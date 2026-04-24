@@ -1,0 +1,58 @@
+/**
+ * @file convex/seedUsers.ts
+ * @description Seed initial admin user
+ */
+import { mutation } from "./_generated/server";
+
+/**
+ * Simple hash function (same as in users.ts)
+ */
+function simpleHash(password: string): string {
+  let hash = 0;
+  for (let i = 0; i < password.length; i++) {
+    const char = password.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return hash.toString(36);
+}
+
+const ADMIN_EMAIL = "eng.mohamed87@live.com";
+const ADMIN_PASSWORD = "Realmadridclub@2604";
+
+/**
+ * Seed admin user
+ */
+export const seedAdminUser = mutation({
+  handler: async (ctx) => {
+    // Check if admin already exists
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", ADMIN_EMAIL))
+      .first();
+
+    if (existing) {
+      console.log("Admin user already exists");
+      return { success: false, message: "المسؤول موجود بالفعل" };
+    }
+
+    // Create admin user with the provided credentials
+    const passwordHash = simpleHash(ADMIN_PASSWORD);
+
+    const userId = await ctx.db.insert("users", {
+      email: ADMIN_EMAIL,
+      passwordHash,
+      name: "المسؤول",
+      role: "ADMIN",
+      isActive: true,
+      createdAt: Date.now(),
+    });
+
+    console.log("Admin user created:", userId);
+    return {
+      success: true,
+      message: "تم إنشاء حساب المسؤول بنجاح",
+      userId,
+    };
+  },
+});

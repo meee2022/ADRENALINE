@@ -1,0 +1,256 @@
+/**
+ * @file client/src/pages/public/PublicPlansNew.tsx
+ * @description صفحة الباقات العامة المحسّنة
+ */
+import { useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { PublicLayout } from "@/components/public/PublicLayout";
+import { Button } from "@/components/ui/button";
+import { Check, X, Sparkles, TrendingUp, Briefcase, Tag, Zap } from "lucide-react";
+
+const badgeConfig = {
+  most_requested: { label: "⭐ الأكثر طلبًا", color: "bg-gradient-to-r from-yellow-400 to-yellow-500", textColor: "text-gray-900", icon: Sparkles },
+  best_value: { label: "🏆 الأفضل قيمة", color: "bg-gradient-to-r from-green-400 to-green-500", textColor: "text-white", icon: TrendingUp },
+  most_chosen_business: { label: "💼 الأكثر اختيارًا للشركات", color: "bg-gradient-to-r from-blue-400 to-blue-500", textColor: "text-white", icon: Briefcase },
+  special_offer: { label: "🎁 عرض خاص", color: "bg-gradient-to-r from-red-400 to-red-500", textColor: "text-white", icon: Tag },
+};
+
+export default function PublicPlansNew() {
+  const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
+  const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
+  const comparisonPlans = plans.filter(p => p.showInComparison);
+
+  const getBadgeLabel = (badge: string) => badgeConfig[badge as keyof typeof badgeConfig];
+
+  return (
+    <PublicLayout>
+      {/* Hero Section with Logo & Background */}
+      <section className="relative bg-gradient-to-br from-[#0F1516] via-[#47759C] to-[#3CC4F0] text-white overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }} />
+        </div>
+
+        {/* Content */}
+        <div className="relative max-w-7xl mx-auto px-4 py-12 md:py-20">
+          <div className="text-center">
+            {/* Logos Container */}
+            <div className="flex items-center justify-center gap-6 mb-8">
+              <div className="animate-fade-in">
+                <img
+                  src="/adrenaline-logo-full.png"
+                  alt="Adrenaline Healthy Food"
+                  className="h-14 md:h-18 w-auto drop-shadow-2xl"
+                />
+              </div>
+              <div className="animate-bounce-slow">
+                <img
+                  src="/heart-logo.png"
+                  alt="Heart"
+                  className="h-12 md:h-14 w-auto drop-shadow-2xl"
+                />
+              </div>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg animate-fade-in-up">
+              استكشف خططنا
+            </h1>
+            
+            {/* Subtitle */}
+            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 animate-fade-in-up animation-delay-200">
+              اختر الباقة المناسبة لأهدافك الصحية واللياقة البدنية
+            </p>
+
+            {/* Duration Tabs */}
+            <div className="flex justify-center gap-3 animate-fade-in-up animation-delay-300">
+              {[
+                { value: "week", label: "أسبوعي" },
+                { value: "two_weeks", label: "أسبوعين" },
+                { value: "month", label: "شهري" },
+              ].map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setSelectedDuration(tab.value as any)}
+                  className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-base md:text-lg transition-all ${
+                    selectedDuration === tab.value
+                      ? "bg-white text-[#3CC4F0] shadow-lg scale-105"
+                      : "bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Wave Divider */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-8 md:h-16">
+            <path
+              fill="#F9FAFB"
+              fillOpacity="1"
+              d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,58.7C960,64,1056,64,1152,58.7C1248,53,1344,43,1392,37.3L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"
+            />
+          </svg>
+        </div>
+      </section>
+
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-16">
+
+        {/* Plans Grid */}
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+            {plans
+              .sort((a, b) => {
+                // Featured plans first
+                if (a.isFeatured && !b.isFeatured) return -1;
+                if (!a.isFeatured && b.isFeatured) return 1;
+                return a.sortOrder - b.sortOrder;
+              })
+              .map((plan) => {
+                const isFeatured = plan.isFeatured;
+                const badge = plan.badge ? getBadgeLabel(plan.badge) : null;
+
+                return (
+                  <div
+                    key={plan._id}
+                    className={`relative bg-white rounded-[32px] overflow-hidden transition-all duration-300 flex flex-col ${
+                      isFeatured
+                        ? "shadow-2xl ring-4 ring-[#3CC4F0] md:scale-105"
+                        : "shadow-lg hover:shadow-xl hover:scale-[1.02]"
+                    }`}
+                  >
+                    {/* Badge - Small Circle */}
+                    {badge && (
+                      <div
+                        className={`absolute top-3 left-3 ${badge.color} ${badge.textColor} px-3 py-1.5 rounded-full text-xs font-bold shadow-md z-10 flex items-center gap-1`}
+                      >
+                        {badge.label}
+                      </div>
+                    )}
+
+                    {/* Image - Full Coverage */}
+                    <div className="h-56 overflow-hidden relative bg-gradient-to-br from-[#3CC4F0]/5 to-[#47759C]/5">
+                      <img
+                        src={plan.imageUrl}
+                        alt={plan.nameAr}
+                        className="w-full h-full object-cover scale-110"
+                      />
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-5 space-y-3 flex-1 flex flex-col">
+                      <div>
+                        <h3 className="text-xl font-black text-[#0F1516] mb-1">
+                          {plan.nameAr}
+                        </h3>
+                        <p className="text-gray-500 text-xs leading-relaxed">
+                          {plan.descriptionAr}
+                        </p>
+                      </div>
+
+                      {/* Price - Compact */}
+                      {plan.options && plan.options[0] && (
+                        <div className="text-center py-3">
+                          <div className="flex items-baseline justify-center gap-1">
+                            <span className="text-4xl font-black text-[#3CC4F0]">
+                              {plan.options[0].priceQAR}
+                            </span>
+                            <div className="text-right leading-tight">
+                              <div className="text-sm text-gray-500">ر.ق</div>
+                              <div className="text-[10px] text-gray-400">/ أسبوع</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Features */}
+                      {plan.features && plan.features.length > 0 && (
+                        <ul className="space-y-2 flex-1">
+                          {plan.features.slice(0, 5).map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2">
+                              <div className="mt-0.5">
+                                <svg className="w-4 h-4 text-[#3CC4F0]" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                </svg>
+                              </div>
+                              <span className="text-xs text-gray-600 leading-snug">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {/* CTA Button */}
+                      <Button
+                        className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
+                          isFeatured
+                            ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
+                            : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
+                        }`}
+                      >
+                        اختر الخطة
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
+        {/* Comparison Table */}
+        {comparisonPlans.length > 0 && (
+          <div className="max-w-7xl mx-auto px-4 mt-20">
+            <h2 className="text-4xl font-black text-center text-[#0F1516] mb-8">
+              مقارنة الباقات
+            </h2>
+            
+            <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-[#3CC4F0] text-white">
+                    <tr>
+                      <th className="py-4 px-6 text-right text-lg font-bold">الميزة</th>
+                      {comparisonPlans.map((plan) => (
+                        <th key={plan._id} className="py-4 px-6 text-center text-lg font-bold">
+                          {plan.nameAr}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Extract all unique features */}
+                    {Array.from(
+                      new Set(
+                        comparisonPlans.flatMap((p) => p.features || [])
+                      )
+                    ).map((feature, idx) => (
+                      <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                        <td className="py-4 px-6 text-right text-sm font-medium text-gray-700">
+                          {feature}
+                        </td>
+                        {comparisonPlans.map((plan) => (
+                          <td key={plan._id} className="py-4 px-6 text-center">
+                            {plan.features?.includes(feature) ? (
+                              <Check className="h-6 w-6 text-[#3CC4F0] mx-auto" />
+                            ) : (
+                              <X className="h-6 w-6 text-gray-300 mx-auto" />
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </PublicLayout>
+  );
+}

@@ -1,0 +1,86 @@
+Build a full-stack web app called "Adrenaline Meals Manager" to replace a manual Excel sheet used to manage gym subscribers meal plans.
+
+Tech stack:
+- Frontend: Next.js (App Router) + TypeScript + Tailwind CSS + shadcn/ui
+- Backend: Next.js server actions (or API routes) + Prisma
+- Database: SQLite for dev (easy), with Prisma schema compatible with PostgreSQL later
+- Auth: simple email/password using NextAuth or a lightweight custom auth + bcrypt
+- Roles: ADMIN, KITCHEN, DELIVERY (RBAC enforced on server)
+
+Core requirements (must implement):
+1) Database Models (Prisma)
+   - User: id, name, email, passwordHash, role (ADMIN/KITCHEN/DELIVERY), createdAt
+   - Customer: id, fullName, phone (unique), gender, goals (e.g., fat loss, muscle gain), notes,
+               deliveryTime (MORNING/EVENING), address(optional), allergies(optional),
+               startDate, endDate, isActive, createdAt
+   - MealCategory: id, name (Breakfast/Lunch/Dinner/Snack/Meal4/etc), sortOrder
+   - MenuItem: id, name, categoryId, calories(optional), macros(optional), isActive, tags(optional)
+   - Addon: id, name, price(optional), calories(optional), isActive
+   - DailyPlan: id, date, customerId, deliveryTime (copy from customer but editable),
+               status (DRAFT/CONFIRMED/PREPARED/DELIVERED/CANCELLED),
+               notes, createdAt
+   - DailyPlanItem: id, dailyPlanId, categoryId, menuItemId (nullable if OFF),
+                    isOff boolean, addons many-to-many, specialNotes
+   - Optional: DeliveryBatch: id, date, deliveryTime, status, createdAt
+              with relation to plans for grouping (nice to have)
+
+2) Admin Dashboard (must be clean UI)
+   Pages:
+   - /login
+   - /dashboard (summary cards: active customers, plans today, morning plans, evening plans)
+   - /customers (CRUD)
+     * Add/Edit Customer with quick form
+     * Search by phone/name, filters by active, deliveryTime
+   - /menu
+     * Manage Meal Categories (CRUD + reorder)
+     * Manage Menu Items (CRUD, filter by category, active toggle)
+     * Manage Addons (CRUD, active toggle)
+   - /plans
+     * Create daily plans quickly for a date (default today)
+     * Fast entry: select customer by phone (typeahead), auto-fill name + deliveryTime
+     * For each category show dropdown (menu items in that category) + OFF toggle
+     * Addons multi-select per item
+     * Save as Draft or Confirm
+     * Bulk-create for all active customers for a chosen date (creates Draft plans)
+   - /kitchen
+     * View plans by date and deliveryTime (tabs Morning/Evening)
+     * Print-friendly view per customer + consolidated list (group by category)
+     * Ability to change status to PREPARED
+   - /delivery
+     * View plans by date/deliveryTime, grouped by delivery time
+     * Mark as DELIVERED
+     * Optional: export delivery sheet (PDF)
+
+3) UX rules (very important)
+   - “Phone number” is primary key for quick search; customer selection should be very fast.
+   - For plans: show meal categories in a clear vertical layout with a dropdown and OFF checkbox.
+   - Prevent duplicates: only one plan per customer per date unless explicitly allowed.
+   - Provide a “copy yesterday plan” button per customer.
+   - Provide “Notes” at plan level and item level.
+   - Validation: cannot confirm plan without at least 1 meal not OFF.
+
+4) Import/Export
+   - Export plans for a date to Excel/CSV (at least CSV) with columns:
+     Date, Customer Name, Phone, DeliveryTime, Breakfast, Snack1, Lunch, Snack2, Dinner, Meal4, Notes
+   - Nice to have: Import customers from CSV.
+
+5) Seed data
+   - Seed meal categories: Breakfast, Snack 1, Lunch, Snack 2, Dinner, Meal 4
+   - Seed a few menu items per category and a few addons.
+
+6) Implementation details
+   - Use shadcn/ui components (Card, Button, Input, Select, Tabs, Table, Dialog)
+   - Use server-side protection for routes based on role.
+   - Use Prisma migrations.
+   - Provide README with steps:
+     npm install
+     npx prisma migrate dev
+     npm run dev
+   - Provide sample admin credentials in README.
+
+Deliverables:
+- Complete runnable code in the Replit project with all pages, Prisma schema, migrations, and a clean UI.
+- Make sure everything works end-to-end (login -> dashboard -> customers -> menu -> plans -> kitchen/delivery).
+- Keep the code organized with components, lib/auth, lib/db, and proper types.
+
+Start by generating the Prisma schema and folder structure, then implement auth, then CRUD pages, then plans workflow, then export CSV.

@@ -1,0 +1,382 @@
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { ChevronRight, ChevronDown, Package, Calendar } from "lucide-react";
+import { useCartStore } from "@/lib/cartStore";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
+
+const dayNameAr: Record<string, string> = {
+  saturday: "السبت",
+  sunday: "الأحد",
+  monday: "الإثنين",
+  tuesday: "الثلاثاء",
+  wednesday: "الأربعاء",
+  // ⚠️ الخميس والجمعة: أيام إجازة
+};
+
+const categoryNameAr: Record<string, string> = {
+  breakfast: "الإفطار",
+  lunch: "الغداء",
+  dinner: "العشاء",
+  snack: "سناك",
+  salad: "سلطة",
+};
+
+export default function OrderReview() {
+  const [, setLocation] = useLocation();
+  
+  // Cart Store
+  const { 
+    items: selectedMeals, 
+    getTotalMeals, 
+    getTotalPrice, 
+    getTotalCalories, 
+    getWeeks,
+    clearCart 
+  } = useCartStore();
+  
+  // بيانات العميل
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  
+  // Convex Mutation & Query (بعد تعريف customerPhone)
+  const createOrder = useMutation(api.customerOrders.create);
+  const findCustomerByPhone = useQuery(
+    api.customers.findByPhone,
+    customerPhone ? { phone: customerPhone } : "skip"
+  );
+  const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // ✅ الربط التلقائي: عند إيجاد customer بنفس الرقم، نملأ البيانات تلقائياً
+  useEffect(() => {
+    if (findCustomerByPhone) {
+      setCustomerName(findCustomerByPhone.fullName);
+      if (findCustomerByPhone.email) {
+        setCustomerEmail(findCustomerByPhone.email);
+      }
+    }
+  }, [findCustomerByPhone]);
+
+  // Computed values from cart
+  const totalMeals = getTotalMeals();
+  const totalPrice = getTotalPrice();
+  const totalCalories = getTotalCalories();
+  const weeks = getWeeks();
+  const totalWeeks = weeks.length;
+
+  // تنظيم الوجبات حسب الأسبوع واليوم
+  const organizedMeals = selectedMeals.reduce((acc, meal) => {
+    if (!acc[meal.week]) acc[meal.week] = {};
+    if (!acc[meal.week][meal.day]) acc[meal.week][meal.day] = [];
+    acc[meal.week][meal.day].push(meal);
+    return acc;
+  }, {} as Record<number, Record<string, typeof selectedMeals>>);
+
+  const toggleWeek = (week: number) => {
+    setExpandedWeeks((prev) =>
+      prev.includes(week) ? prev.filter((w) => w !== week) : [...prev, week]
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!customerName || !customerPhone) {
+      alert("يرجى إدخال الاسم ورقم الجوال");
+      return;
+    }
+    
+    if (selectedMeals.length === 0) {
+      alert("يرجى اختيار وجبات أولاً");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // ✅ إرسال الطلب مع customerId (إذا وُجد تلقائياً)
+      const result = await createOrder({
+        customerName,
+        customerPhone,
+        customerEmail,
+        customerId: findCustomerByPhone?._id, // ✅ ربط تلقائي
+        totalMeals,
+        totalPrice,
+        totalCalories,
+        items: selectedMeals.map((meal) => ({
+          mealId: meal._id as any,
+          mealNameAr: meal.nameAr,
+          mealNameEn: meal.nameEn,
+          calories: meal.calories,
+          protein: meal.protein,
+          carbs: meal.carbs,
+          fats: meal.fats,
+          category: meal.category,
+          imageUrl: meal.imageUrl,
+          priceQAR: meal.priceQAR,
+          week: meal.week,
+          day: meal.day,
+        })),
+      });
+
+      alert(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`);
+      clearCart();
+      setLocation("/");
+    } catch (error) {
+      console.error("Error submitting order:", error);
+      alert("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Redirect if cart is empty
+  if (selectedMeals.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <Package className="h-20 w-20 text-slate-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">السلة فارغة</h2>
+          <p className="text-slate-500 mb-6">لم تقم باختيار أي وجبات بعد</p>
+          <button
+            onClick={() => setLocation("/public/menu")}
+            className="px-6 py-3 bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold rounded-xl transition-all"
+          >
+            تصفح المنيو
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30" dir="rtl">
+      {/* Header */}
+      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+          <button
+            onClick={() => setLocation("/menu")}
+            className="text-slate-600 hover:text-slate-900 flex items-center gap-2"
+          >
+            <ChevronRight className="h-5 w-5" />
+            <span>رجوع</span>
+          </button>
+          <h1 className="text-xl font-bold text-slate-900">مراجعة وتأكيد الطلب</h1>
+        </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        {/* ملخص الاختيارات */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-cyan-50 rounded-xl">
+              <Package className="h-6 w-6 text-cyan-600" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-bold text-slate-900 mb-1">ملخص اختياراتك</h2>
+              <p className="text-sm text-slate-500">خطة وجبات مخصصة لمدة {totalWeeks} أسابيع</p>
+
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">{totalMeals} وجبة</div>
+                  <div className="text-xs text-slate-500">إجمالي الوجبات</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">{totalWeeks} أسابيع</div>
+                  <div className="text-xs text-slate-500">الفترة الزمنية</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* تفاصيل الوجبات المختارة حسب الأسابيع */}
+        <div className="space-y-4">
+          {Object.entries(organizedMeals)
+            .sort(([a], [b]) => Number(a) - Number(b))
+            .map(([week, days]) => (
+              <div key={week} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                {/* عنوان الأسبوع */}
+                <button
+                  onClick={() => toggleWeek(Number(week))}
+                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold">
+                      {week}
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-slate-900">الأسبوع {week}</div>
+                      <div className="text-sm text-slate-500">
+                        {Object.keys(days).length} أيام • {Object.values(days).flat().length} وجبات
+                      </div>
+                    </div>
+                  </div>
+                  {expandedWeeks.includes(Number(week)) ? (
+                    <ChevronDown className="h-5 w-5 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="h-5 w-5 text-slate-400" />
+                  )}
+                </button>
+
+                {/* محتوى الأسبوع */}
+                {expandedWeeks.includes(Number(week)) && (
+                  <div className="border-t">
+                    {Object.entries(days)
+                      .sort(
+                        ([a], [b]) =>
+                          ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(a) -
+                          ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(b)
+                      )
+                      .map(([day, meals]) => (
+                        <div key={day} className="border-b last:border-b-0 p-4 bg-slate-50/50">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Calendar className="h-4 w-4 text-slate-400" />
+                            <span className="font-semibold text-slate-700">{dayNameAr[day]}</span>
+                            <span className="text-xs text-slate-500">
+                              01 {day === "saturday" ? "مارس" : "مارس"}
+                            </span>
+                          </div>
+
+                          <div className="space-y-2">
+                            {meals.map((meal) => (
+                              <div
+                                key={meal._id}
+                                className="flex items-center gap-3 bg-white rounded-xl p-3 border"
+                              >
+                                {meal.imageUrl ? (
+                                  <img
+                                    src={meal.imageUrl}
+                                    alt={meal.nameAr}
+                                    className="w-12 h-12 rounded-lg object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                    <Package className="h-5 w-5 text-slate-400" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-slate-900 truncate">{meal.nameAr}</div>
+                                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                                    <span className="text-cyan-600 font-medium">
+                                      {categoryNameAr[meal.category]}
+                                    </span>
+                                    <span>•</span>
+                                    <span>{meal.calories} سعرة</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            ))}
+        </div>
+
+        {/* معلومات العميل */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6">
+          <h3 className="font-bold text-slate-900 mb-4">معلومات التواصل</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                الاسم الكامل <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                placeholder="أدخل اسمك الكامل"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                رقم الجوال <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                placeholder="مثال: +974 1234 5678"
+                required
+              />
+              {/* ✅ مؤشر الربط التلقائي */}
+              {findCustomerByPhone && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-xs text-green-800 flex items-center gap-1">
+                    <span className="font-bold">✅ تم العثور على حساب:</span>
+                    <span className="font-semibold">{findCustomerByPhone.fullName}</span>
+                  </p>
+                  <p className="text-xs text-green-600 mt-1">
+                    سيتم ربط الطلب تلقائياً بحسابك (مع مراعاة الحساسيات والتفضيلات المسجلة)
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                البريد الإلكتروني <span className="text-slate-400">(اختياري)</span>
+              </label>
+              <input
+                type="email"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                placeholder="example@email.com"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ملخص السعر وزر التأكيد */}
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-cyan-100 p-6 sticky bottom-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-right">
+              <div className="text-sm text-slate-500">إجمالي السعر الشهري</div>
+              <div className="text-3xl font-bold text-slate-900">
+                {totalPrice.toLocaleString()}{" "}
+                <span className="text-lg font-normal text-slate-500">ر.ق</span>
+              </div>
+            </div>
+            <div className="text-left">
+              <div className="text-sm text-slate-500">إجمالي السعرات الحرارية للفترة</div>
+              <div className="text-2xl font-bold text-cyan-600">
+                {totalCalories.toLocaleString()}{" "}
+                <span className="text-sm font-normal text-slate-500">سعرة</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={isSubmitting || !customerName || !customerPhone}
+            className="w-full bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>جاري الإرسال...</span>
+              </>
+            ) : (
+              <>
+                <span>تأكيد وإرسال الطلب</span>
+                <ChevronRight className="h-5 w-5" />
+              </>
+            )}
+          </button>
+
+          <p className="text-xs text-slate-500 text-center mt-3">
+            بالضغط على "تأكيد"، أنت توافق على{" "}
+            <button className="text-cyan-600 underline">الشروط والأحكام</button>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

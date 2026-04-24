@@ -1,0 +1,562 @@
+/**
+ * @file client/src/pages/Users.tsx
+ * @description صفحة إدارة حسابات المستخدمين
+ * @convex users.ts
+ */
+import { useState } from "react";
+import { useLanguage } from "@/lib/i18n";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, UserPlus, Shield } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { convex } from "@/lib/convex";
+import { api } from "@/../../convex/_generated/api";
+import { useQuery, useMutation } from "convex/react";
+import { Role } from "@/lib/types";
+
+interface UserFormData {
+  name: string;
+  email: string;
+  password: string;
+  role: Role;
+}
+
+export default function Users() {
+  const { t, dir } = useLanguage();
+  const isRtl = dir === "rtl";
+  const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = useState<"staff" | "customers">("staff");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<UserFormData>({
+    name: "",
+    email: "",
+    password: "",
+    role: "DELIVERY",
+  });
+
+  // Fetch users from Convex
+  const users = useQuery(api.users.listUsers) || [];
+  const customers = useQuery(api.customerAuth.listCustomers) || [];
+
+  const handleAdd = () => {
+    setFormData({ name: "", email: "", password: "", role: "DELIVERY" });
+    setIsAddDialogOpen(true);
+  };
+
+  const handleEdit = (user: any) => {
+    setSelectedUserId(user.id);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleDelete = async (userId: string) => {
+    if (!confirm(t("users.delete_confirm"))) return;
+
+    try {
+      await convex.mutation(api.users.deleteUser, { userId });
+      toast({
+        title: isRtl ? "تم الحذف" : "Deleted",
+        description: isRtl ? "تم حذف المستخدم بنجاح" : "User deleted successfully",
+      });
+    } catch (error) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "حدث خطأ أثناء الحذف" : "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveAdd = async () => {
+    if (!formData.name || !formData.email || !formData.password) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "يرجى ملء جميع الحقول" : "Please fill all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await convex.mutation(api.users.createUser, {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role,
+      });
+
+      toast({
+        title: isRtl ? "تم الإضافة" : "Added",
+        description: isRtl ? "تم إضافة المستخدم بنجاح" : "User added successfully",
+      });
+
+      setIsAddDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error.message || (isRtl ? "حدث خطأ أثناء الإضافة" : "Failed to add user"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedUserId || !formData.name || !formData.email) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "يرجى ملء جميع الحقول" : "Please fill all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await convex.mutation(api.users.updateUser, {
+        userId: selectedUserId,
+        name: formData.name,
+        email: formData.email,
+        role: formData.role,
+      });
+
+      // If password is provided, update it separately
+      if (formData.password) {
+        await convex.mutation(api.users.changePassword, {
+          userId: selectedUserId,
+          newPassword: formData.password,
+        });
+      }
+
+      toast({
+        title: isRtl ? "تم التحديث" : "Updated",
+        description: isRtl ? "تم تحديث المستخدم بنجاح" : "User updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: error.message || (isRtl ? "حدث خطأ أثناء التحديث" : "Failed to update user"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      await convex.mutation(api.users.updateUserStatus, {
+        userId,
+        isActive: !currentStatus,
+      });
+
+      toast({
+        title: isRtl ? "تم التحديث" : "Updated",
+        description: isRtl
+          ? "تم تحديث حالة المستخدم"
+          : "User status updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "حدث خطأ أثناء التحديث" : "Failed to update status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getRoleBadgeColor = (role: Role) => {
+    switch (role) {
+      case "ADMIN":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "KITCHEN":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "DELIVERY":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "NUTRITIONIST":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "INVENTORY_MANAGER":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getRoleLabel = (role: Role) => {
+    const roleKey = `role.${role.toLowerCase()}` as any;
+    return t(roleKey);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {t("users.title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {t("users.subtitle")}
+          </p>
+        </div>
+        <Button onClick={handleAdd} size="lg" className="gap-2">
+          <UserPlus className="h-5 w-5" />
+          {t("users.add")}
+        </Button>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setActiveTab("staff")}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === "staff"
+              ? "border-b-2 border-[#3CC4F0] text-[#3CC4F0]"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          الموظفين ({users.length})
+        </button>
+        <button
+          onClick={() => setActiveTab("customers")}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === "customers"
+              ? "border-b-2 border-[#3CC4F0] text-[#3CC4F0]"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          العملاء ({customers.length})
+        </button>
+      </div>
+
+      {/* Staff Table */}
+      {activeTab === "staff" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              {t("users.title")}
+            </CardTitle>
+            <CardDescription>{users.length} {isRtl ? "مستخدم" : "users"}</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("users.name")}</TableHead>
+                <TableHead>{t("users.email")}</TableHead>
+                <TableHead>{t("users.role")}</TableHead>
+                <TableHead>{t("users.status")}</TableHead>
+                <TableHead className="text-center">{t("users.actions")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user: any) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">{user.name}</TableCell>
+                  <TableCell className="text-left" dir="ltr">
+                    {user.email}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getRoleBadgeColor(user.role)} variant="outline">
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleUserStatus(user.id, user.isActive)}
+                      className="h-7"
+                    >
+                      <Badge
+                        variant={user.isActive ? "default" : "secondary"}
+                        className={
+                          user.isActive
+                            ? "bg-green-100 text-green-800 border-green-200"
+                            : "bg-gray-100 text-gray-800 border-gray-200"
+                        }
+                      >
+                        {user.isActive ? t("users.active") : t("users.inactive")}
+                      </Badge>
+                    </Button>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(user)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(user.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+        </Card>
+      )}
+
+      {/* Customers Table */}
+      {activeTab === "customers" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              حسابات العملاء
+            </CardTitle>
+            <CardDescription>{customers.length} عميل</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>الاسم الكامل</TableHead>
+                  <TableHead>البريد الإلكتروني</TableHead>
+                  <TableHead>الهاتف</TableHead>
+                  <TableHead>الحالة</TableHead>
+                  <TableHead>تاريخ التسجيل</TableHead>
+                  <TableHead>مرتبط باشتراك</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {customers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      لا يوجد عملاء مسجلين
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  customers.map((customer: any) => (
+                    <TableRow key={customer.id}>
+                      <TableCell className="font-medium">{customer.fullName}</TableCell>
+                      <TableCell>{customer.email}</TableCell>
+                      <TableCell>{customer.phone}</TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            customer.isActive
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {customer.isActive ? "نشط" : "غير نشط"}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(customer.createdAt).toLocaleDateString("ar-SA")}
+                      </TableCell>
+                      <TableCell>
+                        {customer.customerId ? (
+                          <span className="text-green-600 font-medium">✓ مرتبط</span>
+                        ) : (
+                          <span className="text-gray-400">غير مرتبط</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{t("users.add_title")}</DialogTitle>
+            <DialogDescription>{t("users.subtitle")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">{t("users.name")}</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder={isRtl ? "أحمد محمد" : "John Doe"}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">{t("users.email")}</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="user@example.com"
+                dir="ltr"
+                className="text-left"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">{t("users.password")}</Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
+                dir="ltr"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role">{t("users.role")}</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) => setFormData({ ...formData, role: value as Role })}
+                dir={isRtl ? "rtl" : "ltr"}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">{t("role.admin")}</SelectItem>
+                  <SelectItem value="KITCHEN">{t("role.kitchen")}</SelectItem>
+                  <SelectItem value="DELIVERY">{t("role.delivery")}</SelectItem>
+                  <SelectItem value="NUTRITIONIST">{t("role.nutritionist")}</SelectItem>
+                  <SelectItem value="INVENTORY_MANAGER">{t("role.inventory_manager")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              {t("users.cancel")}
+            </Button>
+            <Button onClick={handleSaveAdd}>{t("users.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{t("users.edit_title")}</DialogTitle>
+            <DialogDescription>{t("users.subtitle")}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">{t("users.name")}</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">{t("users.email")}</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                dir="ltr"
+                className="text-left"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-password">{t("users.password")}</Label>
+              <Input
+                id="edit-password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="••••••••"
+                dir="ltr"
+              />
+              <p className="text-xs text-muted-foreground">{t("users.password_note")}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-role">{t("users.role")}</Label>
+              <Select
+                value={formData.role}
+                onValueChange={(value) => setFormData({ ...formData, role: value as Role })}
+                dir={isRtl ? "rtl" : "ltr"}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">{t("role.admin")}</SelectItem>
+                  <SelectItem value="KITCHEN">{t("role.kitchen")}</SelectItem>
+                  <SelectItem value="DELIVERY">{t("role.delivery")}</SelectItem>
+                  <SelectItem value="NUTRITIONIST">{t("role.nutritionist")}</SelectItem>
+                  <SelectItem value="INVENTORY_MANAGER">{t("role.inventory_manager")}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              {t("users.cancel")}
+            </Button>
+            <Button onClick={handleSaveEdit}>{t("users.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
