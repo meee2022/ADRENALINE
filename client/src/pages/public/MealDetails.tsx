@@ -248,14 +248,12 @@ export default function MealDetailsPage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-[#47759C] mb-1">
-                {isRtl ? "السعر" : "Price"}
+              <p className="text-xs text-[#47759C] mb-1 font-semibold uppercase tracking-wide">
+                {isRtl ? "ضمن اشتراكك" : "Included in plan"}
               </p>
-              <p className="text-3xl font-bold text-[#3CC4F0]">
-                {meal.priceQAR}
-                <span className="text-lg text-[#47759C] ml-2">
-                  {isRtl ? "ر.ق" : "QAR"}
-                </span>
+              <p className="text-2xl font-black text-[#3CC4F0] flex items-center gap-2">
+                {meal.calories}
+                <span className="text-sm text-[#47759C]">{isRtl ? "كالوري" : "kcal"}</span>
               </p>
             </div>
             <Button className="h-14 px-10 rounded-full bg-[#3CC4F0] hover:bg-[#47759C] text-white font-bold text-lg shadow-lg">

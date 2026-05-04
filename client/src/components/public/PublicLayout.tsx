@@ -25,10 +25,6 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   // Fetch restaurant settings from database
   const restaurantSettings = useQuery(api.restaurantSettings.get);
 
-  // Debug logging
-  console.log("PublicLayout - currentUser:", currentUser);
-  console.log("PublicLayout - currentCustomer:", currentCustomer);
-
   const toggleLanguage = () => {
     setLanguage(language === "ar" ? "en" : "ar");
   };

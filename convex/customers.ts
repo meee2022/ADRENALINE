@@ -47,20 +47,35 @@ function normalizePhone(input: any) {
    Queries
 ========================= */
 
-// ✅ البحث عن مشترك برقم الجوال (للربط التلقائي)
+// ✅ البحث عن مشترك برقم الجوال (للربط التلقائي - أول مطابق)
 export const findByPhone = query({
   args: { phone: v.string() },
   handler: async (ctx, { phone }) => {
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) return null;
-    
-    // البحث عن أول مشترك بنفس الرقم
+
     const customer = await ctx.db
       .query("customers")
       .filter((q) => q.eq(q.field("phone"), normalizedPhone))
       .first();
-    
+
     return customer || null;
+  },
+});
+
+// ✅ كل المشتركين بنفس الرقم (للعائلات اللي بتشارك رقم واحد)
+export const findAllByPhone = query({
+  args: { phone: v.string() },
+  handler: async (ctx, { phone }) => {
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return [];
+
+    const customers = await ctx.db
+      .query("customers")
+      .filter((q) => q.eq(q.field("phone"), normalizedPhone))
+      .collect();
+
+    return customers;
   },
 });
 
@@ -253,6 +268,7 @@ export const importMany = mutation({
       v.object({
         fullName: v.string(),
         phone: v.string(),
+        gender: v.optional(v.union(v.literal("MALE"), v.literal("FEMALE"))),
         deliveryTime: v.optional(
           v.union(v.literal("MORNING"), v.literal("EVENING")),
         ),
@@ -263,6 +279,10 @@ export const importMany = mutation({
         goals: v.optional(v.string()),
         allergies: v.optional(v.string()),
         notes: v.optional(v.string()),
+
+        avoid: v.optional(v.string()),
+        preferences: v.optional(v.string()),
+        portions: v.optional(v.string()),
 
         program: v.optional(v.string()),
         packageLabel: v.optional(v.string()),
@@ -284,22 +304,18 @@ export const importMany = mutation({
   },
   handler: async (ctx, { rows }) => {
     let added = 0;
-    let updated = 0;
     let skipped = 0;
 
-    // نجيب كل العملاء مرة واحدة ونبني خريطة بالهاتف
+    // احذف كل المشتركين الحاليين أولاً
     const existing = await ctx.db.query("customers").collect();
-    const byPhone = new Map<string, any>();
     for (const c of existing) {
-      if (c.phone) byPhone.set(String(c.phone), c);
+      await ctx.db.delete(c._id);
     }
 
+    // أضف الجديد
     for (const row of rows) {
       const phone = normalizePhone(row.phone);
-      if (!row.fullName || !phone) {
-        skipped++;
-        continue;
-      }
+      if (!row.fullName || !phone) { skipped++; continue; }
 
       const payload: any = {
         ...row,
@@ -308,28 +324,13 @@ export const importMany = mutation({
         startDate: normalizeToISODate(row.startDate) ?? row.startDate,
         endDate: normalizeToISODate(row.endDate) ?? row.endDate,
         birthdayDate: normalizeToISODate(row.birthdayDate) ?? row.birthdayDate,
-        updatedAt: Date.now(),
+        createdAt: Date.now(),
       };
 
-      const found = byPhone.get(phone);
-
-      if (found) {
-        await ctx.db.patch(found._id, payload);
-        updated++;
-      } else {
-        await ctx.db.insert("customers", {
-          ...payload,
-          createdAt: Date.now(),
-        });
-        added++;
-      }
+      await ctx.db.insert("customers", payload);
+      added++;
     }
 
-    return {
-      total: rows.length,
-      added,
-      updated,
-      skipped,
-    };
+    return { total: rows.length, deleted: existing.length, added, skipped };
   },
 });

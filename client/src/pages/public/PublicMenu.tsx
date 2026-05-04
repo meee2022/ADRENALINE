@@ -2,7 +2,7 @@
  * @file client/src/pages/public/PublicMenu.tsx
  * @description صفحة المنيو للموقع العام - مع نظام جدولة الأسابيع والأيام
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { usePublicMeals } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check } from "lucide-react";
+import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
@@ -20,6 +20,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCartStore } from "@/lib/cartStore";
+import { useQuery } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
 // ✅ أيام العمل فقط (السبت-الأربعاء) - الخميس والجمعة إجازة
@@ -36,28 +38,159 @@ export default function PublicMenuPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
   const [selectedMeal, setSelectedMeal] = useState<any>(null);
-  
+
+  // ─── Phone gate ───
+  const [phoneInput, setPhoneInput] = useState("");
+  const [verifiedPhone, setVerifiedPhone] = useState<string>(() => {
+    return typeof window !== "undefined" ? (localStorage.getItem("menu_phone") || "") : "";
+  });
+  const [verifiedCustomerId, setVerifiedCustomerId] = useState<string>(() => {
+    return typeof window !== "undefined" ? (localStorage.getItem("menu_customer_id") || "") : "";
+  });
+  const [browseMode, setBrowseMode] = useState<boolean>(() => {
+    return typeof window !== "undefined" ? localStorage.getItem("menu_browse") === "1" : false;
+  });
+  const [phoneError, setPhoneError] = useState("");
+
+  // Query: use existing `list` query (deployed) and filter client-side
+  // This avoids dependency on a Convex function that may not be deployed yet
+  const allCustomersList = useQuery(api.customers.list);
+
+  const matchingCustomers = useMemo(() => {
+    if (!verifiedPhone) return undefined; // skip state
+    if (!allCustomersList) return undefined; // loading
+    const normalized = verifiedPhone.replace(/\D/g, "");
+    return allCustomersList.filter((c: any) => {
+      const cPhone = String(c.phone || "").replace(/\D/g, "");
+      return cPhone === normalized;
+    });
+  }, [allCustomersList, verifiedPhone]);
+
+  const verifiedCustomer = useMemo(() => {
+    if (!matchingCustomers || !verifiedCustomerId) return null;
+    return matchingCustomers.find((c: any) => String(c._id) === verifiedCustomerId) || null;
+  }, [matchingCustomers, verifiedCustomerId]);
+
+  // Restaurant settings (for WhatsApp)
+  const settings = useQuery(api.restaurantSettings.get);
+  const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
+  const whatsappLink = (msg: string) =>
+    `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
+
+  const handleVerifyPhone = () => {
+    setPhoneError("");
+    const normalized = phoneInput.replace(/\D/g, "");
+    if (normalized.length < 8) {
+      setPhoneError(isRtl ? "رقم غير صحيح" : "Invalid phone number");
+      return;
+    }
+    setVerifiedPhone(normalized);
+    localStorage.setItem("menu_phone", normalized);
+    // customer will be picked from results below
+  };
+
+  const handlePickCustomer = (customer: any) => {
+    setVerifiedCustomerId(String(customer._id));
+    localStorage.setItem("menu_customer_id", String(customer._id));
+  };
+
+  const handleResetPhone = () => {
+    setVerifiedPhone("");
+    setVerifiedCustomerId("");
+    setPhoneInput("");
+    setBrowseMode(false);
+    localStorage.removeItem("menu_phone");
+    localStorage.removeItem("menu_customer_id");
+    localStorage.removeItem("menu_browse");
+  };
+
+  const handleBrowseOnly = () => {
+    setBrowseMode(true);
+    localStorage.setItem("menu_browse", "1");
+  };
+
+  const handleSignupViaWhatsApp = () => {
+    const msg = isRtl
+      ? `مرحباً 👋\nأرغب في الاشتراك في خطط أدرينالين الصحية.\nرقمي: ${phoneInput || verifiedPhone}`
+      : `Hello 👋\nI'd like to subscribe to Adrenaline plans.\nMy phone: ${phoneInput || verifiedPhone}`;
+    window.open(whatsappLink(msg), "_blank");
+  };
+
   // NEW: Week & Day selection
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState<boolean>(false);
+
+  // ─── Subscription limits + warnings ───
+  const mealsPerDay = verifiedCustomer?.mealsPerDay ?? 0;
+  const snacksPerDay = verifiedCustomer?.snacksPerDay ?? 0;
+
+  // Count what's selected for current day
+  const selectedToday = items.filter(
+    (i: any) => i.week === selectedWeek && i.day === selectedDay
+  );
+  const mainMealsToday = selectedToday.filter((i: any) =>
+    ["breakfast", "lunch", "dinner"].includes(String(i.category).toLowerCase())
+  ).length;
+  const snacksToday = selectedToday.filter((i: any) =>
+    String(i.category).toLowerCase() === "snack"
+  ).length;
+
+  // Avoid keywords from customer (lowercase tokens)
+  const avoidTokens = useMemo(() => {
+    const text = [verifiedCustomer?.allergies, verifiedCustomer?.avoid]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return text
+      .split(/[,،|/·•·\s]+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 3);
+  }, [verifiedCustomer]);
+
+  const mealHasAvoidConflict = (meal: any) => {
+    if (avoidTokens.length === 0) return false;
+    const hay = [meal.nameAr, meal.nameEn, meal.descriptionAr, meal.descriptionEn]
+      .filter(Boolean).join(" ").toLowerCase();
+    return avoidTokens.some((t) => hay.includes(t));
+  };
   
   // Handle adding meal to cart
   const handleAddToCart = (meal: any, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    
+
     if (!selectedDay) {
       alert(isRtl ? "يرجى اختيار اليوم أولاً" : "Please select a day first");
       return;
     }
-    
-    // ✅ تم تعطيل فحص isLocked - الطلبات مفتوحة دائماً
-    // if (isLocked) {
-    //   alert(isRtl ? "انتهى وقت الطلب لهذا اليوم" : "Order time has ended for this day");
-    //   return;
-    // }
-    
+
+    // ✅ Check subscription limits
+    const isSnack = String(meal.category).toLowerCase() === "snack";
+    if (isSnack) {
+      if (snacksToday >= snacksPerDay) {
+        alert(isRtl
+          ? `وصلت للحد الأقصى من السناكات (${snacksPerDay}) لهذا اليوم`
+          : `Reached daily snack limit (${snacksPerDay})`);
+        return;
+      }
+    } else {
+      if (mainMealsToday >= mealsPerDay) {
+        alert(isRtl
+          ? `وصلت للحد الأقصى من الوجبات (${mealsPerDay}) لهذا اليوم`
+          : `Reached daily meal limit (${mealsPerDay})`);
+        return;
+      }
+    }
+
+    // ⚠ Warn about avoid conflict
+    if (mealHasAvoidConflict(meal)) {
+      const ok = window.confirm(isRtl
+        ? `⚠ تنبيه: هذه الوجبة قد تحتوي على شيء من ممنوعاتك (${[verifiedCustomer?.allergies, verifiedCustomer?.avoid].filter(Boolean).join(" / ")}). هل تريد المتابعة؟`
+        : `⚠ Warning: This meal may contain items you avoid. Continue anyway?`);
+      if (!ok) return;
+    }
+
     addItem({
       _id: meal._id,
       nameAr: meal.nameAr,
@@ -68,7 +201,7 @@ export default function PublicMenuPage() {
       carbs: meal.carbs,
       fats: meal.fats,
       imageUrl: meal.imageUrl,
-      priceQAR: meal.priceQAR || 45,
+      priceQAR: meal.priceQAR || 0,
       week: selectedWeek,
       day: selectedDay,
     });
@@ -151,8 +284,378 @@ export default function PublicMenuPage() {
     // ⚠️ الخميس والجمعة: أيام إجازة (لا توصيل)
   ];
 
+  // ─── Phone gate state determination ───
+  const isPhoneVerified = !!verifiedPhone && !!verifiedCustomer;
+  const canViewMenu = isPhoneVerified || browseMode;
+  const showPhonePrompt = !verifiedPhone;
+  const showCustomerPicker = verifiedPhone && matchingCustomers && matchingCustomers.length > 1 && !verifiedCustomerId;
+  const showNotRegistered = verifiedPhone && matchingCustomers !== undefined && matchingCustomers.length === 0;
+  const showAutoSelect = verifiedPhone && matchingCustomers && matchingCustomers.length === 1 && !verifiedCustomerId;
+
+  // Auto-select if only one match
+  useEffect(() => {
+    if (showAutoSelect && matchingCustomers && matchingCustomers[0]) {
+      setVerifiedCustomerId(String(matchingCustomers[0]._id));
+      localStorage.setItem("menu_customer_id", String(matchingCustomers[0]._id));
+    }
+  }, [showAutoSelect, matchingCustomers]);
+
+  // ─── Phone Gate Screen (blocks menu) ───
+  if (!canViewMenu) {
+    return (
+      <PublicLayout>
+        <div className="min-h-[80vh] flex items-center justify-center px-4 py-12"
+          style={{ background: "linear-gradient(135deg, #f8fafc, #ecfeff, #f0f9ff)" }}>
+          <div className="w-full max-w-md">
+            {/* Hero card */}
+            <div className="bg-white rounded-3xl p-8 relative overflow-hidden"
+              style={{
+                boxShadow: "0 20px 60px rgba(60,196,240,0.15), 0 4px 20px rgba(0,0,0,0.06)",
+                border: "1px solid rgba(60,196,240,0.15)",
+              }}>
+              {/* Decorative glow */}
+              <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20 blur-2xl"
+                style={{ background: "radial-gradient(circle, #3CC4F0, transparent)" }} />
+
+              {/* Reset button — always visible, fixed top corner */}
+              {verifiedPhone && (
+                <button
+                  onClick={handleResetPhone}
+                  aria-label="رجوع"
+                  className="absolute top-4 left-4 z-20 h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
+                  style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }}
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              )}
+
+              <div className="relative">
+                {/* Icon */}
+                <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #3CC4F0, #47759C)",
+                    boxShadow: "0 8px 24px rgba(60,196,240,0.4)",
+                  }}>
+                  <Phone className="h-7 w-7 text-white" />
+                </div>
+
+                <h2 className="text-2xl font-black text-[#0F1516] text-center mb-2 tracking-tight">
+                  {showPhonePrompt && (isRtl ? "أهلاً بك في أدرينالين" : "Welcome to Adrenaline")}
+                  {showNotRegistered && (isRtl ? "رقمك غير مسجل" : "Phone Not Registered")}
+                  {showCustomerPicker && (isRtl ? "من المستلم؟" : "Who's the recipient?")}
+                </h2>
+                <p className="text-sm text-[#47759C] text-center mb-6 leading-relaxed">
+                  {showPhonePrompt && (isRtl ? "أدخل رقم تليفونك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals")}
+                  {showNotRegistered && (isRtl ? "هذا الرقم غير مسجل لدينا. تواصل عبر واتساب للاشتراك" : "This number isn't registered. Contact us via WhatsApp to subscribe")}
+                  {showCustomerPicker && (isRtl ? "هذا الرقم مسجل لأكثر من مشترك. اختر اسمك للمتابعة" : "This number has multiple subscribers. Pick your name to continue")}
+                </p>
+
+                {/* Phone input */}
+                {showPhonePrompt && (
+                  <>
+                    <div className="space-y-3">
+                      <div
+                        className="flex items-stretch rounded-xl overflow-hidden transition-all"
+                        style={{
+                          background: "#f8fafc",
+                          border: `1.5px solid ${phoneError ? "#fca5a5" : "#e2e8f0"}`,
+                        }}
+                      >
+                        {/* Country code prefix block */}
+                        <div className="flex items-center justify-center px-4 gap-2 border-l"
+                          style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", borderColor: "#e2e8f0", minWidth: "90px" }}>
+                          <Phone className="h-5 w-5 text-white" />
+                          <span className="text-base font-black text-white tabular-nums">+974</span>
+                        </div>
+                        {/* Input */}
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          dir="ltr"
+                          autoFocus
+                          value={phoneInput}
+                          onChange={(e) => setPhoneInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleVerifyPhone()}
+                          placeholder="74XXXXXX"
+                          className="flex-1 h-12 px-4 text-center text-base font-bold tabular-nums tracking-widest bg-transparent outline-none"
+                        />
+                      </div>
+                      {phoneError && (
+                        <p className="text-xs font-semibold text-red-600 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          {phoneError}
+                        </p>
+                      )}
+                      <button
+                        onClick={handleVerifyPhone}
+                        className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        style={{
+                          background: "linear-gradient(135deg, #3CC4F0, #2bb0dc)",
+                          boxShadow: "0 6px 20px rgba(60,196,240,0.4)",
+                        }}
+                      >
+                        {isRtl ? "متابعة" : "Continue"}
+                      </button>
+                    </div>
+
+                    {/* Browse without account */}
+                    <button
+                      onClick={handleBrowseOnly}
+                      className="w-full mt-3 h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
+                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
+                    >
+                      {isRtl ? "تصفح المنيو فقط" : "Just Browse Menu"}
+                    </button>
+
+                    <div className="mt-5 pt-5 border-t border-gray-100 text-center">
+                      <p className="text-xs text-gray-400 mb-2">
+                        {isRtl ? "لست مشتركاً بعد؟" : "Not subscribed yet?"}
+                      </p>
+                      <button
+                        onClick={handleSignupViaWhatsApp}
+                        className="text-sm font-bold inline-flex items-center gap-1.5 hover:underline"
+                        style={{ color: "#25D366" }}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        {isRtl ? "اشترك عبر واتساب" : "Subscribe via WhatsApp"}
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* Loading */}
+                {verifiedPhone && matchingCustomers === undefined && (
+                  <div className="space-y-4">
+                    <div className="text-center py-6">
+                      <div className="inline-block h-8 w-8 rounded-full border-2 border-gray-200 border-t-[#3CC4F0] animate-spin" />
+                      <p className="text-xs text-gray-400 mt-3">{isRtl ? "جاري التحقق..." : "Verifying..."}</p>
+                    </div>
+                    <button
+                      onClick={handleResetPhone}
+                      className="w-full h-10 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+                      style={{ border: "1.5px solid #e2e8f0" }}
+                    >
+                      {isRtl ? "إلغاء" : "Cancel"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Not registered */}
+                {showNotRegistered && (
+                  <div className="space-y-3">
+                    <div className="rounded-xl p-3 flex items-start gap-2.5"
+                      style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
+                      <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-orange-800">
+                        {isRtl
+                          ? `الرقم ${verifiedPhone} غير موجود في قاعدة بياناتنا.`
+                          : `Number ${verifiedPhone} not found in our records.`}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSignupViaWhatsApp}
+                      className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                      style={{
+                        background: "linear-gradient(135deg, #25D366, #128C7E)",
+                        boxShadow: "0 6px 20px rgba(37,211,102,0.4)",
+                      }}
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      {isRtl ? "اشترك عبر واتساب" : "Subscribe via WhatsApp"}
+                    </button>
+                    <button
+                      onClick={handleBrowseOnly}
+                      className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
+                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
+                    >
+                      {isRtl ? "تصفح المنيو فقط" : "Just Browse Menu"}
+                    </button>
+                    <button
+                      onClick={handleResetPhone}
+                      className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all"
+                      style={{ background: "#f1f5f9", border: "1.5px solid #cbd5e1", color: "#475569" }}
+                    >
+                      ← {isRtl ? "أدخل رقم آخر" : "Use different number"}
+                    </button>
+                  </div>
+                )}
+
+                {/* Customer picker (multiple matches) */}
+                {showCustomerPicker && (
+                  <div className="space-y-2">
+                    <div className="rounded-xl p-3 flex items-start gap-2.5 mb-3"
+                      style={{ background: "#ecfeff", border: "1px solid #a5f3fc" }}>
+                      <User className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: "#0891b2" }} />
+                      <p className="text-xs leading-relaxed" style={{ color: "#155e75" }}>
+                        {isRtl
+                          ? `هذا الرقم مسجل لـ ${matchingCustomers.length} مشتركين. اختر المستلم الصحيح:`
+                          : `This number has ${matchingCustomers.length} subscribers. Pick the right recipient:`}
+                      </p>
+                    </div>
+                    {matchingCustomers.map((c: any) => (
+                      <button
+                        key={c._id}
+                        onClick={() => handlePickCustomer(c)}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl transition-all hover:bg-gray-50 hover:scale-[1.01] text-right"
+                        style={{ border: "1.5px solid #e2e8f0" }}
+                      >
+                        <div className="h-11 w-11 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-black text-white"
+                          style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                          {c.fullName?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0 text-right">
+                          <p className="text-sm font-bold text-[#0F1516] truncate">{c.fullName}</p>
+                          <p className="text-[11px] text-[#47759C] mt-0.5">
+                            {c.program || "—"} • {c.mealsPerDay ?? 0} {isRtl ? "وجبات" : "meals"}
+                          </p>
+                        </div>
+                        <Check className="h-4 w-4 text-gray-300 flex-shrink-0" />
+                      </button>
+                    ))}
+                    <button
+                      onClick={handleResetPhone}
+                      className="w-full h-10 mt-3 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                    >
+                      {isRtl ? "أدخل رقم آخر" : "Use different number"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  // ─── Customer Info Banner data ───
+  const cust: any = verifiedCustomer;
+  const hasWarnings = cust?.allergies || cust?.avoid;
+
   return (
     <PublicLayout>
+      {/* ═══ Browse Mode Banner ═══ */}
+      {browseMode && !isPhoneVerified && (
+        <div className="sticky top-[73px] z-50 px-4 py-3"
+          style={{
+            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+            boxShadow: "0 4px 14px rgba(245,158,11,0.3)",
+          }}>
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-white/25 backdrop-blur-sm">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-white leading-tight">
+                  {isRtl ? "وضع التصفح" : "Preview Mode"}
+                </p>
+                <p className="text-[11px] text-white/90 leading-tight">
+                  {isRtl ? "اشترك للحجز والاستلام" : "Subscribe to order & get delivered"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleSignupViaWhatsApp}
+                className="text-xs font-bold px-4 h-9 rounded-full flex items-center gap-1.5 transition-all hover:scale-105"
+                style={{
+                  background: "linear-gradient(135deg, #25D366, #128C7E)",
+                  color: "#fff",
+                  boxShadow: "0 3px 10px rgba(37,211,102,0.4)",
+                }}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                {isRtl ? "اشترك الآن" : "Subscribe Now"}
+              </button>
+              <button
+                onClick={handleResetPhone}
+                className="text-[11px] font-bold text-white px-3 h-9 rounded-full hover:bg-white/30 transition-colors flex items-center"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                {isRtl ? "تسجيل دخول" : "Login"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Customer Info Banner (Sticky top) ═══ */}
+      {isPhoneVerified && (
+        <div className="sticky top-[73px] z-50 px-4 py-3"
+          style={{
+            background: "linear-gradient(135deg, #3CC4F0 0%, #47759C 100%)",
+            boxShadow: "0 4px 14px rgba(60,196,240,0.3)",
+          }}>
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-black text-[#3CC4F0] bg-white">
+                {cust?.fullName?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-black text-white leading-tight">
+                  {isRtl ? "أهلاً" : "Hi"} {cust?.fullName?.split(" ")[0]}
+                </p>
+                <p className="text-[11px] text-white/80 leading-tight" dir="ltr">
+                  {verifiedPhone}
+                </p>
+              </div>
+            </div>
+
+            {/* Plan info */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full"
+                style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                {mealsPerDay} {isRtl ? "وجبات" : "meals"} + {snacksPerDay} {isRtl ? "سناك" : "snacks"} {isRtl ? "يومياً" : "/day"}
+              </span>
+              {cust?.program && (
+                <span className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                  {cust.program}
+                </span>
+              )}
+              <button
+                onClick={handleResetPhone}
+                className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                {isRtl ? "تغيير" : "Switch"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ Allergies / Avoid warning banner (if any) ═══ */}
+      {hasWarnings && isPhoneVerified && (
+        <div className="px-4 pt-3 -mt-1">
+          <div className="max-w-7xl mx-auto rounded-2xl p-3 flex items-start gap-3"
+            style={{ background: "linear-gradient(135deg, #fef2f2, #fff5f5)", border: "1.5px solid #fecaca" }}>
+            <div className="h-9 w-9 rounded-xl flex-shrink-0 flex items-center justify-center bg-red-500">
+              <AlertTriangle className="h-4 w-4 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black text-red-600 uppercase tracking-wide mb-1">
+                {isRtl ? "تنبيه: ممنوعات وحساسية" : "Allergies & Restrictions"}
+              </p>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+                {cust?.allergies && (
+                  <span className="font-semibold text-red-800">
+                    <span className="font-black">{isRtl ? "حساسية: " : "Allergy: "}</span>{cust.allergies}
+                  </span>
+                )}
+                {cust?.avoid && (
+                  <span className="font-semibold text-orange-800">
+                    <span className="font-black">{isRtl ? "ممنوع: " : "Avoid: "}</span>{cust.avoid}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section with Logo & Background */}
       <section className="relative bg-gradient-to-br from-[#0F1516] via-[#47759C] to-[#3CC4F0] text-white overflow-hidden">
         {/* Background Pattern */}
@@ -264,40 +767,55 @@ export default function PublicMenuPage() {
             </div>
           </div>
 
-          {/* Countdown Banner */}
+          {/* Daily Selection Counters */}
           {selectedDay && (
-            <div
-              className={cn(
-                "rounded-xl p-4 flex items-center justify-between",
-                isLocked
-                  ? "bg-red-50 border-2 border-red-300"
-                  : "bg-orange-50 border-2 border-orange-300"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                {isLocked ? (
-                  <Lock className="h-6 w-6 text-red-600" />
-                ) : (
-                  <Clock className="h-6 w-6 text-orange-600" />
-                )}
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      className={cn(
-                        "text-xs font-bold",
-                        isLocked
-                          ? "bg-red-600 text-white"
-                          : "bg-orange-500 text-white"
-                      )}
-                    >
-                      {isLocked ? "مغلق" : "نشط"}
-                    </Badge>
+            <div className="rounded-2xl p-4"
+              style={{
+                background: "linear-gradient(135deg, #ecfeff, #f0f9ff)",
+                border: "1.5px solid #a5f3fc",
+              }}>
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl flex items-center justify-center"
+                    style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                    <Sparkles className="h-5 w-5 text-white" />
                   </div>
-                  <p className="text-sm font-bold text-gray-700 mt-1">
-                    {isLocked
-                      ? "انتهى وقت اختيار وجبات هذا اليوم"
-                      : "الطلبات مفتوحة طوال اليوم"}
-                  </p>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#0891b2" }}>
+                      {isRtl ? "اختياراتك لهذا اليوم" : "Today's Selection"}
+                    </p>
+                    <p className="text-[11px] text-[#47759C] mt-0.5">
+                      {isRtl
+                        ? `${days.find((d) => d.value === selectedDay)?.label} - الأسبوع ${selectedWeek}`
+                        : `${days.find((d) => d.value === selectedDay)?.label} - Week ${selectedWeek}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Meals counter */}
+                  <div className="rounded-xl px-3 py-2 bg-white"
+                    style={{ border: `2px solid ${mainMealsToday >= mealsPerDay ? "#10b981" : "#3CC4F0"}` }}>
+                    <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "الوجبات" : "Meals"}</p>
+                    <p className="text-lg font-black tabular-nums leading-none mt-1"
+                      style={{ color: mainMealsToday >= mealsPerDay ? "#10b981" : "#3CC4F0" }}>
+                      {mainMealsToday}<span className="text-xs text-gray-400">/{mealsPerDay}</span>
+                    </p>
+                  </div>
+                  {/* Snacks counter */}
+                  <div className="rounded-xl px-3 py-2 bg-white"
+                    style={{ border: `2px solid ${snacksToday >= snacksPerDay ? "#10b981" : "#10b981"}` }}>
+                    <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "السناك" : "Snacks"}</p>
+                    <p className="text-lg font-black tabular-nums leading-none mt-1 text-emerald-600">
+                      {snacksToday}<span className="text-xs text-gray-400">/{snacksPerDay}</span>
+                    </p>
+                  </div>
+                  {/* Status pill */}
+                  {mainMealsToday >= mealsPerDay && snacksToday >= snacksPerDay && (
+                    <span className="text-[11px] font-black px-3 py-1.5 rounded-full bg-emerald-500 text-white flex items-center gap-1">
+                      <Check className="h-3 w-3" />
+                      {isRtl ? "مكتمل" : "Done"}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -351,14 +869,34 @@ export default function PublicMenuPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {meals.map((meal: any) => (
+              {meals.map((meal: any) => {
+                const hasConflict = mealHasAvoidConflict(meal);
+                const isSnackMeal = String(meal.category).toLowerCase() === "snack";
+                const atLimit = isSnackMeal
+                  ? snacksToday >= snacksPerDay
+                  : mainMealsToday >= mealsPerDay;
+                return (
                 <Card
                   key={meal._id}
-                  className="group hover:shadow-xl transition-all duration-300 border-2 border-gray-100 hover:border-[#3CC4F0] overflow-hidden cursor-pointer bg-white"
+                  className={cn(
+                    "group transition-all duration-300 overflow-hidden cursor-pointer bg-white relative",
+                    hasConflict
+                      ? "border-2 border-red-300 hover:border-red-500 hover:shadow-lg"
+                      : "border-2 border-gray-100 hover:border-[#3CC4F0] hover:shadow-xl"
+                  )}
                   onClick={() => setSelectedMeal(meal)}
                 >
+                  {/* Avoid conflict ribbon */}
+                  {hasConflict && (
+                    <div className="absolute top-0 inset-x-0 z-20 px-3 py-1.5 flex items-center justify-center gap-1.5 text-[10px] font-black text-white"
+                      style={{ background: "linear-gradient(90deg, #ef4444, #f97316)" }}>
+                      <AlertTriangle className="h-3 w-3" />
+                      {isRtl ? "تحذير: قد تحتوي على ممنوعاتك" : "Warning: May contain restricted items"}
+                    </div>
+                  )}
+
                   {/* Meal Image */}
-                  <div className="relative h-48 overflow-hidden">
+                  <div className={cn("relative h-48 overflow-hidden", hasConflict && "mt-7")}>
                     <img
                       src={meal.imageUrl}
                       alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
@@ -450,43 +988,67 @@ export default function PublicMenuPage() {
                       </div>
                     )}
 
-                    {/* Price & Button */}
+                    {/* Calories & Button (no price — included in subscription) */}
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div>
-                        <p className="text-2xl font-bold text-[#3CC4F0]">
-                          {meal.priceQAR}
-                          <span className="text-sm text-[#47759C] ml-1">
-                            {isRtl ? "ر.ق" : "QAR"}
-                          </span>
-                        </p>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                          style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
+                          {meal.calories} {isRtl ? "كالوري" : "kcal"}
+                        </span>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={(e) => handleAddToCart(meal, e)}
-                        disabled={isInCart(meal._id) || !selectedDay}
-                        className={cn(
-                          "h-9 px-5 rounded-full font-bold transition-all",
-                          isInCart(meal._id)
-                            ? "bg-green-500 hover:bg-green-600 text-white"
-                            : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
-                        )}
-                      >
-                        {isInCart(meal._id) ? (
-                          <>
-                            <Check className="h-4 w-4 mr-1" />
-                            {isRtl ? "تم الإضافة" : "Added"}
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="h-4 w-4 mr-1" />
-                            {isRtl ? "أضف" : "Add"}
-                          </>
-                        )}
-                      </Button>
+                      {browseMode && !isPhoneVerified ? (
+                        // Browse mode: replace add button with subscribe CTA
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e?.stopPropagation();
+                            const msg = isRtl
+                              ? `مرحباً 👋\nأرغب في الاشتراك في أدرينالين.\nأعجبتني وجبة: ${meal.nameAr}`
+                              : `Hello 👋\nI'd like to subscribe to Adrenaline.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
+                            window.open(whatsappLink(msg), "_blank");
+                          }}
+                          className="h-9 px-4 rounded-full font-bold text-white flex items-center gap-1.5"
+                          style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          {isRtl ? "اشترك" : "Subscribe"}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={(e) => handleAddToCart(meal, e)}
+                          disabled={isInCart(meal._id) || !selectedDay || (atLimit && !isInCart(meal._id))}
+                          className={cn(
+                            "h-9 px-5 rounded-full font-bold transition-all",
+                            isInCart(meal._id)
+                              ? "bg-green-500 hover:bg-green-600 text-white"
+                              : atLimit
+                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                : hasConflict
+                                  ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                  : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
+                          )}
+                        >
+                          {isInCart(meal._id) ? (
+                            <>
+                              <Check className="h-4 w-4 mr-1" />
+                              {isRtl ? "مضافة" : "Added"}
+                            </>
+                          ) : atLimit ? (
+                            <>{isRtl ? "ممتلئ" : "Full"}</>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-1" />
+                              {isRtl ? "أضف" : "Add"}
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              );
+            })}
             </div>
           )}
         </div>
@@ -607,17 +1169,18 @@ export default function PublicMenuPage() {
                 </div>
               )}
 
-              {/* Price & CTA */}
+              {/* Info & CTA (no price — included in subscription) */}
               <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div>
-                  <p className="text-3xl font-bold text-[#3CC4F0]">
-                    {selectedMeal.priceQAR}
-                    <span className="text-sm text-[#47759C] ml-2">
-                      {isRtl ? "ر.ق" : "QAR"}
-                    </span>
-                  </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold px-3 py-1.5 rounded-full"
+                    style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
+                    {selectedMeal.calories} {isRtl ? "كالوري" : "kcal"}
+                  </span>
+                  <span className="text-xs font-semibold text-[#47759C]">
+                    {isRtl ? "ضمن اشتراكك" : "Included in your plan"}
+                  </span>
                 </div>
-                <Button 
+                <Button
                   onClick={(e) => {
                     handleAddToCart(selectedMeal, e);
                     setSelectedMeal(null);

@@ -71,29 +71,7 @@ export const get = query({
     deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING")),
   },
   handler: async (ctx, args) => {
-    // 0) ✅ اعمل رقم العميل بناءً على نفس ترتيب صفحة المشتركين (Customers.tsx)
-    // الترتيب: active أولاً، ثم حسب الاسم أبجدياً
-    const allCustomers = await ctx.db
-      .query("customers")
-      .collect();
-    
-    // نفس الترتيب في Customers.tsx
-    allCustomers.sort((a: any, b: any) => {
-      const aa = a.isActive ? 1 : 0;
-      const bb = b.isActive ? 1 : 0;
-      if (aa !== bb) return bb - aa; // active أولاً
-      
-      const an = String(a.fullName || "").toLowerCase();
-      const bn = String(b.fullName || "").toLowerCase();
-      return an.localeCompare(bn); // ثم أبجدياً
-    });
-    
-    const customerNoById = new Map<string, number>();
-    allCustomers.forEach((c: any, idx: number) => {
-      customerNoById.set(String(c._id), idx + 1);
-    });
-
-    // 1) Plans of date
+    // 1) Plans of date + deliveryTime (confirmed only)
     const plansAll = await ctx.db
       .query("dailyPlans")
       .withIndex("by_date", (q) => q.eq("date", args.date))
@@ -109,7 +87,7 @@ export const get = query({
       return { boxStickers: [], mealStickers: [] };
     }
 
-    // 2) Load customers used in these plans
+    // 2) Load customers for this session's plans
     const customerIds = Array.from(
       new Set(plans.map((p: any) => String(p.customerId))),
     );
@@ -122,6 +100,18 @@ export const get = query({
     customers
       .filter(Boolean)
       .forEach((c: any) => customerMap.set(String(c._id), c));
+
+    // 0) الترقيم اليومي التسلسلي: فقط عملاء هذه الجلسة مرتبين أبجدياً
+    // الشيف يرى أرقاماً من 1 لـ N كل يوم — بسيط ومنطقي للمطبخ
+    const sessionCustomers = Array.from(customerMap.values())
+      .sort((a, b) =>
+        String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar")
+      );
+
+    const customerNoById = new Map<string, number>();
+    sessionCustomers.forEach((c, idx) => {
+      customerNoById.set(String(c._id), idx + 1);
+    });
 
     // 3) Collect menuItemIds from plans
     const menuItemIds = new Set<string>();
@@ -161,6 +151,36 @@ export const get = query({
 
     const dateText = isoToDDMMYYYY(args.date);
 
+    // ✅ تواريخ الإنتاج والصلاحية (يوم الإنتاج + يومين)
+    const prodDate = dateText;
+    const expDateObj = (() => {
+      const d = new Date(args.date);
+      d.setDate(d.getDate() + 2);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${dd}/${mm}/${yyyy}`;
+    })();
+    const expDate = expDateObj;
+
+    // helper: استخراج تحذيرات نظيفة (avoid + allergies) كنص قصير
+    const buildWarnings = (cust: any, modifierIds: string[] | undefined) => {
+      const parts: string[] = [];
+      // من العميل
+      const allergies = String(cust?.allergies || "").trim();
+      const custAvoid = String(cust?.avoid || "").trim();
+      if (allergies) parts.push(allergies);
+      if (custAvoid) parts.push(custAvoid);
+      // من الـ modifiers (AVOID فقط)
+      const ids = modifierIds || [];
+      const avoidMods = ids
+        .map((id) => modifiers.find((m: any) => String(m._id) === String(id)))
+        .filter((m: any) => m && m.group === "AVOID")
+        .map((m: any) => m.name);
+      if (avoidMods.length) parts.push(avoidMods.join(", "));
+      return parts.join(" • ");
+    };
+
     // ---------- Build BOX stickers ----------
     const boxBase = plans
       .map((p: any) => {
@@ -177,12 +197,14 @@ export const get = query({
 
         return {
           customerId,
-          customerNo, // ✅ رقم العميل من صفحة المشتركين
+          customerNo,
           customerName: c.fullName || "",
           customerNumber: normalizePhone(c.phone) || "",
           deliveryTime: args.deliveryTime,
           planLabel,
           dateText,
+          prodDate,
+          expDate,
         };
       })
       .filter(Boolean) as any[];
@@ -222,21 +244,31 @@ export const get = query({
         const mealName = menu?.name || "UNKNOWN";
         const calories = Number(menu?.calories ?? 0) || undefined;
 
+        // النص الكامل للملاحظات (للنسخة القديمة)
         const modText = buildModifierText(it.modifierIds, modifiers);
-        const special = it.specialNotes ? String(it.specialNotes).trim() : "";
+        const special = String(it.specialNotes || "")
+          .replace(/\[(?:⚠|✕|⚖|★)[^\]]*\]/g, "")
+          .trim();
 
         const extraParts = [special, modText].filter(Boolean);
         const mealTitle = extraParts.length
           ? `${mealName} — ${extraParts.join(" | ")}`
           : mealName;
 
+        // تحذيرات نظيفة منفصلة (avoid + allergies)
+        const warnings = buildWarnings(c, it.modifierIds);
+
         mealStickers.push({
           customerId,
-          customerNo, // ✅ رقم العميل لكل الوجبات
+          customerNo,
           customerName: c.fullName || "",
-          mealTitle,
+          mealName,           // ✅ اسم الوجبة فقط (نظيف)
+          mealTitle,          // النسخة القديمة (للتوافق)
+          warnings,           // ✅ تحذيرات منفصلة
           caloriesText: calories ? `${calories} CAL` : "",
           dateText,
+          prodDate,           // ✅ تاريخ الإنتاج
+          expDate,            // ✅ تاريخ الصلاحية (+2 أيام)
           mealIndexText: `MEAL ${mealIndex}`,
         });
 

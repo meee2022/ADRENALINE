@@ -26,13 +26,12 @@ export default function OrderReview() {
   const [, setLocation] = useLocation();
   
   // Cart Store
-  const { 
-    items: selectedMeals, 
-    getTotalMeals, 
-    getTotalPrice, 
-    getTotalCalories, 
+  const {
+    items: selectedMeals,
+    getTotalMeals,
+    getTotalCalories,
     getWeeks,
-    clearCart 
+    clearCart
   } = useCartStore();
   
   // بيانات العميل
@@ -61,7 +60,7 @@ export default function OrderReview() {
 
   // Computed values from cart
   const totalMeals = getTotalMeals();
-  const totalPrice = getTotalPrice();
+  const totalPrice = 0;
   const totalCalories = getTotalCalories();
   const weeks = getWeeks();
   const totalWeeks = weeks.length;
@@ -334,19 +333,19 @@ export default function OrderReview() {
           </div>
         </div>
 
-        {/* ملخص السعر وزر التأكيد */}
+        {/* ملخص الطلب وزر التأكيد */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-cyan-100 p-6 sticky bottom-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-right">
-              <div className="text-sm text-slate-500">إجمالي السعر الشهري</div>
-              <div className="text-3xl font-bold text-slate-900">
-                {totalPrice.toLocaleString()}{" "}
-                <span className="text-lg font-normal text-slate-500">ر.ق</span>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="text-right p-3 rounded-xl bg-cyan-50 border border-cyan-100">
+              <div className="text-xs text-slate-500 font-semibold mb-1">إجمالي الوجبات</div>
+              <div className="text-2xl font-black text-cyan-700 tabular-nums">
+                {totalMeals}{" "}
+                <span className="text-sm font-normal text-slate-500">وجبة</span>
               </div>
             </div>
-            <div className="text-left">
-              <div className="text-sm text-slate-500">إجمالي السعرات الحرارية للفترة</div>
-              <div className="text-2xl font-bold text-cyan-600">
+            <div className="text-left p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+              <div className="text-xs text-slate-500 font-semibold mb-1">إجمالي السعرات</div>
+              <div className="text-2xl font-black text-emerald-700 tabular-nums">
                 {totalCalories.toLocaleString()}{" "}
                 <span className="text-sm font-normal text-slate-500">سعرة</span>
               </div>

@@ -83,8 +83,8 @@ export const seedAll = mutation({
     // Seed customers
     await ctx.db.insert("customers", {
       fullName: "Ahmed Ali",
-      phone: "+97450123456",
-      email: "ahmed@example.com",
+      phone: "97450123456",
+      deliveryTime: "MORNING",
       program: "5 Days Plan",
       startDate: "2026-02-01",
       endDate: "2026-02-28",
@@ -93,12 +93,13 @@ export const seedAll = mutation({
       avoid: "Nuts",
       allergies: "",
       address: "Doha, Qatar",
+      createdAt: Date.now(),
     });
 
     await ctx.db.insert("customers", {
       fullName: "Fatima Hassan",
-      phone: "+97450234567",
-      email: "fatima@example.com",
+      phone: "97450234567",
+      deliveryTime: "MORNING",
       program: "7 Days Plan",
       startDate: "2026-02-01",
       endDate: "2026-02-15",
@@ -107,12 +108,13 @@ export const seedAll = mutation({
       avoid: "Dairy",
       allergies: "Lactose intolerant",
       address: "Doha, Qatar",
+      createdAt: Date.now(),
     });
 
     await ctx.db.insert("customers", {
       fullName: "Mohammed Khalil",
-      phone: "+97450345678",
-      email: "mohammed@example.com",
+      phone: "97450345678",
+      deliveryTime: "MORNING",
       program: "3 Days Plan",
       startDate: "2026-02-01",
       endDate: "2026-02-10",
@@ -121,6 +123,7 @@ export const seedAll = mutation({
       avoid: "",
       allergies: "",
       address: "Doha, Qatar",
+      createdAt: Date.now(),
     });
 
     return {

@@ -8,14 +8,13 @@ import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 
 // Admin Pages (Protected)
-import Dashboard from "@/pages/DashboardNew";
+import Dashboard from "@/pages/DashboardNew1";
 import Customers from "@/pages/Customers";
 import Users from "@/pages/Users";
 import Menu from "@/pages/Menu";
 import MenuManagement from "@/pages/MenuManagement";
 import PublicMealsManagement from "@/pages/PublicMealsManagement";
 import BannersManagement from "@/pages/BannersManagement";
-import StickersManagement from "@/pages/StickersManagement";
 import PlansManagement from "@/pages/PlansManagement";
 import Plans from "@/pages/Plans";
 import PlansReview from "@/pages/PlansReview";
@@ -38,6 +37,8 @@ import MealDetails from "@/pages/public/MealDetails";
 import CustomerAuth from "@/pages/public/CustomerAuth";
 import CustomerProfile from "@/pages/public/CustomerProfile";
 import OrderReview from "@/pages/public/OrderReview";
+import AboutPage from "@/pages/public/AboutPage";
+import ContactPage from "@/pages/public/ContactPage";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useStore } from "@/lib/store";
@@ -86,6 +87,8 @@ function Router() {
       <Route path="/public/menu" component={PublicMenu} />
       <Route path="/public/meal/:slug" component={MealDetails} />
       <Route path="/public/order-review" component={OrderReview} />
+      <Route path="/public/about" component={AboutPage} />
+      <Route path="/public/contact" component={ContactPage} />
       <Route path="/customer/auth" component={CustomerAuth} />
       <Route path="/customer/profile" component={CustomerProfile} />
 
@@ -112,9 +115,6 @@ function Router() {
       </Route>
       <Route path="/banners">
         <ProtectedRoute component={BannersManagement} />
-      </Route>
-      <Route path="/stickers">
-        <ProtectedRoute component={StickersManagement} />
       </Route>
       <Route path="/plans-management">
         <ProtectedRoute component={PlansManagement} />

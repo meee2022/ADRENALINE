@@ -447,15 +447,28 @@ export default function Kitchen() {
                                                 : (item.mealNameAr || item.mealNameEn || "وجبة غير محددة");
                           
                           const { avoid, pref, portion } = getModifiersByGroup(item.modifierIds);
-                          
-                          // ✅ دمج modifiers من modifierIds + البيانات المباشرة من customer
+
+                          // ✅ دمج modifiers من 3 مصادر:
+                          // 1) modifierIds (المختارة من الـ picker)
+                          // 2) item نفسه (بيانات مضمنة من الطلب الإلكتروني)
+                          // 3) customer (الحساسية والممنوعات والتفضيلات والكميات من بيانات الاشتراك)
                           const allAvoid = [...avoid];
                           const allPref = [...pref];
                           const allPortions = [...portion];
-                          
+
                           if (item.avoid) allAvoid.push(item.avoid);
                           if (item.preferences) allPref.push(item.preferences);
                           if (item.portions) allPortions.push(item.portions);
+
+                          // من بيانات العميل (تنطبق على كل وجباته)
+                          if (customer?.avoid && String(customer.avoid).trim()) allAvoid.push(String(customer.avoid).trim());
+                          if (customer?.preferences && String(customer.preferences).trim()) allPref.push(String(customer.preferences).trim());
+                          if (customer?.portions && String(customer.portions).trim()) allPortions.push(String(customer.portions).trim());
+
+                          // ملاحظة خاصة بالوجبة (من Plans.tsx)
+                          const itemNote = String(item.specialNotes || "").trim();
+                          // الحساسية على مستوى العميل
+                          const custAllergy = String(customer?.allergies || "").trim();
 
                           return (
                             <div
@@ -494,44 +507,71 @@ export default function Kitchen() {
                                 {mealName}
                               </h3>
 
-                              {/* Modifiers */}
+                              {/* Allergy banner — per meal (chef sees it inline) */}
+                              {custAllergy && (
+                                <div className="mb-2 rounded-lg overflow-hidden flex items-stretch"
+                                  style={{ background: "#fef2f2", border: "1.5px solid #ef4444" }}>
+                                  <div className="px-3 flex items-center justify-center text-white font-black text-base"
+                                    style={{ background: "#ef4444", minWidth: "40px" }}>⚠</div>
+                                  <div className="flex-1 px-3 py-2 min-w-0">
+                                    <p className="text-[10px] font-black text-red-600 uppercase tracking-wider leading-none">
+                                      {isRtl ? "حساسية" : "ALLERGY"}
+                                    </p>
+                                    <p className="text-sm font-bold text-red-800 mt-0.5 leading-tight">{custAllergy}</p>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Modifiers + customer dietary data */}
                               {(allAvoid.length > 0 || allPref.length > 0 || allPortions.length > 0) && (
-                                <div className="space-y-2">
-                                  {/* AVOID - Red and Bold */}
+                                <div className="space-y-1.5">
+                                  {/* AVOID - Red boxes */}
                                   {allAvoid.length > 0 && (
-                                    <div className="flex items-start gap-2">
-                                      <span className="text-sm font-bold text-red-700 whitespace-nowrap">
-                                        {isRtl ? "ممنوع:" : "Avoid:"} ▲
-                                      </span>
-                                      <span className="text-sm font-bold text-red-700 flex-1">
-                                        {allAvoid.join(isRtl ? "، " : ", ")}
-                                      </span>
+                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
+                                      style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
+                                      <span className="text-orange-600 font-black text-sm flex-shrink-0">✕</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-wide">{isRtl ? "ممنوع" : "Avoid"}</p>
+                                        <p className="text-sm font-bold text-orange-800 leading-tight mt-0.5">{allAvoid.join(isRtl ? "، " : ", ")}</p>
+                                      </div>
                                     </div>
                                   )}
 
-                                  {/* PREF - Blue */}
+                                  {/* PREF - Cyan */}
                                   {allPref.length > 0 && (
-                                    <div className="flex items-start gap-2">
-                                      <span className="text-sm font-medium text-cyan-700 whitespace-nowrap">
-                                        {isRtl ? "تفضيلات:" : "Prefs:"}
-                                      </span>
-                                      <span className="text-sm text-cyan-700 flex-1">
-                                        {allPref.join(isRtl ? "، " : ", ")}
-                                      </span>
+                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
+                                      style={{ background: "#ecfeff", border: "1px solid #a5f3fc" }}>
+                                      <span className="font-black text-sm flex-shrink-0" style={{ color: "#0891b2" }}>★</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "#0891b2" }}>{isRtl ? "تفضيلات" : "Prefs"}</p>
+                                        <p className="text-sm font-semibold leading-tight mt-0.5" style={{ color: "#155e75" }}>{allPref.join(isRtl ? "، " : ", ")}</p>
+                                      </div>
                                     </div>
                                   )}
 
-                                  {/* PORTION - Green */}
+                                  {/* PORTION - Yellow */}
                                   {allPortions.length > 0 && (
-                                    <div className="flex items-start gap-2">
-                                      <span className="text-sm font-medium text-green-700 whitespace-nowrap">
-                                        {isRtl ? "الكمية:" : "Portion:"}
-                                      </span>
-                                      <span className="text-sm text-green-700 flex-1">
-                                        {allPortions.join(isRtl ? "، " : ", ")}
-                                      </span>
+                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
+                                      style={{ background: "#fefce8", border: "1px solid #fde68a" }}>
+                                      <span className="text-yellow-600 font-black text-sm flex-shrink-0">⚖</span>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-yellow-700 uppercase tracking-wide">{isRtl ? "الكمية" : "Portion"}</p>
+                                        <p className="text-sm font-semibold text-yellow-900 leading-tight mt-0.5">{allPortions.join(isRtl ? "، " : ", ")}</p>
+                                      </div>
                                     </div>
                                   )}
+                                </div>
+                              )}
+
+                              {/* Special note for this specific meal */}
+                              {itemNote && (
+                                <div className="mt-2 rounded-lg px-3 py-2 flex items-start gap-2"
+                                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+                                  <span className="font-black text-sm flex-shrink-0 text-blue-500">📝</span>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide">{isRtl ? "ملاحظة الوجبة" : "Note"}</p>
+                                    <p className="text-sm font-semibold text-blue-900 leading-tight mt-0.5">{itemNote}</p>
+                                  </div>
                                 </div>
                               )}
                             </div>

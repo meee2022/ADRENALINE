@@ -138,12 +138,10 @@ export default function PublicPlansPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-2xl font-bold text-[#3CC4F0]">
-                              {option.priceQAR}
-                            </p>
-                            <p className="text-xs text-[#47759C]">
-                              {isRtl ? "ر.ق" : "QAR"}
-                            </p>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                              style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
+                              {isRtl ? "متاح" : "Available"}
+                            </span>
                           </div>
                         </div>
                       ))}

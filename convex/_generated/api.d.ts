@@ -28,6 +28,7 @@ import type * as seedPublicWebsite from "../seedPublicWebsite.js";
 import type * as seedRealPlans from "../seedRealPlans.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as stickers from "../stickers.js";
+import type * as updateBanners from "../updateBanners.js";
 import type * as users from "../users.js";
 
 import type {
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   seedRealPlans: typeof seedRealPlans;
   seedUsers: typeof seedUsers;
   stickers: typeof stickers;
+  updateBanners: typeof updateBanners;
   users: typeof users;
 }>;
 

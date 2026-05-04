@@ -154,17 +154,14 @@ export default function PublicPlansNew() {
                         </p>
                       </div>
 
-                      {/* Price - Compact */}
+                      {/* Plan badge */}
                       {plan.options && plan.options[0] && (
                         <div className="text-center py-3">
-                          <div className="flex items-baseline justify-center gap-1">
-                            <span className="text-4xl font-black text-[#3CC4F0]">
-                              {plan.options[0].priceQAR}
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+                            style={{ background: "#3cc4f015", border: "1px solid #3cc4f030" }}>
+                            <span className="text-xs font-black" style={{ color: "#3cc4f0" }}>
+                              {plan.options[0].mealsCount} وجبات + {plan.options[0].snacksCount} سناك
                             </span>
-                            <div className="text-right leading-tight">
-                              <div className="text-sm text-gray-500">ر.ق</div>
-                              <div className="text-[10px] text-gray-400">/ أسبوع</div>
-                            </div>
                           </div>
                         </div>
                       )}
