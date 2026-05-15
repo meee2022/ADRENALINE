@@ -8,8 +8,11 @@
  * @module
  */
 
+import type * as analytics from "../analytics.js";
+import type * as auditLog from "../auditLog.js";
 import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
+import type * as coupons from "../coupons.js";
 import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
 import type * as customers from "../customers.js";
@@ -17,10 +20,13 @@ import type * as dailyPlans from "../dailyPlans.js";
 import type * as files from "../files.js";
 import type * as inventory from "../inventory.js";
 import type * as mealCategories from "../mealCategories.js";
+import type * as mealIngredients from "../mealIngredients.js";
 import type * as menuItems from "../menuItems.js";
 import type * as modifiers from "../modifiers.js";
+import type * as notifications from "../notifications.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
+import type * as ratings from "../ratings.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
 import type * as seedInventory from "../seedInventory.js";
@@ -38,8 +44,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  analytics: typeof analytics;
+  auditLog: typeof auditLog;
   auth: typeof auth;
   banners: typeof banners;
+  coupons: typeof coupons;
   customerAuth: typeof customerAuth;
   customerOrders: typeof customerOrders;
   customers: typeof customers;
@@ -47,10 +56,13 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   inventory: typeof inventory;
   mealCategories: typeof mealCategories;
+  mealIngredients: typeof mealIngredients;
   menuItems: typeof menuItems;
   modifiers: typeof modifiers;
+  notifications: typeof notifications;
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
+  ratings: typeof ratings;
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;
   seedInventory: typeof seedInventory;

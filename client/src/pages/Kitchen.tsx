@@ -99,18 +99,37 @@ export default function Kitchen() {
       (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
 
-    const summary: Record<string, { 
-      count: number; 
-      details: Array<{ 
-        customerName: string; 
+    const summary: Record<string, {
+      count: number;
+      plainCount: number;     // ✅ عادي بدون تعديلات
+      modifiedCount: number;  // ✅ معدّل (فيه ممنوعات أو تفضيلات)
+      details: Array<{
+        customerName: string;
         deliveryTime: string;
         categoryName: string;
-        avoid?: string; 
-        preferences?: string; 
+        avoid?: string;
+        preferences?: string;
         portions?: string;
         specialNotes?: string;
-      }> 
+        isPlain: boolean;     // ✅ هل عادية؟
+      }>
     }> = {};
+
+    // helper: يحدد لو الوجبة عادية (مفيش أي تعديلات)
+    const isPlainMeal = (item: any, customer: any): boolean => {
+      // فحص بيانات الـ item نفسها
+      if (String(item.avoid || "").trim()) return false;
+      if (String(item.preferences || "").trim()) return false;
+      if (String(item.portions || "").trim()) return false;
+      if (String(item.specialNotes || "").trim()) return false;
+      if ((item.modifierIds || []).length > 0) return false;
+      // فحص بيانات العميل (الحساسية والممنوعات تطبق على كل وجباته)
+      if (String(customer?.allergies || "").trim()) return false;
+      if (String(customer?.avoid || "").trim()) return false;
+      if (String(customer?.preferences || "").trim()) return false;
+      if (String(customer?.portions || "").trim()) return false;
+      return true;
+    };
 
     allPlansToday.forEach((plan: any) => {
       const customer = getCustomer(plan.customerId);
@@ -129,18 +148,23 @@ export default function Kitchen() {
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
 
           if (!summary[mealName]) {
-            summary[mealName] = { count: 0, details: [] };
+            summary[mealName] = { count: 0, plainCount: 0, modifiedCount: 0, details: [] };
           }
 
+          const plain = isPlainMeal(item, customer);
           summary[mealName].count += 1;
+          if (plain) summary[mealName].plainCount += 1;
+          else summary[mealName].modifiedCount += 1;
+
           summary[mealName].details.push({
             customerName,
             deliveryTime: plan.deliveryTime,
             categoryName,
-            avoid: item.avoid || undefined,
-            preferences: item.preferences || undefined,
-            portions: item.portions || undefined,
+            avoid: item.avoid || customer?.avoid || undefined,
+            preferences: item.preferences || customer?.preferences || undefined,
+            portions: item.portions || customer?.portions || undefined,
             specialNotes: item.specialNotes || undefined,
+            isPlain: plain,
           });
         });
     });
@@ -154,10 +178,11 @@ export default function Kitchen() {
     try {
       await updatePlanMutation.mutateAsync({
         id: planId,
-        status: "PREPARED" as any,
+        data: { status: "PREPARED" },
       });
     } catch (error) {
       console.error("Failed to mark as prepared:", error);
+      alert("❌ فشل تحديث الحالة. حاول مرة أخرى.");
     }
   };
 
@@ -340,24 +365,60 @@ export default function Kitchen() {
                     return (
                       <div
                         key={index}
-                        className="flex items-center justify-between bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all border-2 border-gray-200"
+                        className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all border-2 border-gray-200"
                       >
-                        <div className="flex items-center gap-4 flex-1">
-                          <div className={cn("w-3 h-3 rounded-full", color)} />
-                          <span className="text-xl font-bold text-gray-900">
-                            {meal.name}
-                          </span>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-4 flex-1">
+                            <div className={cn("w-3 h-3 rounded-full", color)} />
+                            <span className="text-xl font-bold text-gray-900">
+                              {meal.name}
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => openMealDetailsDialog(meal.name, meal.details)}
+                            className={cn(
+                              "text-3xl font-bold text-white px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all active:scale-95",
+                              color
+                            )}
+                          >
+                            {meal.count}
+                          </button>
                         </div>
 
-                        <button
-                          onClick={() => openMealDetailsDialog(meal.name, meal.details)}
-                          className={cn(
-                            "text-3xl font-bold text-white px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all active:scale-95",
-                            color
-                          )}
-                        >
-                          {meal.count}
-                        </button>
+                        {/* ✅ Breakdown: عادي vs معدّل */}
+                        {meal.count > 0 && (
+                          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                              <div>
+                                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">
+                                  {isRtl ? "عادي" : "Plain"}
+                                </p>
+                                <p className="text-[10px] text-emerald-600 mt-0.5">
+                                  {isRtl ? "بدون تعديلات" : "No modifications"}
+                                </p>
+                              </div>
+                              <span className="text-2xl font-black tabular-nums text-emerald-700">
+                                {meal.plainCount}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                              style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
+                              <div>
+                                <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">
+                                  {isRtl ? "معدّل" : "Modified"}
+                                </p>
+                                <p className="text-[10px] text-amber-600 mt-0.5">
+                                  {isRtl ? "ممنوعات/تفضيلات" : "Avoid/Prefs"}
+                                </p>
+                              </div>
+                              <span className="text-2xl font-black tabular-nums text-amber-700">
+                                {meal.modifiedCount}
+                              </span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -641,29 +702,74 @@ export default function Kitchen() {
 
       {/* Print Version */}
       <div className="hidden print:block bg-white" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="p-8 space-y-8">
-          {/* Print Header */}
-          <div className="flex items-center justify-between border-b-2 border-black pb-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-black">
-                {isRtl ? "عرض المطبخ" : "Kitchen Display"}
-              </h1>
-              <p className="text-lg text-black mt-1">
-                {format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-bold text-black">
-                {isRtl ? "ملخص الوجبات لهذا اليوم" : "Today's Meal Summary"}
-              </p>
-              <p className="text-base text-black">
-                {isRtl ? "إجمالي:" : "Total:"} {plans.length} {isRtl ? "وجبة" : "meals"}
-              </p>
-            </div>
-          </div>
+        {(() => {
+          // ✅ في الطباعة: استخدم كل خطط اليوم (مش بس النشطة)
+          const allPlansToday = dailyPlans.filter(
+            (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
+          );
+          const totalMeals = allPlansToday.reduce(
+            (sum: number, p: any) => sum + (p.items || []).filter((i: any) => !i.isOff).length,
+            0
+          );
+          return (
+            <div className="p-6 space-y-6">
+              {/* Print Header */}
+              <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-black">
+                    {isRtl ? "عرض المطبخ" : "Kitchen Display"}
+                  </h1>
+                  <p className="text-base text-black mt-1">
+                    {format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-black text-black">
+                    {totalMeals} {isRtl ? "وجبة" : "meals"}
+                  </p>
+                  <p className="text-sm text-black">
+                    {allPlansToday.length} {isRtl ? "عميل" : "customers"}
+                  </p>
+                </div>
+              </div>
 
-          {/* Print Orders */}
-          {plans.map((plan: any, planIdx: number) => {
+              {/* ✅ Meal Summary Table (Aggregated by meal name) */}
+              {mealSummary.length > 0 && (
+                <div className="mb-6 page-break-inside-avoid">
+                  <h2 className="text-lg font-bold text-black mb-3 border-b border-black pb-1">
+                    {isRtl ? "ملخص الوجبات الإجمالي" : "Meal Summary"}
+                  </h2>
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr style={{ background: "#f3f4f6" }}>
+                        <th className="border border-black px-3 py-2 text-right font-bold">{isRtl ? "الوجبة" : "Meal"}</th>
+                        <th className="border border-black px-3 py-2 text-center font-bold w-20">{isRtl ? "إجمالي" : "Total"}</th>
+                        <th className="border border-black px-3 py-2 text-center font-bold w-20">{isRtl ? "عادي" : "Plain"}</th>
+                        <th className="border border-black px-3 py-2 text-center font-bold w-24">{isRtl ? "معدّل" : "Modified"}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mealSummary.map((m: any, i: number) => (
+                        <tr key={i}>
+                          <td className="border border-black px-3 py-2 font-bold">{m.name}</td>
+                          <td className="border border-black px-3 py-2 text-center text-xl font-black">{m.count}</td>
+                          <td className="border border-black px-3 py-2 text-center font-bold">{m.plainCount}</td>
+                          <td className="border border-black px-3 py-2 text-center font-bold">{m.modifiedCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Print Header for Per-Customer section */}
+              <h2 className="text-lg font-bold text-black mb-3 border-b border-black pb-1">
+                {isRtl ? "تفاصيل العملاء" : "Per-Customer Details"}
+              </h2>
+              <div className="space-y-4">
+
+              {/* Print Orders */}
+              {allPlansToday.map((plan: any, planIdx: number) => {
             const customer = getCustomer(plan.customerId);
             // ✅ دعم الطلبات بدون ربط
             const customerName = customer?.fullName || plan.customerName || "عميل جديد";
@@ -754,117 +860,258 @@ export default function Kitchen() {
               </div>
             );
           })}
-        </div>
+              </div>
 
-        {/* Print Footer */}
-        <div className="fixed bottom-0 left-0 right-0 border-t-2 border-black bg-white p-4 text-center">
-          <p className="text-sm text-black">
-            Adrenaline Healthy Food Kitchen Management System
-          </p>
-        </div>
+              {/* Print Footer */}
+              <div className="border-t-2 border-black mt-6 pt-3 text-center">
+                <p className="text-xs text-black">
+                  Adrenaline Healthy Food Kitchen Management System — {format(new Date(), "yyyy/MM/dd HH:mm")}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
-      {/* ✅ Meal Details Dialog */}
+      {/* ✅ Meal Details Dialog — Premium Light Theme */}
       <Dialog open={openMealDialog} onOpenChange={setOpenMealDialog}>
-        <DialogContent 
-          className="max-w-4xl max-h-[85vh] overflow-auto bg-gray-900 text-white border-2 border-gray-700"
+        <DialogContent
+          className="max-w-4xl max-h-[85vh] overflow-hidden p-0 bg-white"
           dir={isRtl ? "rtl" : "ltr"}
+          style={{
+            border: "1px solid rgba(60,196,240,0.15)",
+            boxShadow: "0 20px 60px rgba(60,196,240,0.15), 0 4px 20px rgba(0,0,0,0.08)",
+          }}
         >
-          <DialogHeader className="border-b border-gray-700 pb-4">
-            <DialogTitle className="text-3xl font-bold text-center flex items-center justify-between">
-              <span>{selectedMealName}</span>
-              <Badge className="bg-green-500 text-white text-2xl px-6 py-2 rounded-xl">
-                {selectedMealDetails.length}
-              </Badge>
-            </DialogTitle>
-          </DialogHeader>
+          {/* Header — Brand gradient */}
+          <div className="relative px-6 py-5 overflow-hidden"
+            style={{ background: "linear-gradient(135deg, #3CC4F0 0%, #2bb0dc 50%, #47759C 100%)" }}>
+            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-20"
+              style={{ background: "radial-gradient(circle, #ffffff60, transparent 70%)" }} />
+            <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full opacity-15"
+              style={{ background: "radial-gradient(circle, #ffffff80, transparent 70%)" }} />
 
-          <div className="space-y-3 mt-6">
-            {/* Header Row */}
-            <div className="grid grid-cols-5 gap-3 text-sm font-bold text-gray-400 px-4 pb-2 border-b border-gray-700">
-              <div>{isRtl ? "الوقت" : "Time"}</div>
-              <div>{isRtl ? "العميل" : "Customer"}</div>
-              <div>{isRtl ? "التصنيف" : "Category"}</div>
-              <div>{isRtl ? "التفاصيل" : "Details"}</div>
-              <div>{isRtl ? "ملاحظات" : "Notes"}</div>
-            </div>
-
-            {/* Data Rows */}
-            {selectedMealDetails.map((detail, idx) => (
-              <div
-                key={idx}
-                className="grid grid-cols-5 gap-3 items-start bg-gray-800 rounded-xl p-4 border border-gray-700 hover:bg-gray-750 transition-all"
-              >
-                {/* Time */}
-                <div className="flex items-center">
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      "text-xs px-3 py-1.5 border-2",
-                      detail.deliveryTime === "MORNING" 
-                        ? "bg-amber-500/20 text-amber-300 border-amber-500/50" 
-                        : "bg-indigo-500/20 text-indigo-300 border-indigo-500/50"
-                    )}
-                  >
-                    {isRtl ? (detail.deliveryTime === "MORNING" ? "صباحي" : "مسائي") : detail.deliveryTime}
-                  </Badge>
-                </div>
-
-                {/* Customer Name */}
-                <div className="font-bold text-white">
-                  {detail.customerName}
-                </div>
-
-                {/* Category */}
-                <div className="text-gray-300 text-sm">
-                  {detail.categoryName || "-"}
-                </div>
-
-                {/* Details (Avoid, Prefs, Portions) */}
-                <div className="space-y-1.5">
-                  {detail.avoid && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-bold text-red-400 whitespace-nowrap">
-                        {isRtl ? "ممنوع:" : "Avoid:"}
-                      </span>
-                      <span className="text-xs text-red-300 font-semibold">
-                        {detail.avoid}
-                      </span>
-                    </div>
-                  )}
-                  {detail.preferences && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-blue-400 whitespace-nowrap">
-                        {isRtl ? "تفضيلات:" : "Prefs:"}
-                      </span>
-                      <span className="text-xs text-blue-300">
-                        {detail.preferences}
-                      </span>
-                    </div>
-                  )}
-                  {detail.portions && (
-                    <div className="flex items-start gap-2">
-                      <span className="text-xs font-medium text-green-400 whitespace-nowrap">
-                        {isRtl ? "الكمية:" : "Portion:"}
-                      </span>
-                      <span className="text-xs text-green-300">
-                        {detail.portions}
-                      </span>
-                    </div>
-                  )}
-                  {!detail.avoid && !detail.preferences && !detail.portions && (
-                    <Badge variant="outline" className="text-xs bg-gray-700 text-gray-400 border-gray-600">
-                      Standard
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Special Notes */}
-                <div className="text-gray-400 text-xs italic">
-                  {detail.specialNotes || "-"}
+            <div className="relative flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/80 mb-1">
+                  {isRtl ? "تفاصيل الوجبة" : "Meal Details"}
+                </p>
+                <h2 className="text-xl md:text-2xl font-black text-white tracking-tight truncate">
+                  {selectedMealName}
+                </h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl backdrop-blur-md px-5 py-3 text-center"
+                  style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                  <p className="text-3xl font-black text-white tabular-nums leading-none">
+                    {selectedMealDetails.length}
+                  </p>
+                  <p className="text-[10px] text-white/80 mt-1 uppercase tracking-wider">
+                    {isRtl ? "عميل" : "Orders"}
+                  </p>
                 </div>
               </div>
-            ))}
+            </div>
+
+            {/* Plain vs Modified split */}
+            {selectedMealDetails.length > 0 && (() => {
+              const plainCount = selectedMealDetails.filter((d) => d.isPlain).length;
+              const modifiedCount = selectedMealDetails.length - plainCount;
+              return (
+                <div className="relative grid grid-cols-2 gap-2 mt-4">
+                  <div className="rounded-xl px-3 py-2 backdrop-blur-md flex items-center justify-between"
+                    style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.25)" }}>
+                    <div>
+                      <p className="text-[10px] font-bold text-white/90 uppercase tracking-wide">
+                        {isRtl ? "عادي" : "Plain"}
+                      </p>
+                      <p className="text-[10px] text-white/70 mt-0.5">{isRtl ? "بدون تعديلات" : "No mods"}</p>
+                    </div>
+                    <span className="text-2xl font-black text-white tabular-nums">{plainCount}</span>
+                  </div>
+                  <div className="rounded-xl px-3 py-2 backdrop-blur-md flex items-center justify-between"
+                    style={{ background: "rgba(252,165,15,0.25)", border: "1px solid rgba(252,165,15,0.4)" }}>
+                    <div>
+                      <p className="text-[10px] font-bold text-white uppercase tracking-wide">
+                        {isRtl ? "معدّل" : "Modified"}
+                      </p>
+                      <p className="text-[10px] text-white/80 mt-0.5">{isRtl ? "احذر التحضير" : "Special prep"}</p>
+                    </div>
+                    <span className="text-2xl font-black text-white tabular-nums">{modifiedCount}</span>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Visually hidden title for accessibility */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>{selectedMealName}</DialogTitle>
+          </DialogHeader>
+
+          {/* Customer list — sorted: Modified first, then Plain */}
+          <div className="overflow-auto px-5 py-5 max-h-[60vh]"
+            style={{ background: "#f8fafc" }}>
+          {(() => {
+            // Sort: المعدّل أولاً (isPlain=false) ثم العادي (isPlain=true)
+            const sorted = [...selectedMealDetails].sort((a, b) => {
+              const aPlain = a.isPlain ? 1 : 0;
+              const bPlain = b.isPlain ? 1 : 0;
+              if (aPlain !== bPlain) return aPlain - bPlain; // معدّل قبل عادي
+              // ثم ترتيب بالوقت: صباحي قبل مسائي
+              const aTime = a.deliveryTime === "MORNING" ? 0 : 1;
+              const bTime = b.deliveryTime === "MORNING" ? 0 : 1;
+              return aTime - bTime;
+            });
+
+            // Group with visual section dividers
+            const modifiedMeals = sorted.filter((d) => !d.isPlain);
+            const plainMeals = sorted.filter((d) => d.isPlain);
+
+            const renderItem = (detail: any, idx: number) => (
+              <div
+                key={idx}
+                className="bg-white rounded-2xl p-4 transition-all hover:-translate-y-0.5"
+                style={{
+                  boxShadow: detail.isPlain
+                    ? "0 2px 12px rgba(0,0,0,0.05)"
+                    : "0 2px 12px rgba(245,158,11,0.12), 0 0 0 1.5px #fde68a inset",
+                  border: detail.isPlain ? "1px solid rgba(0,0,0,0.05)" : "1px solid #fde68a",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  {/* Right: Customer + Category */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    {/* Avatar */}
+                    <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-black text-white"
+                      style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                      {(detail.customerName || "?").charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm md:text-base font-black text-[#0F1516] truncate">
+                        {detail.customerName}
+                      </p>
+                      <p className="text-[11px] text-[#47759C] font-semibold mt-0.5">
+                        {detail.categoryName || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Left: Delivery time + Status */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {detail.isPlain ? (
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full"
+                        style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" }}>
+                        ✓ {isRtl ? "عادي" : "Plain"}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black px-2.5 py-1 rounded-full"
+                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                        ⚠ {isRtl ? "معدّل" : "Modified"}
+                      </span>
+                    )}
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"
+                      style={{
+                        background: detail.deliveryTime === "MORNING" ? "#fffbeb" : "#eff6ff",
+                        color: detail.deliveryTime === "MORNING" ? "#92400e" : "#1e40af",
+                        border: `1px solid ${detail.deliveryTime === "MORNING" ? "#fde68a" : "#bfdbfe"}`,
+                      }}>
+                      {detail.deliveryTime === "MORNING" ? "☀ " : "🌙 "}
+                      {isRtl ? (detail.deliveryTime === "MORNING" ? "صباحي" : "مسائي") : detail.deliveryTime}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Modifications */}
+                {!detail.isPlain && (
+                  <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {detail.avoid && (
+                      <div className="rounded-lg px-3 py-2"
+                        style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
+                        <p className="text-[10px] font-black text-orange-700 uppercase tracking-wide">
+                          ✕ {isRtl ? "ممنوع" : "Avoid"}
+                        </p>
+                        <p className="text-xs font-bold text-orange-800 mt-0.5 leading-tight">
+                          {detail.avoid}
+                        </p>
+                      </div>
+                    )}
+                    {detail.preferences && (
+                      <div className="rounded-lg px-3 py-2"
+                        style={{ background: "#ecfeff", border: "1px solid #a5f3fc" }}>
+                        <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "#0891b2" }}>
+                          ★ {isRtl ? "تفضيلات" : "Prefs"}
+                        </p>
+                        <p className="text-xs font-semibold mt-0.5 leading-tight" style={{ color: "#155e75" }}>
+                          {detail.preferences}
+                        </p>
+                      </div>
+                    )}
+                    {detail.portions && (
+                      <div className="rounded-lg px-3 py-2"
+                        style={{ background: "#fefce8", border: "1px solid #fde68a" }}>
+                        <p className="text-[10px] font-black text-yellow-700 uppercase tracking-wide">
+                          ⚖ {isRtl ? "الكمية" : "Portion"}
+                        </p>
+                        <p className="text-xs font-semibold text-yellow-900 mt-0.5 leading-tight">
+                          {detail.portions}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Special notes */}
+                {detail.specialNotes && (
+                  <div className="mt-2 rounded-lg px-3 py-2 flex items-start gap-2"
+                    style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+                    <span className="text-blue-500 flex-shrink-0">📝</span>
+                    <p className="text-xs font-semibold text-blue-900 leading-tight">
+                      {detail.specialNotes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+
+            return (
+              <>
+                {/* قسم المعدّل */}
+                {modifiedMeals.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, transparent, #fbbf24, transparent)" }} />
+                      <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full"
+                        style={{ background: "#fef3c7", color: "#92400e", border: "1px solid #fde68a" }}>
+                        ⚠ {isRtl ? `معدّل (${modifiedMeals.length})` : `Modified (${modifiedMeals.length})`}
+                      </span>
+                      <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, transparent, #fbbf24, transparent)" }} />
+                    </div>
+                    <div className="space-y-2.5 mb-5">
+                      {modifiedMeals.map((d, i) => renderItem(d, i))}
+                    </div>
+                  </>
+                )}
+
+                {/* قسم العادي */}
+                {plainMeals.length > 0 && (
+                  <>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, transparent, #10b981, transparent)" }} />
+                      <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full"
+                        style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" }}>
+                        ✓ {isRtl ? `عادي (${plainMeals.length})` : `Plain (${plainMeals.length})`}
+                      </span>
+                      <div className="h-px flex-1" style={{ background: "linear-gradient(90deg, transparent, #10b981, transparent)" }} />
+                    </div>
+                    <div className="space-y-2.5">
+                      {plainMeals.map((d, i) => renderItem(d, i + modifiedMeals.length))}
+                    </div>
+                  </>
+                )}
+              </>
+            );
+          })()}
           </div>
         </DialogContent>
       </Dialog>

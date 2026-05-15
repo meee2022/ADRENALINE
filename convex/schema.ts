@@ -120,9 +120,14 @@ export default defineSchema({
     notes: v.optional(v.string()),
     items: v.any(),
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+    // ✅ تتبع المصدر — لو الخطة جاية من approve order، نحفظ orderId
+    // عشان نمنع التكرار لو الـ approve اتنفذ أكثر من مرة لنفس الطلب
+    sourceOrderId: v.optional(v.id("customerOrders")),
   })
     .index("by_date", ["date"])
-    .index("by_customerId", ["customerId"]),
+    .index("by_customerId", ["customerId"])
+    .index("by_source_order", ["sourceOrderId"]),
 
   // ===== Inventory Management Tables =====
   suppliers: defineTable({
@@ -333,6 +338,97 @@ export default defineSchema({
     .index("by_orderId", ["orderId"])
     .index("by_mealId", ["mealId"])
     .index("by_week_day", ["week", "day"]),
+
+  // ===== Notifications =====
+  notifications: defineTable({
+    // الجمهور المستهدف
+    targetRole: v.optional(v.union(
+      v.literal("ADMIN"),
+      v.literal("KITCHEN"),
+      v.literal("DELIVERY"),
+      v.literal("NUTRITIONIST"),
+      v.literal("INVENTORY_MANAGER")
+    )),
+    targetUserId: v.optional(v.id("users")), // إشعار شخصي لمستخدم محدد
+    // المحتوى
+    type: v.union(
+      v.literal("NEW_ORDER"),         // طلب جديد من الموقع
+      v.literal("ORDER_APPROVED"),    // تم اعتماد طلب
+      v.literal("PLAN_CONFIRMED"),    // تم تأكيد خطة
+      v.literal("MEAL_PREPARED"),     // تم تحضير وجبات
+      v.literal("MEAL_DELIVERED"),    // تم التوصيل
+      v.literal("LOW_STOCK"),         // مخزون منخفض
+      v.literal("SYSTEM")             // إشعار عام
+    ),
+    title: v.string(),
+    message: v.string(),
+    link: v.optional(v.string()),     // رابط للانتقال عند الضغط
+    relatedId: v.optional(v.string()), // ID مرتبط (order/plan/customer)
+    // الحالة
+    isRead: v.boolean(),
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_targetRole", ["targetRole", "isRead"])
+    .index("by_targetUserId", ["targetUserId", "isRead"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // ===== Audit Log (تتبع الأحداث الحساسة) =====
+  auditLog: defineTable({
+    actorUserId: v.optional(v.id("users")),
+    actorName: v.optional(v.string()),
+    actorRole: v.optional(v.string()),
+    action: v.string(),           // "CREATE_ORDER" / "APPROVE_ORDER" / "DELETE_PLAN" ...
+    entityType: v.string(),       // "customer" / "order" / "plan" / "inventory" ...
+    entityId: v.optional(v.string()),
+    details: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_action", ["action"])
+    .index("by_entity", ["entityType", "entityId"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // ===== Recipe Ingredients (ربط الوجبة بمكوّنات المخزون) =====
+  mealIngredients: defineTable({
+    menuItemId: v.id("menuItems"),
+    inventoryItemId: v.id("inventoryItems"),
+    quantityPerServing: v.number(),  // الكمية المستهلكة لكل حصة
+    unit: v.string(),                // الوحدة (kg, piece, etc.)
+    createdAt: v.number(),
+  })
+    .index("by_menuItem", ["menuItemId"])
+    .index("by_inventoryItem", ["inventoryItemId"]),
+
+  // ===== Customer Ratings (تقييمات العملاء) =====
+  ratings: defineTable({
+    customerId: v.optional(v.id("customers")),
+    customerName: v.string(),
+    customerPhone: v.optional(v.string()),
+    menuItemId: v.optional(v.id("menuItems")),
+    publicMealId: v.optional(v.id("publicMeals")),
+    mealName: v.string(),
+    stars: v.number(),               // 1..5
+    comment: v.optional(v.string()),
+    planDate: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_menuItem", ["menuItemId"])
+    .index("by_publicMeal", ["publicMealId"])
+    .index("by_customer", ["customerId"]),
+
+  // ===== Coupons =====
+  coupons: defineTable({
+    code: v.string(),
+    discountType: v.union(v.literal("PERCENT"), v.literal("FIXED")),
+    discountValue: v.number(),
+    maxUses: v.optional(v.number()),
+    usedCount: v.number(),
+    expiresAt: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_code", ["code"])
+    .index("by_active", ["isActive"]),
 
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({

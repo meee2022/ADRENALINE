@@ -10,7 +10,7 @@ import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -29,11 +29,12 @@ export default function Delivery() {
   const { data: customers = [] } = useCustomers();
   const updatePlanMutation = useUpdateDailyPlan();
 
+  // ✅ Delivery يعرض بس الطلبات اللي خلصها المطبخ (PREPARED)
   const plans = dailyPlans.filter(
     (p: any) =>
       p.date === formattedDate &&
       p.deliveryTime === activeTab &&
-      p.status === "CONFIRMED"
+      p.status === "PREPARED"
   );
 
   const deliveredPlans = dailyPlans.filter(
@@ -47,14 +48,32 @@ export default function Delivery() {
 
   const handleDeliver = async (planId: string) => {
     try {
+      // ابحث عن plan + customer قبل التحديث للحصول على بيانات الاتصال
+      const plan = plans.find((p: any) => p._id === planId);
+      const customer = plan?.customerId ? getCustomer(plan.customerId) : null;
+
       await updatePlanMutation.mutateAsync({
         id: planId,
-        status: "DELIVERED" as any,
+        data: { status: "DELIVERED" },
       });
       toast({
         title: isRtl ? "تم التسليم" : "Delivered",
         description: isRtl ? "تم تسليم الطلب بنجاح" : "Order delivered successfully",
       });
+
+      // ✅ رسالة واتساب تلقائية للعميل
+      try {
+        const { openWhatsApp, WhatsAppTemplates } = await import("@/lib/whatsapp");
+        const phone = customer?.phone || plan?.customerPhone;
+        const name = customer?.fullName || plan?.customerName;
+        if (phone && name) {
+          if (confirm(isRtl ? "إرسال رسالة شكر للعميل عبر واتساب؟" : "Send thank-you WhatsApp message?")) {
+            openWhatsApp(phone, WhatsAppTemplates.delivered(name));
+          }
+        }
+      } catch {
+        // ignore
+      }
     } catch (error) {
       console.error("Failed to update plan status:", error);
       toast({
@@ -68,7 +87,8 @@ export default function Delivery() {
   const isRtl = language === "ar" || dir === "rtl";
 
   return (
-    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24">
+    <>
+    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 print:hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-6 shadow-sm">
         <div className="max-w-4xl mx-auto">
@@ -86,9 +106,21 @@ export default function Delivery() {
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full">
-              <Bell className="h-5 w-5 text-gray-600" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => window.print()}
+                variant="outline"
+                size="sm"
+                className="h-10 gap-1.5 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white"
+                title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
+              >
+                <Printer className="h-4 w-4" />
+                <span className="text-xs">{isRtl ? "طباعة" : "Print"}</span>
+              </Button>
+              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full">
+                <Bell className="h-5 w-5 text-gray-600" />
+              </Button>
+            </div>
           </div>
 
           {/* Tab Buttons */}
@@ -284,5 +316,80 @@ export default function Delivery() {
         )}
       </div>
     </div>
+
+    {/* ─── Print version ─── */}
+    <div className="hidden print:block bg-white" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="p-6 space-y-5">
+        {/* Print header */}
+        <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-black">
+              {isRtl ? "قائمة التوصيل" : "Delivery List"}
+              {" — "}
+              {activeTab === "MORNING" ? (isRtl ? "صباحي" : "Morning") : (isRtl ? "مسائي" : "Evening")}
+            </h1>
+            <p className="text-base text-black mt-1">
+              {format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-black text-black">{plans.length + deliveredPlans.length}</p>
+            <p className="text-xs text-black">{isRtl ? "إجمالي العملاء" : "Total customers"}</p>
+          </div>
+        </div>
+
+        {/* Stats inline */}
+        <div className="flex items-center gap-4 mb-4 text-sm">
+          <span className="font-bold">{isRtl ? "للتوصيل:" : "Pending:"} <span className="text-base">{plans.length}</span></span>
+          <span className="font-bold">{isRtl ? "تم التوصيل:" : "Delivered:"} <span className="text-base">{deliveredPlans.length}</span></span>
+        </div>
+
+        {/* Delivery table */}
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr style={{ background: "#f3f4f6" }}>
+              <th className="border border-black px-2 py-2 w-10 text-center font-bold">#</th>
+              <th className="border border-black px-3 py-2 text-right font-bold">{isRtl ? "العميل" : "Customer"}</th>
+              <th className="border border-black px-3 py-2 text-right font-bold">{isRtl ? "الهاتف" : "Phone"}</th>
+              <th className="border border-black px-3 py-2 text-right font-bold">{isRtl ? "العنوان" : "Address"}</th>
+              <th className="border border-black px-3 py-2 text-center font-bold w-20">{isRtl ? "وجبات" : "Meals"}</th>
+              <th className="border border-black px-3 py-2 text-center font-bold w-24">{isRtl ? "الحالة" : "Status"}</th>
+              <th className="border border-black px-3 py-2 text-center font-bold w-24">{isRtl ? "توقيع" : "Signature"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...plans, ...deliveredPlans].map((plan: any, i: number) => {
+              const customer = getCustomer(plan.customerId);
+              const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New customer");
+              const phone = customer?.phone || (plan as any).customerPhone || "—";
+              const address = customer?.address || "—";
+              const mealsCount = (plan.items || []).filter((it: any) => !it.isOff).length;
+              const delivered = plan.status === "DELIVERED";
+              return (
+                <tr key={plan._id} style={{ background: delivered ? "#f9fafb" : "#ffffff" }}>
+                  <td className="border border-black px-2 py-2 text-center font-bold">{i + 1}</td>
+                  <td className="border border-black px-3 py-2 font-bold">{customerName}</td>
+                  <td className="border border-black px-3 py-2 tabular-nums" dir="ltr">{phone}</td>
+                  <td className="border border-black px-3 py-2 text-xs">{address}</td>
+                  <td className="border border-black px-3 py-2 text-center font-bold">{mealsCount}</td>
+                  <td className="border border-black px-3 py-2 text-center text-xs">
+                    {delivered ? (isRtl ? "✓ تم التوصيل" : "✓ Delivered") : (isRtl ? "في الانتظار" : "Pending")}
+                  </td>
+                  <td className="border border-black px-3 py-2"></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        {/* Footer */}
+        <div className="border-t border-black mt-6 pt-3 text-center">
+          <p className="text-xs text-black">
+            Adrenaline Healthy Food — Delivery List — {format(new Date(), "yyyy/MM/dd HH:mm")}
+          </p>
+        </div>
+      </div>
+    </div>
+    </>
   );
 }

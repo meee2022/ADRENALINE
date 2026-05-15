@@ -81,30 +81,75 @@ export default function OrderReviewDetail() {
     .map(Number)
     .sort((a, b) => a - b);
 
+  // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الأربعاء)
+  const dayOrder: Record<string, number> = {
+    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4,
+  };
+  const allWeekDayKeys: string[] = Array.from(
+    new Set(items.map((i) => `${i.week}-${i.day}`))
+  ).sort((a, b) => {
+    const [wa, da] = a.split("-");
+    const [wb, db] = b.split("-");
+    const weekDiff = Number(wa) - Number(wb);
+    if (weekDiff !== 0) return weekDiff;
+    return (dayOrder[da] ?? 99) - (dayOrder[db] ?? 99);
+  });
+
   const handleApprove = async () => {
     if (!orderId) return;
-    
-    // ✅ التحقق من أن تاريخ البداية محدد
-    if (!startDate) {
-      alert("⚠️ يرجى تحديد تاريخ بداية التوصيل أولاً");
-      return;
-    }
-    
+
     // ✅ تحويل تواريخ الـ overrides لصيغة { "week-day": "YYYY-MM-DD" }
     const overridesPayload: Record<string, string> = {};
     Object.entries(dateOverrides).forEach(([key, d]) => {
       if (d) overridesPayload[key] = d.toISOString().split("T")[0];
     });
 
+    // ✅ المنطق الجديد:
+    //   - الأول يوم في الطلب (week 1, أول يوم) هو "نقطة البداية" (anchor)
+    //   - لو الأخصائية حددت تاريخ للأول يوم → ده الـ startDate تلقائياً
+    //   - لو startDate الـ explicit موجود → يستخدمه
+    //   - لو ولا واحد → تنبيه
+    const firstKey = allWeekDayKeys[0];
+    const firstDayOverride = overridesPayload[firstKey];
+
+    let effectiveStartDate: string | undefined;
+    if (startDate) {
+      effectiveStartDate = startDate.toISOString().split("T")[0];
+    } else if (firstDayOverride) {
+      effectiveStartDate = firstDayOverride;
+    }
+
+    if (!effectiveStartDate) {
+      alert(
+        `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.`
+      );
+      return;
+    }
+
     try {
       await approveMutation({
         orderId,
-        customerId: selectedCustomerId || undefined, // ✅ ربط بالمشترك
-        startDate: startDate.toISOString().split("T")[0], // ✅ إرسال تاريخ البداية (YYYY-MM-DD)
+        customerId: selectedCustomerId || undefined,
+        startDate: effectiveStartDate,
         notes: approveNotes || undefined,
         dateOverrides: Object.keys(overridesPayload).length > 0 ? overridesPayload : undefined,
       });
-      alert("✅ تم اعتماد الخطة بنجاح!");
+      // ✅ إرسال رسالة واتساب تلقائية للعميل بعد الاعتماد
+      try {
+        const { openWhatsApp, WhatsAppTemplates } = await import("@/lib/whatsapp");
+        if (order?.customerPhone) {
+          const msg = WhatsAppTemplates.orderApproved(
+            order.customerName || "عميلنا الكريم",
+            order.orderNumber || "",
+            effectiveStartDate,
+          );
+          if (confirm("✅ تم الاعتماد! هل تريد إرسال رسالة واتساب للعميل بالتأكيد؟")) {
+            openWhatsApp(order.customerPhone, msg);
+          }
+        }
+      } catch {
+        // ignore
+      }
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
@@ -122,7 +167,21 @@ export default function OrderReviewDetail() {
         orderId,
         reason: rejectReason,
       });
-      alert("✅ تم رفض الخطة");
+      // ✅ إرسال رسالة اعتذار للعميل
+      try {
+        const { openWhatsApp, WhatsAppTemplates } = await import("@/lib/whatsapp");
+        if (order?.customerPhone) {
+          const msg = WhatsAppTemplates.orderRejected(
+            order.customerName || "عميلنا الكريم",
+            rejectReason,
+          );
+          if (confirm("هل تريد إرسال رسالة الاعتذار للعميل عبر واتساب؟")) {
+            openWhatsApp(order.customerPhone, msg);
+          }
+        }
+      } catch {
+        // ignore
+      }
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
@@ -366,41 +425,60 @@ export default function OrderReviewDetail() {
         </h3>
 
         <div className="space-y-4">
-          {/* ✅ تحديد تاريخ بداية التوصيل (مطلوب) */}
+          {/* ✅ ملء سريع — اختياري */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              📅 تاريخ بداية التوصيل <span className="text-red-600">*</span>
+            <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              📅 ملء سريع: تاريخ بداية التوصيل
+              <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                اختياري
+              </span>
             </label>
-            <Popover>
-              <PopoverTrigger asChild>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {startDate ? (
+                      format(startDate, "EEEE، d MMMM yyyy", { locale: ar })
+                    ) : (
+                      <span>اختر تاريخ ابتدائي (يملأ الأيام الفارغة فقط)...</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    disabled={(date) => date < new Date()}
+                    locale={ar}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              {startDate && (
                 <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !startDate && "text-muted-foreground"
-                  )}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setStartDate(undefined)}
+                  className="text-xs text-gray-500 hover:text-red-600"
                 >
-                  <CalendarIcon className="ml-2 h-4 w-4" />
-                  {startDate ? (
-                    format(startDate, "EEEE، d MMMM yyyy", { locale: ar })
-                  ) : (
-                    <span>اختر تاريخ البداية...</span>
-                  )}
+                  مسح
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={setStartDate}
-                  disabled={(date) => date < new Date()}
-                  locale={ar}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            <p className="mt-2 text-xs text-gray-500">
-              💡 حدد اليوم الذي تريد أن يبدأ فيه التوصيل (الأسبوع الأول، اليوم الأول)
+              )}
+            </div>
+            <p className="mt-2 text-xs text-gray-500 leading-relaxed">
+              💡 <b>طريقة سهلة:</b> سيب الحقل ده فاضي وحدد بس تاريخ أول يوم تحت — هيمشي بالترتيب تلقائياً.
+              <br />
+              💡 <b>أو:</b> حدد التاريخ هنا ليكون نقطة بداية للأيام بدون تاريخ يدوي.
+              <br />
+              💡 الأيام اللي حددت ليها تاريخ يدوي تحت بتبقى <b>مستقلة تماماً</b>.
             </p>
           </div>
 
@@ -530,8 +608,27 @@ export default function OrderReviewDetail() {
 
             <Button
               variant="outline"
-              className="px-8 py-4 text-lg font-bold"
+              onClick={() => {
+                // ✅ استخدم رقم العميل المربوط لو موجود، وإلا من بيانات الطلب
+                const linkedCust = ((order as any).customerId || selectedCustomerId)
+                  ? customers.find((c) => c._id === ((order as any).customerId || selectedCustomerId))
+                  : null;
+                const rawPhone = linkedCust?.phone || (order as any).customerPhone || "";
+                const phone = String(rawPhone).replace(/\D/g, "");
+                if (!phone) {
+                  alert("⚠️ رقم الهاتف غير متوفر لهذا العميل");
+                  return;
+                }
+                // تأكد إن الرقم بصيغة دولية (لو رقم قطر بدون code، ضيف 974)
+                const fullPhone = phone.startsWith("974") || phone.length > 8 ? phone : `974${phone}`;
+                const customerName = linkedCust?.fullName || (order as any).customerName || "";
+                const msg = `مرحباً ${customerName} 👋\n\nبخصوص طلبك رقم ${(order as any).orderNumber || ""} في أدرينالين، نود التواصل معك للمراجعة.`;
+                const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
+                window.open(url, "_blank");
+              }}
+              className="px-8 py-4 text-lg font-bold gap-2"
             >
+              <span style={{ color: "#25D366" }}>●</span>
               💬 تواصل مع العميل
             </Button>
           </div>

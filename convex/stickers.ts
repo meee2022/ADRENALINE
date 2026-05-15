@@ -131,6 +131,15 @@ export const get = query({
       .filter(Boolean)
       .forEach((m: any) => menuMap.set(String(m._id), m));
 
+    // ✅ تحميل publicMeals كمصدر إضافي للماكروز (مطابقة بالاسم)
+    const publicMealsAll = await ctx.db.query("publicMeals").collect();
+    const publicMealsByName = new Map<string, any>();
+    publicMealsAll.forEach((pm: any) => {
+      // مفاتيح متعددة للمطابقة (عربي + إنجليزي + lowercase)
+      if (pm.nameAr) publicMealsByName.set(String(pm.nameAr).trim().toLowerCase(), pm);
+      if (pm.nameEn) publicMealsByName.set(String(pm.nameEn).trim().toLowerCase(), pm);
+    });
+
     // 4) Modifiers
     const portion = await ctx.db
       .query("modifiers")
@@ -242,7 +251,24 @@ export const get = query({
       for (const it of items) {
         const menu = menuMap.get(String(it.menuItemId));
         const mealName = menu?.name || "UNKNOWN";
-        const calories = Number(menu?.calories ?? 0) || undefined;
+
+        // ✅ مطابقة بـ publicMeals بالاسم للحصول على ماكروز كاملة
+        const pmLookup = publicMealsByName.get(String(mealName).trim().toLowerCase())
+          || publicMealsByName.get(String((menu as any)?.nameAr || "").trim().toLowerCase())
+          || publicMealsByName.get(String((menu as any)?.nameEn || "").trim().toLowerCase());
+
+        // ترتيب الأولوية: 1) item نفسه، 2) publicMeals، 3) menuItem
+        const itemProtein = Number((it as any).protein ?? 0) || 0;
+        const itemCarbs   = Number((it as any).carbs   ?? 0) || 0;
+        const itemFats    = Number((it as any).fats    ?? 0) || 0;
+        const itemCalories = Number((it as any).calories ?? 0) || 0;
+
+        const protein = itemProtein || Number(pmLookup?.protein ?? 0) || 0;
+        const carbs   = itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
+        const fats    = itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
+        const calories = itemCalories || Number(pmLookup?.calories ?? 0) || Number(menu?.calories ?? 0) || 0;
+
+        const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 
         // النص الكامل للملاحظات (للنسخة القديمة)
         const modText = buildModifierText(it.modifierIds, modifiers);
@@ -258,17 +284,25 @@ export const get = query({
         // تحذيرات نظيفة منفصلة (avoid + allergies)
         const warnings = buildWarnings(c, it.modifierIds);
 
+        // Macros string fallback من menuItem
+        const macrosStr = String((menu as any)?.macros || "").trim();
+
         mealStickers.push({
           customerId,
           customerNo,
           customerName: c.fullName || "",
-          mealName,           // ✅ اسم الوجبة فقط (نظيف)
-          mealTitle,          // النسخة القديمة (للتوافق)
-          warnings,           // ✅ تحذيرات منفصلة
+          mealName,
+          mealTitle,
+          warnings,
           caloriesText: calories ? `${calories} CAL` : "",
+          calories: calories || undefined,
+          macros: macrosStr || undefined,
+          protein: hasMacros ? protein : undefined,
+          carbs:   hasMacros ? carbs   : undefined,
+          fats:    hasMacros ? fats    : undefined,
           dateText,
-          prodDate,           // ✅ تاريخ الإنتاج
-          expDate,            // ✅ تاريخ الصلاحية (+2 أيام)
+          prodDate,
+          expDate,
           mealIndexText: `MEAL ${mealIndex}`,
         });
 

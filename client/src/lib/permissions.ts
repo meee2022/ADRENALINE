@@ -48,6 +48,8 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/public-meals-management",
     "/orders/pending",
     "/orders/review/*",
+    "/analytics",
+    "/reports",
   ],
 
   KITCHEN: [
@@ -113,7 +115,12 @@ export interface MenuItemDef {
     | "suppliers"
     | "settings"
     | "kitchen"
-    | "delivery";
+    | "delivery"
+    | "audit"
+    | "reports"
+    | "analytics"
+    | "coupons"
+    | "ratings";
   labelAr: string;
   labelEn: string;
   roles: Role[];
@@ -191,6 +198,18 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { href: "/banners", iconKey: "banners", labelAr: "السلايدر (البانرات)", labelEn: "Banners",
         roles: ["ADMIN"] },
+      { href: "/coupons", iconKey: "coupons", labelAr: "كوبونات الخصم", labelEn: "Coupons",
+        roles: ["ADMIN"] },
+    ],
+  },
+  {
+    titleAr: "التقارير والتحليلات",
+    titleEn: "Analytics & Reports",
+    items: [
+      { href: "/analytics", iconKey: "analytics", labelAr: "لوحة التحليلات", labelEn: "Analytics",
+        roles: ["ADMIN", "NUTRITIONIST"] },
+      { href: "/reports", iconKey: "reports", labelAr: "التقارير", labelEn: "Reports",
+        roles: ["ADMIN", "NUTRITIONIST"] },
     ],
   },
   {
@@ -198,6 +217,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     titleEn: "System",
     items: [
       { href: "/users", iconKey: "users", labelAr: "إدارة الحسابات", labelEn: "User Management",
+        roles: ["ADMIN"] },
+      { href: "/audit-log", iconKey: "audit", labelAr: "سجل النشاطات", labelEn: "Audit Log",
         roles: ["ADMIN"] },
       { href: "/settings/restaurant", iconKey: "settings", labelAr: "إعدادات المطعم", labelEn: "Restaurant Settings",
         roles: ["ADMIN"] },

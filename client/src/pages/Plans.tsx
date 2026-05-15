@@ -278,6 +278,8 @@ export default function PlansPage() {
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState<"ALL" | "MORNING" | "EVENING">("ALL");
+  // ✅ فلتر الحالة: عرض الكل، أو اللي لسه محتاجين خطة، أو اللي خلصوا
+  const [planFilter, setPlanFilter] = useState<"ALL" | "PENDING" | "DONE">("ALL");
   const [currentPlan, setCurrentPlan] = useState<Partial<DailyPlan> | null>(null);
 
   const { data: customers = [] } = useCustomers();
@@ -443,9 +445,30 @@ export default function PlansPage() {
         setCurrentPlan({ ...currentPlan, _id: created } as any);
       }
       toast({ title: status === "CONFIRMED" ? (isRtl ? "✓ تم تأكيد الخطة" : "Plan confirmed") : (isRtl ? "✓ تم حفظ المسودة" : "Draft saved") });
+
+      // ✅ بعد تأكيد الخطة، اسأل لو عاوز ينتقل لعميل آخر
+      if (status === "CONFIRMED") {
+        setTimeout(() => {
+          const goNext = window.confirm(
+            isRtl
+              ? "تم تأكيد الخطة بنجاح ✓\n\nهل تريد العودة لاختيار عميل آخر؟"
+              : "Plan confirmed ✓\n\nGo back to select another customer?"
+          );
+          if (goNext) {
+            setSelectedCustomerId(null);
+            setCurrentPlan(null);
+          }
+        }, 300);
+      }
     } catch (error: any) {
       toast({ title: isRtl ? "فشل الحفظ" : "Failed to save", description: error?.message, variant: "destructive" });
     }
+  };
+
+  // ✅ زرار العودة لقائمة العملاء
+  const handleBackToCustomers = () => {
+    setSelectedCustomerId(null);
+    setCurrentPlan(null);
   };
 
   const handleExportCSV = () => {
@@ -584,6 +607,18 @@ export default function PlansPage() {
               String(c.phone || "").includes(q)
             );
           }
+          // ✅ فلتر حالة الخطة
+          if (planFilter === "PENDING") {
+            filtered = filtered.filter((c: any) => !customersWithPlans.has(String(c._id)));
+          } else if (planFilter === "DONE") {
+            filtered = filtered.filter((c: any) => customersWithPlans.has(String(c._id)));
+          }
+          // ✅ ترتيب: العملاء بدون خطة أولاً، ثم اللي خلصوا
+          filtered = [...filtered].sort((a: any, b: any) => {
+            const aDone = customersWithPlans.has(String(a._id)) ? 1 : 0;
+            const bDone = customersWithPlans.has(String(b._id)) ? 1 : 0;
+            return aDone - bDone;
+          });
 
           // Avatar gradient based on first letter
           const getAvatarGradient = (name: string) => {
@@ -723,6 +758,41 @@ export default function PlansPage() {
                     );
                   })}
                 </div>
+
+                {/* ─── Plan status filter chips ─── */}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <span className="text-[11px] font-semibold text-gray-400 mr-1">الحالة:</span>
+                  {[
+                    { key: "PENDING", label: isRtl ? "محتاج خطة" : "Pending", color: "#f59e0b", count: pendingCount, icon: <Clock className="h-3 w-3" /> },
+                    { key: "DONE",    label: isRtl ? "خلصت"      : "Done",    color: "#10b981", count: plannedCount, icon: <Check className="h-3 w-3" /> },
+                    { key: "ALL",     label: isRtl ? "الكل"      : "All",     color: "#47759c", count: activeCustomers.length, icon: null },
+                  ].map((f) => {
+                    const active = planFilter === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => setPlanFilter(f.key as any)}
+                        className={cn(
+                          "h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                          active ? "text-white" : "text-gray-500 hover:bg-gray-50"
+                        )}
+                        style={active
+                          ? { background: f.color, boxShadow: `0 3px 8px ${f.color}40` }
+                          : { background: "#f8fafc", border: "1px solid #e2e8f0" }
+                        }
+                      >
+                        {f.icon}
+                        <span>{f.label}</span>
+                        <span className={cn(
+                          "text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
+                          active ? "bg-white/25" : "bg-white"
+                        )}>
+                          {f.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* ─── Customer cards grid ─── */}
@@ -753,15 +823,40 @@ export default function PlansPage() {
                       <button
                         key={customer._id}
                         onClick={() => setSelectedCustomerId(customer._id)}
-                        className="group bg-white rounded-2xl overflow-hidden text-right transition-all hover:-translate-y-1 active:scale-[0.98] relative"
+                        className={cn(
+                          "group rounded-2xl overflow-hidden text-right transition-all hover:-translate-y-1 active:scale-[0.98] relative",
+                          hasPlan ? "opacity-70 hover:opacity-100" : ""
+                        )}
                         style={{
-                          boxShadow: "0 2px 14px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)",
-                          border: "1px solid rgba(0,0,0,0.06)",
+                          boxShadow: hasPlan
+                            ? "0 2px 10px rgba(16,185,129,0.12)"
+                            : "0 2px 14px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.03)",
+                          border: hasPlan
+                            ? "1.5px solid #a7f3d0"
+                            : "1px solid rgba(0,0,0,0.06)",
+                          background: hasPlan
+                            ? "linear-gradient(135deg, #f0fdf4, #ffffff)"
+                            : "#ffffff",
                         }}
                       >
+                        {/* ✅ Large "DONE" overlay watermark for completed customers */}
+                        {hasPlan && (
+                          <div className="absolute top-3 left-3 z-10">
+                            <div
+                              className="h-8 w-8 rounded-full flex items-center justify-center text-white shadow-lg"
+                              style={{
+                                background: "linear-gradient(135deg, #10b981, #059669)",
+                                boxShadow: "0 4px 12px rgba(16,185,129,0.4)",
+                              }}
+                            >
+                              <Check className="h-5 w-5" strokeWidth={3} />
+                            </div>
+                          </div>
+                        )}
+
                         {/* Status indicator strip */}
                         <div
-                          className="h-1"
+                          className="h-1.5"
                           style={{
                             background: hasPlan
                               ? "linear-gradient(90deg, #10b981, #34d399)"
@@ -861,6 +956,25 @@ export default function PlansPage() {
           );
         })() : (
           <>
+            {/* ── Back to customers button (above selector bar) ── */}
+            <button
+              onClick={handleBackToCustomers}
+              className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg transition-colors hover:bg-white"
+              style={{ color: "#47759c" }}
+            >
+              {isRtl ? (
+                <>
+                  <ChevronRight className="h-4 w-4" />
+                  <span>العودة لقائمة العملاء</span>
+                </>
+              ) : (
+                <>
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Back to Customers</span>
+                </>
+              )}
+            </button>
+
             {/* ── Customer selector bar ── */}
             <div className="bg-white rounded-2xl overflow-hidden"
               style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.06)" }}>

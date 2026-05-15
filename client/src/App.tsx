@@ -28,6 +28,11 @@ import Stickers from "@/pages/Stickers";
 import OrdersPending from "@/pages/OrdersPending";
 import OrderReviewDetail from "@/pages/OrderReviewDetail";
 import RestaurantSettings from "@/pages/RestaurantSettings";
+import AuditLog from "@/pages/AuditLog";
+import Reports from "@/pages/Reports";
+import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
+import OrderTracking from "@/pages/public/OrderTracking";
+import Coupons from "@/pages/Coupons";
 
 // Public Pages (No Auth)
 import HomePage from "@/pages/public/HomePage";
@@ -43,6 +48,12 @@ import ContactPage from "@/pages/public/ContactPage";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useStore } from "@/lib/store";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { installGlobalErrorHandlers } from "@/lib/logger";
+
+if (typeof window !== "undefined") {
+  installGlobalErrorHandlers();
+}
 
 function AppDirSync() {
   const { language, dir } = useLanguage();
@@ -170,6 +181,19 @@ function Router() {
       <Route path="/settings/restaurant">
         <ProtectedRoute component={RestaurantSettings} />
       </Route>
+      <Route path="/audit-log">
+        <ProtectedRoute component={AuditLog} />
+      </Route>
+      <Route path="/reports">
+        <ProtectedRoute component={Reports} />
+      </Route>
+      <Route path="/analytics">
+        <ProtectedRoute component={AnalyticsDashboard} />
+      </Route>
+      <Route path="/public/track" component={OrderTracking} />
+      <Route path="/coupons">
+        <ProtectedRoute component={Coupons} />
+      </Route>
 
       <Route component={NotFound} />
     </Switch>
@@ -178,12 +202,14 @@ function Router() {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AppDirSync />
-        <Router />
-        <Toaster />
-      </LanguageProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AppDirSync />
+          <Router />
+          <Toaster />
+        </LanguageProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

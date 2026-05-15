@@ -42,15 +42,15 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
-      className="h-screen w-full bg-background overflow-hidden"
+      className="h-screen w-full bg-background overflow-hidden print:h-auto print:overflow-visible"
     >
       {/* ✅ Desktop */}
       {!isMobile ? (
-        <div className="h-full w-full flex overflow-hidden">
-          {/* Sidebar - positioned by dir attribute */}
+        <div className="h-full w-full flex overflow-hidden print:block print:overflow-visible">
+          {/* Sidebar — hidden on print */}
           <aside
             className={cn(
-              "h-full bg-sidebar overflow-hidden shrink-0 border-sidebar-border",
+              "h-full bg-sidebar overflow-hidden shrink-0 border-sidebar-border print:hidden",
               isRtl ? "border-l" : "border-r"
             )}
             style={{ width: SIDEBAR_W }}
@@ -59,9 +59,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </aside>
 
           {/* Main Content */}
-          <main className="relative h-full flex-1 min-w-0 overflow-hidden flex flex-col" style={{ background: "#f1f5f9" }}>
-            <div className="flex-1 h-full w-full overflow-y-auto overflow-x-auto">
-              <div className="w-full min-w-0 p-4 md:p-8">{children}</div>
+          <main className="relative h-full flex-1 min-w-0 overflow-hidden flex flex-col print:h-auto print:overflow-visible print:block" style={{ background: "#f1f5f9" }}>
+            <div className="flex-1 h-full w-full overflow-y-auto overflow-x-auto print:overflow-visible print:h-auto">
+              <div className="w-full min-w-0 p-4 md:p-8 print:p-0">{children}</div>
             </div>
           </main>
         </div>

@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, UtensilsCrossed } from "lucide-react";
+import { Plus, Edit, Trash2, UtensilsCrossed, Download, Loader2, Boxes } from "lucide-react";
+import { IngredientsDialog } from "@/components/IngredientsDialog";
 import { useToast } from "@/hooks/use-toast";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 
 export default function MenuManagement() {
   const { t } = useLanguage();
@@ -23,6 +24,8 @@ export default function MenuManagement() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<any>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [ingredientsMeal, setIngredientsMeal] = useState<any>(null);
   const [formData, setFormData] = useState({
     name: "",
     categoryId: "",
@@ -31,6 +34,31 @@ export default function MenuManagement() {
     tags: "",
     isActive: true,
   });
+
+  // ✅ Sync from publicMeals
+  const syncFromPublicMutation = useMutation(api.menuItems.syncFromPublicMeals);
+
+  const handleSyncFromPublic = async () => {
+    if (!window.confirm("هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم.")) {
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      const result: any = await syncFromPublicMutation({});
+      toast({
+        title: "✅ تم النسخ",
+        description: result.message || `تم إضافة ${result.created} وجبة`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ فشل النسخ",
+        description: error?.message || "حدث خطأ",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const meals = useQuery(api.menuItems.list) || [];
   const categories = useQuery(api.mealCategories.list) || [];
@@ -122,10 +150,22 @@ export default function MenuManagement() {
           <h1 className="text-3xl font-bold">{t("menu_management.title")}</h1>
           <p className="text-sm text-muted-foreground">{t("menu_management.subtitle")}</p>
         </div>
-        <Button onClick={handleAdd} size="lg" className="gap-2">
-          <Plus className="h-5 w-5" />
-          {t("menu_management.add_meal")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleSyncFromPublic}
+            disabled={isSyncing}
+            size="lg"
+            variant="outline"
+            className="gap-2 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white"
+          >
+            {isSyncing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+            استيراد من منيو الموقع
+          </Button>
+          <Button onClick={handleAdd} size="lg" className="gap-2">
+            <Plus className="h-5 w-5" />
+            {t("menu_management.add_meal")}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -159,6 +199,15 @@ export default function MenuManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIngredientsMeal(meal)}
+                        title="مكوّنات المخزون"
+                        className="text-amber-600 hover:bg-amber-50"
+                      >
+                        <Boxes className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(meal)}>
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -262,6 +311,15 @@ export default function MenuManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Ingredients dialog */}
+      {ingredientsMeal && (
+        <IngredientsDialog
+          meal={ingredientsMeal}
+          open={!!ingredientsMeal}
+          onClose={() => setIngredientsMeal(null)}
+        />
+      )}
     </div>
   );
 }

@@ -76,6 +76,12 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               >
                 {isRtl ? "تواصل معنا" : "Contact"}
               </a>
+              <a
+                href="/public/track"
+                className="text-base font-medium text-[#3CC4F0] hover:text-[#47759C] transition-colors flex items-center gap-1"
+              >
+                📦 {isRtl ? "تتبع طلبي" : "Track Order"}
+              </a>
             </nav>
 
             {/* Actions */}

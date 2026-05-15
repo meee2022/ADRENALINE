@@ -225,3 +225,95 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Chrome, Safari, Opera */
 }
+
+/* =========================
+   ✅ GLOBAL PRINT STYLES
+   ========================= */
+@media print {
+  /* Reset background — clean white paper */
+  html, body, #root {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 12mm 10mm 14mm 10mm;
+    size: A4;
+  }
+
+  /* Hide non-printable elements */
+  .no-print,
+  nav,
+  aside,
+  .sidebar,
+  button:not(.allow-print) {
+    display: none !important;
+  }
+
+  /* Tables — ensure readable */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    page-break-inside: auto;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tbody tr {
+    page-break-inside: avoid;
+  }
+  th, td {
+    border: 0.5px solid #000;
+    padding: 6px 8px;
+    text-align: right;
+  }
+
+  /* Avoid breaking key elements across pages */
+  .page-break-inside-avoid,
+  .print-keep-together {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Force page break utility */
+  .page-break-before {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Reset shadows and animations for print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Cards — simpler borders for print */
+  .card-print-clean {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  /* Ensure text-fill colors show on print (for gradient text) */
+  .print-text-black {
+    -webkit-text-fill-color: #000 !important;
+    color: #000 !important;
+    background: transparent !important;
+  }
+
+  /* Brand badge for printed headers */
+  .print-brand {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+}

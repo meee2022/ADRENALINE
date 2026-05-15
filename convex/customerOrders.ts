@@ -79,6 +79,28 @@ export const create = mutation({
       });
     }
 
+    // 🔔 إشعار: طلب جديد للأخصائية + الإدارة
+    await ctx.db.insert("notifications", {
+      targetRole: "NUTRITIONIST",
+      type: "NEW_ORDER",
+      title: "طلب جديد للمراجعة",
+      message: `${args.customerName} - ${args.totalMeals} وجبة (${orderNumber})`,
+      link: `/orders/${orderId}`,
+      relatedId: orderId,
+      isRead: false,
+      createdAt: now,
+    });
+    await ctx.db.insert("notifications", {
+      targetRole: "ADMIN",
+      type: "NEW_ORDER",
+      title: "طلب جديد على الموقع",
+      message: `${args.customerName} - ${args.customerPhone}`,
+      link: `/orders/${orderId}`,
+      relatedId: orderId,
+      isRead: false,
+      createdAt: now,
+    });
+
     return {
       orderId,
       orderNumber,
@@ -264,35 +286,94 @@ export const approve = mutation({
       mealsByDate[dateKey].push(item);
     }
 
-    // 4. إنشاء خطة يومية لكل تاريخ (خطة واحدة تحتوي على جميع وجبات اليوم)
+    // 4. إنشاء/تحديث خطة يومية لكل تاريخ
+    // ✅ نمنع التكرار: لو فيه plan موجودة لنفس (customer + date + deliveryTime) من نفس الطلب،
+    // نستبدلها بدلاً من إنشاء واحدة جديدة
+    const effectiveCustomerId = customerId || order.customerId;
+    const deliveryTime = "MORNING" as const;
+
     for (const [date, dayMeals] of Object.entries(mealsByDate)) {
-      await ctx.db.insert("dailyPlans", {
-        customerId: (customerId || order.customerId) || undefined, // ✅ اختياري الآن
-        customerName: order.customerName, // ✅ حفظ اسم العميل للعرض في Kitchen
-        date, // YYYY-MM-DD
-        deliveryTime: "MORNING", // ✅ افتراضي
-        status: "CONFIRMED", // ✅ بحروف كبيرة
-        notes: notes || "",
-        items: dayMeals.map((meal) => ({
-          mealId: meal.mealId,
-          mealNameAr: meal.mealNameAr,
-          mealNameEn: meal.mealNameEn,
-          category: meal.category,
-          calories: meal.calories,
-          protein: meal.protein || 0,
-          carbs: meal.carbs || 0,
-          fats: meal.fats || 0,
-          imageUrl: meal.imageUrl,
-          week: meal.week,
-          day: meal.day,
-          // ✅ إضافة التفضيلات/الممنوعات/الكميات من المشترك
-          avoid: linkedCustomer?.avoid || undefined,
-          preferences: linkedCustomer?.preferences || undefined,
-          portions: linkedCustomer?.portions || undefined,
-        })),
-        createdAt: Date.now(),
+      const planItems = dayMeals.map((meal) => ({
+        mealId: meal.mealId,
+        mealNameAr: meal.mealNameAr,
+        mealNameEn: meal.mealNameEn,
+        category: meal.category,
+        calories: meal.calories,
+        protein: meal.protein || 0,
+        carbs: meal.carbs || 0,
+        fats: meal.fats || 0,
+        imageUrl: meal.imageUrl,
+        week: meal.week,
+        day: meal.day,
+        // إضافة التفضيلات/الممنوعات/الكميات من المشترك
+        avoid: linkedCustomer?.avoid || undefined,
+        preferences: linkedCustomer?.preferences || undefined,
+        portions: linkedCustomer?.portions || undefined,
+      }));
+
+      // فحص: في dailyPlan موجودة لنفس العميل في نفس التاريخ من نفس الطلب؟
+      const existingPlans = await ctx.db
+        .query("dailyPlans")
+        .withIndex("by_date", (q) => q.eq("date", date))
+        .collect();
+
+      const duplicatePlan = existingPlans.find((p: any) => {
+        // فحص العميل (customerId لو موجود، أو الاسم لو مش موجود)
+        const sameCustomer = effectiveCustomerId
+          ? p.customerId === effectiveCustomerId
+          : p.customerName === order.customerName;
+        const sameTime = p.deliveryTime === deliveryTime;
+        const sameOrigin = p.sourceOrderId === orderId; // علامة لتمييز الـ plans اللي جاية من نفس الطلب
+        return sameCustomer && sameTime && sameOrigin;
       });
+
+      if (duplicatePlan) {
+        // ✅ تحديث الـ plan الموجودة بدل إنشاء جديدة
+        await ctx.db.patch(duplicatePlan._id, {
+          items: planItems,
+          notes: notes || "",
+          status: "CONFIRMED",
+          updatedAt: Date.now(),
+        });
+      } else {
+        // إنشاء plan جديدة
+        await ctx.db.insert("dailyPlans", {
+          customerId: effectiveCustomerId || undefined,
+          customerName: order.customerName,
+          date,
+          deliveryTime,
+          status: "CONFIRMED",
+          notes: notes || "",
+          items: planItems,
+          sourceOrderId: orderId, // ✅ تتبع المصدر للحماية من التكرار
+          createdAt: Date.now(),
+        });
+      }
     }
+
+    // 🔔 إشعار للمطبخ + الإدارة
+    const planDates = Object.keys(mealsByDate).sort();
+    const totalMealsCount = items.length;
+    await ctx.db.insert("notifications", {
+      targetRole: "KITCHEN",
+      type: "ORDER_APPROVED",
+      title: "خطة جديدة للتحضير",
+      message: `${order.customerName} - ${totalMealsCount} وجبة على ${planDates.length} يوم`,
+      link: `/kitchen`,
+      relatedId: orderId,
+      isRead: false,
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("notifications", {
+      targetRole: "ADMIN",
+      type: "ORDER_APPROVED",
+      title: "تم اعتماد طلب",
+      message: `${order.customerName} - ${order.orderNumber}`,
+      link: `/plans`,
+      relatedId: orderId,
+      isRead: false,
+      createdAt: Date.now(),
+    });
 
     return { success: true, message: "تم اعتماد الطلب وإضافته للمطبخ" };
   },

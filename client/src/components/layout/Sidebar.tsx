@@ -20,8 +20,14 @@ import {
   ClipboardCheck,
   Settings,
   Printer,
+  BarChart3,
+  FileText,
+  ScrollText,
+  Tag,
+  Star,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
+import { NotificationBell } from "../NotificationBell";
 import { MENU_SECTIONS, ROLE_LABEL, ROLE_COLOR, type Role, type MenuItemDef } from "@/lib/permissions";
 
 /** Map iconKey → lucide component */
@@ -44,6 +50,11 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   settings: Settings,
   kitchen: ChefHat,
   delivery: Truck,
+  audit: ScrollText,
+  reports: FileText,
+  analytics: BarChart3,
+  coupons: Tag,
+  ratings: Star,
 };
 
 export function Sidebar() {
@@ -89,8 +100,11 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="px-4 pb-2">
-        <LanguageSwitcher />
+      <div className="px-4 pb-2 flex items-center gap-2">
+        <div className="flex-1">
+          <LanguageSwitcher />
+        </div>
+        <NotificationBell />
       </div>
 
       {/* Role badge (if not admin) */}

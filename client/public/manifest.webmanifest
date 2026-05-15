@@ -1,0 +1,38 @@
+{
+  "name": "Adrenaline Healthy Food",
+  "short_name": "Adrenaline",
+  "description": "وجبات صحية ولذيذة مصممة خصيصاً لتحقيق أهدافك الغذائية",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3CC4F0",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/heart-logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/adrenaline-logo-full.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "تتبع طلبي",
+      "url": "/public/track",
+      "icons": [{ "src": "/heart-logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المنيو",
+      "url": "/public/menu",
+      "icons": [{ "src": "/heart-logo.png", "sizes": "192x192" }]
+    }
+  ]
+}

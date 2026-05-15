@@ -259,31 +259,62 @@ export default function Stickers() {
         }
 
         .label, .label * {
-          color: #000 !important;
           opacity: 1 !important;
           text-shadow: none !important;
           filter: none !important;
+        }
+
+        /* Default text color is black, except brand and macros which keep their colors */
+        .cust-line, .meal-line, .date-label, .date-value, .cust-num-inline {
+          color: #000 !important;
           -webkit-text-fill-color: #000 !important;
         }
 
-        /* Brand block — centered top */
+        /* Force black on print (thermal printer safety) */
+        @media print {
+          .brand-name, .brand-tag, .macros-cal, .macros-text, .macros-val, .macros-unit {
+            color: #000 !important;
+            -webkit-text-fill-color: #000 !important;
+          }
+        }
+
+        /* Brand block — heart icon + text, centered top */
         .brand-block {
-          text-align: center;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 1.8mm;
           line-height: 1;
+        }
+        .brand-heart {
+          width: 5mm;
+          height: 5mm;
+          object-fit: contain;
+          flex-shrink: 0;
+          /* keep heart visible in print */
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .brand-text {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
         }
         .brand-name {
           font-size: 10px;
           font-weight: 900;
           letter-spacing: 2.5px;
           line-height: 1;
+          color: #3CC4F0 !important;
+          -webkit-text-fill-color: #3CC4F0 !important;
         }
         .brand-tag {
           font-size: 4.5px;
           font-weight: 700;
           letter-spacing: 2.5px;
           margin-top: 0.5mm;
-          color: #555 !important;
-          -webkit-text-fill-color: #555 !important;
+          color: #47759C !important;
+          -webkit-text-fill-color: #47759C !important;
         }
         .brand-rule {
           height: 0.5px;
@@ -292,7 +323,7 @@ export default function Stickers() {
           opacity: 0.5;
         }
 
-        /* Center content area */
+        /* Center content area — strictly centered */
         .content-center {
           flex: 1;
           display: flex;
@@ -300,53 +331,111 @@ export default function Stickers() {
           align-items: center;
           justify-content: center;
           padding: 0.5mm 0;
-          gap: 0.3mm;
+          gap: 0.2mm;
           min-height: 0;
+          text-align: center;
+          width: 100%;
+        }
+        .content-center > * {
+          text-align: center !important;
         }
 
-        /* Customer name — main focus, italic bold */
+        /* Customer name — main focus, italic bold, centered */
         .cust-line {
-          font-size: 11.5px;
+          font-size: 11px;
           font-weight: 900;
           font-style: italic;
           letter-spacing: 0.3px;
-          text-align: center;
+          text-align: center !important;
           line-height: 1.15;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
           width: 100%;
+          margin: 0.6mm auto 0;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          padding: 0 1mm;
         }
 
-        /* Meal name — under customer */
+        /* Meal name — under customer, centered */
         .meal-line {
-          font-size: 8.5px;
+          font-size: 8px;
           font-weight: 700;
-          letter-spacing: 0.5px;
-          text-align: center;
+          letter-spacing: 0.4px;
+          text-align: center !important;
           line-height: 1.2;
           overflow: hidden;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          margin-top: 0.4mm;
-          color: #1a1a1a !important;
-          -webkit-text-fill-color: #1a1a1a !important;
+          margin: 0.7mm auto 0;
+          width: 100%;
+          color: #2a2a2a !important;
+          -webkit-text-fill-color: #2a2a2a !important;
+          text-transform: uppercase;
+          padding: 0 1mm;
         }
 
-        /* Warnings — red bold, no icons */
+        /* Macros + Calories row */
+        .macros-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2mm;
+          margin-top: 0.8mm;
+          flex-wrap: wrap;
+          line-height: 1;
+        }
+        .macros-cal {
+          display: inline-flex;
+          align-items: baseline;
+          gap: 0.5mm;
+          padding: 0.3mm 1.5mm;
+          border-radius: 1mm;
+          background: rgba(60,196,240,0.12) !important;
+          border: 0.5px solid rgba(60,196,240,0.4);
+        }
+        .macros-val {
+          font-size: 8px;
+          font-weight: 900;
+          color: #3CC4F0 !important;
+          -webkit-text-fill-color: #3CC4F0 !important;
+        }
+        .macros-unit {
+          font-size: 5px;
+          font-weight: 700;
+          color: #47759C !important;
+          -webkit-text-fill-color: #47759C !important;
+          letter-spacing: 0.5px;
+        }
+        .macros-text {
+          font-size: 6.5px;
+          font-weight: 700;
+          letter-spacing: 0.5px;
+          color: #47759C !important;
+          -webkit-text-fill-color: #47759C !important;
+        }
+
+        /* Warnings — red pill, centered */
         .warn-line {
-          font-size: 7px;
+          display: inline-block;
+          font-size: 6.5px;
           font-weight: 800;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
-          text-align: center;
-          line-height: 1.15;
+          text-align: center !important;
+          line-height: 1.2;
+          margin: 0.7mm auto 0;
+          padding: 0.4mm 1.5mm;
+          border-radius: 1mm;
+          background: rgba(220,38,38,0.08) !important;
+          border: 0.5px solid rgba(220,38,38,0.5);
+          max-width: 95%;
           overflow: hidden;
-          white-space: nowrap;
           text-overflow: ellipsis;
-          margin-top: 0.5mm;
-          width: 100%;
+          white-space: nowrap;
+          align-self: center;
+          letter-spacing: 0.3px;
         }
 
         /* Footer */
@@ -432,12 +521,29 @@ function parseMealData(s: any) {
 
 function MealSticker({ s }: any) {
   const { mealName, warnings } = parseMealData(s);
+
+  // ✅ ابني سطر الماكروز
+  const macrosLine = (() => {
+    if (s.protein || s.carbs || s.fats) {
+      const parts = [];
+      if (s.protein) parts.push(`P ${s.protein}`);
+      if (s.carbs)   parts.push(`C ${s.carbs}`);
+      if (s.fats)    parts.push(`F ${s.fats}`);
+      return parts.join("  •  ");
+    }
+    if (s.macros) return String(s.macros);
+    return "";
+  })();
+
   return (
     <div className="label">
-      {/* Brand */}
+      {/* Brand header — heart icon + ADRENALINE logo + HEALTHY FOOD tag */}
       <div className="brand-block">
-        <div className="brand-name">ADRENALINE</div>
-        <div className="brand-tag">HEALTHY FOOD</div>
+        <img src="/heart-logo.png" alt="" className="brand-heart" />
+        <div className="brand-text">
+          <div className="brand-name">ADRENALINE</div>
+          <div className="brand-tag">HEALTHY FOOD</div>
+        </div>
       </div>
       <div className="brand-rule" />
 
@@ -445,6 +551,20 @@ function MealSticker({ s }: any) {
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
         <div className="meal-line">{mealName}</div>
+
+        {/* Macros + Calories — صف معلومات غذائية */}
+        {(macrosLine || s.calories) && (
+          <div className="macros-row">
+            {s.calories ? (
+              <span className="macros-cal">
+                <span className="macros-val">{s.calories}</span>
+                <span className="macros-unit">kcal</span>
+              </span>
+            ) : null}
+            {macrosLine ? <span className="macros-text">{macrosLine}</span> : null}
+          </div>
+        )}
+
         {warnings ? <div className="warn-line">{warnings}</div> : null}
       </div>
 
@@ -473,8 +593,11 @@ function BoxSticker({ s }: any) {
   return (
     <div className="label">
       <div className="brand-block">
-        <div className="brand-name">ADRENALINE</div>
-        <div className="brand-tag">HEALTHY FOOD</div>
+        <img src="/heart-logo.png" alt="" className="brand-heart" />
+        <div className="brand-text">
+          <div className="brand-name">ADRENALINE</div>
+          <div className="brand-tag">HEALTHY FOOD</div>
+        </div>
       </div>
       <div className="brand-rule" />
 

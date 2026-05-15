@@ -140,6 +140,84 @@ export const update = mutation({
     safe.status = finalStatus;
 
     await ctx.db.patch(id, safe);
+
+    // 🔔 إشعارات + خصم مخزون عند تغيير الحالة
+    if (finalStatus !== currentStatus) {
+      const plan: any = await ctx.db.get(id);
+      const customerName = plan?.customerName || "عميل";
+      const planDate = plan?.date || "";
+
+      if (finalStatus === "PREPARED") {
+        // إشعار للتوصيل
+        await ctx.db.insert("notifications", {
+          targetRole: "DELIVERY",
+          type: "MEAL_PREPARED",
+          title: "وجبات جاهزة للتوصيل",
+          message: `${customerName} - ${planDate}`,
+          link: `/delivery`,
+          relatedId: id,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+
+        // ✅ خصم المخزون التلقائي
+        try {
+          const items = Array.isArray(plan?.items) ? plan.items : [];
+          for (const it of items) {
+            if (it?.isOff || !it?.menuItemId) continue;
+            const ingredients = await ctx.db
+              .query("mealIngredients")
+              .withIndex("by_menuItem", (q) => q.eq("menuItemId", it.menuItemId))
+              .collect();
+
+            for (const ing of ingredients) {
+              const invItem: any = await ctx.db.get(ing.inventoryItemId);
+              if (!invItem) continue;
+              const newStock = Math.max(0, (invItem.currentStock || 0) - ing.quantityPerServing);
+              await ctx.db.patch(ing.inventoryItemId, {
+                currentStock: newStock,
+                updatedAt: Date.now(),
+              });
+              await ctx.db.insert("inventoryMovements", {
+                itemId: ing.inventoryItemId,
+                type: "consume",
+                quantity: ing.quantityPerServing,
+                note: `استهلاك آلي: ${customerName} - ${planDate}`,
+                createdAt: Date.now(),
+              });
+
+              // تحذير مخزون منخفض
+              if (newStock <= (invItem.minStock || 0) && newStock > 0) {
+                await ctx.db.insert("notifications", {
+                  targetRole: "INVENTORY_MANAGER",
+                  type: "LOW_STOCK",
+                  title: "تحذير: مخزون منخفض",
+                  message: `${invItem.nameAr} - متبقي ${newStock} ${invItem.unit}`,
+                  link: `/inventory`,
+                  relatedId: ing.inventoryItemId,
+                  isRead: false,
+                  createdAt: Date.now(),
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Inventory deduction error:", e);
+        }
+      } else if (finalStatus === "DELIVERED") {
+        await ctx.db.insert("notifications", {
+          targetRole: "ADMIN",
+          type: "MEAL_DELIVERED",
+          title: "تم توصيل وجبات",
+          message: `${customerName} - ${planDate}`,
+          link: `/plans`,
+          relatedId: id,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+      }
+    }
+
     return true;
   },
 });
