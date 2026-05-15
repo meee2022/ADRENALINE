@@ -208,8 +208,11 @@ export const approve = mutation({
     customerId: v.optional(v.id("customers")), // ✅ ربط بمشترك (من الأخصائية)
     startDate: v.string(), // ✅ تاريخ بداية التوصيل (YYYY-MM-DD) - مطلوب
     notes: v.optional(v.string()),
+    // ✅ تعديلات اختيارية لتاريخ يوم محدد. المفتاح هو "week-day" (مثال: "1-saturday")
+    // والقيمة تاريخ بصيغة YYYY-MM-DD يستبدل التاريخ المحسوب تلقائياً
+    dateOverrides: v.optional(v.record(v.string(), v.string())),
   },
-  handler: async (ctx, { orderId, customerId, startDate, notes }) => {
+  handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides }) => {
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
@@ -238,16 +241,23 @@ export const approve = mutation({
     const startDateObj = new Date(startDate); // ✅ تاريخ البداية المحدد من الأخصائية
     
     for (const item of items) {
-      // ✅ حساب التاريخ - الأسبوع = 6 أيام عمل (السبت-الأربعاء)
-      // الخميس والجمعة ليسوا أيام عمل
-      const weekOffset = (item.week - 1) * 6; // ✅ 6 أيام بدلاً من 7
-      const dayOffset = getDayOffset(item.day);
-      
-      const deliveryDate = new Date(startDateObj);
-      deliveryDate.setDate(deliveryDate.getDate() + weekOffset + dayOffset);
-      
-      const dateKey = deliveryDate.toISOString().split("T")[0]; // YYYY-MM-DD
-      
+      // ✅ إذا حدّدت الأخصائية تاريخ يدوي لـ (week, day) ده، استخدمه
+      const overrideKey = `${item.week}-${item.day}`;
+      const overrideDate = dateOverrides?.[overrideKey];
+
+      let dateKey: string;
+      if (overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)) {
+        // استخدم التاريخ اليدوي مباشرة
+        dateKey = overrideDate;
+      } else {
+        // احسب التاريخ تلقائياً (6 أيام عمل، السبت-الأربعاء)
+        const weekOffset = (item.week - 1) * 6;
+        const dayOffset = getDayOffset(item.day);
+        const deliveryDate = new Date(startDateObj);
+        deliveryDate.setDate(deliveryDate.getDate() + weekOffset + dayOffset);
+        dateKey = deliveryDate.toISOString().split("T")[0];
+      }
+
       if (!mealsByDate[dateKey]) {
         mealsByDate[dateKey] = [];
       }

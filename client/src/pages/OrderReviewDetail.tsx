@@ -40,6 +40,8 @@ export default function OrderReviewDetail() {
   const [approveNotes, setApproveNotes] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<Id<"customers"> | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined); // ✅ تاريخ بداية التوصيل
+  // ✅ تواريخ يدوية لـ (week, day) — اختيارية، تطغى على التاريخ المحسوب
+  const [dateOverrides, setDateOverrides] = useState<Record<string, Date | undefined>>({});
 
   const orderData = useQuery(
     api.customerOrders.getById,
@@ -88,12 +90,19 @@ export default function OrderReviewDetail() {
       return;
     }
     
+    // ✅ تحويل تواريخ الـ overrides لصيغة { "week-day": "YYYY-MM-DD" }
+    const overridesPayload: Record<string, string> = {};
+    Object.entries(dateOverrides).forEach(([key, d]) => {
+      if (d) overridesPayload[key] = d.toISOString().split("T")[0];
+    });
+
     try {
       await approveMutation({
         orderId,
         customerId: selectedCustomerId || undefined, // ✅ ربط بالمشترك
         startDate: startDate.toISOString().split("T")[0], // ✅ إرسال تاريخ البداية (YYYY-MM-DD)
         notes: approveNotes || undefined,
+        dateOverrides: Object.keys(overridesPayload).length > 0 ? overridesPayload : undefined,
       });
       alert("✅ تم اعتماد الخطة بنجاح!");
       navigate("/orders/pending");
@@ -208,19 +217,97 @@ export default function OrderReviewDetail() {
                 {days.map((day) => {
                   const dayMeals = weekData[day];
                   const dayCalories = dayMeals.reduce((sum, m) => sum + m.calories, 0);
+                  const overrideKey = `${weekNum}-${day}`;
+                  const overrideDate = dateOverrides[overrideKey];
+
+                  // احسب التاريخ التلقائي (لو كان فيه startDate)
+                  const dayOffsetMap: Record<string, number> = {
+                    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4,
+                  };
+                  let autoDate: Date | null = null;
+                  if (startDate) {
+                    autoDate = new Date(startDate);
+                    autoDate.setDate(autoDate.getDate() + (weekNum - 1) * 6 + (dayOffsetMap[day] ?? 0));
+                  }
+                  const effectiveDate = overrideDate || autoDate;
 
                   return (
                     <div
                       key={day}
                       className="p-4 bg-gray-50 rounded-lg border-r-4 border-r-primary"
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <h5 className="text-lg font-bold text-gray-900">
-                          {dayNameAr[day] || day}
-                        </h5>
-                        <span className="text-sm font-semibold text-gray-600">
-                          {dayCalories} سعرة
-                        </span>
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                        <div className="flex items-center gap-3">
+                          <h5 className="text-lg font-bold text-gray-900">
+                            {dayNameAr[day] || day}
+                          </h5>
+                          <span className="text-sm font-semibold text-gray-600">
+                            {dayCalories} سعرة
+                          </span>
+                        </div>
+
+                        {/* ✅ Date override picker for this specific day */}
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant={overrideDate ? "default" : "outline"}
+                                size="sm"
+                                className={cn(
+                                  "h-8 text-xs gap-1.5",
+                                  overrideDate
+                                    ? "bg-[#3CC4F0] hover:bg-[#2bb0dc] text-white"
+                                    : "border-dashed border-gray-300 text-gray-600 hover:border-[#3CC4F0]"
+                                )}
+                              >
+                                <CalendarIcon className="h-3 w-3" />
+                                {effectiveDate
+                                  ? format(effectiveDate, "d MMM", { locale: ar })
+                                  : "تحديد تاريخ"}
+                                {overrideDate && (
+                                  <span className="text-[9px] bg-white/25 px-1 rounded">يدوي</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="end">
+                              <div className="p-3 border-b border-gray-100">
+                                <p className="text-xs font-bold text-gray-700">
+                                  تاريخ هذا اليوم
+                                </p>
+                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                  {autoDate ? `الافتراضي: ${format(autoDate, "d MMM yyyy", { locale: ar })}` : "حدّد تاريخ البداية أولاً"}
+                                </p>
+                              </div>
+                              <Calendar
+                                mode="single"
+                                selected={overrideDate}
+                                onSelect={(d) =>
+                                  setDateOverrides((prev) => ({ ...prev, [overrideKey]: d }))
+                                }
+                                locale={ar}
+                                initialFocus
+                              />
+                              {overrideDate && (
+                                <div className="p-2 border-t border-gray-100">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      setDateOverrides((prev) => {
+                                        const next = { ...prev };
+                                        delete next[overrideKey];
+                                        return next;
+                                      })
+                                    }
+                                    className="w-full h-7 text-[11px] text-gray-500 hover:text-red-600"
+                                  >
+                                    مسح التاريخ اليدوي (استخدم التلقائي)
+                                  </Button>
+                                </div>
+                              )}
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
 
                       <div className="grid md:grid-cols-3 gap-3">
