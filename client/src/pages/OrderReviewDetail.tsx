@@ -317,39 +317,98 @@ export default function OrderReviewDetail() {
             </p>
           </div>
 
-          {/* ✅ ربط الطلب بمشترك موجود */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              🔗 ربط بمشترك موجود (اختياري)
-            </label>
-            <select
-              value={selectedCustomerId || ""}
-              onChange={(e) => setSelectedCustomerId(e.target.value as Id<"customers"> | "" || null)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white"
-            >
-              <option value="">-- لا يوجد (عميل جديد) --</option>
-              {customers.map((customer) => (
-                <option key={customer._id} value={customer._id}>
-                  {customer.fullName} ({customer.phone})
-                  {customer.allergies ? ` - ⚠️ حساسية: ${customer.allergies}` : ""}
-                </option>
-              ))}
-            </select>
-            {selectedCustomerId && customers.find(c => c._id === selectedCustomerId)?.allergies && (
-              <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                <p className="text-xs text-amber-800 flex items-center gap-1">
-                  <span className="font-bold">⚠️ تنبيه:</span>
-                  هذا المشترك لديه حساسية من:{" "}
-                  <span className="font-semibold">
-                    {customers.find(c => c._id === selectedCustomerId)?.allergies}
-                  </span>
+          {/* ✅ ربط الطلب بمشترك */}
+          {(() => {
+            // الربط الفعلي: إما من الطلب نفسه (auto-link) أو اختيار يدوي
+            const linkedId = (order as any).customerId || selectedCustomerId;
+            const linkedCustomer = linkedId
+              ? customers.find((c) => c._id === linkedId)
+              : null;
+
+            // الحالة 1: الطلب مربوط تلقائياً بمشترك موجود
+            if (linkedCustomer) {
+              return (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    🔗 المشترك المربوط
+                  </label>
+                  <div className="rounded-xl p-4 flex items-start gap-3"
+                    style={{
+                      background: "linear-gradient(135deg, #ecfdf5, #f0fdf4)",
+                      border: "1.5px solid #a7f3d0",
+                    }}>
+                    <div className="h-11 w-11 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-black"
+                      style={{ background: "linear-gradient(135deg, #10b981, #059669)" }}>
+                      {linkedCustomer.fullName?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-black text-emerald-900 truncate">{linkedCustomer.fullName}</p>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                          ✓ مربوط تلقائياً
+                        </span>
+                      </div>
+                      <p className="text-xs text-emerald-800" dir="ltr">📞 {linkedCustomer.phone}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                        {linkedCustomer.program && (
+                          <span className="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-700">
+                            {linkedCustomer.program}
+                          </span>
+                        )}
+                        {linkedCustomer.mealsPerDay != null && (
+                          <span className="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-700">
+                            {linkedCustomer.mealsPerDay} وجبات/يوم
+                          </span>
+                        )}
+                        {linkedCustomer.allergies && (
+                          <span className="px-2 py-0.5 rounded-md bg-red-50 border border-red-200 text-red-700 font-bold">
+                            ⚠ حساسية: {linkedCustomer.allergies}
+                          </span>
+                        )}
+                        {linkedCustomer.avoid && (
+                          <span className="px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-orange-700 font-bold">
+                            ✕ ممنوع: {linkedCustomer.avoid}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCustomerId(null)}
+                      className="text-xs text-gray-500 hover:text-red-600 hover:underline whitespace-nowrap"
+                      title="إلغاء الربط واختيار يدوي"
+                    >
+                      تغيير
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
+            // الحالة 2: الطلب غير مربوط — اعرض dropdown يدوي
+            return (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  🔗 ربط بمشترك (اختياري)
+                </label>
+                <select
+                  value={selectedCustomerId || ""}
+                  onChange={(e) => setSelectedCustomerId(e.target.value as Id<"customers"> | "" || null)}
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white"
+                >
+                  <option value="">-- عميل جديد (بدون ربط) --</option>
+                  {customers.map((customer) => (
+                    <option key={customer._id} value={customer._id}>
+                      {customer.fullName} ({customer.phone})
+                      {customer.allergies ? ` - ⚠️ ${customer.allergies}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-gray-500">
+                  💡 لم يتم العثور على مشترك مطابق برقم الهاتف. يمكنك اختياره يدوياً.
                 </p>
               </div>
-            )}
-            <p className="mt-2 text-xs text-gray-500">
-              💡 يساعد الربط بمشترك موجود في مراعاة الحساسيات والتفضيلات المسجلة مسبقاً
-            </p>
-          </div>
+            );
+          })()}
 
           {/* Approval Notes */}
           <div>
