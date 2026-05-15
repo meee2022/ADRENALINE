@@ -60,15 +60,30 @@ function AppDirSync() {
   return null;
 }
 
+import { canAccess, ROLE_HOME, type Role } from "@/lib/permissions";
+import { useLocation as useWouterLocation } from "wouter";
+
 function ProtectedRoute({
   component: Component,
 }: {
   component: React.ComponentType;
 }) {
   const { currentUser } = useStore();
+  const [location] = useWouterLocation();
 
   if (!currentUser) {
     return <Redirect to="/login" />;
+  }
+
+  // Role-based access check
+  const role = currentUser.role as Role | undefined;
+  if (!role) {
+    return <Redirect to="/login" />;
+  }
+  if (!canAccess(role, location)) {
+    // Redirect to the role's default home
+    const home = ROLE_HOME[role] || "/";
+    return <Redirect to={home} />;
   }
 
   return (

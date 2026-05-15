@@ -65,13 +65,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 {isRtl ? "المنيو" : "Menu"}
               </a>
               <a
-                href="#about"
+                href="/public/about"
                 className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
               >
                 {isRtl ? "من نحن" : "About"}
               </a>
               <a
-                href="#contact"
+                href="/public/contact"
                 className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
               >
                 {isRtl ? "تواصل معنا" : "Contact"}
@@ -444,9 +444,15 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   </a>
                 </li>
                 <li>
-                  <a href="#about" className="text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-sm flex items-center gap-2 group">
+                  <a href="/public/about" className="text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-sm flex items-center gap-2 group">
                     <span className="w-1 h-1 rounded-full bg-[#3CC4F0] opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     {isRtl ? "من نحن" : "About"}
+                  </a>
+                </li>
+                <li>
+                  <a href="/public/contact" className="text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-sm flex items-center gap-2 group">
+                    <span className="w-1 h-1 rounded-full bg-[#3CC4F0] opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {isRtl ? "تواصل معنا" : "Contact"}
                   </a>
                 </li>
               </ul>

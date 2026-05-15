@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, UserPlus, Shield } from "lucide-react";
+import { Plus, Edit, Trash2, UserPlus, Shield, Users as UsersIcon, ArrowUpCircle, ChefHat, Truck, HeartPulse, Package, UserCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
@@ -61,13 +61,61 @@ export default function Users() {
   const [activeTab, setActiveTab] = useState<"staff" | "customers">("staff");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [promoteCustomer, setPromoteCustomer] = useState<any>(null);
+  const [promoteRole, setPromoteRole] = useState<Role>("NUTRITIONIST");
+  const [promotePassword, setPromotePassword] = useState("");
   const [formData, setFormData] = useState<UserFormData>({
     name: "",
     email: "",
     password: "",
     role: "DELIVERY",
   });
+
+  // Promote-to-staff mutation
+  const createUserMutation = useMutation(api.users.createUser);
+
+  const openPromoteDialog = (customer: any) => {
+    setPromoteCustomer(customer);
+    setPromoteRole("NUTRITIONIST");
+    setPromotePassword("");
+    setIsPromoteDialogOpen(true);
+  };
+
+  const handlePromote = async () => {
+    if (!promoteCustomer) return;
+    if (!promotePassword || promotePassword.length < 4) {
+      toast({
+        title: isRtl ? "كلمة المرور قصيرة" : "Password too short",
+        description: isRtl ? "كلمة المرور 4 أحرف على الأقل" : "Password must be at least 4 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      await createUserMutation({
+        email: promoteCustomer.email,
+        password: promotePassword,
+        name: promoteCustomer.fullName,
+        role: promoteRole,
+      });
+      toast({
+        title: isRtl ? "تم الرفع بنجاح" : "Promoted successfully",
+        description: isRtl
+          ? `${promoteCustomer.fullName} أصبح موظفاً بدور ${getRoleLabel(promoteRole)}`
+          : `${promoteCustomer.fullName} is now staff (${getRoleLabel(promoteRole)})`,
+      });
+      setIsPromoteDialogOpen(false);
+      setActiveTab("staff");
+    } catch (e: any) {
+      toast({
+        title: isRtl ? "فشل الرفع" : "Failed",
+        description: e?.message || (isRtl ? "حصل خطأ" : "Something went wrong"),
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch users from Convex
   const users = useQuery(api.users.listUsers) || [];
@@ -351,7 +399,7 @@ export default function Users() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
+              <UsersIcon className="h-5 w-5 text-primary" />
               حسابات العملاء
             </CardTitle>
             <CardDescription>{customers.length} عميل</CardDescription>
@@ -366,44 +414,69 @@ export default function Users() {
                   <TableHead>الحالة</TableHead>
                   <TableHead>تاريخ التسجيل</TableHead>
                   <TableHead>مرتبط باشتراك</TableHead>
+                  <TableHead className="text-center">الإجراءات</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       لا يوجد عملاء مسجلين
                     </TableCell>
                   </TableRow>
                 ) : (
-                  customers.map((customer: any) => (
-                    <TableRow key={customer.id}>
-                      <TableCell className="font-medium">{customer.fullName}</TableCell>
-                      <TableCell>{customer.email}</TableCell>
-                      <TableCell>{customer.phone}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            customer.isActive
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {customer.isActive ? "نشط" : "غير نشط"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(customer.createdAt).toLocaleDateString("ar-SA")}
-                      </TableCell>
-                      <TableCell>
-                        {customer.customerId ? (
-                          <span className="text-green-600 font-medium">✓ مرتبط</span>
-                        ) : (
-                          <span className="text-gray-400">غير مرتبط</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  customers.map((customer: any) => {
+                    const alreadyStaff = users.some((u: any) => u.email === customer.email);
+                    return (
+                      <TableRow key={customer.id}>
+                        <TableCell className="font-medium">{customer.fullName}</TableCell>
+                        <TableCell>{customer.email}</TableCell>
+                        <TableCell>{customer.phone}</TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              customer.isActive
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {customer.isActive ? "نشط" : "غير نشط"}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="tabular-nums" dir="ltr">
+                            {new Date(customer.createdAt).toLocaleDateString("en-GB")}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {customer.customerId ? (
+                            <span className="text-green-600 font-medium">✓ مرتبط</span>
+                          ) : (
+                            <span className="text-gray-400">غير مرتبط</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-2">
+                            {alreadyStaff ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                                موظف بالفعل
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openPromoteDialog(customer)}
+                                className="h-8 gap-1.5 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white"
+                              >
+                                <ArrowUpCircle className="h-3.5 w-3.5" />
+                                <span className="text-xs">رفع لموظف</span>
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -554,6 +627,89 @@ export default function Users() {
               {t("users.cancel")}
             </Button>
             <Button onClick={handleSaveEdit}>{t("users.save")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Promote Customer to Staff Dialog ─── */}
+      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowUpCircle className="h-5 w-5 text-[#3CC4F0]" />
+              رفع عميل إلى موظف
+            </DialogTitle>
+            <DialogDescription>
+              تحويل العميل إلى حساب موظف بدور محدد
+            </DialogDescription>
+          </DialogHeader>
+
+          {promoteCustomer && (
+            <div className="space-y-4 py-4">
+              {/* Customer info card */}
+              <div className="rounded-xl p-3 flex items-center gap-3"
+                style={{ background: "#3CC4F010", border: "1px solid #3CC4F030" }}>
+                <div className="h-10 w-10 rounded-xl flex items-center justify-center text-white font-bold"
+                  style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                  {promoteCustomer.fullName?.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="font-bold text-sm text-[#0F1516] truncate">{promoteCustomer.fullName}</p>
+                  <p className="text-xs text-[#47759C] truncate" dir="ltr">{promoteCustomer.email}</p>
+                </div>
+              </div>
+
+              {/* Role selection */}
+              <div className="space-y-2">
+                <Label>اختر الدور</Label>
+                <Select value={promoteRole} onValueChange={(v) => setPromoteRole(v as Role)} dir={isRtl ? "rtl" : "ltr"}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ADMIN">
+                      <span className="flex items-center gap-2"><Shield className="h-4 w-4" /> {t("role.admin")}</span>
+                    </SelectItem>
+                    <SelectItem value="NUTRITIONIST">
+                      <span className="flex items-center gap-2"><HeartPulse className="h-4 w-4" /> {t("role.nutritionist")}</span>
+                    </SelectItem>
+                    <SelectItem value="KITCHEN">
+                      <span className="flex items-center gap-2"><ChefHat className="h-4 w-4" /> {t("role.kitchen")}</span>
+                    </SelectItem>
+                    <SelectItem value="DELIVERY">
+                      <span className="flex items-center gap-2"><Truck className="h-4 w-4" /> {t("role.delivery")}</span>
+                    </SelectItem>
+                    <SelectItem value="INVENTORY_MANAGER">
+                      <span className="flex items-center gap-2"><Package className="h-4 w-4" /> {t("role.inventory_manager")}</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <Label>كلمة المرور الجديدة (للدخول كموظف)</Label>
+                <Input
+                  type="password"
+                  value={promotePassword}
+                  onChange={(e) => setPromotePassword(e.target.value)}
+                  placeholder="4 أحرف على الأقل"
+                  dir="ltr"
+                  className="text-left"
+                />
+                <p className="text-xs text-muted-foreground">
+                  العميل سيستخدم نفس البريد الإلكتروني مع كلمة المرور دي لتسجيل الدخول كموظف.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>إلغاء</Button>
+            <Button onClick={handlePromote} className="bg-[#3CC4F0] hover:bg-[#2bb0dc] gap-2">
+              <ArrowUpCircle className="h-4 w-4" />
+              تأكيد الرفع
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
