@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { useQuery } from "convex/react";
+import { api } from "../../../convex/_generated/api";
 
 export default function PublicPlansPage() {
   const { language, dir } = useLanguage();
@@ -18,6 +20,18 @@ export default function PublicPlansPage() {
   const [activeDuration, setActiveDuration] = useState<"week" | "two_weeks" | "month">("week");
 
   const { data: plans = [] } = usePublicPlans(activeDuration);
+  const settings = useQuery(api.restaurantSettings.get);
+  const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
+
+  const handleSubscribe = (planName: string, option: any) => {
+    const mealsCount = option?.mealsCount || 0;
+    const snacksCount = option?.snacksCount || 0;
+    const msg = isRtl
+      ? `مرحباً 👋\nأرغب في الاشتراك في خطة *${planName}*\n\nالباقة: ${mealsCount} وجبات + ${snacksCount} سناك\n\nمن فضلك أرسلوا لي تفاصيل الاشتراك.`
+      : `Hello 👋\nI'd like to subscribe to the *${planName}* plan.\n\nPackage: ${mealsCount} meals + ${snacksCount} snacks\n\nPlease send me subscription details.`;
+    const url = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
 
   return (
     <PublicLayout>
@@ -163,7 +177,10 @@ export default function PublicPlansPage() {
                     )}
 
                     {/* CTA Button */}
-                    <Button className="w-full h-14 rounded-full bg-[#3CC4F0] hover:bg-[#47759C] text-white font-bold text-lg shadow-md">
+                    <Button 
+                      onClick={() => handleSubscribe(isRtl ? plan.nameAr : plan.nameEn || plan.nameAr, plan.options?.[0])}
+                      className="w-full h-14 rounded-full bg-[#3CC4F0] hover:bg-[#47759C] text-white font-bold text-lg shadow-md"
+                    >
                       {isRtl ? "اشترك الآن" : "Subscribe Now"}
                     </Button>
                   </CardContent>

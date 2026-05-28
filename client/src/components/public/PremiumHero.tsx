@@ -132,10 +132,33 @@ export function PremiumHero({
     <section
       ref={heroRef}
       dir={isRtl ? "rtl" : "ltr"}
-      className="relative w-full overflow-hidden flex items-center pt-8 md:pt-14 pb-10 md:pb-16"
+      className="relative w-full overflow-hidden flex items-center pt-16 pb-20 lg:pt-14 lg:pb-16"
       style={{ background: "linear-gradient(135deg, #0f1516 0%, #162535 50%, #1e3a50 100%)" }}
     >
       <ParticleEffect />
+
+      {/* Mobile Full-Screen Background Slide Image (Only visible on lg:hidden) */}
+      <div className="absolute inset-0 z-0 lg:hidden block overflow-hidden">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeIdx}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.65 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="absolute inset-0"
+          >
+            <img
+              src={slide.image}
+              alt="Immersive Mobile Background"
+              className="w-full h-full object-cover"
+              style={{ filter: "brightness(0.35) saturate(1.15)" }}
+            />
+            {/* Elegant dark overlay to guarantee 100% white text contrast and readability */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/80 pointer-events-none" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Decorative ambient glows */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full opacity-30 blur-[100px] pointer-events-none z-0"
@@ -156,7 +179,7 @@ export function PremiumHero({
         <div className="flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-12">
           
           {/* ─── TEXT COLUMN ─── */}
-          <div className="w-full lg:w-1/2 flex flex-col items-center lg:items-start text-center lg:text-start">
+          <div className="w-full lg:w-[42%] flex flex-col items-center lg:items-start text-center lg:text-start">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
@@ -177,7 +200,7 @@ export function PremiumHero({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5 }}
-                className="text-2xl sm:text-3xl md:text-4xl lg:text-5.5xl font-black text-white mb-3 leading-[1.2] tracking-tight"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5.5xl font-black text-white mb-3 leading-snug sm:leading-[1.2] tracking-tight px-4 sm:px-0"
               >
                 {isRtl ? slide.titleAr : slide.titleEn}
                 <span
@@ -201,7 +224,7 @@ export function PremiumHero({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="text-xs sm:text-sm md:text-base max-w-lg mb-6 leading-relaxed font-medium"
+                className="text-xs sm:text-sm md:text-base max-w-lg mb-6 leading-relaxed font-medium px-4 sm:px-0"
                 style={{ color: "#BCBEBF" }}
               >
                 {isRtl ? slide.subtitleAr : slide.subtitleEn}
@@ -212,7 +235,7 @@ export function PremiumHero({
               initial={{ opacity: 0, y: 20 }}
               animate={isInView ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: 0.4, duration: 0.6 }}
-              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto"
+              className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto px-4 sm:px-0"
             >
               <motion.button
                 whileHover={{ scale: 1.03, boxShadow: "0 15px 30px rgba(60,196,240,0.25)" }}
@@ -240,49 +263,14 @@ export function PremiumHero({
               </motion.button>
             </motion.div>
 
-            {/* Trust Indicators */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="mt-5 flex items-center gap-4 pt-4 border-t border-white/10 w-full max-w-md justify-center lg:justify-start"
-            >
-              <div className="flex flex-col items-center lg:items-start gap-1">
-                <div className="flex items-center gap-1 text-yellow-400">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                </div>
-                <span className="text-[10px] sm:text-xs font-semibold text-white/60">
-                  {isRtl ? "تقييم 4.9 من عملائنا" : "4.9 Rating from clients"}
-                </span>
-              </div>
-              
-              <div className="h-6 w-px bg-white/10" />
 
-              <div className="flex flex-col items-center lg:items-start gap-1">
-                <div className="flex -space-x-1.5 rtl:space-x-reverse">
-                  {[1, 2, 3, 4].map((i) => (
-                    <img key={i} src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="user" className="w-5.5 h-5.5 rounded-full border-2 border-[#0A0F10]" />
-                  ))}
-                  <div className="w-5.5 h-5.5 rounded-full border-2 border-[#0A0F10] bg-[#3CC4F0] flex items-center justify-center text-[7px] font-bold text-white">
-                    +500
-                  </div>
-                </div>
-                <span className="text-[10px] sm:text-xs font-semibold text-white/60">
-                  {isRtl ? "مشترك نشط" : "Active Subscribers"}
-                </span>
-              </div>
-            </motion.div>
 
           </div>
 
-          {/* ─── VISUAL COLUMN (Interactive 3D Cards Stack & Flexible Ratio) ─── */}
-          <div className="w-full lg:w-1/2 relative h-[280px] md:h-[360px] lg:h-[480px] flex items-center justify-center">
+          {/* ─── VISUAL COLUMN (Interactive 3D Cards Stack & Flexible Ratio) - Hidden on mobile, only visible on lg screen sizes */}
+          <div className="hidden lg:flex w-full lg:w-[58%] relative h-[280px] md:h-[360px] lg:h-[480px] items-center justify-center px-4 sm:px-0">
             <motion.div 
-              className="relative w-full max-w-[360px] md:max-w-[420px] lg:max-w-[480px] aspect-[4/3] flex items-center justify-center"
+              className="relative w-full max-w-[420px] md:max-w-[540px] lg:max-w-[650px] aspect-[16/10] flex items-center justify-center"
               whileHover="hover"
             >
               {/* Stack Card 1 (Back Decorative Glass Card) */}
@@ -291,12 +279,12 @@ export function PremiumHero({
                   hover: { rotate: -8, scale: 0.95, x: isRtl ? 15 : -15, y: -5 }
                 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
-                className="absolute inset-0 rounded-[2rem] opacity-30 z-0"
+                className="absolute inset-0 rounded-[2rem] opacity-30 z-0 -rotate-1 sm:-rotate-4 scale-[0.96]"
                 style={{
                   background: "linear-gradient(135deg, rgba(60,196,240,0.4), rgba(71,117,156,0.1))",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  transform: "rotate(-4deg) scale(0.96)",
-                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)"
+                  boxShadow: "0 10px 40px rgba(0,0,0,0.3)",
+                  transformOrigin: "center"
                 }}
               />
 
@@ -306,12 +294,12 @@ export function PremiumHero({
                   hover: { rotate: 6, scale: 0.98, x: isRtl ? -10 : 10, y: 5 }
                 }}
                 transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
-                className="absolute inset-0 rounded-[2rem] opacity-50 z-0"
+                className="absolute inset-0 rounded-[2rem] opacity-50 z-0 rotate-1 sm:rotate-3 scale-[0.98]"
                 style={{
                   background: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))",
                   border: "1px solid rgba(255,255,255,0.15)",
-                  transform: "rotate(3deg) scale(0.98)",
-                  boxShadow: "0 15px 45px rgba(0,0,0,0.35)"
+                  boxShadow: "0 15px 45px rgba(0,0,0,0.35)",
+                  transformOrigin: "center"
                 }}
               />
               
@@ -325,9 +313,9 @@ export function PremiumHero({
                 transition={{ delay: 0.3, duration: 0.8, type: "spring", stiffness: 100 }}
                 className="relative w-full h-full rounded-[2.2rem] overflow-hidden z-10"
                 style={{
-                  boxShadow: "0 30px 60px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.25)",
-                  border: "1.5px solid rgba(255,255,255,0.2)",
-                  background: "rgba(22, 37, 53, 0.4)"
+                  boxShadow: "0 25px 60px rgba(0,0,0,0.45), 0 0 0 4px rgba(255,255,255,0.12), inset 0 1px 0 rgba(255,255,255,0.5)",
+                  border: "3px solid rgba(255,255,255,0.85)",
+                  background: "#ffffff"
                 }}
               >
                 <AnimatePresence mode="wait">
@@ -343,10 +331,10 @@ export function PremiumHero({
                       src={slide.image}
                       alt="Healthy Food"
                       className="w-full h-full object-cover"
-                      style={{ filter: "brightness(0.95) saturate(1.05)" }}
+                      style={{ filter: "brightness(1.02) saturate(1.08) contrast(1.02)" }}
                     />
-                    {/* Subtle inner gradient to ensure image looks rich and premium */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                    {/* Very subtle bottom vignette only */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent pointer-events-none" />
                   </motion.div>
                 </AnimatePresence>
               </motion.div>

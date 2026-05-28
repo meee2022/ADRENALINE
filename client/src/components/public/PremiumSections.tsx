@@ -4,6 +4,8 @@
  */
 import * as React from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 import {
   ChefHat, Sparkles, Star, Quote, MapPin, Phone, Clock, Instagram,
   ArrowLeft, ArrowRight, Leaf, Award, Heart, Users, MessageCircle,
@@ -298,75 +300,175 @@ export function PremiumTestimonials() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [activeIdx, setActiveIdx] = React.useState(0);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [successMsg, setSuccessMsg] = React.useState("");
 
-  const testimonials = [
-    { nameAr: "أحمد المالكي", nameEn: "Ahmed Al-Maliki", roleAr: "رياضي محترف", roleEn: "Pro Athlete",
-      textAr: "أفضل خطة وجبات صحية جربتها! الطعام لذيذ والتوصيل دايماً في الميعاد. ساعدتني أوصل لأهدافي بسهولة.",
-      textEn: "The best meal plan I've tried! Delicious food, always on time. Helped me reach my goals easily." },
-    { nameAr: "فاطمة العبدالله", nameEn: "Fatima Al-Abdullah", roleAr: "مدربة لياقة", roleEn: "Fitness Coach",
-      textAr: "خسرت 8 كيلو في شهرين بدون ما أحس إني على دايت! الوجبات متنوعة والشيف محترف فعلاً.",
-      textEn: "Lost 8kg in 2 months without feeling I'm dieting! Varied meals, truly expert chef." },
-    { nameAr: "محمد الكواري", nameEn: "Mohammed Al-Kuwari", roleAr: "رجل أعمال", roleEn: "Businessman",
-      textAr: "حياتي اتغيرت 100%. الوجبات جاهزة وصحية ومحسوبة، توفرلي وقت كتير وطاقتي زادت.",
-      textEn: "My life changed 100%. Meals are ready, healthy, calculated — saved tons of time, energy boosted." },
-  ];
+  // Form states
+  const [newName, setNewName] = React.useState("");
+  const [newMeal, setNewMeal] = React.useState("");
+  const [newStars, setNewStars] = React.useState(5);
+  const [newComment, setNewComment] = React.useState("");
+
+  const dbRatings = useQuery(api.ratings.listAll, { limit: 5 }) || [];
+  const createRating = useMutation(api.ratings.create);
+
+  const testimonials = React.useMemo(() => {
+    const defaults = [
+      {
+        nameAr: "أحمد المالكي",
+        nameEn: "Ahmed Al-Maliki",
+        roleAr: "رياضي محترف",
+        roleEn: "Pro Athlete",
+        textAr: "أفضل خطة وجبات صحية جربتها! الطعام لذيذ والتوصيل دايماً في الميعاد. ساعدتني أوصل لأهدافي بسهولة.",
+        textEn: "The best meal plan I've tried! Delicious food, always on time. Helped me reach my goals easily.",
+        stars: 5
+      },
+      {
+        nameAr: "فاطمة العبدالله",
+        nameEn: "Fatima Al-Abdullah",
+        roleAr: "مدربة لياقة",
+        roleEn: "Fitness Coach",
+        textAr: "خسرت 8 كيلو في شهرين بدون ما أحس إني على دايت! الوجبات متنوعة والشيف محترف فعلاً.",
+        textEn: "Lost 8kg in 2 months without feeling I'm dieting! Varied meals, truly expert chef.",
+        stars: 5
+      },
+      {
+        nameAr: "محمد الكواري",
+        nameEn: "Mohammed Al-Kuwari",
+        roleAr: "رجل أعمال",
+        roleEn: "Businessman",
+        textAr: "حياتي اتغيرت 100%. الوجبات جاهزة وصحية ومحسوبة، توفرلي وقت كتير وطاقتي زادت.",
+        textEn: "My life changed 100%. Meals are ready, healthy, calculated — saved tons of time, energy boosted.",
+        stars: 5
+      }
+    ];
+
+    const mappedDb = dbRatings.map((r: any) => ({
+      nameAr: r.customerName,
+      nameEn: r.customerName,
+      roleAr: r.mealName || (isRtl ? "وجبات أدرينالين" : "Adrenaline Meals"),
+      roleEn: r.mealName || "Adrenaline Meals",
+      textAr: r.comment || (isRtl ? "وجبات رائعة وصحية وتوصيل مميز للغاية!" : "Great healthy meals and excellent delivery!"),
+      textEn: r.comment || "Great healthy meals and excellent delivery!",
+      stars: r.stars || 5
+    }));
+
+    return mappedDb.length > 0 ? [...mappedDb, ...defaults] : defaults;
+  }, [dbRatings, isRtl]);
 
   React.useEffect(() => {
+    if (testimonials.length <= 1 || isModalOpen) return;
     const t = setInterval(() => setActiveIdx((i) => (i + 1) % testimonials.length), 6000);
     return () => clearInterval(t);
-  }, [testimonials.length]);
+  }, [testimonials.length, isModalOpen]);
 
-  const t = testimonials[activeIdx];
+  const t = testimonials[activeIdx] || testimonials[0];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newName || !newComment || !newMeal) return;
+    setIsSubmitting(true);
+    try {
+      await createRating({
+        customerName: newName,
+        mealName: newMeal,
+        stars: newStars,
+        comment: newComment,
+      });
+      setSuccessMsg(isRtl ? "تم إرسال تقييمك بنجاح! شكراً لك ❤️" : "Your review submitted successfully! Thank you ❤️");
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setSuccessMsg("");
+        setNewName("");
+        setNewMeal("");
+        setNewStars(5);
+        setNewComment("");
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <section className="relative py-12 md:py-16 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #e8f8fd 50%, #eaf1f7 100%)" }}>
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-30 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #3CC4F0, transparent 70%)" }} />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-20 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #47759C, transparent 70%)" }} />
+    <section className="relative py-10 md:py-14 overflow-hidden"
+      style={{ background: "linear-gradient(135deg, #ECF8FB 0%, #F3F9FC 50%, #ECF4F8 100%)" }}>
+      
+      {/* Curved abstract accent highlights using branding colors */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl pointer-events-none"
+        style={{ background: "radial-gradient(circle, #3CC4F0, transparent 75%)" }} />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl pointer-events-none"
+        style={{ background: "radial-gradient(circle, #47759C, transparent 75%)" }} />
 
       <div className="relative max-w-4xl mx-auto px-5 md:px-8">
-        {/* Compact header */}
-        <div className="text-center mb-6 md:mb-8">
+        {/* Modern Clean Header */}
+        <div className="text-center mb-6 md:mb-8 flex flex-col items-center">
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-3"
-            style={{ background: "rgba(60,196,240,0.15)", border: "1px solid rgba(60,196,240,0.35)" }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-3 backdrop-blur-md"
+            style={{ background: "rgba(60,196,240,0.08)", border: "1px solid rgba(60,196,240,0.2)" }}
           >
-            <Star className="h-3.5 w-3.5 fill-current" style={{ color: "#3CC4F0" }} />
-            <span className="text-[11px] font-bold tracking-wider" style={{ color: "#47759C" }}>
+            <Star className="h-3.5 w-3.5 fill-current text-cyan-500" />
+            <span className="text-xs font-black tracking-wider uppercase text-cyan-600">
               {isRtl ? "آراء عملائنا" : "TESTIMONIALS"}
             </span>
           </motion.div>
+          
           <motion.h2
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight"
-            style={{ color: "#0F1516" }}
+            className="text-2xl md:text-4xl font-black tracking-tight text-slate-800 mb-2"
           >
             {isRtl ? "ما يقوله عملاؤنا" : "What Our Clients Say"}
           </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 12 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="text-slate-500 text-xs md:text-sm max-w-lg mb-4"
+          >
+            {isRtl 
+              ? "نحن فخورون بمشاركة تجارب عملائنا الحقيقية مع وجبات أدرينالين الصحية"
+              : "We are proud to share our clients' real experiences with Adrenaline healthy meals"}
+          </motion.p>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black transition-all shadow-md"
+            style={{
+              background: "linear-gradient(135deg, #3CC4F0, #289fc5)",
+              color: "white",
+              boxShadow: "0 4px 12px rgba(60,196,240,0.2)"
+            }}
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            {isRtl ? "اكتب تقييمك الآن" : "Write Your Review Now"}
+          </motion.button>
         </div>
 
-        {/* Compact testimonial card */}
+        {/* Premium Testimonial Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative rounded-2xl md:rounded-3xl p-5 md:p-8 bg-white"
+          className="relative rounded-3xl p-5 md:p-8 bg-white/95 backdrop-blur-md border border-cyan-100/60"
           style={{
-            boxShadow: "0 12px 40px rgba(60,196,240,0.12), 0 4px 16px rgba(0,0,0,0.05)",
-            border: "1px solid rgba(60,196,240,0.2)",
+            boxShadow: "0 15px 40px -10px rgba(60,196,240,0.1), 0 4px 12px rgba(0,0,0,0.02)",
           }}
         >
-          <Quote className="absolute top-4 right-4 md:top-5 md:right-5 h-7 w-7 md:h-9 md:w-9 opacity-10" style={{ color: "#3CC4F0" }} />
+          <Quote className="absolute top-5 right-5 md:top-6 md:right-6 h-6 w-6 md:h-10 md:w-10 opacity-10 text-cyan-500" />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -377,34 +479,34 @@ export function PremiumTestimonials() {
               transition={{ duration: 0.35 }}
             >
               {/* Stars */}
-              <div className="flex gap-1 mb-3 md:mb-4">
-                {[...Array(5)].map((_, si) => (
-                  <Star key={si} className="h-3.5 w-3.5 md:h-4 md:w-4 fill-current" style={{ color: "#fbbf24" }} />
+              <div className="flex gap-1 mb-3">
+                {[...Array(t.stars || 5)].map((_, si) => (
+                  <Star key={si} className="h-4 w-4 fill-current text-amber-400" />
                 ))}
               </div>
 
               {/* Quote text */}
-              <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-5 font-medium" style={{ color: "#47759C" }}>
+              <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-6 font-medium text-slate-700">
                 "{isRtl ? t.textAr : t.textEn}"
               </p>
 
-              {/* Author */}
-              <div className="flex items-center gap-3 pt-3 md:pt-4" style={{ borderTop: "1px solid rgba(60,196,240,0.15)" }}>
+              {/* Author Info */}
+              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <div className="h-10 w-10 md:h-11 md:w-11 rounded-xl flex items-center justify-center text-sm md:text-base font-black text-white flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", boxShadow: "0 6px 16px rgba(60,196,240,0.3)" }}>
+                  style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", boxShadow: "0 4px 10px rgba(60,196,240,0.2)" }}>
                   {(isRtl ? t.nameAr : t.nameEn).charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-black text-sm truncate" style={{ color: "#0F1516" }}>{isRtl ? t.nameAr : t.nameEn}</p>
-                  <p className="text-[11px] md:text-xs" style={{ color: "#3CC4F0" }}>{isRtl ? t.roleAr : t.roleEn}</p>
+                  <p className="font-black text-sm md:text-base text-slate-800 truncate">{isRtl ? t.nameAr : t.nameEn}</p>
+                  <p className="text-[11px] md:text-xs font-bold text-cyan-600 mt-0.5">{isRtl ? t.roleAr : t.roleEn}</p>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
         </motion.div>
 
-        {/* Dots */}
-        <div className="flex items-center justify-center gap-2 mt-5 md:mt-6">
+        {/* Carousel Indicator Dots */}
+        <div className="flex items-center justify-center gap-1.5 mt-5">
           {testimonials.map((_, i) => (
             <button
               key={i}
@@ -412,14 +514,153 @@ export function PremiumTestimonials() {
               aria-label={`Testimonial ${i + 1}`}
               className="rounded-full transition-all duration-300"
               style={{
-                width: activeIdx === i ? "28px" : "7px",
-                height: "7px",
-                background: activeIdx === i ? "#3CC4F0" : "rgba(71,117,156,0.25)",
+                width: activeIdx === i ? "24px" : "6px",
+                height: "6px",
+                background: activeIdx === i ? "#3CC4F0" : "rgba(71,117,156,0.2)",
               }}
             />
           ))}
         </div>
       </div>
+
+      {/* ─── Write a Review Modal ─── */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsModalOpen(false)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl p-6 md:p-8"
+              dir={isRtl ? "rtl" : "ltr"}
+            >
+              <h3 className="text-xl md:text-2xl font-black text-slate-800 mb-2">
+                {isRtl ? "كتابة تقييمك الخاص" : "Write Your Review"}
+              </h3>
+              <p className="text-xs md:text-sm text-slate-500 mb-6">
+                {isRtl
+                  ? "شاركنا تجربتك الحقيقية مع أدرينالين لنعرضها في الصفحة الرئيسية!"
+                  : "Share your real experience with Adrenaline to display on the homepage!"}
+              </p>
+
+              {successMsg ? (
+                <div className="py-12 text-center flex flex-col items-center">
+                  <div className="h-16 w-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4 text-emerald-600 animate-bounce">
+                    <Star className="h-8 w-8 fill-current" />
+                  </div>
+                  <p className="font-bold text-slate-800 text-lg">{successMsg}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Name */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1.5">
+                      {isRtl ? "الاسم الكامل" : "Full Name"}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={isRtl ? "مثال: أحمد محمد" : "e.g. John Doe"}
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Meal/Goal */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1.5">
+                      {isRtl ? "الخطة أو الهدف (مثال: كيتو / زيادة وزن)" : "Plan or Goal (e.g. Keto / Bulking)"}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={isRtl ? "مثال: خطة الكيتو" : "e.g. Keto Plan"}
+                      value={newMeal}
+                      onChange={(e) => setNewMeal(e.target.value)}
+                      className="w-full h-11 px-4 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-slate-800"
+                    />
+                  </div>
+
+                  {/* Stars Rating Selector */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1.5">
+                      {isRtl ? "التقييم بالنجوم" : "Stars Rating"}
+                    </label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setNewStars(star)}
+                          className="hover:scale-110 transition-transform"
+                        >
+                          <Star
+                            className={`h-7 w-7 ${
+                              star <= newStars
+                                ? "text-amber-400 fill-current"
+                                : "text-slate-200"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Comment */}
+                  <div>
+                    <label className="block text-xs font-black text-slate-700 mb-1.5">
+                      {isRtl ? "رأيك وتجربتك" : "Your Review & Experience"}
+                    </label>
+                    <textarea
+                      required
+                      rows={3}
+                      placeholder={isRtl ? "اكتب هنا رأيك بصدق..." : "Write your review honestly here..."}
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="w-full p-4 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all text-slate-800 resize-none animate-none"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="flex-1 h-11 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors"
+                    >
+                      {isRtl ? "إلغاء" : "Cancel"}
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="flex-1 h-11 rounded-xl font-bold text-white text-sm transition-all flex items-center justify-center"
+                      style={{
+                        background: "linear-gradient(135deg, #3CC4F0, #47759C)",
+                        boxShadow: "0 4px 12px rgba(60,196,240,0.3)"
+                      }}
+                    >
+                      {isSubmitting
+                        ? (isRtl ? "جاري الإرسال..." : "Sending...")
+                        : (isRtl ? "إرسال التقييم" : "Submit Review")}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -568,9 +809,9 @@ export function PremiumFooter({ phone, onSubscribeClick }: { phone?: string; onS
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-12 pb-12 border-b border-white/10"
+          className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12 mb-12 pb-12 border-b border-white/10"
         >
-          <div className="md:col-span-2">
+          <div className="col-span-2 md:col-span-2">
             <img src="/adrenaline-logo-full.png" alt="Adrenaline" className="h-10 w-auto mb-4 brightness-0 invert" loading="lazy" />
             <p className="text-sm leading-relaxed mb-5 max-w-md" style={{ color: "#BCBEBF" }}>
               {isRtl

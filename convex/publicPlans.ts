@@ -123,3 +123,19 @@ export const remove = mutation({
     return { success: true };
   },
 });
+
+export const updateDefaultPlanImages = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const plans = await ctx.db.query("publicPlans").collect();
+    for (const plan of plans) {
+      if (plan.slug === "tanshif" || plan.slug.includes("tanshif") || plan.nameAr.includes("تنشيف") || plan.nameAr.includes("التنشيف")) {
+        await ctx.db.patch(plan._id, { imageUrl: "/plan-tanshif-real.png" });
+      } else if (plan.slug === "liyaqa" || plan.slug.includes("liyaqa") || plan.nameAr.includes("لياقة") || plan.nameAr.includes("اللياقة")) {
+        await ctx.db.patch(plan._id, { imageUrl: "/plan-liyaqa-real.png" });
+      } else if (plan.slug === "tadkhim" || plan.slug.includes("tadkhim") || plan.nameAr.includes("تضخيم") || plan.nameAr.includes("التضخيم")) {
+        await ctx.db.patch(plan._id, { imageUrl: "/plan-tadkhim-real.jpg" });
+      }
+    }
+  }
+});

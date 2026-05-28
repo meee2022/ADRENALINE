@@ -9,6 +9,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, 
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import {
   Users, CalendarCheck, Sun, Moon, TrendingUp,
   Package, AlertCircle, ArrowUpRight, ChevronLeft,
@@ -20,6 +21,7 @@ type ModalType = "customers"|"meals"|"morning"|"evening"|"expiring"|"expired"|"i
 export default function DashboardNew() {
   const { t } = useLanguage();
   const [, setLocation] = useLocation();
+  const { currentUser } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [openModal, setOpenModal] = useState<ModalType>(null);
 
@@ -78,6 +80,12 @@ export default function DashboardNew() {
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
   }, [customers]);
 
+  const topProgram = useMemo(() => {
+    if (programData.length === 0) return "DIET";
+    const sorted = [...programData].sort((a,b) => b.value - a.value);
+    return sorted[0]?.name || "DIET";
+  }, [programData]);
+
   const PROG_COLORS: Record<string,string> = {
     FITNESS:    "#3cc4f0",  // سيان - اللون الرئيسي
     DIET:       "#47759c",  // أزرق فولاذي
@@ -117,25 +125,68 @@ export default function DashboardNew() {
   };
 
   return (
-    <div dir="rtl" className="space-y-5">
+    <div dir="rtl" className="space-y-8 pb-10 bg-[#fafafa]/50 p-2 sm:p-4 rounded-[2.5rem]">
 
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-black text-gray-900 tracking-tight">لوحة التحكم</h1>
-          <p className="text-sm mt-0.5 font-medium text-cyan-500">
-            {format(selectedDate, "EEEE، d MMMM yyyy", { locale: ar })}
+      {/* ── 🌟 Premium Welcome Brand Banner (Adrenaline Cyan-Blue Gradient) ── */}
+      <div className="relative rounded-[2rem] p-6 sm:p-8 text-white overflow-hidden shadow-[0_15px_35px_rgba(60,196,240,0.15)] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
+        style={{ background: "linear-gradient(135deg, #2ebbf0 0%, #22517d 50%, #173757 100%)" }}>
+        
+        {/* Repeating luxury geometric background pattern */}
+        <div className="absolute inset-0 z-0 opacity-10"
+          style={{
+            backgroundImage: `radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0), radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0)`,
+            backgroundSize: "24px 24px",
+            backgroundPosition: "0 0, 12px 12px"
+          }} />
+          
+        {/* Glow ambient spots matching official palette */}
+        <div className="absolute -left-12 -top-12 h-44 w-44 rounded-full opacity-40 bg-[#3cc4f0] blur-3xl" />
+        <div className="absolute right-1/4 bottom-0 h-32 w-32 rounded-full opacity-20 bg-[#47759c] blur-2xl" />
+
+        <div className="relative z-10 space-y-3">
+          <div className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-1.5 rounded-full border border-white/20 shadow-inner">
+            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse" />
+            <span className="text-[11px] font-black tracking-wider uppercase">نظام أدرينالين لإدارة الوجبات الصحية 🥗</span>
+          </div>
+          
+          <h1 className="text-3xl sm:text-4.5xl font-black tracking-tight leading-tight" style={{ fontFamily: "Outfit, Inter, system-ui" }}>
+            صباح الخير والنشاط المميز ☀️ ، {currentUser?.name?.split(" ")[0] || "مسؤول أدرينالين"}
+          </h1>
+          <p className="text-xs sm:text-sm text-cyan-100/90 font-bold max-w-xl leading-relaxed">
+            نظرة عامة وشاملة على أداء الاشتراكات، وجبات اليوم، وعمليات المطبخ والمخزون
           </p>
         </div>
+
+        {/* Top-performing badge (Real Data topProgram Card) */}
+        <div className="relative z-10 shrink-0 bg-white/10 backdrop-blur-xl rounded-2xl p-4.5 border border-white/20 flex items-center gap-4 shadow-2xl transition-all duration-300 hover:scale-[1.03]">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-[#47759c] flex items-center justify-center text-white font-extrabold shrink-0 shadow-[0_4px_15px_rgba(60,196,240,0.3)] text-lg">
+            🥗
+          </div>
+          <div>
+            <p className="text-[10px] text-cyan-200 font-black uppercase tracking-wider">البرنامج الأكثر طلباً</p>
+            <p className="text-sm sm:text-base font-black text-white mt-0.5">{topProgram}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Controls Row ── */}
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-gray-100">
+        <div className="space-y-1">
+          <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block">التاريخ المعروض</span>
+          <span className="text-base sm:text-lg font-black text-[#47759c] block">
+            {format(selectedDate, "EEEE، d MMMM yyyy", { locale: ar })}
+          </span>
+        </div>
+        
         {/* Date switcher */}
-        <div className="flex gap-1.5 bg-white rounded-xl p-1 shadow-sm border border-gray-100">
+        <div className="flex gap-1.5 bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
           {[{label:"أمس",offset:-1},{label:"اليوم",offset:0},{label:"غداً",offset:1}].map(({label,offset})=>{
             const d = new Date(); d.setDate(d.getDate()+offset);
             const active = format(selectedDate,"yyyy-MM-dd")===format(d,"yyyy-MM-dd");
             return (
               <button key={label} onClick={()=>setSelectedDate(d)}
-                className="h-8 px-4 rounded-lg text-xs font-semibold transition-all"
-                style={active ? {background:"#3cc4f0",color:"#fff",boxShadow:"0 2px 8px #3cc4f055"} : {color:"#64748b"}}>
+                className="h-9 px-6 rounded-xl text-xs font-black transition-all duration-300"
+                style={active ? {background:"#3cc4f0",color:"#fff",boxShadow:"0 4px 14px rgba(60,196,240,0.4)"} : {color:"#64748b"}}>
                 {label}
               </button>
             );
@@ -143,164 +194,295 @@ export default function DashboardNew() {
         </div>
       </div>
 
-      {/* ── Row 1: 4 KPI cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Row 1: 4 Gorgeous top-accented KPI cards with real operational micro-metrics ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
         {/* المشتركين النشطين */}
         <button onClick={()=>setOpenModal("customers")}
-          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
-          style={{ boxShadow: "0 10px 30px -5px rgba(60,196,240,0.12)" }}>
-          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#3cc4f0] blur-2xl group-hover:opacity-10 transition-opacity" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
-                style={{ background: "rgba(60,196,240,0.1)", border: "1.5px solid rgba(60,196,240,0.2)" }}>
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#3cc4f0] rounded-t-3xl" />
+          
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">المشتركين النشطين</span>
+              <div className="h-12 w-12 rounded-2xl bg-[#3cc4f0]/10 flex items-center justify-center shrink-0 border border-[#3cc4f0]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <Users className="h-6 w-6 text-[#3cc4f0]" />
               </div>
-              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-0.5">
-                <span>+{stats.newThisMonth}</span>
-                <span>هذا الشهر</span>
-              </span>
             </div>
-            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.activeCustomersCount}</p>
-            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">{t("customer.active") || "مشترك نشط"}</p>
-            <div className="mt-4 pt-3.5 border-t border-gray-50 flex items-center justify-between">
-              <span className="text-[11px] text-gray-400">إجمالي المشتركين</span>
-              <strong className="text-xs text-[#47759c] font-black">{stats.totalCustomers}</strong>
+            
+            <div className="mt-1">
+              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+                {stats.activeCustomersCount}
+              </p>
+              <p className="text-xs text-gray-400 font-bold mt-2">
+                إجمالي المشتركين: {stats.totalCustomers}
+              </p>
             </div>
+          </div>
+
+          {/* Operational Micro-Metric */}
+          <div className="w-full mt-2 space-y-2 text-right">
+            <div className="flex justify-between items-center text-[10px] font-bold text-[#3cc4f0]">
+              <span>{stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}% من الإجمالي</span>
+              <span>نشط حالياً</span>
+            </div>
+            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+              <div className="h-full rounded-full bg-[#3cc4f0] transition-all duration-500" 
+                style={{ width: `${stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#3cc4f0] transition-colors">
+            <span className="font-extrabold">عرض التفاصيل</span>
+            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
 
         {/* خطط اليوم */}
         <button onClick={()=>setOpenModal("meals")}
-          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
-          style={{ boxShadow: "0 10px 30px -5px rgba(71,117,156,0.12)" }}>
-          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#47759c] blur-2xl group-hover:opacity-10 transition-opacity" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
-                style={{ background: "rgba(71,117,156,0.1)", border: "1.5px solid rgba(71,117,156,0.2)" }}>
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#47759c] rounded-t-3xl" />
+          
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">خطط وجبات اليوم</span>
+              <div className="h-12 w-12 rounded-2xl bg-[#47759c]/10 flex items-center justify-center shrink-0 border border-[#47759c]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <CalendarCheck className="h-6 w-6 text-[#47759c]" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-gray-400 group-hover:text-[#47759c] transition-colors" />
             </div>
-            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.todayMeals}</p>
-            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">خطة اليوم</p>
-            <div className="mt-4 pt-3.5 border-t border-gray-50 flex justify-between gap-1 text-[10px]">
-              <span className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-lg font-bold border border-sky-100/50">☀ {stats.morningDelivery} صباحي</span>
-              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg font-bold border border-indigo-100/50">🌙 {stats.eveningDelivery} مسائي</span>
+            
+            <div className="mt-1">
+              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+                {stats.todayMeals}
+              </p>
+              <p className="text-xs text-gray-400 font-bold mt-2">
+                إجمالي خطط اليوم
+              </p>
             </div>
+          </div>
+
+          {/* Operational Micro-Metric Split Columns */}
+          <div className="w-full mt-2 grid grid-cols-2 gap-2 border-t border-slate-50 pt-2 text-right">
+            <div>
+              <span className="text-[10px] text-gray-400 font-bold block">☀ صباحي</span>
+              <span className="text-sm font-black text-amber-500">{stats.morningDelivery} وجبة</span>
+            </div>
+            <div className="border-r border-slate-100 pr-2">
+              <span className="text-[10px] text-gray-400 font-bold block">🌙 مسائي</span>
+              <span className="text-sm font-black text-indigo-500">{stats.eveningDelivery} وجبة</span>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#47759c] transition-colors">
+            <span className="font-extrabold">عرض التفاصيل</span>
+            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
 
         {/* توصيل صباحي */}
         <button onClick={()=>setOpenModal("morning")}
-          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
-          style={{ boxShadow: "0 10px 30px -5px rgba(60,196,240,0.12)" }}>
-          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#3cc4f0] blur-2xl group-hover:opacity-10 transition-opacity" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
-                style={{ background: "rgba(60,196,240,0.1)", border: "1.5px solid rgba(60,196,240,0.2)" }}>
-                <Sun className="h-6 w-6 text-[#3cc4f0]" />
-              </div>
-              <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
-                {stats.morningRate}%
-              </span>
-            </div>
-            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.morningDelivery}</p>
-            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">توصيل صباحي</p>
-            <div className="mt-4 pt-3.5 border-t border-gray-50">
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{width:`${stats.morningRate}%`, background:"linear-gradient(90deg, #3cc4f0, #47759c)"}} />
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-500 rounded-t-3xl" />
+          
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">توصيل صباحي</span>
+              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/10 shadow-sm transition-all duration-300 group-hover:scale-105">
+                <Sun className="h-6 w-6 text-amber-500" />
               </div>
             </div>
+            
+            <div className="mt-1">
+              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+                {stats.morningDelivery}
+              </p>
+              <p className="text-xs text-gray-400 font-bold mt-2">
+                وجبات الفوج الصباحي
+              </p>
+            </div>
+          </div>
+
+          {/* Operational Micro-Metric Progress Bar */}
+          <div className="w-full mt-2 space-y-2 text-right">
+            <div className="flex justify-between items-center text-[10px] font-bold text-amber-500">
+              <span>{stats.morningRate}% من التوصيل</span>
+              <span>طلب صباحي</span>
+            </div>
+            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+              <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${stats.morningRate}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-amber-500 transition-colors">
+            <span className="font-extrabold">عرض التفاصيل</span>
+            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
 
         {/* توصيل مسائي */}
         <button onClick={()=>setOpenModal("evening")}
-          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
-          style={{ boxShadow: "0 10px 30px -5px rgba(15,21,22,0.12)" }}>
-          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#0f1516] blur-2xl group-hover:opacity-10 transition-opacity" />
-          <div className="relative">
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
-                style={{ background: "rgba(15,21,22,0.08)", border: "1.5px solid rgba(15,21,22,0.15)" }}>
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#0f1516] rounded-t-3xl" />
+          
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">توصيل مسائي</span>
+              <div className="h-12 w-12 rounded-2xl bg-[#0f1516]/10 flex items-center justify-center shrink-0 border border-[#0f1516]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <Moon className="h-6 w-6 text-[#0f1516]" />
               </div>
-              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
-                {100-stats.morningRate}%
-              </span>
             </div>
-            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.eveningDelivery}</p>
-            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">توصيل مسائي</p>
-            <div className="mt-4 pt-3.5 border-t border-gray-50">
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500" style={{width:`${100-stats.morningRate}%`, background:"linear-gradient(90deg, #0f1516, #47759c)"}} />
-              </div>
+            
+            <div className="mt-1">
+              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+                {stats.eveningDelivery}
+              </p>
+              <p className="text-xs text-gray-400 font-bold mt-2">
+                وجبات الفوج المسائي
+              </p>
             </div>
+          </div>
+
+          {/* Operational Micro-Metric Progress Bar */}
+          <div className="w-full mt-2 space-y-2 text-right">
+            <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
+              <span>{100 - stats.morningRate}% من التوصيل</span>
+              <span>طلب مسائي</span>
+            </div>
+            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
+              <div className="h-full rounded-full bg-[#0f1516] transition-all duration-500" style={{ width: `${100 - stats.morningRate}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#0f1516] transition-colors">
+            <span className="font-extrabold">عرض التفاصيل</span>
+            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
       </div>
 
-      {/* ── Row 2: alerts + programs ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ── Row 2: alerts + programs (Spacious & Clean Layout) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* حالة الاشتراكات */}
-        <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between"
-          style={{ boxShadow: "0 10px 30px -5px rgba(0,0,0,0.03)" }}>
-          <div className="flex items-center justify-between px-6 py-4.5 border-b border-gray-50">
-            <button onClick={()=>setLocation("/customers")}
-              className="text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-1 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
-              عرض الكل <ArrowUpRight className="h-3.5 w-3.5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4.5 w-4.5 text-amber-500" />
-              <span className="text-sm font-black text-gray-800 tracking-tight">حالة الاشتراكات</span>
+        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col h-full">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <span className="text-base font-black text-slate-800 tracking-tight">حالة الاشتراكات</span>
             </div>
+            <button onClick={()=>setLocation("/customers")}
+              className="text-xs font-black px-4 py-2.5 rounded-xl flex items-center gap-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
+              عرض الكل <ArrowUpRight className="h-4 w-4" />
+            </button>
           </div>
-          <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { label:"اشتراكات منتهية",   count:stats.expiredCustomersCount,  glowColor: "rgba(239,68,68,0.15)",   textColor: "#ef4444", bg:"bg-red-50/50",   border:"rgba(239,68,68,0.2)",  modal:"expired"  as ModalType, icon:"🔴" },
-              { label:"تنتهي اليوم",       count:stats.expiringTodayCount,     glowColor: "rgba(249,115,22,0.15)",  textColor: "#f97316", bg:"bg-orange-50/50",border:"rgba(249,115,22,0.2)", modal:"expiring" as ModalType, icon:"🟠" },
-              { label:"تنتهي خلال 3 أيام", count:stats.expiringCustomersCount, glowColor: "rgba(234,179,8,0.15)",   textColor: "#ca8a04", bg:"bg-yellow-50/50",border:"rgba(234,179,8,0.2)",  modal:"expiring" as ModalType, icon:"🟡" },
-            ].map(({label,count,glowColor,textColor,bg,border,modal,icon})=>(
-              <button key={label} onClick={()=>setOpenModal(modal)}
-                className={`group relative rounded-2.5xl p-5 text-right border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] ${bg}`}
-                style={{ borderColor: border, boxShadow: `0 8px 24px -5px ${glowColor}` }}>
-                <p className="text-4.5xl font-black tabular-nums leading-none tracking-tight" style={{ color: textColor }}>
-                  {count}
-                </p>
-                <p className="text-xs font-bold mt-3 flex items-center gap-1.5" style={{ color: textColor }}>
-                  <span>{icon}</span>
-                  <span>{label}</span>
-                </p>
-                <ChevronLeft className="absolute bottom-5 left-5 h-4 w-4 opacity-40 group-hover:opacity-100 group-hover:-translate-x-1 transition-all" style={{ color: textColor }} />
-              </button>
-            ))}
+          
+          <div className="p-6 grid grid-cols-1 md:grid-cols-5 gap-6 flex-1 items-center">
+            {/* Right side: Detailed Progress Lines (3 cols) */}
+            <div className="md:col-span-3 space-y-3.5">
+              {[
+                { label: "نشطة ومستمرة", count: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0", modal: "customers" as ModalType },
+                { label: "تنتهي خلال 3 أيام", count: stats.expiringCustomersCount, color: "#ca8a04", modal: "expiring" as ModalType },
+                { label: "تنتهي اليوم", count: stats.expiringTodayCount, color: "#f97316", modal: "expiring" as ModalType },
+                { label: "اشتراكات منتهية", count: stats.expiredCustomersCount, color: "#ef4444", modal: "expired" as ModalType },
+              ].map(({ label, count, color, modal }) => {
+                const pct = stats.totalCustomers > 0 ? Math.round((count / stats.totalCustomers) * 100) : 0;
+                return (
+                  <button
+                    key={label}
+                    onClick={() => setOpenModal(modal)}
+                    className="w-full text-right group p-3.5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:border-slate-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.015)] transition-all duration-300 flex flex-col gap-2 relative overflow-hidden active:scale-[0.99]"
+                  >
+                    <div className="flex items-center justify-between w-full relative z-10">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                        <span className="text-xs font-bold text-slate-500">{label}</span>
+                      </div>
+                      <span className="text-xs font-black tabular-nums" style={{ color }}>
+                        {count} ({pct}%)
+                      </span>
+                    </div>
+                    
+                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden relative z-10 border border-slate-200/30">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%`, backgroundColor: color }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Left side: Premium Donut Chart (2 cols) */}
+            <div className="md:col-span-2 flex flex-col items-center justify-center relative min-h-[200px]">
+              <div className="w-full h-[180px] relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={(() => {
+                        const chartData = [
+                          { name: "نشطة ومستمرة", value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
+                          { name: "تنتهي خلال 3 أيام", value: stats.expiringCustomersCount, color: "#ca8a04" },
+                          { name: "تنتهي اليوم", value: stats.expiringTodayCount, color: "#f97316" },
+                          { name: "اشتراكات منتهية", value: stats.expiredCustomersCount, color: "#ef4444" },
+                        ].filter(d => d.value > 0);
+                        return chartData.length > 0 ? chartData : [{ name: "لا يوجد", value: 1, color: "#e2e8f0" }];
+                      })()}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={52}
+                      outerRadius={70}
+                      paddingAngle={3}
+                      dataKey="value"
+                    >
+                      {(() => {
+                        const chartData = [
+                          { name: "نشطة ومستمرة", value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
+                          { name: "تنتهي خلال 3 أيام", value: stats.expiringCustomersCount, color: "#ca8a04" },
+                          { name: "تنتهي اليوم", value: stats.expiringTodayCount, color: "#f97316" },
+                          { name: "اشتراكات منتهية", value: stats.expiredCustomersCount, color: "#ef4444" },
+                        ].filter(d => d.value > 0);
+                        const finalData = chartData.length > 0 ? chartData : [{ name: "لا يوجد", value: 1, color: "#e2e8f0" }];
+                        return finalData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ));
+                      })()}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                {/* Center text indicating total subscribers */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black text-slate-800 tracking-tight leading-none">{stats.totalCustomers}</span>
+                  <span className="text-[10px] font-bold text-slate-400 mt-1">إجمالي المشتركين</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* توزيع البرامج */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <TrendingUp className="h-4 w-4 text-gray-300" />
-            <span className="text-sm font-bold text-gray-800">توزيع البرامج</span>
+        <div className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
+            <div className="flex items-center gap-2.5">
+              <TrendingUp className="h-5 w-5 text-slate-400" />
+              <span className="text-base font-black text-slate-800">توزيع البرامج</span>
+            </div>
+            <div className="w-5 h-5" />
           </div>
-          <div className="p-4 space-y-2.5">
+          
+          <div className="p-6 space-y-4">
             {programData.map(({name, value}) => {
               const pct = stats.totalCustomers > 0 ? Math.round((value/stats.totalCustomers)*100) : 0;
               const color = PROG_COLORS[name] || "#64748b";
               return (
-                <div key={name}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold tabular-nums" style={{color}}>{value}</span>
-                    <span className="text-xs font-semibold text-gray-600">{name}</span>
+                <div key={name} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-500">{name}</span>
+                    <span className="text-xs font-black tabular-nums" style={{color}}>{value} ({pct}%)</span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
                     <div className="h-full rounded-full transition-all duration-700"
-                      style={{width:`${pct}%`, background:color}} />
+                       style={{width:`${pct}%`, background:color}} />
                   </div>
                 </div>
               );
@@ -310,43 +492,46 @@ export default function DashboardNew() {
       </div>
 
       {/* ── Row 3: inventory + charts ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ملخص المخزون */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+        <div className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
+            <div className="flex items-center gap-2.5">
+              <Package className="h-5 w-5 text-slate-400" />
+              <span className="text-base font-black text-slate-800">ملخص المخزون</span>
+            </div>
             <button onClick={()=>setLocation("/inventory")}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 text-slate-600 bg-slate-50 hover:bg-slate-100 transition-colors">
-              إدارة <ArrowUpRight className="h-3 w-3" />
+              className="text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
+              إدارة <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-bold text-gray-800">ملخص المخزون</span>
-            </div>
           </div>
-          <div className="p-4 space-y-3">
+          
+          <div className="p-6 grid grid-cols-1 gap-4">
             <button onClick={()=>setOpenModal("inventory")}
-              className="w-full rounded-xl p-4 text-center bg-gradient-to-br from-red-50 to-rose-50 border border-red-100 hover:shadow-md transition-all active:scale-[0.98]">
-              <p className="text-4xl font-black text-red-500 tabular-nums">{stats.lowStockCount}</p>
-              <p className="text-xs font-semibold text-red-400 mt-1">⚠ مخزون منخفض</p>
+              className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-red-50 to-rose-50/30 border border-red-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
+              <p className="text-5xl font-black text-red-500 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{stats.lowStockCount}</p>
+              <p className="text-xs font-black text-red-400 mt-2">⚠ أصناف مخزون منخفض</p>
             </button>
-            <div className="rounded-xl p-4 text-center bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-100">
-              <p className="text-4xl font-black text-emerald-600 tabular-nums">{(inventorySummary as any)?.totalItems||0}</p>
-              <p className="text-xs font-semibold text-emerald-500 mt-1">✓ إجمالي الأصناف</p>
-            </div>
+            <button onClick={()=>setLocation("/inventory")}
+              className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-emerald-50 to-green-50/30 border border-emerald-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
+              <p className="text-5xl font-black text-emerald-600 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{(inventorySummary as any)?.totalItems||0}</p>
+              <p className="text-xs font-black text-emerald-500 mt-2">✓ إجمالي الأصناف</p>
+            </button>
           </div>
         </div>
 
         {/* نظرة أسبوعية */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <span className="text-xs font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-lg">آخر 7 أيام</span>
-            <div className="flex items-center gap-2">
-              <Utensils className="h-4 w-4 text-cyan-400" />
-              <span className="text-sm font-bold text-gray-800">الخطط الأسبوعية</span>
+        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
+            <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">آخر 7 أيام</span>
+            <div className="flex items-center gap-2.5">
+              <Utensils className="h-5 w-5 text-cyan-500" />
+              <span className="text-base font-black text-slate-800">الخطط الأسبوعية</span>
             </div>
           </div>
-          <div className="p-5">
+          
+          <div className="p-6">
             {weeklyData.every(d => d.value === 0) ? (
               <div className="flex flex-col items-center justify-center h-[180px] gap-3">
                 <div className="w-14 h-14 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
@@ -359,7 +544,7 @@ export default function DashboardNew() {
                 <BarChart data={weeklyData} barCategoryGap="40%">
                   <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:11}} axisLine={false} tickLine={false} />
                   <YAxis tick={{fill:"#94a3b8",fontSize:11}} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
-                  <Tooltip contentStyle={{borderRadius:"12px",border:"1px solid #e2e8f0",fontSize:12,boxShadow:"0 8px 30px rgba(0,0,0,0.1)"}} cursor={{fill:"#f8fafc",radius:6}} />
+                  <Tooltip contentStyle={{borderRadius:"16px",border:"1px solid #f1f5f9",fontSize:12,boxShadow:"0 12px 35px rgba(0,0,0,0.06)"}} cursor={{fill:"#f8fafc",radius:8}} />
                   <Bar dataKey="value" radius={[8,8,0,0]}>
                     {weeklyData.map((_,i) => <Cell key={i} fill={i===6?"#3cc4f0":"#47759c"} />)}
                   </Bar>

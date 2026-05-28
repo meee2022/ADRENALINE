@@ -12,11 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Package, X } from "lucide-react";
+import { Plus, Edit, Trash2, Package, X, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 
 interface PlanOption {
   meals: number;
@@ -29,6 +29,54 @@ export default function PlansManagement() {
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "خطأ",
+        description: "يرجى اختيار صورة فقط",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) throw new Error("فشل رفع الصورة");
+
+      const { storageId } = await result.json();
+      const imageUrl = await convex.query(api.files.getFileUrl, { storageId });
+
+      if (imageUrl) {
+        setFormData((prev) => ({ ...prev, imageUrl }));
+        toast({
+          title: "نجاح",
+          description: "تم رفع الصورة وتحديث الرابط بنجاح",
+        });
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء رفع الصورة",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [formData, setFormData] = useState({
     nameAr: "",
@@ -322,12 +370,48 @@ export default function PlansManagement() {
 
             <div className="space-y-2">
               <Label>{t("plans_management.image_url")}</Label>
-              <Input
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-                dir="ltr"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  placeholder="https://example.com/image.jpg"
+                  dir="ltr"
+                  className="flex-1"
+                />
+                <div className="relative">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="plan-image-upload"
+                    disabled={isUploading}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById("plan-image-upload")?.click()}
+                    disabled={isUploading}
+                    className="flex items-center gap-1.5"
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    {isUploading ? "جاري الرفع..." : "رفع صورة"}
+                  </Button>
+                </div>
+              </div>
+              {formData.imageUrl && (
+                <div className="mt-2 relative rounded-lg overflow-hidden border border-slate-200 h-28 w-44 bg-slate-50">
+                  <img
+                    src={formData.imageUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

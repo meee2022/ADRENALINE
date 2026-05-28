@@ -12,6 +12,8 @@ import { Bell, CheckCheck, ChefHat, Truck, ClipboardList, Sparkles, AlertTriangl
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 
+import { useLanguage } from "@/lib/i18n";
+
 const TYPE_ICON: Record<string, any> = {
   NEW_ORDER: ClipboardList,
   ORDER_APPROVED: Sparkles,
@@ -38,6 +40,8 @@ export function NotificationBell() {
   const role = currentUser?.role as any;
   const btnRef = useRef<HTMLButtonElement>(null);
   const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
+  const { dir, language } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
   const notifications = useQuery(
     api.notifications.listForRole,
@@ -52,15 +56,24 @@ export function NotificationBell() {
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
 
-  // حساب موضع الـ dropdown بناءً على موضع الزر
+  // حساب موضع الـ dropdown بناءً على موضع الزر بشكل ديناميكي وقوي
   useEffect(() => {
-    if (open && btnRef.current) {
+    if (!open || !btnRef.current) return;
+
+    const updatePosition = () => {
+      if (!btnRef.current) return;
       const rect = btnRef.current.getBoundingClientRect();
-      const dropW = 360;
-      // نحاول نحط الـ dropdown على اليسار من الزر، لو الشاشة ضيقة نحطه على اليمين
-      let left = rect.right - dropW;
-      if (left < 8) left = rect.left;
-      if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+      const dropW = 320; // عرض مناسب ومتناسق
+      
+      // حساب الإزاحة لليمين أو اليسار بناءً على اتجاه اللغة
+      let left = isRtl ? rect.right - dropW : rect.left;
+      
+      // ضمان بقاء القائمة داخل حدود الشاشة
+      if (left < 8) left = 8;
+      if (left + dropW > window.innerWidth - 8) {
+        left = window.innerWidth - dropW - 8;
+      }
+
       setDropdownStyle({
         position: "fixed",
         top: rect.bottom + 8,
@@ -68,8 +81,17 @@ export function NotificationBell() {
         width: dropW,
         zIndex: 9999,
       });
-    }
-  }, [open]);
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, isRtl]);
 
   if (!role) return null;
 
@@ -79,7 +101,7 @@ export function NotificationBell() {
       <div
         dir="rtl"
         style={dropdownStyle}
-        className="max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+        className="fixed z-[9999] w-[320px] max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
       >
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-l from-cyan-50 to-blue-50">
           <h3 className="font-bold text-slate-800 text-sm">الإشعارات</h3>

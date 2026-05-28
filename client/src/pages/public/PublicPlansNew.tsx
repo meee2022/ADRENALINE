@@ -19,7 +19,18 @@ const badgeConfig = {
 export default function PublicPlansNew() {
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
+  const settings = useQuery(api.restaurantSettings.get);
   const comparisonPlans = plans.filter(p => p.showInComparison);
+
+  const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
+
+  const handleSubscribe = (planName: string, option: any) => {
+    const mealsCount = option?.mealsCount || 0;
+    const snacksCount = option?.snacksCount || 0;
+    const msg = `مرحباً 👋\nأرغب في الاشتراك في خطة *${planName}*\n\nالباقة: ${mealsCount} وجبات + ${snacksCount} سناك\n\nمن فضلك أرسلوا لي تفاصيل الاشتراك.`;
+    const url = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
 
   const getBadgeLabel = (badge: string) => badgeConfig[badge as keyof typeof badgeConfig];
 
@@ -135,11 +146,11 @@ export default function PublicPlansNew() {
                     )}
 
                     {/* Image - Full Coverage */}
-                    <div className="h-56 overflow-hidden relative bg-gradient-to-br from-[#3CC4F0]/5 to-[#47759C]/5">
+                    <div className="h-64 overflow-hidden relative bg-white">
                       <img
                         src={plan.imageUrl}
                         alt={plan.nameAr}
-                        className="w-full h-full object-cover scale-110"
+                        className="w-full h-full object-cover object-top"
                       />
                     </div>
 
@@ -184,6 +195,7 @@ export default function PublicPlansNew() {
 
                       {/* CTA Button */}
                       <Button
+                        onClick={() => handleSubscribe(plan.nameAr, plan.options?.[0])}
                         className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
                           isFeatured
                             ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"

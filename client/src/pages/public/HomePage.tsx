@@ -51,43 +51,50 @@ export default function HomePage() {
       {/* ═══════════ HERO (multi-banner carousel with curated images) ═══════════ */}
       <PremiumHero
         banners={banners && banners.length > 0 ? banners : [
-          // Curated Unsplash images — premium healthy food, no text/logos
           {
             _id: "hero-1",
-            titleAr: "وجبات صحية متوازنة",
-            titleEn: "Balanced Healthy Meals",
-            subtitleAr: "",
-            subtitleEn: "",
-            imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1920&q=85&auto=format&fit=crop",
+            titleAr: "طعام صحي بمذاق لا يُقاوم",
+            titleEn: "Healthy Taste Like Never Before",
+            subtitleAr: "وجبات طازجة ومتكاملة تُحضّر يومياً بإشراف أفضل أخصائيي التغذية لتناسب احتياجاتك",
+            subtitleEn: "Fresh and complete meals prepared daily under top nutritionists to fit your needs",
+            imageUrl: "/1.png",
           },
           {
             _id: "hero-2",
-            titleAr: "بولز طازجة يومياً",
-            titleEn: "Fresh Bowls Daily",
-            subtitleAr: "",
-            subtitleEn: "",
-            imageUrl: "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=1920&q=85&auto=format&fit=crop",
+            titleAr: "برامج غذائية مخصصة لأهدافك",
+            titleEn: "Tailored Programs For Your Goals",
+            subtitleAr: "اختر ما بين التنشيف، التضخيم، الكيتو، واللايت، واستمتع بنمط حياة متوازن ومميز",
+            subtitleEn: "Choose from Cutting, Bulking, Keto, or Balanced Lite, and enjoy a balanced lifestyle",
+            imageUrl: "/2.png",
           },
           {
             _id: "hero-3",
-            titleAr: "مكونات طازجة فاخرة",
-            titleEn: "Premium Fresh Ingredients",
-            subtitleAr: "",
-            subtitleEn: "",
-            imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=1920&q=85&auto=format&fit=crop",
+            titleAr: "وجبات طازجة لباب بيتك يومياً",
+            titleEn: "Fresh Meals To Your Doorstep Daily",
+            subtitleAr: "نوفر توصيلاً مجانياً ومباشراً في جميع أنحاء قطر، لنبقي وجباتك طازجة ومحفوظة بإتقان",
+            subtitleEn: "We provide free and direct delivery all over Qatar, keeping your meals fresh and perfectly preserved",
+            imageUrl: "/3.png",
           },
           {
             _id: "hero-4",
-            titleAr: "بروتين عالي الجودة",
-            titleEn: "Premium Protein",
-            subtitleAr: "",
-            subtitleEn: "",
-            imageUrl: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=1920&q=85&auto=format&fit=crop",
+            titleAr: "نمط حياة صحي يبدأ من هنا",
+            titleEn: "A Healthy Lifestyle Starts Here",
+            subtitleAr: "انضم لأكثر من 500 مشترك واستعد طاقتك ونشاطك مع وجبات محسوبة السعرات والماكروز بدقة",
+            subtitleEn: "Join 500+ active subscribers and boost your energy with precisely calculated macro meals",
+            imageUrl: "/4.png",
+          },
+          {
+            _id: "hero-5",
+            titleAr: "شيفات محترفون لخيارات شهية",
+            titleEn: "Professional Chefs For Delicious Choices",
+            subtitleAr: "لأننا نؤمن أن الأكل الصحي متعة، فريقنا يحضّر لك الأطباق بأعلى معايير الجودة العالمية",
+            subtitleEn: "Because we believe healthy food is a joy, our team prepares dishes with the highest global standards",
+            imageUrl: "/5.png",
           },
         ]}
         onSubscribeClick={handleGeneralInquiry}
         onMenuClick={() => setLocation("/public/menu")}
-        heroImage="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1920&q=85&auto=format&fit=crop"
+        heroImage="/1.png"
         settings={settings}
       />
 
