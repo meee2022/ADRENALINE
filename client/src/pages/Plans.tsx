@@ -280,6 +280,8 @@ export default function PlansPage() {
   const [deliveryFilter, setDeliveryFilter] = useState<"ALL" | "MORNING" | "EVENING">("ALL");
   // ✅ فلتر الحالة: عرض الكل، أو اللي لسه محتاجين خطة، أو اللي خلصوا
   const [planFilter, setPlanFilter] = useState<"ALL" | "PENDING" | "DONE">("ALL");
+  // ✅ فلتر البرنامج: مثل (FITNESS, DIET, BULK, CUSTOMIZED, etc.)
+  const [programFilter, setProgramFilter] = useState<string | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Partial<DailyPlan> | null>(null);
 
   const { data: customers = [] } = useCustomers();
@@ -600,6 +602,9 @@ export default function PlansPage() {
           if (filterTime !== "ALL") {
             filtered = filtered.filter((c: any) => c.deliveryTime === filterTime);
           }
+          if (programFilter) {
+            filtered = filtered.filter((c: any) => (c.program || "STANDARD").toUpperCase() === programFilter);
+          }
           if (searchQ.trim()) {
             const q = searchQ.trim().toLowerCase();
             filtered = filtered.filter((c: any) =>
@@ -761,7 +766,7 @@ export default function PlansPage() {
 
                 {/* ─── Plan status filter chips ─── */}
                 <div className="flex items-center gap-2 flex-wrap pt-1">
-                  <span className="text-[11px] font-semibold text-gray-400 mr-1">الحالة:</span>
+                  <span className="text-[11px] font-semibold text-gray-400 mr-1">{isRtl ? "الحالة:" : "Status:"}</span>
                   {[
                     { key: "PENDING", label: isRtl ? "محتاج خطة" : "Pending", color: "#f59e0b", count: pendingCount, icon: <Clock className="h-3 w-3" /> },
                     { key: "DONE",    label: isRtl ? "خلصت"      : "Done",    color: "#10b981", count: plannedCount, icon: <Check className="h-3 w-3" /> },
@@ -788,6 +793,50 @@ export default function PlansPage() {
                           active ? "bg-white/25" : "bg-white"
                         )}>
                           {f.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* ─── Program Filter Chips ─── */}
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <span className="text-[11px] font-semibold text-gray-400 mr-1">{isRtl ? "البرنامج:" : "Program:"}</span>
+                  {[
+                    { key: null, label: isRtl ? "الكل" : "All", color: "#47759c" },
+                    { key: "CUSTOMIZED", label: isRtl ? "مخصص (Customized)" : "Customized", color: "#8b5cf6" },
+                    { key: "FITNESS", label: "Fitness", color: "#06b6d4" },
+                    { key: "DIET", label: "Diet", color: "#3cc4f0" },
+                    { key: "BULK", label: "Bulk", color: "#f59e0b" },
+                    { key: "STANDARD", label: "Standard", color: "#64748b" },
+                  ].map((f) => {
+                    const active = programFilter === f.key;
+                    // Calculate count for this program in activeCustomers list
+                    const count = f.key === null 
+                      ? activeCustomers.length 
+                      : activeCustomers.filter((c: any) => (c.program || "STANDARD").toUpperCase() === f.key).length;
+
+                    if (f.key !== null && count === 0) return null; // skip if no customers have this program
+
+                    return (
+                      <button
+                        key={String(f.key)}
+                        onClick={() => setProgramFilter(f.key)}
+                        className={cn(
+                          "h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                          active ? "text-white" : "text-gray-500 hover:bg-gray-50"
+                        )}
+                        style={active
+                          ? { background: f.color, boxShadow: `0 3px 8px ${f.color}40` }
+                          : { background: "#f8fafc", border: "1px solid #e2e8f0" }
+                        }
+                      >
+                        <span>{f.label}</span>
+                        <span className={cn(
+                          "text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
+                          active ? "bg-white/25" : "bg-white"
+                        )}>
+                          {count}
                         </span>
                       </button>
                     );

@@ -103,10 +103,16 @@ export default function Kitchen() {
       count: number;
       plainCount: number;     // ✅ عادي بدون تعديلات
       modifiedCount: number;  // ✅ معدّل (فيه ممنوعات أو تفضيلات)
+      dietCount: number;
+      fitnessCount: number;
+      bulkCount: number;
+      customizedCount: number;
+      standardCount: number;
       details: Array<{
         customerName: string;
         deliveryTime: string;
         categoryName: string;
+        program: string;       // ✅ البرنامج
         avoid?: string;
         preferences?: string;
         portions?: string;
@@ -134,6 +140,7 @@ export default function Kitchen() {
     allPlansToday.forEach((plan: any) => {
       const customer = getCustomer(plan.customerId);
       const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
+      const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
 
       (plan.items || [])
         .filter((item: any) => !item.isOff)
@@ -148,7 +155,17 @@ export default function Kitchen() {
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
 
           if (!summary[mealName]) {
-            summary[mealName] = { count: 0, plainCount: 0, modifiedCount: 0, details: [] };
+            summary[mealName] = { 
+              count: 0, 
+              plainCount: 0, 
+              modifiedCount: 0, 
+              dietCount: 0,
+              fitnessCount: 0,
+              bulkCount: 0,
+              customizedCount: 0,
+              standardCount: 0,
+              details: [] 
+            };
           }
 
           const plain = isPlainMeal(item, customer);
@@ -156,10 +173,17 @@ export default function Kitchen() {
           if (plain) summary[mealName].plainCount += 1;
           else summary[mealName].modifiedCount += 1;
 
+          if (program.includes("DIET")) summary[mealName].dietCount += 1;
+          else if (program.includes("FITNESS")) summary[mealName].fitnessCount += 1;
+          else if (program.includes("BULK")) summary[mealName].bulkCount += 1;
+          else if (program.includes("CUSTOMIZED")) summary[mealName].customizedCount += 1;
+          else summary[mealName].standardCount += 1;
+
           summary[mealName].details.push({
             customerName,
             deliveryTime: plan.deliveryTime,
             categoryName,
+            program: customer?.program || "Standard",
             avoid: item.avoid || customer?.avoid || undefined,
             preferences: item.preferences || customer?.preferences || undefined,
             portions: item.portions || customer?.portions || undefined,
@@ -388,34 +412,64 @@ export default function Kitchen() {
 
                         {/* ✅ Breakdown: عادي vs معدّل */}
                         {meal.count > 0 && (
-                          <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
-                            <div className="flex items-center justify-between px-3 py-2 rounded-lg"
-                              style={{ background: "#e8f8fd", border: "1px solid #3cc4f040" }}>
-                              <div>
-                                <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
-                                  {isRtl ? "عادي" : "Plain"}
-                                </p>
-                                <p className="text-[10px] text-[#3cc4f0] mt-0.5">
-                                  {isRtl ? "بدون تعديلات" : "No modifications"}
-                                </p>
+                          <div className="space-y-2 mt-3 pt-3 border-t border-gray-100">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                                style={{ background: "#e8f8fd", border: "1px solid #3cc4f040" }}>
+                                <div>
+                                  <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
+                                    {isRtl ? "عادي" : "Plain"}
+                                  </p>
+                                  <p className="text-[10px] text-[#3cc4f0] mt-0.5">
+                                    {isRtl ? "بدون تعديلات" : "No modifications"}
+                                  </p>
+                                </div>
+                                <span className="text-2xl font-black tabular-nums text-[#3cc4f0]">
+                                  {meal.plainCount}
+                                </span>
                               </div>
-                              <span className="text-2xl font-black tabular-nums text-[#3cc4f0]">
-                                {meal.plainCount}
-                              </span>
+                              <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                                style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
+                                <div>
+                                  <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
+                                    {isRtl ? "معدّل" : "Modified"}
+                                  </p>
+                                  <p className="text-[10px] text-[#47759c]/70 mt-0.5">
+                                    {isRtl ? "ممنوعات/تفضيلات" : "Avoid/Prefs"}
+                                  </p>
+                                </div>
+                                <span className="text-2xl font-black tabular-nums text-[#47759c]">
+                                  {meal.modifiedCount}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center justify-between px-3 py-2 rounded-lg"
-                              style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
-                              <div>
-                                <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
-                                  {isRtl ? "معدّل" : "Modified"}
-                                </p>
-                                <p className="text-[10px] text-[#47759c]/70 mt-0.5">
-                                  {isRtl ? "ممنوعات/تفضيلات" : "Avoid/Prefs"}
-                                </p>
-                              </div>
-                              <span className="text-2xl font-black tabular-nums text-[#47759c]">
-                                {meal.modifiedCount}
-                              </span>
+
+                            {/* Program Breakdown */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                              {meal.dietCount > 0 && (
+                                <div className="px-2.5 py-1.5 rounded-lg bg-sky-50/50 border border-sky-100 text-center">
+                                  <span className="text-[9px] font-bold text-sky-600 block">DIET</span>
+                                  <span className="text-lg font-black text-sky-700">{meal.dietCount}</span>
+                                </div>
+                              )}
+                              {meal.fitnessCount > 0 && (
+                                <div className="px-2.5 py-1.5 rounded-lg bg-cyan-50/50 border border-cyan-100 text-center">
+                                  <span className="text-[9px] font-bold text-cyan-600 block">FITNESS</span>
+                                  <span className="text-lg font-black text-cyan-700">{meal.fitnessCount}</span>
+                                </div>
+                              )}
+                              {meal.bulkCount > 0 && (
+                                <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/50 border border-amber-100 text-center">
+                                  <span className="text-[9px] font-bold text-amber-600 block">BULK</span>
+                                  <span className="text-lg font-black text-amber-700">{meal.bulkCount}</span>
+                                </div>
+                              )}
+                              {meal.customizedCount > 0 && (
+                                <div className="px-2.5 py-1.5 rounded-lg bg-purple-50/50 border border-purple-100 text-center">
+                                  <span className="text-[9px] font-bold text-purple-600 block">CUSTOMIZED</span>
+                                  <span className="text-lg font-black text-purple-700">{meal.customizedCount}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -739,22 +793,30 @@ export default function Kitchen() {
                   <h2 className="text-lg font-bold text-black mb-3 border-b border-black pb-1">
                     {isRtl ? "ملخص الوجبات الإجمالي" : "Meal Summary"}
                   </h2>
-                  <table className="w-full border-collapse text-sm">
+                  <table className="w-full border-collapse text-xs">
                     <thead>
                       <tr style={{ background: "#f3f4f6" }}>
-                        <th className="border border-black px-3 py-2 text-right font-bold">{isRtl ? "الوجبة" : "Meal"}</th>
-                        <th className="border border-black px-3 py-2 text-center font-bold w-20">{isRtl ? "إجمالي" : "Total"}</th>
-                        <th className="border border-black px-3 py-2 text-center font-bold w-20">{isRtl ? "عادي" : "Plain"}</th>
-                        <th className="border border-black px-3 py-2 text-center font-bold w-24">{isRtl ? "معدّل" : "Modified"}</th>
+                        <th className="border border-black px-2 py-1.5 text-right font-bold">{isRtl ? "الوجبة" : "Meal"}</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-14">{isRtl ? "إجمالي" : "Total"}</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-14">{isRtl ? "عادي" : "Plain"}</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-16">{isRtl ? "معدّل" : "Modified"}</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-16 text-sky-700">DIET</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-16 text-cyan-700">FITNESS</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-16 text-amber-700">BULK</th>
+                        <th className="border border-black px-2 py-1.5 text-center font-bold w-20 text-purple-700">CUSTOM</th>
                       </tr>
                     </thead>
                     <tbody>
                       {mealSummary.map((m: any, i: number) => (
                         <tr key={i}>
-                          <td className="border border-black px-3 py-2 font-bold">{m.name}</td>
-                          <td className="border border-black px-3 py-2 text-center text-xl font-black">{m.count}</td>
-                          <td className="border border-black px-3 py-2 text-center font-bold">{m.plainCount}</td>
-                          <td className="border border-black px-3 py-2 text-center font-bold">{m.modifiedCount}</td>
+                          <td className="border border-black px-2 py-1.5 font-bold">{m.name}</td>
+                          <td className="border border-black px-2 py-1.5 text-center text-base font-black">{m.count}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-semibold">{m.plainCount}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-semibold">{m.modifiedCount}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-bold bg-sky-50/30">{m.dietCount || "—"}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-bold bg-cyan-50/30">{m.fitnessCount || "—"}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-bold bg-amber-50/30">{m.bulkCount || "—"}</td>
+                          <td className="border border-black px-2 py-1.5 text-center font-bold bg-purple-50/30">{m.customizedCount || "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -776,26 +838,64 @@ export default function Kitchen() {
             const customerProgram = customer?.program || (isRtl ? "طلب من الموقع" : "Website Order");
             const hasAllergy = customer?.allergies && customer.allergies.trim().length > 0;
 
-            return (
+            return (() => {
+              const customerAvoid = String(customer?.avoid || "").trim();
+              const customerPrefs = String(customer?.preferences || "").trim();
+              const customerAllergy = String(customer?.allergies || "").trim();
+              const customerPortions = String(customer?.portions || "").trim();
+              const hasRestrictions = customerAvoid || customerPrefs || customerAllergy || customerPortions;
+
+              // Determine plan type label
+              const programLower = (customerProgram || "").toLowerCase();
+              let programBadgeStyle = "bg-gray-200 text-black";
+              if (programLower.includes("diet") || programLower.includes("تنشيف")) programBadgeStyle = "bg-sky-200 text-sky-900";
+              else if (programLower.includes("fitness") || programLower.includes("لياقة")) programBadgeStyle = "bg-cyan-200 text-cyan-900";
+              else if (programLower.includes("bulk") || programLower.includes("تضخيم")) programBadgeStyle = "bg-amber-200 text-amber-900";
+              else if (programLower.includes("custom") || programLower.includes("مخصص")) programBadgeStyle = "bg-purple-200 text-purple-900";
+
+              return (
               <div
                 key={plan._id}
                 className="border-2 border-black rounded-lg p-6 page-break-inside-avoid mb-6"
               >
                 {/* Customer Info */}
-                <div className="border-b-2 border-gray-400 pb-4 mb-4">
-                  <h2 className="text-2xl font-bold text-black mb-2">{customerName}</h2>
-                  <p className="text-base text-black">
-                    ID: #{plan._id.slice(-6)} • {customerProgram}
-                  </p>
+                <div className="border-b-2 border-gray-400 pb-3 mb-3 flex items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-2xl font-bold text-black mb-1">{customerName}</h2>
+                    <p className="text-sm text-black">ID: #{plan._id.slice(-6)}</p>
+                  </div>
+                  <span className={`text-sm font-black px-3 py-1 rounded-full uppercase shrink-0 ${programBadgeStyle}`}>
+                    {customerProgram}
+                  </span>
                 </div>
 
-                {/* Allergy Warning */}
-                {hasAllergy && customer && (
-                  <div className="border-4 border-black bg-gray-100 p-4 mb-4">
-                    <p className="text-lg font-bold text-black mb-2 uppercase">
-                      ⚠️ {isRtl ? "حساسية مفرطة (ALLERGY)" : "ALLERGY WARNING"}
+                {/* ⚠️ Customer Restrictions Summary — Chef Alert Box */}
+                {hasRestrictions && (
+                  <div className="border-2 border-black bg-gray-50 rounded p-3 mb-4">
+                    <p className="text-xs font-black uppercase text-black mb-2 tracking-widest">
+                      🚨 {isRtl ? "تعليمات خاصة — اقرأ قبل التحضير" : "SPECIAL INSTRUCTIONS — READ BEFORE COOKING"}
                     </p>
-                    <p className="text-base font-bold text-black">{customer.allergies}</p>
+                    {customerAllergy && (
+                      <div className="bg-black text-white rounded px-3 py-1.5 mb-2">
+                        <span className="text-sm font-black uppercase">⚠️ حساسية مفرطة: </span>
+                        <span className="text-sm font-bold">{customerAllergy}</span>
+                      </div>
+                    )}
+                    {customerAvoid && (
+                      <p className="text-sm font-bold text-black mb-1">
+                        🚫 {isRtl ? "ممنوع / بدون:" : "AVOID:"} <span className="font-black">{customerAvoid}</span>
+                      </p>
+                    )}
+                    {customerPrefs && (
+                      <p className="text-sm font-bold text-black mb-1">
+                        ✅ {isRtl ? "تفضيلات:" : "PREFERENCES:"} <span className="font-semibold">{customerPrefs}</span>
+                      </p>
+                    )}
+                    {customerPortions && (
+                      <p className="text-sm font-bold text-black">
+                        ⚖️ {isRtl ? "الكمية:" : "PORTIONS:"} <span className="font-semibold">{customerPortions}</span>
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -815,32 +915,69 @@ export default function Kitchen() {
 
                       const { avoid, pref, portion } = getModifiersByGroup(item.modifierIds);
 
+                      const allAvoid = [...avoid];
+                      const allPref = [...pref];
+                      const allPortions = [...portion];
+
+                      if (item.avoid) allAvoid.push(item.avoid);
+                      if (item.preferences) allPref.push(item.preferences);
+                      if (item.portions) allPortions.push(item.portions);
+
+                      if (customer?.avoid && String(customer.avoid).trim()) allAvoid.push(String(customer.avoid).trim());
+                      if (customer?.preferences && String(customer.preferences).trim()) allPref.push(String(customer.preferences).trim());
+                      if (customer?.portions && String(customer.portions).trim()) allPortions.push(String(customer.portions).trim());
+
+                      const itemNote = String(item.specialNotes || "").trim();
+                      const custAllergy = String(customer?.allergies || "").trim();
+
                       return (
-                        <div key={idx} className="border border-gray-400 rounded p-4">
+                        <div key={idx} className="border border-gray-400 rounded p-4 mb-3">
                           {/* Category */}
-                          <p className="text-sm font-bold text-black mb-2 uppercase">
-                            {getCategoryLabel(category?.name || item.category || "")}
-                          </p>
+                          <div className="flex items-center justify-between border-b border-gray-200 pb-1 mb-2">
+                            <p className="text-sm font-bold text-black uppercase">
+                              {getCategoryLabel(category?.name || item.category || "")}
+                            </p>
+                            {item.specialInstructions && (
+                              <span className="text-xs font-bold border border-black px-1.5 py-0.5 rounded">
+                                {item.specialInstructions}
+                              </span>
+                            )}
+                          </div>
 
                           {/* Meal Name */}
                           <h3 className="text-xl font-bold text-black mb-3">
                             {mealName}
                           </h3>
 
+                          {/* Allergy Warning */}
+                          {custAllergy && (
+                            <div className="border border-red-600 bg-red-50 p-2 mb-2 rounded">
+                              <p className="text-xs font-black text-red-700 uppercase leading-none">
+                                ⚠️ {isRtl ? "تنبيه حساسية مفرطة" : "ALLERGY WARNING"}
+                              </p>
+                              <p className="text-xs font-bold text-red-900 mt-1">{custAllergy}</p>
+                            </div>
+                          )}
+
                           {/* Modifiers */}
-                          {avoid.length > 0 && (
+                          {allAvoid.length > 0 && (
                             <p className="text-base font-bold text-black mb-1">
-                              ▲ {isRtl ? "ممنوع:" : "Avoid:"} {avoid.join(isRtl ? "، " : ", ")}
+                              ▲ {isRtl ? "ممنوع:" : "Avoid:"} {allAvoid.join(isRtl ? "، " : ", ")}
                             </p>
                           )}
-                          {pref.length > 0 && (
+                          {allPref.length > 0 && (
                             <p className="text-base text-black mb-1">
-                              {isRtl ? "تفضيلات:" : "Prefs:"} {pref.join(isRtl ? "، " : ", ")}
+                              ★ {isRtl ? "تفضيلات:" : "Prefs:"} {allPref.join(isRtl ? "، " : ", ")}
                             </p>
                           )}
-                          {portion.length > 0 && (
-                            <p className="text-base text-black">
-                              {isRtl ? "الكمية:" : "Portion:"} {portion.join(isRtl ? "، " : ", ")}
+                          {allPortions.length > 0 && (
+                            <p className="text-base text-black mb-1">
+                              ⚖ {isRtl ? "الكمية:" : "Portion:"} {allPortions.join(isRtl ? "، " : ", ")}
+                            </p>
+                          )}
+                          {itemNote && (
+                            <p className="text-base text-black italic">
+                              📝 {isRtl ? "ملاحظة:" : "Note:"} {itemNote}
                             </p>
                           )}
                         </div>
@@ -859,6 +996,7 @@ export default function Kitchen() {
                 )}
               </div>
             );
+            })();
           })}
               </div>
 
