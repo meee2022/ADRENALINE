@@ -305,7 +305,7 @@ export default function PlansPage() {
   const activeCustomers = useMemo(
     () =>
       (customers || [])
-        .filter((c: any) => c?.status === "ACTIVE")
+        .filter((c: any) => c?.status === "ACTIVE" || c?.isActive === true || c?.isActive === undefined)
         .sort((a: any, b: any) =>
           String(a?.fullName || "").toLowerCase().localeCompare(String(b?.fullName || "").toLowerCase())
         ),
@@ -712,8 +712,8 @@ export default function PlansPage() {
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                   <input
                     type="text"
-                    value={searchQ}
-                    onChange={(e) => setSearchQ(e.target.value)}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={isRtl ? "ابحث بالاسم أو رقم الهاتف..." : "Search by name or phone..."}
                     className={cn(
                       "w-full h-11 rounded-xl text-sm font-medium pl-4 pr-10 transition-all outline-none",

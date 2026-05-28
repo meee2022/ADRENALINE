@@ -143,19 +143,19 @@ export function PremiumHero({
           <motion.div
             key={activeIdx}
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.65 }}
+            animate={{ opacity: 0.7 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
-            className="absolute inset-0"
+            className="absolute inset-0 flex items-center justify-center bg-[#0f1516]"
           >
             <img
               src={slide.image}
               alt="Immersive Mobile Background"
-              className="w-full h-full object-cover"
-              style={{ filter: "brightness(0.35) saturate(1.15)" }}
+              className="w-full h-full object-contain"
+              style={{ filter: "brightness(0.55) saturate(1.15)" }}
             />
             {/* Elegant dark overlay to guarantee 100% white text contrast and readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/45 to-black/80 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-[#0f1516]/80 to-black/90 pointer-events-none" />
           </motion.div>
         </AnimatePresence>
       </div>

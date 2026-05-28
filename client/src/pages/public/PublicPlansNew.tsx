@@ -145,12 +145,12 @@ export default function PublicPlansNew() {
                       </div>
                     )}
 
-                    {/* Image - Full Coverage */}
-                    <div className="h-64 overflow-hidden relative bg-white">
+                    {/* Image - Full Width & Aspect Ratio containment */}
+                    <div className="w-full aspect-[4/3] overflow-hidden relative bg-[#0F1516] p-1 flex items-center justify-center">
                       <img
                         src={plan.imageUrl}
                         alt={plan.nameAr}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-contain"
                       />
                     </div>
 
