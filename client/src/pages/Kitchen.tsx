@@ -319,7 +319,7 @@ export default function Kitchen() {
                 className={cn(
                   "flex-1 h-12 rounded-xl font-bold text-base transition-all",
                   activeTab === "SUMMARY"
-                    ? "bg-green-500 text-white shadow-md"
+                    ? "bg-[#47759c] text-white shadow-md"
                     : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                 )}
               >
@@ -350,15 +350,15 @@ export default function Kitchen() {
                   
                   {mealSummary.map((meal, index) => {
                     const colors = [
-                      "bg-green-500",
-                      "bg-cyan-500",
-                      "bg-teal-500",
-                      "bg-amber-500",
-                      "bg-orange-500",
-                      "bg-indigo-500",
-                      "bg-blue-500",
-                      "bg-emerald-500",
-                      "bg-lime-500",
+                      "bg-[#3cc4f0]",
+                      "bg-[#47759c]",
+                      "bg-[#0f1516]",
+                      "bg-[#5a8aad]",
+                      "bg-[#7ba8c4]",
+                      "bg-[#2d5c82]",
+                      "bg-[#3cc4f0]/70",
+                      "bg-[#47759c]/70",
+                      "bg-[#0f1516]/70",
                     ];
                     const color = colors[index % colors.length];
 
@@ -390,30 +390,30 @@ export default function Kitchen() {
                         {meal.count > 0 && (
                           <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100">
                             <div className="flex items-center justify-between px-3 py-2 rounded-lg"
-                              style={{ background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+                              style={{ background: "#e8f8fd", border: "1px solid #3cc4f040" }}>
                               <div>
-                                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide">
+                                <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
                                   {isRtl ? "عادي" : "Plain"}
                                 </p>
-                                <p className="text-[10px] text-emerald-600 mt-0.5">
+                                <p className="text-[10px] text-[#3cc4f0] mt-0.5">
                                   {isRtl ? "بدون تعديلات" : "No modifications"}
                                 </p>
                               </div>
-                              <span className="text-2xl font-black tabular-nums text-emerald-700">
+                              <span className="text-2xl font-black tabular-nums text-[#3cc4f0]">
                                 {meal.plainCount}
                               </span>
                             </div>
                             <div className="flex items-center justify-between px-3 py-2 rounded-lg"
-                              style={{ background: "#fef3c7", border: "1px solid #fde68a" }}>
+                              style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
                               <div>
-                                <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide">
+                                <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
                                   {isRtl ? "معدّل" : "Modified"}
                                 </p>
-                                <p className="text-[10px] text-amber-600 mt-0.5">
+                                <p className="text-[10px] text-[#47759c]/70 mt-0.5">
                                   {isRtl ? "ممنوعات/تفضيلات" : "Avoid/Prefs"}
                                 </p>
                               </div>
-                              <span className="text-2xl font-black tabular-nums text-amber-700">
+                              <span className="text-2xl font-black tabular-nums text-[#47759c]">
                                 {meal.modifiedCount}
                               </span>
                             </div>
@@ -487,7 +487,7 @@ export default function Kitchen() {
                           {isRtl ? "جاهز للتوصيل" : "Ready to Deliver"}
                         </Badge>
                       ) : (
-                        <Badge className="bg-green-500 text-white border-0 text-sm px-4 py-2 rounded-xl">
+                        <Badge className="bg-[#47759c] text-white border-0 text-sm px-4 py-2 rounded-xl">
                           {isRtl ? "جاهز للتحضير" : "Ready to Prepare"}
                         </Badge>
                       )}
@@ -544,13 +544,13 @@ export default function Kitchen() {
                                     "text-xs font-bold px-3 py-1 border-0",
                                     // ✅ استخدام category من item أو من lookup
                                     getCategoryLabel(category?.name || item.category || "").includes("BREAKFAST") &&
-                                      "bg-orange-100 text-orange-700",
+                                      "bg-[#e8f8fd] text-[#3cc4f0]",
                                     getCategoryLabel(category?.name || item.category || "").includes("LUNCH") &&
                                       "bg-cyan-100 text-cyan-700",
                                     getCategoryLabel(category?.name || item.category || "").includes("DINNER") &&
-                                      "bg-indigo-100 text-indigo-700",
+                                      "bg-[#eaf1f7] text-[#47759c]",
                                     getCategoryLabel(category?.name || item.category || "").includes("SNACK") &&
-                                      "bg-green-100 text-green-700"
+                                      "bg-[#e8f8fd] text-[#3cc4f0]"
                                   )}
                                 >
                                   {getCategoryLabel(category?.name || item.category || "")}
@@ -589,11 +589,11 @@ export default function Kitchen() {
                                   {/* AVOID - Red boxes */}
                                   {allAvoid.length > 0 && (
                                     <div className="rounded-lg px-3 py-2 flex items-start gap-2"
-                                      style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
-                                      <span className="text-orange-600 font-black text-sm flex-shrink-0">✕</span>
+                                      style={{ background: "#fef2f2", border: "1px solid #ef444440" }}>
+                                      <span className="text-red-500 font-black text-sm flex-shrink-0">✕</span>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-orange-600 uppercase tracking-wide">{isRtl ? "ممنوع" : "Avoid"}</p>
-                                        <p className="text-sm font-bold text-orange-800 leading-tight mt-0.5">{allAvoid.join(isRtl ? "، " : ", ")}</p>
+                                        <p className="text-[10px] font-black text-red-600 uppercase tracking-wide">{isRtl ? "ممنوع" : "Avoid"}</p>
+                                        <p className="text-sm font-bold text-red-800 leading-tight mt-0.5">{allAvoid.join(isRtl ? "، " : ", ")}</p>
                                       </div>
                                     </div>
                                   )}
@@ -613,11 +613,11 @@ export default function Kitchen() {
                                   {/* PORTION - Yellow */}
                                   {allPortions.length > 0 && (
                                     <div className="rounded-lg px-3 py-2 flex items-start gap-2"
-                                      style={{ background: "#fefce8", border: "1px solid #fde68a" }}>
-                                      <span className="text-yellow-600 font-black text-sm flex-shrink-0">⚖</span>
+                                      style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
+                                      <span className="text-[#47759c] font-black text-sm flex-shrink-0">⚖</span>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-yellow-700 uppercase tracking-wide">{isRtl ? "الكمية" : "Portion"}</p>
-                                        <p className="text-sm font-semibold text-yellow-900 leading-tight mt-0.5">{allPortions.join(isRtl ? "، " : ", ")}</p>
+                                        <p className="text-[10px] font-black text-[#47759c] uppercase tracking-wide">{isRtl ? "الكمية" : "Portion"}</p>
+                                        <p className="text-sm font-semibold text-[#0f1516] leading-tight mt-0.5">{allPortions.join(isRtl ? "، " : ", ")}</p>
                                       </div>
                                     </div>
                                   )}
@@ -627,11 +627,11 @@ export default function Kitchen() {
                               {/* Special note for this specific meal */}
                               {itemNote && (
                                 <div className="mt-2 rounded-lg px-3 py-2 flex items-start gap-2"
-                                  style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                                  <span className="font-black text-sm flex-shrink-0 text-blue-500">📝</span>
+                                  style={{ background: "#eaf1f7", border: "1px solid #47759c50" }}>
+                                  <span className="font-black text-sm flex-shrink-0 text-[#47759c]">📝</span>
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black text-blue-600 uppercase tracking-wide">{isRtl ? "ملاحظة الوجبة" : "Note"}</p>
-                                    <p className="text-sm font-semibold text-blue-900 leading-tight mt-0.5">{itemNote}</p>
+                                    <p className="text-[10px] font-black text-[#47759c] uppercase tracking-wide">{isRtl ? "ملاحظة الوجبة" : "Note"}</p>
+                                    <p className="text-sm font-semibold text-[#0f1516] leading-tight mt-0.5">{itemNote}</p>
                                   </div>
                                 </div>
                               )}
@@ -642,16 +642,16 @@ export default function Kitchen() {
 
                     {/* Special Notes */}
                     {plan.notes && plan.notes.trim().length > 0 && (
-                      <div className="bg-amber-50 rounded-xl p-4 border-2 border-amber-300 mb-4">
+                      <div className="bg-[#eaf1f7] rounded-xl p-4 border-2 border-[#47759c]/30 mb-4">
                         <div className="flex items-start gap-2">
                           <span className="text-2xl">💬</span>
                           <div className="flex-1">
-                            <p className="text-xs font-bold text-amber-900 mb-1 uppercase">
+                            <p className="text-xs font-bold text-[#0f1516] mb-1 uppercase">
                               {isRtl
                                 ? "الرجاء التأكد من تشريح اللحم جيداً وعدم إضافة أي نوع من المكسرات."
                                 : "Please ensure meat is well-cooked and do not add any nuts."}
                             </p>
-                            <p className="text-sm text-amber-900 font-medium italic">
+                            <p className="text-sm text-[#47759c] font-medium italic">
                               {plan.notes}
                             </p>
                           </div>
@@ -678,7 +678,7 @@ export default function Kitchen() {
                     {!isPrepared && (
                       <Button
                         onClick={() => handleMarkPrepared(plan._id)}
-                        className="w-full h-14 rounded-xl bg-green-600 hover:bg-green-700 text-white font-bold text-lg shadow-md"
+                        className="w-full h-14 rounded-xl text-white font-bold text-lg shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#47759c)"}}
                       >
                         {isRtl ? 'تحديد ك "تم التحضير"' : 'Mark as "Prepared"'}
                       </Button>
@@ -1027,7 +1027,7 @@ export default function Kitchen() {
                   <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {detail.avoid && (
                       <div className="rounded-lg px-3 py-2"
-                        style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
+                        style={{ background: "#fef2f2", border: "1px solid #ef444440" }}>
                         <p className="text-[10px] font-black text-orange-700 uppercase tracking-wide">
                           ✕ {isRtl ? "ممنوع" : "Avoid"}
                         </p>
@@ -1049,8 +1049,8 @@ export default function Kitchen() {
                     )}
                     {detail.portions && (
                       <div className="rounded-lg px-3 py-2"
-                        style={{ background: "#fefce8", border: "1px solid #fde68a" }}>
-                        <p className="text-[10px] font-black text-yellow-700 uppercase tracking-wide">
+                        style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
+                        <p className="text-[10px] font-black text-[#47759c] uppercase tracking-wide">
                           ⚖ {isRtl ? "الكمية" : "Portion"}
                         </p>
                         <p className="text-xs font-semibold text-yellow-900 mt-0.5 leading-tight">
@@ -1064,7 +1064,7 @@ export default function Kitchen() {
                 {/* Special notes */}
                 {detail.specialNotes && (
                   <div className="mt-2 rounded-lg px-3 py-2 flex items-start gap-2"
-                    style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+                    style={{ background: "#eaf1f7", border: "1px solid #47759c50" }}>
                     <span className="text-blue-500 flex-shrink-0">📝</span>
                     <p className="text-xs font-semibold text-blue-900 leading-tight">
                       {detail.specialNotes}

@@ -236,10 +236,11 @@ export const ROLE_LABEL: Record<Role, { ar: string; en: string }> = {
 };
 
 /** لون الدور (للـ badge) */
+// Brand palette: #3cc4f0 / #47759c / #0f1516 / #bcbebf / #fff
 export const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string }> = {
-  ADMIN: { bg: "#fef3c7", text: "#92400e", border: "#fde68a" },
-  NUTRITIONIST: { bg: "#fce7f3", text: "#9d174d", border: "#fbcfe8" },
-  KITCHEN: { bg: "#fff7ed", text: "#9a3412", border: "#fed7aa" },
-  DELIVERY: { bg: "#eff6ff", text: "#1e40af", border: "#bfdbfe" },
-  INVENTORY_MANAGER: { bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
+  ADMIN:             { bg: "#e8f8fd", text: "#0f1516",  border: "#3cc4f0" },  // سيان فاتح
+  NUTRITIONIST:      { bg: "#eaf1f7", text: "#47759c",  border: "#47759c" },  // أزرق فولاذي فاتح
+  KITCHEN:           { bg: "#f0f4f7", text: "#47759c",  border: "#bcbebf" },  // رصاصي/فولاذي
+  DELIVERY:          { bg: "#e8f8fd", text: "#3cc4f0",  border: "#3cc4f0" },  // سيان
+  INVENTORY_MANAGER: { bg: "#f5f6f7", text: "#0f1516",  border: "#bcbebf" },  // رمادي داكن
 };

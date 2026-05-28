@@ -40,5 +40,8 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    hmr: {
+      clientPort: 5173,
+    },
   },
 });

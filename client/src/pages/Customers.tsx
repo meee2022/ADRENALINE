@@ -9,9 +9,6 @@ import {
   useUpdateCustomer,
   useImportCustomers,
   useDeleteCustomer,
-  useDeleteAllCustomers,
-  useMigrateCustomerDates,
-  useActivateAllCustomers,
   type Customer,
   useModifiers,
   type Modifier,
@@ -57,9 +54,6 @@ import {
   Plus,
   Upload,
   Download,
-  RefreshCcw,
-  Power,
-  AlertTriangle,
   ChevronDown,
   X,
 } from "lucide-react";
@@ -224,12 +218,10 @@ export default function Customers() {
   const deleteCustomer = useDeleteCustomer();
 
   const importCustomers = useImportCustomers();
-  const deleteAll = useDeleteAllCustomers();
-  const migrateDates = useMigrateCustomerDates();
-  const activateAll = useActivateAllCustomers();
   const { data: modifiers = [] } = useModifiers();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
 
@@ -293,29 +285,62 @@ export default function Customers() {
     },
   });
 
-  // ✅ Active first, then inactive (while preserving search)
+  // ✅ حساب عدد كل برنامج
+  const programCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const c of customers as any[]) {
+      const p = (c.program || "STANDARD").toUpperCase();
+      counts[p] = (counts[p] || 0) + 1;
+    }
+    return counts;
+  }, [customers]);
+
+  // brand palette only: #3cc4f0 / #47759c / #0f1516 / #bcbebf
+  const PROGRAMS = [
+    { key: null,          label: isRtl ? "الكل" : "All",
+      color: "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-300" },
+    { key: "FITNESS",     label: "FITNESS",
+      color: "bg-cyan-50 text-cyan-700 hover:bg-cyan-100 border-cyan-300" },
+    { key: "DIET",        label: "DIET",
+      color: "bg-sky-100 text-[#47759c] hover:bg-sky-200 border-sky-300" },
+    { key: "BULK",        label: "BULK",
+      color: "bg-slate-200 text-[#0f1516] hover:bg-slate-300 border-slate-400" },
+    { key: "CUSTOMIZED",  label: isRtl ? "مخصص" : "CUSTOMIZED",
+      color: "bg-blue-50 text-[#47759c] hover:bg-blue-100 border-blue-200" },
+    { key: "STANDARD",    label: isRtl ? "قياسي" : "STANDARD",
+      color: "bg-gray-100 text-gray-500 hover:bg-gray-200 border-gray-300" },
+  ].filter(p => p.key === null || (programCounts[p.key as string] || 0) > 0);
+
+  // ✅ Active first, then inactive (while preserving search + program filter)
   const filteredCustomers = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
 
-    const base = !q
-      ? customers
-      : customers.filter(
-          (c: any) =>
-            String(c.fullName || "")
-              .toLowerCase()
-              .includes(q) || String(c.phone || "").includes(q),
-        );
+    let base = customers as any[];
+
+    // فلتر البرنامج
+    if (selectedProgram) {
+      base = base.filter((c: any) =>
+        (c.program || "STANDARD").toUpperCase() === selectedProgram
+      );
+    }
+
+    // فلتر البحث
+    if (q) {
+      base = base.filter((c: any) =>
+        String(c.fullName || "").toLowerCase().includes(q) ||
+        String(c.phone || "").includes(q)
+      );
+    }
 
     return base.slice().sort((a: any, b: any) => {
       const aa = a.isActive ? 1 : 0;
       const bb = b.isActive ? 1 : 0;
-      if (aa !== bb) return bb - aa; // ✅ active first
-
+      if (aa !== bb) return bb - aa;
       const an = String(a.fullName || "").toLowerCase();
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm]);
+  }, [customers, searchTerm, selectedProgram]);
 
   const resetForm = () => {
     setEditingCustomer(null);
@@ -622,66 +647,6 @@ export default function Customers() {
     URL.revokeObjectURL(url);
   };
 
-  const runMigrateDates = async () => {
-    const ok = confirm(
-      isRtl ? "تصحيح كل التواريخ القديمة؟" : "Fix all old dates?",
-    );
-    if (!ok) return;
-    try {
-      const res = await migrateDates.mutateAsync();
-      alert(
-        isRtl
-          ? `تم ✅\nالإجمالي: ${res.total}\nتم تعديل: ${res.fixed}\nتم تخطي: ${res.skipped}`
-          : `Done ✅\nTotal: ${res.total}\nFixed: ${res.fixed}\nSkipped: ${res.skipped}`,
-      );
-    } catch (err) {
-      console.error("migrateDates error:", err);
-      alert(isRtl ? "حدث خطأ" : "An error occurred");
-    }
-  };
-
-  const runActivateAll = async () => {
-    const ok = confirm(
-      isRtl ? "تفعيل كل المشتركين؟" : "Activate all customers?",
-    );
-    if (!ok) return;
-    try {
-      const res = await activateAll.mutateAsync();
-      alert(
-        isRtl
-          ? `تم ✅\nتم تفعيل: ${res.updated} من ${res.total}`
-          : `Done ✅\nActivated: ${res.updated} / ${res.total}`,
-      );
-    } catch (err) {
-      console.error("activateAll error:", err);
-      alert(isRtl ? "حدث خطأ" : "An error occurred");
-    }
-  };
-
-  const runDeleteAll = async () => {
-    const ok = confirm(
-      isRtl
-        ? "تحذير: سيتم مسح كل المشتركين + الخطط اليومية. هل أنت متأكد؟"
-        : "WARNING: This will delete ALL customers + daily plans. Are you sure?",
-    );
-    if (!ok) return;
-
-    const ok2 = confirm(isRtl ? "تأكيد نهائي؟" : "Final confirmation?");
-    if (!ok2) return;
-
-    try {
-      const res = await deleteAll.mutateAsync(true);
-      alert(
-        isRtl
-          ? `تم المسح ✅\nCustomers: ${res.deletedCustomers}\nDailyPlans: ${res.deletedPlans}`
-          : `Deleted ✅\nCustomers: ${res.deletedCustomers}\nDailyPlans: ${res.deletedPlans}`,
-      );
-    } catch (err) {
-      console.error("deleteAll error:", err);
-      alert(isRtl ? "حدث خطأ" : "An error occurred");
-    }
-  };
-
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6">
       {/* Header with Icon */}
@@ -715,9 +680,9 @@ export default function Customers() {
       </div>
 
       {/* Search and Filter Row */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col gap-3">
         {/* Search Bar */}
-        <div className="relative flex-1">
+        <div className="relative">
           <Search className={cn("absolute top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400", isRtl ? "right-4" : "left-4")} />
           <Input
             type="text"
@@ -727,28 +692,39 @@ export default function Customers() {
             className={cn("h-11 sm:h-12 rounded-xl shadow-sm border-gray-200 bg-white text-sm", isRtl ? "pr-12 text-right" : "pl-12")}
           />
         </div>
+
+        {/* Program Filter Chips */}
+        <div className="flex flex-wrap gap-2">
+          {PROGRAMS.map((p) => {
+            const isActive = selectedProgram === p.key;
+            const count = p.key === null
+              ? (customers as any[]).length
+              : (programCounts[p.key as string] || 0);
+            return (
+              <button
+                key={String(p.key)}
+                onClick={() => setSelectedProgram(p.key)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                  p.color,
+                  isActive && "ring-2 ring-offset-1 ring-current shadow-sm scale-105"
+                )}
+              >
+                {p.label}
+                <span className={cn(
+                  "inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold",
+                  isActive ? "bg-white/60" : "bg-white/80"
+                )}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" className="rounded-xl text-xs sm:text-sm h-9 sm:h-10" onClick={runMigrateDates}>
-          <RefreshCcw className={cn("h-3 w-3 sm:h-4 sm:w-4", isRtl ? "ml-1.5 sm:ml-2" : "mr-1.5 sm:mr-2")} />
-          <span className="hidden sm:inline">{isRtl ? "تصحيح التواريخ" : "Fix Dates"}</span>
-          <span className="sm:hidden">{isRtl ? "تصحيح" : "Fix"}</span>
-        </Button>
-
-        <Button variant="outline" size="sm" className="rounded-xl text-xs sm:text-sm h-9 sm:h-10" onClick={runActivateAll}>
-          <Power className={cn("h-3 w-3 sm:h-4 sm:w-4", isRtl ? "ml-1.5 sm:ml-2" : "mr-1.5 sm:mr-2")} />
-          <span className="hidden sm:inline">{isRtl ? "تفعيل الكل" : "Activate All"}</span>
-          <span className="sm:hidden">{isRtl ? "تفعيل" : "Activate"}</span>
-        </Button>
-
-        <Button variant="outline" size="sm" className="rounded-xl bg-gradient-to-r from-red-50 to-red-100 border-red-200 hover:bg-red-100 text-red-600 text-xs sm:text-sm h-9 sm:h-10" onClick={runDeleteAll}>
-          <AlertTriangle className={cn("h-3 w-3 sm:h-4 sm:w-4", isRtl ? "ml-1.5 sm:ml-2" : "mr-1.5 sm:mr-2")} />
-          <span className="hidden sm:inline">{isRtl ? "مسح الكل" : "Delete All"}</span>
-          <span className="sm:hidden">{isRtl ? "مسح" : "Delete"}</span>
-        </Button>
-
         <Button variant="outline" size="sm" className="rounded-xl text-xs sm:text-sm h-9 sm:h-10" onClick={downloadTemplateCSV}>
           <Download className={cn("h-3 w-3 sm:h-4 sm:w-4", isRtl ? "ml-1.5 sm:ml-2" : "mr-1.5 sm:mr-2")} />
           <span className="hidden sm:inline">{isRtl ? "تحميل CSV" : "CSV Template"}</span>

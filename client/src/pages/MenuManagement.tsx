@@ -204,7 +204,7 @@ export default function MenuManagement() {
                         size="icon"
                         onClick={() => setIngredientsMeal(meal)}
                         title="مكوّنات المخزون"
-                        className="text-amber-600 hover:bg-amber-50"
+                        className="text-[#47759c] hover:bg-[#eaf1f7]"
                       >
                         <Boxes className="h-4 w-4" />
                       </Button>

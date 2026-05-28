@@ -2,12 +2,13 @@
  * @file client/src/components/NotificationBell.tsx
  * @description جرس إشعارات + قائمة منسدلة - يظهر للموظفين حسب الدور
  */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { Link } from "wouter";
-import { Bell, CheckCheck, Package, ChefHat, Truck, ClipboardList, Sparkles, AlertTriangle } from "lucide-react";
+import { Bell, CheckCheck, ChefHat, Truck, ClipboardList, Sparkles, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 
@@ -35,6 +36,8 @@ export function NotificationBell() {
   const { currentUser } = useStore();
   const [open, setOpen] = useState(false);
   const role = currentUser?.role as any;
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
   const notifications = useQuery(
     api.notifications.listForRole,
@@ -49,11 +52,83 @@ export function NotificationBell() {
   const markAsRead = useMutation(api.notifications.markAsRead);
   const markAllAsRead = useMutation(api.notifications.markAllAsRead);
 
+  // حساب موضع الـ dropdown بناءً على موضع الزر
+  useEffect(() => {
+    if (open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      const dropW = 360;
+      // نحاول نحط الـ dropdown على اليسار من الزر، لو الشاشة ضيقة نحطه على اليمين
+      let left = rect.right - dropW;
+      if (left < 8) left = rect.left;
+      if (left + dropW > window.innerWidth - 8) left = window.innerWidth - dropW - 8;
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 8,
+        left,
+        width: dropW,
+        zIndex: 9999,
+      });
+    }
+  }, [open]);
+
   if (!role) return null;
+
+  const dropdown = open ? (
+    <>
+      <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+      <div
+        dir="rtl"
+        style={dropdownStyle}
+        className="max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+      >
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-l from-cyan-50 to-blue-50">
+          <h3 className="font-bold text-slate-800 text-sm">الإشعارات</h3>
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllAsRead({ role })}
+              className="text-[11px] text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"
+            >
+              <CheckCheck className="h-3 w-3" />
+              تعليم الكل كمقروء
+            </button>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-sm">
+              <Bell className="h-10 w-10 mx-auto mb-2 opacity-30" />
+              لا توجد إشعارات
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {notifications.map((n: any) => {
+                const Icon = TYPE_ICON[n.type] || Bell;
+                const color = TYPE_COLOR[n.type] || "#64748b";
+                return (
+                  <NotificationItem
+                    key={n._id}
+                    n={n}
+                    Icon={Icon}
+                    color={color}
+                    onClick={() => {
+                      if (!n.isRead) markAsRead({ id: n._id });
+                      setOpen(false);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  ) : null;
 
   return (
     <div className="relative">
       <button
+        ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         className="relative p-2 rounded-md hover:bg-sidebar-accent transition-colors"
         aria-label="الإشعارات"
@@ -66,60 +141,7 @@ export function NotificationBell() {
         )}
       </button>
 
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-          />
-          <div
-            dir="rtl"
-            className="absolute left-0 mt-2 w-[360px] max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden flex flex-col"
-            style={{ insetInlineStart: 0 }}
-          >
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-l from-cyan-50 to-blue-50">
-              <h3 className="font-bold text-slate-800 text-sm">الإشعارات</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={() => markAllAsRead({ role })}
-                  className="text-[11px] text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"
-                >
-                  <CheckCheck className="h-3 w-3" />
-                  تعليم الكل كمقروء
-                </button>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto">
-              {notifications.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 text-sm">
-                  <Bell className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                  لا توجد إشعارات
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100">
-                  {notifications.map((n: any) => {
-                    const Icon = TYPE_ICON[n.type] || Bell;
-                    const color = TYPE_COLOR[n.type] || "#64748b";
-                    return (
-                      <NotificationItem
-                        key={n._id}
-                        n={n}
-                        Icon={Icon}
-                        color={color}
-                        onClick={() => {
-                          if (!n.isRead) markAsRead({ id: n._id });
-                          setOpen(false);
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </>
-      )}
+      {createPortal(dropdown, document.body)}
     </div>
   );
 }

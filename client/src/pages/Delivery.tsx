@@ -98,7 +98,7 @@ export default function Delivery() {
                 {isRtl ? "توصيل الطلبات" : "Delivery Orders"}
               </h1>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                <Badge variant="outline" className="bg-[#e8f8fd] text-[#3cc4f0] border-[#3cc4f0]/30">
                   {isRtl ? "مراقبة مباشرة" : "Live Tracking"}
                 </Badge>
                 <p className="text-sm text-gray-600">
@@ -130,7 +130,7 @@ export default function Delivery() {
               className={cn(
                 "flex-1 h-14 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-3",
                 activeTab === "MORNING"
-                  ? "bg-gradient-to-r from-orange-400 to-orange-500 text-white shadow-lg"
+                  ? "bg-gradient-to-r from-[#3cc4f0] to-[#0ea5e9] text-white shadow-lg"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               )}
             >
@@ -142,7 +142,7 @@ export default function Delivery() {
               className={cn(
                 "flex-1 h-14 rounded-2xl font-bold text-base transition-all flex items-center justify-center gap-3",
                 activeTab === "EVENING"
-                  ? "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white shadow-lg"
+                  ? "bg-gradient-to-r from-[#0f1516] to-[#47759c] text-white shadow-lg"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               )}
             >
@@ -222,19 +222,19 @@ export default function Delivery() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-10 w-10 rounded-lg bg-blue-100 hover:bg-blue-200"
+                          className="h-10 w-10 rounded-lg bg-[#e8f8fd] hover:bg-[#3cc4f0]/20"
                         >
-                          <Map className="h-5 w-5 text-blue-600" />
+                          <Map className="h-5 w-5 text-[#47759c]" />
                         </Button>
                       </div>
 
                       {/* Delivery Notes */}
                       {plan.notes && (
-                        <div className="p-3 bg-amber-50 rounded-xl border-2 border-amber-200">
-                          <p className="text-xs font-bold text-amber-900 mb-1">
+                        <div className="p-3 bg-[#eaf1f7] rounded-xl border-2 border-[#47759c]/30">
+                          <p className="text-xs font-bold text-[#47759c] mb-1">
                             {isRtl ? "📝 ملاحظات خاصة" : "📝 Special Notes"}
                           </p>
-                          <p className="text-sm text-amber-900 font-medium">
+                          <p className="text-sm text-[#0f1516] font-medium">
                             {plan.notes}
                           </p>
                         </div>
@@ -251,7 +251,7 @@ export default function Delivery() {
                           {isRtl ? "اتصال" : "Call"}
                         </Button>
                         <Button
-                          className="flex-1 h-12 rounded-xl bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold shadow-md"
+                          className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#47759c)"}}
                           onClick={() => handleDeliver(plan._id)}
                         >
                           <Check className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
@@ -270,13 +270,13 @@ export default function Delivery() {
         {deliveredPlans.length > 0 && (
           <div className="mt-8">
             <div className="flex items-center gap-2 mb-4">
-              <div className="h-10 w-10 rounded-xl bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-6 w-6 text-green-600" />
+              <div className="h-10 w-10 rounded-xl bg-[#e8f8fd] flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-[#3cc4f0]" />
               </div>
               <h2 className="text-lg font-bold text-gray-900">
                 {isRtl ? "تم التسليم" : "Delivered"}
               </h2>
-              <Badge variant="secondary" className="bg-green-50 text-green-700 border-0">
+              <Badge variant="secondary" className="bg-[#e8f8fd] text-[#3cc4f0] border-0">
                 {deliveredPlans.length}
               </Badge>
             </div>
@@ -294,8 +294,8 @@ export default function Delivery() {
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                          <div className="h-10 w-10 rounded-lg bg-[#e8f8fd] flex items-center justify-center">
+                            <CheckCircle2 className="h-5 w-5 text-[#3cc4f0]" />
                           </div>
                           <div>
                             <h3 className="font-bold text-gray-700 text-sm line-through">

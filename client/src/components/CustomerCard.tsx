@@ -1,6 +1,6 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { Edit2, Trash2, Phone, Calendar, Utensils, Moon, Sun } from "lucide-react";
+import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,18 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
   const sISO = safeISOOrToday(customer.startDate);
   const eISO = safeISOOrToday(customer.endDate);
 
+  // حساب تقدم الاشتراك
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startD = parseISO(sISO);
+  const endD   = parseISO(eISO);
+  const totalDays   = Math.max(differenceInDays(endD, startD), 1);
+  const passedDays  = Math.max(0, differenceInDays(today, startD));
+  const remainDays  = Math.max(0, differenceInDays(endD, today));
+  const progress    = Math.min(100, Math.round((passedDays / totalDays) * 100));
+  const isExpired   = today > endD;
+  const isNotStarted = today < startD;
+
   // Get initials for avatar
   const getInitials = (name: string) => {
     const parts = name.trim().split(" ");
@@ -39,13 +51,14 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Get goal color
+  // Get goal color — using brand palette only
   const getGoalColor = (goal: string) => {
     const g = (goal || "").toUpperCase();
-    if (g.includes("DIET")) return { bg: "from-orange-50 to-orange-100", text: "text-orange-600", icon: "🍴" };
-    if (g.includes("FITNESS")) return { bg: "from-green-50 to-green-100", text: "text-green-600", icon: "💪" };
-    if (g.includes("CUSTOMIZED")) return { bg: "from-purple-50 to-purple-100", text: "text-purple-600", icon: "⭐" };
-    return { bg: "from-gray-50 to-gray-100", text: "text-gray-600", icon: "🎯" };
+    if (g.includes("FITNESS"))    return { bg: "from-cyan-50 to-sky-100",   text: "text-cyan-700",   border: "border-cyan-200",   hex: "#3cc4f0", icon: "💪" };
+    if (g.includes("DIET"))       return { bg: "from-blue-50 to-blue-100",   text: "text-blue-700",   border: "border-blue-200",   hex: "#47759c", icon: "🍴" };
+    if (g.includes("BULK"))       return { bg: "from-slate-100 to-slate-200",text: "text-slate-800",  border: "border-slate-300",  hex: "#0f1516", icon: "🏋" };
+    if (g.includes("CUSTOMIZED")) return { bg: "from-sky-50 to-sky-100",     text: "text-sky-700",    border: "border-sky-200",    hex: "#5a8aad", icon: "⭐" };
+    return                               { bg: "from-gray-50 to-gray-100",   text: "text-gray-500",   border: "border-gray-200",   hex: "#bcbebf", icon: "🎯" };
   };
 
   const goalStyle = getGoalColor(customer.goals || customer.program || "");
@@ -109,8 +122,8 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
           <div className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold shadow-sm",
             customer.deliveryTime === "MORNING"
-              ? "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700"
-              : "bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700"
+              ? "bg-gradient-to-r from-cyan-50 to-sky-100 text-cyan-700 border border-cyan-200"
+              : "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300"
           )}>
             {customer.deliveryTime === "MORNING" ? (
               <Sun className="h-3.5 w-3.5" />
@@ -125,9 +138,10 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
           {/* Goal Badge */}
           {(customer.goals || customer.program) && (
             <div className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold shadow-sm bg-gradient-to-r",
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold shadow-sm bg-gradient-to-r border",
               goalStyle.bg,
-              goalStyle.text
+              goalStyle.text,
+              goalStyle.border
             )}>
               <span>{goalStyle.icon}</span>
               <span className="truncate">{customer.goals || customer.program}</span>
@@ -135,23 +149,69 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
           )}
         </div>
 
-        {/* Date Range & Meals */}
-        <div className="flex items-center justify-between gap-3 bg-white p-2.5 rounded-lg border border-gray-100">
-          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 flex-1">
-            <Calendar className="h-4 w-4 text-gray-500 flex-shrink-0" />
-            <span>
-              {format(parseISO(sISO), "d MMM", { locale: dateLocale })}
-              {" - "}
-              {format(parseISO(eISO), "d MMM", { locale: dateLocale })}
-            </span>
+        {/* Date Range — prominent */}
+        <div className={cn(
+          "rounded-xl border p-3 space-y-2",
+          isExpired    ? "bg-red-50 border-red-200"
+          : isNotStarted ? "bg-blue-50 border-blue-200"
+          : "bg-gradient-to-r from-cyan-50 to-blue-50 border-cyan-200"
+        )}>
+          {/* Row: icon + dates + meals badge */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <CalendarDays className={cn(
+                "h-4 w-4 flex-shrink-0",
+                isExpired ? "text-red-500" : isNotStarted ? "text-blue-500" : "text-cyan-600"
+              )} />
+              <div className="flex items-center gap-1 text-xs sm:text-sm font-semibold flex-wrap">
+                <span className={isExpired ? "text-red-700" : "text-gray-800"}>
+                  {format(parseISO(sISO), "d MMM", { locale: dateLocale })}
+                </span>
+                <span className="text-gray-400 mx-0.5">←</span>
+                <span className={isExpired ? "text-red-700" : "text-gray-800"}>
+                  {format(parseISO(eISO), "d MMM yyyy", { locale: dateLocale })}
+                </span>
+              </div>
+            </div>
+
+            {/* Meals Badge */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-sm shadow-sm flex-shrink-0">
+              <Utensils className="h-3.5 w-3.5" />
+              <span>{customer.mealsPerDay ?? 0}/{customer.snacksPerDay ?? 0}</span>
+            </div>
           </div>
-          
-          {/* Meals Badge - Highlighted */}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-bold text-sm shadow-md">
-            <Utensils className="h-4 w-4" />
-            <span>
-              {customer.mealsPerDay ?? 0}/{customer.snacksPerDay ?? 0}
-            </span>
+
+          {/* Progress bar */}
+          <div className="space-y-1">
+            <div className="h-2 rounded-full bg-white/60 overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all",
+                  isExpired    ? "bg-red-400"
+                  : isNotStarted ? "bg-[#47759c]"
+                  : progress > 80 ? "bg-[#47759c]"
+                  : "bg-gradient-to-r from-[#3cc4f0] to-[#47759c]"
+                )}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] font-medium">
+              <span className="text-gray-500">{progress}%</span>
+              <span className={cn(
+                "font-bold",
+                isExpired    ? "text-red-600"
+                : isNotStarted ? "text-[#47759c]"
+                : remainDays <= 5 ? "text-[#47759c] font-black"
+                : "text-[#3cc4f0]"
+              )}>
+                {isExpired
+                  ? (isRtl ? "منتهي" : "Expired")
+                  : isNotStarted
+                  ? (isRtl ? `يبدأ بعد ${Math.abs(remainDays - totalDays)} يوم` : `Starts in ${differenceInDays(startD, today)}d`)
+                  : isRtl ? `متبقي ${remainDays} يوم` : `${remainDays}d left`
+                }
+              </span>
+            </div>
           </div>
         </div>
       </div>

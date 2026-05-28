@@ -275,8 +275,8 @@ export default function HomePage() {
                       )}
                       className="w-full h-11 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
                       style={{
-                        background: "linear-gradient(135deg, #25D366, #128C7E)",
-                        boxShadow: "0 6px 16px rgba(37,211,102,0.3)",
+                        background: "linear-gradient(135deg, #3cc4f0, #47759c)",
+                        boxShadow: "0 6px 16px rgba(60,196,240,0.35)",
                       }}
                     >
                       <MessageCircle className="h-4 w-4" />

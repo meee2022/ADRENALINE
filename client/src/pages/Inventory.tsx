@@ -84,13 +84,13 @@ export default function InventoryPage() {
   const getCategoryColor = (cat: string) => {
     switch (cat) {
       case "vegetables":
-        return "bg-green-100 text-green-700 border-green-200";
+        return "bg-[#e8f8fd] text-[#3cc4f0] border-[#3cc4f0]/30";
       case "proteins":
         return "bg-red-100 text-red-700 border-red-200";
       case "dairy":
-        return "bg-blue-100 text-blue-700 border-blue-200";
+        return "bg-[#eaf1f7] text-[#47759c] border-[#47759c]/30";
       case "dry_goods":
-        return "bg-amber-100 text-amber-700 border-amber-200";
+        return "bg-[#eaf1f7] text-[#47759c] border-[#47759c]/30";
       default:
         return "bg-gray-100 text-gray-700 border-gray-200";
     }
@@ -103,9 +103,9 @@ export default function InventoryPage() {
     } else if (item.currentStock === 0) {
       return { label: isRtl ? "نفذ المخزون" : "Out of Stock", color: "text-red-700", badge: "bg-red-500 text-white" };
     } else if (percentage >= 85) {
-      return { label: isRtl ? "متوفر" : "Available", color: "text-green-600", badge: "bg-green-100 text-green-700" };
+      return { label: isRtl ? "متوفر" : "Available", color: "text-[#3cc4f0]", badge: "bg-[#e8f8fd] text-[#3cc4f0]" };
     } else {
-      return { label: isRtl ? "متوسط" : "Medium", color: "text-amber-600", badge: "bg-amber-100 text-amber-700" };
+      return { label: isRtl ? "متوسط" : "Medium", color: "text-[#47759c]", badge: "bg-[#eaf1f7] text-[#47759c]" };
     }
   };
 
@@ -172,8 +172,8 @@ export default function InventoryPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <Package className="h-5 w-5 text-blue-600" />
+              <div className="h-10 w-10 rounded-lg bg-[#eaf1f7] flex items-center justify-center">
+                <Package className="h-5 w-5 text-[#47759c]" />
               </div>
               <p className="text-sm text-gray-600">{isRtl ? "إجمالي المواد" : "Total Items"}</p>
             </div>
@@ -187,15 +187,15 @@ export default function InventoryPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-orange-600" />
+              <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-red-500" />
               </div>
               <p className="text-sm text-gray-600">{isRtl ? "نقص في المخزون" : "Low Stock"}</p>
             </div>
             <p className="text-3xl font-bold text-gray-900">
               {summary?.lowStockCount || 0}
             </p>
-            <p className="text-xs text-orange-600 mt-1">
+            <p className="text-xs text-red-500 mt-1">
               {isRtl ? "يتطلب إعادة طلب" : "Requires reorder"}
             </p>
           </div>
@@ -217,8 +217,8 @@ export default function InventoryPage() {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-600" />
+              <div className="h-10 w-10 rounded-lg bg-[#e8f8fd] flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-[#3cc4f0]" />
               </div>
               <p className="text-sm text-gray-600">{isRtl ? "قيمة المخزون" : "Stock Value"}</p>
             </div>
@@ -353,8 +353,8 @@ export default function InventoryPage() {
                               item.currentStock <= item.minStock
                                 ? "bg-red-500"
                                 : stockPercentage >= 85
-                                ? "bg-green-500"
-                                : "bg-amber-500"
+                                ? "bg-[#3cc4f0]"
+                                : "bg-[#47759c]"
                             )}
                             style={{ width: `${stockPercentage}%` }}
                           />

@@ -320,10 +320,10 @@ export function PremiumTestimonials() {
 
   return (
     <section className="relative py-12 md:py-16 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #0F1516 0%, #1a2628 50%, #0F1516 100%)" }}>
-      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-20 blur-3xl pointer-events-none"
+      style={{ background: "linear-gradient(135deg, #f0f9ff 0%, #e8f8fd 50%, #eaf1f7 100%)" }}>
+      <div className="absolute top-0 right-0 w-[400px] h-[400px] rounded-full opacity-30 blur-3xl pointer-events-none"
         style={{ background: "radial-gradient(circle, #3CC4F0, transparent 70%)" }} />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-15 blur-3xl pointer-events-none"
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full opacity-20 blur-3xl pointer-events-none"
         style={{ background: "radial-gradient(circle, #47759C, transparent 70%)" }} />
 
       <div className="relative max-w-4xl mx-auto px-5 md:px-8">
@@ -334,11 +334,11 @@ export function PremiumTestimonials() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-3 backdrop-blur-md"
-            style={{ background: "rgba(60,196,240,0.15)", border: "1px solid rgba(60,196,240,0.3)" }}
+            className="inline-flex items-center gap-2 px-3 py-1 rounded-full mb-3"
+            style={{ background: "rgba(60,196,240,0.15)", border: "1px solid rgba(60,196,240,0.35)" }}
           >
             <Star className="h-3.5 w-3.5 fill-current" style={{ color: "#3CC4F0" }} />
-            <span className="text-[11px] font-bold tracking-wider" style={{ color: "#3CC4F0" }}>
+            <span className="text-[11px] font-bold tracking-wider" style={{ color: "#47759C" }}>
               {isRtl ? "آراء عملائنا" : "TESTIMONIALS"}
             </span>
           </motion.div>
@@ -347,7 +347,8 @@ export function PremiumTestimonials() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
+            className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight"
+            style={{ color: "#0F1516" }}
           >
             {isRtl ? "ما يقوله عملاؤنا" : "What Our Clients Say"}
           </motion.h2>
@@ -359,13 +360,13 @@ export function PremiumTestimonials() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative rounded-2xl md:rounded-3xl p-5 md:p-8 backdrop-blur-md"
+          className="relative rounded-2xl md:rounded-3xl p-5 md:p-8 bg-white"
           style={{
-            background: "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-            border: "1px solid rgba(255,255,255,0.1)",
+            boxShadow: "0 12px 40px rgba(60,196,240,0.12), 0 4px 16px rgba(0,0,0,0.05)",
+            border: "1px solid rgba(60,196,240,0.2)",
           }}
         >
-          <Quote className="absolute top-4 right-4 md:top-5 md:right-5 h-7 w-7 md:h-9 md:w-9 opacity-15" style={{ color: "#3CC4F0" }} />
+          <Quote className="absolute top-4 right-4 md:top-5 md:right-5 h-7 w-7 md:h-9 md:w-9 opacity-10" style={{ color: "#3CC4F0" }} />
 
           <AnimatePresence mode="wait">
             <motion.div
@@ -382,19 +383,19 @@ export function PremiumTestimonials() {
                 ))}
               </div>
 
-              {/* Quote text — compact */}
-              <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-5 font-medium" style={{ color: "#E5E7EB" }}>
+              {/* Quote text */}
+              <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-5 font-medium" style={{ color: "#47759C" }}>
                 "{isRtl ? t.textAr : t.textEn}"
               </p>
 
               {/* Author */}
-              <div className="flex items-center gap-3 pt-3 md:pt-4 border-t border-white/10">
+              <div className="flex items-center gap-3 pt-3 md:pt-4" style={{ borderTop: "1px solid rgba(60,196,240,0.15)" }}>
                 <div className="h-10 w-10 md:h-11 md:w-11 rounded-xl flex items-center justify-center text-sm md:text-base font-black text-white flex-shrink-0"
                   style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", boxShadow: "0 6px 16px rgba(60,196,240,0.3)" }}>
                   {(isRtl ? t.nameAr : t.nameEn).charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-black text-white text-sm truncate">{isRtl ? t.nameAr : t.nameEn}</p>
+                  <p className="font-black text-sm truncate" style={{ color: "#0F1516" }}>{isRtl ? t.nameAr : t.nameEn}</p>
                   <p className="text-[11px] md:text-xs" style={{ color: "#3CC4F0" }}>{isRtl ? t.roleAr : t.roleEn}</p>
                 </div>
               </div>
@@ -413,7 +414,7 @@ export function PremiumTestimonials() {
               style={{
                 width: activeIdx === i ? "28px" : "7px",
                 height: "7px",
-                background: activeIdx === i ? "#3CC4F0" : "rgba(255,255,255,0.25)",
+                background: activeIdx === i ? "#3CC4F0" : "rgba(71,117,156,0.25)",
               }}
             />
           ))}
