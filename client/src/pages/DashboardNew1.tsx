@@ -144,95 +144,101 @@ export default function DashboardNew() {
       </div>
 
       {/* ── Row 1: 4 KPI cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
         {/* المشتركين النشطين */}
         <button onClick={()=>setOpenModal("customers")}
-          className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg, #3cc4f0 0%, #47759c 100%)", boxShadow:"0 4px 20px rgba(60,196,240,0.3)"}}>
-          <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
-          <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
+          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
+          style={{ boxShadow: "0 10px 30px -5px rgba(60,196,240,0.12)" }}>
+          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#3cc4f0] blur-2xl group-hover:opacity-10 transition-opacity" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Users className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
+                style={{ background: "rgba(60,196,240,0.1)", border: "1.5px solid rgba(60,196,240,0.2)" }}>
+                <Users className="h-6 w-6 text-[#3cc4f0]" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-white/60 group-hover:text-white transition-colors" />
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center gap-0.5">
+                <span>+{stats.newThisMonth}</span>
+                <span>هذا الشهر</span>
+              </span>
             </div>
-            <p className="text-4xl font-black text-white tabular-nums leading-none">{stats.activeCustomersCount}</p>
-            <p className="text-xs text-white/80 mt-1.5 font-medium">مشترك نشط</p>
-            <div className="mt-3 pt-3 border-t border-white/20">
-              <span className="text-[11px] text-white/70">من إجمالي <strong className="text-white">{stats.totalCustomers}</strong> مشترك</span>
+            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.activeCustomersCount}</p>
+            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">{t("customer.active") || "مشترك نشط"}</p>
+            <div className="mt-4 pt-3.5 border-t border-gray-50 flex items-center justify-between">
+              <span className="text-[11px] text-gray-400">إجمالي المشتركين</span>
+              <strong className="text-xs text-[#47759c] font-black">{stats.totalCustomers}</strong>
             </div>
           </div>
         </button>
 
         {/* خطط اليوم */}
         <button onClick={()=>setOpenModal("meals")}
-          className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg, #47759c 0%, #0f1516 100%)", boxShadow:"0 4px 20px rgba(71,117,156,0.25)"}}>
-          <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
-          <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
+          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
+          style={{ boxShadow: "0 10px 30px -5px rgba(71,117,156,0.12)" }}>
+          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#47759c] blur-2xl group-hover:opacity-10 transition-opacity" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <CalendarCheck className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
+                style={{ background: "rgba(71,117,156,0.1)", border: "1.5px solid rgba(71,117,156,0.2)" }}>
+                <CalendarCheck className="h-6 w-6 text-[#47759c]" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-white/60 group-hover:text-white transition-colors" />
+              <ArrowUpRight className="h-4 w-4 text-gray-400 group-hover:text-[#47759c] transition-colors" />
             </div>
-            <p className="text-4xl font-black text-white tabular-nums leading-none">{stats.todayMeals}</p>
-            <p className="text-xs text-white/80 mt-1.5 font-medium">خطة اليوم</p>
-            <div className="mt-3 pt-3 border-t border-white/20 flex justify-between">
-              <span className="text-[11px] text-white/80">☀ <strong className="text-white">{stats.morningDelivery}</strong> صباحي</span>
-              <span className="text-[11px] text-white/80">🌙 <strong className="text-white">{stats.eveningDelivery}</strong> مسائي</span>
+            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.todayMeals}</p>
+            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">خطة اليوم</p>
+            <div className="mt-4 pt-3.5 border-t border-gray-50 flex justify-between gap-1 text-[10px]">
+              <span className="bg-sky-50 text-sky-700 px-2 py-0.5 rounded-lg font-bold border border-sky-100/50">☀ {stats.morningDelivery} صباحي</span>
+              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg font-bold border border-indigo-100/50">🌙 {stats.eveningDelivery} مسائي</span>
             </div>
           </div>
         </button>
 
         {/* توصيل صباحي */}
         <button onClick={()=>setOpenModal("morning")}
-          className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg, #3cc4f0 0%, #2bb0dc 100%)", boxShadow:"0 4px 20px rgba(60,196,240,0.3)"}}>
-          <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
-          <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
+          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
+          style={{ boxShadow: "0 10px 30px -5px rgba(60,196,240,0.12)" }}>
+          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#3cc4f0] blur-2xl group-hover:opacity-10 transition-opacity" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Sun className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
+                style={{ background: "rgba(60,196,240,0.1)", border: "1.5px solid rgba(60,196,240,0.2)" }}>
+                <Sun className="h-6 w-6 text-[#3cc4f0]" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-white/60 group-hover:text-white transition-colors" />
+              <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-100">
+                {stats.morningRate}%
+              </span>
             </div>
-            <p className="text-4xl font-black text-white tabular-nums leading-none">{stats.morningDelivery}</p>
-            <p className="text-xs text-white/80 mt-1.5 font-medium">توصيل صباحي</p>
-            <div className="mt-3 pt-3 border-t border-white/20">
-              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full transition-all" style={{width:`${stats.morningRate}%`}} />
+            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.morningDelivery}</p>
+            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">توصيل صباحي</p>
+            <div className="mt-4 pt-3.5 border-t border-gray-50">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500" style={{width:`${stats.morningRate}%`, background:"linear-gradient(90deg, #3cc4f0, #47759c)"}} />
               </div>
-              <span className="text-[11px] text-white/70 mt-1 block">{stats.morningRate}% من الإجمالي</span>
             </div>
           </div>
         </button>
 
         {/* توصيل مسائي */}
         <button onClick={()=>setOpenModal("evening")}
-          className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg, #0f1516 0%, #47759c 100%)", boxShadow:"0 4px 20px rgba(15,21,22,0.4)"}}>
-          <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
-          <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
+          className="group relative rounded-3xl p-6 text-right overflow-hidden transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl active:scale-[0.98] bg-white border border-gray-100/80"
+          style={{ boxShadow: "0 10px 30px -5px rgba(15,21,22,0.12)" }}>
+          <div className="absolute -left-12 -top-12 h-32 w-32 rounded-full opacity-5 bg-[#0f1516] blur-2xl group-hover:opacity-10 transition-opacity" />
           <div className="relative">
-            <div className="flex items-center justify-between mb-3">
-              <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <Moon className="h-5 w-5 text-white" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-12 w-12 rounded-2xl flex items-center justify-center transition-all duration-300"
+                style={{ background: "rgba(15,21,22,0.08)", border: "1.5px solid rgba(15,21,22,0.15)" }}>
+                <Moon className="h-6 w-6 text-[#0f1516]" />
               </div>
-              <ArrowUpRight className="h-4 w-4 text-white/60 group-hover:text-white transition-colors" />
+              <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                {100-stats.morningRate}%
+              </span>
             </div>
-            <p className="text-4xl font-black text-white tabular-nums leading-none">{stats.eveningDelivery}</p>
-            <p className="text-xs text-white/80 mt-1.5 font-medium">توصيل مسائي</p>
-            <div className="mt-3 pt-3 border-t border-white/20">
-              <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
-                <div className="h-full bg-white rounded-full transition-all" style={{width:`${100-stats.morningRate}%`}} />
+            <p className="text-4.5xl font-black text-[#0f1516] tabular-nums leading-none tracking-tight">{stats.eveningDelivery}</p>
+            <p className="text-xs text-gray-500 mt-2 font-bold uppercase tracking-wider">توصيل مسائي</p>
+            <div className="mt-4 pt-3.5 border-t border-gray-50">
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-500" style={{width:`${100-stats.morningRate}%`, background:"linear-gradient(90deg, #0f1516, #47759c)"}} />
               </div>
-              <span className="text-[11px] text-white/70 mt-1 block">{100-stats.morningRate}% من الإجمالي</span>
             </div>
           </div>
         </button>
@@ -242,32 +248,35 @@ export default function DashboardNew() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* حالة الاشتراكات */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+        <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-between"
+          style={{ boxShadow: "0 10px 30px -5px rgba(0,0,0,0.03)" }}>
+          <div className="flex items-center justify-between px-6 py-4.5 border-b border-gray-50">
             <button onClick={()=>setLocation("/customers")}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 transition-colors">
-              عرض الكل <ArrowUpRight className="h-3 w-3" />
+              className="text-xs font-bold px-3.5 py-1.5 rounded-xl flex items-center gap-1 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
+              عرض الكل <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <span className="text-sm font-bold text-gray-800">حالة الاشتراكات</span>
+              <AlertCircle className="h-4.5 w-4.5 text-amber-500" />
+              <span className="text-sm font-black text-gray-800 tracking-tight">حالة الاشتراكات</span>
             </div>
           </div>
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label:"اشتراكات منتهية",   count:stats.expiredCustomersCount,  gradient:"from-red-500 to-rose-400",    bg:"bg-red-50",   border:"border-red-100",  text:"text-red-600",   modal:"expired"  as ModalType, icon:"🔴" },
-              { label:"تنتهي اليوم",       count:stats.expiringTodayCount,     gradient:"from-orange-500 to-amber-400",bg:"bg-orange-50",border:"border-orange-100",text:"text-orange-600",modal:"expiring" as ModalType, icon:"🟠" },
-              { label:"تنتهي خلال 3 أيام", count:stats.expiringCustomersCount, gradient:"from-yellow-500 to-amber-300",bg:"bg-yellow-50",border:"border-yellow-100",text:"text-yellow-600",modal:"expiring" as ModalType, icon:"🟡" },
-            ].map(({label,count,gradient,bg,border,text,modal,icon})=>(
+              { label:"اشتراكات منتهية",   count:stats.expiredCustomersCount,  glowColor: "rgba(239,68,68,0.15)",   textColor: "#ef4444", bg:"bg-red-50/50",   border:"rgba(239,68,68,0.2)",  modal:"expired"  as ModalType, icon:"🔴" },
+              { label:"تنتهي اليوم",       count:stats.expiringTodayCount,     glowColor: "rgba(249,115,22,0.15)",  textColor: "#f97316", bg:"bg-orange-50/50",border:"rgba(249,115,22,0.2)", modal:"expiring" as ModalType, icon:"🟠" },
+              { label:"تنتهي خلال 3 أيام", count:stats.expiringCustomersCount, glowColor: "rgba(234,179,8,0.15)",   textColor: "#ca8a04", bg:"bg-yellow-50/50",border:"rgba(234,179,8,0.2)",  modal:"expiring" as ModalType, icon:"🟡" },
+            ].map(({label,count,glowColor,textColor,bg,border,modal,icon})=>(
               <button key={label} onClick={()=>setOpenModal(modal)}
-                className={`group relative rounded-2xl p-4 text-right border overflow-hidden hover:shadow-md transition-all active:scale-[0.98] ${bg} ${border}`}>
-                <div className={`absolute top-0 right-0 h-1 w-full bg-gradient-to-l ${gradient} rounded-t-2xl`} />
-                <p className="text-3xl font-black tabular-nums mt-1"
-                  style={{color: gradient.includes("red")?"#dc2626":gradient.includes("orange")?"#ea580c":"#ca8a04"}}>
+                className={`group relative rounded-2.5xl p-5 text-right border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg active:scale-[0.98] ${bg}`}
+                style={{ borderColor: border, boxShadow: `0 8px 24px -5px ${glowColor}` }}>
+                <p className="text-4.5xl font-black tabular-nums leading-none tracking-tight" style={{ color: textColor }}>
                   {count}
                 </p>
-                <p className={`text-xs font-semibold mt-1 ${text}`}>{icon} {label}</p>
-                <ChevronLeft className={`absolute bottom-3 left-3 h-3.5 w-3.5 opacity-40 group-hover:opacity-70 transition-opacity ${text}`} />
+                <p className="text-xs font-bold mt-3 flex items-center gap-1.5" style={{ color: textColor }}>
+                  <span>{icon}</span>
+                  <span>{label}</span>
+                </p>
+                <ChevronLeft className="absolute bottom-5 left-5 h-4 w-4 opacity-40 group-hover:opacity-100 group-hover:-translate-x-1 transition-all" style={{ color: textColor }} />
               </button>
             ))}
           </div>
