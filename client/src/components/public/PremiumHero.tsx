@@ -280,9 +280,9 @@ export function PremiumHero({
           </div>
 
           {/* ─── VISUAL COLUMN (Interactive 3D Cards Stack & Flexible Ratio) ─── */}
-          <div className="w-full lg:w-1/2 relative h-[260px] md:h-[320px] lg:h-[360px] flex items-center justify-center">
+          <div className="w-full lg:w-1/2 relative h-[280px] md:h-[360px] lg:h-[480px] flex items-center justify-center">
             <motion.div 
-              className="relative w-full max-w-[360px] aspect-[4/3] flex items-center justify-center"
+              className="relative w-full max-w-[360px] md:max-w-[420px] lg:max-w-[480px] aspect-[4/3] flex items-center justify-center"
               whileHover="hover"
             >
               {/* Stack Card 1 (Back Decorative Glass Card) */}

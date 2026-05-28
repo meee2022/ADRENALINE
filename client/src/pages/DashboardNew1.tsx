@@ -149,7 +149,7 @@ export default function DashboardNew() {
         {/* المشتركين النشطين */}
         <button onClick={()=>setOpenModal("customers")}
           className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg,#0ea5e9,#38bdf8)",boxShadow:"0 4px 20px #0ea5e940"}}>
+          style={{background:"linear-gradient(135deg, #3cc4f0 0%, #47759c 100%)", boxShadow:"0 4px 20px rgba(60,196,240,0.3)"}}>
           <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
           <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
           <div className="relative">
@@ -170,7 +170,7 @@ export default function DashboardNew() {
         {/* خطط اليوم */}
         <button onClick={()=>setOpenModal("meals")}
           className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg,#47759c,#5a8aad)",boxShadow:"0 4px 20px #47759c40"}}>
+          style={{background:"linear-gradient(135deg, #47759c 0%, #0f1516 100%)", boxShadow:"0 4px 20px rgba(71,117,156,0.25)"}}>
           <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
           <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
           <div className="relative">
@@ -192,7 +192,7 @@ export default function DashboardNew() {
         {/* توصيل صباحي */}
         <button onClick={()=>setOpenModal("morning")}
           className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg,#3cc4f0,#0ea5e9)",boxShadow:"0 4px 20px #3cc4f050"}}>
+          style={{background:"linear-gradient(135deg, #3cc4f0 0%, #2bb0dc 100%)", boxShadow:"0 4px 20px rgba(60,196,240,0.3)"}}>
           <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
           <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
           <div className="relative">
@@ -216,7 +216,7 @@ export default function DashboardNew() {
         {/* توصيل مسائي */}
         <button onClick={()=>setOpenModal("evening")}
           className="group relative rounded-2xl p-5 text-right overflow-hidden transition-all duration-200 hover:-translate-y-1 active:scale-[0.98]"
-          style={{background:"linear-gradient(135deg,#0f1516,#47759c)",boxShadow:"0 4px 20px #0f151640"}}>
+          style={{background:"linear-gradient(135deg, #0f1516 0%, #47759c 100%)", boxShadow:"0 4px 20px rgba(15,21,22,0.4)"}}>
           <div className="absolute -left-4 -top-4 h-24 w-24 rounded-full opacity-10 bg-white" />
           <div className="absolute left-4 bottom-4 h-14 w-14 rounded-full opacity-10 bg-white" />
           <div className="relative">
@@ -352,7 +352,7 @@ export default function DashboardNew() {
                   <YAxis tick={{fill:"#94a3b8",fontSize:11}} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
                   <Tooltip contentStyle={{borderRadius:"12px",border:"1px solid #e2e8f0",fontSize:12,boxShadow:"0 8px 30px rgba(0,0,0,0.1)"}} cursor={{fill:"#f8fafc",radius:6}} />
                   <Bar dataKey="value" radius={[8,8,0,0]}>
-                    {weeklyData.map((_,i) => <Cell key={i} fill={i===6?"#3cc4f0":"#bae6fd"} />)}
+                    {weeklyData.map((_,i) => <Cell key={i} fill={i===6?"#3cc4f0":"#47759c"} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
