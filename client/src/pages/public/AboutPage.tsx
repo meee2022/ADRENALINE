@@ -169,8 +169,43 @@ export default function AboutPage() {
 
   return (
     <PublicLayout>
-      {/* ─── Print CSS ─── */}
+      {/* ─── Responsive + Print CSS ─── */}
       <style>{`
+        /* ══ MOBILE RESPONSIVE ══ */
+        @media (max-width: 768px) {
+          /* Cover */
+          #cover { padding: 48px 18px !important; min-height: auto !important; }
+          .ab-cover-grid { grid-template-columns: 1fr !important; }
+          .ab-cover-logo-wrap { display: none !important; }
+          #cover h1 { font-size: 28px !important; }
+
+          /* TOC */
+          .ab-toc-grid { grid-template-columns: 1fr !important; }
+          .ab-toc-intro { display: none !important; }
+          .ab-toc-buttons { grid-template-columns: 1fr 1fr !important; }
+
+          /* 2-col sections → 1-col */
+          .ab-grid-2 { grid-template-columns: 1fr !important; }
+
+          /* 4-col → 2-col */
+          .ab-grid-4 { grid-template-columns: 1fr 1fr !important; }
+
+          /* 3-col → 1-col */
+          .ab-grid-3 { grid-template-columns: 1fr !important; }
+
+          /* General section padding */
+          section { padding: 40px 0 !important; }
+          section > div { padding: 0 16px !important; }
+
+          /* Floating buttons */
+          .ab-fab { bottom: 16px !important; left: 16px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .ab-grid-4 { grid-template-columns: 1fr !important; }
+          .ab-toc-buttons { grid-template-columns: 1fr !important; }
+        }
+
         @media print {
           /* ─ hide UI chrome ─ */
           nav, footer, header, .no-print { display:none !important; }
@@ -258,7 +293,7 @@ export default function AboutPage() {
       `}</style>
 
       {/* ─── Floating action bar ─── */}
-      <div className="no-print" style={{
+      <div className="no-print ab-fab" style={{
         position:"fixed", bottom:90, left:16, zIndex:999,
         display:"flex", flexDirection:"column", gap:10,
       }}>
@@ -291,7 +326,7 @@ export default function AboutPage() {
         <div style={{ position:"absolute", bottom:-100, left:-100, width:400, height:400,
           borderRadius:"50%", background:`radial-gradient(circle,${B.accent}55 0%,transparent 65%)`,
           pointerEvents:"none" }}/>
-        <div style={{ maxWidth:1080, margin:"0 auto", width:"100%",
+        <div className="ab-cover-grid" style={{ maxWidth:1080, margin:"0 auto", width:"100%",
           display:"grid", gridTemplateColumns:"1fr auto", gap:40, alignItems:"center" }}>
           <div>
             <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
@@ -325,7 +360,7 @@ export default function AboutPage() {
               ))}
             </div>
           </div>
-          <div style={{ textAlign:"center" }}>
+          <div className="ab-cover-logo-wrap" style={{ textAlign:"center" }}>
             <img src="/heart-logo.png" alt="♥"
               style={{ width:120, opacity:0.15, filter:"brightness(0) invert(1)" }}/>
           </div>
@@ -334,14 +369,14 @@ export default function AboutPage() {
 
       {/* ══ 02 TOC ══ */}
       <Sec id="toc" bg={B.bg2}>
-        <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:48, alignItems:"start" }}>
-          <div>
+        <div className="ab-toc-grid" style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:48, alignItems:"start" }}>
+          <div className="ab-toc-intro">
             <Eyebrow ar="الملف التعريفي" en="PROFILE" isAr={isAr}/>
             <H2 ar="المحتويات" en="Contents" isAr={isAr}/>
             <P ar="دليلٌ سريع لأقسام ملف أدرينالين التعريفي."
                en="A quick guide to the sections of Adrenaline's company profile." isAr={isAr}/>
           </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))", gap:10 }}>
+          <div className="ab-toc-buttons" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(185px,1fr))", gap:10 }}>
             {toc.map(item=>(
               <button key={item.id} onClick={()=>scrollTo(item.id)}
                 style={{ background:"#fff", border:`1px solid ${B.line}`,
@@ -363,7 +398,7 @@ export default function AboutPage() {
 
       {/* ══ 03 ABOUT ══ */}
       <Sec id="about">
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"start" }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"start" }}>
           <div>
             <Eyebrow ar="من نحن" en="WHO WE ARE" isAr={isAr}/>
             <H2 ar="عن أدرينالين" en="About Adrenaline" isAr={isAr}/>
@@ -416,7 +451,7 @@ export default function AboutPage() {
 
       {/* ══ 04 STORY ══ */}
       <Sec id="story" bg={B.bg2}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
           <div>
             <Eyebrow ar="رحلتنا" en="OUR JOURNEY" isAr={isAr}/>
             <H2 ar="قصتنا" en="Our Story" isAr={isAr}/>
@@ -443,7 +478,7 @@ export default function AboutPage() {
       <Sec id="vision">
         <CentreHead eyeAr="توجّهنا" eyeEn="OUR DIRECTION"
           titleAr="الرؤية والرسالة" titleEn="Vision & Mission" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:22 }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:22 }}>
           {[
             { kAr:"الرؤية", kEn:"Vision",
               tAr:"الخيار الأول للأكل الصحي", tEn:"The First Choice for Healthy Food",
@@ -473,7 +508,7 @@ export default function AboutPage() {
       <Sec id="values" bg={B.bg2}>
         <CentreHead eyeAr="ما نؤمن به" eyeEn="WHAT WE BELIEVE"
           titleAr="قيمنا" titleEn="Our Values" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18 }}>
+        <div className="ab-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18 }}>
           {[
             { color:"#0E76AC", ic:(c:string)=><IcShld color={c}/>, ar:"الجودة", en:"Quality",
               dAr:"مكوّناتٌ مختارة وتحضيرٌ يومي وفق معايير عالية.",
@@ -508,7 +543,7 @@ export default function AboutPage() {
 
       {/* ══ 07 PHILOSOPHY ══ */}
       <Sec id="philo">
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
           <div>
             <Eyebrow ar="لماذا الأكل الصحي" en="WHY HEALTHY FOOD" isAr={isAr}/>
             <H2 ar="فلسفتنا الغذائية" en="Our Food Philosophy" isAr={isAr}/>
@@ -610,7 +645,7 @@ export default function AboutPage() {
           subAr="وجبات من مطبخنا — متوازنة ولذيذة"
           subEn="Meals from our kitchen — balanced and delicious"
           isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+        <div className="ab-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
           {FEATURED_MEALS.map((m,i)=>(
             <div key={i} style={{ borderRadius:18, overflow:"hidden",
               background:"linear-gradient(158deg,#fff 0%,#ECF5FC 100%)",
@@ -647,7 +682,7 @@ export default function AboutPage() {
       <Sec id="plans" bg={B.bg2}>
         <CentreHead eyeAr="اشتراكات صحية" eyeEn="HEALTHY SUBSCRIPTIONS"
           titleAr="برامج الوجبات والاشتراكات" titleEn="Meal Plans & Subscriptions" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+        <div className="ab-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
           {[
             { badge:{ar:"مرونة",en:"Flexible"},
               title:{ar:"يومي",en:"Daily"},
@@ -736,7 +771,7 @@ export default function AboutPage() {
       <Sec id="process">
         <CentreHead eyeAr="كيف نعمل" eyeEn="HOW WE WORK"
           titleAr="من مطبخنا إليك" titleEn="From Our Kitchen to You" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18 }}>
+        <div className="ab-grid-4" style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:18 }}>
           {[
             { n:"01", color:"#0E76AC", ic:(c:string)=><IcBox color={c}/>,   ar:"المطبخ المركزي — الثمامة", en:"Central Kitchen — Al Thumama",
               dAr:"إنتاجٌ يومي في مطبخنا الرئيسي بالثمامة، وهو القائم على توزيع الوجبات.",
@@ -773,7 +808,7 @@ export default function AboutPage() {
       <Sec id="locations" bg={B.bg2}>
         <CentreHead eyeAr="شبكتنا التشغيلية" eyeEn="OUR NETWORK"
           titleAr="مواقعنا" titleEn="Our Locations" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+        <div className="ab-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
           {[
             { bAr:"الإنتاج والتوزيع", bEn:"Production & Distribution",
               tAr:"المطبخ الرئيسي — الثمامة", tEn:"Central Kitchen — Al Thumama",
@@ -812,7 +847,7 @@ export default function AboutPage() {
       <Sec id="why">
         <CentreHead eyeAr="نقاط تميّزنا" eyeEn="WHY CHOOSE US"
           titleAr="لماذا أدرينالين" titleEn="Why Adrenaline" isAr={isAr}/>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18 }}>
           {[
             { n:"01", color:"#0E76AC", ic:(c:string)=><IcNut color={c}/>, ar:"إشراف تغذوي", en:"Nutrition Supervision",
               dAr:"وجباتٌ يصمّمها اختصاصيو التغذية بسعراتٍ محسوبة.",
@@ -849,7 +884,7 @@ export default function AboutPage() {
 
       {/* ══ 14 CONTACT ══ */}
       <Sec id="contact" bg={B.ink}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
           <div>
             <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
               letterSpacing:"0.25em", color:B.brand, marginBottom:18 }}>
