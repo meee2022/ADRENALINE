@@ -172,10 +172,60 @@ export default function AboutPage() {
       {/* ─── Print CSS ─── */}
       <style>{`
         @media print {
-          nav, footer, .no-print { display:none !important; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          section { break-inside: avoid; page-break-inside: avoid; }
-          #cover { background: #0E2A4A !important; -webkit-print-color-adjust: exact; }
+          /* ─ hide UI chrome ─ */
+          nav, footer, header, .no-print { display:none !important; }
+
+          /* ─ page setup ─ */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          body, html { background: #fff !important; }
+
+          /* ─ sections: keep together where possible ─ */
+          section { break-inside: avoid; page-break-inside: avoid; margin: 0 !important; padding: 32px 0 !important; }
+
+          /* ─ COVER: swap dark background for white + brand border ─ */
+          #cover {
+            background: #fff !important;
+            border-bottom: 6px solid #3AC7F4 !important;
+            padding: 24px 0 !important;
+          }
+          #cover h1 { color: #0E2A4A !important; }
+          #cover p  { color: #2D4A67 !important; }
+          #cover span { color: #6A7E91 !important; }
+          #cover img[alt="ADRENALINE"] { filter: none !important; }
+          #cover img[alt="♥"] { display: none !important; }
+          #cover > div > div:last-child { display: none !important; }
+
+          /* ─ CONTACT section: swap dark background for white ─ */
+          #contact {
+            background: #fff !important;
+            border-top: 4px solid #0E76AC !important;
+          }
+          #contact h2 { color: #0E2A4A !important; }
+          #contact p  { color: #2D4A67 !important; }
+          #contact a  { color: #0E76AC !important; text-decoration: none !important; }
+          #contact > div > div:first-child > a {
+            background: #0E76AC !important;
+            color: #fff !important;
+            padding: 10px 20px !important;
+            border-radius: 50px !important;
+          }
+          #contact > div > div:last-child > div {
+            background: #EAF3FB !important;
+            border: 1px solid #D9E6F1 !important;
+          }
+          #contact > div > div:last-child > div > div:first-child { color: #0E76AC !important; }
+          #contact > div > div:last-child > div > div:last-child  { color: #0E2A4A !important; }
+          #contact img { filter: none !important; opacity: 0.7 !important; }
+          #contact p[style] { color: #6A7E91 !important; }
+
+          /* ─ Cards: keep light backgrounds, remove heavy shadows ─ */
+          div[style*="box-shadow"] { box-shadow: 0 0 0 1px #D9E6F1 !important; }
+
+          /* ─ gradient text fix ─ */
+          h1, h2, h3, h4, p, span { color: inherit; }
+
+          /* ─ Table of contents: hide (long list wastes paper) ─ */
+          #toc { display: none !important; }
         }
         @page { margin: 1.5cm; size: A4; }
       `}</style>
@@ -256,7 +306,7 @@ export default function AboutPage() {
       </section>
 
       {/* ══ 02 TOC ══ */}
-      <Sec bg={B.bg2}>
+      <Sec id="toc" bg={B.bg2}>
         <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:48, alignItems:"start" }}>
           <div>
             <Eyebrow ar="الملف التعريفي" en="PROFILE" isAr={isAr}/>
