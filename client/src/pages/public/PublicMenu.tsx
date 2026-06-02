@@ -24,8 +24,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
-// ✅ أيام العمل فقط (السبت-الأربعاء) - الخميس والجمعة إجازة
-type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday";
+type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
@@ -220,25 +219,22 @@ export default function PublicMenuPage() {
     search: searchQuery,
   });
 
-  // Filter meals by selected week and day
+  // Filter meals by selected week and day using exact schedule pairs
   const filteredMeals = allMeals.filter((meal: any) => {
-    // If meal has no schedule (weeks/days), show it by default
-    if (!meal.weeks || meal.weeks.length === 0) {
-      if (!meal.days || meal.days.length === 0) {
-        return true; // Show meals without any schedule
+    // Use precise schedule pairs if available
+    if (meal.schedule && meal.schedule.length > 0) {
+      if (selectedDay) {
+        return meal.schedule.some((s: any) => s.week === selectedWeek && s.day === selectedDay);
       }
+      return meal.schedule.some((s: any) => s.week === selectedWeek);
     }
-
-    // If week/day are selected, filter strictly
+    // Fallback: legacy weeks/days arrays
+    const hasSchedule = meal.weeks && meal.weeks.length > 0;
+    if (!hasSchedule) return false;
     if (selectedDay) {
-      // BOTH week AND day must match
-      const hasWeek = meal.weeks && meal.weeks.includes(selectedWeek);
-      const hasDay = meal.days && meal.days.includes(selectedDay);
-      return hasWeek && hasDay;
-    } else {
-      // Only week is selected
-      return meal.weeks && meal.weeks.includes(selectedWeek);
+      return meal.weeks.includes(selectedWeek) && meal.days && meal.days.includes(selectedDay);
     }
+    return meal.weeks.includes(selectedWeek);
   });
 
   const meals = filteredMeals;
@@ -281,7 +277,7 @@ export default function PublicMenuPage() {
     { value: "monday", label: "الإثنين" },
     { value: "tuesday", label: "الثلاثاء" },
     { value: "wednesday", label: "الأربعاء" },
-    // ⚠️ الخميس والجمعة: أيام إجازة (لا توصيل)
+    { value: "thursday", label: "الخميس" },
   ];
 
   // ─── Phone gate state determination ───

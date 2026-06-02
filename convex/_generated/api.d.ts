@@ -9,15 +9,19 @@
  */
 
 import type * as analytics from "../analytics.js";
+import type * as applySchedulePairs from "../applySchedulePairs.js";
 import type * as auditLog from "../auditLog.js";
 import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
+import type * as cleanupDuplicateMeals from "../cleanupDuplicateMeals.js";
 import type * as coupons from "../coupons.js";
 import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
 import type * as customers from "../customers.js";
 import type * as dailyPlans from "../dailyPlans.js";
 import type * as files from "../files.js";
+import type * as fixSchedule from "../fixSchedule.js";
+import type * as fixScheduleExtra from "../fixScheduleExtra.js";
 import type * as inventory from "../inventory.js";
 import type * as mealCategories from "../mealCategories.js";
 import type * as mealIngredients from "../mealIngredients.js";
@@ -30,6 +34,7 @@ import type * as ratings from "../ratings.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
 import type * as seedInventory from "../seedInventory.js";
+import type * as seedMealSchedule from "../seedMealSchedule.js";
 import type * as seedPublicWebsite from "../seedPublicWebsite.js";
 import type * as seedRealPlans from "../seedRealPlans.js";
 import type * as seedUsers from "../seedUsers.js";
@@ -45,15 +50,19 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
+  applySchedulePairs: typeof applySchedulePairs;
   auditLog: typeof auditLog;
   auth: typeof auth;
   banners: typeof banners;
+  cleanupDuplicateMeals: typeof cleanupDuplicateMeals;
   coupons: typeof coupons;
   customerAuth: typeof customerAuth;
   customerOrders: typeof customerOrders;
   customers: typeof customers;
   dailyPlans: typeof dailyPlans;
   files: typeof files;
+  fixSchedule: typeof fixSchedule;
+  fixScheduleExtra: typeof fixScheduleExtra;
   inventory: typeof inventory;
   mealCategories: typeof mealCategories;
   mealIngredients: typeof mealIngredients;
@@ -66,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;
   seedInventory: typeof seedInventory;
+  seedMealSchedule: typeof seedMealSchedule;
   seedPublicWebsite: typeof seedPublicWebsite;
   seedRealPlans: typeof seedRealPlans;
   seedUsers: typeof seedUsers;

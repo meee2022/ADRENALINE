@@ -267,10 +267,12 @@ export default defineSchema({
     priceQAR: v.number(),
     isActive: v.boolean(),
     sortOrder: v.number(),
-    // NEW: Scheduling fields
-    weeks: v.optional(v.array(v.number())), // [1, 2, 3, 4]
-    days: v.optional(v.array(v.string())), // ["saturday", "sunday", "monday", ...]
-    cutoffTime: v.optional(v.string()), // "18:00" - time when selection locks
+    // Scheduling fields
+    weeks: v.optional(v.array(v.number())), // legacy
+    days: v.optional(v.array(v.string())),  // legacy
+    // Exact week+day pairs from meal schedule (e.g. [{week:1,day:"saturday"}])
+    schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
+    cutoffTime: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_slug", ["slug"])
