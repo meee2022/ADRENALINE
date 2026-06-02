@@ -226,6 +226,33 @@ export default function AboutPage() {
 
           /* ─ Table of contents: hide (long list wastes paper) ─ */
           #toc { display: none !important; }
+
+          /* ─ Meal images: force display ─ */
+          #menu img {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            width: 100% !important;
+            height: 160px !important;
+            object-fit: cover !important;
+            max-width: 100% !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #menu div[style*="height:180px"],
+          #menu div[style*="height: 180px"] {
+            height: 160px !important;
+            overflow: visible !important;
+          }
+          #menu div[style*="border-radius:18px"],
+          #menu div[style*="border-radius: 18px"] {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          /* grid 2 cols in print for menu */
+          #menu > div > div[style*="grid-template-columns"] {
+            grid-template-columns: 1fr 1fr !important;
+          }
         }
         @page { margin: 1.5cm; size: A4; }
       `}</style>
