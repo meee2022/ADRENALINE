@@ -235,6 +235,12 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               >
                 {isRtl ? "المنيو" : "Menu"}
               </a>
+              <a
+                href="/public/about"
+                className="block py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
+              >
+                {isRtl ? "من نحن" : "About"}
+              </a>
               <button
                 onClick={toggleLanguage}
                 className="w-full text-left py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium flex items-center gap-2"
@@ -343,14 +349,23 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               </a>
               <a
                 href="/public/menu"
-                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
               >
                 <UtensilsCrossed className="h-6 w-6" />
                 <span className="text-xs font-medium">{isRtl ? "المنيو" : "Menu"}</span>
               </a>
+              <a
+                href="/public/about"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <circle cx="12" cy="8" r="3"/><path d="M6 20v-1a6 6 0 0 1 12 0v1"/>
+                </svg>
+                <span className="text-xs font-medium">{isRtl ? "من نحن" : "About"}</span>
+              </a>
               <button
                 onClick={toggleLanguage}
-                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
               >
                 <Globe className="h-6 w-6" />
                 <span className="text-xs font-medium">{language === "ar" ? "EN" : "ع"}</span>

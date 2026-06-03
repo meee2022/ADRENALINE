@@ -92,7 +92,7 @@ function Sec({ id, bg, children, style }: { id?:string; bg?:string; children:Rea
   return (
     <section id={id} style={{ background:bg||B.bg, padding:"64px 0",
       position:"relative", overflow:"hidden", ...style }}>
-      <div style={{ maxWidth:1080, margin:"0 auto", padding:"0 22px" }}>
+      <div className="sec-inner" style={{ maxWidth:1080, margin:"0 auto", padding:"0 22px" }}>
         {children}
       </div>
     </section>
@@ -142,7 +142,17 @@ export default function AboutPage() {
   const waLink = `https://wa.me/${phone}?text=${encodeURIComponent(isAr ? "مرحباً 👋\nأرغب في الاستفسار عن خدمات أدرينالين." : "Hello 👋\nI'd like to inquire about Adrenaline services.")}`;
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    // Preload all meal images before printing to avoid blank images in Chrome
+    const imgPromises = FEATURED_MEALS.map(m => new Promise<void>(resolve => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve();
+      img.onerror = () => resolve(); // resolve even on error
+      img.src = m.img;
+    }));
+    Promise.all(imgPromises).then(() => window.print());
+  };
 
   const toc = [
     { n:"01", ar:"عن أدرينالين",          en:"About Adrenaline",     id:"about"    },
@@ -195,7 +205,10 @@ export default function AboutPage() {
 
           /* General section padding */
           section { padding: 40px 0 !important; }
-          section > div { padding: 0 16px !important; }
+          section > div { padding: 0 14px !important; }
+
+          /* Testimonial cards — ensure text doesn't overflow */
+          .ab-grid-3 > div { overflow: hidden !important; word-break: break-word !important; }
 
           /* Floating buttons */
           .ab-fab { bottom: 16px !important; left: 16px !important; }
@@ -207,90 +220,214 @@ export default function AboutPage() {
         }
 
         @media print {
-          /* ─ hide UI chrome ─ */
-          nav, footer, header, .no-print { display:none !important; }
+          /* ══ BASE ══ */
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
+          body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
 
-          /* ─ page setup ─ */
-          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-          body, html { background: #fff !important; }
+          /* ══ HIDE CHROME ══ */
+          nav, header, footer, .no-print, #toc { display: none !important; }
 
-          /* ─ sections: keep together where possible ─ */
-          section { break-inside: avoid; page-break-inside: avoid; margin: 0 !important; padding: 32px 0 !important; }
+          /* ══ RUNNING FOOTER (every page) ══ */
+          .print-running-footer {
+            display: flex !important;
+            position: fixed !important;
+            bottom: 0 !important; left: 0 !important; right: 0 !important;
+            height: 24px !important;
+            background: #0E2A4A !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 0 16px !important;
+            z-index: 9999 !important;
+          }
+          .print-running-footer span {
+            font-size: 8px !important; font-weight: 700 !important;
+            color: rgba(255,255,255,0.55) !important;
+            letter-spacing: 0.12em !important;
+            font-family: 'Cairo',sans-serif !important;
+          }
 
-          /* ─ COVER: swap dark background for white + brand border ─ */
-          #cover {
+          /* ══ SECTIONS — allow content to flow freely ══ */
+          section {
+            padding: 14px 0 !important;
+            margin: 0 !important;
             background: #fff !important;
-            border-bottom: 6px solid #3AC7F4 !important;
-            padding: 24px 0 !important;
-          }
-          #cover h1 { color: #0E2A4A !important; }
-          #cover p  { color: #2D4A67 !important; }
-          #cover span { color: #6A7E91 !important; }
-          #cover img[alt="ADRENALINE"] { filter: none !important; }
-          #cover img[alt="♥"] { display: none !important; }
-          #cover > div > div:last-child { display: none !important; }
-
-          /* ─ CONTACT section: swap dark background for white ─ */
-          #contact {
-            background: #fff !important;
-            border-top: 4px solid #0E76AC !important;
-          }
-          #contact h2 { color: #0E2A4A !important; }
-          #contact p  { color: #2D4A67 !important; }
-          #contact a  { color: #0E76AC !important; text-decoration: none !important; }
-          #contact > div > div:first-child > a {
-            background: #0E76AC !important;
-            color: #fff !important;
-            padding: 10px 20px !important;
-            border-radius: 50px !important;
-          }
-          #contact > div > div:last-child > div {
-            background: #EAF3FB !important;
-            border: 1px solid #D9E6F1 !important;
-          }
-          #contact > div > div:last-child > div > div:first-child { color: #0E76AC !important; }
-          #contact > div > div:last-child > div > div:last-child  { color: #0E2A4A !important; }
-          #contact img { filter: none !important; opacity: 0.7 !important; }
-          #contact p[style] { color: #6A7E91 !important; }
-
-          /* ─ Cards: keep light backgrounds, remove heavy shadows ─ */
-          div[style*="box-shadow"] { box-shadow: 0 0 0 1px #D9E6F1 !important; }
-
-          /* ─ gradient text fix ─ */
-          h1, h2, h3, h4, p, span { color: inherit; }
-
-          /* ─ Table of contents: hide (long list wastes paper) ─ */
-          #toc { display: none !important; }
-
-          /* ─ Meal images: force display ─ */
-          #menu img {
-            display: block !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            width: 100% !important;
-            height: 160px !important;
-            object-fit: cover !important;
-            max-width: 100% !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          #menu div[style*="height:180px"],
-          #menu div[style*="height: 180px"] {
-            height: 160px !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
             overflow: visible !important;
           }
-          #menu div[style*="border-radius:18px"],
-          #menu div[style*="border-radius: 18px"] {
+          .sec-inner { padding: 0 16px !important; max-width: 100% !important; overflow: visible !important; }
+
+          /* ══ FIX ORPHAN HEADINGS — h2 never alone at page bottom ══ */
+          h2, h3 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            font-size: 18px !important; font-weight: 800 !important;
+            color: #0E2A4A !important;
+            padding-bottom: 6px !important;
+            border-bottom: 2px solid #3AC7F4 !important;
+            margin-bottom: 12px !important;
+          }
+          h3 { font-size: 13px !important; border-bottom: none !important; }
+          h4 { font-size: 12px !important; color: #0E2A4A !important; }
+          p  { font-size: 11px !important; line-height: 1.6 !important; color: #2D4A67 !important; }
+
+          /* ══ GRIDS ══ */
+          .ab-grid-2 { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+          .ab-grid-3 { grid-template-columns: repeat(3,1fr) !important; gap: 8px !important; }
+          .ab-grid-4 { grid-template-columns: repeat(4,1fr) !important; gap: 8px !important; }
+
+          /* ══ CARDS — clean, no shadow ══ */
+          .ab-grid-2 > div,
+          .ab-grid-3 > div,
+          .ab-grid-4 > div {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            box-shadow: none !important;
+            border: 1px solid #D9E6F1 !important;
+            border-radius: 8px !important;
+            background: #FAFCFE !important;
+            padding: 12px !important;
           }
-          /* grid 2 cols in print for menu */
-          #menu > div > div[style*="grid-template-columns"] {
-            grid-template-columns: 1fr 1fr !important;
+          /* ══ STATS BAR CELLS — must stay transparent (white text on gradient) ══ */
+          #stats-bar .ab-grid-4 > div {
+            background: transparent !important;
+            border: none !important;
+            color: #fff !important;
           }
+          #stats-bar .ab-grid-4 > div * { color: #fff !important; }
+
+          /* ══ SECTIONS THAT MUST STAY WHOLE ══ */
+          #vision   { page-break-inside: avoid !important; break-inside: avoid !important; }
+          #values   { page-break-inside: avoid !important; break-inside: avoid !important; }
+          #why      { page-break-inside: avoid !important; break-inside: avoid !important; }
+          #process  { page-break-inside: avoid !important; break-inside: avoid !important; }
+          #locations{ page-break-inside: avoid !important; break-inside: avoid !important; }
+
+          /* ══ No forced page breaks — let content flow naturally ══ */
+          /* Only the cover forces a page break (defined above) */
+
+          /* Remove overflow:hidden from all sections — critical to avoid blank pages */
+          section, section > div, section > div > div {
+            overflow: visible !important;
+          }
+
+          /* ══ COVER — fills full A4 page ══ */
+          #cover {
+            background: linear-gradient(145deg, #071830 0%, #0E4070 40%, #0E76AC 75%, #3AC7F4 100%) !important;
+            min-height: 25.7cm !important;
+            padding: 3cm 1.5cm 1.5cm !important;
+            page-break-after: always !important;
+            break-after: page !important;
+            display: flex !important;
+            align-items: flex-start !important;
+            position: relative !important;
+          }
+          #cover h1 { font-size: 40px !important; color: #fff !important; line-height: 1.2 !important; }
+          #cover p  { color: rgba(255,255,255,0.82) !important; font-size: 13px !important; }
+          #cover span { color: rgba(255,255,255,0.6) !important; }
+          #cover img[alt="ADRENALINE"] { filter: brightness(0) invert(1) !important; height: 48px !important; }
+          #cover .ab-cover-logo-wrap { display: none !important; }
+          #cover p[style*="letterSpacing"] { color: #3AC7F4 !important; }
+
+          /* ══ STATS BAR ══ */
+          #stats-bar {
+            background: linear-gradient(135deg, #0E2A4A 0%, #0E76AC 60%, #3AC7F4 100%) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 20px 16px !important;
+          }
+          #stats-bar * { color: #fff !important; }
+          #stats-bar .ab-grid-4 > div { border-right-color: rgba(255,255,255,0.2) !important; }
+
+          /* ══ MEAL IMAGES ══ */
+          #menu img {
+            display: block !important; visibility: visible !important;
+            opacity: 1 !important; width: 100% !important;
+            height: 110px !important; object-fit: cover !important;
+          }
+          #menu div[style*="height:180px"],
+          #menu div[style*="height: 180px"] { height: 110px !important; overflow: hidden !important; }
+
+          /* ══ OFFER PILLS ══ */
+          #offer .sec-inner > div > div {
+            padding: 5px 12px !important; font-size: 10px !important;
+            border: 1px solid #D9E6F1 !important; background: #F2F8FC !important;
+            color: #0E2A4A !important; border-radius: 50px !important;
+          }
+
+          /* ══ PLANS — all same style in print ══ */
+          #plans .ab-grid-3 > div,
+          #plans .ab-grid-3 > div * { color: #0E2A4A !important; background: #FAFCFE !important; }
+          #plans .ab-grid-3 > div a {
+            background: #0E76AC !important; color: #fff !important;
+            font-size: 10px !important; padding: 7px 0 !important; border-radius: 50px !important;
+          }
+
+          /* ══ CONTACT ══ */
+          #contact, #contact * { background-color: transparent !important; color: #0E2A4A !important; }
+          #contact { background: #fff !important; border-top: 4px solid #0E76AC !important; padding-top: 24px !important; }
+          #contact > .sec-inner > .ab-grid-2 > div:last-child > div {
+            background: #EAF3FB !important; border: 1px solid #D9E6F1 !important;
+          }
+          #contact a[href*="wa.me"] {
+            background: #0E76AC !important; color: #fff !important;
+            padding: 10px 20px !important; border-radius: 50px !important;
+            display: inline-flex !important; text-decoration: none !important;
+          }
+          #contact a[style*="rgba(255,255,255"] {
+            background: #EAF3FB !important; border: 1px solid #D9E6F1 !important; color: #0E76AC !important;
+          }
+          #contact img { opacity: 0.35 !important; filter: none !important; }
+
+          /* ══ QR: show in print only ══ */
+          .print-only { display: block !important; }
+
+          /* ══ REMOVE DECORATIVE ELEMENTS ══ */
+          div[style*="pointerEvents"][style*="position:absolute"],
+          div[style*="pointerEvents"][style*='position:"absolute"'] { display: none !important; }
+          [style*="min-height:380px"], [style*="minHeight:380px"] { min-height: 0 !important; }
+
+          /* ══ STORY LOGO BOX — hide in print, saves vertical space ══ */
+          .story-logo-box { display: none !important; }
+          #story .ab-grid-2 { grid-template-columns: 1fr !important; }
+
+          /* ══ EYEBROW LABELS ══ */
+          p[style*="0.2em"], p[style*="0.25em"] {
+            font-size: 8px !important; color: #0E76AC !important;
+          }
+
+          /* ══ REMOVE LARGE PADDING FROM CENTRED HEADERS ══ */
+          div[style*="textAlign:\"center\""][style*="marginBottom:48px"],
+          div[style*="textAlign:center"][style*="marginBottom:48px"],
+          div[style*="text-align: center"][style*="margin-bottom: 48px"] {
+            margin-bottom: 12px !important;
+          }
+          /* Reduce all large margins in print */
+          div[style*="marginBottom:48"], div[style*="marginBottom: 48"],
+          div[style*="marginTop:48"],   div[style*="marginTop: 48"],
+          div[style*="marginBottom:40"], div[style*="marginTop:40"] {
+            margin-bottom: 12px !important;
+            margin-top: 12px !important;
+          }
+
+          /* ══ ICON WRAP — smaller in print ══ */
+          div[style*="width:56px"] { width: 36px !important; height: 36px !important; border-radius: 8px !important; }
+          div[style*="width:56px"] svg { width: 18px !important; height: 18px !important; }
+
+          /* ══ BODY PADDING for footer ══ */
+          body { padding-bottom: 28px !important; }
         }
-        @page { margin: 1.5cm; size: A4; }
+
+        @page        { size: A4 portrait; margin: 1.2cm 1cm 1.5cm 1cm; }
+        @page :first { size: A4 portrait; margin: 0; }
       `}</style>
+
+      {/* ─── Print footer (fixed, shows on every printed page) ─── */}
+      <div className="print-running-footer" style={{ display:"none" }}>
+        <span>{isAr ? "أدرينالين للأكل الصحي — الملف التعريفي 2026" : "Adrenaline Healthy Food — Company Profile 2026"}</span>
+        <img src="/adrenaline-logo.png" alt="Adrenaline" style={{ height:14, filter:"brightness(0) invert(0.6)" }}/>
+        <span>{isAr ? "الدوحة، قطر · 195910/01" : "Doha, Qatar · CR 195910/01"}</span>
+      </div>
 
       {/* ─── Floating action bar ─── */}
       <div className="no-print ab-fab" style={{
@@ -366,6 +503,26 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      {/* ══ STATS BAR ══ */}
+      <div id="stats-bar" style={{ background:`linear-gradient(135deg,#0A2240 0%,${B.accent} 50%,${B.brand} 100%)`, padding:"36px 24px", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", top:-60, right:-60, width:240, height:240, borderRadius:"50%", background:"rgba(255,255,255,0.04)", pointerEvents:"none" }}/>
+        <div className="ab-grid-4" style={{ maxWidth:1080, margin:"0 auto", display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:0, textAlign:"center" }}>
+          {[
+            { num:"200+", icon:"👥", unit:{ar:"عميل راضٍ",en:"Happy Clients"}, sub:{ar:"في قطر",en:"Across Qatar"} },
+            { num:"90%+", icon:"🔁", unit:{ar:"اشتراكات",en:"Subscriptions"}, sub:{ar:"من إجمالي الطلبات",en:"of total orders"} },
+            { num:"5",    icon:"🚀", unit:{ar:"تطبيقات توصيل",en:"Delivery Apps"}, sub:{ar:"طلبات · سنونو · ديليفرو · كيتا · رفيق",en:"Talabat · Snoonu · Deliveroo · Keeta"} },
+            { num:"3",    icon:"📍", unit:{ar:"مواقع تشغيلية",en:"Locations"}, sub:{ar:"الثمامة · المرخية · لوسيل",en:"Al Thumama · Al Maarkhiya · Lusail"} },
+          ].map((s,i)=>(
+            <div key={i} style={{ padding:"16px 12px", borderRight: i<3?"1px solid rgba(255,255,255,0.15)":"none" }}>
+              <div style={{ fontSize:22, marginBottom:4 }}>{s.icon}</div>
+              <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:"clamp(30px,4vw,48px)", fontWeight:800, color:"#fff", lineHeight:1 }}>{s.num}</div>
+              <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:13, fontWeight:700, color:"rgba(255,255,255,0.95)", margin:"5px 0 4px" }}>{t(s.unit,isAr)}</div>
+              <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, color:"rgba(255,255,255,0.55)", lineHeight:1.5 }}>{t(s.sub,isAr)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ══ 02 TOC ══ */}
       <Sec id="toc" bg={B.bg2}>
@@ -465,7 +622,8 @@ export default function AboutPage() {
           </div>
           <div style={{ borderRadius:22, overflow:"hidden", boxShadow:SD,
             background:B.surf, minHeight:260, display:"flex",
-            alignItems:"center", justifyContent:"center", position:"relative" }}>
+            alignItems:"center", justifyContent:"center", position:"relative" }}
+            className="story-logo-box">
             <img src="/adrenaline-logo.png" alt="Adrenaline"
               style={{ width:"65%", opacity:0.1 }}/>
             <div style={{ position:"absolute", inset:0,
@@ -651,7 +809,7 @@ export default function AboutPage() {
               background:"linear-gradient(158deg,#fff 0%,#ECF5FC 100%)",
               border:`1px solid ${B.line}`, boxShadow:SD }}>
               <div style={{ height:180, overflow:"hidden", position:"relative" }}>
-                <img src={m.img} alt={m.en} loading="lazy"
+                <img src={m.img} alt={m.en} loading="eager" crossOrigin="anonymous"
                   style={{ width:"100%", height:"100%", objectFit:"cover",
                     transition:"transform .4s" }}
                   onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.06)")}
@@ -882,9 +1040,101 @@ export default function AboutPage() {
         </div>
       </Sec>
 
+      {/* ══ TESTIMONIALS ══ */}
+      <Sec bg={B.bg2}>
+        <CentreHead eyeAr="يقولون عنّا" eyeEn="WHAT THEY SAY"
+          titleAr="آراء عملائنا" titleEn="Client Reviews"
+          subAr="من تجارب حقيقية لعملاء أدرينالين"
+          subEn="Real experiences from Adrenaline clients"
+          isAr={isAr}/>
+        <div className="ab-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
+          {[
+            { ar:"من أفضل قرارات السنة! الوجبات طازجة، السعرات محسوبة بدقة، وساعدتني أخسر ٦ كيلو في شهرين.",
+              en:"One of my best decisions this year! Fresh meals, precise calories — helped me lose 6kg in two months.",
+              name:"أحمد العنزي", role:{ar:"مشترك أسبوعي",en:"Weekly subscriber"}, avatar:"أ", color:"#0E76AC" },
+            { ar:"أفضل اشتراك وجبات جربته في قطر. التوصيل دايم في الموعد والطعم ما يخيب أبداً.",
+              en:"Best meal plan I've tried in Qatar. Always on time and the taste never disappoints.",
+              name:"سارة المري", role:{ar:"مشتركة شهرية",en:"Monthly subscriber"}, avatar:"س", color:"#5BC4A0" },
+            { ar:"خيار الاشتراك الأسبوعي وفّر عليّ وقت ومجهود كبير، وكل وجبة تحس إنها مطبوخة لك بالاسم.",
+              en:"The weekly plan saved me incredible time. Every meal feels personally crafted for you.",
+              name:"محمد الشمري", role:{ar:"مشترك يومي",en:"Daily subscriber"}, avatar:"م", color:"#F4A93A" },
+          ].map((r,i)=>(
+            <div key={i} style={{ background:"#fff", borderRadius:20, padding:"24px 20px",
+              boxShadow:SD, border:`1px solid ${B.line}`, position:"relative", overflow:"hidden" }}>
+              {/* Quote mark — decorative background only */}
+              <div style={{ position:"absolute", top:-8, right:isAr?8:undefined, left:isAr?undefined:8,
+                fontSize:80, lineHeight:1, color:r.color, opacity:0.07,
+                fontFamily:"Georgia,serif", pointerEvents:"none", userSelect:"none",
+                zIndex:0 }}>"</div>
+              {/* Stars */}
+              <div style={{ display:"flex", gap:3, marginBottom:14, position:"relative", zIndex:1 }}>
+                {[1,2,3,4,5].map(j=>(
+                  <svg key={j} width="15" height="15" viewBox="0 0 24 24" fill="#F4A93A" stroke="none">
+                    <polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>
+                  </svg>
+                ))}
+              </div>
+              {/* Quote */}
+              <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:14, lineHeight:1.85,
+                color:B.ink2, margin:"0 0 18px", position:"relative", zIndex:1,
+                wordBreak:"keep-all" }}>
+                {isAr ? r.ar : r.en}
+              </p>
+              {/* Divider */}
+              <div style={{ height:1, background:B.line, marginBottom:16, position:"relative", zIndex:1 }}/>
+              {/* Name + role */}
+              <div style={{ display:"flex", alignItems:"center", gap:12, position:"relative", zIndex:1 }}>
+                <div style={{ width:42, height:42, borderRadius:"50%", flexShrink:0,
+                  background:`linear-gradient(135deg,${r.color}cc,${r.color}88)`,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  fontFamily:"'Cairo',sans-serif", fontSize:16, fontWeight:800, color:"#fff",
+                  boxShadow:`0 4px 12px ${r.color}44` }}>
+                  {r.avatar}
+                </div>
+                <div>
+                  <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:14,
+                    fontWeight:800, color:B.ink }}>{r.name}</div>
+                  <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:11,
+                    color:r.color, fontWeight:700 }}>{t(r.role,isAr)}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Delivery Apps */}
+        <div style={{ marginTop:48, background:"#fff", borderRadius:20,
+          padding:"28px 32px", border:`1px solid ${B.line}`, boxShadow:SD }}>
+          <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:12, fontWeight:700,
+            letterSpacing:"0.18em", color:B.muted, textAlign:"center", marginBottom:20 }}>
+            {isAr ? "اطلب وجباتك الآن عبر" : "ORDER NOW VIA"}
+          </p>
+          <div style={{ display:"flex", justifyContent:"center", alignItems:"center",
+            flexWrap:"wrap", gap:14 }}>
+            {[
+              { ar:"طلبات",   en:"Talabat",   color:"#FF5A00" },
+              { ar:"سنونو",   en:"Snoonu",    color:"#8B2FC9" },
+              { ar:"ديليفرو", en:"Deliveroo", color:"#00CCBC" },
+              { ar:"كيتا",    en:"Keeta",     color:"#E31837" },
+              { ar:"رفيق",    en:"Rafeeq",    color:"#0E76AC" },
+            ].map((app,i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:8,
+                background:app.color+"12", border:`1.5px solid ${app.color}30`,
+                borderRadius:50, padding:"9px 20px",
+                fontFamily:"'Cairo',sans-serif", fontSize:13, fontWeight:800,
+                color:app.color }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:app.color }}/>
+                {isAr ? app.ar : app.en}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Sec>
+
       {/* ══ 14 CONTACT ══ */}
       <Sec id="contact" bg={B.ink}>
-        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"center" }}>
+        <div className="ab-grid-2" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:56, alignItems:"start" }}>
+          {/* LEFT */}
           <div>
             <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
               letterSpacing:"0.25em", color:B.brand, marginBottom:18 }}>
@@ -896,50 +1146,94 @@ export default function AboutPage() {
               {isAr ? "لنبقَ على تواصل" : "Let's Stay Connected"}
             </h2>
             <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:15, lineHeight:1.8,
-              color:"rgba(255,255,255,0.65)", margin:"0 0 28px" }}>
-              {isAr ? "للتواصل واستشارة اختصاصي التغذية"
-                     : "For inquiries and nutrition specialist consultation"}
+              color:"rgba(255,255,255,0.65)", margin:"0 0 24px" }}>
+              {isAr ? "للاستفسار، الاشتراك، أو استشارة اختصاصي التغذية"
+                     : "For inquiries, subscriptions, or nutrition consultation"}
             </p>
+
+            {/* WhatsApp CTA */}
             <a href={waLink} target="_blank" rel="noopener noreferrer" style={{
               display:"inline-flex", alignItems:"center", gap:10,
               background:"#25D366", color:"#fff",
-              padding:"13px 26px", borderRadius:50,
-              fontFamily:"'Cairo',sans-serif", fontSize:14, fontWeight:800,
-              textDecoration:"none",
-              boxShadow:"0 8px 24px rgba(37,211,102,0.35)",
+              padding:"14px 28px", borderRadius:50,
+              fontFamily:"'Cairo',sans-serif", fontSize:15, fontWeight:800,
+              textDecoration:"none", marginBottom:20,
+              boxShadow:"0 8px 24px rgba(37,211,102,0.4)",
             }}>
-              <MessageCircle size={17}/>
+              <MessageCircle size={18}/>
               {settings?.phone || "+974 5114 4366"}
             </a>
+
+            {/* Social media */}
+            <div style={{ marginTop:8 }}>
+              <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
+                color:"rgba(255,255,255,0.4)", letterSpacing:"0.15em", marginBottom:12 }}>
+                {isAr ? "تابعنا" : "FOLLOW US"}
+              </p>
+              <div style={{ display:"flex", gap:10 }}>
+                {[
+                  { label:"Instagram", icon:"📸", href:"https://www.instagram.com/adrenaline.qa" },
+                  { label:"TikTok",    icon:"🎵", href:"https://www.tiktok.com/@adrenaline.qa" },
+                  { label:"Snapchat",  icon:"👻", href:"#" },
+                ].map((s,i)=>(
+                  <a key={i} href={s.href} target="_blank" rel="noopener noreferrer"
+                    style={{ display:"flex", alignItems:"center", gap:6,
+                      background:"rgba(255,255,255,0.09)",
+                      border:"1px solid rgba(255,255,255,0.14)",
+                      borderRadius:50, padding:"8px 14px",
+                      fontFamily:"'Cairo',sans-serif", fontSize:12, fontWeight:700,
+                      color:"rgba(255,255,255,0.8)", textDecoration:"none" }}>
+                    <span>{s.icon}</span>{s.label}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+          {/* RIGHT */}
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
             {[
-              { lAr:"الموقع", lEn:"Location",
+              { lAr:"الموقع", lEn:"📍 Location",
                 vAr:"المرخية، الدوحة، قطر", vEn:"Al Maarkhiya, Doha, Qatar" },
-              { lAr:"تطبيقات التوصيل", lEn:"Delivery Apps",
+              { lAr:"واتساب", lEn:"💬 WhatsApp",
+                vAr:settings?.phone||"+974 5114 4366", vEn:settings?.phone||"+974 5114 4366" },
+              { lAr:"تطبيقات التوصيل", lEn:"🚀 Delivery Apps",
                 vAr:"طلبات · سنونو · ديليفرو · كيتا · رفيق",
                 vEn:"Talabat · Snoonu · Deliveroo · Keeta · Rafeeq" },
-              { lAr:"السجل التجاري", lEn:"Commercial Reg.",
+              { lAr:"السجل التجاري", lEn:"📄 Commercial Reg.",
                 vAr:"195910/01", vEn:"195910/01" },
             ].map((row,i)=>(
-              <div key={i} style={{ background:"rgba(255,255,255,0.07)",
+              <div key={i} style={{ background:"rgba(255,255,255,0.06)",
                 border:"1px solid rgba(255,255,255,0.1)", borderRadius:14,
-                padding:"16px 20px" }}>
+                padding:"14px 20px" }}>
                 <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
-                  color:B.brand, letterSpacing:"0.12em", marginBottom:6 }}>
+                  color:B.brand, letterSpacing:"0.1em", marginBottom:5 }}>
                   {t({ar:row.lAr,en:row.lEn},isAr)}
                 </div>
-                <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:15, fontWeight:700,
+                <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:14, fontWeight:700,
                   color:"rgba(255,255,255,0.88)", lineHeight:1.6 }}>
                   {t({ar:row.vAr,en:row.vEn},isAr)}
                 </div>
               </div>
             ))}
-            <div style={{ textAlign:"center", paddingTop:8 }}>
+
+            {/* QR for print */}
+            <div className="print-only" style={{ display:"none",
+              background:"#fff", borderRadius:14, padding:"16px",
+              textAlign:"center", marginTop:4 }}>
+              <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:11, fontWeight:700,
+                color:B.accent, marginBottom:8 }}>
+                {isAr ? "امسح للتواصل عبر واتساب" : "Scan to contact via WhatsApp"}
+              </p>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(waLink)}`}
+                alt="QR" style={{ width:100, height:100 }}/>
+            </div>
+
+            <div style={{ textAlign:"center", paddingTop:6 }}>
               <img src="/adrenaline-logo.png" alt="Adrenaline"
-                style={{ height:32, filter:"brightness(0) invert(1)", opacity:0.3 }}/>
-              <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:13, fontWeight:700,
-                color:"rgba(255,255,255,0.3)", margin:"8px 0 0" }}>
+                style={{ height:30, filter:"brightness(0) invert(1)", opacity:0.25 }}/>
+              <p style={{ fontFamily:"'Cairo',sans-serif", fontSize:12, fontWeight:700,
+                color:"rgba(255,255,255,0.25)", margin:"6px 0 0" }}>
                 {isAr ? "الأكل الصحي .. خيارٌ يومي" : "Healthy Food .. A Daily Choice"}
               </p>
             </div>
