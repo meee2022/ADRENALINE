@@ -143,13 +143,17 @@ export default function AboutPage() {
 
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior:"smooth" });
   const handlePrint = () => {
-    // Preload all meal images before printing to avoid blank images in Chrome
-    const imgPromises = FEATURED_MEALS.map(m => new Promise<void>(resolve => {
+    // Preload meal + branch photos before printing to avoid blank images in Chrome
+    const srcs = [
+      ...FEATURED_MEALS.map(m => m.img),
+      "/store-front.jpg", "/store-counter.jpg", "/store-fridge.jpg",
+    ];
+    const imgPromises = srcs.map(src => new Promise<void>(resolve => {
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => resolve();
       img.onerror = () => resolve(); // resolve even on error
-      img.src = m.img;
+      img.src = src;
     }));
     Promise.all(imgPromises).then(() => window.print());
   };
@@ -165,8 +169,9 @@ export default function AboutPage() {
     { n:"08", ar:"برامج الاشتراكات",      en:"Subscription Plans",   id:"plans"    },
     { n:"09", ar:"من مطبخنا إليك",        en:"From Kitchen to You",  id:"process"  },
     { n:"10", ar:"مواقعنا",               en:"Our Locations",        id:"locations"},
-    { n:"11", ar:"لماذا أدرينالين",       en:"Why Adrenaline",       id:"why"      },
-    { n:"12", ar:"تواصل معنا",            en:"Contact Us",           id:"contact"  },
+    { n:"11", ar:"من داخل فرعنا",         en:"Inside Our Branch",    id:"gallery"  },
+    { n:"12", ar:"لماذا أدرينالين",       en:"Why Adrenaline",       id:"why"      },
+    { n:"13", ar:"تواصل معنا",            en:"Contact Us",           id:"contact"  },
   ];
 
   const catLabel = (cat: string) => {
@@ -179,6 +184,7 @@ export default function AboutPage() {
 
   return (
     <PublicLayout>
+     <div dir={isAr ? "rtl" : "ltr"} style={{ direction: isAr ? "rtl" : "ltr", textAlign: isAr ? "right" : "left" }}>
       {/* ─── Responsive + Print CSS ─── */}
       <style>{`
         /* ══ MOBILE RESPONSIVE ══ */
@@ -222,7 +228,14 @@ export default function AboutPage() {
         @media print {
           /* ══ BASE ══ */
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box !important; }
-          body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+          body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+
+          /* ══ PREVENT SHRINK-TO-FIT — no element may force the page wider ══ */
+          html, body, #root, #root > div, main, main > div {
+            width: 100% !important; max-width: 100% !important;
+            margin: 0 !important; float: none !important; overflow-x: hidden !important;
+          }
+          * { max-width: 100% !important; }
 
           /* ══ HIDE CHROME ══ */
           nav, header, footer, .no-print, #toc { display: none !important; }
@@ -256,6 +269,19 @@ export default function AboutPage() {
             overflow: visible !important;
           }
           .sec-inner { padding: 0 16px !important; max-width: 100% !important; overflow: visible !important; }
+
+          /* ══ KEEP RTL/LTR DIRECTION IN PRINT ══ */
+          section, .sec-inner, p, h2, h3, h4, li, span, div {
+            direction: ${isAr ? "rtl" : "ltr"} !important;
+          }
+          p, h2, h3, h4, li, .sec-inner > div, .ab-grid-2 > div, .ab-grid-3 > div, .ab-grid-4 > div {
+            text-align: ${isAr ? "right" : "left"} !important;
+          }
+          /* Preserve intentionally centred blocks */
+          [style*="textAlign:center"], [style*="textAlign:\"center\""],
+          [style*="text-align: center"], #cover, #stats-bar, .print-running-footer {
+            text-align: center !important;
+          }
 
           /* ══ FIX ORPHAN HEADINGS — h2 never alone at page bottom ══ */
           h2, h3 {
@@ -296,37 +322,79 @@ export default function AboutPage() {
           }
           #stats-bar .ab-grid-4 > div * { color: #fff !important; }
 
-          /* ══ SECTIONS THAT MUST STAY WHOLE ══ */
-          #vision   { page-break-inside: avoid !important; break-inside: avoid !important; }
-          #values   { page-break-inside: avoid !important; break-inside: avoid !important; }
-          #why      { page-break-inside: avoid !important; break-inside: avoid !important; }
-          #process  { page-break-inside: avoid !important; break-inside: avoid !important; }
-          #locations{ page-break-inside: avoid !important; break-inside: avoid !important; }
+          /* ══ PAGE MODEL — each main section starts on a fresh page ══
+             KEY FIX. Forcing a clean break BEFORE every section stops headings
+             from being stranded at the bottom of a page (titles split over two
+             pages). Dropping the old break-inside:avoid on whole (tall) sections
+             stops their content from being clipped (text cut off) — a block
+             taller than one page that is told not to break gets cut. Tall
+             sections now flow naturally across pages; only small cards stay
+             whole (rule below). The result is a tidy, send-ready PDF. */
+          section {
+            page-break-before: always !important;
+            break-before: page !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          /* Cover is the first page; the stats bar + table of contents ride the
+             second page together — never break before these three. */
+          #cover, #stats-bar, #toc {
+            page-break-before: avoid !important;
+            break-before: avoid !important;
+          }
 
-          /* ══ No forced page breaks — let content flow naturally ══ */
-          /* Only the cover forces a page break (defined above) */
+          /* A heading (and the centred header block) must never be the last
+             thing on a page — glue it to the content that follows. */
+          .sec-inner > div:first-child,
+          h2, h3, h4 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
 
           /* Remove overflow:hidden from all sections — critical to avoid blank pages */
           section, section > div, section > div > div {
             overflow: visible !important;
           }
 
-          /* ══ COVER — fills full A4 page ══ */
+          /* ══ COVER — fills full A4 page, content centred ══ */
           #cover {
             background: linear-gradient(145deg, #071830 0%, #0E4070 40%, #0E76AC 75%, #3AC7F4 100%) !important;
             min-height: 25.7cm !important;
-            padding: 3cm 1.5cm 1.5cm !important;
+            padding: 2cm 1.5cm !important;
             page-break-after: always !important;
             break-after: page !important;
             display: flex !important;
-            align-items: flex-start !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
             position: relative !important;
           }
-          #cover h1 { font-size: 40px !important; color: #fff !important; line-height: 1.2 !important; }
-          #cover p  { color: rgba(255,255,255,0.82) !important; font-size: 13px !important; }
-          #cover span { color: rgba(255,255,255,0.6) !important; }
-          #cover img[alt="ADRENALINE"] { filter: brightness(0) invert(1) !important; height: 48px !important; }
+          /* Single centred column in print */
+          #cover .ab-cover-grid {
+            display: block !important; max-width: 640px !important; margin: 0 auto !important;
+            text-align: center !important;
+          }
+          #cover .ab-cover-grid > div:first-child {
+            display: flex !important; flex-direction: column !important; align-items: center !important;
+          }
+          /* Hide the inline grid logo + faint side heart — use the print brand lockup instead */
+          #cover .ab-cover-grid img { display: none !important; }
           #cover .ab-cover-logo-wrap { display: none !important; }
+
+          /* Print brand lockup: official cyan heart + wordmark, centred above title */
+          .cover-print-brand {
+            display: flex !important; flex-direction: column !important; align-items: center !important;
+            gap: 18px !important; margin-bottom: 30px !important;
+          }
+          .cover-print-brand .cpb-heart { width: 92px !important; height: auto !important; }
+          .cover-print-brand .cpb-word  { height: 44px !important; width: auto !important; }
+
+          #cover h1 { font-size: 42px !important; color: #fff !important; line-height: 1.2 !important; text-align: center !important; }
+          #cover p  { color: rgba(255,255,255,0.85) !important; font-size: 14px !important; text-align: center !important; margin-left: auto !important; margin-right: auto !important; max-width: 540px !important; }
+          #cover span { color: rgba(255,255,255,0.6) !important; }
+          /* Centre the CR / location / year meta line */
+          #cover .ab-cover-grid > div:first-child > div:last-child { justify-content: center !important; }
           #cover p[style*="letterSpacing"] { color: #3AC7F4 !important; }
 
           /* ══ STATS BAR ══ */
@@ -338,6 +406,22 @@ export default function AboutPage() {
           }
           #stats-bar * { color: #fff !important; }
           #stats-bar .ab-grid-4 > div { border-right-color: rgba(255,255,255,0.2) !important; }
+
+          /* ══ COVER PHOTO — fit nicely on the title page ══ */
+          .ab-cover-photo { max-width: 540px !important; margin-top: 30px !important; }
+          .ab-cover-photo img { height: 200px !important; }
+
+          /* ══ GALLERY — real branch photos (section gets its own page) ══ */
+          #gallery .ab-gallery { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+          #gallery figure { break-inside: avoid !important; page-break-inside: avoid !important; box-shadow: none !important; border: 1px solid #D9E6F1 !important; }
+          #gallery figure > div { height: 200px !important; }
+          #gallery img { display: block !important; visibility: visible !important; opacity: 1 !important; width: 100% !important; height: 200px !important; object-fit: cover !important; }
+          #gallery figcaption { font-size: 11px !important; padding: 8px 10px !important; }
+
+          /* ══ TESTIMONIALS / MENU — each gets its own page; only the small
+             cards inside must stay whole so none is split across a page edge. */
+          #reviews .ab-grid-3 > div { break-inside: avoid !important; page-break-inside: avoid !important; }
+          #menu .ab-grid-3 > div { break-inside: avoid !important; page-break-inside: avoid !important; }
 
           /* ══ MEAL IMAGES ══ */
           #menu img {
@@ -383,8 +467,8 @@ export default function AboutPage() {
           .print-only { display: block !important; }
 
           /* ══ REMOVE DECORATIVE ELEMENTS ══ */
-          div[style*="pointerEvents"][style*="position:absolute"],
-          div[style*="pointerEvents"][style*='position:"absolute"'] { display: none !important; }
+          div[style*="pointer-events: none"],
+          div[style*="radial-gradient"] { display: none !important; }
           [style*="min-height:380px"], [style*="minHeight:380px"] { min-height: 0 !important; }
 
           /* ══ STORY LOGO BOX — hide in print, saves vertical space ══ */
@@ -463,6 +547,11 @@ export default function AboutPage() {
         <div style={{ position:"absolute", bottom:-100, left:-100, width:400, height:400,
           borderRadius:"50%", background:`radial-gradient(circle,${B.accent}55 0%,transparent 65%)`,
           pointerEvents:"none" }}/>
+        {/* Print-only centered brand lockup (official cyan logo + heart) */}
+        <div className="cover-print-brand" style={{ display:"none" }}>
+          <img src="/heart-logo.png" alt="" className="cpb-heart"/>
+          <img src="/adrenaline-logo.png" alt="Adrenaline" className="cpb-word"/>
+        </div>
         <div className="ab-cover-grid" style={{ maxWidth:1080, margin:"0 auto", width:"100%",
           display:"grid", gridTemplateColumns:"1fr auto", gap:40, alignItems:"center" }}>
           <div>
@@ -502,6 +591,14 @@ export default function AboutPage() {
               style={{ width:120, opacity:0.15, filter:"brightness(0) invert(1)" }}/>
           </div>
         </div>
+        {/* Storefront photo — framed band, shows on screen + print */}
+        <div className="ab-cover-photo" style={{ width:"100%", maxWidth:640, margin:"34px auto 0",
+          borderRadius:18, overflow:"hidden", border:"1px solid rgba(255,255,255,0.22)",
+          boxShadow:"0 18px 50px -20px rgba(0,0,0,0.55)" }}>
+          <img src="/store-front.jpg" alt="Adrenaline storefront" crossOrigin="anonymous"
+            style={{ width:"100%", height:230, objectFit:"cover", display:"block" }}
+            onError={(e)=>{ const w=e.currentTarget.closest('.ab-cover-photo') as HTMLElement|null; if(w) w.style.display="none"; }}/>
+        </div>
       </section>
 
       {/* ══ STATS BAR ══ */}
@@ -511,7 +608,7 @@ export default function AboutPage() {
           {[
             { num:"200+", icon:"👥", unit:{ar:"عميل راضٍ",en:"Happy Clients"}, sub:{ar:"في قطر",en:"Across Qatar"} },
             { num:"90%+", icon:"🔁", unit:{ar:"اشتراكات",en:"Subscriptions"}, sub:{ar:"من إجمالي الطلبات",en:"of total orders"} },
-            { num:"5",    icon:"🚀", unit:{ar:"تطبيقات توصيل",en:"Delivery Apps"}, sub:{ar:"طلبات · سنونو · ديليفرو · كيتا · رفيق",en:"Talabat · Snoonu · Deliveroo · Keeta"} },
+            { num:"5",    icon:"🚀", unit:{ar:"تطبيقات توصيل",en:"Delivery Apps"}, sub:{ar:"طلبات · سنونو · ديليفرو · كيتا · رفيق",en:"Talabat · Snoonu · Deliveroo · Keeta · Rafeeq"} },
             { num:"3",    icon:"📍", unit:{ar:"مواقع تشغيلية",en:"Locations"}, sub:{ar:"الثمامة · المرخية · لوسيل",en:"Al Thumama · Al Maarkhiya · Lusail"} },
           ].map((s,i)=>(
             <div key={i} style={{ padding:"16px 12px", borderRight: i<3?"1px solid rgba(255,255,255,0.15)":"none" }}>
@@ -1001,6 +1098,35 @@ export default function AboutPage() {
         </div>
       </Sec>
 
+      {/* ══ GALLERY — real branch photos ══ */}
+      <Sec id="gallery">
+        <CentreHead eyeAr="من أرض الواقع" eyeEn="ON THE GROUND"
+          titleAr="من داخل فرعنا" titleEn="Inside Our Branch"
+          subAr="لمحة من تجربة العميل داخل فرع أدرينالين"
+          subEn="A glimpse of the customer experience inside Adrenaline"
+          isAr={isAr}/>
+        <div className="ab-grid-2 ab-gallery" style={{ display:"grid",
+          gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          {[
+            { src:"/store-counter.jpg", cap:{ar:"كاونتر الاستقبال والعرض", en:"Reception & display counter"} },
+            { src:"/store-fridge.jpg",  cap:{ar:"ثلاجة العرض — وجبات طازجة يوميًا", en:"Display fridge — fresh meals daily"} },
+          ].map((g,i)=>(
+            <figure key={i} style={{ margin:0, borderRadius:18, overflow:"hidden",
+              border:`1px solid ${B.line}`, boxShadow:SD, background:B.surf }}>
+              <div style={{ height:300, overflow:"hidden", background:B.bg2 }}>
+                <img src={g.src} alt={t(g.cap,isAr)} crossOrigin="anonymous"
+                  style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                  onError={(e)=>{ const f=e.currentTarget.closest('figure') as HTMLElement|null; if(f) f.style.display="none"; }}/>
+              </div>
+              <figcaption style={{ padding:"12px 16px", fontFamily:"'Cairo',sans-serif",
+                fontSize:13, fontWeight:700, color:B.ink, textAlign:"center" }}>
+                {t(g.cap,isAr)}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </Sec>
+
       {/* ══ 13 WHY ADRENALINE ══ */}
       <Sec id="why">
         <CentreHead eyeAr="نقاط تميّزنا" eyeEn="WHY CHOOSE US"
@@ -1041,7 +1167,7 @@ export default function AboutPage() {
       </Sec>
 
       {/* ══ TESTIMONIALS ══ */}
-      <Sec bg={B.bg2}>
+      <Sec id="reviews" bg={B.bg2}>
         <CentreHead eyeAr="يقولون عنّا" eyeEn="WHAT THEY SAY"
           titleAr="آراء عملائنا" titleEn="Client Reviews"
           subAr="من تجارب حقيقية لعملاء أدرينالين"
@@ -1110,21 +1236,29 @@ export default function AboutPage() {
             {isAr ? "اطلب وجباتك الآن عبر" : "ORDER NOW VIA"}
           </p>
           <div style={{ display:"flex", justifyContent:"center", alignItems:"center",
-            flexWrap:"wrap", gap:14 }}>
+            flexWrap:"wrap", gap:16 }}>
             {[
-              { ar:"طلبات",   en:"Talabat",   color:"#FF5A00" },
-              { ar:"سنونو",   en:"Snoonu",    color:"#8B2FC9" },
-              { ar:"ديليفرو", en:"Deliveroo", color:"#00CCBC" },
-              { ar:"كيتا",    en:"Keeta",     color:"#E31837" },
-              { ar:"رفيق",    en:"Rafeeq",    color:"#0E76AC" },
+              { ar:"طلبات",   en:"Talabat",   color:"#FF5A00", img:"/app-talabat.png" },
+              { ar:"سنونو",   en:"Snoonu",    color:"#8B2FC9", img:"/app-snoonu.png" },
+              { ar:"ديليفرو", en:"Deliveroo", color:"#00CCBC", img:"/app-deliveroo.png" },
+              { ar:"كيتا",    en:"Keeta",     color:"#E31837", img:"/app-keeta.png" },
+              { ar:"رفيق",    en:"Rafeeq",    color:"#0E76AC", img:"/app-rafeeq.png" },
             ].map((app,i)=>(
-              <div key={i} style={{ display:"flex", alignItems:"center", gap:8,
-                background:app.color+"12", border:`1.5px solid ${app.color}30`,
-                borderRadius:50, padding:"9px 20px",
-                fontFamily:"'Cairo',sans-serif", fontSize:13, fontWeight:800,
-                color:app.color }}>
-                <div style={{ width:8, height:8, borderRadius:"50%", background:app.color }}/>
-                {isAr ? app.ar : app.en}
+              <div key={i} style={{ width:128, height:84, borderRadius:16,
+                background:"#fff", border:`1px solid ${B.line}`,
+                boxShadow:"0 6px 18px -8px rgba(14,42,74,.22)",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                padding:"12px 16px", overflow:"hidden" }}>
+                <img src={app.img} alt={app.en}
+                  style={{ maxWidth:"100%", maxHeight:"100%", objectFit:"contain" }}
+                  onError={(e)=>{
+                    const t=e.currentTarget; t.style.display="none";
+                    const f=t.nextElementSibling as HTMLElement|null; if(f) f.style.display="block";
+                  }}/>
+                <span style={{ display:"none", fontFamily:"'Cairo',sans-serif",
+                  fontSize:15, fontWeight:900, color:app.color, textAlign:"center" }}>
+                  {isAr ? app.ar : app.en}
+                </span>
               </div>
             ))}
           </div>
@@ -1240,6 +1374,7 @@ export default function AboutPage() {
           </div>
         </div>
       </Sec>
+     </div>
     </PublicLayout>
   );
 }

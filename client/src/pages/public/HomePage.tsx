@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useBanners, usePublicPlans } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PremiumHero } from "@/components/public/PremiumHero";
+import { HeroClean } from "@/components/public/HeroClean";
 import { PremiumTestimonials, PremiumFooter } from "@/components/public/PremiumSections";
 import {
   Check, ArrowLeft, ArrowRight, ShieldCheck, Sparkles, MessageCircle,
@@ -26,7 +27,16 @@ export default function HomePage() {
   const { data: allPlans = [] } = usePublicPlans("week");
   const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
+  const allMeals = useQuery(api.publicMeals.list) || [];
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
+
+  // Real dish images for the hero carousel (fallback to banner/stock images)
+  const heroImages: string[] = (() => {
+    const dishImgs = allMeals.filter((m: any) => m.imageUrl).slice(0, 5).map((m: any) => m.imageUrl);
+    if (dishImgs.length) return dishImgs;
+    const bannerImgs = (banners || []).map((b: any) => b.imageUrl).filter(Boolean);
+    return bannerImgs.length ? bannerImgs : ["/1.png", "/2.png", "/3.png"];
+  })();
 
   const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
   const whatsappLink = (message: string) =>
@@ -48,54 +58,16 @@ export default function HomePage() {
 
   return (
     <PublicLayout>
-      {/* ═══════════ HERO (multi-banner carousel with curated images) ═══════════ */}
-      <PremiumHero
-        banners={banners && banners.length > 0 ? banners : [
-          {
-            _id: "hero-1",
-            titleAr: "طعام صحي بمذاق لا يُقاوم",
-            titleEn: "Healthy Taste Like Never Before",
-            subtitleAr: "وجبات طازجة ومتكاملة تُحضّر يومياً بإشراف أفضل أخصائيي التغذية لتناسب احتياجاتك",
-            subtitleEn: "Fresh and complete meals prepared daily under top nutritionists to fit your needs",
-            imageUrl: "/1.png",
-          },
-          {
-            _id: "hero-2",
-            titleAr: "برامج غذائية مخصصة لأهدافك",
-            titleEn: "Tailored Programs For Your Goals",
-            subtitleAr: "اختر ما بين التنشيف، التضخيم، الكيتو، واللايت، واستمتع بنمط حياة متوازن ومميز",
-            subtitleEn: "Choose from Cutting, Bulking, Keto, or Balanced Lite, and enjoy a balanced lifestyle",
-            imageUrl: "/2.png",
-          },
-          {
-            _id: "hero-3",
-            titleAr: "وجبات طازجة لباب بيتك يومياً",
-            titleEn: "Fresh Meals To Your Doorstep Daily",
-            subtitleAr: "نوفر توصيلاً مجانياً ومباشراً في جميع أنحاء قطر، لنبقي وجباتك طازجة ومحفوظة بإتقان",
-            subtitleEn: "We provide free and direct delivery all over Qatar, keeping your meals fresh and perfectly preserved",
-            imageUrl: "/3.png",
-          },
-          {
-            _id: "hero-4",
-            titleAr: "نمط حياة صحي يبدأ من هنا",
-            titleEn: "A Healthy Lifestyle Starts Here",
-            subtitleAr: "انضم لأكثر من 500 مشترك واستعد طاقتك ونشاطك مع وجبات محسوبة السعرات والماكروز بدقة",
-            subtitleEn: "Join 500+ active subscribers and boost your energy with precisely calculated macro meals",
-            imageUrl: "/4.png",
-          },
-          {
-            _id: "hero-5",
-            titleAr: "شيفات محترفون لخيارات شهية",
-            titleEn: "Professional Chefs For Delicious Choices",
-            subtitleAr: "لأننا نؤمن أن الأكل الصحي متعة، فريقنا يحضّر لك الأطباق بأعلى معايير الجودة العالمية",
-            subtitleEn: "Because we believe healthy food is a joy, our team prepares dishes with the highest global standards",
-            imageUrl: "/5.png",
-          },
-        ]}
+      {/* ═══════════ HERO — clean premium carousel with real dish photos ═══════════ */}
+      <HeroClean
+        images={heroImages}
+        titleAr="طعام صحي بمذاق لا يُقاوم"
+        titleEn="Healthy Food That Tastes Amazing"
+        subtitleAr="وجبات طازجة محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية — وتوصَّل لباب بيتك في قطر."
+        subtitleEn="Fresh, calorie-counted meals prepared daily by nutritionists — delivered to your door in Qatar."
         onSubscribeClick={handleGeneralInquiry}
         onMenuClick={() => setLocation("/public/menu")}
-        heroImage="/1.png"
-        settings={settings}
+        onSmartPlanClick={() => setLocation("/customer/smart-plan")}
       />
 
       {/* ═══════════ FEATURE STRIP — Floating glass card overlapping hero ═══════════ */}
@@ -148,6 +120,57 @@ export default function HomePage() {
               ))}
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════ SMART PLAN PROMO ═══════════ */}
+      <section className="px-4 md:px-6 py-10 md:py-14">
+        <div className="max-w-6xl mx-auto rounded-3xl overflow-hidden relative"
+          style={{ background: "linear-gradient(135deg,#0B2138 0%,#143A57 55%,#0E76AC 100%)" }}>
+          <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full pointer-events-none"
+            style={{ background: "radial-gradient(circle,#3AC7F455,transparent 70%)", filter: "blur(50px)" }} />
+          <div className="relative z-10 grid md:grid-cols-[1.3fr_1fr] gap-6 items-center p-7 md:p-12"
+            style={{ direction: isRtl ? "rtl" : "ltr" }}>
+            <div className="text-center md:text-start">
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-4"
+                style={{ background: "rgba(58,199,244,0.16)", border: "1px solid rgba(58,199,244,0.3)" }}>
+                <Sparkles className="w-4 h-4" style={{ color: "#3AC7F4" }} />
+                <span className="text-xs font-bold tracking-wider" style={{ color: "#3AC7F4" }}>
+                  {isRtl ? "جديد · مدعوم بالذكاء الاصطناعي" : "NEW · AI-POWERED"}
+                </span>
+              </div>
+              <h2 className="font-black text-white mb-3" style={{ fontSize: "clamp(24px,3.5vw,40px)", fontFamily: "'Cairo',sans-serif" }}>
+                {isRtl ? "خطتك الذكية لليوم — في ثوانٍ" : "Your Smart Daily Plan — in seconds"}
+              </h2>
+              <p className="text-white/80 mb-6 leading-relaxed mx-auto md:mx-0" style={{ maxWidth: 520 }}>
+                {isRtl
+                  ? "يختار لك الذكاء الاصطناعي وجبات اليوم المتاحة حسب هدفك وسعراتك وما لا تحبه — ثم يراجعها أخصائي التغذية."
+                  : "AI picks today's available meals by your goal, calories, and dislikes — then a nutritionist reviews them."}
+              </p>
+              <button onClick={() => setLocation("/customer/smart-plan")}
+                className="h-12 px-7 rounded-full font-black text-white inline-flex items-center gap-2 transition-transform hover:scale-[1.03]"
+                style={{ background: "linear-gradient(135deg,#3AC7F4,#0E76AC)", boxShadow: "0 12px 30px -8px rgba(58,199,244,.5)" }}>
+                <Sparkles className="w-5 h-5" />
+                {isRtl ? "جرّب خطتي الذكية" : "Try Smart Plan"}
+              </button>
+            </div>
+            <div className="hidden md:flex items-center justify-center">
+              <div className="flex flex-col gap-3 w-full max-w-xs">
+                {[
+                  { ar: "حسب هدفك", en: "By your goal", icon: "🎯" },
+                  { ar: "محسوبة السعرات", en: "Calorie-counted", icon: "🔥" },
+                  { ar: "تتجنّب ما لا تحبه", en: "Skips your dislikes", icon: "🚫" },
+                  { ar: "مراجعة الأخصائي", en: "Nutritionist-reviewed", icon: "✅" },
+                ].map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.14)" }}>
+                    <span style={{ fontSize: 20 }}>{f.icon}</span>
+                    <span className="text-white font-bold text-sm">{isRtl ? f.ar : f.en}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

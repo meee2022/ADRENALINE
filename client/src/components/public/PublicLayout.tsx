@@ -10,6 +10,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import ChatBot from "@/components/public/ChatBot";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -63,6 +64,18 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
               >
                 {isRtl ? "المنيو" : "Menu"}
+              </a>
+              <a
+                href="/customer/smart-plan"
+                className="text-base font-bold text-[#0E76AC] hover:text-[#3CC4F0] transition-colors"
+              >
+                {isRtl ? "خطتي الذكية ✨" : "Smart Plan ✨"}
+              </a>
+              <a
+                href="/public/how-to-subscribe"
+                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
+              >
+                {isRtl ? "كيف تشترك" : "How to Subscribe"}
               </a>
               <a
                 href="/public/about"
@@ -519,6 +532,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
           </div>
         </div>
       </footer>
+
+      {/* AI nutrition assistant — floating on all public pages */}
+      <ChatBot />
     </div>
   );
 }

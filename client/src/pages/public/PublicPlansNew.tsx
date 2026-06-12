@@ -37,7 +37,8 @@ export default function PublicPlansNew() {
   return (
     <PublicLayout>
       {/* Hero Section with Logo & Background */}
-      <section className="relative bg-gradient-to-br from-[#0F1516] via-[#47759C] to-[#3CC4F0] text-white overflow-hidden">
+      <section className="relative text-white overflow-hidden"
+        style={{ background: "linear-gradient(135deg,#0B2138 0%,#143A57 55%,#0E76AC 100%)" }}>
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0" style={{

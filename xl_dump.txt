@@ -1,0 +1,276 @@
+﻿=== Table 1 ((39, 5)) ===
+                    0          1                               2   3                                     4
+0               NAME:        NaN    الاشتراك الشهري  مدته 24 يوم NaN  التوصيل كل ايام الاسبوع ماعدا الجمعة
+1             Number:        NaN         الاشتراك اسبوعين 12 يوم NaN                                   NaN
+2            Week One        NaN        الاشتراك الاسبوعي 6 ايام NaN                                   NaN
+3                 NaN        NaN                       OPTION  1 NaN                              OPTION 2
+4      SA T U R D A Y  BREAKFAST               HALLOUMI SANDWICH NaN                       EGG WITH ZAATER
+5                 NaN   SNACK  1                  BEETROOT SALAD NaN           SWEET POTATO ENERGY BOOSTER
+6                 NaN      LUNCH           GARLIC BUTTER CHICKEN NaN                  CHICKEN TERYAKI BOWL
+7                 NaN   SNACK  2                  BEETROOT SALAD NaN                          CHICKEN SOUP
+8                 NaN     DINNER                 BEEF KOFTA WRAP NaN                    HONEY GLAZE SALMON
+9                 NaN        NaN                             NaN NaN                                   NaN
+10        S U N D A Y  BREAKFAST                          HUUMUS NaN                      MIX VEGE OMELETE
+11                NaN   SNACK  1                        BROWNIES NaN                          CEASAR SALAD
+12                NaN      LUNCH                   CHICKEN CURRY NaN                  BEEF BALLS WITH RICE
+13                NaN   SNACK  2                        BROWNIES NaN                 CINNAMON APPLE YOGURT
+14                NaN     DINNER             SPAGHETTI BOLOGNESE NaN                          SHRIMP TACOS
+15                NaN        NaN                             NaN NaN                                   NaN
+16        M O N D A Y  BREAKFAST                  NORMAL Pancake NaN                          EGG CROISANT
+17                NaN   SNACK  1                     LENTIL SOUP NaN                       PISTACHIO SALAD
+18                NaN      LUNCH         HEALTHY CHICKEN MAJBOUS NaN                          BEEF ALFREDO
+19                NaN   SNACK  2                     LENTIL SOUP NaN                               UMM ALI
+20                NaN     DINNER                CHICKEN SHAWARMA NaN                      CHICKEN PARMESAN
+21                NaN        NaN                             NaN NaN                                   NaN
+22      T U E S D A Y  BREAKFAST   SUNNY SIDE EGG W/ BROWN BREAD NaN                           EGG BURRITO
+23                NaN   SNACK  1               BAHAMAS LAVA CAKE NaN                            CRAB SALAD
+24                NaN      LUNCH                  BEEF STROGANOF NaN                CRISPY CHICKEN CUTLETS
+25                NaN   SNACK  2                 VEGETABLES SOUP NaN                            CRAB SALAD
+26                NaN     DINNER                    BEEF LASAGNA NaN                SOUTHWEST CHICKEN WRAP
+27                NaN        NaN                             NaN NaN                                   NaN
+28  W E D N E S D A Y  BREAKFAST                 CROISANT CHEESE NaN                         OMELETE PIZZA
+29                NaN  SNA CK  1                      DATE BALLS NaN                        WALDORAF SALAD
+30                NaN      LUNCH                 DYNAMITE SHRIMP NaN                    SHISHTAWOOK & RICE
+31                NaN   SNACK  2                  GREEK INFUSION NaN                        WALDORAF SALAD
+32                NaN     DINNER         CHICKEN FAJITA SANDWICH NaN                    BEEF KOFTA DELIGHT
+33                NaN        NaN                             NaN NaN                                   NaN
+34    T H U R S D A Y  BREAKFAST              BERRY OATMEAL BOWL NaN                    TURKEY CHEESE WRAP
+35                NaN  SNA CK  1                        TIRAMISU NaN                           FRUIT SALAD
+36                NaN      LUNCH           CREAMY GARLIC CHICKEN NaN                     NEW GREEK CHICKEN
+37                NaN   SNACK  2        MEDITERRANEAN FETA SALAD NaN                           FRUIT SALAD
+38                NaN     DINNER  BEEF SHAWERMA W/ BEETROOT RICE NaN                    SALMON PESTO PASTA
+
+=== Table 2  ((39, 5)) ===
+                    0          1                               2   3                            4
+0               NAME:        NaN    الاشتراك الشهري  مدته 24 يوم NaN          Package & Requests:
+1             Number:        NaN                             NaN NaN                          NaN
+2            Week Two        NaN       start date     -     -    NaN                          NaN
+3                 NaN        NaN                       OPTION  1 NaN                     OPTION 2
+4      SA T U R D A Y  BREAKFAST              CHOCOLATE Pancakes NaN           ORIENTAL BREAKFAST
+5                 NaN  SNA CK  1                    CEASAR SALAD NaN                      TALBINA
+6                 NaN      LUNCH                   CHICKEN TACOS NaN              IRANIAN CHICKEN
+7                 NaN   SNACK  2                    BROCOLI SOUP NaN                      TALBINA
+8                 NaN     DINNER                  SALMON NO CARB NaN               STEAK SANDWICH
+9                 NaN        NaN                             NaN NaN                          NaN
+10        S U N D A Y  BREAKFAST                 CROISANT ZAATER NaN             NEW Egg sandwich
+11                NaN  SNA CK  1                     FRUIT SALAD NaN               BEETROOT SALAD
+12                NaN      LUNCH                     CORDON BLUE NaN                 FISH SYADIAH
+13                NaN   SNACK  2                     FRUIT SALAD NaN        CINNAMON APPLE YOGURT
+14                NaN     DINNER  GARLIC BUTTER STEAK & POTATOES NaN                CHICKEN HERBS
+15                NaN        NaN                             NaN NaN                          NaN
+16        M O N D A Y  BREAKFAST            SWEET POTATO DELIGHT NaN              MEXICAN OMELETE
+17                NaN  SNA CK  1                   MUSHROOM SOUP NaN                      COOKIES
+18                NaN      LUNCH             CAJUN CHICKEN PASTA NaN           CHICKEN VEGETABLES
+19                NaN   SNACK  2                        FATTOUSH NaN                      COOKIES
+20                NaN     DINNER                    DAWOUD BASHA NaN         BUFFALO CHICKEN WRAP
+21                NaN        NaN                             NaN NaN                          NaN
+22      T U E S D A Y  BREAKFAST                            FOUL NaN           NEW EGG SHAKSHOUKA
+23                NaN  SNA CK  1                     lentil soup NaN         Chia  Seeds  Pudding
+24                NaN      LUNCH                   LEMON CHICKEN NaN                 SHRIMP CURRY
+25                NaN   SNACK  2                    ENERGY BALLS NaN         Chia  Seeds  Pudding
+26                NaN     DINNER          BEEF SHAWERMA SANDWICH NaN                IRANIAN KOFTA
+27                NaN        NaN                             NaN NaN                          NaN
+28  W E D N E S D A Y  BREAKFAST          CHOCOLATE PEANUTBUTTER NaN            EGG AVOCADO TOAST
+29                NaN  SNA CK  1      PASSION FRUIT QUINOA SALAD NaN                    CORN SOUP
+30                NaN      LUNCH             BEEF VINDALO & RICE NaN         JAMAICAN JERK SALMON
+31                NaN   SNACK  2      PASSION FRUIT QUINOA SALAD NaN        MATCHA SMOOTHIE SHAKE
+32                NaN     DINNER          BEEF PASTRAMI SANDWICH NaN              CHICKEN MAJBOUS
+33                NaN        NaN                             NaN NaN                          NaN
+34    T H U R S D A Y  BREAKFAST                    FALAFEL WRAP NaN  LEBANESE TRADITIONAL MUFFIN
+35                NaN  SNA CK  1                    RICE PUDDING NaN     MEDITERRANEEN FETA SALAD
+36                NaN      LUNCH             SWEET CHILI CHICKEN NaN                 BEEF NOODLES
+37                NaN   SNACK  2                 VEGETABLES SOUP NaN     MEDITERRANEEN FETA SALAD
+38                NaN     DINNER                     BEEF BURGER NaN     Chicken Avocado Sandwich
+
+=== Table 3 ((39, 5)) ===
+                    0          1                              2   3                           4
+0               NAME:        NaN   الاشتراك الشهري  مدته 24 يوم NaN         Package & Requests:
+1             Number:        NaN                            NaN NaN                         NaN
+2          Week Three        NaN      start date     -     -    NaN                         NaN
+3                 NaN        NaN                       OPTION 1 NaN                    OPTION 2
+4      SA T U R D A Y  BREAKFAST                     EGG MUFFIN NaN             NORMAL PANCAKES
+5                 NaN  SNA CK  1                   BROCOLI SOUP NaN              WALDORAF SALAD
+6                 NaN      LUNCH            PENNE CHICKEN PASTA NaN   BEEF KOFTA W/ SAFRON RICE
+7                 NaN   SNACK  2              BAHAMAS LAVA CAKE NaN              WALDORAF SALAD
+8                 NaN     DINNER                  CRISPY STRIPS NaN                LEMON SHRIMP
+9                 NaN        NaN                            NaN NaN                         NaN
+10        S U N D A Y  BREAKFAST                HALLOUMI MUFFIN NaN             CROISANT TURKEY
+11                NaN  SNA CK  1                  MUSHROOM SOUP NaN             PISTACHIO SALAD
+12                NaN      LUNCH                CHICKEN BIRYANI NaN             SALMON W/ SALSA
+13                NaN   SNACK  2                         MUFFIN NaN             PISTACHIO SALAD
+14                NaN     DINNER                STUFFED PEPPERS NaN            CHICKEN MESAKHAN
+15                NaN        NaN                            NaN NaN                         NaN
+16        M O N D A Y  BREAKFAST              CROISANT EGG RING NaN               OMELETE PIZZA
+17                NaN  SNA CK  1                    LENTIL SOUP NaN  PASSION FRUIT QUINOA SALAD
+18                NaN      LUNCH      NEW Roasted Beef Sandwich NaN          CAJUN SHRIMP PASTA
+19                NaN   SNACK  2                      LAZY CAKE NaN  PASSION FRUIT QUINOA SALAD
+20                NaN     DINNER                 CHICKEN FATTAH NaN   BEEF ROLLS SWEET POTATOES
+21                NaN        NaN                            NaN NaN                         NaN
+22      T U E S D A Y  BREAKFAST  SUNNY SIDE EGG W/ BROWN BREAD NaN          CHOCOLATE PANCAKES
+23                NaN  SNA CK  1                     CRAB SALAD NaN                   CORN SOUP
+24                NaN      LUNCH      Peri  Peri Chicken & Rice NaN        SPAGHETTI BEEF BALLS
+25                NaN   SNACK  2                     CRAB SALAD NaN                    TIRAMISU
+26                NaN     DINNER                TURKEY SANDWICH NaN            SHISHTAWOOK WRAP
+27                NaN        NaN                            NaN NaN                         NaN
+28  W E D N E S D A Y  BREAKFAST             NEW EGG SHAKSHOUKA NaN       TURKEY ENGLISH MUFFIN
+29                NaN  SNA CK  1                   CEASAR SALAD NaN              GREEK INFUSION
+30                NaN      LUNCH                 SHRIMP MAJBOUS NaN           CHICKEN STROGANOF
+31                NaN   SNACK  2                VEGETABLES SOUP NaN              GREEK INFUSION
+32                NaN     DINNER           FAJITA BEEF SANDWICH NaN    STEAK W/ MASHED POTATOES
+33                NaN        NaN                            NaN NaN                         NaN
+34    T H U R S D A Y  BREAKFAST           PEANUTBUTTER OATMEAL NaN             EGG QUESADILLAS
+35                NaN  SNA CK  1                    FRUIT SALAD NaN      RASPBERRY RICE PUDDING
+36                NaN      LUNCH              MANGOLIAN NOODLES NaN             CHICKEN ALFREDO
+37                NaN   SNACK  2       MEDITERRANEEN FETA SALAD NaN      RASPBERRY RICE PUDDING
+38                NaN     DINNER                  CHICKEN TAJEN NaN      GRILLED CHICKEN BURGER
+
+=== Table 4 ((39, 5)) ===
+                    0          1                              2   3                            4
+0               NAME:        NaN   الاشتراك الشهري  مدته 24 يوم NaN          Package & Requests:
+1             Number:        NaN                            NaN NaN                          NaN
+2           WEEK FOUR        NaN      start date     -     -    NaN                          NaN
+3                 NaN        NaN                      OPTION  1 NaN                     OPTION 2
+4      SA T U R D A Y  BREAKFAST             CHOCOLATE Pancakes NaN           ORIENTAL BREAKFAST
+5                 NaN  SNA CK  1                   CEASAR SALAD NaN                      TALBINA
+6                 NaN      LUNCH                  CHICKEN TACOS NaN              IRANIAN CHICKEN
+7                 NaN   SNACK  2                   BROCOLI SOUP NaN                      TALBINA
+8                 NaN     DINNER                 SALMON NO CARB NaN               STEAK SANDWICH
+9                 NaN        NaN                            NaN NaN                          NaN
+10        S U N D A Y  BREAKFAST                CROISANT ZAATER NaN             NEW Egg sandwich
+11                NaN  SNA CK  1                    FRUIT SALAD NaN               BEETROOT SALAD
+12                NaN      LUNCH                    CORDON BLUE NaN                 FISH SYADIAH
+13                NaN   SNACK  2                    FRUIT SALAD NaN        CINNAMON APPLE YOGURT
+14                NaN     DINNER  CREAMY ZUCCHINI CHICKEN PASTA NaN                CHICKEN HERBS
+15                NaN        NaN                            NaN NaN                          NaN
+16        M O N D A Y  BREAKFAST           SWEET POTATO DELIGHT NaN              MEXICAN OMELETE
+17                NaN  SNA CK  1                  MUSHROOM SOUP NaN                      COOKIES
+18                NaN      LUNCH             CAJUN SHRIMP PASTA NaN           CHICKEN VEGETABLES
+19                NaN   SNACK  2                       FATTOUSH NaN                      COOKIES
+20                NaN     DINNER                   DAWOUD BASHA NaN         BUFFALO CHICKEN WRAP
+21                NaN        NaN                            NaN NaN                          NaN
+22      T U E S D A Y  BREAKFAST                           FOUL NaN           NEW EGG SHAKSHOUKA
+23                NaN  SNA CK  1                    lentil soup NaN         Chia  Seeds  Pudding
+24                NaN      LUNCH                  LEMON CHICKEN NaN                 SALMON CURRY
+25                NaN   SNACK  2                   ENERGY BALLS NaN         Chia  Seeds  Pudding
+26                NaN     DINNER         BEEF SHAWERMA SANDWICH NaN                IRANIAN KOFTA
+27                NaN        NaN                            NaN NaN                          NaN
+28  W E D N E S D A Y  BREAKFAST         CHOCOLATE PEANUTBUTTER NaN            EGG AVOCADO TOAST
+29                NaN  SNA CK  1     PASSION FRUIT QUINOA SALAD NaN                    CORN SOUP
+30                NaN      LUNCH            BEEF VINDALO & RICE NaN              CHICKEN RIZOTTO
+31                NaN   SNACK  2     PASSION FRUIT QUINOA SALAD NaN        MATCHA SMOOTHIE SHAKE
+32                NaN     DINNER         BEEF PASTRAMI SANDWICH NaN              CHICKEN MAJBOUS
+33                NaN        NaN                            NaN NaN                          NaN
+34    T H U R S D A Y  BREAKFAST                   FALAFEL WRAP NaN  LEBANESE TRADITIONAL MUFFIN
+35                NaN  SNA CK  1                   RICE PUDDING NaN     MEDITERRANEEN FETA SALAD
+36                NaN      LUNCH            SWEET CHILI CHICKEN NaN                 BEEF NOODLES
+37                NaN   SNACK  2                VEGETABLES SOUP NaN     MEDITERRANEEN FETA SALAD
+38                NaN     DINNER                    BEEF BURGER NaN     Chicken Avocado Sandwich
+
+=== Meal Plan ((123, 5)) ===
+                                          0          1          2                              3                            4
+0    ADRENALINE HEALTHY - 4 WEEKS MEAL PLAN        NaN        NaN                            NaN                          NaN
+1                                       NaN        NaN        NaN                            NaN                          NaN
+2                                      WEEK        DAY       MEAL                       OPTION 1                     OPTION 2
+3                                    WEEK 1   SATURDAY  BREAKFAST              HALLOUMI SANDWICH              EGG WITH ZAATER
+4                                    WEEK 1   SATURDAY    SNACK 1                 BEETROOT SALAD  SWEET POTATO ENERGY BOOSTER
+5                                    WEEK 1   SATURDAY      LUNCH          GARLIC BUTTER CHICKEN         CHICKEN TERYAKI BOWL
+6                                    WEEK 1   SATURDAY    SNACK 2                 BEETROOT SALAD                 CHICKEN SOUP
+7                                    WEEK 1   SATURDAY     DINNER                BEEF KOFTA WRAP           HONEY GLAZE SALMON
+8                                    WEEK 1     SUNDAY  BREAKFAST                         HUMMUS             MIX VEGE OMELETE
+9                                    WEEK 1     SUNDAY    SNACK 1                       BROWNIES                 CEASAR SALAD
+10                                   WEEK 1     SUNDAY      LUNCH                  CHICKEN CURRY         BEEF BALLS WITH RICE
+11                                   WEEK 1     SUNDAY    SNACK 2                       BROWNIES        CINNAMON APPLE YOGURT
+12                                   WEEK 1     SUNDAY     DINNER            SPAGHETTI BOLOGNESE                 SHRIMP TACOS
+13                                   WEEK 1     MONDAY  BREAKFAST                 NORMAL PANCAKE                 EGG CROISANT
+14                                   WEEK 1     MONDAY    SNACK 1                    LENTIL SOUP              PISTACHIO SALAD
+15                                   WEEK 1     MONDAY      LUNCH        HEALTHY CHICKEN MAJBOUS                 BEEF ALFREDO
+16                                   WEEK 1     MONDAY    SNACK 2                    LENTIL SOUP                      UMM ALI
+17                                   WEEK 1     MONDAY     DINNER               CHICKEN SHAWARMA             CHICKEN PARMESAN
+18                                   WEEK 1    TUESDAY  BREAKFAST  SUNNY SIDE EGG W/ BROWN BREAD                  EGG BURRITO
+19                                   WEEK 1    TUESDAY    SNACK 1              BAHAMAS LAVA CAKE                   CRAB SALAD
+20                                   WEEK 1    TUESDAY      LUNCH                 BEEF STROGANOF       CRISPY CHICKEN CUTLETS
+21                                   WEEK 1    TUESDAY    SNACK 2                VEGETABLES SOUP                   CRAB SALAD
+22                                   WEEK 1    TUESDAY     DINNER                   BEEF LASAGNA       SOUTHWEST CHICKEN WRAP
+23                                   WEEK 1  WEDNESDAY  BREAKFAST                CROISANT CHEESE                OMELETE PIZZA
+24                                   WEEK 1  WEDNESDAY    SNACK 1                     DATE BALLS               WALDORAF SALAD
+..                                      ...        ...        ...                            ...                          ...
+98                                   WEEK 4     SUNDAY  BREAKFAST                CROISANT ZAATER             NEW EGG SANDWICH
+99                                   WEEK 4     SUNDAY    SNACK 1                    FRUIT SALAD               BEETROOT SALAD
+100                                  WEEK 4     SUNDAY      LUNCH                    CORDON BLUE                 FISH SYADIAH
+101                                  WEEK 4     SUNDAY    SNACK 2                    FRUIT SALAD        CINNAMON APPLE YOGURT
+102                                  WEEK 4     SUNDAY     DINNER  CREAMY ZUCCHINI CHICKEN PASTA                CHICKEN HERBS
+103                                  WEEK 4     MONDAY  BREAKFAST           SWEET POTATO DELIGHT              MEXICAN OMELETE
+104                                  WEEK 4     MONDAY    SNACK 1                  MUSHROOM SOUP                      COOKIES
+105                                  WEEK 4     MONDAY      LUNCH             CAJUN SHRIMP PASTA           CHICKEN VEGETABLES
+106                                  WEEK 4     MONDAY    SNACK 2                       FATTOUSH                      COOKIES
+107                                  WEEK 4     MONDAY     DINNER                   DAWOUD BASHA         BUFFALO CHICKEN WRAP
+108                                  WEEK 4    TUESDAY  BREAKFAST                           FOUL           NEW EGG SHAKSHOUKA
+109                                  WEEK 4    TUESDAY    SNACK 1                    LENTIL SOUP           CHIA SEEDS PUDDING
+110                                  WEEK 4    TUESDAY      LUNCH                  LEMON CHICKEN                 SALMON CURRY
+111                                  WEEK 4    TUESDAY    SNACK 2                   ENERGY BALLS           CHIA SEEDS PUDDING
+112                                  WEEK 4    TUESDAY     DINNER         BEEF SHAWERMA SANDWICH                IRANIAN KOFTA
+113                                  WEEK 4  WEDNESDAY  BREAKFAST         CHOCOLATE PEANUTBUTTER            EGG AVOCADO TOAST
+114                                  WEEK 4  WEDNESDAY    SNACK 1     PASSION FRUIT QUINOA SALAD                    CORN SOUP
+115                                  WEEK 4  WEDNESDAY      LUNCH            BEEF VINDALO & RICE              CHICKEN RIZOTTO
+116                                  WEEK 4  WEDNESDAY    SNACK 2     PASSION FRUIT QUINOA SALAD        MATCHA SMOOTHIE SHAKE
+117                                  WEEK 4  WEDNESDAY     DINNER         BEEF PASTRAMI SANDWICH              CHICKEN MAJBOUS
+118                                  WEEK 4   THURSDAY  BREAKFAST                   FALAFEL WRAP  LEBANESE TRADITIONAL MUFFIN
+119                                  WEEK 4   THURSDAY    SNACK 1                   RICE PUDDING     MEDITERRANEEN FETA SALAD
+120                                  WEEK 4   THURSDAY      LUNCH            SWEET CHILI CHICKEN                 BEEF NOODLES
+121                                  WEEK 4   THURSDAY    SNACK 2                VEGETABLES SOUP     MEDITERRANEEN FETA SALAD
+122                                  WEEK 4   THURSDAY     DINNER                    BEEF BURGER     CHICKEN AVOCADO SANDWICH
+
+=== JSON Export ((1907, 1)) ===
+                                                                                  0
+0                                                  JSON Export — Meal Plan with IDs
+1     Copy the JSON below (column A from row 4 onwards) for your app / Claude Code.
+2                                                                               NaN
+3                                                                                 {
+4                                                                 "meal_catalog": [
+5                                                                                 {
+6                                                  "id": "m_001_halloumi_sandwich",
+7                                                       "name": "Halloumi Sandwich"
+8                                                                                },
+9                                                                                 {
+10                                                   "id": "m_002_egg_with_zaatar",
+11                                                        "name": "Egg with Zaatar"
+12                                                                               },
+13                                                                                {
+14                                                    "id": "m_003_beetroot_salad",
+15                                                         "name": "Beetroot Salad"
+16                                                                               },
+17                                                                                {
+18                                       "id": "m_004_sweet_potato_energy_booster",
+19                                            "name": "Sweet Potato Energy Booster"
+20                                                                               },
+21                                                                                {
+22                                             "id": "m_005_garlic_butter_chicken",
+23                                                  "name": "Garlic Butter Chicken"
+24                                                                               },
+...                                                                             ...
+1882                                                  "id": "m_034_vegetable_soup",
+1883                                                       "name": "Vegetable Soup"
+1884                                                                             },
+1885                                                                   "option2": {
+1886                                        "id": "m_052_mediterranean_feta_salad",
+1887                                             "name": "Mediterranean Feta Salad"
+1888                                                                              }
+1889                                                                             },
+1890                                                                    "dinner": {
+1891                                                                   "option1": {
+1892                                                     "id": "m_100_beef_burger",
+1893                                                          "name": "Beef Burger"
+1894                                                                             },
+1895                                                                   "option2": {
+1896                                        "id": "m_101_chicken_avocado_sandwich",
+1897                                             "name": "Chicken Avocado Sandwich"
+1898                                                                              }
+1899                                                                              }
+1900                                                                              }
+1901                                                                              }
+1902                                                                              ]
+1903                                                                              }
+1904                                                                              ]
+1905                                                                              }
+1906                                                                              }
+
