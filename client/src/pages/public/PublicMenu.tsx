@@ -821,7 +821,7 @@ export default function PublicMenuPage() {
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group transition-all duration-300 overflow-hidden cursor-pointer bg-white relative",
+                    "group transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-3xl",
                     hasConflict
                       ? "border-2 border-red-300 hover:border-red-500 hover:shadow-lg"
                       : "border-2 border-gray-100 hover:border-[#3CC4F0] hover:shadow-xl"

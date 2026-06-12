@@ -366,9 +366,9 @@ export default function HomePage() {
                 <motion.a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
                   initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }}
-                  className="group rounded-2xl overflow-hidden bg-white block"
-                  style={{ border: "1px solid #D9E6F1", boxShadow: "0 6px 18px -12px rgba(14,42,74,.25)", textDecoration: "none" }}>
-                  <div className="relative" style={{ height: 130, background: "#EAF3FB", overflow: "hidden" }}>
+                  className="group rounded-3xl overflow-hidden bg-white block"
+                  style={{ border: "1px solid #D9E6F1", boxShadow: "0 10px 30px -16px rgba(14,42,74,.3)", textDecoration: "none" }}>
+                  <div className="relative w-full aspect-[4/3]" style={{ background: "#EAF3FB", overflow: "hidden" }}>
                     {m.imageUrl && <img src={m.imageUrl} alt={isRtl ? m.nameAr : m.nameEn}
                       className="w-full h-full object-cover transition-transform group-hover:scale-105" />}
                     {i < 3 && (
@@ -378,7 +378,7 @@ export default function HomePage() {
                       </span>
                     )}
                   </div>
-                  <div className="p-2.5">
+                  <div className="p-4">
                     <div className="font-bold text-[#0E2A4A] text-sm leading-tight mb-1 line-clamp-1"
                       style={{ fontFamily: "'Cairo',sans-serif" }}>
                       {isRtl ? m.nameAr : m.nameEn}

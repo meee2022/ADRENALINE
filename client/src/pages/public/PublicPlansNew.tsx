@@ -90,7 +90,7 @@ export default function PublicPlansNew() {
                 return (
                   <div
                     key={plan._id}
-                    className={`relative bg-white rounded-[32px] overflow-hidden transition-all duration-300 flex flex-col ${
+                    className={`relative bg-white rounded-3xl overflow-hidden transition-all duration-300 flex flex-col ${
                       isFeatured
                         ? "shadow-2xl ring-4 ring-[#3CC4F0] md:scale-105"
                         : "shadow-lg hover:shadow-xl hover:scale-[1.02]"
@@ -105,12 +105,12 @@ export default function PublicPlansNew() {
                       </div>
                     )}
 
-                    {/* Image - Full Width & Aspect Ratio containment */}
-                    <div className="w-full aspect-[4/3] overflow-hidden relative bg-[#0F1516] p-1 flex items-center justify-center">
+                    {/* Image - uniform 4:3, fills the frame */}
+                    <div className="w-full aspect-[4/3] overflow-hidden relative bg-[#EAF3FB]">
                       <img
                         src={plan.imageUrl}
                         alt={plan.nameAr}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
 

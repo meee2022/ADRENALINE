@@ -228,7 +228,7 @@ export default function SmartPlan() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
                   {bestSellers.map((m: any) => (
                     <a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
-                      style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 14,
+                      style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16,
                         overflow: "hidden", textDecoration: "none", display: "block" }}>
                       <div style={{ height: 100, background: B.bg2, overflow: "hidden" }}>
                         {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr}
