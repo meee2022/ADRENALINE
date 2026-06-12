@@ -4,7 +4,7 @@
  */
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check } from "lucide-react";
+import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -46,54 +46,30 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </a>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-8">
-              <a
-                href="/"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
+            <nav className="hidden md:flex items-center gap-3 lg:gap-5">
+              <a href="/" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
                 {isRtl ? "الرئيسية" : "Home"}
               </a>
-              <a
-                href="/public/plans"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
+              <a href="/public/plans" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
                 {isRtl ? "الخطط" : "Plans"}
               </a>
-              <a
-                href="/public/menu"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
+              <a href="/public/menu" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
                 {isRtl ? "المنيو" : "Menu"}
               </a>
-              <a
-                href="/customer/smart-plan"
-                className="text-base font-bold text-[#0E76AC] hover:text-[#3CC4F0] transition-colors"
-              >
-                {isRtl ? "خطتي الذكية ✨" : "Smart Plan ✨"}
+              <a href="/customer/smart-plan"
+                className="text-[15px] font-bold px-3 py-1.5 rounded-full text-[#0E76AC] hover:text-white hover:bg-[#0E76AC] transition-colors whitespace-nowrap flex items-center gap-1"
+                style={{ background: "#3AC7F415", border: "1px solid #3AC7F440" }}>
+                <Sparkles className="h-3.5 w-3.5" />
+                {isRtl ? "خطتي الذكية" : "Smart Plan"}
               </a>
-              <a
-                href="/public/how-to-subscribe"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
-                {isRtl ? "كيف تشترك" : "How to Subscribe"}
+              <a href="/public/how-to-subscribe" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+                {isRtl ? "كيف تشترك" : "Subscribe"}
               </a>
-              <a
-                href="/public/about"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
+              <a href="/public/about" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
                 {isRtl ? "من نحن" : "About"}
               </a>
-              <a
-                href="/public/contact"
-                className="text-base font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors"
-              >
-                {isRtl ? "تواصل معنا" : "Contact"}
-              </a>
-              <a
-                href="/public/track"
-                className="text-base font-medium text-[#3CC4F0] hover:text-[#47759C] transition-colors flex items-center gap-1"
-              >
-                📦 {isRtl ? "تتبع طلبي" : "Track Order"}
+              <a href="/public/contact" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+                {isRtl ? "تواصل" : "Contact"}
               </a>
             </nav>
 
