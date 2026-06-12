@@ -341,7 +341,7 @@ export default function PublicMenuPage() {
                   {showCustomerPicker && (isRtl ? "من المستلم؟" : "Who's the recipient?")}
                 </h2>
                 <p className="text-sm text-[#47759C] text-center mb-6 leading-relaxed">
-                  {showPhonePrompt && (isRtl ? "أدخل رقم تليفونك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals")}
+                  {showPhonePrompt && (isRtl ? "أدخل رقم هاتفك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals")}
                   {showNotRegistered && (isRtl ? "هذا الرقم غير مسجل لدينا. تواصل عبر واتساب للاشتراك" : "This number isn't registered. Contact us via WhatsApp to subscribe")}
                   {showCustomerPicker && (isRtl ? "هذا الرقم مسجل لأكثر من مشترك. اختر اسمك للمتابعة" : "This number has multiple subscribers. Pick your name to continue")}
                 </p>

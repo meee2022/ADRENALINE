@@ -7,7 +7,6 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useBanners, usePublicPlans } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
-import { PremiumHero } from "@/components/public/PremiumHero";
 import { HeroClean } from "@/components/public/HeroClean";
 import { PremiumTestimonials, PremiumFooter } from "@/components/public/PremiumSections";
 import {
@@ -28,6 +27,7 @@ export default function HomePage() {
   const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
   const allMeals = useQuery(api.publicMeals.list) || [];
+  const bestSellers = useQuery((api.publicMeals as any).bestSellers, { limit: 6 }) || [];
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
 
   // Real dish images for the hero carousel (fallback to banner/stock images)
@@ -340,6 +340,60 @@ export default function HomePage() {
           </motion.div>
         </div>
       </section>
+
+      {/* ═══════════ BEST SELLERS ═══════════ */}
+      {bestSellers.length > 0 && (
+        <section className="py-16 md:py-20 bg-[#F7FBFE]" style={{ direction: isRtl ? "rtl" : "ltr" }}>
+          <div className="max-w-7xl mx-auto px-5 md:px-8">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-3"
+                style={{ background: "#3CC4F015", border: "1px solid #3CC4F030" }}>
+                <Sparkles className="h-4 w-4" style={{ color: "#0E76AC" }} />
+                <span className="text-xs md:text-sm font-bold tracking-wider" style={{ color: "#0E76AC" }}>
+                  {isRtl ? "اختيارات عملائنا" : "CUSTOMER FAVORITES"}
+                </span>
+              </div>
+              <h2 className="text-3xl md:text-4xl font-black text-[#0E2A4A] mb-2" style={{ fontFamily: "'Cairo',sans-serif" }}>
+                {isRtl ? "الأكثر طلبًا" : "Best Sellers"}
+              </h2>
+              <p className="text-base" style={{ color: "#47759C" }}>
+                {isRtl ? "أكثر الوجبات التي يحبها مشتركونا" : "The meals our subscribers love most"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+              {bestSellers.map((m: any, i: number) => (
+                <motion.a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
+                  initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }}
+                  className="group rounded-2xl overflow-hidden bg-white block"
+                  style={{ border: "1px solid #D9E6F1", boxShadow: "0 6px 18px -12px rgba(14,42,74,.25)", textDecoration: "none" }}>
+                  <div className="relative" style={{ height: 130, background: "#EAF3FB", overflow: "hidden" }}>
+                    {m.imageUrl && <img src={m.imageUrl} alt={isRtl ? m.nameAr : m.nameEn}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-105" />}
+                    {i < 3 && (
+                      <span className="absolute top-2 px-2 py-0.5 rounded-full text-[10px] font-black text-white"
+                        style={{ insetInlineStart: 8, background: i === 0 ? "#F4A93A" : "#0E76AC" }}>
+                        {isRtl ? `#${i + 1} الأكثر طلبًا` : `#${i + 1} Best`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5">
+                    <div className="font-bold text-[#0E2A4A] text-sm leading-tight mb-1 line-clamp-1"
+                      style={{ fontFamily: "'Cairo',sans-serif" }}>
+                      {isRtl ? m.nameAr : m.nameEn}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px]" style={{ color: "#47759C" }}>
+                      <span>{m.calories} {isRtl ? "سعرة" : "kcal"}</span>
+                      <span className="font-bold" style={{ color: "#0E76AC" }}>{m.priceQAR} {isRtl ? "ر.ق" : "QAR"}</span>
+                    </div>
+                  </div>
+                </motion.a>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ═══════════ TESTIMONIALS ═══════════ */}
       <PremiumTestimonials />

@@ -4,7 +4,7 @@
  *  مدخلان: مسجّل دخول (تلقائي) أو رقم تليفون (بدون تسجيل).
  */
 import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { PublicLayout } from "@/components/public/PublicLayout";
@@ -26,6 +26,7 @@ export default function SmartPlan() {
   const { currentCustomer } = useStore();
   const generate = useAction(api.ai.generateSmartPlan);
   const createOrder = useMutation(api.customerOrders.create);
+  const bestSellers = useQuery((api.publicMeals as any).bestSellers, { limit: 4 }) || [];
 
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
@@ -217,6 +218,36 @@ export default function SmartPlan() {
                 </>
               )}
             </div>
+
+            {/* Upsell — best sellers to complete the order */}
+            {bestSellers.length > 0 && (
+              <div style={{ marginTop: 34 }}>
+                <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, marginBottom: 14, textAlign: "center" }}>
+                  قد يعجبك أيضًا — الأكثر طلبًا 🔥
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
+                  {bestSellers.map((m: any) => (
+                    <a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
+                      style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 14,
+                        overflow: "hidden", textDecoration: "none", display: "block" }}>
+                      <div style={{ height: 100, background: B.bg2, overflow: "hidden" }}>
+                        {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                      </div>
+                      <div style={{ padding: "8px 10px" }}>
+                        <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, color: B.ink, marginBottom: 3 }}>
+                          {m.nameAr}
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: B.ink2 }}>
+                          <span>{m.calories} سعرة</span>
+                          <span style={{ fontWeight: 700, color: B.accent }}>{m.priceQAR} ر.ق</span>
+                        </div>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

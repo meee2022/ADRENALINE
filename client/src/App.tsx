@@ -44,7 +44,6 @@ import CustomerProfile from "@/pages/public/CustomerProfile";
 import OrderReview from "@/pages/public/OrderReview";
 import AboutPage from "@/pages/public/AboutPage";
 import SmartPlan from "@/pages/public/SmartPlan";
-import HeroPreview from "@/pages/public/HeroPreview";
 import HowToSubscribe from "@/pages/public/HowToSubscribe";
 import ContactPage from "@/pages/public/ContactPage";
 
@@ -121,7 +120,6 @@ function Router() {
       <Route path="/customer/auth" component={CustomerAuth} />
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/smart-plan" component={SmartPlan} />
-      <Route path="/public/hero-preview" component={HeroPreview} />
       <Route path="/public/how-to-subscribe" component={HowToSubscribe} />
 
       {/* ===== Admin Routes (Protected) ===== */}

@@ -212,3 +212,46 @@ export const deleteAll = mutation({
     return { deleted: meals.length };
   },
 });
+
+// ===== الأكثر طلبًا (للموقع العام) =====
+// يحسب الأكثر مبيعًا من طلبات العملاء الفعلية، مع صور، وfallback لو لا توجد طلبات.
+export const bestSellers = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, { limit = 6 }) => {
+    const items = await ctx.db.query("customerOrderItems").collect();
+    const counts = new Map<string, number>();
+    for (const it of items) {
+      const k = String(it.mealId);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+
+    const active = await ctx.db
+      .query("publicMeals")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    // رتّب الوجبات النشطة حسب عدد الطلبات (ثم sortOrder كاحتياطي)
+    const ranked = [...active].sort((a, b) => {
+      const ca = counts.get(String(a._id)) || 0;
+      const cb = counts.get(String(b._id)) || 0;
+      if (cb !== ca) return cb - ca;
+      return (a.sortOrder || 0) - (b.sortOrder || 0);
+    });
+
+    const top = ranked.slice(0, limit);
+    return Promise.all(
+      top.map(async (m) => ({
+        id: m._id,
+        nameAr: m.nameAr,
+        nameEn: m.nameEn || "",
+        slug: m.slug,
+        calories: m.calories,
+        protein: m.protein,
+        priceQAR: m.priceQAR,
+        category: m.category,
+        orders: counts.get(String(m._id)) || 0,
+        imageUrl: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null),
+      }))
+    );
+  },
+});
