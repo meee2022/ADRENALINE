@@ -5,7 +5,7 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { PublicLayout } from "@/components/public/PublicLayout";
-import { PremiumPageHero } from "@/components/public/PremiumPageHero";
+import { PageHeader } from "@/components/public/PageHeader";
 import { PremiumFooter } from "@/components/public/PremiumSections";
 import { useLanguage } from "@/lib/i18n";
 import { useQuery } from "convex/react";
@@ -69,11 +69,10 @@ export default function ContactPage() {
 
   return (
     <PublicLayout>
-      <PremiumPageHero
-        badgeIcon={<MessageCircle className="h-4 w-4" />}
-        badgeAr="تواصل معنا" badgeEn="GET IN TOUCH"
-        titleAr={<>نحن <span style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>هنا لخدمتك</span></>}
-        titleEn={<>We're <span style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Here For You</span></>}
+      <PageHeader
+        icon={<MessageCircle className="w-3.5 h-3.5" style={{ color: "#3AC7F4" }} />}
+        eyebrowAr="تواصل معنا" eyebrowEn="GET IN TOUCH"
+        titleAr="نحن هنا لخدمتك" titleEn="We're Here For You"
         subtitleAr="عندك سؤال؟ تحتاج مساعدة في اختيار خطتك؟ فريقنا جاهز للرد عليك في أي وقت"
         subtitleEn="Have a question? Need help choosing a plan? Our team is ready to assist you anytime"
       />

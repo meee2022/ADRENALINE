@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { PageHeader } from "@/components/public/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles, TrendingUp, Briefcase, Tag, Zap } from "lucide-react";
 
@@ -20,6 +21,8 @@ export default function PublicPlansNew() {
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);
+  const meals = useQuery(api.publicMeals.list) || [];
+  const headerImage = (meals.find((m: any) => m.imageUrl)?.imageUrl) || undefined;
   const comparisonPlans = plans.filter(p => p.showInComparison);
 
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
@@ -36,81 +39,37 @@ export default function PublicPlansNew() {
 
   return (
     <PublicLayout>
-      {/* Hero Section with Logo & Background */}
-      <section className="relative text-white overflow-hidden"
-        style={{ background: "linear-gradient(135deg,#0B2138 0%,#143A57 55%,#0E76AC 100%)" }}>
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
+      {/* Unified compact header */}
+      <PageHeader
+        eyebrowAr="باقات الاشتراك" eyebrowEn="SUBSCRIPTION PLANS"
+        titleAr="استكشف خططنا" titleEn="Explore Our Plans"
+        subtitleAr="اختر الباقة المناسبة لأهدافك الصحية واللياقة البدنية"
+        subtitleEn="Choose the plan that suits your health and fitness goals"
+        image={headerImage}
+      />
+
+      {/* Duration Tabs bar */}
+      <div className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex justify-center gap-3">
+          {[
+            { value: "week", label: "أسبوعي" },
+            { value: "two_weeks", label: "أسبوعين" },
+            { value: "month", label: "شهري" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setSelectedDuration(tab.value as any)}
+              className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-base md:text-lg transition-all ${
+                selectedDuration === tab.value
+                  ? "bg-[#3CC4F0] text-white shadow-lg scale-105"
+                  : "bg-gray-100 text-[#47759C] hover:bg-gray-200"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
-
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-4 py-12 md:py-20">
-          <div className="text-center">
-            {/* Logos Container */}
-            <div className="flex items-center justify-center gap-6 mb-8">
-              <div className="animate-fade-in">
-                <img
-                  src="/adrenaline-logo-full.png"
-                  alt="Adrenaline Healthy Food"
-                  className="h-14 md:h-18 w-auto drop-shadow-2xl"
-                />
-              </div>
-              <div className="animate-bounce-slow">
-                <img
-                  src="/heart-logo.png"
-                  alt="Heart"
-                  className="h-12 md:h-14 w-auto drop-shadow-2xl"
-                />
-              </div>
-            </div>
-
-            {/* Title */}
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg animate-fade-in-up">
-              استكشف خططنا
-            </h1>
-            
-            {/* Subtitle */}
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-8 animate-fade-in-up animation-delay-200">
-              اختر الباقة المناسبة لأهدافك الصحية واللياقة البدنية
-            </p>
-
-            {/* Duration Tabs */}
-            <div className="flex justify-center gap-3 animate-fade-in-up animation-delay-300">
-              {[
-                { value: "week", label: "أسبوعي" },
-                { value: "two_weeks", label: "أسبوعين" },
-                { value: "month", label: "شهري" },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setSelectedDuration(tab.value as any)}
-                  className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-base md:text-lg transition-all ${
-                    selectedDuration === tab.value
-                      ? "bg-white text-[#3CC4F0] shadow-lg scale-105"
-                      : "bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-8 md:h-16">
-            <path
-              fill="#F9FAFB"
-              fillOpacity="1"
-              d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,58.7C960,64,1056,64,1152,58.7C1248,53,1344,43,1392,37.3L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"
-            />
-          </svg>
-        </div>
-      </section>
+      </div>
 
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-16">
 

@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "wouter";
 import { usePublicMeals } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
+import { PageHeader } from "@/components/public/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -218,6 +219,8 @@ export default function PublicMenuPage() {
     category: activeCategory,
     search: searchQuery,
   });
+
+  const menuHeaderImage = (allMeals.find((m: any) => m.imageUrl)?.imageUrl) || undefined;
 
   // Filter meals by selected week and day using exact schedule pairs
   const filteredMeals = allMeals.filter((meal: any) => {
@@ -652,72 +655,14 @@ export default function PublicMenuPage() {
         </div>
       )}
 
-      {/* Hero Section with Logo & Background */}
-      <section className="relative text-white overflow-hidden"
-        style={{ background: "linear-gradient(135deg,#0B2138 0%,#143A57 55%,#0E76AC 100%)" }}>
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }} />
-        </div>
-
-        {/* Content */}
-        <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-24">
-          <div className="text-center">
-            {/* Logos Container */}
-            <div className="flex items-center justify-center gap-6 mb-8">
-              {/* Main Logo */}
-              <div className="animate-fade-in">
-                <img
-                  src="/adrenaline-logo-full.png"
-                  alt="Adrenaline Healthy Food"
-                  className="h-16 md:h-20 w-auto drop-shadow-2xl"
-                />
-              </div>
-              
-              {/* Heart Logo */}
-              <div className="animate-bounce-slow">
-                <img
-                  src="/heart-logo.png"
-                  alt="Heart"
-                  className="h-14 md:h-16 w-auto drop-shadow-2xl"
-                />
-              </div>
-            </div>
-
-            {/* Title */}
-            <h1 className="text-4xl md:text-6xl font-bold mb-4 drop-shadow-lg animate-fade-in-up">
-              {isRtl ? "قائمة الوجبات" : "Our Menu"}
-            </h1>
-            
-            {/* Subtitle */}
-            <p className="text-lg md:text-2xl text-white/90 max-w-3xl mx-auto mb-8 animate-fade-in-up animation-delay-200">
-              {isRtl
-                ? "اكتشف مجموعتنا المتنوعة من الوجبات الصحية واللذيذة"
-                : "Discover our diverse collection of healthy and delicious meals"}
-            </p>
-
-            {/* Decorative Line */}
-            <div className="flex items-center justify-center gap-3 animate-fade-in-up animation-delay-300">
-              <div className="h-1 w-20 bg-white/30 rounded-full" />
-              <div className="h-2 w-2 bg-[#3CC4F0] rounded-full" />
-              <div className="h-1 w-20 bg-white/30 rounded-full" />
-            </div>
-          </div>
-        </div>
-
-        {/* Wave Divider */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-12 md:h-20">
-            <path
-              fill="#ffffff"
-              fillOpacity="1"
-              d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,48C672,43,768,53,864,58.7C960,64,1056,64,1152,58.7C1248,53,1344,43,1392,37.3L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"
-            />
-          </svg>
-        </div>
-      </section>
+      {/* Unified compact header */}
+      <PageHeader
+        eyebrowAr="قائمتنا" eyebrowEn="OUR MENU"
+        titleAr="قائمة الوجبات" titleEn="Our Menu"
+        subtitleAr="اكتشف مجموعتنا المتنوعة من الوجبات الصحية واللذيذة"
+        subtitleEn="Discover our diverse collection of healthy and delicious meals"
+        image={menuHeaderImage}
+      />
 
       {/* NEW: Week & Day Scheduling Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
