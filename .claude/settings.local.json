@@ -60,7 +60,9 @@
       "mcp__Claude_Preview__preview_resize",
       "Bash(curl -s -o /dev/null -w \"home:%{http_code}\\\\n\" http://localhost:5000/)",
       "Bash(curl -s -o /dev/null -w \"hero-preview:%{http_code}\\\\n\" http://localhost:5000/public/hero-preview)",
-      "Bash(awk '{print $NF, $5}')"
+      "Bash(awk '{print $NF, $5}')",
+      "mcp__a1542eab-8ea8-4d7a-ae15-eafc0c39e9db__generate_image",
+      "mcp__a1542eab-8ea8-4d7a-ae15-eafc0c39e9db__job_display"
     ]
   }
 }

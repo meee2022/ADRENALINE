@@ -175,14 +175,14 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════ PLANS ═══════════ */}
-      <section id="plans-section" className="py-16 md:py-20 bg-white relative overflow-hidden">
+      <section id="plans-section" className="py-10 md:py-20 bg-white relative overflow-hidden">
         <div className="absolute top-20 -right-32 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
           style={{ background: "radial-gradient(circle, #3CC4F0, transparent)" }} />
         <div className="absolute bottom-20 -left-32 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
           style={{ background: "radial-gradient(circle, #47759C, transparent)" }} />
 
         <div className="max-w-7xl mx-auto px-5 md:px-8 relative">
-          <div className="text-center mb-10 md:mb-12">
+          <div className="text-center mb-6 md:mb-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -219,7 +219,7 @@ export default function HomePage() {
             </motion.p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+          <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-3 md:pb-0 -mx-5 px-5 md:mx-0 md:px-0 scrollbar-hide">
             {weekPlans.slice(0, 3).map((plan: any, idx: number) => {
               const isPopular = idx === 1;
               return (
@@ -230,7 +230,7 @@ export default function HomePage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   whileHover={{ y: -8 }}
-                  className="group relative bg-white rounded-3xl overflow-hidden"
+                  className="group relative bg-white rounded-3xl overflow-hidden snap-center shrink-0 w-[80%] sm:w-[55%] md:w-auto"
                   style={{
                     boxShadow: isPopular
                       ? "0 20px 60px rgba(60,196,240,0.25), 0 8px 20px rgba(0,0,0,0.06)"
@@ -251,7 +251,7 @@ export default function HomePage() {
                     </div>
                   )}
 
-                  <div className="relative h-44 md:h-48 overflow-hidden">
+                  <div className="relative h-32 md:h-48 overflow-hidden">
                     <motion.img
                       src={plan.imageUrl}
                       alt={isRtl ? plan.nameAr : plan.nameEn || plan.nameAr}
@@ -269,12 +269,12 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="p-5">
-                    <p className="text-sm mb-4 line-clamp-2 min-h-[2.5rem]" style={{ color: "#47759C" }}>
+                  <div className="p-4 md:p-5">
+                    <p className="text-sm mb-3 md:mb-4 line-clamp-2" style={{ color: "#47759C" }}>
                       {isRtl ? plan.descriptionAr : plan.descriptionEn || plan.descriptionAr}
                     </p>
 
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2 mb-3 md:mb-4">
                       {plan.options?.slice(0, 2).map((option: any, oi: number) => (
                         <button
                           key={oi}
@@ -343,9 +343,9 @@ export default function HomePage() {
 
       {/* ═══════════ BEST SELLERS ═══════════ */}
       {bestSellers.length > 0 && (
-        <section className="py-16 md:py-20 bg-[#F7FBFE]" style={{ direction: isRtl ? "rtl" : "ltr" }}>
+        <section className="py-10 md:py-20 bg-[#F7FBFE]" style={{ direction: isRtl ? "rtl" : "ltr" }}>
           <div className="max-w-7xl mx-auto px-5 md:px-8">
-            <div className="text-center mb-10">
+            <div className="text-center mb-6 md:mb-10">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-3"
                 style={{ background: "#3CC4F015", border: "1px solid #3CC4F030" }}>
                 <Sparkles className="h-4 w-4" style={{ color: "#0E76AC" }} />
@@ -399,7 +399,7 @@ export default function HomePage() {
       <PremiumTestimonials />
 
       {/* ═══════════ FAQ (compact, 3 questions) ═══════════ */}
-      <section className="py-16 md:py-20 bg-white">
+      <section className="py-10 md:py-20 bg-white">
         <div className="max-w-3xl mx-auto px-5 md:px-8">
           <div className="text-center mb-10">
             <motion.div
@@ -456,7 +456,7 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════ FINAL CTA ═══════════ */}
-      <section className="py-16 md:py-20 px-5 md:px-8">
+      <section className="py-10 md:py-20 px-5 md:px-8">
         <div className="max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}

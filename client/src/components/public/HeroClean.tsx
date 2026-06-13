@@ -45,7 +45,7 @@ export function HeroClean({ image, images, titleAr, titleEn, subtitleAr, subtitl
   return (
     <section dir={isRtl ? "rtl" : "ltr"}
       className="relative w-full overflow-hidden flex items-center py-12 md:py-0"
-      style={{ minHeight: "min(82vh, 720px)", background: "#0E2A4A" }}>
+      style={{ minHeight: "min(74vh, 720px)", background: "#0E2A4A" }}>
       {/* Background photos — soft crossfade */}
       <AnimatePresence mode="sync">
         <motion.img
