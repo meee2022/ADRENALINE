@@ -52,9 +52,7 @@ export default function OrderReview() {
   useEffect(() => {
     if (findCustomerByPhone) {
       setCustomerName(findCustomerByPhone.fullName);
-      if (findCustomerByPhone.email) {
-        setCustomerEmail(findCustomerByPhone.email);
-      }
+      // ملاحظة: جدول customers لا يحتوي على email (الإيميل في customerAccounts)
     }
   }, [findCustomerByPhone]);
 

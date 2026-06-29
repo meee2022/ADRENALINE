@@ -393,6 +393,14 @@ export function useUpdateDailyPlan() {
   };
 }
 
+// تحضير خطة + خصم المخزون تلقائياً حسب الرسيبي
+export function usePrepareAndConsume() {
+  const mutation = useConvexMutation(api.inventory.prepareAndConsume);
+  return {
+    mutateAsync: (planId: string) => mutation({ planId: planId as any }),
+  };
+}
+
 export function useDeleteDailyPlan() {
   const mutation = useConvexMutation(api.dailyPlans.remove);
   return {
@@ -607,10 +615,7 @@ export function usePublicPlans(duration?: "week" | "two_weeks" | "month") {
   return { data: data ?? [] };
 }
 
-export function usePublicPlanBySlug(slug: string) {
-  const data = useConvexQuery(api.publicPlans.getBySlug, { slug });
-  return { data };
-}
+// أُزيل usePublicPlanBySlug: كان ينادي api.publicPlans.getBySlug غير الموجودة، ولم يكن مستخدماً.
 
 export function usePublicMeals(options?: {
   category?: "breakfast" | "lunch" | "dinner" | "salad" | "snack" | "all";

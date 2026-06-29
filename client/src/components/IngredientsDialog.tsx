@@ -23,7 +23,7 @@ export function IngredientsDialog({
 }) {
   const { toast } = useToast();
   const ingredients = useQuery(api.mealIngredients.listByMeal, { menuItemId: meal._id }) || [];
-  const inventoryItems = useQuery(api.inventory.listItems) || [];
+  const inventoryItems = useQuery(api.inventory.listItems, {}) || [];
 
   const createMutation = useMutation(api.mealIngredients.create);
   const removeMutation = useMutation(api.mealIngredients.remove);

@@ -124,6 +124,8 @@ export default defineSchema({
     // ✅ تتبع المصدر — لو الخطة جاية من approve order، نحفظ orderId
     // عشان نمنع التكرار لو الـ approve اتنفذ أكثر من مرة لنفس الطلب
     sourceOrderId: v.optional(v.id("customerOrders")),
+    // ✅ ختم خصم المخزون (idempotent) — يُملأ عند تحضير الخطة وخصم المكوّنات
+    inventoryConsumedAt: v.optional(v.number()),
   })
     .index("by_date", ["date"])
     .index("by_customerId", ["customerId"])

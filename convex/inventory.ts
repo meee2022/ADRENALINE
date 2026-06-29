@@ -654,3 +654,75 @@ export const createSupplier = mutation({
     return supplierId;
   },
 });
+
+// ===== تحضير خطة + خصم المخزون تلقائياً حسب الرسيبي (idempotent) =====
+// يستدعيه المطبخ عند تأكيد تحضير خطة اليوم. يخصم مكوّنات كل وجبة من المخزون.
+export const prepareAndConsume = mutation({
+  args: { planId: v.id("dailyPlans") },
+  handler: async (ctx, { planId }) => {
+    const plan = await ctx.db.get(planId);
+    if (!plan) throw new Error("Plan not found");
+
+    // idempotency: لو سبق خصم مكوّنات هذه الخطة، لا نكرّر الخصم
+    if (plan.inventoryConsumedAt) {
+      if (plan.status !== "PREPARED") {
+        await ctx.db.patch(planId, { status: "PREPARED", updatedAt: Date.now() });
+      }
+      return { alreadyConsumed: true, consumed: [] as any[] };
+    }
+
+    // 1) جمّع الكمية المطلوبة لكل صنف مخزون من رسيبيات كل وجبة في الخطة
+    const need = new Map<string, number>(); // inventoryItemId -> totalQty
+    const items: any[] = Array.isArray(plan.items) ? plan.items : [];
+    for (const it of items) {
+      if (it?.isOff) continue;
+      const menuItemId = it.menuItemId || it.mealId;
+      if (!menuItemId) continue;
+      const recipe = await ctx.db
+        .query("mealIngredients")
+        .withIndex("by_menuItem", (q) => q.eq("menuItemId", menuItemId as Id<"menuItems">))
+        .collect();
+      for (const ing of recipe) {
+        const key = String(ing.inventoryItemId);
+        need.set(key, (need.get(key) || 0) + (ing.quantityPerServing || 0));
+      }
+    }
+
+    // 2) اخصم من المخزون (لا نوقف التحضير لو المخزون أقل — نخصم المتاح ونسجّل)
+    const now = Date.now();
+    const consumed: { itemId: string; requested: number; deducted: number; shortBy: number }[] = [];
+    for (const [itemId, qty] of Array.from(need.entries())) {
+      if (qty <= 0) continue;
+      const item = await ctx.db.get(itemId as Id<"inventoryItems">);
+      if (!item) continue;
+      const deduct = Math.min(item.currentStock, qty);
+      if (deduct > 0) {
+        await ctx.db.insert("inventoryMovements", {
+          itemId: item._id, type: "consume", quantity: -deduct,
+          note: `تحضير خطة ${plan.date}`, createdAt: now,
+        });
+        await ctx.db.patch(item._id, { currentStock: item.currentStock - deduct, updatedAt: now });
+        // خصم FIFO من الدفعات
+        let remaining = deduct;
+        const batches = await ctx.db
+          .query("inventoryBatches")
+          .withIndex("by_itemId", (q) => q.eq("itemId", item._id))
+          .collect();
+        batches.sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+        for (const b of batches) {
+          if (remaining <= 0) break;
+          if (b.quantityRemaining <= 0) continue;
+          const d = Math.min(b.quantityRemaining, remaining);
+          await ctx.db.patch(b._id, { quantityRemaining: b.quantityRemaining - d });
+          remaining -= d;
+        }
+      }
+      consumed.push({ itemId, requested: qty, deducted: deduct, shortBy: Math.max(0, qty - deduct) });
+    }
+
+    // 3) علّم الخطة كمحضّرة + ختم الخصم
+    await ctx.db.patch(planId, { status: "PREPARED", inventoryConsumedAt: now, updatedAt: now });
+
+    return { alreadyConsumed: false, consumed };
+  },
+});

@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import {
   useDailyPlans,
   useUpdateDailyPlan,
+  usePrepareAndConsume,
   useCustomers,
   useMenuItems,
   useCategories,
@@ -67,6 +68,7 @@ export default function Kitchen() {
   const { data: categories = [] } = useCategories();
   const { data: modifiers = [] } = useModifiers();
   const updatePlanMutation = useUpdateDailyPlan();
+  const prepareAndConsume = usePrepareAndConsume();
 
   const plans = useMemo(() => {
     return dailyPlans
@@ -200,13 +202,16 @@ export default function Kitchen() {
 
   const handleMarkPrepared = async (planId: string) => {
     try {
-      await updatePlanMutation.mutateAsync({
-        id: planId,
-        data: { status: "PREPARED" },
-      });
+      // يعلّم الخطة كمحضّرة + يخصم مكوّنات الرسيبي من المخزون تلقائياً (idempotent)
+      await prepareAndConsume.mutateAsync(planId);
     } catch (error) {
       console.error("Failed to mark as prepared:", error);
-      alert("❌ فشل تحديث الحالة. حاول مرة أخرى.");
+      // fallback: على الأقل حدّث الحالة لو فشل خصم المخزون
+      try {
+        await updatePlanMutation.mutateAsync({ id: planId, data: { status: "PREPARED" } });
+      } catch {
+        alert("❌ فشل تحديث الحالة. حاول مرة أخرى.");
+      }
     }
   };
 
