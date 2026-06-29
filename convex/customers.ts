@@ -175,6 +175,29 @@ export const remove = mutation({
   },
 });
 
+// خدمة ذاتية: تبديل يوم توصيل في قائمة skippedDates (yyyy-MM-dd)
+export const toggleSkipDay = mutation({
+  args: { id: v.id("customers"), date: v.string() },
+  handler: async (ctx, args) => {
+    const c = await ctx.db.get(args.id);
+    if (!c) return null;
+    const cur: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
+    const exists = cur.includes(args.date);
+    const next = exists ? cur.filter((d) => d !== args.date) : [...cur, args.date].sort();
+    await ctx.db.patch(args.id, { skippedDates: next, updatedAt: Date.now() });
+    return { skipped: !exists, skippedDates: next };
+  },
+});
+
+// خدمة ذاتية: إيقاف/استئناف الاشتراك
+export const setSubscriptionActive = mutation({
+  args: { id: v.id("customers"), active: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, { isActive: args.active, updatedAt: Date.now() });
+    return { isActive: args.active };
+  },
+});
+
 /* =========================
    ✅ NEW: Activate ALL customers
 ========================= */

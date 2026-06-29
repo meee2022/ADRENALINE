@@ -22,9 +22,17 @@ import {
   AlertTriangle,
   CheckCircle,
   XCircle,
+  Pause,
+  Play,
+  Bell,
+  CheckCheck,
+  Gift,
+  Copy,
+  Award,
+  Ban,
 } from "lucide-react";
 import { convex } from "@/lib/convex";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
 
@@ -36,6 +44,8 @@ export default function CustomerProfile() {
 
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   // سجل طلبات العميل (حسب رقم الهاتف)
   const orders = useQuery(
@@ -43,27 +53,71 @@ export default function CustomerProfile() {
     currentCustomer?.phone ? { phone: currentCustomer.phone } : "skip"
   ) || [];
 
+  // إشعارات العميل (حالة الطلب) — تفاعلية
+  const notifs = useQuery(
+    api.notifications.listForCustomer,
+    profile?.subscription?.id ? { customerId: profile.subscription.id } : "skip"
+  ) || [];
+
+  const setActive = useMutation(api.customers.setSubscriptionActive);
+  const toggleSkipMut = useMutation(api.customers.toggleSkipDay);
+  const markAllReadMut = useMutation(api.notifications.markAllAsReadForCustomer);
+
+  const loadProfile = async () => {
+    if (!currentCustomer) return;
+    try {
+      const data = await convex.query(api.customerAuth.getProfile, { accountId: currentCustomer.id });
+      setProfile(data);
+    } catch (error) {
+      console.error("Failed to fetch profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!currentCustomer) {
       setLocation("/customer/auth");
       return;
     }
-
-    const fetchProfile = async () => {
-      try {
-        const data = await convex.query(api.customerAuth.getProfile, {
-          accountId: currentCustomer.id,
-        });
-        setProfile(data);
-      } catch (error) {
-        console.error("Failed to fetch profile:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchProfile();
+    loadProfile();
   }, [currentCustomer]);
+
+  const togglePause = async () => {
+    if (!profile?.subscription?.id || busy) return;
+    setBusy(true);
+    try {
+      await setActive({ id: profile.subscription.id, active: !profile.subscription.isActive });
+      await loadProfile();
+    } catch (e) { console.error(e); } finally { setBusy(false); }
+  };
+  const toggleSkip = async (date: string) => {
+    if (!profile?.subscription?.id || busy) return;
+    setBusy(true);
+    try {
+      await toggleSkipMut({ id: profile.subscription.id, date });
+      await loadProfile();
+    } catch (e) { console.error(e); } finally { setBusy(false); }
+  };
+  const markAllRead = async () => {
+    if (!profile?.subscription?.id) return;
+    try { await markAllReadMut({ customerId: profile.subscription.id }); } catch (e) { console.error(e); }
+  };
+  const upcomingDays: string[] = (() => {
+    const sub = profile?.subscription;
+    if (!sub?.startDate) return [];
+    const out: string[] = [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(sub.startDate);
+    const end = sub.endDate ? new Date(sub.endDate) : null;
+    let d = new Date(Math.max(today.getTime(), start.getTime()));
+    for (let i = 0; i < 10; i++) {
+      if (end && d.getTime() > end.getTime()) break;
+      out.push(d.toISOString().split("T")[0]);
+      d = new Date(d.getTime() + 86400000);
+    }
+    return out;
+  })();
 
   if (isLoading) {
     return (
@@ -141,6 +195,45 @@ export default function CustomerProfile() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Notifications — order status updates */}
+          {notifs.length > 0 && (
+            <Card className="border-2 border-cyan-100">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-slate-900">
+                    <Bell className="h-5 w-5 text-cyan-600" />
+                    {isRtl ? "تنبيهاتك" : "Your Notifications"}
+                    {notifs.some((n: any) => !n.isRead) && (
+                      <Badge className="bg-cyan-600 text-white">{notifs.filter((n: any) => !n.isRead).length}</Badge>
+                    )}
+                  </CardTitle>
+                  {notifs.some((n: any) => !n.isRead) && (
+                    <Button variant="outline" size="sm" onClick={markAllRead} className="border-slate-200 text-slate-500 hover:text-slate-900">
+                      <CheckCheck className="h-4 w-4 mr-1" />{isRtl ? "تعليم الكل كمقروء" : "Mark all read"}
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notifs.slice(0, 8).map((n: any) => {
+                  const created = n.createdAt ? new Date(Number(n.createdAt)) : null;
+                  return (
+                    <div key={n._id} className={`p-3 rounded-lg border ${n.isRead ? "bg-white border-slate-100" : "bg-cyan-50 border-cyan-200"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900">{n.title}</p>
+                          <p className="text-xs text-slate-500 mt-0.5">{n.message}</p>
+                        </div>
+                        {!n.isRead && <span className="h-2 w-2 rounded-full bg-cyan-600 mt-1.5 shrink-0" />}
+                      </div>
+                      {created && <p className="text-[10px] text-slate-400 mt-1.5">{created.toLocaleDateString(isRtl ? "ar-EG" : "en-US")}</p>}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Subscription Status */}
           <Card className={`border-2 ${hasSubscription ? "border-green-200" : "border-gray-200"}`}>
@@ -303,6 +396,83 @@ export default function CustomerProfile() {
               )}
             </CardContent>
           </Card>
+
+          {/* Subscription Management — pause / skip days */}
+          {hasSubscription && (
+            <Card className="border-2 border-cyan-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-slate-900">
+                  <Pause className="h-5 w-5 text-cyan-600" />
+                  {isRtl ? "إدارة الاشتراك" : "Manage Subscription"}
+                </CardTitle>
+                <CardDescription>{isRtl ? "أوقِف اشتراكك مؤقتًا أو تخطَّ أيام التوصيل" : "Pause your subscription or skip delivery days"}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="flex items-center justify-between gap-3 p-4 bg-slate-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">{subscription.isActive ? (isRtl ? "الاشتراك نشط" : "Active") : (isRtl ? "الاشتراك متوقف" : "Paused")}</p>
+                    <p className="text-xs text-slate-500">{subscription.isActive ? (isRtl ? "التوصيل يعمل بشكل طبيعي" : "Deliveries running") : (isRtl ? "لا توصيل حتى تستأنف" : "No deliveries until resume")}</p>
+                  </div>
+                  <Button onClick={togglePause} disabled={busy} className={subscription.isActive ? "bg-slate-200 hover:bg-slate-300 text-slate-800" : "bg-cyan-600 hover:bg-cyan-700 text-white"}>
+                    {subscription.isActive ? (<><Pause className="h-4 w-4 mr-2" />{isRtl ? "إيقاف مؤقت" : "Pause"}</>) : (<><Play className="h-4 w-4 mr-2" />{isRtl ? "استئناف" : "Resume"}</>)}
+                  </Button>
+                </div>
+                {subscription.isActive && upcomingDays.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 mb-3">{isRtl ? "تخطّي أيام التوصيل القادمة:" : "Skip upcoming delivery days:"}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {upcomingDays.map((date) => {
+                        const skipped = (subscription.skippedDates || []).includes(date);
+                        const dObj = new Date(date);
+                        return (
+                          <button key={date} onClick={() => toggleSkip(date)} disabled={busy}
+                            className={`flex flex-col items-center gap-0.5 rounded-lg border px-2 py-2.5 text-center transition-colors disabled:opacity-50 ${skipped ? "bg-red-50 border-red-200 text-red-600" : "bg-white border-slate-200 text-slate-700 hover:border-cyan-300"}`}>
+                            <span className="text-xs font-bold">{dObj.toLocaleDateString(isRtl ? "ar-EG" : "en-US", { weekday: "short" })}</span>
+                            <span className="text-[11px] text-slate-400">{dObj.toLocaleDateString(isRtl ? "ar-EG" : "en-US", { day: "numeric", month: "short" })}</span>
+                            {skipped && <span className="flex items-center gap-0.5 text-[10px] font-bold mt-0.5"><Ban className="h-3 w-3" />{isRtl ? "متخطّى" : "skipped"}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {(subscription.skippedDates || []).length > 0 && (
+                      <p className="text-xs text-slate-500 mt-3">{isRtl ? `لديك ${subscription.skippedDates.length} يوم متخطّى` : `${subscription.skippedDates.length} day(s) skipped`}</p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Loyalty & Referral */}
+          {hasSubscription && (
+            <Card className="border-2 border-cyan-100 bg-gradient-to-br from-cyan-50 to-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-slate-900"><Gift className="h-5 w-5 text-cyan-600" />{isRtl ? "الولاء والإحالة" : "Loyalty & Referral"}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-md"><Award className="h-6 w-6 text-white" /></div>
+                    <div>
+                      <p className="text-xs text-slate-500">{isRtl ? "رصيد نقاطك" : "Your points"}</p>
+                      <p className="text-2xl font-black text-slate-900">{subscription.loyaltyPoints || 0} <span className="text-sm font-bold text-slate-400">{isRtl ? "نقطة" : "pts"}</span></p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 max-w-[40%] text-left">{isRtl ? "تكسب 10 نقاط مع كل طلب معتمد" : "Earn 10 points per approved order"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-900 mb-2">{isRtl ? "كود الإحالة الخاص بك:" : "Your referral code:"}</p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 px-4 py-3 bg-slate-900 rounded-lg text-cyan-300 font-black tracking-widest text-center" dir="ltr">{subscription.referralCode || "—"}</code>
+                    <Button variant="outline" className="h-12 border-slate-200" onClick={() => { if (subscription.referralCode) { navigator.clipboard?.writeText(subscription.referralCode); setCopied(true); setTimeout(() => setCopied(false), 1500); } }}>
+                      {copied ? <CheckCircle className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">{isRtl ? "شارك الكود مع أصدقائك — يحصلون على خصم وتحصل أنت على نقاط إضافية." : "Share with friends — they get a discount and you earn bonus points."}</p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Order History */}
           <Card className="border-2 border-[#3CC4F0]/20">

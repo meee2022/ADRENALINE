@@ -57,6 +57,11 @@ export default defineSchema({
 
     isActive: v.boolean(),
 
+    // الخدمة الذاتية + الولاء
+    skippedDates: v.optional(v.array(v.string())), // أيام التوصيل المتخطّاة yyyy-MM-dd
+    loyaltyPoints: v.optional(v.number()),         // نقاط الولاء
+    referredBy: v.optional(v.string()),            // كود من أحاله
+
     durationWeeks: v.optional(v.number()),
     mealsPerDay: v.optional(v.number()),
     snacksPerDay: v.optional(v.number()),
@@ -383,6 +388,7 @@ export default defineSchema({
       v.literal("INVENTORY_MANAGER")
     )),
     targetUserId: v.optional(v.id("users")), // إشعار شخصي لمستخدم محدد
+    targetCustomerId: v.optional(v.id("customers")), // إشعار لعميل محدد (بوابة العميل)
     // المحتوى
     type: v.union(
       v.literal("NEW_ORDER"),         // طلب جديد من الموقع
@@ -404,6 +410,7 @@ export default defineSchema({
   })
     .index("by_targetRole", ["targetRole", "isRead"])
     .index("by_targetUserId", ["targetUserId", "isRead"])
+    .index("by_targetCustomer", ["targetCustomerId", "isRead"])
     .index("by_createdAt", ["createdAt"]),
 
   // ===== Audit Log (تتبع الأحداث الحساسة) =====

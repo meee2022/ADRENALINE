@@ -375,6 +375,23 @@ export const approve = mutation({
       createdAt: Date.now(),
     });
 
+    // 🔔 إشعار للعميل + نقاط ولاء (تظهر في بوابة العميل)
+    const effectiveCustomerId = customerId || order.customerId;
+    if (effectiveCustomerId) {
+      await ctx.db.insert("notifications", {
+        targetCustomerId: effectiveCustomerId,
+        type: "ORDER_APPROVED",
+        title: "تم اعتماد خطتك ✅",
+        message: `اعتمد أخصائي التغذية طلبك ${order.orderNumber || ""} — وجباتك في الطريق إليك`,
+        link: "/customer/profile",
+        relatedId: orderId,
+        isRead: false,
+        createdAt: Date.now(),
+      });
+      const cust: any = await ctx.db.get(effectiveCustomerId);
+      await ctx.db.patch(effectiveCustomerId, { loyaltyPoints: Number(cust?.loyaltyPoints || 0) + 10, updatedAt: Date.now() });
+    }
+
     return { success: true, message: "تم اعتماد الطلب وإضافته للمطبخ" };
   },
 });
@@ -410,12 +427,27 @@ export const reject = mutation({
     reason: v.string(),
   },
   handler: async (ctx, { orderId, reason }) => {
+    const order = await ctx.db.get(orderId);
     await ctx.db.patch(orderId, {
       status: "cancelled",
       rejectionReason: reason,
       rejectedAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // 🔔 إشعار للعميل بسبب الرفض (لو الطلب مربوط بمشترك)
+    if (order?.customerId) {
+      await ctx.db.insert("notifications", {
+        targetCustomerId: order.customerId,
+        type: "SYSTEM",
+        title: "تحديث على طلبك",
+        message: `لم يُعتمد طلبك ${order.orderNumber || ""}. السبب: ${reason}`,
+        link: "/customer/profile",
+        relatedId: orderId,
+        isRead: false,
+        createdAt: Date.now(),
+      });
+    }
 
     return { success: true };
   },

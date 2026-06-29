@@ -218,6 +218,19 @@ export const update = mutation({
           isRead: false,
           createdAt: Date.now(),
         });
+        // 🔔 إشعار للعميل بوصول وجباته
+        if ((plan as any)?.customerId) {
+          await ctx.db.insert("notifications", {
+            targetCustomerId: (plan as any).customerId,
+            type: "MEAL_DELIVERED",
+            title: "تم توصيل وجباتك 🚚",
+            message: `وصلت وجبات ${planDate} — بالهنا والشفا`,
+            link: "/customer/profile",
+            relatedId: id,
+            isRead: false,
+            createdAt: Date.now(),
+          });
+        }
       }
     }
 

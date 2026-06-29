@@ -132,6 +132,32 @@ export const markAllAsRead = mutation({
   },
 });
 
+// إشعارات عميل معيّن (بوابة العميل)
+export const listForCustomer = query({
+  args: { customerId: v.id("customers"), onlyUnread: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    let rows = await ctx.db
+      .query("notifications")
+      .withIndex("by_targetCustomer", (q) => q.eq("targetCustomerId", args.customerId))
+      .collect();
+    rows = rows.sort((a, z) => z.createdAt - a.createdAt).slice(0, 50);
+    return args.onlyUnread ? rows.filter((n) => !n.isRead) : rows;
+  },
+});
+
+export const markAllAsReadForCustomer = mutation({
+  args: { customerId: v.id("customers") },
+  handler: async (ctx, args) => {
+    const open = await ctx.db
+      .query("notifications")
+      .withIndex("by_targetCustomer", (q) => q.eq("targetCustomerId", args.customerId).eq("isRead", false))
+      .collect();
+    const now = Date.now();
+    for (const n of open) await ctx.db.patch(n._id, { isRead: true, readAt: now });
+    return { success: true, count: open.length };
+  },
+});
+
 /**
  * حذف الإشعارات القديمة (أكثر من 30 يوم)
  */
