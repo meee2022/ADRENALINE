@@ -11,9 +11,13 @@ import {
   useSeedInventory,
   type InventoryItem,
 } from "@/lib/api";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import ItemFormModal from "@/components/inventory/ItemFormModal";
 import {
   Search,
@@ -25,6 +29,7 @@ import {
   TrendingDown,
   Barcode,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +69,27 @@ export default function InventoryPage() {
   });
   const seedMutation = useSeedInventory();
   const { data: barcodeResult } = useInventoryByBarcode(search && search.length > 3 ? search : undefined);
+
+  // Consumption & waste (الهالك) report
+  const wasteReport: any = useQuery(api.inventory.getConsumptionReport, { days: 30 });
+  const recordWaste = useMutation(api.inventory.recordWaste);
+  const [wasteItem, setWasteItem] = useState<any>(null);
+  const [wasteQty, setWasteQty] = useState("");
+  const [wasteReason, setWasteReason] = useState("");
+
+  const handleRecordWaste = async () => {
+    if (!wasteItem || !wasteQty || Number(wasteQty) <= 0) {
+      toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "حدد كمية صحيحة" : "Enter a valid quantity", variant: "destructive" });
+      return;
+    }
+    try {
+      await recordWaste({ itemId: wasteItem._id, quantity: Number(wasteQty), reason: wasteReason });
+      toast({ title: isRtl ? "تم تسجيل الهالك" : "Waste recorded", description: `${wasteItem.nameAr} − ${wasteQty} ${wasteItem.unit}` });
+      setWasteItem(null); setWasteQty(""); setWasteReason("");
+    } catch (e: any) {
+      toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" });
+    }
+  };
 
   const handleSeedData = async () => {
     try {
@@ -133,20 +159,27 @@ export default function InventoryPage() {
               <Button
                 onClick={() => setLocation("/inventory-reports")}
                 variant="outline"
-                className="h-11 rounded-xl border-cyan-500 text-cyan-600 hover:bg-cyan-50 shadow-sm"
+                className="h-11 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm"
               >
                 <FileText className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
                 {isRtl ? "التقارير" : "Reports"}
+              </Button>
+              <Button
+                onClick={() => setLocation("/inventory/receive")}
+                className="h-11 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white shadow-md font-bold"
+              >
+                <Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
+                {isRtl ? "استلام بضاعة" : "Receive Goods"}
               </Button>
               <Button
                 onClick={() => {
                   setBarcodeToAdd(undefined);
                   setShowAddModal(true);
                 }}
-                className="h-11 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white shadow-md"
+                variant="outline"
+                className="h-11 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm"
               >
-                <Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                {isRtl ? "إضافة مادة" : "Add Item"}
+                {isRtl ? "صنف جديد" : "Add Item"}
               </Button>
             </div>
           </div>
@@ -163,13 +196,45 @@ export default function InventoryPage() {
               />
             </div>
           </div>
+
+          {/* Quick links — full inventory cycle from one place */}
+          <div className="flex items-center gap-2 overflow-x-auto pt-3 mt-1">
+            <span className="text-xs text-gray-500 whitespace-nowrap">{isRtl ? "دورة المخزون:" : "Cycle:"}</span>
+            <button onClick={() => setLocation("/inventory/receive")} className="flex items-center gap-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📥 {isRtl ? "استلام بضاعة" : "Receive"}</button>
+            <button onClick={() => setLocation("/menu-management")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📦 {isRtl ? "الوصفات (الرسبي)" : "Recipes"}</button>
+            <button onClick={() => setLocation("/kitchen")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🍳 {isRtl ? "المطبخ (خصم تلقائي)" : "Kitchen"}</button>
+            <button onClick={() => setLocation("/inventory/waste")} className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📉 {isRtl ? "تقرير الهالك" : "Waste Report"}</button>
+          </div>
         </div>
       </div>
 
       {/* Content */}
       <div className="max-w-6xl mx-auto px-4 py-4 space-y-4">
         {/* KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Waste (الهالك) KPI — click for full report */}
+          <div
+            onClick={() => setLocation("/inventory/waste")}
+            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer hover:border-red-300 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <TrendingDown className="h-5 w-5 text-red-500" />
+                </div>
+                <p className="text-sm text-gray-600">{isRtl ? "الهالك (٣٠ يوم)" : "Waste (30d)"}</p>
+              </div>
+              <FileText className="h-4 w-4 text-red-400" />
+            </div>
+            <p className="text-3xl font-bold text-red-600">
+              {wasteReport ? (wasteReport.totalWasteValue || 0).toLocaleString() : 0}
+              <span className="text-sm font-medium text-gray-400"> {isRtl ? "ر.ق" : "QAR"}</span>
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {isRtl ? `استهلاك المطبخ: ${wasteReport ? (wasteReport.totalConsumedValue || 0).toLocaleString() : 0}` : `Kitchen: ${wasteReport ? (wasteReport.totalConsumedValue || 0).toLocaleString() : 0}`}
+            </p>
+          </div>
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-lg bg-[#eaf1f7] flex items-center justify-center">
@@ -320,9 +385,18 @@ export default function InventoryPage() {
                           </div>
                         </div>
 
-                        <Badge className={cn("text-xs px-2.5 py-1", status.badge)}>
-                          {status.label}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <Badge className={cn("text-xs px-2.5 py-1", status.badge)}>
+                            {status.label}
+                          </Badge>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setWasteItem(item); setWasteQty(""); setWasteReason(""); }}
+                            className="flex items-center gap-1 text-[11px] font-medium text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-2 py-1 transition-colors"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            {isRtl ? "تسجيل هالك" : "Record waste"}
+                          </button>
+                        </div>
                       </div>
 
                       {/* Stock Info */}
@@ -391,6 +465,50 @@ export default function InventoryPage() {
         }}
         initialBarcode={barcodeToAdd}
       />
+
+      {/* Record Waste (تسجيل هالك) dialog */}
+      <Dialog open={!!wasteItem} onOpenChange={(o) => { if (!o) setWasteItem(null); }}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              {isRtl ? "تسجيل هالك" : "Record Waste"}
+            </DialogTitle>
+          </DialogHeader>
+          {wasteItem && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
+                <p className="font-bold text-gray-900">{wasteItem.nameAr}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {isRtl ? "المخزون الحالي:" : "Current stock:"} {wasteItem.currentStock} {wasteItem.unit}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-bold">{isRtl ? "الكمية الهالكة" : "Wasted quantity"}</Label>
+                <Input type="number" step="0.01" min="0" value={wasteQty} onChange={(e) => setWasteQty(e.target.value)} placeholder={`0 ${wasteItem.unit}`} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-bold">{isRtl ? "السبب" : "Reason"}</Label>
+                <select value={wasteReason} onChange={(e) => setWasteReason(e.target.value)} className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm">
+                  <option value="">{isRtl ? "اختر السبب" : "Select reason"}</option>
+                  <option value="تالف">{isRtl ? "تالف" : "Spoiled"}</option>
+                  <option value="انتهت الصلاحية">{isRtl ? "انتهت الصلاحية" : "Expired"}</option>
+                  <option value="خطأ تحضير">{isRtl ? "خطأ تحضير" : "Prep error"}</option>
+                  <option value="انسكاب">{isRtl ? "انسكاب" : "Spillage"}</option>
+                  <option value="أخرى">{isRtl ? "أخرى" : "Other"}</option>
+                </select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWasteItem(null)}>{isRtl ? "إلغاء" : "Cancel"}</Button>
+            <Button onClick={handleRecordWaste} className="bg-red-500 hover:bg-red-600 text-white gap-2">
+              <Trash2 className="h-4 w-4" />
+              {isRtl ? "تسجيل الهالك وخصمه" : "Record & deduct"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

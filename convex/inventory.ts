@@ -428,6 +428,177 @@ export const adjustStock = mutation({
   },
 });
 
+// ===== Record waste (الهالك) — deduct stock + log a consume movement tagged "هالك" =====
+export const recordWaste = mutation({
+  args: {
+    itemId: v.id("inventoryItems"),
+    quantity: v.number(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    if (args.quantity <= 0) throw new Error("الكمية يجب أن تكون أكبر من صفر");
+    const item = await ctx.db.get(args.itemId);
+    if (!item) throw new Error("الصنف غير موجود");
+    const now = Date.now();
+    const newStock = Math.max(0, item.currentStock - args.quantity);
+    await ctx.db.insert("inventoryMovements", {
+      itemId: args.itemId,
+      type: "consume",
+      quantity: -args.quantity,
+      note: `هالك: ${args.reason || "غير محدد"}`,
+      createdAt: now,
+    });
+    await ctx.db.patch(args.itemId, { currentStock: newStock, updatedAt: now });
+    // FIFO batch deduct
+    let remaining = args.quantity;
+    const batches = await ctx.db
+      .query("inventoryBatches")
+      .withIndex("by_itemId", (q) => q.eq("itemId", args.itemId))
+      .collect();
+    batches.sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+    for (const b of batches) {
+      if (remaining <= 0) break;
+      if (b.quantityRemaining <= 0) continue;
+      const d = Math.min(b.quantityRemaining, remaining);
+      await ctx.db.patch(b._id, { quantityRemaining: b.quantityRemaining - d });
+      remaining -= d;
+    }
+    return { success: true, newStock };
+  },
+});
+
+// ===== Consumption & waste report (kitchen vs waste, with cost from latest batch) =====
+export const getConsumptionReport = query({
+  args: { days: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const days = args.days ?? 30;
+    const since = Date.now() - days * 86400000;
+    const movements = (await ctx.db.query("inventoryMovements").collect()).filter(
+      (m) => m.type === "consume" && m.createdAt >= since,
+    );
+    const items = await ctx.db.query("inventoryItems").collect();
+    const itemMap = new Map(items.map((i) => [i._id, i]));
+    const batches = await ctx.db.query("inventoryBatches").collect();
+    const costMap = new Map<string, number>();
+    for (const b of batches.sort((a, z) => String(a.receivedAt).localeCompare(String(z.receivedAt)))) {
+      costMap.set(b.itemId, b.unitCost ?? 0); // last write = latest
+    }
+    let kitchenQty = 0, wasteQty = 0, totalWasteValue = 0, totalConsumedValue = 0;
+    const perItem: Record<string, any> = {};
+    const byReason: Record<string, { qty: number; value: number }> = {};
+    for (const m of movements) {
+      const qty = Math.abs(m.quantity || 0);
+      const note = typeof m.note === "string" ? m.note : "";
+      const isWaste = note.startsWith("هالك");
+      const inv = itemMap.get(m.itemId);
+      const unitCost = costMap.get(m.itemId) || 0;
+      const value = qty * unitCost;
+      const key = m.itemId as string;
+      if (!perItem[key])
+        perItem[key] = { itemId: key, nameAr: inv?.nameAr || "—", unit: inv?.unit || "", unitCost, consumed: 0, wasted: 0, consumedCost: 0, wastedCost: 0 };
+      if (isWaste) {
+        wasteQty += qty; totalWasteValue += value;
+        perItem[key].wasted += qty; perItem[key].wastedCost += value;
+        const r = note.replace(/^هالك:\s*/, "").trim() || "غير محدد";
+        if (!byReason[r]) byReason[r] = { qty: 0, value: 0 };
+        byReason[r].qty += qty; byReason[r].value += value;
+      } else {
+        kitchenQty += qty; totalConsumedValue += value;
+        perItem[key].consumed += qty; perItem[key].consumedCost += value;
+      }
+    }
+    const wastePct = kitchenQty + wasteQty > 0 ? Math.round((wasteQty / (kitchenQty + wasteQty)) * 100) : 0;
+    return {
+      days,
+      totalConsumed: kitchenQty,
+      totalWasted: wasteQty,
+      totalWasteValue: Math.round(totalWasteValue * 100) / 100,
+      totalConsumedValue: Math.round(totalConsumedValue * 100) / 100,
+      wastePct,
+      byReason: Object.entries(byReason).map(([reason, v2]) => ({ reason, ...v2 })).sort((a, b) => b.value - a.value),
+      perItem: Object.values(perItem).sort((a: any, b: any) => b.wastedCost - a.wastedCost),
+    };
+  },
+});
+
+// ===== Bulk receive (purchase invoice) — add many items to stock at once =====
+export const receiveMany = mutation({
+  args: {
+    supplierId: v.optional(v.id("suppliers")),
+    receivedAt: v.string(),
+    invoiceNo: v.optional(v.string()),
+    lines: v.array(
+      v.object({
+        itemId: v.optional(v.id("inventoryItems")),
+        newItem: v.optional(
+          v.object({
+            nameAr: v.string(),
+            nameEn: v.optional(v.string()),
+            category: v.union(v.literal("vegetables"), v.literal("proteins"), v.literal("dairy"), v.literal("dry_goods"), v.literal("other")),
+            unit: v.union(v.literal("kg"), v.literal("piece"), v.literal("liter"), v.literal("pack"), v.literal("box")),
+            minStock: v.optional(v.number()),
+            targetStock: v.optional(v.number()),
+          }),
+        ),
+        quantity: v.number(),
+        unitCost: v.number(),
+        expiryDate: v.optional(v.string()),
+      }),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const note = args.invoiceNo ? `فاتورة: ${args.invoiceNo}` : "استلام بضاعة";
+    let count = 0, totalQty = 0, totalCost = 0;
+    for (const line of args.lines) {
+      const qty = line.quantity;
+      if (!qty || qty <= 0) continue;
+      let itemId = line.itemId;
+      if (!itemId && line.newItem) {
+        itemId = await ctx.db.insert("inventoryItems", {
+          nameAr: line.newItem.nameAr,
+          nameEn: line.newItem.nameEn,
+          category: line.newItem.category,
+          unit: line.newItem.unit,
+          supplierId: args.supplierId,
+          minStock: line.newItem.minStock ?? 0,
+          targetStock: line.newItem.targetStock ?? qty,
+          currentStock: 0,
+          avgWeeklyUsage: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+      if (!itemId) continue;
+      const item = await ctx.db.get(itemId);
+      if (!item) continue;
+      const batchId = await ctx.db.insert("inventoryBatches", {
+        itemId,
+        quantityReceived: qty,
+        quantityRemaining: qty,
+        unitCost: line.unitCost,
+        supplierId: args.supplierId,
+        expiryDate: line.expiryDate,
+        receivedAt: args.receivedAt,
+        notes: note,
+      });
+      await ctx.db.insert("inventoryMovements", {
+        itemId,
+        type: "receive",
+        quantity: qty,
+        unitCost: line.unitCost,
+        supplierId: args.supplierId,
+        batchId,
+        note,
+        createdAt: now,
+      });
+      await ctx.db.patch(itemId, { currentStock: item.currentStock + qty, updatedAt: now });
+      count++; totalQty += qty; totalCost += qty * line.unitCost;
+    }
+    return { count, totalQty, totalCost: Math.round(totalCost * 100) / 100 };
+  },
+});
+
 // Create supplier
 export const createSupplier = mutation({
   args: {

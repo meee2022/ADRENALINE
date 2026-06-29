@@ -21,6 +21,8 @@ import PlansReview from "@/pages/PlansReview";
 import Inventory from "@/pages/Inventory";
 import InventoryItemDetails from "@/pages/InventoryItemDetails";
 import InventoryReports from "@/pages/InventoryReports";
+import WasteReport from "@/pages/WasteReport";
+import ReceiveGoods from "@/pages/ReceiveGoods";
 import Suppliers from "@/pages/Suppliers";
 import Kitchen from "@/pages/Kitchen";
 import Delivery from "@/pages/Delivery";
@@ -157,6 +159,12 @@ function Router() {
       </Route>
       <Route path="/inventory">
         <ProtectedRoute component={Inventory} />
+      </Route>
+      <Route path="/inventory/waste">
+        <ProtectedRoute component={WasteReport} />
+      </Route>
+      <Route path="/inventory/receive">
+        <ProtectedRoute component={ReceiveGoods} />
       </Route>
       <Route path="/inventory/:id">
         <ProtectedRoute component={InventoryItemDetails} />

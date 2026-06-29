@@ -1,0 +1,169 @@
+/**
+ * @file client/src/pages/ReceiveGoods.tsx
+ * @description استلام بضاعة (فاتورة شراء) — إدخال عدة أصناف للمخزون دفعة واحدة (هوية أدرينالين)
+ */
+import { useState } from "react";
+import { useLocation } from "wouter";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { useLanguage } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowRight, Plus, Trash2, PackagePlus, Truck } from "lucide-react";
+
+const CATEGORIES = [
+  { v: "vegetables", ar: "خضروات" }, { v: "proteins", ar: "بروتينات" },
+  { v: "dairy", ar: "ألبان" }, { v: "dry_goods", ar: "مواد جافة" }, { v: "other", ar: "أخرى" },
+];
+const UNITS = [
+  { v: "kg", ar: "كجم" }, { v: "piece", ar: "قطعة" }, { v: "liter", ar: "لتر" },
+  { v: "pack", ar: "عبوة" }, { v: "box", ar: "صندوق" },
+];
+
+type Line = { mode: "existing" | "new"; itemId: string; nameAr: string; category: string; unit: string; quantity: string; unitCost: string; expiryDate: string; };
+const emptyLine = (): Line => ({ mode: "existing", itemId: "", nameAr: "", category: "proteins", unit: "kg", quantity: "", unitCost: "", expiryDate: "" });
+
+export default function ReceiveGoods() {
+  const { isRtl } = useLanguage();
+  const { toast } = useToast();
+  const [, setLocation] = useLocation();
+
+  const items: any[] = useQuery(api.inventory.listItems, {}) || [];
+  const suppliers: any[] = useQuery(api.inventory.getSuppliers) || [];
+  const receiveMany = useMutation(api.inventory.receiveMany);
+  const createSupplier = useMutation(api.inventory.createSupplier);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [supplierId, setSupplierId] = useState("");
+  const [receivedAt, setReceivedAt] = useState(today);
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [lines, setLines] = useState<Line[]>([emptyLine()]);
+  const [saving, setSaving] = useState(false);
+  const [newSupplier, setNewSupplier] = useState("");
+
+  const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  const addLine = () => setLines((ls) => [...ls, emptyLine()]);
+  const removeLine = (i: number) => setLines((ls) => ls.filter((_, idx) => idx !== i));
+  const lineTotal = (l: Line) => (Number(l.quantity) || 0) * (Number(l.unitCost) || 0);
+  const grandTotal = lines.reduce((s, l) => s + lineTotal(l), 0);
+  const totalQty = lines.reduce((s, l) => s + (Number(l.quantity) || 0), 0);
+
+  const handleAddSupplier = async () => {
+    if (!newSupplier.trim()) return;
+    try {
+      const id = await createSupplier({ name: newSupplier.trim() });
+      setSupplierId(id as string); setNewSupplier("");
+      toast({ title: isRtl ? "تم إضافة المورّد" : "Supplier added" });
+    } catch (e: any) { toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" }); }
+  };
+
+  const handleSubmit = async () => {
+    const valid = lines.filter((l) => Number(l.quantity) > 0 && (l.mode === "existing" ? l.itemId : l.nameAr.trim()));
+    if (valid.length === 0) { toast({ title: isRtl ? "لا توجد أصناف" : "No items", description: isRtl ? "أضف صنفاً وكمية صحيحة" : "Add at least one item", variant: "destructive" }); return; }
+    setSaving(true);
+    try {
+      const res: any = await receiveMany({
+        supplierId: (supplierId || undefined) as any,
+        receivedAt,
+        invoiceNo: invoiceNo || undefined,
+        lines: valid.map((l) => l.mode === "existing"
+          ? { itemId: l.itemId as any, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, expiryDate: l.expiryDate || undefined }
+          : { newItem: { nameAr: l.nameAr.trim(), category: l.category as any, unit: l.unit as any, targetStock: Number(l.quantity) }, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, expiryDate: l.expiryDate || undefined }),
+      });
+      toast({ title: isRtl ? "تم استلام البضاعة ✅" : "Goods received ✅", description: isRtl ? `${res.count} صنف · ${res.totalCost.toLocaleString()} ر.ق أُضيفت للمخزون` : `${res.count} items · ${res.totalCost.toLocaleString()} QAR added` });
+      setLocation("/inventory");
+    } catch (e: any) { toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" }); }
+    finally { setSaving(false); }
+  };
+
+  const selCls = "w-full rounded-md border border-slate-300 bg-white text-slate-900 px-2 py-2 text-sm";
+
+  return (
+    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-28">
+      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><PackagePlus className="h-6 w-6 text-white" /></div>
+            <div>
+              <h1 className="text-xl font-black text-white">{isRtl ? "استلام بضاعة" : "Receive Goods"}</h1>
+              <p className="text-sm text-white/85">{isRtl ? "أدخل أصناف الفاتورة دفعة واحدة" : "Enter a purchase invoice — many items at once"}</p>
+            </div>
+          </div>
+          <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 shadow-sm">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{isRtl ? "المورّد" : "Supplier"}</Label>
+            <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={selCls}>
+              <option value="">{isRtl ? "بدون مورّد" : "No supplier"}</option>
+              {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+            </select>
+            <div className="flex gap-1.5 pt-1">
+              <Input value={newSupplier} onChange={(e) => setNewSupplier(e.target.value)} placeholder={isRtl ? "مورّد جديد..." : "New supplier..."} className="h-8 text-xs" />
+              <Button size="sm" variant="outline" onClick={handleAddSupplier} className="h-8 px-2"><Plus className="h-3.5 w-3.5" /></Button>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{isRtl ? "تاريخ الاستلام" : "Received date"}</Label>
+            <Input type="date" value={receivedAt} onChange={(e) => setReceivedAt(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-slate-500">{isRtl ? "رقم الفاتورة (اختياري)" : "Invoice no. (optional)"}</Label>
+            <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="INV-..." />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-slate-900">{isRtl ? "الأصناف" : "Items"}</h2>
+            <span className="text-xs text-slate-500">{lines.length} {isRtl ? "سطر" : "lines"}</span>
+          </div>
+          {lines.map((l, i) => (
+            <div key={i} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-12 sm:col-span-4 space-y-1">
+                  <Label className="text-[10px] text-slate-400">{isRtl ? "الصنف" : "Item"}</Label>
+                  <select value={l.mode === "new" ? "__new__" : l.itemId}
+                    onChange={(e) => { if (e.target.value === "__new__") setLine(i, { mode: "new", itemId: "" }); else { const it = items.find((x) => x._id === e.target.value); setLine(i, { mode: "existing", itemId: e.target.value, unit: it?.unit || l.unit }); } }}
+                    className={selCls}>
+                    <option value="">{isRtl ? "اختر صنف" : "Select item"}</option>
+                    {items.map((it) => <option key={it._id} value={it._id}>{it.nameAr} ({it.currentStock} {it.unit})</option>)}
+                    <option value="__new__">➕ {isRtl ? "صنف جديد" : "New item"}</option>
+                  </select>
+                </div>
+                {l.mode === "new" && (<>
+                  <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الاسم" : "Name"}</Label><Input value={l.nameAr} onChange={(e) => setLine(i, { nameAr: e.target.value })} className="h-9 text-sm" /></div>
+                  <div className="col-span-3 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "النوع" : "Cat"}</Label><select value={l.category} onChange={(e) => setLine(i, { category: e.target.value })} className={selCls}>{CATEGORIES.map((c) => <option key={c.v} value={c.v}>{c.ar}</option>)}</select></div>
+                </>)}
+                <div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الكمية" : "Qty"}</Label><Input type="number" step="0.01" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-sm" /></div>
+                {l.mode === "new" && (<div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الوحدة" : "Unit"}</Label><select value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} className={selCls}>{UNITS.map((u) => <option key={u.v} value={u.v}>{u.ar}</option>)}</select></div>)}
+                <div className="col-span-4 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "سعر الوحدة" : "Unit cost"}</Label><Input type="number" step="0.01" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} className="h-9 text-sm" /></div>
+                <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الصلاحية" : "Expiry"}</Label><Input type="date" value={l.expiryDate} onChange={(e) => setLine(i, { expiryDate: e.target.value })} className="h-9 text-sm" /></div>
+                <div className="col-span-6 sm:col-span-1 flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-cyan-700 tabular-nums">{lineTotal(l).toLocaleString()}</span>
+                  {lines.length > 1 && <button onClick={() => removeLine(i)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>}
+                </div>
+              </div>
+            </div>
+          ))}
+          <button onClick={addLine} className="w-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 text-slate-500 hover:text-cyan-600 hover:border-cyan-300 py-2.5 text-sm font-medium transition-colors"><Plus className="h-4 w-4" /> {isRtl ? "إضافة سطر" : "Add line"}</button>
+        </div>
+      </div>
+
+      <div className="fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,.08)] z-40">
+        <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-5 text-sm">
+            <div><span className="text-slate-500">{isRtl ? "الكمية:" : "Qty:"}</span> <span className="font-bold text-slate-900">{totalQty.toLocaleString()}</span></div>
+            <div><span className="text-slate-500">{isRtl ? "الإجمالي:" : "Total:"}</span> <span className="font-black text-cyan-600 text-lg">{grandTotal.toLocaleString()} {isRtl ? "ر.ق" : "QAR"}</span></div>
+          </div>
+          <Button onClick={handleSubmit} disabled={saving} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold gap-2 h-11 px-6"><Truck className="h-5 w-5" />{saving ? (isRtl ? "جارٍ الحفظ..." : "Saving...") : (isRtl ? "تأكيد الاستلام" : "Confirm receipt")}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
