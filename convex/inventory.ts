@@ -428,6 +428,46 @@ export const adjustStock = mutation({
   },
 });
 
+// ===== Demo seed for the waste/consumption report (run once to populate) =====
+// Adds a priced batch + kitchen-consume + waste movements to the first few items.
+// Safe to ignore/clean later; only affects movement history (not current stock here).
+export const seedWasteDemo = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const items = (await ctx.db.query("inventoryItems").collect()).slice(0, 6);
+    if (items.length === 0) throw new Error("لا توجد أصناف في المخزون — أضف أصناف أولاً");
+    const costs = [18, 55, 42, 8, 12, 15];
+    const reasons = ["تالف", "انتهت الصلاحية", "انسكاب", "خطأ تحضير"];
+    let n = 0;
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const cost = costs[i % costs.length];
+      // a priced opening batch (so the report has a unit cost)
+      await ctx.db.insert("inventoryBatches", {
+        itemId: it._id,
+        quantityReceived: 60,
+        quantityRemaining: 60,
+        unitCost: cost,
+        receivedAt: new Date(now - 9 * 86400000).toISOString().slice(0, 10),
+        notes: "دفعة تجريبية",
+      });
+      // kitchen consumption
+      await ctx.db.insert("inventoryMovements", {
+        itemId: it._id, type: "consume", quantity: -(3 + i),
+        note: "استهلاك المطبخ", createdAt: now - (i + 1) * 86400000,
+      });
+      // waste
+      await ctx.db.insert("inventoryMovements", {
+        itemId: it._id, type: "consume", quantity: -(0.5 + i * 0.3),
+        note: `هالك: ${reasons[i % reasons.length]}`, createdAt: now - (i + 2) * 86400000,
+      });
+      n++;
+    }
+    return { seededItems: n };
+  },
+});
+
 // ===== Record waste (الهالك) — deduct stock + log a consume movement tagged "هالك" =====
 export const recordWaste = mutation({
   args: {
