@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Plus, Trash2, PackagePlus, Truck } from "lucide-react";
+import { ArrowRight, Plus, Trash2, PackagePlus, Truck, ClipboardPaste } from "lucide-react";
 
 const CATEGORIES = [
   { v: "vegetables", ar: "خضروات" }, { v: "proteins", ar: "بروتينات" },
@@ -42,6 +42,38 @@ export default function ReceiveGoods() {
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [saving, setSaving] = useState(false);
   const [newSupplier, setNewSupplier] = useState("");
+  const [showImport, setShowImport] = useState(false);
+  const [pasteText, setPasteText] = useState("");
+
+  // Parse pasted rows from Excel/CSV: "name <tab|,|;> qty <..> unitCost <..> [expiry]"
+  const parsePaste = () => {
+    const rows = pasteText.split(/\r?\n/).map((r) => r.trim()).filter(Boolean);
+    const parsed: Line[] = [];
+    for (const row of rows) {
+      const cols = row.split(/\t|,|;|\|/).map((c) => c.trim());
+      if (cols.length < 2) continue;
+      const name = cols[0];
+      const qty = (cols[1] || "").replace(/[^\d.]/g, "");
+      const cost = (cols[2] || "").replace(/[^\d.]/g, "");
+      const expiry = (cols[3] || "").match(/\d{4}-\d{2}-\d{2}/)?.[0] || "";
+      if (!name || !qty) continue; // skips header rows (qty non-numeric)
+      const existing = items.find((it) =>
+        (it.nameAr || "").trim().toLowerCase() === name.toLowerCase() ||
+        (it.nameEn || "").trim().toLowerCase() === name.toLowerCase(),
+      );
+      parsed.push(
+        existing
+          ? { ...emptyLine(), mode: "existing", itemId: existing._id, unit: existing.unit, quantity: qty, unitCost: cost, expiryDate: expiry }
+          : { ...emptyLine(), mode: "new", nameAr: name, quantity: qty, unitCost: cost, expiryDate: expiry },
+      );
+    }
+    if (parsed.length) {
+      setLines(parsed); setShowImport(false); setPasteText("");
+      toast({ title: isRtl ? `تم تحويل ${parsed.length} صنف` : `${parsed.length} items parsed` });
+    } else {
+      toast({ title: isRtl ? "صيغة غير صحيحة" : "Invalid format", description: isRtl ? "كل سطر: الاسم، الكمية، السعر" : "Each row: name, qty, unitCost", variant: "destructive" });
+    }
+  };
 
   const setLine = (i: number, patch: Partial<Line>) => setLines((ls) => ls.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   const addLine = () => setLines((ls) => [...ls, emptyLine()]);
@@ -121,8 +153,39 @@ export default function ReceiveGoods() {
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-slate-900">{isRtl ? "الأصناف" : "Items"}</h2>
-            <span className="text-xs text-slate-500">{lines.length} {isRtl ? "سطر" : "lines"}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowImport((s) => !s)}
+                className="flex items-center gap-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg px-3 py-1.5">
+                <ClipboardPaste className="h-3.5 w-3.5" /> {isRtl ? "لصق من Excel" : "Paste from Excel"}
+              </button>
+              <span className="text-xs text-slate-500">{lines.length} {isRtl ? "سطر" : "lines"}</span>
+            </div>
           </div>
+
+          {showImport && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
+              <p className="text-xs text-slate-500">
+                {isRtl
+                  ? "انسخ الأعمدة من Excel والصقها هنا — كل سطر: الاسم، الكمية، سعر الوحدة، (الصلاحية اختياري yyyy-MM-dd)."
+                  : "Copy columns from Excel and paste here — each row: name, qty, unit cost, (optional expiry yyyy-MM-dd)."}
+              </p>
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={5}
+                placeholder={isRtl ? "صدر دجاج\t20\t18\nأرز بني\t50\t8\nسلمون,10,55" : "Chicken\t20\t18\nRice\t50\t8\nSalmon,10,55"}
+                className="w-full rounded-md border border-slate-300 bg-white text-slate-900 px-3 py-2 text-sm font-mono"
+                dir="ltr"
+              />
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="outline" onClick={() => { setShowImport(false); setPasteText(""); }}>{isRtl ? "إلغاء" : "Cancel"}</Button>
+                <Button size="sm" onClick={parsePaste} className="bg-cyan-600 hover:bg-cyan-700 text-white gap-1.5">
+                  <ClipboardPaste className="h-4 w-4" /> {isRtl ? "تحويل لأسطر" : "Convert to lines"}
+                </Button>
+              </div>
+            </div>
+          )}
+
           {lines.map((l, i) => (
             <div key={i} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="grid grid-cols-12 gap-2 items-end">
