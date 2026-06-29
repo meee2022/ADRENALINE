@@ -88,8 +88,14 @@ export default function OrdersPending() {
                         {order.customerName?.[0]?.toUpperCase() || "؟"}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">
+                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                           {order.customerName}
+                          {order.notes?.includes("مولّد الوجبات الذكي") && (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
+                              style={{ background: "linear-gradient(135deg,#3AC7F4,#0E76AC)" }}>
+                              ✨ خطة ذكية — راجِع
+                            </span>
+                          )}
                         </h3>
                         <p className="text-sm text-gray-600">
                           {order.customerPhone}

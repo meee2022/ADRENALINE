@@ -24,6 +24,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { convex } from "@/lib/convex";
+import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
 
@@ -35,6 +36,12 @@ export default function CustomerProfile() {
 
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // سجل طلبات العميل (حسب رقم الهاتف)
+  const orders = useQuery(
+    api.customerOrders.getByPhone,
+    currentCustomer?.phone ? { phone: currentCustomer.phone } : "skip"
+  ) || [];
 
   useEffect(() => {
     if (!currentCustomer) {
@@ -292,6 +299,47 @@ export default function CustomerProfile() {
                   >
                     {t("customer.subscribe_now")}
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Order History */}
+          <Card className="border-2 border-[#3CC4F0]/20">
+            <CardHeader>
+              <CardTitle className="text-[#0F1516] flex items-center justify-between">
+                <span>{isRtl ? "سجل الطلبات" : "Order History"}</span>
+                <Badge variant="secondary" className="bg-[#3CC4F0]/10 text-[#0E76AC]">{orders.length}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {orders.length === 0 ? (
+                <p className="text-sm text-[#47759C] text-center py-4">
+                  {isRtl ? "لا توجد طلبات بعد." : "No orders yet."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {orders.slice(0, 10).map((o: any) => {
+                    const statusMap: Record<string, { ar: string; en: string; cls: string }> = {
+                      pending: { ar: "قيد المراجعة", en: "Pending", cls: "bg-amber-100 text-amber-800" },
+                      confirmed: { ar: "مؤكّد", en: "Confirmed", cls: "bg-blue-100 text-blue-800" },
+                      active: { ar: "قيد التنفيذ", en: "Active", cls: "bg-cyan-100 text-cyan-800" },
+                      completed: { ar: "مكتمل", en: "Completed", cls: "bg-green-100 text-green-800" },
+                      cancelled: { ar: "ملغي", en: "Cancelled", cls: "bg-red-100 text-red-800" },
+                    };
+                    const st = statusMap[o.status] || statusMap.pending;
+                    return (
+                      <div key={o._id} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+                        <div>
+                          <div className="text-sm font-bold text-[#0F1516]">#{o.orderNumber}</div>
+                          <div className="text-xs text-[#47759C]">
+                            {o.totalMeals} {isRtl ? "وجبة" : "meals"} · {o.totalPrice} {isRtl ? "ر.ق" : "QAR"}
+                          </div>
+                        </div>
+                        <Badge className={`${st.cls} border-0`}>{isRtl ? st.ar : st.en}</Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
