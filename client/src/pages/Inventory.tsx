@@ -77,6 +77,22 @@ export default function InventoryPage() {
   const [wasteQty, setWasteQty] = useState("");
   const [wasteReason, setWasteReason] = useState("");
 
+  // Reorder / purchase list
+  const reorder: any = useQuery(api.inventory.getReorderList, {});
+  const [showReorder, setShowReorder] = useState(false);
+
+  const sendReorderWhatsApp = (group: any) => {
+    const lines = group.items
+      .map((it: any) => `• ${it.nameAr}: ${it.suggestedQty} ${it.unit}`)
+      .join("\n");
+    const msg = `طلب توريد — أدرينالين\n\nالمورّد: ${group.supplierName || "—"}\n\n${lines}\n\nبرجاء التأكيد والتوريد. شكراً.`;
+    const phone = (group.supplierPhone || "").replace(/\D/g, "");
+    const url = phone
+      ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+      : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
+
   const handleRecordWaste = async () => {
     if (!wasteItem || !wasteQty || Number(wasteQty) <= 0) {
       toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "حدد كمية صحيحة" : "Enter a valid quantity", variant: "destructive" });
@@ -204,6 +220,7 @@ export default function InventoryPage() {
             <button onClick={() => setLocation("/menu-management")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📦 {isRtl ? "الوصفات (الرسبي)" : "Recipes"}</button>
             <button onClick={() => setLocation("/kitchen")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🍳 {isRtl ? "المطبخ (خصم تلقائي)" : "Kitchen"}</button>
             <button onClick={() => setLocation("/inventory/waste")} className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📉 {isRtl ? "تقرير الهالك" : "Waste Report"}</button>
+            <button onClick={() => setShowReorder((v) => !v)} className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🛒 {isRtl ? "أوامر الشراء" : "Purchase Orders"}{reorder?.count ? ` (${reorder.count})` : ""}</button>
           </div>
         </div>
       </div>
@@ -315,6 +332,54 @@ export default function InventoryPage() {
             ))}
           </div>
         </div>
+
+        {/* Reorder / Purchase Orders panel */}
+        {showReorder && (
+          <div className="bg-white rounded-xl shadow-sm border border-amber-200 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-amber-50 border-b border-amber-200">
+              <h3 className="font-bold text-amber-800 flex items-center gap-2">
+                🛒 {isRtl ? "أوامر الشراء المقترحة" : "Suggested Purchase Orders"}
+                <span className="text-xs bg-amber-200 text-amber-900 rounded-full px-2 py-0.5">{reorder?.count || 0}</span>
+              </h3>
+              <button onClick={() => setShowReorder(false)} className="text-amber-700 hover:text-amber-900 text-sm font-bold">✕</button>
+            </div>
+            {(!reorder || reorder.count === 0) ? (
+              <div className="p-6 text-center text-gray-500 text-sm">
+                ✅ {isRtl ? "كل الأصناف فوق الحد الأدنى — لا حاجة لإعادة طلب." : "All items above minimum — nothing to reorder."}
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {reorder.groups.map((g: any) => (
+                  <div key={g.supplierId} className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-bold text-gray-800 text-sm">
+                        {g.supplierName ? `🏷️ ${g.supplierName}` : (isRtl ? "🏷️ بدون مورّد محدد" : "🏷️ No supplier")}
+                        {g.supplierPhone ? <span className="text-xs text-gray-400 font-normal"> · {g.supplierPhone}</span> : null}
+                      </div>
+                      <button
+                        onClick={() => sendReorderWhatsApp(g)}
+                        className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#25D366] hover:opacity-90 rounded-lg px-3 py-1.5"
+                      >
+                        💬 {isRtl ? "إرسال الطلب" : "Send order"}
+                      </button>
+                    </div>
+                    <div className="space-y-1">
+                      {g.items.map((it: any) => (
+                        <div key={it.id} className="flex items-center justify-between text-sm bg-gray-50 rounded-lg px-3 py-2">
+                          <span className="font-medium text-gray-700">{isRtl ? it.nameAr : it.nameEn || it.nameAr}</span>
+                          <span className="flex items-center gap-3">
+                            <span className="text-red-600 text-xs">{isRtl ? "المتاح" : "have"}: {it.currentStock} {it.unit}</span>
+                            <span className="font-bold text-amber-700">{isRtl ? "اطلب" : "order"}: {it.suggestedQty} {it.unit}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Items List Header */}
         <div className="flex items-center justify-between">

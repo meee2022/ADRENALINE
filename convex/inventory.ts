@@ -3,6 +3,28 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
+// ينشئ إشعار "مخزون منخفض" لمدير المخزون عند هبوط الصنف للحد الأدنى — بدون تكرار
+async function maybeLowStockAlert(ctx: any, itemId: Id<"inventoryItems">, newStock: number) {
+  const item = await ctx.db.get(itemId);
+  if (!item || newStock > item.minStock) return;
+  // تجنّب التكرار: لو فيه إشعار غير مقروء بالفعل لنفس الصنف
+  const unread = await ctx.db
+    .query("notifications")
+    .withIndex("by_targetRole", (q: any) => q.eq("targetRole", "INVENTORY_MANAGER").eq("isRead", false))
+    .collect();
+  if (unread.some((n: any) => n.type === "LOW_STOCK" && n.relatedId === String(itemId))) return;
+  await ctx.db.insert("notifications", {
+    targetRole: "INVENTORY_MANAGER",
+    type: "LOW_STOCK",
+    title: "مخزون منخفض",
+    message: `${item.nameAr} وصل إلى ${newStock} ${item.unit} (الحد الأدنى ${item.minStock})`,
+    relatedId: String(itemId),
+    link: `/inventory/${itemId}`,
+    isRead: false,
+    createdAt: Date.now(),
+  });
+}
+
 // ===== QUERIES =====
 
 // Get all inventory items with search and filter
@@ -358,10 +380,12 @@ export const consumeStock = mutation({
     });
 
     // Update current stock
+    const newStock = item.currentStock - args.quantity;
     await ctx.db.patch(args.itemId, {
-      currentStock: item.currentStock - args.quantity,
+      currentStock: newStock,
       updatedAt: now,
     });
+    await maybeLowStockAlert(ctx, args.itemId, newStock);
 
     // Deduct from batches (FIFO - First In First Out)
     let remaining = args.quantity;
@@ -489,6 +513,7 @@ export const recordWaste = mutation({
       createdAt: now,
     });
     await ctx.db.patch(args.itemId, { currentStock: newStock, updatedAt: now });
+    await maybeLowStockAlert(ctx, args.itemId, newStock);
     // FIFO batch deduct
     let remaining = args.quantity;
     const batches = await ctx.db
@@ -702,6 +727,7 @@ export const prepareAndConsume = mutation({
           note: `تحضير خطة ${plan.date}`, createdAt: now,
         });
         await ctx.db.patch(item._id, { currentStock: item.currentStock - deduct, updatedAt: now });
+        await maybeLowStockAlert(ctx, item._id, item.currentStock - deduct);
         // خصم FIFO من الدفعات
         let remaining = deduct;
         const batches = await ctx.db
@@ -724,5 +750,55 @@ export const prepareAndConsume = mutation({
     await ctx.db.patch(planId, { status: "PREPARED", inventoryConsumedAt: now, updatedAt: now });
 
     return { alreadyConsumed: false, consumed };
+  },
+});
+
+// ===== قائمة إعادة الطلب (Reorder) — أصناف وصلت/تحت الحد الأدنى مع الكمية المقترحة =====
+export const getReorderList = query({
+  args: {},
+  handler: async (ctx) => {
+    const items = await ctx.db.query("inventoryItems").collect();
+    const suppliers = await ctx.db.query("suppliers").collect();
+    const supplierMap = new Map(suppliers.map((s) => [String(s._id), s]));
+
+    const low = items
+      .filter((it) => it.currentStock <= it.minStock)
+      .map((it) => {
+        // الكمية المقترحة = الوصول للمخزون المستهدف (أو ضعف الحد الأدنى كحد احتياطي)
+        const target = it.targetStock && it.targetStock > 0 ? it.targetStock : it.minStock * 2;
+        const suggestedQty = Math.max(0, Math.round((target - it.currentStock) * 100) / 100);
+        const sup = it.supplierId ? supplierMap.get(String(it.supplierId)) : undefined;
+        return {
+          id: it._id,
+          nameAr: it.nameAr,
+          nameEn: it.nameEn || "",
+          unit: it.unit,
+          category: it.category,
+          currentStock: it.currentStock,
+          minStock: it.minStock,
+          targetStock: target,
+          suggestedQty,
+          supplierId: it.supplierId ? String(it.supplierId) : null,
+          supplierName: sup?.name || null,
+          supplierPhone: sup?.phone || null,
+        };
+      })
+      .sort((a, b) => a.currentStock / (a.minStock || 1) - b.currentStock / (b.minStock || 1));
+
+    // تجميع حسب المورّد
+    const bySupplier: Record<string, { supplierName: string | null; supplierPhone: string | null; items: any[] }> = {};
+    for (const it of low) {
+      const key = it.supplierId || "_none";
+      if (!bySupplier[key]) {
+        bySupplier[key] = { supplierName: it.supplierName, supplierPhone: it.supplierPhone, items: [] };
+      }
+      bySupplier[key].items.push(it);
+    }
+
+    return {
+      count: low.length,
+      items: low,
+      groups: Object.entries(bySupplier).map(([supplierId, g]) => ({ supplierId, ...g })),
+    };
   },
 });

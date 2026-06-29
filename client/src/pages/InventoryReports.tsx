@@ -66,8 +66,18 @@ export default function InventoryReportsPage() {
     );
     
     const lowStockPercentage = totalItems > 0 ? (lowStockCount / totalItems) * 100 : 0;
-    const expiryPercentage = 2.4; // Mock data
-    
+
+    // نسبة الدفعات القاربة على الانتهاء (خلال 7 أيام) من إجمالي الدفعات النشطة — حقيقية
+    const today = new Date();
+    const in7 = new Date(today.getTime() + 7 * 86400000).toISOString().split("T")[0];
+    const todayStr = today.toISOString().split("T")[0];
+    const activeBatches = batches.filter((b) => (b.quantityRemaining || 0) > 0);
+    const expiringBatches = activeBatches.filter(
+      (b) => b.expiryDate && b.expiryDate >= todayStr && b.expiryDate <= in7
+    );
+    const expiryPercentage =
+      activeBatches.length > 0 ? (expiringBatches.length / activeBatches.length) * 100 : 0;
+
     return {
       totalItems,
       totalConsumption,
@@ -77,16 +87,25 @@ export default function InventoryReportsPage() {
     };
   }, [items, movements, batches]);
 
-  // Monthly consumption chart data
+  // Monthly consumption chart data — حقيقية من حركات الاستهلاك آخر 4 أسابيع
   const monthlyConsumptionData = useMemo(() => {
-    const weeks = [
-      { name: isRtl ? "الأسبوع 1" : "Week 1", value: 420 },
-      { name: isRtl ? "الأسبوع 2" : "Week 2", value: 580 },
-      { name: isRtl ? "الأسبوع 3" : "Week 3", value: 890 },
-      { name: isRtl ? "الأسبوع 4" : "Week 4", value: 650 },
-    ];
-    return weeks;
-  }, [isRtl]);
+    const now = Date.now();
+    const week = 7 * 86400000;
+    // bucket[0] = أقدم أسبوع ... bucket[3] = الأسبوع الحالي
+    const buckets = [0, 0, 0, 0];
+    movements
+      .filter((m) => m.type === "consume")
+      .forEach((m) => {
+        const ageWeeks = Math.floor((now - (m.createdAt || now)) / week);
+        if (ageWeeks >= 0 && ageWeeks < 4) {
+          buckets[3 - ageWeeks] += Math.abs(m.quantity || 0);
+        }
+      });
+    return buckets.map((value, i) => ({
+      name: isRtl ? `الأسبوع ${i + 1}` : `Week ${i + 1}`,
+      value: Math.round(value),
+    }));
+  }, [movements, isRtl]);
 
   // Category distribution data
   const categoryDistributionData = useMemo(() => {
