@@ -6,3 +6,8 @@ vite.config.ts.*
 *.tar.gz
 .env.local
 .claude/
+
+# Secrets
+.env
+.env.*
+!.env.example

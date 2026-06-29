@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { convertUnit } from "./units";
 
 // ينشئ إشعار "مخزون منخفض" لمدير المخزون عند هبوط الصنف للحد الأدنى — بدون تكرار
 async function maybeLowStockAlert(ctx: any, itemId: Id<"inventoryItems">, newStock: number) {
@@ -846,7 +847,11 @@ export const prepareAndConsume = mutation({
         .collect();
       for (const ing of recipe) {
         const key = String(ing.inventoryItemId);
-        need.set(key, (need.get(key) || 0) + (ing.quantityPerServing || 0));
+        const invItem: any = await ctx.db.get(ing.inventoryItemId);
+        if (!invItem) continue;
+        // حوّل كمية الرسيبي لوحدة المخزون (جرام→كيلو..) قبل التجميع
+        const qty = convertUnit(Number(ing.quantityPerServing) || 0, (ing as any).unit, invItem.unit);
+        need.set(key, (need.get(key) || 0) + qty);
       }
     }
 

@@ -17,8 +17,10 @@ function simpleHash(password: string): string {
   return hash.toString(36);
 }
 
-const ADMIN_EMAIL = "eng.mohamed87@live.com";
-const ADMIN_PASSWORD = "Realmadridclub@2604";
+// ⚠️ يُقرأ من بيئة Convex — لا تضع كلمة مرور حقيقية في الكود.
+// عيّنها بـ: npx convex env set SEED_ADMIN_EMAIL ... و SEED_ADMIN_PASSWORD ...
+const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL || "admin@example.com";
+const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "ChangeMe!2024";
 
 /**
  * Seed admin user

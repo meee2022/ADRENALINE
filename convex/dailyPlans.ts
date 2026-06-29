@@ -161,51 +161,58 @@ export const update = mutation({
           createdAt: Date.now(),
         });
 
-        // ✅ خصم المخزون التلقائي
-        try {
-          const items = Array.isArray(plan?.items) ? plan.items : [];
-          for (const it of items) {
-            if (it?.isOff || !it?.menuItemId) continue;
-            const ingredients = await ctx.db
-              .query("mealIngredients")
-              .withIndex("by_menuItem", (q) => q.eq("menuItemId", it.menuItemId))
-              .collect();
+        // ✅ خصم المخزون التلقائي — idempotent: لا نخصم لو سبق خصم مكوّنات هذه الخطة
+        // (يمنع الخصم المزدوج مع inventory.prepareAndConsume أو عند تكرار التحديث)
+        if (!plan?.inventoryConsumedAt) {
+          try {
+            const items = Array.isArray(plan?.items) ? plan.items : [];
+            for (const it of items) {
+              if (it?.isOff) continue;
+              const menuItemId = it?.menuItemId || it?.mealId;
+              if (!menuItemId) continue;
+              const ingredients = await ctx.db
+                .query("mealIngredients")
+                .withIndex("by_menuItem", (q) => q.eq("menuItemId", menuItemId))
+                .collect();
 
-            for (const ing of ingredients) {
-              const invItem: any = await ctx.db.get(ing.inventoryItemId);
-              if (!invItem) continue;
-              // حوّل كمية الرسيبي إلى وحدة المخزون (جرام→كيلو مثلاً) قبل الخصم
-              const deduct = convertUnit(Number(ing.quantityPerServing), (ing as any).unit, invItem.unit);
-              const newStock = Math.max(0, (invItem.currentStock || 0) - deduct);
-              await ctx.db.patch(ing.inventoryItemId, {
-                currentStock: newStock,
-                updatedAt: Date.now(),
-              });
-              await ctx.db.insert("inventoryMovements", {
-                itemId: ing.inventoryItemId,
-                type: "consume",
-                quantity: deduct,
-                note: `استهلاك آلي: ${customerName} - ${planDate}`,
-                createdAt: Date.now(),
-              });
-
-              // تحذير مخزون منخفض
-              if (newStock <= (invItem.minStock || 0) && newStock > 0) {
-                await ctx.db.insert("notifications", {
-                  targetRole: "INVENTORY_MANAGER",
-                  type: "LOW_STOCK",
-                  title: "تحذير: مخزون منخفض",
-                  message: `${invItem.nameAr} - متبقي ${newStock} ${invItem.unit}`,
-                  link: `/inventory`,
-                  relatedId: ing.inventoryItemId,
-                  isRead: false,
+              for (const ing of ingredients) {
+                const invItem: any = await ctx.db.get(ing.inventoryItemId);
+                if (!invItem) continue;
+                // حوّل كمية الرسيبي إلى وحدة المخزون (جرام→كيلو مثلاً) قبل الخصم
+                const deduct = convertUnit(Number(ing.quantityPerServing), (ing as any).unit, invItem.unit);
+                const newStock = Math.max(0, (invItem.currentStock || 0) - deduct);
+                await ctx.db.patch(ing.inventoryItemId, {
+                  currentStock: newStock,
+                  updatedAt: Date.now(),
+                });
+                await ctx.db.insert("inventoryMovements", {
+                  itemId: ing.inventoryItemId,
+                  type: "consume",
+                  quantity: -deduct, // ✅ سالب (استهلاك) — كان موجباً ويُفسد التقارير
+                  note: `استهلاك آلي: ${customerName} - ${planDate}`,
                   createdAt: Date.now(),
                 });
+
+                // تحذير مخزون منخفض (يشمل الوصول لصفر — أخطر حالة)
+                if (newStock <= (invItem.minStock || 0)) {
+                  await ctx.db.insert("notifications", {
+                    targetRole: "INVENTORY_MANAGER",
+                    type: "LOW_STOCK",
+                    title: "تحذير: مخزون منخفض",
+                    message: `${invItem.nameAr} - متبقي ${newStock} ${invItem.unit}`,
+                    link: `/inventory`,
+                    relatedId: ing.inventoryItemId,
+                    isRead: false,
+                    createdAt: Date.now(),
+                  });
+                }
               }
             }
+            // ختم الخصم حتى لا يتكرر من أي مسار آخر
+            await ctx.db.patch(id, { inventoryConsumedAt: Date.now() });
+          } catch (e) {
+            console.error("Inventory deduction error:", e);
           }
-        } catch (e) {
-          console.error("Inventory deduction error:", e);
         }
       } else if (finalStatus === "DELIVERED") {
         await ctx.db.insert("notifications", {

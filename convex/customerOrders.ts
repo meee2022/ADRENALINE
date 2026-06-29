@@ -238,6 +238,11 @@ export const approve = mutation({
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
+    // ✅ idempotency: لا نعتمد الطلب أكثر من مرة (يمنع تكرار الخطط/النقاط/الإشعارات)
+    if (order.status !== "pending") {
+      return { success: true, alreadyApproved: true };
+    }
+
     // 1. تحديث حالة الطلب + ربط المشترك
     await ctx.db.patch(orderId, {
       status: "confirmed",
@@ -376,7 +381,7 @@ export const approve = mutation({
     });
 
     // 🔔 إشعار للعميل + نقاط ولاء (تظهر في بوابة العميل)
-    const effectiveCustomerId = customerId || order.customerId;
+    // ملاحظة: effectiveCustomerId مُعرّف بالفعل أعلاه (عند إنشاء الخطط)
     if (effectiveCustomerId) {
       await ctx.db.insert("notifications", {
         targetCustomerId: effectiveCustomerId,

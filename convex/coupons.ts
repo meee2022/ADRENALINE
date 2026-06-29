@@ -100,8 +100,12 @@ export const incrementUsage = mutation({
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
       .first();
-    if (coupon) {
-      await ctx.db.patch(coupon._id, { usedCount: coupon.usedCount + 1 });
+    if (!coupon) throw new Error("Coupon not found");
+    if (!coupon.isActive) throw new Error("Coupon inactive");
+    // ✅ فرض الحد الأقصى للاستخدام داخل الـmutation (Convex يسلسل المعاملات → لا تجاوز)
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+      throw new Error("Coupon usage limit reached");
     }
+    await ctx.db.patch(coupon._id, { usedCount: coupon.usedCount + 1 });
   },
 });
