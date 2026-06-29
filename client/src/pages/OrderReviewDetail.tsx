@@ -53,6 +53,32 @@ export default function OrderReviewDetail() {
 
   const approveMutation = useMutation(api.customerOrders.approve);
   const rejectMutation = useMutation(api.customerOrders.reject);
+  const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
+
+  // تبديل وجبة اقترحها الـAI قبل الاعتماد
+  const allMeals: any[] = useQuery(api.publicMeals.listMeals, {}) || [];
+  const [swapTarget, setSwapTarget] = useState<any>(null);
+  const [swapping, setSwapping] = useState(false);
+  const doSwap = async (m: any) => {
+    if (!swapTarget) return;
+    setSwapping(true);
+    try {
+      await swapMealMutation({
+        itemId: swapTarget._id,
+        newMealId: m._id,
+        newMealNameAr: m.nameAr,
+        newMealNameEn: m.nameEn,
+        newCalories: m.calories ?? 0,
+        newProtein: m.protein ?? 0,
+        newCarbs: m.carbs ?? 0,
+        newFats: m.fats ?? 0,
+        newCategory: m.category ?? swapTarget.category,
+        newImageUrl: m.imageUrl,
+        newPriceQAR: m.priceQAR ?? m.price ?? swapTarget.priceQAR ?? 0,
+      });
+      setSwapTarget(null);
+    } catch (e) { console.error("swap failed", e); } finally { setSwapping(false); }
+  };
 
   if (!orderData) {
     return (
@@ -388,8 +414,9 @@ export default function OrderReviewDetail() {
                                   {categoryNameAr[meal.category] || meal.category}
                                 </span>
                                 <button
+                                  onClick={() => setSwapTarget(meal)}
                                   className="text-gray-400 hover:text-primary transition-colors"
-                                  title="تعديل الوجبة"
+                                  title="تبديل الوجبة"
                                 >
                                   ✏️
                                 </button>
@@ -670,6 +697,35 @@ export default function OrderReviewDetail() {
                 إلغاء
               </Button>
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Meal Swap Dialog */}
+      {swapTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSwapTarget(null)}>
+          <Card className="p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-white" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">🔁 تبديل: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
+              <button onClick={() => setSwapTarget(null)} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">×</button>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">اختر وجبة بديلة — ستُحدَّث السعرات والسعر تلقائياً.</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {allMeals
+                .slice()
+                .sort((a: any, b: any) => (a.category === swapTarget.category ? -1 : 0) - (b.category === swapTarget.category ? -1 : 0))
+                .map((m: any) => (
+                  <button key={m._id} onClick={() => doSwap(m)} disabled={swapping}
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors text-right disabled:opacity-50">
+                    {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} className="w-14 h-14 rounded-lg object-cover shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-gray-900 text-sm truncate">{m.nameAr}</p>
+                      <p className="text-xs text-gray-500">{categoryNameAr[m.category] || m.category} · {m.calories || 0} سعرة{m.priceQAR ? ` · ${m.priceQAR} ر.ق` : ""}</p>
+                    </div>
+                  </button>
+                ))}
+            </div>
+            {allMeals.length === 0 && <p className="text-center text-gray-400 py-8">لا توجد وجبات متاحة للتبديل</p>}
           </Card>
         </div>
       )}

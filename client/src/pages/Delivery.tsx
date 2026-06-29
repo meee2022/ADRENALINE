@@ -46,6 +46,12 @@ export default function Delivery() {
 
   const getCustomer = (id: string) => customers.find((c: any) => c._id === id);
 
+  // تحسين المسار: تجميع/ترتيب المحطات حسب المنطقة + فتح كل عنوان في الخرائط
+  const getArea = (addr?: string) =>
+    !addr ? (isRtl ? "غير محدّد" : "Unknown") : String(addr).split(/[,،\-|]/)[0].trim() || (isRtl ? "غير محدّد" : "Unknown");
+  const mapsUrl = (addr?: string) =>
+    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr || "Doha Qatar")}`;
+
   const handleDeliver = async (planId: string) => {
     try {
       // ابحث عن plan + customer قبل التحديث للحصول على بيانات الاتصال
@@ -172,13 +178,25 @@ export default function Delivery() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {plans.map((plan: any) => {
+            {[...plans]
+              .sort((a: any, b: any) => getArea(getCustomer(a.customerId)?.address).localeCompare(getArea(getCustomer(b.customerId)?.address), "ar"))
+              .map((plan: any, idx: number, arr: any[]) => {
               const customer = getCustomer(plan.customerId);
               if (!customer) return null;
+              const area = getArea(customer.address);
+              const prevArea = idx > 0 ? getArea(getCustomer(arr[idx - 1].customerId)?.address) : null;
+              const newZone = area !== prevArea;
 
               return (
+                <div key={plan._id}>
+                  {newZone && (
+                    <div className="flex items-center gap-2 mt-4 mb-2 px-1">
+                      <MapPin className="h-4 w-4 text-cyan-600" />
+                      <span className="text-sm font-bold text-gray-900">{area}</span>
+                      <span className="h-px flex-1 bg-gray-200" />
+                    </div>
+                  )}
                 <Card
-                  key={plan._id}
                   className="bg-white border-2 border-cyan-400 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
                 >
                   <CardContent className="p-0">
@@ -186,8 +204,9 @@ export default function Delivery() {
                     <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 border-b-2 border-cyan-100">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-md">
+                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-md relative">
                             {customer.fullName?.charAt(0).toUpperCase()}
+                            <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white text-cyan-700 text-[10px] font-black flex items-center justify-center border border-cyan-400 shadow">{idx + 1}</span>
                           </div>
                           <div>
                             <h3 className="font-bold text-gray-900 text-lg">
@@ -222,7 +241,9 @@ export default function Delivery() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          title={isRtl ? "افتح في الخرائط" : "Open in Maps"}
                           className="h-10 w-10 rounded-lg bg-[#e8f8fd] hover:bg-[#3cc4f0]/20"
+                          onClick={() => window.open(mapsUrl(customer.address), "_blank")}
                         >
                           <Map className="h-5 w-5 text-[#47759c]" />
                         </Button>
@@ -261,6 +282,7 @@ export default function Delivery() {
                     </div>
                   </CardContent>
                 </Card>
+                </div>
               );
             })}
           </div>

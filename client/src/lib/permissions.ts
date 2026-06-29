@@ -23,7 +23,7 @@ export const ALL_ROLES: Role[] = [
 /** الصفحة الافتراضية اللي يتوجّه لها كل دور بعد تسجيل الدخول */
 export const ROLE_HOME: Record<Role, string> = {
   ADMIN: "/dashboard",
-  NUTRITIONIST: "/customers",
+  NUTRITIONIST: "/orders/pending",
   KITCHEN: "/kitchen",
   DELIVERY: "/delivery",
   INVENTORY_MANAGER: "/inventory",
