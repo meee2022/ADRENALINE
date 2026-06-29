@@ -31,6 +31,7 @@ import type * as modifiers from "../modifiers.js";
 import type * as notifications from "../notifications.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
+import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as ratings from "../ratings.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
+  purchaseOrders: typeof purchaseOrders;
   ratings: typeof ratings;
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;

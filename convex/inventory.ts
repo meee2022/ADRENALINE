@@ -132,6 +132,85 @@ export const getSummary = query({
   },
 });
 
+// Alerts: low-stock (reorder) + expiring-soon + expired batches
+export const getAlerts = query({
+  args: { days: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const days = args.days ?? 7;
+    const today = new Date().toISOString().split("T")[0];
+    const horizon = new Date();
+    horizon.setDate(horizon.getDate() + days);
+    const horizonStr = horizon.toISOString().split("T")[0];
+
+    const items = await ctx.db.query("inventoryItems").collect();
+    const batches = await ctx.db.query("inventoryBatches").collect();
+    const itemMap = new Map(items.map((i) => [i._id, i]));
+
+    const lowStock = items
+      .filter((it) => Number(it.currentStock) <= Number(it.minStock))
+      .map((it) => {
+        const target = Number(it.targetStock) || Number(it.minStock) || 0;
+        return {
+          itemId: it._id,
+          nameAr: it.nameAr,
+          unit: it.unit,
+          currentStock: Number(it.currentStock || 0),
+          minStock: Number(it.minStock || 0),
+          reorderQty: Math.max(0, target - Number(it.currentStock || 0)),
+          isOut: Number(it.currentStock || 0) <= 0,
+          deficit: Number(it.minStock || 0) - Number(it.currentStock || 0),
+        };
+      })
+      .sort((a, b) => b.deficit - a.deficit);
+
+    const active = batches.filter(
+      (b) => b.expiryDate && Number(b.quantityRemaining) > 0
+    );
+    const mapBatch = (b: any) => {
+      const inv = itemMap.get(b.itemId);
+      const qty = Number(b.quantityRemaining || 0);
+      const unitCost = Number(b.unitCost || 0);
+      const daysLeft = Math.round(
+        (new Date(b.expiryDate).getTime() - new Date(today).getTime()) / 86400000
+      );
+      return {
+        batchId: b._id,
+        itemId: b.itemId,
+        nameAr: inv?.nameAr || "—",
+        unit: inv?.unit || "",
+        quantity: qty,
+        value: Math.round(qty * unitCost * 100) / 100,
+        expiryDate: b.expiryDate,
+        daysLeft,
+      };
+    };
+    const expiring = active
+      .filter((b) => b.expiryDate! > today && b.expiryDate! <= horizonStr)
+      .map(mapBatch)
+      .sort((a, z) => a.daysLeft - z.daysLeft);
+    const expired = active
+      .filter((b) => b.expiryDate! <= today)
+      .map(mapBatch)
+      .sort((a, z) => a.daysLeft - z.daysLeft);
+    const atRiskValue = [...expiring, ...expired].reduce((s, b) => s + b.value, 0);
+
+    return {
+      days,
+      lowStock,
+      expiring,
+      expired,
+      counts: {
+        lowStock: lowStock.length,
+        outOfStock: lowStock.filter((l) => l.isOut).length,
+        expiring: expiring.length,
+        expired: expired.length,
+        total: lowStock.length + expiring.length + expired.length,
+      },
+      atRiskValue: Math.round(atRiskValue * 100) / 100,
+    };
+  },
+});
+
 // Get batches for an item
 export const getBatchesByItem = query({
   args: { itemId: v.id("inventoryItems") },

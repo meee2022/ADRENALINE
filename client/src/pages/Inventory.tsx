@@ -220,7 +220,9 @@ export default function InventoryPage() {
             <button onClick={() => setLocation("/menu-management")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📦 {isRtl ? "الوصفات (الرسبي)" : "Recipes"}</button>
             <button onClick={() => setLocation("/kitchen")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🍳 {isRtl ? "المطبخ (خصم تلقائي)" : "Kitchen"}</button>
             <button onClick={() => setLocation("/inventory/waste")} className="flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📉 {isRtl ? "تقرير الهالك" : "Waste Report"}</button>
-            <button onClick={() => setShowReorder((v) => !v)} className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🛒 {isRtl ? "أوامر الشراء" : "Purchase Orders"}{reorder?.count ? ` (${reorder.count})` : ""}</button>
+            <button onClick={() => setLocation("/inventory/alerts")} className="flex items-center gap-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🔔 {isRtl ? "التنبيهات" : "Alerts"}</button>
+            <button onClick={() => setLocation("/inventory/purchase-orders")} className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🛒 {isRtl ? "أوامر الشراء" : "Purchase Orders"}{reorder?.count ? ` (${reorder.count})` : ""}</button>
+            <button onClick={() => setLocation("/inventory/stock-take")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">✅ {isRtl ? "الجرد الفعلي" : "Stock Take"}</button>
           </div>
         </div>
       </div>

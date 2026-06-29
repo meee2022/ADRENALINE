@@ -23,6 +23,9 @@ import InventoryItemDetails from "@/pages/InventoryItemDetails";
 import InventoryReports from "@/pages/InventoryReports";
 import WasteReport from "@/pages/WasteReport";
 import ReceiveGoods from "@/pages/ReceiveGoods";
+import InventoryAlerts from "@/pages/InventoryAlerts";
+import PurchaseOrders from "@/pages/PurchaseOrders";
+import StockTake from "@/pages/StockTake";
 import Suppliers from "@/pages/Suppliers";
 import Kitchen from "@/pages/Kitchen";
 import Delivery from "@/pages/Delivery";
@@ -165,6 +168,15 @@ function Router() {
       </Route>
       <Route path="/inventory/receive">
         <ProtectedRoute component={ReceiveGoods} />
+      </Route>
+      <Route path="/inventory/alerts">
+        <ProtectedRoute component={InventoryAlerts} />
+      </Route>
+      <Route path="/inventory/purchase-orders">
+        <ProtectedRoute component={PurchaseOrders} />
+      </Route>
+      <Route path="/inventory/stock-take">
+        <ProtectedRoute component={StockTake} />
       </Route>
       <Route path="/inventory/:id">
         <ProtectedRoute component={InventoryItemDetails} />

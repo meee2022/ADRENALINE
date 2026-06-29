@@ -194,6 +194,35 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_createdAt", ["createdAt"]),
 
+  // أوامر الشراء (إعادة طلب من المورّد)
+  purchaseOrders: defineTable({
+    supplierId: v.optional(v.id("suppliers")),
+    supplierName: v.optional(v.string()),
+    status: v.union(
+      v.literal("DRAFT"),
+      v.literal("SENT"),
+      v.literal("RECEIVED"),
+      v.literal("CANCELLED")
+    ),
+    items: v.array(
+      v.object({
+        itemId: v.id("inventoryItems"),
+        nameAr: v.string(),
+        unit: v.string(),
+        quantity: v.number(),
+        estUnitCost: v.number(),
+        estLineCost: v.number(),
+      })
+    ),
+    totalEst: v.number(),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    sentAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+  })
+    .index("by_supplier", ["supplierId"])
+    .index("by_status", ["status"]),
+
   // ===== Public Website Tables =====
   banners: defineTable({
     titleAr: v.string(),
