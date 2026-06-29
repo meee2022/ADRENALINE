@@ -13,16 +13,34 @@ async function maybeLowStockAlert(ctx: any, itemId: Id<"inventoryItems">, newSto
     .withIndex("by_targetRole", (q: any) => q.eq("targetRole", "INVENTORY_MANAGER").eq("isRead", false))
     .collect();
   if (unread.some((n: any) => n.type === "LOW_STOCK" && n.relatedId === String(itemId))) return;
+  const isOut = newStock <= 0;
   await ctx.db.insert("notifications", {
     targetRole: "INVENTORY_MANAGER",
     type: "LOW_STOCK",
-    title: "مخزون منخفض",
-    message: `${item.nameAr} وصل إلى ${newStock} ${item.unit} (الحد الأدنى ${item.minStock})`,
+    title: isOut ? "نفد المخزون" : "مخزون منخفض",
+    message: isOut
+      ? `${item.nameAr} نفد تماماً — يجب إعادة الطلب`
+      : `${item.nameAr} وصل إلى ${newStock} ${item.unit} (الحد الأدنى ${item.minStock})`,
     relatedId: String(itemId),
-    link: `/inventory/${itemId}`,
+    link: `/inventory/alerts`,
     isRead: false,
     createdAt: Date.now(),
   });
+}
+
+// عند ترصيع الصنف فوق الحد الأدنى، أغلق إشعارات النقص المفتوحة له تلقائياً
+async function resolveLowStock(ctx: any, itemId: Id<"inventoryItems">, newStock: number) {
+  const item = await ctx.db.get(itemId);
+  if (!item || newStock <= item.minStock) return;
+  const unread = await ctx.db
+    .query("notifications")
+    .withIndex("by_targetRole", (q: any) => q.eq("targetRole", "INVENTORY_MANAGER").eq("isRead", false))
+    .collect();
+  for (const n of unread) {
+    if (n.type === "LOW_STOCK" && n.relatedId === String(itemId)) {
+      await ctx.db.patch(n._id, { isRead: true, readAt: Date.now() });
+    }
+  }
 }
 
 // ===== QUERIES =====
@@ -593,6 +611,7 @@ export const recordWaste = mutation({
     });
     await ctx.db.patch(args.itemId, { currentStock: newStock, updatedAt: now });
     await maybeLowStockAlert(ctx, args.itemId, newStock);
+    await resolveLowStock(ctx, args.itemId, newStock);
     // FIFO batch deduct
     let remaining = args.quantity;
     const batches = await ctx.db
@@ -737,6 +756,7 @@ export const receiveMany = mutation({
         createdAt: now,
       });
       await ctx.db.patch(itemId, { currentStock: item.currentStock + qty, updatedAt: now });
+      await resolveLowStock(ctx, itemId, item.currentStock + qty);
       count++; totalQty += qty; totalCost += qty * line.unitCost;
     }
     return { count, totalQty, totalCost: Math.round(totalCost * 100) / 100 };
@@ -756,6 +776,44 @@ export const createSupplier = mutation({
       createdAt: Date.now(),
     });
     return supplierId;
+  },
+});
+
+export const updateSupplier = mutation({
+  args: {
+    id: v.id("suppliers"),
+    name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...rest } = args;
+    await ctx.db.patch(id, rest);
+    return id;
+  },
+});
+
+// إحصائيات مشتريات لكل مورّد (عدد فواتير، قيمة، أصناف، آخر شراء)
+export const getSupplierStats = query({
+  args: {},
+  handler: async (ctx) => {
+    const batches = await ctx.db.query("inventoryBatches").collect();
+    const stats: Record<string, { purchases: number; totalValue: number; items: Set<string>; lastPurchase: string }> = {};
+    for (const b of batches) {
+      const sid = b.supplierId;
+      if (!sid) continue;
+      if (!stats[sid]) stats[sid] = { purchases: 0, totalValue: 0, items: new Set(), lastPurchase: "" };
+      stats[sid].purchases += 1;
+      stats[sid].totalValue += Number(b.quantityReceived || 0) * Number(b.unitCost || 0);
+      stats[sid].items.add(b.itemId);
+      if (String(b.receivedAt || "") > stats[sid].lastPurchase) stats[sid].lastPurchase = b.receivedAt || "";
+    }
+    return Object.entries(stats).map(([supplierId, s]) => ({
+      supplierId,
+      purchases: s.purchases,
+      totalValue: Math.round(s.totalValue * 100) / 100,
+      itemCount: s.items.size,
+      lastPurchase: s.lastPurchase || null,
+    }));
   },
 });
 

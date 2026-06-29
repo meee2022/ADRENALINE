@@ -4,6 +4,7 @@
  * @frontend client/src/pages/Plans.tsx, client/src/pages/Kitchen.tsx, client/src/pages/Delivery.tsx, client/src/pages/Dashboard.tsx
  */
 import { mutation, query } from "./_generated/server";
+import { convertUnit } from "./units";
 import { v } from "convex/values";
 
 type PlanStatus =
@@ -173,7 +174,9 @@ export const update = mutation({
             for (const ing of ingredients) {
               const invItem: any = await ctx.db.get(ing.inventoryItemId);
               if (!invItem) continue;
-              const newStock = Math.max(0, (invItem.currentStock || 0) - ing.quantityPerServing);
+              // حوّل كمية الرسيبي إلى وحدة المخزون (جرام→كيلو مثلاً) قبل الخصم
+              const deduct = convertUnit(Number(ing.quantityPerServing), (ing as any).unit, invItem.unit);
+              const newStock = Math.max(0, (invItem.currentStock || 0) - deduct);
               await ctx.db.patch(ing.inventoryItemId, {
                 currentStock: newStock,
                 updatedAt: Date.now(),
@@ -181,7 +184,7 @@ export const update = mutation({
               await ctx.db.insert("inventoryMovements", {
                 itemId: ing.inventoryItemId,
                 type: "consume",
-                quantity: ing.quantityPerServing,
+                quantity: deduct,
                 note: `استهلاك آلي: ${customerName} - ${planDate}`,
                 createdAt: Date.now(),
               });
