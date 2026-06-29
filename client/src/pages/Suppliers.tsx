@@ -1,221 +1,166 @@
 /**
  * @file client/src/pages/Suppliers.tsx
- * @description صفحة إدارة الموردين
+ * @description إدارة الموردين — قائمة + إحصائيات مشتريات كل مورّد + إضافة/تعديل (هوية أدرينالين)
  */
-import { useState } from "react";
-import { useSuppliers, useCreateSupplier, type Supplier } from "@/lib/api";
+import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Users, Plus, Phone, Package } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, Plus, Phone, Package, Truck, ArrowRight, Coins, CalendarClock, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 
+const fmt = (n: number) => (Math.round((n || 0) * 100) / 100).toLocaleString();
+
 export default function SuppliersPage() {
-  const { t, isRtl } = useLanguage();
+  const { isRtl } = useLanguage();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
-  const { data: suppliers = [], isLoading } = useSuppliers();
-  const createMutation = useCreateSupplier();
+  const suppliers: any[] = useQuery(api.inventory.getSuppliers, {}) || [];
+  const stats: any[] = useQuery(api.inventory.getSupplierStats, {}) || [];
+  const createSupplier = useMutation(api.inventory.createSupplier);
+  const updateSupplier = useMutation(api.inventory.updateSupplier);
 
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-  });
+  const statsMap = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const s of stats) m.set(s.supplierId, s);
+    return m;
+  }, [stats]);
+  const totalPurchaseValue = useMemo(() => stats.reduce((sum, s) => sum + Number(s.totalValue || 0), 0), [stats]);
+
+  const [showModal, setShowModal] = useState(false);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [form, setForm] = useState({ name: "", phone: "" });
+  const [saving, setSaving] = useState(false);
+
+  const openAdd = () => { setEditing(null); setForm({ name: "", phone: "" }); setShowModal(true); };
+  const openEdit = (s: any) => { setEditing(s); setForm({ name: s.name || "", phone: s.phone || "" }); setShowModal(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.name.trim()) {
-      toast({
-        title: isRtl ? "خطأ" : "Error",
-        description: isRtl ? "الاسم مطلوب" : "Name is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!form.name.trim()) { toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "الاسم مطلوب" : "Name is required", variant: "destructive" }); return; }
+    setSaving(true);
     try {
-      await createMutation.mutateAsync({
-        name: formData.name.trim(),
-        phone: formData.phone.trim() || undefined,
-      });
-
-      toast({
-        title: isRtl ? "تمت الإضافة" : "Added",
-        description: isRtl ? "تم إضافة المورد بنجاح" : "Supplier added successfully",
-      });
-
-      setShowAddModal(false);
-      setFormData({ name: "", phone: "" });
+      if (editing) { await updateSupplier({ id: editing._id, name: form.name.trim(), phone: form.phone.trim() || undefined }); toast({ title: isRtl ? "تم التعديل" : "Updated" }); }
+      else { await createSupplier({ name: form.name.trim(), phone: form.phone.trim() || undefined }); toast({ title: isRtl ? "تمت الإضافة" : "Added" }); }
+      setShowModal(false); setForm({ name: "", phone: "" }); setEditing(null);
     } catch (error: any) {
-      toast({
-        title: isRtl ? "خطأ" : "Error",
-        description: error?.message || (isRtl ? "فشلت العملية" : "Operation failed"),
-        variant: "destructive",
-      });
-    }
+      toast({ title: isRtl ? "خطأ" : "Error", description: error?.message || (isRtl ? "فشلت العملية" : "Operation failed"), variant: "destructive" });
+    } finally { setSaving(false); }
   };
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
-      {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-4 shadow-sm">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-md">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {isRtl ? "إدارة الموردين" : "Suppliers Management"}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {isRtl ? "إدارة قائمة الموردين" : "Manage suppliers list"}
-                </p>
-              </div>
-            </div>
-
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="h-11 rounded-xl bg-purple-500 hover:bg-purple-600 text-white shadow-md"
-            >
-              <Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-              {isRtl ? "إضافة مورد" : "Add Supplier"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-4 space-y-4">
-        {/* Stats Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex items-center justify-between">
+      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><Users className="h-6 w-6 text-white" /></div>
             <div>
-              <p className="text-sm text-gray-600">{isRtl ? "إجمالي الموردين" : "Total Suppliers"}</p>
-              <p className="text-3xl font-bold text-gray-900">{suppliers.length}</p>
-            </div>
-            <div className="h-16 w-16 rounded-full bg-purple-100 flex items-center justify-center">
-              <Users className="h-8 w-8 text-purple-600" />
+              <h1 className="text-xl font-black text-white">{isRtl ? "إدارة الموردين" : "Suppliers"}</h1>
+              <p className="text-sm text-white/85">{isRtl ? "الموردون ومشترياتهم" : "Suppliers & their purchases"}</p>
             </div>
           </div>
-        </div>
-
-        {/* Suppliers List */}
-        <div className="space-y-3">
-          {isLoading ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <p className="text-gray-500">{isRtl ? "جاري التحميل..." : "Loading..."}</p>
-            </div>
-          ) : suppliers.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <Users className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500">{isRtl ? "لا يوجد موردين" : "No suppliers"}</p>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                variant="outline"
-                className="mt-4"
-              >
-                {isRtl ? "إضافة أول مورد" : "Add First Supplier"}
-              </Button>
-            </div>
-          ) : (
-            suppliers.map((supplier) => (
-              <div
-                key={supplier._id}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
-                    {supplier.name.charAt(0).toUpperCase()}
-                  </div>
-
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">
-                      {supplier.name}
-                    </h3>
-                    {supplier.phone && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Phone className="h-4 w-4" />
-                        <span>{supplier.phone}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <Badge variant="secondary" className="text-sm">
-                    <Package className={cn("h-4 w-4", isRtl ? "ml-1" : "mr-1")} />
-                    {isRtl ? "مورد نشط" : "Active"}
-                  </Badge>
-                </div>
-              </div>
-            ))
-          )}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setLocation("/inventory/receive")} className="hidden sm:flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><Truck className="h-4 w-4" /> {isRtl ? "استلام بضاعة" : "Receive"}</button>
+            <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
+          </div>
         </div>
       </div>
 
-      {/* Add Supplier Modal */}
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className={cn("sm:max-w-[400px]", isRtl && "rtl")}>
-          <DialogHeader>
-            <DialogTitle>{isRtl ? "إضافة مورد جديد" : "Add New Supplier"}</DialogTitle>
-          </DialogHeader>
+      <div className="max-w-5xl mx-auto px-4 py-5 space-y-5">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-lg bg-cyan-50 flex items-center justify-center"><Users className="h-5 w-5 text-cyan-600" /></div>
+              <p className="text-sm text-slate-500">{isRtl ? "إجمالي الموردين" : "Total Suppliers"}</p>
+            </div>
+            <p className="text-2xl font-black text-slate-900">{suppliers.length}</p>
+          </div>
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 rounded-lg bg-cyan-50 flex items-center justify-center"><Coins className="h-5 w-5 text-cyan-600" /></div>
+              <p className="text-sm text-slate-500">{isRtl ? "إجمالي المشتريات" : "Total Purchases"}</p>
+            </div>
+            <p className="text-2xl font-black text-slate-900">{fmt(totalPurchaseValue)} <span className="text-base font-bold text-slate-400">{isRtl ? "ر.ق" : "QAR"}</span></p>
+          </div>
+        </div>
 
+        <div className="flex justify-end">
+          <Button onClick={openAdd} className="h-11 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white shadow-md"><Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />{isRtl ? "إضافة مورّد" : "Add Supplier"}</Button>
+        </div>
+
+        {suppliers.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+            <Users className="h-12 w-12 mx-auto text-slate-300 mb-3" />
+            <p className="text-slate-500">{isRtl ? "لا يوجد موردون" : "No suppliers"}</p>
+            <Button onClick={openAdd} variant="outline" className="mt-4">{isRtl ? "إضافة أول مورّد" : "Add First Supplier"}</Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {suppliers.map((s) => {
+              const st = statsMap.get(s._id);
+              return (
+                <div key={s._id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0">{(s.name || "?").charAt(0).toUpperCase()}</div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-900 text-lg mb-1 truncate">{s.name}</h3>
+                      {s.phone ? (
+                        <a href={`tel:${s.phone}`} className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-cyan-600" dir="ltr"><Phone className="h-4 w-4" /><span>{s.phone}</span></a>
+                      ) : (<span className="text-sm text-slate-400">{isRtl ? "بدون رقم" : "No phone"}</span>)}
+                    </div>
+                    <button onClick={() => openEdit(s)} title={isRtl ? "تعديل" : "Edit"} className="h-9 w-9 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 hover:text-slate-900 shrink-0"><Pencil className="h-4 w-4" /></button>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100">
+                    <Stat icon={Truck} label={isRtl ? "فواتير" : "Receipts"} value={st ? String(st.purchases) : "0"} />
+                    <Stat icon={Coins} label={isRtl ? "قيمة الشراء" : "Purchased"} value={st ? `${fmt(st.totalValue)}` : "0"} suffix={isRtl ? "ر.ق" : "QAR"} />
+                    <Stat icon={Package} label={isRtl ? "أصناف" : "Items"} value={st ? String(st.itemCount) : "0"} />
+                  </div>
+                  {st?.lastPurchase && (
+                    <div className="flex items-center gap-1.5 mt-3 text-xs text-slate-400"><CalendarClock className="h-3.5 w-3.5" />{isRtl ? "آخر شراء:" : "Last purchase:"} <span className="text-slate-600" dir="ltr">{st.lastPurchase}</span></div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent className={cn("sm:max-w-[420px]", isRtl && "rtl")}>
+          <DialogHeader><DialogTitle>{editing ? (isRtl ? "تعديل المورّد" : "Edit Supplier") : (isRtl ? "إضافة مورّد جديد" : "Add New Supplier")}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label>
-                {isRtl ? "اسم المورد" : "Supplier Name"}{" "}
-                <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                required
-                placeholder={isRtl ? "مثال: مزارع اليوم" : "e.g. Fresh Farms"}
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className={isRtl ? "text-right" : ""}
-              />
+              <Label>{isRtl ? "اسم المورّد" : "Supplier Name"} <span className="text-red-500">*</span></Label>
+              <Input required placeholder={isRtl ? "مثال: مزارع اليوم" : "e.g. Fresh Farms"} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={isRtl ? "text-right" : ""} />
             </div>
-
             <div className="space-y-2">
-              <Label>{isRtl ? "رقم الهاتف (اختياري)" : "Phone (Optional)"}</Label>
-              <Input
-                type="tel"
-                placeholder={isRtl ? "+974 XXXX XXXX" : "+974 XXXX XXXX"}
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className={isRtl ? "text-right" : ""}
-              />
+              <Label>{isRtl ? "رقم الهاتف (اختياري)" : "Phone (optional)"}</Label>
+              <Input type="tel" placeholder="+974 XXXX XXXX" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" />
             </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowAddModal(false)}
-                className="flex-1"
-              >
-                {isRtl ? "إلغاء" : "Cancel"}
-              </Button>
-              <Button
-                type="submit"
-                className="flex-1 bg-purple-500 hover:bg-purple-600"
-              >
-                {isRtl ? "إضافة" : "Add"}
-              </Button>
+            <div className="flex gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)} className="flex-1">{isRtl ? "إلغاء" : "Cancel"}</Button>
+              <Button type="submit" disabled={saving} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">{saving ? (isRtl ? "جارٍ الحفظ..." : "Saving...") : editing ? (isRtl ? "حفظ" : "Save") : (isRtl ? "إضافة" : "Add")}</Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function Stat({ icon: Icon, label, value, suffix }: { icon: any; label: string; value: string; suffix?: string }) {
+  return (
+    <div className="bg-slate-50 rounded-lg border border-slate-100 px-3 py-2.5 text-center">
+      <Icon className="h-4 w-4 text-cyan-600 mx-auto mb-1" />
+      <p className="text-sm font-black text-slate-900 tabular-nums leading-tight">{value}{suffix && <span className="text-[10px] font-bold text-slate-400"> {suffix}</span>}</p>
+      <p className="text-[10px] text-slate-500 mt-0.5">{label}</p>
     </div>
   );
 }
