@@ -4,22 +4,13 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { hashPassword, verifyPassword } from "./passwords";
 
 /**
  * Simple hash function for passwords (FOR DEMO ONLY)
  * In production, use bcrypt or similar proper hashing
  */
-function simpleHash(password: string): string {
-  // This is NOT secure - for demo purposes only
-  // In production, use proper password hashing library
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
+// التشفير الآمن في convex/passwords.ts (PBKDF2 + توافق رجعي)
 
 /**
  * Authenticate user with email and password
@@ -43,9 +34,8 @@ export const authenticate = query({
       return { success: false, error: "الحساب غير نشط" };
     }
 
-    const passwordHash = simpleHash(args.password);
-    if (user.passwordHash !== passwordHash) {
-      return { success: false, error: "كلمة المرور غير صحيحة" };
+    if (!(await verifyPassword(args.password, user.passwordHash))) {
+      return { success: false, error: "بيانات الدخول غير صحيحة" };
     }
 
     return {
@@ -123,7 +113,7 @@ export const createUser = mutation({
       throw new Error("البريد الإلكتروني مستخدم بالفعل");
     }
 
-    const passwordHash = simpleHash(args.password);
+    const passwordHash = await hashPassword(args.password);
 
     const userId = await ctx.db.insert("users", {
       email: args.email,
@@ -163,7 +153,7 @@ export const changePassword = mutation({
     newPassword: v.string(),
   },
   handler: async (ctx, args) => {
-    const passwordHash = simpleHash(args.newPassword);
+    const passwordHash = await hashPassword(args.newPassword);
     await ctx.db.patch(args.userId, {
       passwordHash,
       updatedAt: Date.now(),

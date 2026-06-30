@@ -75,14 +75,27 @@ export const getSmartPlanData = query({
 
     // 2.5) حساب أسبوع الدورة (1..4) من تاريخ بداية اشتراك العميل
     //   weekIndex = عدد الأسابيع منذ البداية، ثم نلفّها على دورة 4 أسابيع.
+    // أسبوع الدورة يتقدّم كل 6 أيام عمل (السبت→الأربعاء، باستثناء الخميس والجمعة)
+    // ليطابق جدول التوصيل الفعلي بدلاً من 7 أيام تقويمية.
     let rotationWeek = 1;
     let started = true;
     if (customer?.startDate && args.todayDate) {
       const start = new Date(customer.startDate + "T00:00:00");
       const today = new Date(args.todayDate + "T00:00:00");
-      const diffDays = Math.floor((today.getTime() - start.getTime()) / 86400000);
-      if (diffDays < 0) { started = false; rotationWeek = 1; }
-      else rotationWeek = (Math.floor(diffDays / 7) % 4) + 1;
+      if (today.getTime() < start.getTime()) {
+        started = false; rotationWeek = 1;
+      } else {
+        // عُدّ أيام العمل من البداية حتى اليوم (شامل)، مع حدّ أقصى احترازي
+        let workingDays = 0;
+        const cur = new Date(start);
+        for (let i = 0; i < 400 && cur.getTime() <= today.getTime(); i++) {
+          const dow = cur.getDay(); // 4=الخميس، 5=الجمعة (عطلة)
+          if (dow !== 4 && dow !== 5) workingDays++;
+          cur.setDate(cur.getDate() + 1);
+        }
+        const idx = Math.max(0, workingDays - 1); // 0-based لليوم الحالي ضمن أيام التوصيل
+        rotationWeek = (Math.floor(idx / 6) % 4) + 1;
+      }
     }
 
     // 3) الوجبات المجدولة فعلاً لـ(أسبوع الدورة + يوم اليوم) — فلترة صارمة

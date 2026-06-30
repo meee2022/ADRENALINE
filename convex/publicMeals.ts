@@ -205,6 +205,10 @@ export const remove = mutation({
 
 export const deleteAll = mutation({
   handler: async (ctx) => {
+    // 🔒 حماية: عملية مدمّرة (مسح كل وجبات الموقع) — معطّلة افتراضياً.
+    if (process.env.ALLOW_DESTRUCTIVE !== "true") {
+      throw new Error("عملية المسح الجماعي معطّلة لأسباب أمنية");
+    }
     const meals = await ctx.db.query("publicMeals").collect();
     for (const meal of meals) {
       await ctx.db.delete(meal._id);

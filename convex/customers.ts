@@ -262,6 +262,11 @@ export const deleteAll = mutation({
     deleteDailyPlans: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    // 🔒 حماية: عملية مدمّرة (مسح كل العملاء) — معطّلة افتراضياً.
+    // لتشغيلها مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true (ثم أعدها false).
+    if (process.env.ALLOW_DESTRUCTIVE !== "true") {
+      throw new Error("عملية المسح الجماعي معطّلة لأسباب أمنية");
+    }
     const deleteDailyPlans = args.deleteDailyPlans ?? true;
 
     let deletedPlans = 0;

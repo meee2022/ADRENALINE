@@ -4,19 +4,7 @@
  */
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-
-/**
- * Simple hash function (same as in users.ts and customerAuth.ts)
- */
-function simpleHash(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
+import { verifyPassword } from "./passwords";
 
 /**
  * Unified authentication - checks both users and customerAccounts tables
@@ -27,7 +15,8 @@ export const authenticateUnified = query({
     password: v.string(),
   },
   handler: async (ctx, args) => {
-    const passwordHash = simpleHash(args.password);
+    // رسالة موحّدة لمنع كشف وجود البريد (user enumeration)
+    const INVALID = { success: false as const, error: "بيانات الدخول غير صحيحة" };
 
     // First, try to find in users table (Admin, Staff)
     const user = await ctx.db
@@ -40,8 +29,8 @@ export const authenticateUnified = query({
         return { success: false, error: "الحساب غير نشط" };
       }
 
-      if (user.passwordHash !== passwordHash) {
-        return { success: false, error: "كلمة المرور غير صحيحة" };
+      if (!(await verifyPassword(args.password, user.passwordHash))) {
+        return INVALID;
       }
 
       return {
@@ -67,8 +56,8 @@ export const authenticateUnified = query({
         return { success: false, error: "الحساب غير نشط" };
       }
 
-      if (customer.passwordHash !== passwordHash) {
-        return { success: false, error: "كلمة المرور غير صحيحة" };
+      if (!(await verifyPassword(args.password, customer.passwordHash))) {
+        return INVALID;
       }
 
       return {
@@ -84,7 +73,7 @@ export const authenticateUnified = query({
       };
     }
 
-    // Not found in either table
-    return { success: false, error: "البريد الإلكتروني غير موجود" };
+    // Not found in either table — رسالة موحّدة
+    return INVALID;
   },
 });

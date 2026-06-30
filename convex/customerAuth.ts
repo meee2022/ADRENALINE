@@ -4,19 +4,12 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { hashPassword, verifyPassword } from "./passwords";
 
 /**
  * Simple hash function (same as users.ts)
  */
-function simpleHash(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
+// التشفير الآمن في convex/passwords.ts (PBKDF2 + توافق رجعي)
 
 /**
  * Register new customer account
@@ -49,7 +42,7 @@ export const register = mutation({
       return { success: false, error: "رقم الهاتف مستخدم بالفعل" };
     }
 
-    const passwordHash = simpleHash(args.password);
+    const passwordHash = await hashPassword(args.password);
 
     const accountId = await ctx.db.insert("customerAccounts", {
       email: args.email,
@@ -87,16 +80,15 @@ export const authenticate = query({
       .first();
 
     if (!account) {
-      return { success: false, error: "البريد الإلكتروني غير موجود" };
+      return { success: false, error: "بيانات الدخول غير صحيحة" };
     }
 
     if (!account.isActive) {
       return { success: false, error: "الحساب غير نشط" };
     }
 
-    const passwordHash = simpleHash(args.password);
-    if (account.passwordHash !== passwordHash) {
-      return { success: false, error: "كلمة المرور غير صحيحة" };
+    if (!(await verifyPassword(args.password, account.passwordHash))) {
+      return { success: false, error: "بيانات الدخول غير صحيحة" };
     }
 
     return {
@@ -229,12 +221,11 @@ export const changePassword = mutation({
       throw new Error("الحساب غير موجود");
     }
 
-    const oldPasswordHash = simpleHash(args.oldPassword);
-    if (account.passwordHash !== oldPasswordHash) {
+    if (!(await verifyPassword(args.oldPassword, account.passwordHash))) {
       throw new Error("كلمة المرور القديمة غير صحيحة");
     }
 
-    const newPasswordHash = simpleHash(args.newPassword);
+    const newPasswordHash = await hashPassword(args.newPassword);
     await ctx.db.patch(args.accountId, {
       passwordHash: newPasswordHash,
       updatedAt: Date.now(),

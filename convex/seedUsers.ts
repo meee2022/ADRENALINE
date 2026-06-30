@@ -3,19 +3,7 @@
  * @description Seed initial admin user
  */
 import { mutation } from "./_generated/server";
-
-/**
- * Simple hash function (same as in users.ts)
- */
-function simpleHash(password: string): string {
-  let hash = 0;
-  for (let i = 0; i < password.length; i++) {
-    const char = password.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return hash.toString(36);
-}
+import { hashPassword } from "./passwords";
 
 // ⚠️ يُقرأ من بيئة Convex — لا تضع كلمة مرور حقيقية في الكود.
 // عيّنها بـ: npx convex env set SEED_ADMIN_EMAIL ... و SEED_ADMIN_PASSWORD ...
@@ -39,7 +27,7 @@ export const seedAdminUser = mutation({
     }
 
     // Create admin user with the provided credentials
-    const passwordHash = simpleHash(ADMIN_PASSWORD);
+    const passwordHash = await hashPassword(ADMIN_PASSWORD);
 
     const userId = await ctx.db.insert("users", {
       email: ADMIN_EMAIL,
