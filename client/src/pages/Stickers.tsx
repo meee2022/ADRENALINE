@@ -358,9 +358,14 @@ export default function Stickers() {
             font-weight: 800 !important;
           }
           /* كل الحدود الرفيعة تبقى أسود صلب */
-          .label, .label .brand-rule, .label .date-divider, .label .date-row {
+          .label, .label .date-divider, .label .date-row {
             border-color: #000 !important;
             background: #fff !important;
+          }
+          /* الخط الفاصل تحت اللوجو خلفيته سوداء — لا تبيّضه وإلا يختفي */
+          .label .brand-rule {
+            background: #000 !important;
+            opacity: 1 !important;
           }
         }
 
@@ -417,9 +422,10 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.6mm 0;
-          gap: 0.7mm;
+          padding: 0.4mm 0;
+          gap: 0.5mm;
           min-height: 0;
+          overflow: hidden;
           text-align: center;
           width: 100%;
         }
@@ -429,25 +435,25 @@ export default function Stickers() {
 
         /* Customer name — main focus, italic bold, centered */
         .cust-line {
-          font-size: 12.5px;
+          font-size: 11.5px;
           font-weight: 900;
           font-style: italic;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.35;
+          line-height: 1.25;
           width: 100%;
           margin: 0 auto;
           overflow: visible;
-          padding: 0.3mm 1mm;
+          padding: 0.15mm 1mm;
         }
 
         /* Meal name — under customer, biggest info after the name */
         .meal-line {
-          font-size: 10.5px;
+          font-size: 9.5px;
           font-weight: 800;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.3;
+          line-height: 1.25;
           overflow: visible;
           margin: 0 auto;
           width: 100%;
@@ -519,10 +525,11 @@ export default function Stickers() {
           letter-spacing: 0.3px;
         }
 
-        /* Footer */
+        /* Footer — لا يُسمح للمحتوى بالطغيان عليه */
         .date-row {
           display: flex;
           align-items: stretch;
+          flex-shrink: 0;
           border-top: 0.5px solid #000;
           padding-top: 0.7mm;
           gap: 0;
