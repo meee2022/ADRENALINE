@@ -300,7 +300,7 @@ export default function Stickers() {
           align-items: center;
           justify-content: center;
           gap: 2mm;
-          margin-top: 0.3mm;
+          margin-top: 0;
           line-height: 1;
         }
         .goal-badge {
@@ -373,8 +373,8 @@ export default function Stickers() {
           line-height: 1;
         }
         .brand-heart {
-          width: 5mm;
-          height: 5mm;
+          width: 6mm;
+          height: 6mm;
           object-fit: contain;
           flex-shrink: 0;
           /* keep heart visible in print */
@@ -395,10 +395,10 @@ export default function Stickers() {
           -webkit-text-fill-color: #3CC4F0 !important;
         }
         .brand-tag {
-          font-size: 4.5px;
-          font-weight: 700;
+          font-size: 5.5px;
+          font-weight: 900;
           letter-spacing: 2.5px;
-          margin-top: 0.5mm;
+          margin-top: 0.1mm;
           color: #47759C !important;
           -webkit-text-fill-color: #47759C !important;
         }
@@ -409,15 +409,15 @@ export default function Stickers() {
           opacity: 0.5;
         }
 
-        /* Center content area — strictly centered */
+        /* Center content area — strictly centered, with breathing room */
         .content-center {
           flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.5mm 0;
-          gap: 0.2mm;
+          padding: 1mm 0;
+          gap: 1mm;
           min-height: 0;
           text-align: center;
           width: 100%;
@@ -435,7 +435,7 @@ export default function Stickers() {
           text-align: center !important;
           line-height: 1.12;
           width: 100%;
-          margin: 0.6mm auto 0;
+          margin: 0 auto;
           overflow: hidden;
           display: -webkit-box;
           -webkit-line-clamp: 2;
@@ -454,7 +454,7 @@ export default function Stickers() {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          margin: 0.9mm auto 0;
+          margin: 0 auto;
           width: 100%;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
@@ -468,7 +468,7 @@ export default function Stickers() {
           align-items: center;
           justify-content: center;
           gap: 2mm;
-          margin-top: 0.8mm;
+          margin-top: 0;
           flex-wrap: wrap;
           line-height: 1;
         }
@@ -511,7 +511,7 @@ export default function Stickers() {
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
           line-height: 1.2;
-          margin: 0.7mm auto 0;
+          margin: 0 auto;
           padding: 0.4mm 1.5mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
@@ -548,16 +548,16 @@ export default function Stickers() {
           margin: 0 0.5mm;
         }
         .date-label {
-          font-size: 4.5px;
-          font-weight: 700;
+          font-size: 5.5px;
+          font-weight: 800;
           letter-spacing: 1px;
-          color: #666 !important;
-          -webkit-text-fill-color: #666 !important;
-          margin-bottom: 0.3mm;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
+          margin-bottom: 0.4mm;
           text-transform: uppercase;
         }
         .date-value {
-          font-size: 8px;
+          font-size: 9px;
           font-weight: 900;
           letter-spacing: 0.2px;
         }
