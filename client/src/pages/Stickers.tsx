@@ -304,17 +304,17 @@ export default function Stickers() {
           line-height: 1;
         }
         .goal-badge {
-          font-size: 8px;
-          font-weight: 800;
-          border: 0.4px solid #000;
+          font-size: 9px;
+          font-weight: 900;
+          border: 0.5px solid #000;
           border-radius: 1mm;
-          padding: 0.2mm 1mm;
+          padding: 0.3mm 1.4mm;
           white-space: nowrap;
         }
         .cust-phone {
-          font-size: 8.5px;
-          font-weight: 700;
-          letter-spacing: 0.2px;
+          font-size: 10px;
+          font-weight: 800;
+          letter-spacing: 0.3px;
           direction: ltr;
         }
 
@@ -387,9 +387,9 @@ export default function Stickers() {
           align-items: center;
         }
         .brand-name {
-          font-size: 10px;
+          font-size: 11px;
           font-weight: 900;
-          letter-spacing: 2.5px;
+          letter-spacing: 2px;
           line-height: 1;
           color: #3CC4F0 !important;
           -webkit-text-fill-color: #3CC4F0 !important;
@@ -428,12 +428,12 @@ export default function Stickers() {
 
         /* Customer name — main focus, italic bold, centered */
         .cust-line {
-          font-size: 11px;
+          font-size: 12.5px;
           font-weight: 900;
           font-style: italic;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.15;
+          line-height: 1.12;
           width: 100%;
           margin: 0.6mm auto 0;
           overflow: hidden;
@@ -443,21 +443,21 @@ export default function Stickers() {
           padding: 0 1mm;
         }
 
-        /* Meal name — under customer, centered */
+        /* Meal name — under customer, biggest info after the name */
         .meal-line {
-          font-size: 8px;
-          font-weight: 700;
-          letter-spacing: 0.4px;
+          font-size: 10.5px;
+          font-weight: 800;
+          letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.2;
+          line-height: 1.15;
           overflow: hidden;
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          margin: 0.7mm auto 0;
+          margin: 0.9mm auto 0;
           width: 100%;
-          color: #2a2a2a !important;
-          -webkit-text-fill-color: #2a2a2a !important;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
           text-transform: uppercase;
           padding: 0 1mm;
         }
@@ -482,22 +482,22 @@ export default function Stickers() {
           border: 0.5px solid rgba(60,196,240,0.4);
         }
         .macros-val {
-          font-size: 8px;
+          font-size: 9.5px;
           font-weight: 900;
           color: #3CC4F0 !important;
           -webkit-text-fill-color: #3CC4F0 !important;
         }
         .macros-unit {
-          font-size: 5px;
-          font-weight: 700;
+          font-size: 6px;
+          font-weight: 800;
           color: #47759C !important;
           -webkit-text-fill-color: #47759C !important;
           letter-spacing: 0.5px;
         }
         .macros-text {
-          font-size: 6.5px;
-          font-weight: 700;
-          letter-spacing: 0.5px;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.4px;
           color: #47759C !important;
           -webkit-text-fill-color: #47759C !important;
         }
@@ -505,8 +505,8 @@ export default function Stickers() {
         /* Warnings — red pill, centered */
         .warn-line {
           display: inline-block;
-          font-size: 6.5px;
-          font-weight: 800;
+          font-size: 8px;
+          font-weight: 900;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
