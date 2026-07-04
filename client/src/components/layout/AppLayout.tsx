@@ -78,16 +78,26 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Sheet>
 
           {/* Top mobile bar */}
-          <div className="h-14 border-b-2 border-cyan-200 flex items-center px-4 bg-gradient-to-r from-cyan-50 to-blue-50 sticky top-0 z-20 shadow-lg">
-            <img 
-              src="/heart-icon.png" 
-              alt="Adrenaline" 
+          <div className="h-14 border-b-2 border-cyan-200 flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-50 to-blue-50 sticky top-0 z-20 shadow-lg">
+            {/* زرار القائمة الجانبية (كل الأقسام) */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsSidebarOpen(true)}
+              aria-label={isRtl ? "القائمة" : "Menu"}
+              className="h-10 w-10 shrink-0 text-cyan-700 hover:bg-cyan-100"
+            >
+              <MenuIcon className="h-6 w-6" />
+            </Button>
+            <img
+              src="/heart-icon.png"
+              alt="Adrenaline"
               className="h-8 w-8"
             />
-            <img 
-              src="/adrenaline-logo.png" 
-              alt="Adrenaline Healthy Food" 
-              className={cn("h-5 w-auto", isRtl ? "mr-2" : "ml-2")}
+            <img
+              src="/adrenaline-logo.png"
+              alt="Adrenaline Healthy Food"
+              className={cn("h-5 w-auto", isRtl ? "mr-1" : "ml-1")}
             />
           </div>
 

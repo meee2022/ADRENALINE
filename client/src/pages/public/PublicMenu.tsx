@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles } from "lucide-react";
+import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles, UtensilsCrossed } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
@@ -664,6 +664,41 @@ export default function PublicMenuPage() {
         image={menuHeaderImage}
       />
 
+      {/* Choose: manual selection vs AI smart plan */}
+      <section className="bg-white border-b border-gray-100">
+        <div className="max-w-5xl mx-auto px-4 py-5" dir={isRtl ? "rtl" : "ltr"}>
+          <p className="text-center text-sm font-bold text-[#47759C] mb-3">
+            {isRtl ? "اختر طريقتك:" : "Choose how to order:"}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Manual */}
+            <div className="rounded-2xl border-2 border-[#3CC4F0] bg-[#3CC4F0]/5 p-4 flex items-center gap-3">
+              <div className="h-11 w-11 rounded-xl bg-[#3CC4F0]/15 flex items-center justify-center shrink-0">
+                <UtensilsCrossed className="h-5 w-5 text-[#0E76AC]" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-black text-[#0E2A4A]">{isRtl ? "اختيار يدوي" : "Manual Pick"}</div>
+                <div className="text-xs text-[#47759C]">{isRtl ? "تصفّح القائمة واختر وجباتك بنفسك (أنت هنا)" : "Browse and pick your meals (you're here)"}</div>
+              </div>
+            </div>
+            {/* Smart */}
+            <button
+              onClick={() => setLocation("/customer/smart-plan")}
+              className="rounded-2xl border border-[#D9E6F1] hover:border-[#0E76AC] hover:shadow-md transition-all p-4 flex items-center gap-3 text-start"
+            >
+              <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "linear-gradient(145deg,#3AC7F4,#0E76AC)" }}>
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-black text-[#0E2A4A]">{isRtl ? "خطة ذكية ✨" : "Smart Plan ✨"}</div>
+                <div className="text-xs text-[#47759C]">{isRtl ? "سيبها علينا — الذكاء الاصطناعي يختار (يوم أو أسبوع)" : "Let AI pick for you (day or week)"}</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* NEW: Week & Day Scheduling Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -1155,7 +1190,7 @@ export default function PublicMenuPage() {
       
       {/* Floating Cart Button */}
       {getTotalMeals() > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
           <Button
             onClick={() => setLocation("/public/order-review")}
             className="h-14 px-8 rounded-full bg-gradient-to-l from-[#3CC4F0] to-[#47759C] hover:from-[#47759C] hover:to-[#3CC4F0] text-white font-bold shadow-2xl flex items-center gap-3"

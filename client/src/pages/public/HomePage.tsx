@@ -219,8 +219,7 @@ export default function HomePage() {
             </motion.p>
           </div>
 
-          <div className="flex md:grid md:grid-cols-3 gap-4 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-proximity pb-3 md:pb-0"
-            style={{ WebkitOverflowScrolling: "touch", scrollPaddingInline: "4px" }}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
             {weekPlans.slice(0, 3).map((plan: any, idx: number) => {
               const isPopular = idx === 1;
               return (
@@ -231,7 +230,7 @@ export default function HomePage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.1 }}
                   whileHover={{ y: -8 }}
-                  className="group relative bg-white rounded-3xl overflow-hidden snap-center shrink-0 w-[80%] sm:w-[55%] md:w-auto"
+                  className="group relative bg-white rounded-3xl overflow-hidden"
                   style={{
                     boxShadow: isPopular
                       ? "0 20px 60px rgba(60,196,240,0.25), 0 8px 20px rgba(0,0,0,0.06)"

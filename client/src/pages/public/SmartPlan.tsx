@@ -25,15 +25,50 @@ const B = {
 export default function SmartPlan() {
   const { currentCustomer } = useStore();
   const generate = useAction(api.ai.generateSmartPlan);
+  const generateWeekly = useAction((api.ai as any).generateWeeklyPlan);
   const createOrder = useMutation(api.customerOrders.create);
   const bestSellers = useQuery((api.publicMeals as any).bestSellers, { limit: 4 }) || [];
 
+  const [mode, setMode] = useState<"day" | "week">("day");
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);   // خطة اليوم
+  const [weekly, setWeekly] = useState<any>(null);    // خطة الأسبوع
   const [error, setError] = useState("");
   const [ordering, setOrdering] = useState(false);
   const [orderNo, setOrderNo] = useState("");
+
+  // إرسال خطة الأسبوع كاملة للمراجعة (كل الأيام في طلب واحد)
+  const placeWeeklyOrder = async () => {
+    if (!weekly?.days?.length || ordering) return;
+    setOrdering(true); setError("");
+    try {
+      const items: any[] = [];
+      for (const d of weekly.days) {
+        for (const m of (d.picks || [])) {
+          items.push({
+            mealId: m.id, mealNameAr: m.nameAr, mealNameEn: m.nameEn || undefined,
+            calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
+            category: m.category, imageUrl: m.imageUrl || undefined,
+            priceQAR: m.priceQAR || 0, week: d.rotationWeek || 1, day: d.day,
+          });
+        }
+      }
+      if (!items.length) { setError("لا توجد وجبات في الخطة."); setOrdering(false); return; }
+      const totalPrice = items.reduce((s, i) => s + (i.priceQAR || 0), 0);
+      const totalCalories = items.reduce((s, i) => s + (i.calories || 0), 0);
+      const res: any = await createOrder({
+        customerName: currentCustomer?.fullName || "عميل ذكاء اصطناعي",
+        customerPhone: currentCustomer?.phone || phone.trim() || "—",
+        customerId: (currentCustomer?.customerId as any) || undefined,
+        totalMeals: items.length, totalPrice, totalCalories, items,
+        notes: "خطة أسبوعية من مولّد الوجبات الذكي",
+      });
+      setOrderNo(res?.orderNumber || "تم");
+    } catch (e) {
+      setError("تعذّر إنشاء الطلب، حاول مرة أخرى.");
+    } finally { setOrdering(false); }
+  };
 
   const placeOrder = async () => {
     if (!result?.picks?.length || ordering) return;
@@ -65,15 +100,18 @@ export default function SmartPlan() {
   const loggedInId = currentCustomer?.customerId;
 
   const run = async (useLogin: boolean) => {
-    setError(""); setResult(null); setOrderNo(""); setLoading(true);
+    setError(""); setResult(null); setWeekly(null); setOrderNo(""); setLoading(true);
+    const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
     try {
-      const res: any = await generate(
-        useLogin
-          ? { customerId: loggedInId as any }
-          : { phone: phone.trim() }
-      );
-      if (!res.ok) { setError(res.error || "تعذّر توليد الخطة"); }
-      else setResult(res);
+      if (mode === "week") {
+        const res: any = await generateWeekly(source);
+        if (!res.ok) { setError("لا توجد وجبات مجدولة لهذا الأسبوع."); }
+        else setWeekly(res);
+      } else {
+        const res: any = await generate(source);
+        if (!res.ok) { setError(res.error || "تعذّر توليد الخطة"); }
+        else setResult(res);
+      }
     } catch (e: any) {
       setError("حصل خطأ أثناء التوليد، حاول مرة أخرى.");
     } finally {
@@ -86,9 +124,9 @@ export default function SmartPlan() {
       <PageHeader
         eyebrowAr="مدعوم بالذكاء الاصطناعي" eyebrowEn="AI-POWERED"
         icon={<Sparkles className="w-3.5 h-3.5" style={{ color: "#3AC7F4" }} />}
-        titleAr="خطة وجباتك الذكية لليوم" titleEn="Your Smart Daily Plan"
-        subtitleAr="نختار لك من وجبات اليوم المتاحة حسب هدفك وما تفضّله — في ثوانٍ."
-        subtitleEn="We pick from today's available meals based on your goal and preferences — in seconds."
+        titleAr="خطة وجباتك الذكية" titleEn="Your Smart Meal Plan"
+        subtitleAr="اختر خطة اليوم أو الأسبوع — نختار لك من الوجبات المتاحة حسب هدفك وما تفضّله."
+        subtitleEn="Pick a daily or weekly plan — we choose from available meals by your goal and preferences."
       />
       <div dir="rtl" style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
         {/* Entry */}
@@ -96,6 +134,25 @@ export default function SmartPlan() {
           background: "#fff", border: `1px solid ${B.line}`, borderRadius: 18,
           padding: 24, marginBottom: 26, boxShadow: "0 10px 30px -18px rgba(14,42,74,.25)",
         }}>
+          {/* Day / Week toggle */}
+          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+            {([
+              { k: "day", label: "خطة اليوم" },
+              { k: "week", label: "خطة الأسبوع" },
+            ] as const).map((m) => (
+              <button key={m.k} onClick={() => { setMode(m.k); setResult(null); setWeekly(null); setOrderNo(""); }}
+                style={{
+                  flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer",
+                  fontFamily: "'Cairo',sans-serif", fontSize: 14, fontWeight: 800,
+                  border: `1.5px solid ${mode === m.k ? B.accent : B.line}`,
+                  background: mode === m.k ? B.accent : "#fff",
+                  color: mode === m.k ? "#fff" : B.ink2,
+                }}>
+                {m.k === "week" ? "🗓️ " : "📅 "}{m.label}
+              </button>
+            ))}
+          </div>
+
           {loggedInId ? (
             <button onClick={() => run(true)} disabled={loading}
               style={btnPrimary(loading)}>
@@ -122,6 +179,80 @@ export default function SmartPlan() {
           )}
           {error && <p style={{ color: "#C0392B", fontSize: 14, marginTop: 12 }}>{error}</p>}
         </div>
+
+        {/* Weekly Result */}
+        {weekly && (
+          <div>
+            <div style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              marginBottom: 14, flexWrap: "wrap", gap: 8,
+            }}>
+              <p style={{ fontSize: 16, color: B.ink, fontWeight: 800, margin: 0 }}>
+                🗓️ خطة الأسبوع — {weekly.totalMeals} وجبة عبر {weekly.days.length} أيام
+              </p>
+              {!weekly.profileFound && (
+                <span style={{ fontSize: 12, color: "#8A6A1F", background: "#FFF7E6", border: "1px solid #F4D58A", borderRadius: 50, padding: "4px 12px" }}>
+                  خطة عامة — سجّل الدخول لتخصيص كامل
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: "grid", gap: 14 }}>
+              {weekly.days.map((d: any, di: number) => (
+                <div key={di} style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16, overflow: "hidden" }}>
+                  <div style={{
+                    background: B.ink, color: "#fff", padding: "10px 16px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6,
+                  }}>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>{WEEKDAYS_AR[d.day] || d.day} · {d.date}</span>
+                    <span style={{ fontSize: 12, opacity: 0.85 }}>{d.picks.length} وجبة</span>
+                  </div>
+                  {d.empty ? (
+                    <p style={{ padding: "14px 16px", color: B.ink2, fontSize: 13, margin: 0 }}>
+                      لا توجد وجبات مجدولة لهذا اليوم.
+                    </p>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, padding: 12 }}>
+                      {d.picks.map((m: any, i: number) => (
+                        <div key={i} style={{ border: `1px solid ${B.line}`, borderRadius: 12, overflow: "hidden", background: B.surf }}>
+                          <div style={{ height: 84, background: B.bg2, overflow: "hidden" }}>
+                            {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+                          </div>
+                          <div style={{ padding: "7px 9px" }}>
+                            <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{m.nameAr}</div>
+                            <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{m.calories} سعرة</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Weekly order CTA */}
+            <div style={{ textAlign: "center", marginTop: 24 }}>
+              {orderNo ? (
+                <div style={{
+                  background: "#E8F8EF", border: "1px solid #9FDCB8", color: "#1E7A45",
+                  borderRadius: 14, padding: "16px 20px", fontSize: 15, fontWeight: 700, display: "inline-block",
+                }}>
+                  ✅ تم إرسال خطتك الأسبوعية لمراجعة أخصائي التغذية! رقم الطلب: <b>{orderNo}</b>
+                </div>
+              ) : (
+                <>
+                  <button onClick={placeWeeklyOrder} disabled={ordering} style={btnPrimary(ordering)}>
+                    {ordering ? "جارٍ الإرسال…" : "📋 أرسل خطة الأسبوع لمراجعة الأخصائي"}
+                  </button>
+                  <p style={{ fontSize: 12, color: B.ink2, marginTop: 10 }}>
+                    يراجع أخصائي التغذية خطة الأسبوع كاملة للتأكد من ملاءمتها قبل التأكيد.
+                  </p>
+                </>
+              )}
+              {error && <p style={{ color: "#C0392B", fontSize: 14, marginTop: 12 }}>{error}</p>}
+            </div>
+          </div>
+        )}
 
         {/* Result */}
         {result && (

@@ -225,10 +225,35 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 {isRtl ? "المنيو" : "Menu"}
               </a>
               <a
+                href="/customer/smart-plan"
+                className="block py-2 px-4 rounded-lg font-bold text-[#0E76AC] bg-[#3AC7F4]/10 hover:bg-[#3AC7F4]/20 flex items-center gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                {isRtl ? "خطتي الذكية" : "Smart Plan"}
+              </a>
+              <a
+                href="/public/how-to-subscribe"
+                className="block py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
+              >
+                {isRtl ? "كيف تشترك" : "How to Subscribe"}
+              </a>
+              <a
                 href="/public/about"
                 className="block py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
               >
                 {isRtl ? "من نحن" : "About"}
+              </a>
+              <a
+                href="/public/contact"
+                className="block py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
+              >
+                {isRtl ? "تواصل معنا" : "Contact"}
+              </a>
+              <a
+                href="/public/track"
+                className="block py-2 px-4 text-[#3CC4F0] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
+              >
+                📦 {isRtl ? "تتبع طلبي" : "Track Order"}
               </a>
               <button
                 onClick={toggleLanguage}

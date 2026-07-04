@@ -372,3 +372,74 @@ export const generateSmartPlan = action({
     };
   },
 });
+
+// ═══════════════════════════════════════════════════════════
+//  خطة أسبوعية ذكية — تولّد خطة لكل أيام العمل (السبت→الأربعاء)
+// ═══════════════════════════════════════════════════════════
+const WORKING_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday"];
+
+export const generateWeeklyPlan = action({
+  args: {
+    customerId: v.optional(v.id("customers")),
+    phone: v.optional(v.string()),
+    startDate: v.optional(v.string()), // yyyy-MM-dd (افتراضي: أقرب يوم عمل من اليوم)
+  },
+  handler: async (ctx, args): Promise<any> => {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    // نبدأ من startDate أو من اليوم، ونتقدّم حتى نجمع 5 أيام عمل
+    const base = args.startDate ? new Date(args.startDate + "T00:00:00") : new Date();
+    const days: any[] = [];
+    let profileFound = false;
+    const cur = new Date(base);
+
+    for (let guard = 0; guard < 14 && days.length < WORKING_DAYS.length; guard++) {
+      const dow = cur.getDay(); // 4=خميس، 5=جمعة (إجازة)
+      if (dow !== 4 && dow !== 5) {
+        const dayName = WEEKDAYS[dow];
+        const dateStr = cur.toISOString().slice(0, 10);
+
+        const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
+          customerId: args.customerId,
+          phone: args.phone,
+          todayDay: dayName,
+          todayDate: dateStr,
+        });
+        profileFound = profile.found;
+
+        let picks: any[] = [];
+        let summary = "";
+        let engine = "none";
+        if (candidates && candidates.length > 0) {
+          let result;
+          if (apiKey) {
+            try { result = await aiPlan(profile, candidates, apiKey); }
+            catch { result = ruleBasedPlan(profile, candidates); }
+          } else {
+            result = ruleBasedPlan(profile, candidates);
+          }
+          const byId = new Map(candidates.map((c: any) => [c.id, c]));
+          picks = (result.picks || [])
+            .filter((p: any) => byId.has(p.id))
+            .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
+          summary = result.summary;
+          engine = result.engine;
+        }
+
+        days.push({
+          date: dateStr,
+          day: dayName,
+          rotationWeek: meta?.rotationWeek ?? 1,
+          picks,
+          summary,
+          engine,
+          empty: picks.length === 0,
+        });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+
+    const totalMeals = days.reduce((s, d) => s + d.picks.length, 0);
+    return { ok: totalMeals > 0, profileFound, days, totalMeals };
+  },
+});

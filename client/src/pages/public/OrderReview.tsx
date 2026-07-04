@@ -34,9 +34,11 @@ export default function OrderReview() {
     clearCart
   } = useCartStore();
   
-  // بيانات العميل
+  // بيانات العميل — نملأ الرقم تلقائياً من الذي أدخله في المنيو
   const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerPhone, setCustomerPhone] = useState<string>(
+    () => (typeof window !== "undefined" ? (localStorage.getItem("menu_phone") || "") : "")
+  );
   const [customerEmail, setCustomerEmail] = useState("");
   
   // Convex Mutation & Query (بعد تعريف customerPhone)
