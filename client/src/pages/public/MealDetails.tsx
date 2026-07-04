@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Flame, ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { tagLabel } from "@/lib/tagLabels";
 
 export default function MealDetailsPage() {
   const { language, dir } = useLanguage();
@@ -92,7 +93,7 @@ export default function MealDetailsPage() {
                   key={idx}
                   className="text-sm px-4 py-2 rounded-full bg-[#3CC4F0]/10 text-[#3CC4F0] border-2 border-[#3CC4F0]/20 font-medium"
                 >
-                  {tag}
+                  {tagLabel(tag, isRtl)}
                 </Badge>
               ))}
             </div>

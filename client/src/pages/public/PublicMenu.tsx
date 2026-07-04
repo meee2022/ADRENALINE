@@ -21,6 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCartStore } from "@/lib/cartStore";
+import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
@@ -990,7 +991,7 @@ export default function PublicMenuPage() {
                             variant="secondary"
                             className="text-xs bg-[#3CC4F0]/10 text-[#3CC4F0] border-0"
                           >
-                            {tag}
+                            {tagLabel(tag, isRtl)}
                           </Badge>
                         ))}
                       </div>
@@ -1114,7 +1115,7 @@ export default function PublicMenuPage() {
                     variant="secondary"
                     className="text-xs bg-[#3CC4F0]/10 text-[#3CC4F0] border-0"
                   >
-                    {tag}
+                    {tagLabel(tag, isRtl)}
                   </Badge>
                 ))}
               </div>

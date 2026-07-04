@@ -179,7 +179,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 space-y-2">
+            <div className="md:hidden mt-4 pb-4 space-y-2"
+              onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMobileMenuOpen(false); }}>
               {/* Dashboard Link - Show only for logged in admin users */}
               {currentUser && (
                 <>
