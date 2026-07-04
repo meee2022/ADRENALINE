@@ -503,7 +503,8 @@ export default function CustomerProfile() {
                         <div>
                           <div className="text-sm font-bold text-[#0F1516]">#{o.orderNumber}</div>
                           <div className="text-xs text-[#47759C]">
-                            {o.totalMeals} {isRtl ? "وجبة" : "meals"} · {o.totalPrice} {isRtl ? "ر.ق" : "QAR"}
+                            {o.totalMeals} {isRtl ? "وجبة" : "meals"}
+                            {o.totalPrice > 0 ? ` · ${o.totalPrice} ${isRtl ? "ر.ق" : "QAR"}` : ""}
                           </div>
                         </div>
                         <Badge className={`${st.cls} border-0`}>{isRtl ? st.ar : st.en}</Badge>

@@ -96,7 +96,7 @@ export const useCartStore = create<CartState>()(
         get().items.reduce((sum, item) => sum + item.calories, 0),
 
       getWeeks: () => {
-        const weeks = [...new Set(get().items.map((item) => item.week))];
+        const weeks = Array.from(new Set(get().items.map((item) => item.week)));
         return weeks.sort((a, b) => a - b);
       },
 

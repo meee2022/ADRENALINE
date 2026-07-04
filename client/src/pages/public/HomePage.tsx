@@ -27,7 +27,9 @@ export default function HomePage() {
   const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
   const allMeals = useQuery(api.publicMeals.list) || [];
-  const bestSellers = useQuery((api.publicMeals as any).bestSellers, { limit: 6 }) || [];
+  const bestSellersRaw = useQuery((api.publicMeals as any).bestSellers, { limit: 6 });
+  const bestSellers = bestSellersRaw || [];
+  const bestSellersLoading = bestSellersRaw === undefined;
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
 
   // Real dish images for the hero carousel (fallback to banner/stock images)
@@ -342,7 +344,7 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════ BEST SELLERS ═══════════ */}
-      {bestSellers.length > 0 && (
+      {(bestSellersLoading || bestSellers.length > 0) && (
         <section className="py-10 md:py-20 bg-[#F7FBFE]" style={{ direction: isRtl ? "rtl" : "ltr" }}>
           <div className="max-w-7xl mx-auto px-5 md:px-8">
             <div className="text-center mb-6 md:mb-10">
@@ -362,7 +364,16 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
-              {bestSellers.map((m: any, i: number) => (
+              {bestSellersLoading && Array.from({ length: 6 }).map((_, i) => (
+                <div key={`sk-${i}`} className="rounded-3xl overflow-hidden bg-white" style={{ border: "1px solid #D9E6F1" }}>
+                  <div className="w-full aspect-[4/3] animate-pulse" style={{ background: "#E4EEF6" }} />
+                  <div className="p-4 space-y-2">
+                    <div className="h-3 rounded animate-pulse" style={{ background: "#E4EEF6", width: "80%" }} />
+                    <div className="h-2.5 rounded animate-pulse" style={{ background: "#EAF3FB", width: "55%" }} />
+                  </div>
+                </div>
+              ))}
+              {!bestSellersLoading && bestSellers.map((m: any, i: number) => (
                 <motion.a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
                   initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }}

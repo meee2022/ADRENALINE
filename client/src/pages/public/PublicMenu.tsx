@@ -713,6 +713,23 @@ export default function PublicMenuPage() {
         </div>
       </section>
 
+      {/* Browse-mode notice: cart is saved locally but ordering needs a subscription */}
+      {browseMode && (
+        <div className="bg-amber-50 border-b border-amber-200" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800 leading-relaxed">
+              {isRtl
+                ? "أنت في وضع التصفّح — اختياراتك تُحفظ على جهازك، لكن لإتمام الطلب تحتاج اشتراكًا نشطًا. "
+                : "You're browsing — your picks are saved on this device, but completing an order needs an active subscription. "}
+              <button onClick={handleResetPhone} className="font-bold underline text-amber-900">
+                {isRtl ? "أدخل رقمك للتحقق" : "Enter your phone to verify"}
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* NEW: Week & Day Scheduling Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
