@@ -373,8 +373,8 @@ export default function Stickers() {
           line-height: 1;
         }
         .brand-heart {
-          width: 7.5mm;
-          height: 7.5mm;
+          width: 6mm;
+          height: 6mm;
           object-fit: contain;
           flex-shrink: 0;
           /* keep heart visible in print */
@@ -387,7 +387,7 @@ export default function Stickers() {
           align-items: center;
         }
         .brand-name {
-          font-size: 15px;
+          font-size: 13px;
           font-weight: 900;
           letter-spacing: 2.5px;
           line-height: 1.05;
@@ -403,10 +403,11 @@ export default function Stickers() {
           -webkit-text-fill-color: #47759C !important;
         }
         .brand-rule {
-          height: 0.5px;
+          height: 0.4mm;
+          width: 100%;
           background: #000 !important;
-          margin: 1mm 0 0;
-          opacity: 0.5;
+          margin: 1mm 0 0.3mm;
+          opacity: 1;
         }
 
         /* Center content area — strictly centered, with breathing room */
