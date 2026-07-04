@@ -25,6 +25,8 @@ export default function Stickers() {
   const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("MORNING");
   const [activeTab, setActiveTab] = useState<TabKey>("MEALS");
+  // وضع الطباعة: "label" = طابعة استيكرات (كل استيكر صفحة بمقاسه) · "sheet" = ورقة A4 شبكة
+  const [printerMode, setPrinterMode] = useState<"label" | "sheet">("label");
 
   const DEFAULTS = useMemo(() => ({ w: 70, h: 35, gap: 4, pad: 3.2 }), []);
   const [labelW, setLabelW] = useState(DEFAULTS.w);
@@ -72,14 +74,35 @@ export default function Stickers() {
               {isRtl ? "معاينة وطباعة ستيكرات الوجبات والبوكس" : "Preview and print meal & box stickers"}
             </p>
           </div>
-          <button
-            onClick={() => window.print()}
-            className="h-10 px-5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
-            style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
-          >
-            <Printer className="h-4 w-4" />
-            {isRtl ? "طباعة الكل" : "Print All"}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Printer mode toggle */}
+            <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+              {([
+                { key: "label", ar: "طابعة استيكرات", en: "Label Printer" },
+                { key: "sheet", ar: "ورقة A4", en: "A4 Sheet" },
+              ] as const).map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => setPrinterMode(m.key)}
+                  className={cn(
+                    "h-10 px-3 text-xs font-bold transition-colors",
+                    printerMode === m.key ? "text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+                  )}
+                  style={printerMode === m.key ? { background: "#0E76AC" } : {}}
+                >
+                  {isRtl ? m.ar : m.en}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => window.print()}
+              className="h-10 px-5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
+            >
+              <Printer className="h-4 w-4" />
+              {isRtl ? "طباعة الكل" : "Print All"}
+            </button>
+          </div>
         </div>
 
         {/* Filters card */}
@@ -483,6 +506,32 @@ export default function Stickers() {
         @media print {
           .print\\:hidden { display: none !important; }
           body { margin: 0; }
+          .print-grid { margin: 0 !important; }
+          ${printerMode === "label" ? `
+          /* ── وضع طابعة الاستيكرات: كل استيكر = صفحة مستقلة بمقاس الليبل بالظبط ── */
+          @page {
+            size: ${clamp(labelW, 20, 120)}mm ${clamp(labelH, 15, 120)}mm;
+            margin: 0;
+          }
+          html, body { width: ${clamp(labelW, 20, 120)}mm; }
+          .print-grid { display: block !important; gap: 0 !important; }
+          .label {
+            width: ${clamp(labelW, 20, 120)}mm !important;
+            height: ${clamp(labelH, 15, 120)}mm !important;
+            margin: 0 !important;
+            border: none !important;        /* حافة الورقة هي حدود الاستيكر */
+            border-radius: 0 !important;
+            page-break-after: always;
+            break-after: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .label:last-child { page-break-after: auto; break-after: auto; }
+          ` : `
+          /* ── وضع ورقة A4: شبكة مع منع قصّ الاستيكر بين صفحتين ── */
+          @page { size: A4 portrait; margin: 6mm; }
+          .label { page-break-inside: avoid; break-inside: avoid; }
+          `}
         }
       `}</style>
     </div>
