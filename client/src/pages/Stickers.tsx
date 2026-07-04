@@ -373,8 +373,8 @@ export default function Stickers() {
           line-height: 1;
         }
         .brand-heart {
-          width: 6mm;
-          height: 6mm;
+          width: 7.5mm;
+          height: 7.5mm;
           object-fit: contain;
           flex-shrink: 0;
           /* keep heart visible in print */
@@ -387,18 +387,18 @@ export default function Stickers() {
           align-items: center;
         }
         .brand-name {
-          font-size: 11px;
+          font-size: 15px;
           font-weight: 900;
-          letter-spacing: 2px;
-          line-height: 1;
+          letter-spacing: 2.5px;
+          line-height: 1.05;
           color: #3CC4F0 !important;
           -webkit-text-fill-color: #3CC4F0 !important;
         }
         .brand-tag {
-          font-size: 5.5px;
+          font-size: 6.5px;
           font-weight: 900;
-          letter-spacing: 2.5px;
-          margin-top: 0.1mm;
+          letter-spacing: 3px;
+          margin-top: 0.2mm;
           color: #47759C !important;
           -webkit-text-fill-color: #47759C !important;
         }
@@ -416,8 +416,8 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 1mm 0;
-          gap: 1mm;
+          padding: 0.6mm 0;
+          gap: 0.7mm;
           min-height: 0;
           text-align: center;
           width: 100%;
@@ -433,14 +433,11 @@ export default function Stickers() {
           font-style: italic;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.12;
+          line-height: 1.35;
           width: 100%;
           margin: 0 auto;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          padding: 0 1mm;
+          overflow: visible;
+          padding: 0.3mm 1mm;
         }
 
         /* Meal name — under customer, biggest info after the name */
@@ -449,17 +446,14 @@ export default function Stickers() {
           font-weight: 800;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.15;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
+          line-height: 1.3;
+          overflow: visible;
           margin: 0 auto;
           width: 100%;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
           text-transform: uppercase;
-          padding: 0 1mm;
+          padding: 0.3mm 1mm;
         }
 
         /* Macros + Calories row */
