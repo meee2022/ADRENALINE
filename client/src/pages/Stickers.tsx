@@ -336,8 +336,14 @@ export default function Stickers() {
             color: #000 !important;
             -webkit-text-fill-color: #000 !important;
           }
-          /* القلب السماوي يتبعثر على الحرارية → إخفاؤه */
-          .label .brand-heart { display: none !important; }
+          /* القلب: نحوّله لأسود صلب (بدل السماوي الذي يتبعثر) مع الحفاظ على شكله */
+          .label .brand-heart {
+            display: inline-block !important;
+            filter: brightness(0) !important;
+            -webkit-filter: brightness(0) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           /* خط اللوجو أثقل وأوضح للطباعة الحرارية */
           .label .brand-name {
             font-weight: 900 !important;
