@@ -167,6 +167,7 @@ export const getChatContext = query({
       .query("publicPlans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
+    const settings = await ctx.db.query("restaurantSettings").first();
 
     return {
       meals: meals.slice(0, 40).map((m) => ({
@@ -174,9 +175,15 @@ export const getChatContext = query({
         p: m.protein, c: m.carbs, f: m.fats, tags: (m.tags || []).join(","),
       })),
       plans: plans.map((p) => ({
-        name: p.nameAr, slug: p.slug,
-        prices: (p.options || []).map((o) => `${o.mealsCount}وجبة/${o.priceQAR}ر.ق`).join(" · "),
+        name: p.nameAr, slug: p.slug, duration: p.duration,
+        prices: (p.options || []).map((o) => `${o.mealsCount} وجبة + ${o.snacksCount} سناك = ${o.priceQAR} ر.ق`).join(" · "),
       })),
+      contact: {
+        phone: settings?.phone || "",
+        whatsapp: settings?.whatsappNumber || settings?.phone || "",
+        address: settings?.addressAr || "",
+        hours: settings?.workingHoursAr || "",
+      },
     };
   },
 });
@@ -198,15 +205,24 @@ export const chat = action({
     const ctxData = await ctx.runQuery(api.ai.getChatContext, {});
     const menuStr = ctxData.meals.map((m: any) =>
       `${m.name} (${m.cat}, ${m.kcal}kcal, بروتين ${m.p})`).join(" | ");
-    const plansStr = ctxData.plans.map((p: any) => `${p.name}: ${p.prices}`).join(" | ");
+    const plansStr = ctxData.plans.map((p: any) => `${p.name} [${p.duration}]: ${p.prices}`).join(" || ");
+    const c = ctxData.contact || ({} as any);
+    const contactStr = [
+      c.phone ? `الهاتف/الاستفسارات: ${c.phone}` : "",
+      c.whatsapp ? `واتساب: ${c.whatsapp}` : "",
+      c.address ? `العنوان: ${c.address}` : "",
+      c.hours ? `مواعيد العمل: ${c.hours}` : "",
+    ].filter(Boolean).join(" · ") || "غير متوفّر";
 
     const system = `أنت "مساعد أدرينالين" — مساعد تغذية ودود لمطعم أدرينالين للأكل الصحي في قطر.
 - رد بالعربي بإيجاز ووضوح وبأسلوب مشجّع.
 - رشّح من قائمتنا الحقيقية فقط: ${menuStr}
-- باقات الاشتراك المتاحة: ${plansStr}
-- لو سُئلت عن الاشتراك، شجّع بلطف ووجّه للطلب عبر الموقع أو واتساب.
+- باقات الاشتراك وأسعارها الرسمية (استخدم هذه الأرقام حرفيًا بلا تقريب أو تغيير): ${plansStr}
+- بيانات التواصل الرسمية: ${contactStr}
+- عند السؤال عن السعر: اذكر الرقم الرسمي أعلاه بالضبط. لا تُقرّب ولا تخمّن. لو الباقة غير مذكورة، قل "تواصل معنا للتفاصيل" مع إعطاء رقم الهاتف.
+- عند السؤال عن رقم الاستفسارات/التواصل: أعطِ رقم الهاتف والواتساب أعلاه إن وُجدا. لا تقل "لا يوجد رقم" طالما الرقم موجود في البيانات.
 - لا تقدّم نصائح طبية تشخيصية؛ للحالات الخاصة انصح بمراجعة أخصائي.
-- لا تخترع وجبات أو أسعار غير المذكورة.`;
+- ممنوع اختراع وجبات أو أسعار أو أرقام غير المذكورة.`;
 
     try {
       const res = await fetch("https://api.anthropic.com/v1/messages", {

@@ -282,19 +282,19 @@ export default function PublicMenuPage() {
   ];
 
   const weeks = [
-    { value: 1, label: "الأسبوع 1" },
-    { value: 2, label: "الأسبوع 2" },
-    { value: 3, label: "الأسبوع 3" },
-    { value: 4, label: "الأسبوع 4" },
+    { value: 1, label: isRtl ? "الأسبوع 1" : "Week 1" },
+    { value: 2, label: isRtl ? "الأسبوع 2" : "Week 2" },
+    { value: 3, label: isRtl ? "الأسبوع 3" : "Week 3" },
+    { value: 4, label: isRtl ? "الأسبوع 4" : "Week 4" },
   ];
 
   const days: { value: DayOfWeek; label: string }[] = [
-    { value: "saturday", label: "السبت" },
-    { value: "sunday", label: "الأحد" },
-    { value: "monday", label: "الإثنين" },
-    { value: "tuesday", label: "الثلاثاء" },
-    { value: "wednesday", label: "الأربعاء" },
-    { value: "thursday", label: "الخميس" },
+    { value: "saturday", label: isRtl ? "السبت" : "Saturday" },
+    { value: "sunday", label: isRtl ? "الأحد" : "Sunday" },
+    { value: "monday", label: isRtl ? "الإثنين" : "Monday" },
+    { value: "tuesday", label: isRtl ? "الثلاثاء" : "Tuesday" },
+    { value: "wednesday", label: isRtl ? "الأربعاء" : "Wednesday" },
+    { value: "thursday", label: isRtl ? "الخميس" : "Thursday" },
   ];
 
   // ─── Phone gate state determination ───
@@ -735,7 +735,7 @@ export default function PublicMenuPage() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           {/* Week Tabs */}
           <div className="mb-4">
-            <h3 className="text-sm font-bold text-[#47759C] mb-3">اختر الأسبوع</h3>
+            <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {weeks.map((week) => (
                 <button
@@ -756,7 +756,7 @@ export default function PublicMenuPage() {
 
           {/* Day Chips */}
           <div className="mb-4">
-            <h3 className="text-sm font-bold text-[#47759C] mb-3">اختر اليوم</h3>
+            <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {days.map((day) => (
                 <button
