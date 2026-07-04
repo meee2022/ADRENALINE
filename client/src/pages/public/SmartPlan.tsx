@@ -237,7 +237,12 @@ export default function SmartPlan() {
                   background: "#E8F8EF", border: "1px solid #9FDCB8", color: "#1E7A45",
                   borderRadius: 14, padding: "16px 20px", fontSize: 15, fontWeight: 700, display: "inline-block",
                 }}>
-                  ✅ تم إرسال خطتك الأسبوعية لمراجعة أخصائي التغذية! رقم الطلب: <b>{orderNo}</b>
+                  <div style={{ fontSize: 16 }}>✅ تم إرسال خطتك الأسبوعية للمراجعة!</div>
+                  <div style={{ fontWeight: 400, fontSize: 13.5, marginTop: 6, lineHeight: 1.8 }}>
+                    📋 رقم الطلب: <b>{orderNo}</b><br />
+                    ⏱️ يراجعها أخصائي التغذية عادةً خلال ساعات قليلة<br />
+                    📞 سنتواصل معك على {currentCustomer?.phone || phone || "رقمك"} للتأكيد
+                  </div>
                 </div>
               ) : (
                 <>
@@ -333,9 +338,11 @@ export default function SmartPlan() {
                   borderRadius: 14, padding: "16px 20px", fontSize: 15, fontWeight: 700,
                   display: "inline-block",
                 }}>
-                  ✅ تم إرسال خطتك لمراجعة أخصائي التغذية! رقم الطلب: <b>{orderNo}</b><br />
-                  <span style={{ fontWeight: 400, fontSize: 13 }}>
-                    سيراجعها الأخصائي للتأكد من ملاءمتها ثم نتواصل معك للتأكيد.
+                  <div style={{ fontSize: 16 }}>✅ تم إرسال خطتك للمراجعة!</div>
+                  <span style={{ fontWeight: 400, fontSize: 13.5, display: "block", marginTop: 6, lineHeight: 1.8 }}>
+                    📋 رقم الطلب: <b>{orderNo}</b><br />
+                    ⏱️ يراجعها أخصائي التغذية عادةً خلال ساعات قليلة<br />
+                    📞 سنتواصل معك على {currentCustomer?.phone || phone || "رقمك"} للتأكيد
                   </span>
                 </div>
               ) : (

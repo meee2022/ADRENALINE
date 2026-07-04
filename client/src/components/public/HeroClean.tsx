@@ -50,7 +50,7 @@ export function HeroClean({ image, images, titleAr, titleEn, subtitleAr, subtitl
       <AnimatePresence mode="sync">
         <motion.img
           key={idx}
-          src={slides[idx]} alt=""
+          src={slides[idx]} alt={isRtl ? "وجبة صحية طازجة من أدرينالين" : "Fresh healthy meal by Adrenaline"}
           initial={{ opacity: 0, scale: 1.06 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}

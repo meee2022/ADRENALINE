@@ -21,8 +21,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useCartStore } from "@/lib/cartStore";
+import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+
+const DAY_LABEL_AR: Record<string, string> = {
+  saturday: "السبت", sunday: "الأحد", monday: "الإثنين",
+  tuesday: "الثلاثاء", wednesday: "الأربعاء", thursday: "الخميس",
+};
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
 type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
@@ -34,6 +40,7 @@ export default function PublicMenuPage() {
   
   // Cart State
   const { items, addItem, getTotalMeals } = useCartStore();
+  const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
@@ -204,6 +211,13 @@ export default function PublicMenuPage() {
       priceQAR: meal.priceQAR || 0,
       week: selectedWeek,
       day: selectedDay,
+    });
+
+    // ✅ تأكيد فوري للإضافة
+    const dayLbl = isRtl ? (DAY_LABEL_AR[selectedDay] || selectedDay) : selectedDay;
+    toast({
+      title: isRtl ? "✓ أُضيفت للخطة" : "✓ Added to plan",
+      description: `${isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)} — ${isRtl ? "أسبوع" : "Week"} ${selectedWeek} · ${dayLbl}`,
     });
   };
   
