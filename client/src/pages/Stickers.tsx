@@ -288,9 +288,34 @@ export default function Stickers() {
         }
 
         /* Default text color is black, except brand and macros which keep their colors */
-        .cust-line, .meal-line, .date-label, .date-value, .cust-num-inline {
+        .cust-line, .meal-line, .date-label, .date-value, .cust-num-inline,
+        .cust-sub, .goal-badge, .cust-phone {
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
+        }
+
+        /* Customer sub-line: goal + phone */
+        .cust-sub {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 2mm;
+          margin-top: 0.3mm;
+          line-height: 1;
+        }
+        .goal-badge {
+          font-size: 8px;
+          font-weight: 800;
+          border: 0.4px solid #000;
+          border-radius: 1mm;
+          padding: 0.2mm 1mm;
+          white-space: nowrap;
+        }
+        .cust-phone {
+          font-size: 8.5px;
+          font-weight: 700;
+          letter-spacing: 0.2px;
+          direction: ltr;
         }
 
         /* Force black on print (thermal printer safety) */
@@ -599,6 +624,12 @@ function MealSticker({ s }: any) {
       {/* Center content */}
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
+        {(s.goal || s.customerNumber) && (
+          <div className="cust-sub">
+            {s.goal ? <span className="goal-badge">{s.goal}</span> : null}
+            {s.customerNumber ? <span className="cust-phone">{s.customerNumber}</span> : null}
+          </div>
+        )}
         <div className="meal-line">{mealName}</div>
 
         {/* Macros + Calories — صف معلومات غذائية */}
@@ -652,6 +683,12 @@ function BoxSticker({ s }: any) {
 
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
+        {(s.goal || s.customerNumber) && (
+          <div className="cust-sub">
+            {s.goal ? <span className="goal-badge">{s.goal}</span> : null}
+            {s.customerNumber ? <span className="cust-phone">{s.customerNumber}</span> : null}
+          </div>
+        )}
         <div className="meal-line">{s.planLabel}</div>
       </div>
 
