@@ -326,6 +326,38 @@ export default function Stickers() {
           }
         }
 
+        /* ── Thermal print hardening — solid black, no dithering ── */
+        @media print {
+          /* أعلى تخصيص لتغلب على لون العلامة السماوي */
+          .label .brand-name, .label .brand-tag,
+          .label .goal-badge, .label .cust-phone, .label .warn-line,
+          .label .macros-cal, .label .macros-text, .label .macros-val,
+          .label .macros-unit, .label .cust-num-inline {
+            color: #000 !important;
+            -webkit-text-fill-color: #000 !important;
+          }
+          /* القلب السماوي يتبعثر على الحرارية → إخفاؤه */
+          .label .brand-heart { display: none !important; }
+          /* خط اللوجو أثقل وأوضح للطباعة الحرارية */
+          .label .brand-name {
+            font-weight: 900 !important;
+            letter-spacing: 1.2px !important;
+          }
+          /* الشارات: خلفية بيضاء + حدود سوداء صلبة + نص أسود (بدل السماوي/الأحمر الباهت) */
+          .label .goal-badge,
+          .label .macros-cal,
+          .label .warn-line {
+            background: #fff !important;
+            border: 0.5px solid #000 !important;
+            font-weight: 800 !important;
+          }
+          /* كل الحدود الرفيعة تبقى أسود صلب */
+          .label, .label .brand-rule, .label .date-divider, .label .date-row {
+            border-color: #000 !important;
+            background: #fff !important;
+          }
+        }
+
         /* Brand block — heart icon + text, centered top */
         .brand-block {
           display: flex;
