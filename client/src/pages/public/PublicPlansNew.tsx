@@ -131,17 +131,23 @@ export default function PublicPlansNew() {
                         </p>
                       </div>
 
-                      {/* Plan badge */}
-                      {plan.options && plan.options[0] && (
-                        <div className="text-center py-3">
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-                            style={{ background: "#3cc4f015", border: "1px solid #3cc4f030" }}>
-                            <span className="text-xs font-black" style={{ color: "#3cc4f0" }}>
-                              {isRtl
-                                ? `${plan.options[0].mealsCount} وجبات + ${plan.options[0].snacksCount} سناك`
-                                : `${plan.options[0].mealsCount} meals + ${plan.options[0].snacksCount} snacks`}
-                            </span>
-                          </div>
+                      {/* Pricing options — each meal-count with its price */}
+                      {plan.options && plan.options.length > 0 && (
+                        <div className="space-y-1.5 py-1">
+                          {plan.options.map((opt: any, oi: number) => (
+                            <div key={oi}
+                              className="flex items-center justify-between px-3 py-2 rounded-xl"
+                              style={{ background: "#3cc4f00d", border: "1px solid #3cc4f026" }}>
+                              <span className="text-xs font-bold text-[#47759C]">
+                                {isRtl
+                                  ? `${opt.mealsCount} وجبات + ${opt.snacksCount} سناك`
+                                  : `${opt.mealsCount} meals + ${opt.snacksCount} snacks`}
+                              </span>
+                              <span className="text-sm font-black" style={{ color: "#0E76AC" }}>
+                                {opt.priceQAR} {isRtl ? "ر.ق" : "QAR"}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
