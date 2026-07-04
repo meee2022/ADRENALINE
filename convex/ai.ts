@@ -195,11 +195,15 @@ export const getChatContext = query({
 export const chat = action({
   args: {
     messages: v.array(v.object({ role: v.string(), content: v.string() })),
+    lang: v.optional(v.string()), // "ar" | "en"
   },
   handler: async (ctx, args): Promise<any> => {
+    const isEn = args.lang === "en";
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
-      return { ok: false, reply: "خدمة المساعد الذكي غير مفعّلة حالياً. تواصل معنا عبر واتساب وسنساعدك فوراً 🌿" };
+      return { ok: false, reply: isEn
+        ? "The smart assistant is currently unavailable. Contact us on WhatsApp and we'll help right away 🌿"
+        : "خدمة المساعد الذكي غير مفعّلة حالياً. تواصل معنا عبر واتساب وسنساعدك فوراً 🌿" };
     }
 
     const ctxData = await ctx.runQuery(api.ai.getChatContext, {});
@@ -215,7 +219,7 @@ export const chat = action({
     ].filter(Boolean).join(" · ") || "غير متوفّر";
 
     const system = `أنت "مساعد أدرينالين" — مساعد تغذية ودود لمطعم أدرينالين للأكل الصحي في قطر.
-- رد بالعربي بإيجاز ووضوح وبأسلوب مشجّع.
+- ${isEn ? "Reply in ENGLISH, briefly and clearly, in an encouraging tone." : "رد بالعربي بإيجاز ووضوح وبأسلوب مشجّع."}
 - رشّح من قائمتنا الحقيقية فقط: ${menuStr}
 - باقات الاشتراك وأسعارها الرسمية (استخدم هذه الأرقام حرفيًا بلا تقريب أو تغيير): ${plansStr}
 - بيانات التواصل الرسمية: ${contactStr}

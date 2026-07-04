@@ -9,15 +9,21 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles, TrendingUp, Briefcase, Tag, Zap } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 const badgeConfig = {
-  most_requested: { label: "⭐ الأكثر طلبًا", color: "bg-gradient-to-r from-yellow-400 to-yellow-500", textColor: "text-gray-900", icon: Sparkles },
-  best_value: { label: "🏆 الأفضل قيمة", color: "bg-gradient-to-r from-green-400 to-green-500", textColor: "text-white", icon: TrendingUp },
-  most_chosen_business: { label: "💼 الأكثر اختيارًا للشركات", color: "bg-gradient-to-r from-blue-400 to-blue-500", textColor: "text-white", icon: Briefcase },
-  special_offer: { label: "🎁 عرض خاص", color: "bg-gradient-to-r from-red-400 to-red-500", textColor: "text-white", icon: Tag },
+  most_requested: { ar: "⭐ الأكثر طلبًا", en: "⭐ Most Requested", color: "bg-gradient-to-r from-yellow-400 to-yellow-500", textColor: "text-gray-900", icon: Sparkles },
+  best_value: { ar: "🏆 الأفضل قيمة", en: "🏆 Best Value", color: "bg-gradient-to-r from-green-400 to-green-500", textColor: "text-white", icon: TrendingUp },
+  most_chosen_business: { ar: "💼 الأكثر اختيارًا للشركات", en: "💼 Top for Business", color: "bg-gradient-to-r from-blue-400 to-blue-500", textColor: "text-white", icon: Briefcase },
+  special_offer: { ar: "🎁 عرض خاص", en: "🎁 Special Offer", color: "bg-gradient-to-r from-red-400 to-red-500", textColor: "text-white", icon: Tag },
 };
 
 export default function PublicPlansNew() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  // اسم الباقة: إنجليزي في الوضع الإنجليزي، وعربي مع استبدال "حزمة" بـ"باقة"
+  const planName = (p: any) => isRtl ? String(p.nameAr || "").replace(/حزمة/g, "باقة") : (p.nameEn || p.nameAr);
+  const planDesc = (p: any) => isRtl ? p.descriptionAr : (p.descriptionEn || p.descriptionAr);
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);
@@ -52,9 +58,9 @@ export default function PublicPlansNew() {
       <div className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-5 flex justify-center gap-3">
           {[
-            { value: "week", label: "أسبوعي" },
-            { value: "two_weeks", label: "أسبوعين" },
-            { value: "month", label: "شهري" },
+            { value: "week", label: isRtl ? "أسبوعي" : "Weekly" },
+            { value: "two_weeks", label: isRtl ? "أسبوعين" : "2 Weeks" },
+            { value: "month", label: isRtl ? "شهري" : "Monthly" },
           ].map((tab) => (
             <button
               key={tab.value}
@@ -101,7 +107,7 @@ export default function PublicPlansNew() {
                       <div
                         className={`absolute top-3 left-3 ${badge.color} ${badge.textColor} px-3 py-1.5 rounded-full text-xs font-bold shadow-md z-10 flex items-center gap-1`}
                       >
-                        {badge.label}
+                        {isRtl ? badge.ar : badge.en}
                       </div>
                     )}
 
@@ -118,10 +124,10 @@ export default function PublicPlansNew() {
                     <div className="p-5 space-y-3 flex-1 flex flex-col">
                       <div>
                         <h3 className="text-xl font-black text-[#0F1516] mb-1">
-                          {plan.nameAr}
+                          {planName(plan)}
                         </h3>
                         <p className="text-gray-500 text-xs leading-relaxed">
-                          {plan.descriptionAr}
+                          {planDesc(plan)}
                         </p>
                       </div>
 
@@ -131,7 +137,9 @@ export default function PublicPlansNew() {
                           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
                             style={{ background: "#3cc4f015", border: "1px solid #3cc4f030" }}>
                             <span className="text-xs font-black" style={{ color: "#3cc4f0" }}>
-                              {plan.options[0].mealsCount} وجبات + {plan.options[0].snacksCount} سناك
+                              {isRtl
+                                ? `${plan.options[0].mealsCount} وجبات + ${plan.options[0].snacksCount} سناك`
+                                : `${plan.options[0].mealsCount} meals + ${plan.options[0].snacksCount} snacks`}
                             </span>
                           </div>
                         </div>
@@ -155,14 +163,14 @@ export default function PublicPlansNew() {
 
                       {/* CTA Button */}
                       <Button
-                        onClick={() => handleSubscribe(plan.nameAr, plan.options?.[0])}
+                        onClick={() => handleSubscribe(planName(plan), plan.options?.[0])}
                         className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
                           isFeatured
                             ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
                             : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
                         }`}
                       >
-                        اختر الخطة
+                        {isRtl ? "اختر الباقة" : "Choose Plan"}
                       </Button>
                     </div>
                   </div>
@@ -175,7 +183,7 @@ export default function PublicPlansNew() {
         {comparisonPlans.length > 0 && (
           <div className="max-w-7xl mx-auto px-4 mt-20">
             <h2 className="text-4xl font-black text-center text-[#0F1516] mb-8">
-              مقارنة الباقات
+              {isRtl ? "مقارنة الباقات" : "Compare Plans"}
             </h2>
             
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden">
@@ -183,10 +191,10 @@ export default function PublicPlansNew() {
                 <table className="w-full">
                   <thead className="bg-[#3CC4F0] text-white">
                     <tr>
-                      <th className="py-4 px-6 text-right text-lg font-bold">الميزة</th>
+                      <th className="py-4 px-6 text-right text-lg font-bold">{isRtl ? "الميزة" : "Feature"}</th>
                       {comparisonPlans.map((plan) => (
                         <th key={plan._id} className="py-4 px-6 text-center text-lg font-bold">
-                          {plan.nameAr}
+                          {planName(plan)}
                         </th>
                       ))}
                     </tr>

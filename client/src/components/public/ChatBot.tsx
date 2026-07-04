@@ -5,16 +5,21 @@
 import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useLanguage } from "@/lib/i18n";
 
 const B = { brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A", line: "#D9E6F1", bg2: "#EAF3FB" };
 
 type Msg = { role: "user" | "assistant"; content: string };
 
 export default function ChatBot() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const chat = useAction(api.ai.chat);
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "assistant", content: "أهلاً بك في أدرينالين 🌿 أنا مساعدك الذكي — اسألني عن الوجبات، السعرات، أو باقات الاشتراك." },
+    { role: "assistant", content: isRtl
+      ? "أهلاً بك في أدرينالين 🌿 أنا مساعدك الذكي — اسألني عن الوجبات، السعرات، أو باقات الاشتراك."
+      : "Welcome to Adrenaline 🌿 I'm your smart assistant — ask me about meals, calories, or subscription plans." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,17 +33,17 @@ export default function ChatBot() {
     const next: Msg[] = [...msgs, { role: "user", content: text }];
     setMsgs(next); setInput(""); setLoading(true);
     try {
-      const res: any = await chat({ messages: next });
+      const res: any = await chat({ messages: next, lang: isRtl ? "ar" : "en" });
       setMsgs([...next, { role: "assistant", content: res.reply }]);
     } catch {
-      setMsgs([...next, { role: "assistant", content: "حصل خطأ مؤقت، حاول تاني 🌿" }]);
+      setMsgs([...next, { role: "assistant", content: isRtl ? "حصل خطأ مؤقت، حاول تاني 🌿" : "A temporary error occurred, please try again 🌿" }]);
     } finally { setLoading(false); }
   };
 
   return (
     <>
       {/* Launcher */}
-      <button onClick={() => setOpen(!open)} aria-label="المساعد الذكي"
+      <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
         className="no-print"
         style={{
           position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
@@ -52,7 +57,7 @@ export default function ChatBot() {
 
       {/* Panel */}
       {open && (
-        <div dir="rtl" className="no-print" style={{
+        <div dir={isRtl ? "rtl" : "ltr"} className="no-print" style={{
           position: "fixed", bottom: "calc(160px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
           width: "min(360px, calc(100vw - 44px))", height: "min(480px, calc(100vh - 220px))",
           background: "#fff", borderRadius: 20, overflow: "hidden",
@@ -66,8 +71,8 @@ export default function ChatBot() {
           }}>
             <div style={{ width: 34, height: 34, borderRadius: "50%", background: "rgba(255,255,255,.18)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🤖</div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15 }}>مساعد أدرينالين</div>
-              <div style={{ fontSize: 11, opacity: .8 }}>يرد عادةً خلال ثوانٍ</div>
+              <div style={{ fontWeight: 800, fontSize: 15 }}>{isRtl ? "مساعد أدرينالين" : "Adrenaline Assistant"}</div>
+              <div style={{ fontSize: 11, opacity: .8 }}>{isRtl ? "يرد عادةً خلال ثوانٍ" : "Usually replies in seconds"}</div>
             </div>
           </div>
 
@@ -84,7 +89,7 @@ export default function ChatBot() {
                 }}>{m.content}</div>
               </div>
             ))}
-            {loading && <div style={{ textAlign: "center", color: B.accent, fontSize: 13 }}>...يكتب</div>}
+            {loading && <div style={{ textAlign: "center", color: B.accent, fontSize: 13 }}>{isRtl ? "...يكتب" : "typing..."}</div>}
             <div ref={endRef} />
           </div>
 
@@ -92,13 +97,13 @@ export default function ChatBot() {
           <div style={{ display: "flex", gap: 8, padding: 12, borderTop: `1px solid ${B.line}`, background: "#fff" }}>
             <input value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-              placeholder="اكتب رسالتك…"
+              placeholder={isRtl ? "اكتب رسالتك…" : "Type your message…"}
               style={{ flex: 1, border: `1px solid ${B.line}`, borderRadius: 12, padding: "10px 14px", fontSize: 14, fontFamily: "'Cairo',sans-serif" }} />
             <button onClick={send} disabled={loading || !input.trim()}
               style={{
                 border: "none", borderRadius: 12, padding: "0 18px", cursor: "pointer",
                 background: loading || !input.trim() ? "#9CC5DB" : B.accent, color: "#fff", fontWeight: 800,
-              }}>إرسال</button>
+              }}>{isRtl ? "إرسال" : "Send"}</button>
           </div>
         </div>
       )}
