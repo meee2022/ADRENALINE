@@ -29,6 +29,7 @@ export default function RestaurantSettings() {
     twitterUrl: "",
     facebookUrl: "",
     tiktokUrl: "",
+    snapchatUrl: "",
     whatsappNumber: "",
     descriptionAr: "",
     descriptionEn: "",
@@ -63,6 +64,7 @@ export default function RestaurantSettings() {
         twitterUrl: settings.twitterUrl || "",
         facebookUrl: settings.facebookUrl || "",
         tiktokUrl: settings.tiktokUrl || "",
+        snapchatUrl: (settings as any).snapchatUrl || "",
         whatsappNumber: settings.whatsappNumber || "",
         descriptionAr: settings.descriptionAr || "",
         descriptionEn: settings.descriptionEn || "",
@@ -343,6 +345,16 @@ export default function RestaurantSettings() {
                   value={formData.tiktokUrl}
                   onChange={(e) => handleChange("tiktokUrl", e.target.value)}
                   placeholder="https://tiktok.com/@adrenaline"
+                  dir="ltr"
+                />
+              </div>
+              <div>
+                <Label htmlFor="snapchatUrl">Snapchat (اختياري)</Label>
+                <Input
+                  id="snapchatUrl"
+                  value={formData.snapchatUrl}
+                  onChange={(e) => handleChange("snapchatUrl", e.target.value)}
+                  placeholder="https://snapchat.com/add/adrenaline"
                   dir="ltr"
                 />
               </div>

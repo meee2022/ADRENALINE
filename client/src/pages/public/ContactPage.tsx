@@ -272,30 +272,47 @@ export default function ContactPage() {
                   background: "linear-gradient(135deg, #0F1516 0%, #1a2628 100%)",
                   boxShadow: "0 12px 40px rgba(0,0,0,0.15)",
                 }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="h-10 w-10 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
-                    <Instagram className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-base font-black text-white">{isRtl ? "تابعنا" : "Follow Us"}</h4>
-                    <p className="text-xs" style={{ color: "#BCBEBF" }}>
-                      {isRtl ? "آخر العروض والوصفات" : "Latest offers and recipes"}
-                    </p>
-                  </div>
+                <div className="mb-4">
+                  <h4 className="text-base font-black text-white">{isRtl ? "تابعنا" : "Follow Us"}</h4>
+                  <p className="text-xs" style={{ color: "#BCBEBF" }}>
+                    {isRtl ? "آخر العروض والوصفات" : "Latest offers and recipes"}
+                  </p>
                 </div>
-                <motion.a
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block w-full h-11 rounded-xl text-center font-bold text-sm flex items-center justify-center gap-2 text-white"
-                  style={{ background: "linear-gradient(135deg, #833AB4, #FD1D1D, #FCAF45)" }}
-                >
-                  <Instagram className="h-4 w-4" />
-                  @adrenaline_qa
-                </motion.a>
+                {(() => {
+                  const socials = [
+                    { url: settings?.instagramUrl, label: "Instagram", bg: "linear-gradient(135deg,#833AB4,#FD1D1D,#FCAF45)",
+                      svg: <path d="M12 2.2c3.2 0 3.6 0 4.9.07 1.17.05 1.8.25 2.23.41.56.22.96.48 1.38.9.42.42.68.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s0 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.48.96-.9 1.38-.42.42-.82.68-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.9.07s-3.63 0-4.9-.07c-1.17-.05-1.8-.25-2.23-.41a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.16-.42-.36-1.06-.41-2.23C2.21 15.58 2.2 15.2 2.2 12s0-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.16 1.06-.36 2.23-.41C8.4 2.2 8.8 2.2 12 2.2Zm0 1.8c-3.14 0-3.51.01-4.75.07-.9.04-1.38.19-1.7.32-.43.16-.73.36-1.05.68-.32.32-.52.62-.68 1.05-.13.32-.28.8-.32 1.7C3.21 8.49 3.2 8.86 3.2 12s.01 3.51.07 4.75c.04.9.19 1.38.32 1.7.16.43.36.73.68 1.05.32.32.62.52 1.05.68.32.13.8.28 1.7.32 1.24.06 1.61.07 4.75.07s3.51-.01 4.75-.07c.9-.04 1.38-.19 1.7-.32.43-.16.73-.36 1.05-.68.32-.32.52-.62.68-1.05.13-.32.28-.8.32-1.7.06-1.24.07-1.61.07-4.75s-.01-3.51-.07-4.75c-.04-.9-.19-1.38-.32-1.7a2.8 2.8 0 0 0-.68-1.05 2.8 2.8 0 0 0-1.05-.68c-.32-.13-.8-.28-1.7-.32C15.51 4.01 15.14 4 12 4Zm0 3.06A4.94 4.94 0 1 1 12 17a4.94 4.94 0 0 1 0-9.88Zm0 1.8a3.14 3.14 0 1 0 0 6.28 3.14 3.14 0 0 0 0-6.28Zm5.14-.94a1.15 1.15 0 1 1-2.3 0 1.15 1.15 0 0 1 2.3 0Z"/> },
+                    { url: (settings as any)?.tiktokUrl, label: "TikTok", bg: "#000",
+                      svg: <path d="M16.5 3c.3 2 1.5 3.6 3.5 3.9v2.6c-1.3.1-2.5-.3-3.6-.9v5.6c0 3.2-2.4 5.4-5.3 5.4-2.7 0-4.9-2-4.9-4.7 0-2.9 2.4-4.9 5.4-4.5v2.7c-.3-.1-.7-.2-1-.2-1.2 0-2.1.9-2.1 2 0 1.2.9 2 2 2 1.2 0 2.2-.9 2.2-2.4V3h3.4Z"/> },
+                    { url: (settings as any)?.snapchatUrl, label: "Snapchat", bg: "#FFFC00", fg: "#000",
+                      svg: <path d="M12 2.3c2.6 0 4.4 1.9 4.5 4.5.02.5 0 1 0 1.4 0 .2.2.3.4.2.2 0 .5-.2.8-.2.4 0 .9.3.9.8 0 .6-.8.8-1.2 1-.2.1-.5.2-.5.5 0 .5 1.4 2.6 3.3 3 .3.05.5.3.5.5 0 .6-1 1-1.9 1.2-.2.03-.3.2-.35.4-.05.2-.1.5-.35.6-.3.1-.9-.1-1.6-.1-.6 0-1 .1-1.5.5-.6.5-1.3 1-2.6 1s-2-.5-2.6-1c-.5-.4-.9-.5-1.5-.5-.7 0-1.3.2-1.6.1-.25-.1-.3-.4-.35-.6-.05-.2-.15-.37-.35-.4-.9-.2-1.9-.6-1.9-1.2 0-.2.2-.45.5-.5 1.9-.4 3.3-2.5 3.3-3 0-.3-.3-.4-.5-.5-.4-.2-1.2-.4-1.2-1 0-.5.5-.8.9-.8.3 0 .6.2.8.2.2.1.4 0 .4-.2 0-.4-.02-.9 0-1.4C7.6 4.2 9.4 2.3 12 2.3Z"/> },
+                    { url: settings?.twitterUrl, label: "X", bg: "#000",
+                      svg: <path d="M17.5 3h3l-6.6 7.5L21.7 21h-5.9l-4.6-6-5.3 6H2.9l7-8L2.3 3h6l4.2 5.5L17.5 3Zm-1 16h1.6L7.6 4.6H5.9L16.5 19Z"/> },
+                    { url: settings?.facebookUrl, label: "Facebook", bg: "#1877F2",
+                      svg: <path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.75-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12Z"/> },
+                  ].filter(s => s.url && String(s.url).trim());
+
+                  if (socials.length === 0) return (
+                    <p className="text-sm" style={{ color: "#BCBEBF" }}>
+                      {isRtl ? "أضف روابط التواصل من لوحة التحكم." : "Add social links from the dashboard."}
+                    </p>
+                  );
+                  return (
+                    <div className="flex flex-wrap gap-3">
+                      {socials.map((s, i) => (
+                        <motion.a key={i}
+                          whileHover={{ scale: 1.08, y: -2 }} whileTap={{ scale: 0.95 }}
+                          href={String(s.url).trim()} target="_blank" rel="noreferrer"
+                          aria-label={s.label} title={s.label}
+                          className="h-12 w-12 rounded-xl flex items-center justify-center shadow-lg"
+                          style={{ background: s.bg }}
+                        >
+                          <svg viewBox="0 0 24 24" width="22" height="22" fill={s.fg || "#fff"}>{s.svg}</svg>
+                        </motion.a>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </motion.div>
           </div>

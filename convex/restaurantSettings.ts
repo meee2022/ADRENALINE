@@ -23,6 +23,7 @@ export const update = mutation({
     twitterUrl: v.optional(v.string()),
     facebookUrl: v.optional(v.string()),
     tiktokUrl: v.optional(v.string()),
+    snapchatUrl: v.optional(v.string()),
     whatsappNumber: v.optional(v.string()),
     
     descriptionAr: v.string(),

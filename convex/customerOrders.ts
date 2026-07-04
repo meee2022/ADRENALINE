@@ -416,12 +416,13 @@ function getDayOffset(day: string): number {
     // friday: 6,
   };
   const offset = dayMap[day.toLowerCase()];
-  
-  // ✅ إذا كان اليوم خميس/جمعة، نرمي خطأ
+
+  // ✅ الخميس/الجمعة إجازة — بدل رمي خطأ يوقف اعتماد الطلب كله،
+  //    نُرجّع أقرب يوم عمل (الأربعاء) حتى لا يتعطّل الاعتماد.
   if (offset === undefined) {
-    throw new Error(`Invalid day: ${day}. Thursday and Friday are not working days.`);
+    return 4; // wednesday
   }
-  
+
   return offset;
 }
 

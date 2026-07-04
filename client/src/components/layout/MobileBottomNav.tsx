@@ -93,6 +93,7 @@ export function MobileBottomNav() {
     <div
       dir={isRtl ? "rtl" : "ltr"}
       className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white to-cyan-50 border-t-2 border-cyan-300 shadow-[0_-4px_20px_rgba(6,182,212,0.15)]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <nav className="flex items-center justify-around h-16 px-2 max-w-screen-xl mx-auto">
         {filteredItems.map((item) => {

@@ -88,8 +88,10 @@ export const get = query({
     }
 
     // 2) Load customers for this session's plans
+    // ✅ نتجاهل الخطط بدون customerId (طلبات غير مربوطة بمشترك) حتى لا يتعطّل
+    //    ctx.db.get("undefined") — نعتمد على customerName لها لاحقاً.
     const customerIds = Array.from(
-      new Set(plans.map((p: any) => String(p.customerId))),
+      new Set(plans.map((p: any) => p.customerId).filter(Boolean).map((id: any) => String(id))),
     );
 
     const customers = await Promise.all(

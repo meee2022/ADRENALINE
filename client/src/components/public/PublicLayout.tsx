@@ -311,7 +311,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       <main className="pb-20 md:pb-0">{children}</main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex items-center justify-around py-2">
           {/* Show Dashboard button for logged in users */}
           {currentUser ? (

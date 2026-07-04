@@ -41,7 +41,7 @@ export default function ChatBot() {
       <button onClick={() => setOpen(!open)} aria-label="المساعد الذكي"
         className="no-print"
         style={{
-          position: "fixed", bottom: 90, right: 18, zIndex: 1000,
+          position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
           width: 58, height: 58, borderRadius: "50%", border: "none", cursor: "pointer",
           background: `linear-gradient(145deg,${B.brand},${B.accent})`,
           boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
@@ -53,8 +53,8 @@ export default function ChatBot() {
       {/* Panel */}
       {open && (
         <div dir="rtl" className="no-print" style={{
-          position: "fixed", bottom: 160, right: 18, zIndex: 1000,
-          width: "min(370px, calc(100vw - 36px))", height: 480,
+          position: "fixed", bottom: "calc(160px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
+          width: "min(360px, calc(100vw - 44px))", height: "min(480px, calc(100vh - 220px))",
           background: "#fff", borderRadius: 20, overflow: "hidden",
           border: `1px solid ${B.line}`, boxShadow: "0 24px 60px -20px rgba(14,42,74,.4)",
           display: "flex", flexDirection: "column", fontFamily: "'Cairo',sans-serif",
