@@ -270,7 +270,7 @@ export default function Stickers() {
         .label {
           width: var(--label-w);
           height: var(--label-h);
-          padding: 1.5mm 2.5mm 1.2mm;
+          padding: 0.6mm 2.5mm 1.2mm;
           border: 0.5px solid #000;
           border-radius: 1.5mm;
           background: #fff;
