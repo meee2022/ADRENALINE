@@ -45,6 +45,33 @@ export default defineSchema({
     .index("by_name", ["name"])
     .index("by_type", ["type"]),
 
+  // ===== Attendance (الحضور اليومي — يدوي أو من جهاز البصمة) =====
+  attendance: defineTable({
+    name: v.string(),                 // اسم الموظف
+    designation: v.optional(v.string()),
+    date: v.string(),                 // yyyy-MM-dd
+    month: v.string(),                // yyyy-MM (مشتق من التاريخ)
+    status: v.union(
+      v.literal("present"),           // حاضر
+      v.literal("absent"),            // غائب
+      v.literal("leave"),             // إجازة
+      v.literal("half"),              // نصف يوم
+    ),
+    checkIn: v.optional(v.string()),  // HH:mm
+    checkOut: v.optional(v.string()), // HH:mm
+    workedHours: v.optional(v.number()),
+    otHours: v.optional(v.number()),
+    late: v.optional(v.boolean()),
+    source: v.optional(v.union(v.literal("manual"), v.literal("biometric"))),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_date", ["date"])
+    .index("by_month", ["month"])
+    .index("by_name", ["name"])
+    .index("by_name_date", ["name", "date"]),
+
   // ===== Payroll (كشف رواتب الموظفين) =====
   payroll: defineTable({
     name: v.string(),

@@ -122,6 +122,7 @@ export interface MenuItemDef {
     | "coupons"
     | "payroll"
     | "leaves"
+    | "attendance"
     | "ratings";
   labelAr: string;
   labelEn: string;
@@ -219,6 +220,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     titleEn: "System",
     items: [
       { href: "/payroll", iconKey: "payroll", labelAr: "الرواتب", labelEn: "Payroll",
+        roles: ["ADMIN"] },
+      { href: "/attendance", iconKey: "attendance", labelAr: "الحضور اليومي", labelEn: "Attendance",
         roles: ["ADMIN"] },
       { href: "/leaves", iconKey: "leaves", labelAr: "الإجازات", labelEn: "Leaves",
         roles: ["ADMIN"] },
