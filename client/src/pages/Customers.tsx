@@ -56,7 +56,9 @@ import {
   Download,
   ChevronDown,
   X,
+  Users,
 } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { format, parseISO } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useForm, Controller } from "react-hook-form";
@@ -649,35 +651,25 @@ export default function Customers() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6">
-      {/* Header with Icon */}
-      <div className="flex items-center justify-between gap-3 flex-wrap bg-gradient-to-r from-cyan-50 to-blue-50 p-4 sm:p-6 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-lg">
-            <svg className="h-6 w-6 sm:h-7 sm:w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight font-heading text-gray-800">
-              {t("customers.title")}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600">
-              {t("customers.subtitle")}
-            </p>
-          </div>
-        </div>
-
-        <Button 
-          className="h-10 sm:h-11 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-lg text-sm"
-          onClick={() => {
-            resetForm();
-            setIsDialogOpen(true);
-          }}
-        >
-          <Plus className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
-          {isRtl ? "إضافة مشترك" : "Add Customer"}
-        </Button>
-      </div>
+      {/* Header — unified brand hero */}
+      <DashboardHeader
+        icon={<Users className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="المشتركين" titleEn="Subscribers"
+        subtitleAr="إدارة العملاء والاشتراكات" subtitleEn="Manage customers & subscriptions"
+        kpis={[
+          { value: (customers as any[]).length, labelAr: "إجمالي المشتركين", labelEn: "Total Subscribers" },
+          { value: (customers as any[]).filter((c: any) => c.isActive).length, labelAr: "نشط", labelEn: "Active" },
+        ]}
+        actions={
+          <Button
+            className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
+            onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          >
+            <Plus className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+            {isRtl ? "إضافة مشترك" : "Add Customer"}
+          </Button>
+        }
+      />
 
       {/* Search and Filter Row */}
       <div className="flex flex-col gap-3">

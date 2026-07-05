@@ -647,8 +647,8 @@ export default function PlansPage() {
               <div
                 className="rounded-3xl overflow-hidden relative p-7"
                 style={{
-                  background: "linear-gradient(135deg, #3cc4f0 0%, #2bb0dc 50%, #47759c 100%)",
-                  boxShadow: "0 8px 32px rgba(60,196,240,0.25)",
+                  background: "linear-gradient(135deg,#0E2A4A 0%,#0E76AC 55%,#3AC7F4 100%)",
+                  boxShadow: "0 8px 32px rgba(14,42,74,0.25)",
                 }}
               >
                 {/* Decorative glow */}
@@ -1348,7 +1348,7 @@ export default function PlansPage() {
                                   <span className="text-[11px] font-bold px-2 h-6 rounded-full flex items-center gap-1.5"
                                     style={{ color: accent.color, background: accent.color + "12" }}>
                                     <span className="text-sm leading-none">{accent.icon}</span>
-                                    {isRtl ? category.nameAr || category.name : category.name}
+                                    {isRtl ? (category as any).nameAr || category.name : category.name}
                                   </span>
                                 </div>
                               </div>
