@@ -37,7 +37,6 @@ export default function Stickers() {
   const styleVars = useMemo(
     () =>
       ({
-        // @ts-expect-error css vars
         "--label-w": `${clamp(labelW, 20, 120)}mm`,
         "--label-h": `${clamp(labelH, 15, 120)}mm`,
         "--gap": `${clamp(gap, 0, 20)}mm`,
@@ -331,10 +330,20 @@ export default function Stickers() {
           /* أعلى تخصيص لتغلب على لون العلامة السماوي */
           .label .brand-name, .label .brand-tag,
           .label .goal-badge, .label .cust-phone, .label .warn-line,
-          .label .macros-cal, .label .macros-text, .label .macros-val,
-          .label .macros-unit, .label .cust-num-inline {
+          .label .macros-text, .label .cust-num-inline {
             color: #000 !important;
             -webkit-text-fill-color: #000 !important;
+          }
+          /* Calorie pill: solid black fill + white text (knockout) */
+          .label .macros-cal {
+            background: #000 !important;
+            border: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          .label .macros-val, .label .macros-unit {
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
           }
           /* القلب: نحوّله لأسود صلب (بدل السماوي الذي يتبعثر) مع الحفاظ على شكله */
           .label .brand-heart {
@@ -349,13 +358,12 @@ export default function Stickers() {
             font-weight: 900 !important;
             letter-spacing: 1.2px !important;
           }
-          /* الشارات: خلفية بيضاء + حدود سوداء صلبة + نص أسود (بدل السماوي/الأحمر الباهت) */
+          /* الشارات الأخرى: خلفية بيضاء + حدود سوداء صلبة + نص أسود */
           .label .goal-badge,
-          .label .macros-cal,
           .label .warn-line {
             background: #fff !important;
             border: 0.5px solid #000 !important;
-            font-weight: 800 !important;
+            font-weight: 900 !important;
           }
           /* كل الحدود الرفيعة تبقى أسود صلب */
           .label, .label .date-divider, .label .date-row {
@@ -392,26 +400,26 @@ export default function Stickers() {
           align-items: center;
         }
         .brand-name {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 900;
-          letter-spacing: 2.5px;
+          letter-spacing: 2px;
           line-height: 1.05;
-          color: #3CC4F0 !important;
-          -webkit-text-fill-color: #3CC4F0 !important;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
         }
         .brand-tag {
           font-size: 6.5px;
           font-weight: 900;
           letter-spacing: 3px;
           margin-top: 0.2mm;
-          color: #47759C !important;
-          -webkit-text-fill-color: #47759C !important;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
         }
         .brand-rule {
-          height: 0.4mm;
+          height: 0.5mm;
           width: 100%;
           background: #000 !important;
-          margin: 1mm 0 0.3mm;
+          margin: 1mm 0 0.4mm;
           opacity: 1;
         }
 
@@ -433,27 +441,27 @@ export default function Stickers() {
           text-align: center !important;
         }
 
-        /* Customer name — main focus, italic bold, centered */
+        /* Customer name — main title, heavy black, centered */
         .cust-line {
-          font-size: 11.5px;
+          font-size: 13px;
           font-weight: 900;
-          font-style: italic;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.25;
+          line-height: 1.2;
           width: 100%;
           margin: 0 auto;
           overflow: visible;
           padding: 0.15mm 1mm;
+          text-transform: uppercase;
         }
 
         /* Meal name — under customer, biggest info after the name */
         .meal-line {
-          font-size: 9.5px;
-          font-weight: 800;
-          letter-spacing: 0.2px;
+          font-size: 10.5px;
+          font-weight: 900;
+          letter-spacing: 0.3px;
           text-align: center !important;
-          line-height: 1.25;
+          line-height: 1.2;
           overflow: visible;
           margin: 0 auto;
           width: 100%;
@@ -473,34 +481,37 @@ export default function Stickers() {
           flex-wrap: wrap;
           line-height: 1;
         }
+        /* Calories — solid black pill with white knockout text (crisp on thermal) */
         .macros-cal {
           display: inline-flex;
           align-items: baseline;
-          gap: 0.5mm;
-          padding: 0.3mm 1.5mm;
+          gap: 0.6mm;
+          padding: 0.5mm 2mm;
           border-radius: 1mm;
-          background: rgba(60,196,240,0.12) !important;
-          border: 0.5px solid rgba(60,196,240,0.4);
+          background: #000 !important;
+          border: none;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         .macros-val {
-          font-size: 9.5px;
+          font-size: 10px;
           font-weight: 900;
-          color: #3CC4F0 !important;
-          -webkit-text-fill-color: #3CC4F0 !important;
+          color: #fff !important;
+          -webkit-text-fill-color: #fff !important;
         }
         .macros-unit {
-          font-size: 6px;
-          font-weight: 800;
-          color: #47759C !important;
-          -webkit-text-fill-color: #47759C !important;
+          font-size: 6.5px;
+          font-weight: 900;
+          color: #fff !important;
+          -webkit-text-fill-color: #fff !important;
           letter-spacing: 0.5px;
         }
         .macros-text {
-          font-size: 8px;
-          font-weight: 800;
+          font-size: 8.5px;
+          font-weight: 900;
           letter-spacing: 0.4px;
-          color: #47759C !important;
-          -webkit-text-fill-color: #47759C !important;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
         }
 
         /* Warnings — red pill, centered */
