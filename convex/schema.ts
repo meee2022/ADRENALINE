@@ -28,6 +28,7 @@ export default defineSchema({
     type: v.union(
       v.literal("annual"),            // سنوية
       v.literal("sick"),              // مرضية
+      v.literal("travel"),            // سفر
       v.literal("unpaid"),            // بدون راتب
       v.literal("emergency"),         // طارئة
       v.literal("other"),             // أخرى

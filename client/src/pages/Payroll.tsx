@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Banknote, Plus, Pencil, Trash2, Printer } from "lucide-react";
+import { Banknote, Plus, Pencil, Trash2, Printer, Clock4 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const money = (n: number) => (n || 0).toLocaleString("en-US");
@@ -51,6 +51,39 @@ export default function Payroll() {
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
   // معدّل الأوفرتايم (قابل للتعديل) — 1.25 = +25% (قانون العمل القطري لأيام الأسبوع)
   const [otRate, setOtRate] = useState("1.25");
+
+  // ─── أوفرتايم جماعي ───
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkRate, setBulkRate] = useState("1.25");
+  const [bulkFilter, setBulkFilter] = useState<"all" | "kitchen" | "delivery">("kitchen");
+  const [bulkHours, setBulkHours] = useState<Record<string, string>>({});
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  const isKitchen = (d: string) => /chef|cdp|helper|kitchen|cleaner|butcher|grill|salad|dessert|desert|iftar|iftikar|store/i.test(d || "");
+  const isDelivery = (d: string) => /driver|delivery|توصيل|سائق/i.test(d || "");
+  const bulkRows = rows.filter((r: any) =>
+    bulkFilter === "all" ? true : bulkFilter === "kitchen" ? isKitchen(r.designation) : isDelivery(r.designation));
+
+  const bulkOTFor = (r: any) => {
+    const hrs = Number(bulkHours[r._id]) || 0;
+    const hourly = (r.package || 0) / (DAYS_PER_MONTH * WORK_HOURS_PER_DAY);
+    return { hrs, amount: Math.round(hrs * hourly * (Number(bulkRate) || 1)) };
+  };
+
+  const saveBulk = async () => {
+    const targets = bulkRows.filter((r: any) => (Number(bulkHours[r._id]) || 0) > 0);
+    if (!targets.length) { alert(t("أدخل ساعات لموظف واحد على الأقل", "Enter hours for at least one employee")); return; }
+    setBulkSaving(true);
+    try {
+      for (const r of targets) {
+        const { hrs, amount } = bulkOTFor(r);
+        await updateM({ id: r._id, otHours: hrs, overtime: amount, sessionToken });
+      }
+      setBulkHours({});
+      setBulkOpen(false);
+    } catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    finally { setBulkSaving(false); }
+  };
 
   const monthLabel = (m: string) => {
     const [y, mo] = m.split("-");
@@ -130,6 +163,12 @@ export default function Payroll() {
                 style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}>
                 <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("طباعة", "Print")}
               </Button>
+              {isAdmin && (
+                <Button onClick={() => { setBulkHours({}); setBulkOpen(true); }} className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
+                  style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}>
+                  <Clock4 className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("أوفرتايم جماعي", "Bulk OT")}
+                </Button>
+              )}
               {isAdmin && (
                 <Button onClick={openAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm">
                   <Plus className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("موظف جديد", "Add Employee")}
@@ -333,6 +372,76 @@ export default function Payroll() {
             <Button onClick={save} className="rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
               {t("حفظ", "Save")}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk overtime dialog */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col p-0" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader className="p-5 pb-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Clock4 className="h-5 w-5 text-[#0E76AC]" /> {t("إدخال أوفرتايم جماعي", "Bulk Overtime Entry")}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="px-5 space-y-3">
+            {/* group filter + rate */}
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex gap-1.5">
+                {([
+                  { k: "kitchen", ar: "المطبخ", en: "Kitchen" },
+                  { k: "delivery", ar: "التوصيل", en: "Delivery" },
+                  { k: "all", ar: "الكل", en: "All" },
+                ] as const).map((g) => (
+                  <button key={g.k} onClick={() => setBulkFilter(g.k)}
+                    className={cn("px-3 h-8 rounded-lg text-xs font-bold transition-all", bulkFilter === g.k ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}
+                    style={bulkFilter === g.k ? { background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" } : {}}>
+                    {isRtl ? g.ar : g.en}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-[11px] text-gray-500">{t("المعدّل ×", "Rate ×")}</Label>
+                <Input value={bulkRate} onChange={(e) => setBulkRate(e.target.value)} type="number" step="0.05" dir="ltr" className="h-8 w-20 text-center" />
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400">
+              {t("اكتب عدد ساعات الأوفرتايم لكل موظف — والمبلغ يُحسب تلقائيًا (باقة ÷ 270 × ساعات × المعدّل).",
+                 "Enter OT hours per employee — the amount is auto-computed (package ÷ 270 × hours × rate).")}
+            </p>
+          </div>
+
+          {/* employee list with hours inputs */}
+          <div className="flex-1 overflow-y-auto px-5 py-2 space-y-1.5">
+            {bulkRows.length === 0 ? (
+              <p className="text-center text-sm text-gray-400 py-6">{t("لا يوجد موظفون في هذه المجموعة", "No employees in this group")}</p>
+            ) : bulkRows.map((r: any) => {
+              const { amount } = bulkOTFor(r);
+              return (
+                <div key={r._id} className="flex items-center gap-3 rounded-xl px-3 py-2" style={{ background: "#f7fbfe", border: "1px solid #eef3f8" }}>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-[#0f1516] truncate">{r.name}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{r.designation}</div>
+                  </div>
+                  {amount > 0 && <div className="text-xs font-black text-[#0E76AC] tabular-nums">{money(amount)} {t("ر.ق", "QAR")}</div>}
+                  <Input type="number" placeholder={t("ساعات", "hrs")} dir="ltr"
+                    value={bulkHours[r._id] || ""} onChange={(e) => setBulkHours((h) => ({ ...h, [r._id]: e.target.value }))}
+                    className="h-9 w-24 text-center" />
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="p-5 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-between w-full gap-3">
+              <span className="text-xs text-gray-400">
+                {bulkRows.filter((r: any) => (Number(bulkHours[r._id]) || 0) > 0).length} {t("موظف محدّد", "selected")}
+              </span>
+              <Button onClick={saveBulk} disabled={bulkSaving} className="rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+                {bulkSaving ? t("جارٍ الحفظ…", "Saving…") : t("حفظ الكل", "Save All")}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

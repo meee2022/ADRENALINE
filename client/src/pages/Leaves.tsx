@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 const TYPES = [
   { key: "annual", ar: "سنوية", en: "Annual", cls: "bg-[#e8f8fd] text-[#0E76AC]" },
   { key: "sick", ar: "مرضية", en: "Sick", cls: "bg-amber-50 text-amber-700" },
+  { key: "travel", ar: "سفر", en: "Travel", cls: "bg-cyan-50 text-cyan-700" },
   { key: "unpaid", ar: "بدون راتب", en: "Unpaid", cls: "bg-red-50 text-red-700" },
   { key: "emergency", ar: "طارئة", en: "Emergency", cls: "bg-purple-50 text-purple-700" },
   { key: "other", ar: "أخرى", en: "Other", cls: "bg-gray-100 text-gray-600" },

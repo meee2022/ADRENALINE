@@ -41,7 +41,7 @@ export const summary = query({
     const rows = await ctx.db.query("leaves").collect();
     const byName: Record<string, any> = {};
     for (const r of rows) {
-      const b = (byName[r.name] ??= { name: r.name, annual: 0, sick: 0, unpaid: 0, emergency: 0, other: 0, total: 0 });
+      const b = (byName[r.name] ??= { name: r.name, annual: 0, sick: 0, travel: 0, unpaid: 0, emergency: 0, other: 0, total: 0 });
       b[r.type] = (b[r.type] || 0) + r.days;
       b.total += r.days;
     }
@@ -65,7 +65,7 @@ export const summary = query({
 
 const leaveArgs = {
   name: v.string(),
-  type: v.union(v.literal("annual"), v.literal("sick"), v.literal("unpaid"), v.literal("emergency"), v.literal("other")),
+  type: v.union(v.literal("annual"), v.literal("sick"), v.literal("travel"), v.literal("unpaid"), v.literal("emergency"), v.literal("other")),
   startDate: v.string(),
   endDate: v.string(),
   days: v.number(),
@@ -87,7 +87,7 @@ export const update = mutation({
   args: {
     id: v.id("leaves"),
     name: v.optional(v.string()),
-    type: v.optional(v.union(v.literal("annual"), v.literal("sick"), v.literal("unpaid"), v.literal("emergency"), v.literal("other"))),
+    type: v.optional(v.union(v.literal("annual"), v.literal("sick"), v.literal("travel"), v.literal("unpaid"), v.literal("emergency"), v.literal("other"))),
     startDate: v.optional(v.string()),
     endDate: v.optional(v.string()),
     days: v.optional(v.number()),
