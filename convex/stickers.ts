@@ -339,8 +339,20 @@ export const get = query({
       }
     }
 
-    // ترتيب الوجبات حسب رقم العميل ثم رقم الوجبة
+    // ترتيب الطباعة: حسب نوع الوجبة (فطور → غداء → عشاء → سلطة → سناك) ثم العميل ثم رقم الوجبة
+    const catRank = (s: any) => {
+      const c = String(s.category || "").toUpperCase();
+      if (c.includes("BREAKFAST")) return 0;
+      if (c.includes("LUNCH")) return 1;
+      if (c.includes("DINNER")) return 2;
+      if (c.includes("SALAD")) return 3;
+      if (c.includes("SNACK")) return 4;
+      return 5;
+    };
     mealStickers.sort((a, b) => {
+      const r = catRank(a) - catRank(b);
+      if (r !== 0) return r;
+
       const n = (a.customerNo ?? 0) - (b.customerNo ?? 0);
       if (n !== 0) return n;
 
