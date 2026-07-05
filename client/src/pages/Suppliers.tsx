@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Users, Plus, Phone, Package, Truck, ArrowRight, Coins, CalendarClock, Pencil } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
@@ -57,46 +58,31 @@ export default function SuppliersPage() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><Users className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "إدارة الموردين" : "Suppliers"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "الموردون ومشترياتهم" : "Suppliers & their purchases"}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setLocation("/inventory/receive")} className="hidden sm:flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><Truck className="h-4 w-4" /> {isRtl ? "استلام بضاعة" : "Receive"}</button>
-            <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
-          </div>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<Users className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="إدارة الموردين" titleEn="Suppliers"
+          subtitleAr="الموردون ومشترياتهم" subtitleEn="Suppliers & their purchases"
+          kpis={[
+            { value: suppliers.length, labelAr: "إجمالي الموردين", labelEn: "Total Suppliers" },
+            { value: fmt(totalPurchaseValue), labelAr: "إجمالي المشتريات", labelEn: "Total Purchases" },
+          ]}
+          actions={
+            <>
+              <button onClick={() => setLocation("/inventory/receive")} className="hidden sm:flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><Truck className="h-4 w-4" /> {isRtl ? "استلام بضاعة" : "Receive"}</button>
+              <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
+            </>
+          }
+        />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-5">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-lg bg-cyan-50 flex items-center justify-center"><Users className="h-5 w-5 text-cyan-600" /></div>
-              <p className="text-sm text-slate-500">{isRtl ? "إجمالي الموردين" : "Total Suppliers"}</p>
-            </div>
-            <p className="text-2xl font-black text-slate-900">{suppliers.length}</p>
-          </div>
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 rounded-lg bg-cyan-50 flex items-center justify-center"><Coins className="h-5 w-5 text-cyan-600" /></div>
-              <p className="text-sm text-slate-500">{isRtl ? "إجمالي المشتريات" : "Total Purchases"}</p>
-            </div>
-            <p className="text-2xl font-black text-slate-900">{fmt(totalPurchaseValue)} <span className="text-base font-bold text-slate-400">{isRtl ? "ر.ق" : "QAR"}</span></p>
-          </div>
-        </div>
-
         <div className="flex justify-end">
-          <Button onClick={openAdd} className="h-11 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white shadow-md"><Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />{isRtl ? "إضافة مورّد" : "Add Supplier"}</Button>
+          <Button onClick={openAdd} className="h-11 rounded-xl text-white shadow-lg font-bold" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}><Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />{isRtl ? "إضافة مورّد" : "Add Supplier"}</Button>
         </div>
 
         {suppliers.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+          <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <Users className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500">{isRtl ? "لا يوجد موردون" : "No suppliers"}</p>
             <Button onClick={openAdd} variant="outline" className="mt-4">{isRtl ? "إضافة أول مورّد" : "Add First Supplier"}</Button>
@@ -106,7 +92,7 @@ export default function SuppliersPage() {
             {suppliers.map((s) => {
               const st = statsMap.get(s._id);
               return (
-                <div key={s._id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+                <div key={s._id} className="bg-white rounded-2xl p-4 hover:-translate-y-0.5 transition-all" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
                   <div className="flex items-center gap-4">
                     <div className="h-14 w-14 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md shrink-0">{(s.name || "?").charAt(0).toUpperCase()}</div>
                     <div className="flex-1 min-w-0">

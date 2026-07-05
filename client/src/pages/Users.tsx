@@ -41,6 +41,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, UserPlus, Shield, Users as UsersIcon, ArrowUpCircle, ChefHat, Truck, HeartPulse, Package, UserCog } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
@@ -276,20 +277,21 @@ export default function Users() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            {t("users.title")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("users.subtitle")}
-          </p>
-        </div>
-        <Button onClick={handleAdd} size="lg" className="gap-2">
-          <UserPlus className="h-5 w-5" />
-          {t("users.add")}
-        </Button>
-      </div>
+      <DashboardHeader
+        icon={<UserCog className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr={t("users.title")} titleEn={t("users.title")}
+        subtitleAr={t("users.subtitle")} subtitleEn={t("users.subtitle")}
+        actions={
+          <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
+            <UserPlus className="h-5 w-5" />
+            {t("users.add")}
+          </Button>
+        }
+        kpis={[
+          { value: users.length, labelAr: "الموظفين", labelEn: "Staff" },
+          { value: customers.length, labelAr: "العملاء", labelEn: "Customers" },
+        ]}
+      />
 
       {/* Tabs */}
       <div className="flex gap-2 border-b">
@@ -317,7 +319,7 @@ export default function Users() {
 
       {/* Staff Table */}
       {activeTab === "staff" && (
-        <Card>
+        <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5 text-primary" />
@@ -326,8 +328,9 @@ export default function Users() {
             <CardDescription>{users.length} {isRtl ? "مستخدم" : "users"}</CardDescription>
           </CardHeader>
           <CardContent>
+          <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
                 <TableHead>{t("users.name")}</TableHead>
                 <TableHead>{t("users.email")}</TableHead>
@@ -338,7 +341,7 @@ export default function Users() {
             </TableHeader>
             <TableBody>
               {users.map((user: any) => (
-                <TableRow key={user.id}>
+                <TableRow key={user.id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="text-left" dir="ltr">
                     {user.email}
@@ -390,13 +393,14 @@ export default function Users() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
         </Card>
       )}
 
       {/* Customers Table */}
       {activeTab === "customers" && (
-        <Card>
+        <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UsersIcon className="h-5 w-5 text-primary" />
@@ -405,8 +409,9 @@ export default function Users() {
             <CardDescription>{customers.length} عميل</CardDescription>
           </CardHeader>
           <CardContent>
+            <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
                 <TableRow>
                   <TableHead>الاسم الكامل</TableHead>
                   <TableHead>البريد الإلكتروني</TableHead>
@@ -428,7 +433,7 @@ export default function Users() {
                   customers.map((customer: any) => {
                     const alreadyStaff = users.some((u: any) => u.email === customer.email);
                     return (
-                      <TableRow key={customer.id}>
+                      <TableRow key={customer.id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                         <TableCell className="font-medium">{customer.fullName}</TableCell>
                         <TableCell>{customer.email}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
@@ -480,6 +485,7 @@ export default function Users() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}

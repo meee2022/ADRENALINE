@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Image as ImageIcon, Upload, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function BannersManagement() {
   const { toast } = useToast();
@@ -140,13 +141,18 @@ export default function BannersManagement() {
     <div className="min-h-screen bg-slate-50 p-6" dir="rtl">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">إدارة البانرات (السلايدر)</h1>
-          <p className="text-slate-600 mt-2">رفع وإدارة صور السلايدر في الصفحة الرئيسية</p>
-        </div>
+        <DashboardHeader
+          icon={<ImageIcon className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="إدارة البانرات (السلايدر)" titleEn="Banners (Slider)"
+          subtitleAr="رفع وإدارة صور السلايدر في الصفحة الرئيسية" subtitleEn="Upload & manage homepage slider images"
+          kpis={[
+            { value: banners.length, labelAr: "إجمالي البانرات", labelEn: "Total banners" },
+            { value: banners.filter((b: any) => b.isActive).length, labelAr: "نشط", labelEn: "Active" },
+          ]}
+        />
 
         {/* Upload Form */}
-        <Card>
+        <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
@@ -226,7 +232,8 @@ export default function BannersManagement() {
             <Button
               onClick={handleUpload}
               disabled={isUploading || !selectedFile || !titleAr}
-              className="w-full bg-cyan-500 hover:bg-cyan-600"
+              className="w-full rounded-xl font-bold text-white"
+              style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
             >
               {isUploading ? "جاري الرفع..." : "رفع البانر"}
             </Button>
@@ -234,7 +241,7 @@ export default function BannersManagement() {
         </Card>
 
         {/* Banners List */}
-        <Card>
+        <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5" />
@@ -252,11 +259,12 @@ export default function BannersManagement() {
                 {banners.map((banner: any) => (
                   <div
                     key={banner._id}
-                    className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
+                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${
                       banner.isActive
-                        ? "border-cyan-200 bg-cyan-50/50"
+                        ? "border-[#e8eef4] bg-white"
                         : "border-slate-200 bg-slate-50 opacity-60"
                     }`}
+                    style={banner.isActive ? { boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" } : undefined}
                   >
                     {/* Image */}
                     <div className="relative w-32 h-20 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0">
@@ -284,7 +292,7 @@ export default function BannersManagement() {
                       )}
                       <div className="flex items-center gap-2 mt-2">
                         <span
-                          className={`text-xs px-2 py-1 rounded ${
+                          className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
                             banner.isActive
                               ? "bg-green-100 text-green-700"
                               : "bg-slate-200 text-slate-600"

@@ -21,7 +21,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Send,
-  MoreVertical,
   Truck,
   Bell,
   CheckCheck,
@@ -31,6 +30,8 @@ import { ar, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { ClipboardCheck } from "lucide-react";
 
 export default function PlansReviewPage() {
   const { t, isRtl } = useLanguage();
@@ -137,69 +138,59 @@ export default function PlansReviewPage() {
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-32">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
-        <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => setLocation("/plans")}
-              className="p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <MoreVertical className="h-5 w-5 text-gray-600" />
-            </button>
-            
-            <div className="text-center flex-1">
-              <h1 className="text-lg font-bold text-gray-900">
-                {isRtl ? "المراجعة النهائية والاعتماد" : "Final Review & Approval"}
-              </h1>
-              <p className="text-sm text-gray-500">
-                {stats.confirmed} {isRtl ? "خطة جاهزة للإرسال" : "plans ready to send"}
-              </p>
-            </div>
-
-            <div className="w-10" />
-          </div>
-        </div>
+      <div className="max-w-3xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<ClipboardCheck className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="المراجعة النهائية والاعتماد" titleEn="Final Review & Approval"
+          subtitleAr={`${stats.confirmed} خطة جاهزة للإرسال`}
+          subtitleEn={`${stats.confirmed} plans ready to send`}
+          kpis={[
+            { value: stats.totalMeals, labelAr: "إجمالي الوجبات", labelEn: "Total Meals" },
+            { value: stats.confirmed, labelAr: "خطط مؤكدة", labelEn: "Confirmed" },
+            { value: stats.specialRequests, labelAr: "طلبات خاصة", labelEn: "Special Requests" },
+          ]}
+        />
       </div>
 
       {/* Content */}
       <div className="max-w-3xl mx-auto px-4 py-4 space-y-4">
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-blue-100 flex items-center justify-center mb-2">
-              <Utensils className="h-5 w-5 text-blue-600" />
+          <div className="bg-white rounded-2xl p-4 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+            <div className="h-10 w-10 mx-auto rounded-full bg-[#e8f8fd] flex items-center justify-center mb-2">
+              <Utensils className="h-5 w-5 text-[#3cc4f0]" />
             </div>
-            <p className="text-xs text-gray-500 mb-1">
+            <p className="text-xs text-gray-400 font-semibold mb-1">
               {isRtl ? "إجمالي الوجبات" : "Total Meals"}
             </p>
-            <p className="text-2xl font-bold text-gray-900">{stats.totalMeals}</p>
+            <p className="text-2xl font-black tabular-nums text-[#0E76AC]">{stats.totalMeals}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-orange-100 flex items-center justify-center mb-2">
-              <Bell className="h-5 w-5 text-orange-600" />
+          <div className="bg-white rounded-2xl p-4 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+            <div className="h-10 w-10 mx-auto rounded-full bg-amber-50 flex items-center justify-center mb-2">
+              <Bell className="h-5 w-5 text-amber-600" />
             </div>
-            <p className="text-xs text-gray-500 mb-1">
+            <p className="text-xs text-gray-400 font-semibold mb-1">
               {isRtl ? "طلبات خاصة" : "Special Requests"}
             </p>
-            <p className="text-2xl font-bold text-gray-900">{stats.specialRequests}</p>
+            <p className="text-2xl font-black tabular-nums text-amber-600">{stats.specialRequests}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 text-center">
-            <div className="h-10 w-10 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-2">
-              <Truck className="h-5 w-5 text-green-600" />
+          <div className="bg-white rounded-2xl p-4 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+            <div className="h-10 w-10 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-2">
+              <Truck className="h-5 w-5 text-emerald-600" />
             </div>
-            <p className="text-xs text-gray-500 mb-1">
+            <p className="text-xs text-gray-400 font-semibold mb-1">
               {isRtl ? "توصيل (6-9)" : "Delivery (9-6)"}
             </p>
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-black tabular-nums text-emerald-600">
               {stats.deliveryGroups["AM 8-6"] || stats.deliveryGroups["صباحاً (6-8)"] || 0}
             </p>
           </div>
         </div>
 
         {/* Status Indicators */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-green-500"></div>
@@ -226,7 +217,7 @@ export default function PlansReviewPage() {
         {/* Plans List */}
         <div className="space-y-3">
           {plansList.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
               <AlertTriangle className="h-12 w-12 mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500">
                 {isRtl ? "لا توجد خطط مؤكدة لهذا اليوم" : "No confirmed plans for this day"}
@@ -250,10 +241,11 @@ export default function PlansReviewPage() {
               return (
                 <div
                   key={plan._id}
-                  className={cn(
-                    "bg-white rounded-xl shadow-sm border overflow-hidden transition-all hover:shadow-md",
-                    icons.hasAllergies ? "border-l-4 border-l-red-500" : "border-gray-200"
-                  )}
+                  className="bg-white rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5"
+                  style={{
+                    border: icons.hasAllergies ? "1px solid #fecaca" : "1px solid #e8eef4",
+                    boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)",
+                  }}
                 >
                   <div className="p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -371,7 +363,8 @@ export default function PlansReviewPage() {
           <Button
             onClick={handleSendToKitchen}
             disabled={plansList.length === 0}
-            className="w-full h-14 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold text-base shadow-lg"
+            className="w-full h-14 rounded-xl text-white font-bold text-base shadow-lg hover:opacity-95"
+            style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
           >
             {isRtl ? (
               <>

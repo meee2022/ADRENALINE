@@ -7,6 +7,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { Shield, Activity, Clock, User as UserIcon } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -33,42 +34,42 @@ export default function AuditLog() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Shield className="h-7 w-7 text-cyan-600" />
-            سجل النشاطات
-          </h1>
-          <p className="text-sm text-muted-foreground">تتبع كامل للأحداث الحساسة في النظام</p>
-        </div>
-      </div>
+      <DashboardHeader
+        icon={<Shield className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="سجل النشاطات" titleEn="Audit Log"
+        subtitleAr="تتبع كامل للأحداث الحساسة في النظام" subtitleEn="Full tracking of sensitive system events"
+        kpis={stats ? [
+          { value: stats.total, labelAr: "الإجمالي", labelEn: "Total" },
+          { value: stats.last24h, labelAr: "آخر 24 ساعة", labelEn: "Last 24h" },
+        ] : undefined}
+      />
 
       {/* Stats */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card>
+          <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-sm font-semibold text-gray-400 flex items-center gap-2">
                 <Activity className="h-4 w-4" /> الإجمالي
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{stats.total}</div>
+              <div className="text-3xl font-black tabular-nums" style={{ color: "#0E76AC" }}>{stats.total}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <CardTitle className="text-sm font-semibold text-gray-400 flex items-center gap-2">
                 <Clock className="h-4 w-4" /> آخر 24 ساعة
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-cyan-600">{stats.last24h}</div>
+              <div className="text-3xl font-black tabular-nums" style={{ color: "#3cc4f0" }}>{stats.last24h}</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">أكثر الأحداث</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-400">أكثر الأحداث</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xs space-y-1">
@@ -87,7 +88,7 @@ export default function AuditLog() {
         </div>
       )}
 
-      <Card>
+      <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
           <CardTitle>الأحداث الأخيرة</CardTitle>
         </CardHeader>

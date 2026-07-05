@@ -10,10 +10,11 @@ import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function Delivery() {
   const { language, dir } = useLanguage();
@@ -70,8 +71,8 @@ export default function Delivery() {
       // ✅ رسالة واتساب تلقائية للعميل
       try {
         const { openWhatsApp, WhatsAppTemplates } = await import("@/lib/whatsapp");
-        const phone = customer?.phone || plan?.customerPhone;
-        const name = customer?.fullName || plan?.customerName;
+        const phone = customer?.phone || (plan as any)?.customerPhone;
+        const name = customer?.fullName || (plan as any)?.customerName;
         if (phone && name) {
           if (confirm(isRtl ? "إرسال رسالة شكر للعميل عبر واتساب؟" : "Send thank-you WhatsApp message?")) {
             openWhatsApp(phone, WhatsAppTemplates.delivered(name));
@@ -96,39 +97,32 @@ export default function Delivery() {
     <>
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 print:hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-6 shadow-sm">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {isRtl ? "توصيل الطلبات" : "Delivery Orders"}
-              </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="bg-[#e8f8fd] text-[#3cc4f0] border-[#3cc4f0]/30">
-                  {isRtl ? "مراقبة مباشرة" : "Live Tracking"}
-                </Badge>
-                <p className="text-sm text-gray-600">
-                  {format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => window.print()}
-                variant="outline"
-                size="sm"
-                className="h-10 gap-1.5 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white"
-                title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
-              >
-                <Printer className="h-4 w-4" />
-                <span className="text-xs">{isRtl ? "طباعة" : "Print"}</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full">
-                <Bell className="h-5 w-5 text-gray-600" />
-              </Button>
-            </div>
-          </div>
+      <div className="max-w-4xl mx-auto px-4 pt-6">
+        <DashboardHeader
+          icon={<Truck className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="توصيل الطلبات" titleEn="Delivery Orders"
+          subtitleAr={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+          subtitleEn={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+          kpis={[
+            { value: plans.length, labelAr: "للتوصيل", labelEn: "To Deliver" },
+            { value: deliveredPlans.length, labelAr: "تم التسليم", labelEn: "Delivered" },
+          ]}
+          actions={
+            <Button
+              onClick={() => window.print()}
+              className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
+              title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
+            >
+              <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+              {isRtl ? "طباعة" : "Print"}
+            </Button>
+          }
+        />
+      </div>
 
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-100 px-4 py-4 shadow-sm mt-4">
+        <div className="max-w-4xl mx-auto">
           {/* Tab Buttons */}
           <div className="flex gap-3">
             <button
@@ -163,10 +157,10 @@ export default function Delivery() {
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         {/* Ready for Delivery */}
         {plans.length === 0 ? (
-          <Card className="border-2 border-dashed border-gray-200">
+          <Card className="rounded-2xl border-dashed" style={{ border: "1.5px dashed #e8eef4" }}>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-                <Map className="h-10 w-10 text-gray-400" />
+              <div className="h-20 w-20 rounded-2xl bg-[#f4f8fb] flex items-center justify-center mb-4">
+                <Map className="h-10 w-10 text-[#3cc4f0]" />
               </div>
               <p className="text-lg font-medium text-gray-700 mb-1">
                 {isRtl ? "لا توجد طلبات للتوصيل" : "No Orders for Delivery"}
@@ -197,14 +191,15 @@ export default function Delivery() {
                     </div>
                   )}
                 <Card
-                  className="bg-white border-2 border-cyan-400 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
+                  className="bg-white rounded-2xl hover:-translate-y-0.5 transition-all overflow-hidden"
+                  style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                 >
                   <CardContent className="p-0">
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-cyan-50 to-blue-50 p-4 border-b-2 border-cyan-100">
+                    <div className="bg-[#f4f8fb] p-4 border-b border-[#e8eef4]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center text-white text-xl font-bold shadow-md relative">
+                          <div className="h-12 w-12 rounded-xl flex items-center justify-center text-white text-xl font-bold shadow-md relative" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
                             {customer.fullName?.charAt(0).toUpperCase()}
                             <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white text-cyan-700 text-[10px] font-black flex items-center justify-center border border-cyan-400 shadow">{idx + 1}</span>
                           </div>
@@ -217,7 +212,7 @@ export default function Delivery() {
                             </p>
                           </div>
                         </div>
-                        <Badge className="bg-cyan-500 text-white border-0 text-xs px-3 py-1 shadow-md">
+                        <Badge className="bg-[#e8f8fd] text-[#0E76AC] border-0 text-xs px-3 py-1 rounded-full font-semibold">
                           {isRtl ? "جاهز للتوصيل" : "Ready"}
                         </Badge>
                       </div>
@@ -265,14 +260,14 @@ export default function Delivery() {
                       <div className="flex gap-2 pt-2">
                         <Button
                           variant="outline"
-                          className="flex-1 h-12 rounded-xl border-2 border-cyan-400 text-cyan-600 hover:bg-cyan-50 font-bold"
+                          className="flex-1 h-12 rounded-xl border border-gray-200 text-[#0E76AC] hover:bg-[#f7fbfe] font-bold"
                           onClick={() => window.open(`tel:${customer.phone}`)}
                         >
                           <Phone className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
                           {isRtl ? "اتصال" : "Call"}
                         </Button>
                         <Button
-                          className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#47759c)"}}
+                          className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
                           onClick={() => handleDeliver(plan._id)}
                         >
                           <Check className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
@@ -311,7 +306,8 @@ export default function Delivery() {
                 return (
                   <Card
                     key={plan._id}
-                    className="bg-white border border-gray-200 opacity-60"
+                    className="bg-white rounded-2xl opacity-70"
+                    style={{ border: "1px solid #e8eef4" }}
                   >
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">

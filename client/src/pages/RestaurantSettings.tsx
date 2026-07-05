@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { Settings, Phone, Mail, MapPin, Instagram, Twitter, Facebook, Clock, Save, Upload, Image as ImageIcon } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function RestaurantSettings() {
   const settings = useQuery(api.restaurantSettings.get);
@@ -209,29 +210,25 @@ export default function RestaurantSettings() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Settings className="h-8 w-8 text-primary" />
-            إعدادات المطعم
-          </h1>
-          <p className="text-gray-600 mt-1">
-            إدارة معلومات الاتصال والسوشيال ميديا ووصف المطعم
-          </p>
-        </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="bg-primary hover:bg-primary/90 px-8 h-12"
-        >
-          <Save className="h-5 w-5 ml-2" />
-          {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
-        </Button>
-      </div>
+      <DashboardHeader
+        icon={<Settings className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="إعدادات المطعم" titleEn="Restaurant Settings"
+        subtitleAr="إدارة معلومات الاتصال والسوشيال ميديا ووصف المطعم" subtitleEn="Manage contact info, social media & restaurant description"
+        actions={
+          <Button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
+          >
+            <Save className="h-5 w-5 ml-2" />
+            {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
+          </Button>
+        }
+      />
 
       <div className="grid gap-6 max-w-5xl">
         {/* Contact Information */}
-        <Card>
+        <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
@@ -296,7 +293,7 @@ export default function RestaurantSettings() {
         </Card>
 
         {/* Social Media */}
-        <Card>
+        <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Instagram className="h-5 w-5 text-primary" />
@@ -363,7 +360,7 @@ export default function RestaurantSettings() {
         </Card>
 
         {/* Description */}
-        <Card>
+        <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-primary" />
@@ -396,7 +393,7 @@ export default function RestaurantSettings() {
         </Card>
 
         {/* Working Hours */}
-        <Card>
+        <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
@@ -429,7 +426,7 @@ export default function RestaurantSettings() {
         </Card>
 
         {/* Footer Links */}
-        <Card>
+        <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
@@ -702,7 +699,8 @@ export default function RestaurantSettings() {
             onClick={handleSave}
             disabled={isSaving}
             size="lg"
-            className="bg-primary hover:bg-primary/90 px-12"
+            className="px-12 rounded-xl font-bold text-white shadow-lg"
+            style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
           >
             <Save className="h-5 w-5 ml-2" />
             {isSaving ? "جاري الحفظ..." : "حفظ جميع التغييرات"}

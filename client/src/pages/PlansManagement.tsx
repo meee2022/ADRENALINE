@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Package, X, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
@@ -244,18 +245,20 @@ export default function PlansManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t("plans_management.title")}</h1>
-          <p className="text-sm text-muted-foreground">{t("plans_management.subtitle")}</p>
-        </div>
-        <Button onClick={handleAdd} size="lg" className="gap-2">
-          <Plus className="h-5 w-5" />
-          {t("plans_management.add_plan")}
-        </Button>
-      </div>
+      <DashboardHeader
+        icon={<Package className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr={t("plans_management.title")} titleEn={t("plans_management.title")}
+        subtitleAr={t("plans_management.subtitle")} subtitleEn={t("plans_management.subtitle")}
+        actions={
+          <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
+            <Plus className="h-5 w-5" />
+            {t("plans_management.add_plan")}
+          </Button>
+        }
+        kpis={[{ value: plans.length, labelAr: "إجمالي الباقات", labelEn: "Total plans" }]}
+      />
 
-      <Card>
+      <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
@@ -263,8 +266,9 @@ export default function PlansManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
                 <TableHead>اسم الخطة</TableHead>
                 <TableHead>{t("plans_management.duration")}</TableHead>
@@ -275,7 +279,7 @@ export default function PlansManagement() {
             </TableHeader>
             <TableBody>
               {plans.map((plan: any) => (
-                <TableRow key={plan._id}>
+                <TableRow key={plan._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                   <TableCell className="font-medium">{plan.nameAr}</TableCell>
                   <TableCell>
                     {plan.duration === "week"
@@ -286,7 +290,7 @@ export default function PlansManagement() {
                   </TableCell>
                   <TableCell>{plan.options?.length || 0}</TableCell>
                   <TableCell>
-                    <Badge variant={plan.isActive ? "default" : "secondary"}>
+                    <Badge className={`rounded-full ${plan.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
                       {plan.isActive ? t("menu_management.active") : t("menu_management.inactive")}
                     </Badge>
                   </TableCell>
@@ -309,6 +313,7 @@ export default function PlansManagement() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

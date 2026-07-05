@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, UtensilsCrossed, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function PublicMealsManagement() {
   const { toast } = useToast();
@@ -179,30 +180,31 @@ export default function PublicMealsManagement() {
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <UtensilsCrossed className="h-8 w-8 text-[#3CC4F0]" />
-            إدارة المنيو العام
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            إدارة الوجبات الظاهرة في الموقع العام للعملاء
-          </p>
-        </div>
-        <Button onClick={handleAdd} size="lg" className="gap-2 bg-[#3CC4F0] hover:bg-[#2ab3df]">
-          <Plus className="h-5 w-5" />
-          إضافة وجبة جديدة
-        </Button>
-      </div>
+      <DashboardHeader
+        icon={<UtensilsCrossed className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="إدارة المنيو العام" titleEn="Public Menu"
+        subtitleAr="إدارة الوجبات الظاهرة في الموقع العام للعملاء" subtitleEn="Manage meals shown on the public site"
+        actions={
+          <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
+            <Plus className="h-5 w-5" />
+            إضافة وجبة جديدة
+          </Button>
+        }
+        kpis={[
+          { value: meals.length, labelAr: "إجمالي الوجبات", labelEn: "Total meals" },
+          { value: meals.filter((m: any) => m.isActive).length, labelAr: "نشط", labelEn: "Active" },
+        ]}
+      />
 
       {/* Meals Table */}
-      <Card className="border-0 shadow-lg">
+      <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
           <CardTitle>الوجبات ({meals.length})</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
                 <TableHead>الصورة</TableHead>
                 <TableHead>الاسم</TableHead>
@@ -222,7 +224,7 @@ export default function PublicMealsManagement() {
                 </TableRow>
               ) : (
                 meals.map((meal: any) => (
-                  <TableRow key={meal._id}>
+                  <TableRow key={meal._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                     <TableCell>
                       <img
                         src={meal.imageUrl}
@@ -237,7 +239,7 @@ export default function PublicMealsManagement() {
                     <TableCell>{meal.calories} Cal</TableCell>
                     <TableCell>{meal.priceQAR} QAR</TableCell>
                     <TableCell>
-                      <Badge variant={meal.isActive ? "default" : "secondary"}>
+                      <Badge className={`rounded-full ${meal.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
                         {meal.isActive ? "نشط" : "غير نشط"}
                       </Badge>
                     </TableCell>
@@ -265,6 +267,7 @@ export default function PublicMealsManagement() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -565,7 +568,7 @@ export default function PublicMealsManagement() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button onClick={handleSave} className="bg-[#3CC4F0] hover:bg-[#2ab3df]">
+            <Button onClick={handleSave} className="rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
               {selectedMeal ? "تحديث" : "إضافة"}
             </Button>
           </DialogFooter>

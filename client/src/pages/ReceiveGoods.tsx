@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Plus, Trash2, PackagePlus, Truck, ClipboardPaste } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 const CATEGORIES = [
   { v: "vegetables", ar: "خضروات" }, { v: "proteins", ar: "بروتينات" },
@@ -114,21 +115,19 @@ export default function ReceiveGoods() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-28">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><PackagePlus className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "استلام بضاعة" : "Receive Goods"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "أدخل أصناف الفاتورة دفعة واحدة" : "Enter a purchase invoice — many items at once"}</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<PackagePlus className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="استلام بضاعة" titleEn="Receive Goods"
+          subtitleAr="أدخل أصناف الفاتورة دفعة واحدة" subtitleEn="Enter a purchase invoice — many items at once"
+          actions={
+            <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2"><ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}</button>
+          }
+        />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3 shadow-sm">
+        <div className="bg-white rounded-2xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-3" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <div className="space-y-1.5">
             <Label className="text-xs text-slate-500">{isRtl ? "المورّد" : "Supplier"}</Label>
             <select value={supplierId} onChange={(e) => setSupplierId(e.target.value)} className={selCls}>
@@ -150,7 +149,7 @@ export default function ReceiveGoods() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3 shadow-sm">
+        <div className="bg-white rounded-2xl p-4 space-y-3" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-slate-900">{isRtl ? "الأصناف" : "Items"}</h2>
             <div className="flex items-center gap-2">
@@ -224,7 +223,7 @@ export default function ReceiveGoods() {
             <div><span className="text-slate-500">{isRtl ? "الكمية:" : "Qty:"}</span> <span className="font-bold text-slate-900">{totalQty.toLocaleString()}</span></div>
             <div><span className="text-slate-500">{isRtl ? "الإجمالي:" : "Total:"}</span> <span className="font-black text-cyan-600 text-lg">{grandTotal.toLocaleString()} {isRtl ? "ر.ق" : "QAR"}</span></div>
           </div>
-          <Button onClick={handleSubmit} disabled={saving} className="bg-cyan-500 hover:bg-cyan-600 text-white font-bold gap-2 h-11 px-6"><Truck className="h-5 w-5" />{saving ? (isRtl ? "جارٍ الحفظ..." : "Saving...") : (isRtl ? "تأكيد الاستلام" : "Confirm receipt")}</Button>
+          <Button onClick={handleSubmit} disabled={saving} className="text-white font-bold gap-2 h-11 px-6 rounded-xl shadow-lg" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}><Truck className="h-5 w-5" />{saving ? (isRtl ? "جارٍ الحفظ..." : "Saving...") : (isRtl ? "تأكيد الاستلام" : "Confirm receipt")}</Button>
         </div>
       </div>
     </div>

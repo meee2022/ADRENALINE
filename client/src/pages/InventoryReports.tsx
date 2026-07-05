@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 import { format, subDays, differenceInDays } from "date-fns";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import {
   BarChart,
   Bar,
@@ -172,27 +173,27 @@ export default function InventoryReportsPage() {
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-6 shadow-sm">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">
-              {isRtl ? "تقارير استهلاك المواد" : "Consumption Reports"}
-            </h1>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<FileBarChart className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="تقارير استهلاك المواد" titleEn="Consumption Reports"
+          subtitleAr="تحليل تفصيلي لاستهلاك المواد والحركات المخزنية" subtitleEn="Detailed analysis of material consumption and inventory movements"
+          kpis={[
+            { value: summaryStats.totalConsumption.toLocaleString(), labelAr: "إجمالي الاستهلاك", labelEn: "Total Consumption" },
+            { value: `${summaryStats.lowStockPercentage}%`, labelAr: "نسبة التوافر", labelEn: "Availability" },
+            { value: `${summaryStats.expiryPercentage}%`, labelAr: "نسبة الانتهاء", labelEn: "Expiry Rate" },
+            { value: summaryStats.totalItems, labelAr: "إجمالي الأصناف", labelEn: "Total Items" },
+          ]}
+          actions={
             <Button
               onClick={handleExportPDF}
-              size="lg"
-              className="h-12 px-6 rounded-2xl bg-gradient-to-r from-cyan-400 to-cyan-500 hover:from-cyan-500 hover:to-cyan-600 text-white shadow-lg shadow-cyan-200"
+              className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
             >
               <FileText className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
               {isRtl ? "تصدير PDF" : "Export PDF"}
             </Button>
-          </div>
-          <p className="text-sm text-gray-500">
-            {isRtl
-              ? "تحليل تفصيلي لاستهلاك المواد والحركات المخزنية"
-              : "Detailed analysis of material consumption and inventory movements"}
-          </p>
-        </div>
+          }
+        />
       </div>
 
       {/* Content */}
@@ -200,7 +201,7 @@ export default function InventoryReportsPage() {
         {/* Top Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
           {/* Total Consumption Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-white rounded-2xl hover:-translate-y-0.5 transition-all" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
@@ -223,7 +224,7 @@ export default function InventoryReportsPage() {
           </Card>
 
           {/* Chicken Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-white rounded-2xl hover:-translate-y-0.5 transition-all" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-2xl">
@@ -243,7 +244,7 @@ export default function InventoryReportsPage() {
           </Card>
 
           {/* Low Stock % Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-white rounded-2xl hover:-translate-y-0.5 transition-all" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center">
@@ -266,7 +267,7 @@ export default function InventoryReportsPage() {
           </Card>
 
           {/* Expiry % Card */}
-          <Card className="bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+          <Card className="bg-white rounded-2xl hover:-translate-y-0.5 transition-all" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center">
@@ -290,7 +291,7 @@ export default function InventoryReportsPage() {
         </div>
 
         {/* Monthly Consumption Chart */}
-        <Card className="bg-white border border-gray-100 shadow-sm">
+        <Card className="bg-white rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader className="border-b border-gray-100 pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold text-gray-900">
@@ -331,7 +332,7 @@ export default function InventoryReportsPage() {
         </Card>
 
         {/* Category Distribution Pie Chart */}
-        <Card className="bg-white border border-gray-100 shadow-sm">
+        <Card className="bg-white rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader className="border-b border-gray-100 pb-4">
             <CardTitle className="text-lg font-bold text-gray-900">
               {isRtl ? "توزيع الاستهلاك حسب التصنيف" : "Consumption by Category"}
@@ -380,7 +381,7 @@ export default function InventoryReportsPage() {
         </Card>
 
         {/* Top Consumed Items Table */}
-        <Card className="bg-white border border-gray-100 shadow-sm">
+        <Card className="bg-white rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <CardHeader className="border-b border-gray-100 pb-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg font-bold text-gray-900">

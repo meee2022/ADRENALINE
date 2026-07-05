@@ -12,15 +12,14 @@ import { cn } from "@/lib/utils";
 import {
   Bell,
   ArrowRight,
-  PackageX,
   PackageMinus,
   Clock,
   CalendarX,
-  Coins,
   Truck,
   CheckCircle2,
   ClipboardList,
 } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 const HORIZONS = [
   { days: 7, ar: "٧ أيام", en: "7 days" },
@@ -57,30 +56,27 @@ export default function InventoryAlerts() {
     }
   };
 
-  const kpis = [
-    { label: isRtl ? "نفد المخزون" : "Out of Stock", value: a.counts.outOfStock, sub: isRtl ? "صنف بدون رصيد" : "items at zero", icon: PackageX, danger: true },
-    { label: isRtl ? "مخزون منخفض" : "Low Stock", value: a.counts.lowStock, sub: isRtl ? "يحتاج إعادة طلب" : "need reorder", icon: PackageMinus, danger: false },
-    { label: isRtl ? "قرب الانتهاء" : "Expiring Soon", value: a.counts.expiring, sub: `${isRtl ? "خلال" : "within"} ${days} ${isRtl ? "يوم" : "days"}`, icon: Clock, danger: false },
-    { label: isRtl ? "قيمة معرّضة للخطر" : "At-Risk Value", value: `${fmt(a.atRiskValue)}`, sub: isRtl ? "ر.ق (صلاحية)" : "QAR (expiry)", icon: Coins, danger: true },
-  ];
-
   const allClear = a.counts.total === 0 && data !== undefined;
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><Bell className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "تنبيهات المخزون" : "Inventory Alerts"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "ما يحتاج تصرّفاً الآن — نواقص وصلاحيات" : "What needs action now — shortages & expiry"}</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
-            <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<Bell className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="تنبيهات المخزون" titleEn="Inventory Alerts"
+          subtitleAr="ما يحتاج تصرّفاً الآن — نواقص وصلاحيات" subtitleEn="What needs action now — shortages & expiry"
+          kpis={[
+            { value: a.counts.outOfStock, labelAr: "نفد المخزون", labelEn: "Out of Stock" },
+            { value: a.counts.lowStock, labelAr: "مخزون منخفض", labelEn: "Low Stock" },
+            { value: a.counts.expiring, labelAr: "قرب الانتهاء", labelEn: "Expiring Soon" },
+            { value: fmt(a.atRiskValue), labelAr: "قيمة معرّضة للخطر", labelEn: "At-Risk Value" },
+          ]}
+          actions={
+            <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
+              <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
+            </button>
+          }
+        />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
@@ -98,7 +94,7 @@ export default function InventoryAlerts() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleReorder} disabled={!a.lowStock.length}
-              className="flex items-center gap-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg px-4 py-2">
+              className="flex items-center gap-2 text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed rounded-xl px-4 py-2 shadow-lg" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
               <ClipboardList className="h-4 w-4" /> {isRtl ? "اطلب من المورّد" : "Reorder"}
             </button>
             <button onClick={() => setLocation("/inventory/purchase-orders")}
@@ -106,22 +102,6 @@ export default function InventoryAlerts() {
               <Truck className="h-4 w-4" /> {isRtl ? "أوامر الشراء" : "Orders"}
             </button>
           </div>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {kpis.map((k, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", k.danger ? "bg-red-50" : "bg-cyan-50")}>
-                  <k.icon className={cn("h-5 w-5", k.danger ? "text-red-500" : "text-cyan-600")} />
-                </div>
-                <p className="text-sm text-slate-500">{k.label}</p>
-              </div>
-              <p className="text-2xl font-black text-slate-900">{k.value}</p>
-              <p className="text-xs text-slate-400 mt-1">{k.sub}</p>
-            </div>
-          ))}
         </div>
 
         {allClear && (
@@ -145,7 +125,7 @@ export default function InventoryAlerts() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-y border-slate-200 text-slate-500 text-xs bg-slate-50">
+                  <tr className="bg-[#f4f8fb] text-[#47759c] font-bold text-xs uppercase border-y border-slate-100">
                     <th className="text-start font-medium px-5 py-2.5">{isRtl ? "الصنف" : "Item"}</th>
                     <th className="text-center font-medium px-3 py-2.5">{isRtl ? "الرصيد" : "Stock"}</th>
                     <th className="text-center font-medium px-3 py-2.5">{isRtl ? "حد الطلب" : "Min"}</th>
@@ -155,7 +135,7 @@ export default function InventoryAlerts() {
                 </thead>
                 <tbody>
                   {a.lowStock.map((it: any) => (
-                    <tr key={it.itemId} className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer" onClick={() => setLocation(`/inventory/${it.itemId}`)}>
+                    <tr key={it.itemId} className="border-t border-gray-100 hover:bg-[#f7fbfe] cursor-pointer" onClick={() => setLocation(`/inventory/${it.itemId}`)}>
                       <td className="px-5 py-3 font-medium text-slate-900">{it.nameAr}</td>
                       <td className="text-center px-3 py-3 text-slate-500 tabular-nums">{fmt(it.currentStock)} {it.unit}</td>
                       <td className="text-center px-3 py-3 text-slate-400 tabular-nums">{fmt(it.minStock)} {it.unit}</td>
@@ -188,7 +168,7 @@ export default function InventoryAlerts() {
 
 function Section({ icon: Icon, title, danger, children }: { icon: any; title: string; danger?: boolean; children: React.ReactNode }) {
   return (
-    <div className={cn("bg-white rounded-xl border overflow-hidden shadow-sm", danger ? "border-red-200" : "border-slate-200")}>
+    <div className="bg-white rounded-2xl overflow-hidden" style={{ border: danger ? "1px solid #fecaca" : "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 p-5 pb-3"><Icon className="h-5 w-5 text-cyan-600" />{title}</h2>
       {children}
     </div>
@@ -210,7 +190,7 @@ function BatchTable({ rows, isRtl, expired }: { rows: any[]; isRtl: boolean; exp
         </thead>
         <tbody>
           {rows.map((b: any) => (
-            <tr key={b.batchId} className="border-b border-slate-100 hover:bg-slate-50">
+            <tr key={b.batchId} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
               <td className="px-5 py-3 font-medium text-slate-900">{b.nameAr}</td>
               <td className="text-center px-3 py-3 text-slate-500 tabular-nums">{fmt(b.quantity)} {b.unit}</td>
               <td className="text-center px-3 py-3 text-slate-500 tabular-nums" dir="ltr">{b.expiryDate}</td>

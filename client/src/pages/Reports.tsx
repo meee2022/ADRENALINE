@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import {
   FileText,
   Download,
@@ -66,18 +67,14 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-7 w-7 text-cyan-600" />
-            مركز التقارير
-          </h1>
-          <p className="text-sm text-muted-foreground">تقارير شاملة قابلة للتصدير والطباعة</p>
-        </div>
-      </div>
+      <DashboardHeader
+        icon={<FileText className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="مركز التقارير" titleEn="Reports Center"
+        subtitleAr="تقارير شاملة قابلة للتصدير والطباعة" subtitleEn="Comprehensive exportable & printable reports"
+      />
 
       {/* Filter bar */}
-      <Card>
+      <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
@@ -101,8 +98,8 @@ export default function Reports() {
             <button
               key={r.key}
               onClick={() => setActiveReport(r.key)}
-              className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
-                isActive ? "border-cyan-500 bg-cyan-50" : "border-slate-200 bg-white hover:border-slate-300"
+              className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
+                isActive ? "border-cyan-400 bg-cyan-50 shadow-sm" : "border-gray-200 bg-white hover:bg-[#f7fbfe]"
               }`}
             >
               <Icon className="h-6 w-6" style={{ color: r.color }} />
@@ -165,7 +162,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>تقرير المبيعات</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -238,7 +235,7 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>تقرير المطبخ</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -286,7 +283,7 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
   );
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader>
         <CardTitle>تقرير التوصيل</CardTitle>
       </CardHeader>
@@ -348,7 +345,7 @@ function CustomersReport() {
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>تقرير العملاء</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -409,7 +406,7 @@ function InventoryReport() {
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>تقرير المخزون</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -459,12 +456,12 @@ function InventoryReport() {
 function StatBox({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) {
   return (
     <div
-      className={`p-3 rounded-lg border ${
-        highlight ? "border-cyan-300 bg-cyan-50" : "border-slate-200 bg-slate-50"
+      className={`p-3 rounded-2xl border bg-white ${
+        highlight ? "border-cyan-200" : "border-gray-200"
       }`}
     >
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className={`text-xl font-bold ${highlight ? "text-cyan-700" : "text-slate-800"}`}>
+      <p className="text-xs text-gray-400 font-semibold">{label}</p>
+      <p className={`text-xl font-black tabular-nums ${highlight ? "text-[#0E76AC]" : "text-slate-800"}`}>
         {value}
       </p>
     </div>

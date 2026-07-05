@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import ItemFormModal from "@/components/inventory/ItemFormModal";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import {
   Search,
   Plus,
@@ -156,52 +157,49 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center shadow-md">
-                <Package className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  {isRtl ? "إدارة المخزون والمواد" : "Inventory Management"}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {isRtl ? "إدارة المواد والمخزون" : "Manage items and stock"}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setLocation("/inventory-reports")}
-                variant="outline"
-                className="h-11 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm"
-              >
-                <FileText className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                {isRtl ? "التقارير" : "Reports"}
-              </Button>
-              <Button
-                onClick={() => setLocation("/inventory/receive")}
-                className="h-11 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white shadow-md font-bold"
-              >
-                <Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                {isRtl ? "استلام بضاعة" : "Receive Goods"}
-              </Button>
-              <Button
-                onClick={() => {
-                  setBarcodeToAdd(undefined);
-                  setShowAddModal(true);
-                }}
-                variant="outline"
-                className="h-11 rounded-xl border-gray-300 text-gray-700 hover:bg-gray-50 shadow-sm"
-              >
-                {isRtl ? "صنف جديد" : "Add Item"}
-              </Button>
-            </div>
-          </div>
+          <DashboardHeader
+            icon={<Package className="h-6 w-6 sm:h-7 sm:w-7" />}
+            titleAr="إدارة المخزون والمواد" titleEn="Inventory Management"
+            subtitleAr="إدارة المواد والمخزون" subtitleEn="Manage items and stock"
+            kpis={[
+              { value: summary?.totalItems || 0, labelAr: "إجمالي المواد", labelEn: "Total Items" },
+              { value: summary?.lowStockCount || 0, labelAr: "نقص في المخزون", labelEn: "Low Stock" },
+              { value: summary?.expiringSoonCount || 0, labelAr: "تنتهي قريباً", labelEn: "Expiring Soon" },
+              { value: summary?.stockValue?.toLocaleString() || 0, labelAr: "قيمة المخزون", labelEn: "Stock Value" },
+            ]}
+            actions={
+              <>
+                <Button
+                  onClick={() => setLocation("/inventory-reports")}
+                  variant="outline"
+                  className="h-11 rounded-xl border-white/40 text-white hover:bg-white/10 bg-white/10 shadow-sm"
+                >
+                  <FileText className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
+                  {isRtl ? "التقارير" : "Reports"}
+                </Button>
+                <Button
+                  onClick={() => setLocation("/inventory/receive")}
+                  className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
+                >
+                  <Plus className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
+                  {isRtl ? "استلام بضاعة" : "Receive Goods"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setBarcodeToAdd(undefined);
+                    setShowAddModal(true);
+                  }}
+                  variant="outline"
+                  className="h-11 rounded-xl border-white/40 text-white hover:bg-white/10 bg-white/10 shadow-sm"
+                >
+                  {isRtl ? "صنف جديد" : "Add Item"}
+                </Button>
+              </>
+            }
+          />
 
           {/* Search and Filter */}
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 mt-4">
             <div className="flex-1 relative">
               <Search className={cn("absolute top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400", isRtl ? "right-3" : "left-3")} />
               <Input
@@ -234,7 +232,8 @@ export default function InventoryPage() {
           {/* Waste (الهالك) KPI — click for full report */}
           <div
             onClick={() => setLocation("/inventory/waste")}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer hover:border-red-300 transition-colors"
+            className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-0.5 transition-all"
+            style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
@@ -254,7 +253,7 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-lg bg-[#eaf1f7] flex items-center justify-center">
                 <Package className="h-5 w-5 text-[#47759c]" />
@@ -269,7 +268,7 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
                 <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -284,7 +283,7 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-lg bg-red-100 flex items-center justify-center">
                 <Calendar className="h-5 w-5 text-red-600" />
@@ -299,7 +298,7 @@ export default function InventoryPage() {
             </p>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <div className="flex items-center gap-3 mb-2">
               <div className="h-10 w-10 rounded-lg bg-[#e8f8fd] flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-[#3cc4f0]" />
@@ -316,7 +315,7 @@ export default function InventoryPage() {
         </div>
 
         {/* Category Filters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <button
@@ -399,11 +398,11 @@ export default function InventoryPage() {
         {/* Items List */}
         <div className="space-y-3">
           {isLoading ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
               <p className="text-gray-500">{isRtl ? "جاري التحميل..." : "Loading..."}</p>
             </div>
           ) : !items || items.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
               <Package className="h-12 w-12 mx-auto text-gray-300 mb-3" />
               <p className="text-gray-500">
                 {isRtl ? "لا توجد مواد في المخزون" : "No items in inventory"}
@@ -421,7 +420,8 @@ export default function InventoryPage() {
                 <div
                   key={item._id}
                   onClick={() => setLocation(`/inventory/${item._id}`)}
-                  className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                  className="bg-white rounded-2xl p-4 cursor-pointer hover:-translate-y-0.5 transition-all"
+                  style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                 >
                   <div className="flex items-start gap-4">
                     {/* Item Image/Icon */}

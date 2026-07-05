@@ -9,6 +9,8 @@ import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { TrendingDown, Coins, Percent, ChefHat, ArrowRight, Trash2, PieChart } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
+import { Button } from "@/components/ui/button";
 
 const RANGES = [
   { days: 7, ar: "٧ أيام", en: "7 days" },
@@ -33,27 +35,29 @@ export default function WasteReport() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><TrendingDown className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "تقرير الهالك والاستهلاك" : "Waste & Consumption Report"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "تكلفة الهدر وتحليل الاستهلاك" : "Waste cost & consumption analysis"}</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
-            <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
-          </button>
-        </div>
+      <div className="max-w-6xl mx-auto px-4 pt-5">
+        <DashboardHeader
+          icon={<TrendingDown className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="تقرير الهالك والاستهلاك" titleEn="Waste & Consumption Report"
+          subtitleAr="تكلفة الهدر وتحليل الاستهلاك" subtitleEn="Waste cost & consumption analysis"
+          actions={
+            <Button
+              onClick={() => setLocation("/inventory")}
+              className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2"
+            >
+              <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
+            </Button>
+          }
+        />
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-5 space-y-5">
         <div className="flex items-center gap-2">
           {RANGES.map((rng) => (
             <button key={rng.days} onClick={() => setDays(rng.days)}
-              className={cn("px-4 py-2 rounded-lg text-sm font-bold transition-colors",
-                days === rng.days ? "bg-cyan-500 text-white shadow" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50")}>
+              style={days === rng.days ? { background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" } : undefined}
+              className={cn("px-4 py-2 rounded-xl text-sm font-bold transition-colors",
+                days === rng.days ? "text-white shadow" : "bg-white text-slate-600 border border-gray-200 hover:bg-[#f7fbfe]")}>
               {isRtl ? rng.ar : rng.en}
             </button>
           ))}
@@ -61,20 +65,20 @@ export default function WasteReport() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {kpis.map((k, i) => (
-            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+            <div key={i} className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
               <div className="flex items-center gap-3 mb-2">
-                <div className={cn("h-10 w-10 rounded-lg flex items-center justify-center", k.danger ? "bg-red-50" : "bg-cyan-50")}>
+                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", k.danger ? "bg-red-50" : "bg-cyan-50")}>
                   <k.icon className={cn("h-5 w-5", k.danger ? "text-red-500" : "text-cyan-600")} />
                 </div>
-                <p className="text-sm text-slate-500">{k.label}</p>
+                <p className="text-sm text-gray-400 font-semibold">{k.label}</p>
               </div>
-              <p className={cn("text-2xl font-black", k.danger ? "text-red-600" : "text-slate-900")}>{k.value}</p>
-              <p className="text-xs text-slate-400 mt-1">{k.sub}</p>
+              <p className={cn("text-2xl font-black tabular-nums", k.danger ? "text-red-600" : "text-[#0E76AC]")}>{k.value}</p>
+              <p className="text-xs text-gray-400 mt-1">{k.sub}</p>
             </div>
           ))}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div className="bg-white rounded-2xl p-5" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 mb-4"><PieChart className="h-5 w-5 text-cyan-600" />{isRtl ? "الهالك حسب السبب" : "Waste by Reason"}</h2>
           {(!r.byReason || r.byReason.length === 0) ? (
             <p className="text-sm text-slate-400 py-4 text-center">{isRtl ? "لا يوجد هالك مسجّل في هذه الفترة" : "No waste recorded in this period"}</p>
@@ -96,17 +100,17 @@ export default function WasteReport() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 p-5 pb-3"><TrendingDown className="h-5 w-5 text-cyan-600" />{isRtl ? "التفصيل لكل صنف" : "Per-Item Breakdown"}</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-y border-slate-200 text-slate-500 text-xs bg-slate-50">
-                  <th className="text-start font-medium px-5 py-2.5">{isRtl ? "الصنف" : "Item"}</th>
-                  <th className="text-center font-medium px-3 py-2.5">{isRtl ? "استُهلك" : "Consumed"}</th>
-                  <th className="text-center font-medium px-3 py-2.5">{isRtl ? "هالك" : "Wasted"}</th>
-                  <th className="text-center font-medium px-3 py-2.5">{isRtl ? "تكلفة الوحدة" : "Unit Cost"}</th>
-                  <th className="text-center font-medium px-5 py-2.5">{isRtl ? "تكلفة الهالك" : "Waste Cost"}</th>
+                <tr className="border-t border-[#e8eef4] text-[#47759c] text-xs uppercase bg-[#f4f8fb]">
+                  <th className="text-start font-bold px-5 py-2.5">{isRtl ? "الصنف" : "Item"}</th>
+                  <th className="text-center font-bold px-3 py-2.5">{isRtl ? "استُهلك" : "Consumed"}</th>
+                  <th className="text-center font-bold px-3 py-2.5">{isRtl ? "هالك" : "Wasted"}</th>
+                  <th className="text-center font-bold px-3 py-2.5">{isRtl ? "تكلفة الوحدة" : "Unit Cost"}</th>
+                  <th className="text-center font-bold px-5 py-2.5">{isRtl ? "تكلفة الهالك" : "Waste Cost"}</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,7 +118,7 @@ export default function WasteReport() {
                   <tr><td colSpan={5} className="text-center text-slate-400 py-8">{isRtl ? "لا توجد بيانات" : "No data"}</td></tr>
                 ) : (
                   r.perItem.map((it: any) => (
-                    <tr key={it.itemId} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={it.itemId} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                       <td className="px-5 py-3 font-medium text-slate-900">{it.nameAr}</td>
                       <td className="text-center px-3 py-3 text-slate-500">{fmt(it.consumed)} {it.unit}</td>
                       <td className="text-center px-3 py-3 font-bold text-red-600">{fmt(it.wasted)} {it.unit}</td>

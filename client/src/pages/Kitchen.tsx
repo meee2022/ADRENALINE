@@ -26,9 +26,11 @@ import {
   Printer,
   Truck,
   AlertTriangle,
+  ChefHat,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 import {
   Popover,
@@ -278,18 +280,21 @@ export default function Kitchen() {
       {/* Screen Version */}
       <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24 print:hidden">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-6 shadow-sm">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {isRtl ? "عرض المطبخ" : "Kitchen Display"}
-              </h1>
-
-              <div className="flex items-center gap-3">
+        <div className="max-w-6xl mx-auto px-4 pt-6">
+          <DashboardHeader
+            icon={<ChefHat className="h-6 w-6 sm:h-7 sm:w-7" />}
+            titleAr="عرض المطبخ" titleEn="Kitchen Display"
+            subtitleAr={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+            subtitleEn={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+            kpis={[
+              { value: stats.today, labelAr: "قيد التحضير", labelEn: "To Prepare" },
+              { value: stats.prepared, labelAr: "جاهز", labelEn: "Prepared" },
+            ]}
+            actions={
+              <>
                 <Button
                   onClick={handlePrint}
-                  variant="outline"
-                  className="h-11 rounded-xl border-gray-300 hover:bg-gray-50"
+                  className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
                 >
                   <Printer className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
                   {isRtl ? "طباعة" : "Print"}
@@ -297,7 +302,7 @@ export default function Kitchen() {
 
                 <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-11 rounded-xl border-gray-300">
+                    <Button variant="outline" className="h-11 rounded-xl border-white/40 bg-white/10 text-white hover:bg-white/20 hover:text-white">
                       <CalendarIcon className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
                       {format(date, "EEEE, d MMMM", { locale: dateLocale })}
                     </Button>
@@ -316,31 +321,14 @@ export default function Kitchen() {
                     />
                   </PopoverContent>
                 </Popover>
-              </div>
-            </div>
+              </>
+            }
+          />
+        </div>
 
-            {/* Stats */}
-            <div className="flex gap-3 mb-4">
-              <div className="flex items-center gap-2 bg-cyan-50 px-4 py-2 rounded-xl border border-cyan-200">
-                <span className="text-2xl font-bold text-cyan-600">{stats.today}</span>
-                <span className="text-sm text-cyan-700 font-medium">
-                  {isRtl ? "اليوم" : "Today"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-xl border border-gray-200">
-                <span className="text-2xl font-bold text-gray-600">{stats.prepared}</span>
-                <span className="text-sm text-gray-700 font-medium">
-                  {isRtl ? "بكرة" : "Tomorrow"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-xl border border-gray-200">
-                <span className="text-2xl font-bold text-gray-600">0</span>
-                <span className="text-sm text-gray-700 font-medium">
-                  {isRtl ? "بعده" : "After"}
-                </span>
-              </div>
-            </div>
-
+        {/* Tabs */}
+        <div className="bg-white border-b border-gray-200 px-4 py-4 shadow-sm mt-4">
+          <div className="max-w-6xl mx-auto">
             {/* Tabs */}
             <div className="flex gap-3">
               <button
@@ -386,7 +374,7 @@ export default function Kitchen() {
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
               {mealSummary.length === 0 ? (
-                <Card className="border-2 border-dashed border-gray-200">
+                <Card className="rounded-2xl border-dashed" style={{ border: "1.5px dashed #e8eef4" }}>
                   <CardContent className="flex flex-col items-center justify-center py-12">
                     <p className="text-lg text-gray-500">
                       {isRtl ? "لا توجد وجبات" : "No meals"}
@@ -416,7 +404,8 @@ export default function Kitchen() {
                     return (
                       <div
                         key={index}
-                        className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all border-2 border-gray-200"
+                        className="bg-white rounded-2xl p-5 hover:-translate-y-0.5 transition-all"
+                        style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div className="flex items-center gap-4 flex-1">
@@ -604,7 +593,7 @@ export default function Kitchen() {
             /* ✅ تابات التوصيل (MORNING / EVENING) */
             <>
               {plans.length === 0 ? (
-              <Card className="border-2 border-dashed border-gray-200">
+              <Card className="rounded-2xl border-dashed" style={{ border: "1.5px dashed #e8eef4" }}>
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <p className="text-lg text-gray-500">
                     {isRtl ? "لا توجد طلبات" : "No orders"}
@@ -627,11 +616,13 @@ export default function Kitchen() {
                 <Card
                   key={plan._id}
                   className={cn(
-                    "overflow-hidden transition-all",
-                    isPrepared
-                      ? "bg-cyan-50 border-2 border-cyan-300 opacity-75"
-                      : "bg-white border-2 border-gray-200 shadow-md"
+                    "overflow-hidden rounded-2xl transition-all",
+                    isPrepared ? "bg-[#f4f8fb] opacity-80" : "bg-white hover:-translate-y-0.5"
                   )}
+                  style={{
+                    border: isPrepared ? "1px solid #cbe8f5" : "1px solid #e8eef4",
+                    boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)",
+                  }}
                 >
                   {/* Allergy Warning Banner */}
                   {hasAllergy && !isPrepared && (
@@ -658,11 +649,11 @@ export default function Kitchen() {
                       </div>
 
                       {isPrepared ? (
-                        <Badge className="bg-cyan-500 text-white border-0 text-sm px-4 py-2 rounded-xl">
+                        <Badge className="bg-[#e8f8fd] text-[#0E76AC] border-0 text-sm px-4 py-1.5 rounded-full font-semibold">
                           {isRtl ? "جاهز للتوصيل" : "Ready to Deliver"}
                         </Badge>
                       ) : (
-                        <Badge className="bg-[#47759c] text-white border-0 text-sm px-4 py-2 rounded-xl">
+                        <Badge className="bg-amber-50 text-amber-700 border-0 text-sm px-4 py-1.5 rounded-full font-semibold">
                           {isRtl ? "جاهز للتحضير" : "Ready to Prepare"}
                         </Badge>
                       )}
@@ -709,7 +700,8 @@ export default function Kitchen() {
                           return (
                             <div
                               key={idx}
-                              className="bg-gray-50 rounded-xl p-4 border-2 border-gray-200"
+                              className="bg-[#f7fbfe] rounded-xl p-4"
+                              style={{ border: "1px solid #e8eef4" }}
                             >
                               {/* Meal Category Badge */}
                               <div className="flex items-start justify-between mb-2">
@@ -853,7 +845,7 @@ export default function Kitchen() {
                     {!isPrepared && (
                       <Button
                         onClick={() => handleMarkPrepared(plan._id)}
-                        className="w-full h-14 rounded-xl text-white font-bold text-lg shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#47759c)"}}
+                        className="w-full h-14 rounded-xl text-white font-bold text-lg shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
                       >
                         {isRtl ? 'تحديد ك "تم التحضير"' : 'Mark as "Prepared"'}
                       </Button>

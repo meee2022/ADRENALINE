@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function Coupons() {
   const { toast } = useToast();
@@ -59,27 +60,26 @@ export default function Coupons() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Tag className="h-7 w-7 text-cyan-600" />
-            كوبونات الخصم
-          </h1>
-          <p className="text-sm text-muted-foreground">إنشاء وإدارة أكواد الخصم</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg" className="gap-2">
-          <Plus className="h-5 w-5" />
-          كوبون جديد
-        </Button>
-      </div>
+      <DashboardHeader
+        icon={<Tag className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="كوبونات الخصم" titleEn="Coupons"
+        subtitleAr="إنشاء وإدارة أكواد الخصم" subtitleEn="Create & manage discount codes"
+        actions={
+          <Button onClick={() => setDialogOpen(true)} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
+            <Plus className="h-5 w-5" />
+            كوبون جديد
+          </Button>
+        }
+      />
 
-      <Card>
+      <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
           <CardTitle>الكوبونات</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
                 <TableHead>الكود</TableHead>
                 <TableHead>النوع</TableHead>
@@ -99,7 +99,7 @@ export default function Coupons() {
                 </TableRow>
               ) : (
                 coupons.map((c: any) => (
-                  <TableRow key={c._id}>
+                  <TableRow key={c._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold">{c.code}</span>
@@ -128,7 +128,7 @@ export default function Coupons() {
                     </TableCell>
                     <TableCell className="text-xs" dir="ltr">{c.expiresAt || "—"}</TableCell>
                     <TableCell>
-                      <Badge className={c.isActive ? "bg-green-100 text-green-700" : "bg-slate-100"}>
+                      <Badge className={`rounded-full ${c.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
                         {c.isActive ? "مفعّل" : "متوقف"}
                       </Badge>
                     </TableCell>
@@ -159,6 +159,7 @@ export default function Coupons() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

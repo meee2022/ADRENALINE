@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { ClipboardList, CheckCircle2 } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function OrdersPending() {
   const [, navigate] = useLocation();
@@ -23,48 +25,57 @@ export default function OrdersPending() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          📋 مراجعة الطلبات المعلقة
-        </h1>
-        <p className="text-gray-600">
-          قائمة المشتركين الذين أرسلوا جداولهم الأسبوعية وينتظرون الاعتماد
-        </p>
-      </div>
+      <DashboardHeader
+        icon={<ClipboardList className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="مراجعة الطلبات المعلقة" titleEn="Pending Orders Review"
+        subtitleAr="قائمة المشتركين الذين أرسلوا جداولهم الأسبوعية وينتظرون الاعتماد"
+        subtitleEn="Subscribers who submitted their weekly plans awaiting approval"
+        kpis={[
+          { value: pendingOrders.length, labelAr: "قيد المراجعة", labelEn: "Pending" },
+          { value: `${Math.round(progressPercentage)}%`, labelAr: "التقدم", labelEn: "Progress" },
+        ]}
+      />
 
       {/* Progress Bar */}
-      <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-primary/20">
+      <Card
+        className="p-6 bg-white rounded-2xl"
+        style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
+      >
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-lg font-bold text-gray-900">
               التقدم اليومي
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-500">
               {pendingOrders.length} طلب ينتظر المراجعة
             </p>
           </div>
-          <div className="text-3xl font-bold text-primary">
+          <div className="text-3xl font-black tabular-nums text-[#0E76AC]">
             {Math.round(progressPercentage)}%
           </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
           <div
-            className="bg-gradient-to-r from-primary to-cyan-500 h-full rounded-full transition-all duration-500"
-            style={{ width: `${progressPercentage}%` }}
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${progressPercentage}%`, background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
           />
         </div>
       </Card>
 
       {/* Orders List */}
       {pendingOrders.length === 0 ? (
-        <Card className="p-12 text-center">
-          <div className="text-6xl mb-4">✅</div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+        <Card
+          className="p-12 text-center bg-white rounded-2xl"
+          style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
+        >
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-[#e8f8fd] flex items-center justify-center mb-4">
+            <CheckCircle2 className="h-8 w-8 text-[#3cc4f0]" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
             رائع! لا توجد طلبات معلقة
           </h3>
-          <p className="text-gray-600">
-            تم مراجعة جميع الطلبات. استمتع بوقتك!
+          <p className="text-gray-500">
+            تم مراجعة جميع الطلبات
           </p>
         </Card>
       ) : (
@@ -77,14 +88,15 @@ export default function OrdersPending() {
             return (
               <Card
                 key={order._id}
-                className="p-6 hover:shadow-lg transition-shadow cursor-pointer border-r-4 border-r-orange-400"
+                className="p-6 bg-white rounded-2xl cursor-pointer hover:-translate-y-0.5 transition-all"
+                style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                 onClick={() => navigate(`/orders/review/${order._id}`)}
               >
                 <div className="flex items-start justify-between">
                   {/* Right Side - Customer Info */}
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center text-white font-bold text-xl">
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
                         {order.customerName?.[0]?.toUpperCase() || "؟"}
                       </div>
                       <div>
@@ -133,8 +145,8 @@ export default function OrdersPending() {
 
                   {/* Left Side - Status Badge */}
                   <div className="mr-4">
-                    <div className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap">
-                      ⏳ قيد المراجعة
+                    <div className="bg-amber-50 text-amber-700 px-4 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap">
+                      قيد المراجعة
                     </div>
                   </div>
                 </div>
@@ -148,9 +160,9 @@ export default function OrdersPending() {
                 )}
 
                 {/* Action Hint */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-500 text-center">
-                    👆 اضغط للمراجعة التفصيلية
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <p className="text-sm text-[#47759c] font-semibold text-center">
+                    اضغط للمراجعة التفصيلية
                   </p>
                 </div>
               </Card>

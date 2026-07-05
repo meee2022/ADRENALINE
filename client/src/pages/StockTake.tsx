@@ -10,6 +10,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ClipboardCheck, ArrowRight, Search, Check, AlertTriangle } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 const CATS: Record<string, string> = {
   vegetables: "خضروات", proteins: "بروتينات", dairy: "ألبان", dry_goods: "مواد جافة", other: "أخرى",
@@ -69,19 +70,21 @@ export default function StockTake() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-28">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><ClipboardCheck className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "الجرد الفعلي" : "Stock Take"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "عُدّ الكميات الفعلية وطابِقها مع النظام" : "Count actual quantities and reconcile"}</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
-            <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
-          </button>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<ClipboardCheck className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="الجرد الفعلي" titleEn="Stock Take"
+          subtitleAr="عُدّ الكميات الفعلية وطابِقها مع النظام" subtitleEn="Count actual quantities and reconcile"
+          kpis={[
+            { value: `${countedTotal}/${items.length}`, labelAr: "تم عدّ", labelEn: "Counted" },
+            { value: changes.length, labelAr: "فروقات", labelEn: "Discrepancies" },
+          ]}
+          actions={
+            <button onClick={() => setLocation("/inventory")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
+              <ArrowRight className="h-4 w-4" /> {isRtl ? "المخزون" : "Inventory"}
+            </button>
+          }
+        />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
@@ -92,16 +95,16 @@ export default function StockTake() {
         </div>
 
         {byCat.map(([cat, list]) => (
-          <div key={cat} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-            <h2 className="text-sm font-bold text-slate-700 px-4 py-2.5 bg-slate-50 border-b border-slate-100">{CATS[cat] || cat}</h2>
+          <div key={cat} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+            <h2 className="text-sm font-bold text-slate-700 px-4 py-2.5 bg-[#f4f8fb] border-b border-slate-100">{CATS[cat] || cat}</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-slate-500 text-xs border-b border-slate-100">
-                    <th className="text-start font-medium px-4 py-2">{isRtl ? "الصنف" : "Item"}</th>
-                    <th className="text-center font-medium px-3 py-2">{isRtl ? "النظام" : "System"}</th>
-                    <th className="text-center font-medium px-3 py-2">{isRtl ? "المعدود فعليًا" : "Counted"}</th>
-                    <th className="text-center font-medium px-4 py-2">{isRtl ? "الفرق" : "Variance"}</th>
+                  <tr className="bg-[#f4f8fb] text-[#47759c] font-bold text-xs uppercase border-b border-slate-100">
+                    <th className="text-start px-4 py-2">{isRtl ? "الصنف" : "Item"}</th>
+                    <th className="text-center px-3 py-2">{isRtl ? "النظام" : "System"}</th>
+                    <th className="text-center px-3 py-2">{isRtl ? "المعدود فعليًا" : "Counted"}</th>
+                    <th className="text-center px-4 py-2">{isRtl ? "الفرق" : "Variance"}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -110,7 +113,7 @@ export default function StockTake() {
                     const has = v !== undefined && v !== "";
                     const variance = has ? Number(v) - Number(it.currentStock) : 0;
                     return (
-                      <tr key={it._id} className="border-b border-slate-50">
+                      <tr key={it._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                         <td className="px-4 py-2.5 text-slate-900 font-medium">{it.nameAr}</td>
                         <td className="text-center px-3 py-2.5 text-slate-500 tabular-nums">{fmt(it.currentStock)} {it.unit}</td>
                         <td className="text-center px-3 py-2.5">
@@ -137,7 +140,7 @@ export default function StockTake() {
         ))}
 
         {items.length === 0 && (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400 shadow-sm">{isRtl ? "لا توجد أصناف" : "No items"}</div>
+          <div className="bg-white rounded-2xl p-12 text-center text-slate-400" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>{isRtl ? "لا توجد أصناف" : "No items"}</div>
         )}
       </div>
 
@@ -150,7 +153,7 @@ export default function StockTake() {
             </span>
           </div>
           <button onClick={apply} disabled={saving || !changes.length}
-            className="flex items-center gap-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl px-5 py-2.5">
+            className="flex items-center gap-2 text-sm font-bold text-white disabled:opacity-40 disabled:cursor-not-allowed rounded-xl px-5 py-2.5 shadow-lg" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
             <Check className="h-4 w-4" />{saving ? (isRtl ? "جارٍ التطبيق..." : "Applying...") : isRtl ? "تطبيق الجرد" : "Apply stock take"}
           </button>
         </div>

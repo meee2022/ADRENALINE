@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ClipboardList, ArrowRight, Sparkles, Send, Truck, XCircle, Trash2, PackageCheck } from "lucide-react";
+import { DashboardHeader } from "@/components/DashboardHeader";
 
 const fmt = (n: number) => (Math.round((n || 0) * 100) / 100).toLocaleString();
 
@@ -52,30 +53,31 @@ export default function PurchaseOrders() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
-      <div className="bg-gradient-to-l from-cyan-500 to-blue-600 px-4 py-6 shadow-md">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center"><ClipboardList className="h-6 w-6 text-white" /></div>
-            <div>
-              <h1 className="text-xl font-black text-white">{isRtl ? "أوامر الشراء" : "Purchase Orders"}</h1>
-              <p className="text-sm text-white/85">{isRtl ? "اطلب الناقص من موردينك وتابِع حالته" : "Reorder shortages and track their status"}</p>
-            </div>
-          </div>
-          <button onClick={() => setLocation("/inventory/alerts")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
-            <ArrowRight className="h-4 w-4" /> {isRtl ? "التنبيهات" : "Alerts"}
-          </button>
-        </div>
+      <div className="max-w-5xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<ClipboardList className="h-6 w-6 sm:h-7 sm:w-7" />}
+          titleAr="أوامر الشراء" titleEn="Purchase Orders"
+          subtitleAr="اطلب الناقص من موردينك وتابِع حالته" subtitleEn="Reorder shortages and track their status"
+          kpis={[
+            { value: orders.length, labelAr: "أوامر الشراء", labelEn: "Orders" },
+          ]}
+          actions={
+            <button onClick={() => setLocation("/inventory/alerts")} className="flex items-center gap-2 text-sm font-bold text-white bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2">
+              <ArrowRight className="h-4 w-4" /> {isRtl ? "التنبيهات" : "Alerts"}
+            </button>
+          }
+        />
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-5">
         <div className="flex justify-end">
-          <button onClick={handleGenerate} className="flex items-center gap-2 text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg px-4 py-2.5 shadow">
+          <button onClick={handleGenerate} className="flex items-center gap-2 text-sm font-bold text-white rounded-xl px-4 py-2.5 shadow-lg" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
             <Sparkles className="h-4 w-4" /> {isRtl ? "توليد من النواقص" : "Generate from shortages"}
           </button>
         </div>
 
         {orders.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-sm">
+          <div className="bg-white rounded-2xl p-12 text-center" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <ClipboardList className="h-12 w-12 mx-auto text-slate-300 mb-3" />
             <p className="text-slate-500">{isRtl ? "لا توجد أوامر شراء بعد" : "No purchase orders yet"}</p>
             <p className="text-xs text-slate-400 mt-1">{isRtl ? "اضغط «توليد من النواقص» لإنشاء أوامر تلقائياً" : "Click ‘Generate from shortages’ to create them"}</p>
@@ -85,7 +87,7 @@ export default function PurchaseOrders() {
             {orders.map((po) => {
               const st = STATUS[po.status] || STATUS.DRAFT;
               return (
-                <div key={po._id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                <div key={po._id} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
                   <div className="flex items-center justify-between gap-3 p-4 border-b border-slate-100">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="h-10 w-10 rounded-lg bg-cyan-50 flex items-center justify-center shrink-0"><Truck className="h-5 w-5 text-cyan-600" /></div>
@@ -102,16 +104,16 @@ export default function PurchaseOrders() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-slate-500 text-xs border-b border-slate-100 bg-slate-50">
-                          <th className="text-start font-medium px-4 py-2">{isRtl ? "الصنف" : "Item"}</th>
-                          <th className="text-center font-medium px-3 py-2">{isRtl ? "الكمية" : "Qty"}</th>
-                          <th className="text-center font-medium px-3 py-2">{isRtl ? "سعر تقديري" : "Est. cost"}</th>
-                          <th className="text-center font-medium px-4 py-2">{isRtl ? "الإجمالي" : "Line"}</th>
+                        <tr className="bg-[#f4f8fb] text-[#47759c] font-bold text-xs uppercase border-b border-slate-100">
+                          <th className="text-start px-4 py-2">{isRtl ? "الصنف" : "Item"}</th>
+                          <th className="text-center px-3 py-2">{isRtl ? "الكمية" : "Qty"}</th>
+                          <th className="text-center px-3 py-2">{isRtl ? "سعر تقديري" : "Est. cost"}</th>
+                          <th className="text-center px-4 py-2">{isRtl ? "الإجمالي" : "Line"}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {(po.items || []).map((it: any, i: number) => (
-                          <tr key={i} className="border-b border-slate-50">
+                          <tr key={i} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
                             <td className="px-4 py-2 text-slate-700">{it.nameAr}</td>
                             <td className="text-center px-3 py-2 text-slate-900 font-bold tabular-nums">{fmt(it.quantity)} {it.unit}</td>
                             <td className="text-center px-3 py-2 text-slate-500 tabular-nums">{it.estUnitCost ? fmt(it.estUnitCost) : "—"}</td>
