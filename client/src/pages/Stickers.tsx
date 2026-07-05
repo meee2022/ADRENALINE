@@ -521,11 +521,15 @@ export default function Stickers() {
           letter-spacing: 0.5px;
         }
         .macros-text {
-          font-size: 8.5px;
+          font-size: 8px;
           font-weight: 900;
-          letter-spacing: 0.4px;
+          letter-spacing: 0.3px;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
+          border: 0.5px solid #000;
+          border-radius: 1mm;
+          padding: 0.4mm 1.8mm;
+          white-space: nowrap;
         }
 
         /* Warnings — red pill, centered */
