@@ -49,7 +49,7 @@ export const seedPublicWebsite = mutation({
     // ===== Seed Public Plans =====
     // DIET PACK
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التنحيف",
+      nameAr: "باقة التنحيف",
       nameEn: "DIET PACK",
       slug: "diet-pack",
       descriptionAr: "خطة متكاملة لخسارة الوزن بشكل صحي",
@@ -72,7 +72,7 @@ export const seedPublicWebsite = mutation({
 
     // BULKING PACK
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التضخيم",
+      nameAr: "باقة التضخيم",
       nameEn: "BULKING PACK",
       slug: "bulking-pack",
       descriptionAr: "خطة لزيادة الكتلة العضلية",
@@ -95,7 +95,7 @@ export const seedPublicWebsite = mutation({
 
     // FITNESS PACK
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة اللياقة",
+      nameAr: "باقة اللياقة",
       nameEn: "FITNESS PACK",
       slug: "fitness-pack",
       descriptionAr: "خطة متوازنة للحفاظ على اللياقة",

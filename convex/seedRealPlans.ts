@@ -15,7 +15,7 @@ export const seedRealPlans = mutation({
     // ===== DIET PACK =====
     // 1 Week
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التنحيف",
+      nameAr: "باقة التنحيف",
       nameEn: "DIET PACK",
       slug: "diet-pack-week",
       descriptionAr: "خطة متكاملة لخسارة الوزن بشكل صحي - أسبوع واحد",
@@ -41,7 +41,7 @@ export const seedRealPlans = mutation({
 
     // 2 Weeks
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التنحيف",
+      nameAr: "باقة التنحيف",
       nameEn: "DIET PACK",
       slug: "diet-pack-two-weeks",
       descriptionAr: "خطة متكاملة لخسارة الوزن بشكل صحي - أسبوعين",
@@ -66,7 +66,7 @@ export const seedRealPlans = mutation({
 
     // 1 Month
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التنحيف",
+      nameAr: "باقة التنحيف",
       nameEn: "DIET PACK",
       slug: "diet-pack-month",
       descriptionAr: "خطة متكاملة لخسارة الوزن بشكل صحي - شهر كامل",
@@ -93,7 +93,7 @@ export const seedRealPlans = mutation({
     // ===== FITNESS PACK =====
     // 1 Week
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة اللياقة",
+      nameAr: "باقة اللياقة",
       nameEn: "FITNESS PACK",
       slug: "fitness-pack-week",
       descriptionAr: "خطة متوازنة للحفاظ على اللياقة - أسبوع واحد",
@@ -118,7 +118,7 @@ export const seedRealPlans = mutation({
 
     // 2 Weeks
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة اللياقة",
+      nameAr: "باقة اللياقة",
       nameEn: "FITNESS PACK",
       slug: "fitness-pack-two-weeks",
       descriptionAr: "خطة متوازنة للحفاظ على اللياقة - أسبوعين",
@@ -143,7 +143,7 @@ export const seedRealPlans = mutation({
 
     // 1 Month
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة اللياقة",
+      nameAr: "باقة اللياقة",
       nameEn: "FITNESS PACK",
       slug: "fitness-pack-month",
       descriptionAr: "خطة متوازنة للحفاظ على اللياقة - شهر كامل",
@@ -170,7 +170,7 @@ export const seedRealPlans = mutation({
     // ===== BULKING PACK =====
     // 1 Week
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التضخيم",
+      nameAr: "باقة التضخيم",
       nameEn: "BULKING PACK",
       slug: "bulking-pack-week",
       descriptionAr: "خطة لزيادة الكتلة العضلية - أسبوع واحد",
@@ -195,7 +195,7 @@ export const seedRealPlans = mutation({
 
     // 2 Weeks
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التضخيم",
+      nameAr: "باقة التضخيم",
       nameEn: "BULKING PACK",
       slug: "bulking-pack-two-weeks",
       descriptionAr: "خطة لزيادة الكتلة العضلية - أسبوعين",
@@ -220,7 +220,7 @@ export const seedRealPlans = mutation({
 
     // 1 Month
     await ctx.db.insert("publicPlans", {
-      nameAr: "حزمة التضخيم",
+      nameAr: "باقة التضخيم",
       nameEn: "BULKING PACK",
       slug: "bulking-pack-month",
       descriptionAr: "خطة لزيادة الكتلة العضلية - شهر كامل",
