@@ -395,7 +395,7 @@ function CustomersReport() {
 }
 
 function InventoryReport() {
-  const items = useQuery(api.inventory.listItems) || [];
+  const items = useQuery(api.inventory.listItems, {}) || [];
   const lowStock = items.filter((i: any) => i.currentStock <= i.minStock).length;
 
   const handleExport = () => {
