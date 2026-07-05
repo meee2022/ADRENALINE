@@ -10,11 +10,15 @@ import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { DeliveryMap } from "@/components/DeliveryMap";
+import { useStore } from "@/lib/store";
+import { useQuery, useAction } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 
 export default function Delivery() {
   const { language, dir } = useLanguage();
@@ -108,6 +112,42 @@ export default function Delivery() {
     getArea(getCustomer(a.customerId)?.address).localeCompare(getArea(getCustomer(b.customerId)?.address), "ar"));
   const routeUrl = buildRouteUrl(sortedPlans.map((p: any) => getCustomer(p.customerId)?.address).filter(Boolean) as string[]);
 
+  // ─── الخريطة ───
+  const [showMap, setShowMap] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const settings = useQuery(api.restaurantSettings.get);
+  const geocodeAll = useAction(api.geo.geocodeAllCustomers);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+
+  const mapStops = sortedPlans
+    .map((p: any, idx: number) => {
+      const c: any = getCustomer(p.customerId);
+      if (!c || c.lat == null || c.lng == null) return null;
+      return { id: p._id, name: c.fullName, lat: c.lat, lng: c.lng, address: c.address, phone: c.phone, order: idx + 1 };
+    })
+    .filter(Boolean) as any[];
+  const missingCoords = sortedPlans.filter((p: any) => {
+    const c: any = getCustomer(p.customerId);
+    return c && c.address && (c.lat == null || c.lng == null);
+  }).length;
+  const storeOrigin = settings?.storeLat != null && settings?.storeLng != null
+    ? { lat: settings.storeLat as number, lng: settings.storeLng as number } : null;
+
+  const handleGeocodeAll = async () => {
+    setGeocoding(true);
+    try {
+      const res: any = await geocodeAll({ sessionToken });
+      toast({
+        title: isRtl ? "تم تحديد المواقع" : "Locations updated",
+        description: isRtl
+          ? `تم تحديد ${res.updated} موقع${res.remaining ? ` — متبقٍ ${res.remaining}` : ""}`
+          : `Geocoded ${res.updated}${res.remaining ? ` — ${res.remaining} remaining` : ""}`,
+      });
+    } catch {
+      toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "تعذّر تحديد المواقع" : "Geocoding failed", variant: "destructive" });
+    } finally { setGeocoding(false); }
+  };
+
   return (
     <>
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 print:hidden">
@@ -178,8 +218,54 @@ export default function Delivery() {
               {isRtl ? "الجولة المسائية" : "Evening Shift"}
             </button>
           </div>
+
+          {/* Map controls */}
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <button
+              onClick={() => setShowMap((v) => !v)}
+              className={cn(
+                "h-10 px-4 rounded-xl text-sm font-bold flex items-center gap-2 transition-all",
+                showMap ? "text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              )}
+              style={showMap ? { background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" } : {}}
+            >
+              <MapPinned className="h-4 w-4" />
+              {showMap ? (isRtl ? "إخفاء الخريطة" : "Hide Map") : (isRtl ? "عرض الخريطة" : "Show Map")}
+            </button>
+            {missingCoords > 0 && (
+              <button
+                onClick={handleGeocodeAll}
+                disabled={geocoding}
+                className="h-10 px-4 rounded-xl text-sm font-bold flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 disabled:opacity-60"
+              >
+                {geocoding ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                {isRtl ? `تحديد مواقع ${missingCoords} عنوان` : `Locate ${missingCoords} addresses`}
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Map panel */}
+      {showMap && (
+        <div className="max-w-4xl mx-auto px-4 pt-4">
+          {mapStops.length === 0 ? (
+            <div className="rounded-2xl p-8 text-center bg-white" style={{ border: "1px solid #e8eef4" }}>
+              <MapPinned className="h-10 w-10 mx-auto mb-3 text-[#3cc4f0]" />
+              <p className="text-sm font-semibold text-gray-600">
+                {isRtl ? "لا توجد مواقع محدّدة لهذه الجولة بعد" : "No pinned locations for this shift yet"}
+              </p>
+              {missingCoords > 0 && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {isRtl ? "اضغط \"تحديد المواقع\" لتحويل العناوين تلقائياً" : "Use \"Locate addresses\" to geocode them"}
+                </p>
+              )}
+            </div>
+          ) : (
+            <DeliveryMap stops={mapStops} origin={storeOrigin} height={380} />
+          )}
+        </div>
+      )}
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">

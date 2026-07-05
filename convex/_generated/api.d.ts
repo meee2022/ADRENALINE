@@ -24,6 +24,7 @@ import type * as files from "../files.js";
 import type * as fixPlanWording from "../fixPlanWording.js";
 import type * as fixSchedule from "../fixSchedule.js";
 import type * as fixScheduleExtra from "../fixScheduleExtra.js";
+import type * as geo from "../geo.js";
 import type * as inventory from "../inventory.js";
 import type * as mealCategories from "../mealCategories.js";
 import type * as mealImages from "../mealImages.js";
@@ -73,6 +74,7 @@ declare const fullApi: ApiFromModules<{
   fixPlanWording: typeof fixPlanWording;
   fixSchedule: typeof fixSchedule;
   fixScheduleExtra: typeof fixScheduleExtra;
+  geo: typeof geo;
   inventory: typeof inventory;
   mealCategories: typeof mealCategories;
   mealImages: typeof mealImages;

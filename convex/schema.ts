@@ -66,6 +66,9 @@ export default defineSchema({
     endDate: v.string(), // yyyy-MM-dd
 
     address: v.optional(v.string()),
+    // ✅ إحداثيات الموقع للخريطة والتوصيل (من التحويل التلقائي أو تحديد يدوي)
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
     goals: v.optional(v.string()),
     allergies: v.optional(v.string()),
     notes: v.optional(v.string()),
@@ -500,7 +503,10 @@ export default defineSchema({
     email: v.string(),
     addressAr: v.string(),
     addressEn: v.string(),
-    
+    // ✅ إحداثيات المطعم (نقطة انطلاق التوصيل على الخريطة)
+    storeLat: v.optional(v.number()),
+    storeLng: v.optional(v.number()),
+
     // Social Media Links
     instagramUrl: v.optional(v.string()),
     twitterUrl: v.optional(v.string()),
