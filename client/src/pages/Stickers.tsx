@@ -270,7 +270,7 @@ export default function Stickers() {
         .label {
           width: var(--label-w);
           height: var(--label-h);
-          padding: 0.6mm 2.5mm 1.2mm;
+          padding: 0.3mm 2.5mm 1.2mm;
           border: 0.5px solid #000;
           border-radius: 1.5mm;
           background: #fff;
@@ -387,8 +387,8 @@ export default function Stickers() {
           line-height: 1;
         }
         .brand-heart {
-          width: 5mm;
-          height: 5mm;
+          width: 5.6mm;
+          height: 5.6mm;
           object-fit: contain;
           flex-shrink: 0;
           /* keep heart visible in print */
@@ -401,15 +401,16 @@ export default function Stickers() {
           align-items: center;
         }
         .brand-name {
-          font-size: 14px;
+          font-size: 16px;
           font-weight: 900;
-          letter-spacing: 2px;
-          line-height: 1.05;
+          letter-spacing: 1.5px;
+          line-height: 1.02;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
+          -webkit-text-stroke: 0.2px #000;
         }
         .brand-tag {
-          font-size: 6.5px;
+          font-size: 7px;
           font-weight: 900;
           letter-spacing: 3px;
           margin-top: 0.2mm;
@@ -562,18 +563,21 @@ export default function Stickers() {
           margin: 0 0.5mm;
         }
         .date-label {
-          font-size: 5.5px;
-          font-weight: 800;
-          letter-spacing: 1px;
+          font-size: 6.5px;
+          font-weight: 900;
+          letter-spacing: 0.6px;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
           margin-bottom: 0.4mm;
           text-transform: uppercase;
         }
         .date-value {
-          font-size: 9px;
+          font-size: 9.5px;
           font-weight: 900;
           letter-spacing: 0.2px;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
+          -webkit-text-stroke: 0.15px #000;
         }
         .cust-num-inline {
           font-size: 12px;
