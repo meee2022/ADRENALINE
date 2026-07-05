@@ -18,6 +18,10 @@ import { cn } from "@/lib/utils";
 
 const money = (n: number) => (n || 0).toLocaleString("en-US");
 
+// دوام العمل: 9 ساعات/يوم — يُستخدم لحساب سعر الساعة والأوفرتايم
+const WORK_HOURS_PER_DAY = 9;
+const DAYS_PER_MONTH = 30;
+
 const emptyForm = {
   name: "", designation: "", basic: "", allowance: "", days: "31",
   overtime: "", advance: "", paid: "", otHours: "", fridays: "",
@@ -45,6 +49,8 @@ export default function Payroll() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  // معدّل الأوفرتايم (قابل للتعديل) — 1.25 = +25% (قانون العمل القطري لأيام الأسبوع)
+  const [otRate, setOtRate] = useState("1.25");
 
   const monthLabel = (m: string) => {
     const [y, mo] = m.split("-");
@@ -91,6 +97,12 @@ export default function Payroll() {
   const dSalary = Math.round((dPkg * Math.min(Number(form.days) || 0, 31)) / 31);
   const dTotal = dSalary + (Number(form.overtime) || 0);
   const dBalance = dTotal - (Number(form.advance) || 0) - (Number(form.paid) || 0);
+
+  // حاسبة الأوفرتايم: سعر الساعة = الباقة ÷ (30 يوم × 9 ساعات) ثم × المعدّل
+  const hourlyRate = dPkg / (DAYS_PER_MONTH * WORK_HOURS_PER_DAY);
+  const otHoursNum = Number(form.otHours) || 0;
+  const rateNum = Number(otRate) || 1;
+  const suggestedOT = Math.round(otHoursNum * hourlyRate * rateNum);
 
   const cols = [
     { k: "sr", ar: "#", en: "#" },
@@ -256,6 +268,27 @@ export default function Payroll() {
               </div>
             ))}
           </div>
+          {/* OT calculator — دوام 9 ساعات */}
+          <div className="rounded-xl p-3 space-y-2" style={{ background: "#eef9fe", border: "1px solid #3cc4f033" }}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="text-xs font-bold text-[#0E76AC]">
+                {t("حاسبة الأوفرتايم (دوام 9 ساعات)", "Overtime calculator (9-hour shift)")}
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-[11px] text-gray-500">{t("المعدّل ×", "Rate ×")}</Label>
+                <Input value={otRate} onChange={(e) => setOtRate(e.target.value)} type="number" step="0.05" dir="ltr" className="h-8 w-20 text-center" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between text-[11px] text-[#47759c]">
+              <span>{t("سعر الساعة", "Hourly")}: <b className="text-[#0E76AC]">{hourlyRate.toFixed(2)}</b> {t("ر.ق", "QAR")}</span>
+              <span>{otHoursNum} {t("ساعة", "hrs")} × {rateNum} = <b className="text-[#0E76AC]">{money(suggestedOT)}</b> {t("ر.ق", "QAR")}</span>
+            </div>
+            <Button type="button" onClick={() => set("overtime", String(suggestedOT))}
+              className="w-full h-9 rounded-lg text-xs font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              {t(`طبّق الأوفرتايم المحسوب (${money(suggestedOT)} ر.ق)`, `Apply calculated OT (${money(suggestedOT)} QAR)`)}
+            </Button>
+          </div>
+
           {/* Live derived preview */}
           <div className="grid grid-cols-4 gap-2 rounded-xl p-3" style={{ background: "#f4f8fb" }}>
             {[
