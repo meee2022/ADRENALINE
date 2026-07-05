@@ -183,8 +183,19 @@ export default function Login() {
             </Button>
           </form>
 
+          {/* Forgot password */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => setLocation("/customer/auth?reset=1")}
+              className="text-sm font-bold hover:underline transition-colors"
+              style={{ color: "#47759c" }}
+            >
+              {dir === "rtl" ? "نسيت كلمة المرور؟" : "Forgot your password?"}
+            </button>
+          </div>
+
           {/* Register link */}
-          <div className="mt-5 text-center">
+          <div className="mt-3 text-center">
             <p className="text-sm" style={{ color: "#bcbebf" }}>
               {t("customer.no_account") || "ليس لديك حساب؟"}{" "}
               <button
