@@ -22,6 +22,25 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
+  // ===== Payroll (كشف رواتب الموظفين) =====
+  payroll: defineTable({
+    name: v.string(),
+    designation: v.string(),
+    basic: v.number(),
+    allowance: v.number(),
+    days: v.number(),         // أيام العمل في الشهر
+    overtime: v.number(),     // مبلغ الأوفرتايم
+    advance: v.number(),      // سلفة
+    paid: v.number(),         // المدفوع
+    otHours: v.optional(v.number()),   // ساعات الأوفرتايم
+    fridays: v.optional(v.number()),   // أيام الجمعة
+    month: v.string(),        // "2026-05"
+    sortOrder: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_month", ["month"]),
+
   // ===== Password reset codes (OTP via email) =====
   passwordResetCodes: defineTable({
     email: v.string(),

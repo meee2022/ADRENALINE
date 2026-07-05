@@ -34,6 +34,7 @@ import type * as modifiers from "../modifiers.js";
 import type * as notifications from "../notifications.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as passwords from "../passwords.js";
+import type * as payroll from "../payroll.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
@@ -84,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   passwordReset: typeof passwordReset;
   passwords: typeof passwords;
+  payroll: typeof payroll;
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
   purchaseOrders: typeof purchaseOrders;

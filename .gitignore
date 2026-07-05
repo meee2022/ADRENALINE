@@ -11,3 +11,7 @@ vite.config.ts.*
 .env
 .env.*
 !.env.example
+
+# Sensitive: salary/payroll source files
+*SALARY*
+*salary*.pdf

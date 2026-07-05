@@ -25,6 +25,7 @@ import {
   ScrollText,
   Tag,
   Star,
+  Banknote,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -41,6 +42,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   publicMenu: UtensilsCrossed,
   banners: ImageIcon,
   stickers: Printer,
+  payroll: Banknote,
   plansManagement: CalendarDays,
   plans: Dumbbell,
   ordersPending: ClipboardCheck,
