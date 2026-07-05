@@ -42,29 +42,18 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Launcher — الأيقونة مع عنوان "المساعد الذكي" جنبها في شارة واحدة أنيقة */}
+      {/* Launcher — أيقونة دائرية بسيطة */}
       <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
+        title={isRtl ? "المساعد الذكي" : "Smart Assistant"}
         className="no-print"
         style={{
           position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
-          border: "none", cursor: "pointer", borderRadius: 999,
+          width: 58, height: 58, borderRadius: "50%", border: "none", cursor: "pointer",
           background: `linear-gradient(145deg,${B.brand},${B.accent})`,
           boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
-          display: "flex", alignItems: "center", gap: open ? 0 : 8,
-          padding: open ? 0 : "0 16px 0 0",
-          height: 56, width: open ? 56 : "auto",
-          justifyContent: "center", transition: "all .2s ease",
-          fontFamily: "'Cairo',sans-serif",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
         }}>
-        <span style={{
-          width: 56, height: 56, borderRadius: "50%", flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
-        }}>{open ? "✕" : "💬"}</span>
-        {!open && (
-          <span style={{ color: "#fff", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>
-            {isRtl ? "المساعد الذكي" : "Smart Assistant"}
-          </span>
-        )}
+        {open ? "✕" : "💬"}
       </button>
 
       {/* Panel */}
