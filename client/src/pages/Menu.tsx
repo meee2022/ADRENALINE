@@ -714,73 +714,73 @@ function CategoriesTab({ categories }: { categories: MealCategory[] }) {
   const totalMeals = menuItems?.length || 0;
   const activeCategories = sortedCategories.filter(c => getCategoryMealCount(c._id) > 0).length;
 
-  // Get icon and color for each category
+  // Get icon and brand-consistent accent color for each category
   const getCategoryStyle = (name: string) => {
     const n = name.toUpperCase();
     if (n.includes("BREAKFAST") || n.includes("فطور")) {
-      return { icon: "☀️", color: "from-orange-400 to-orange-500", lightBg: "bg-orange-50", borderColor: "border-orange-200" };
+      return { icon: "☀️", accent: "#f59e0b", soft: "#fff7ed" };
     }
     if (n.includes("LUNCH") || n.includes("غداء")) {
-      return { icon: "🍽️", color: "from-blue-400 to-blue-500", lightBg: "bg-blue-50", borderColor: "border-blue-200" };
+      return { icon: "🍽️", accent: "#3cc4f0", soft: "#eef9fe" };
     }
     if (n.includes("DINNER") || n.includes("عشاء")) {
-      return { icon: "🌙", color: "from-purple-400 to-purple-500", lightBg: "bg-purple-50", borderColor: "border-purple-200" };
+      return { icon: "🌙", accent: "#8b5cf6", soft: "#f5f3ff" };
     }
     if (n.includes("SNACK") || n.includes("سناك")) {
-      return { icon: "🥗", color: "from-green-400 to-green-500", lightBg: "bg-green-50", borderColor: "border-green-200" };
+      return { icon: "🥗", accent: "#10b981", soft: "#ecfdf5" };
     }
-    return { icon: "•••", color: "from-gray-400 to-gray-500", lightBg: "bg-gray-50", borderColor: "border-gray-200" };
+    return { icon: "🍱", accent: "#47759c", soft: "#eef2f7" };
   };
 
   return (
     <div className="space-y-4 sm:space-y-6" dir={language === "ar" ? "rtl" : "ltr"}>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap bg-gradient-to-r from-cyan-50 to-blue-50 p-4 sm:p-6 rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-lg">
-            <Database className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+      {/* Hero header — brand gradient */}
+      <div className="relative overflow-hidden rounded-3xl p-5 sm:p-7"
+        style={{ background: "linear-gradient(135deg,#0E2A4A 0%,#0E76AC 55%,#3AC7F4 100%)" }}>
+        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full opacity-20"
+          style={{ background: "radial-gradient(circle,#ffffff66,transparent 70%)" }} />
+        <div className="relative flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl flex items-center justify-center shadow-lg backdrop-blur-md"
+              style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}>
+              <Database className="h-6 w-6 sm:h-7 sm:w-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-white">
+                {language === "ar" ? "إدارة التصنيفات" : "Categories Management"}
+              </h2>
+              <p className="text-xs sm:text-sm text-white/75 mt-0.5">
+                {language === "ar" ? "تنظيم وترتيب أنواع الوجبات" : "Organize and sort meal types"}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight font-heading text-gray-800">
-              {language === "ar" ? "إدارة التصنيفات" : "Categories Management"}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600">
-              {language === "ar" ? "تنظيم وترتيب أنواع الوجبات" : "Organize and sort meal types"}
-            </p>
-          </div>
+
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setName("");
+              setIsOpen(true);
+            }}
+            className="h-11 sm:h-12 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg"
+          >
+            <Plus className={cn("h-4 w-4", language === "ar" ? "ml-2" : "mr-2")} />
+            {language === "ar" ? "إضافة صنف جديد" : "Add Category"}
+          </Button>
         </div>
 
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setName("");
-            setIsOpen(true);
-          }}
-          className="h-11 sm:h-12 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 shadow-lg"
-        >
-          <Plus className={cn("h-4 w-4", language === "ar" ? "ml-2" : "mr-2")} />
-          {language === "ar" ? "إضافة صنف جديد" : "Add Category"}
-        </Button>
-      </div>
-
-      {/* Stats Card */}
-      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-4 sm:p-6 border-2 border-blue-100 shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="text-2xl">📊</span>
-          <h3 className="font-bold text-gray-800 text-base sm:text-lg">
-            {language === "ar" ? "نظرة سريعة على القائمة" : "Quick Menu Overview"}
-          </h3>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-cyan-600">{totalMeals}</div>
-            <div className="text-xs sm:text-sm text-gray-600 font-medium">
+        {/* KPI strip inside hero */}
+        <div className="relative grid grid-cols-2 gap-3 mt-5 max-w-md">
+          <div className="rounded-2xl px-4 py-3 backdrop-blur-md"
+            style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.22)" }}>
+            <div className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">{totalMeals}</div>
+            <div className="text-[11px] sm:text-xs text-white/70 font-semibold mt-1">
               {language === "ar" ? "إجمالي الوجبات" : "Total Meals"}
             </div>
           </div>
-          <div className="text-center">
-            <div className="text-3xl sm:text-4xl font-bold text-blue-600">{activeCategories}</div>
-            <div className="text-xs sm:text-sm text-gray-600 font-medium">
+          <div className="rounded-2xl px-4 py-3 backdrop-blur-md"
+            style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.22)" }}>
+            <div className="text-2xl sm:text-3xl font-black text-white tabular-nums leading-none">{activeCategories}</div>
+            <div className="text-[11px] sm:text-xs text-white/70 font-semibold mt-1">
               {language === "ar" ? "تصنيفات نشطة" : "Active Categories"}
             </div>
           </div>
@@ -840,83 +840,77 @@ function CategoriesTab({ categories }: { categories: MealCategory[] }) {
             const style = getCategoryStyle(cat.name);
             const mealCount = getCategoryMealCount(cat._id);
 
+            const share = totalMeals > 0 ? Math.round((mealCount / totalMeals) * 100) : 0;
             return (
               <div
                 key={cat._id}
-                className={cn(
-                  "group relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border-2",
-                  style.borderColor
-                )}
+                className="group relative bg-white rounded-2xl transition-all duration-300 overflow-hidden hover:-translate-y-1"
+                style={{
+                  border: "1px solid #e8eef4",
+                  boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)",
+                }}
               >
-                {/* Gradient Header */}
-                <div className={cn("h-24 bg-gradient-to-br p-4 flex items-center justify-between", style.color)}>
-                  <div className="flex items-center gap-3">
-                    <div className="text-4xl">{style.icon}</div>
-                    <div className="text-white">
-                      <div className="text-xl font-bold">{cat.name}</div>
-                      <div className="text-xs opacity-90">
-                        {language === "ar" ? "الترتيب" : "Order"}: #{cat.sortOrder}
+                {/* Accent top strip */}
+                <div className="h-1.5 w-full" style={{ background: style.accent }} />
+
+                <div className="p-5">
+                  {/* Header: icon orb + name/order + count */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                        style={{ background: style.soft, border: `1px solid ${style.accent}22` }}>
+                        {style.icon}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-lg font-black text-[#0f1516] truncate">{cat.name}</div>
+                        <div className="text-[11px] text-gray-400 font-semibold">
+                          {language === "ar" ? "الترتيب" : "Order"} #{cat.sortOrder}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Card Body */}
-                <div className="p-4 space-y-3">
-                  {/* Meal Count Badge */}
-                  <div className="flex items-center justify-center">
-                    <div className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-6 py-3 rounded-xl shadow-lg">
-                      <div className="text-3xl font-bold">{mealCount}</div>
-                      <div className="text-xs font-medium opacity-95">
+                    <div className="text-right shrink-0">
+                      <div className="text-3xl font-black tabular-nums leading-none" style={{ color: style.accent }}>
+                        {mealCount}
+                      </div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wide mt-0.5">
                         {language === "ar" ? "وجبة" : "Meals"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between gap-2 pt-2">
-                    {/* Move Buttons */}
+                  {/* Share progress bar */}
+                  <div className="mt-4">
+                    <div className="h-1.5 w-full rounded-full overflow-hidden bg-gray-100">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${share}%`, background: style.accent }} />
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-semibold mt-1">
+                      {share}% {language === "ar" ? "من إجمالي القائمة" : "of menu"}
+                    </div>
+                  </div>
+
+                  {/* Toolbar */}
+                  <div className="flex items-center justify-between gap-2 pt-4 mt-4 border-t border-gray-100">
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 rounded-lg hover:bg-cyan-50 hover:border-cyan-400 hover:text-cyan-600"
-                        onClick={() => move(idx, "up")}
-                        disabled={idx === 0}
-                      >
+                      <Button variant="outline" size="icon"
+                        className="h-9 w-9 rounded-lg border-gray-200 text-gray-500 hover:bg-cyan-50 hover:border-cyan-400 hover:text-cyan-600"
+                        onClick={() => move(idx, "up")} disabled={idx === 0}>
                         <ArrowUp className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 rounded-lg hover:bg-cyan-50 hover:border-cyan-400 hover:text-cyan-600"
-                        onClick={() => move(idx, "down")}
-                        disabled={idx === sortedCategories.length - 1}
-                      >
+                      <Button variant="outline" size="icon"
+                        className="h-9 w-9 rounded-lg border-gray-200 text-gray-500 hover:bg-cyan-50 hover:border-cyan-400 hover:text-cyan-600"
+                        onClick={() => move(idx, "down")} disabled={idx === sortedCategories.length - 1}>
                         <ArrowDown className="h-4 w-4" />
                       </Button>
                     </div>
-
-                    {/* Edit & Delete Buttons */}
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 rounded-lg hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600"
-                        onClick={() => {
-                          setEditing(cat);
-                          setName(cat.name);
-                          setIsOpen(true);
-                        }}
-                      >
+                      <Button variant="outline" size="icon"
+                        className="h-9 w-9 rounded-lg border-gray-200 text-gray-500 hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600"
+                        onClick={() => { setEditing(cat); setName(cat.name); setIsOpen(true); }}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-9 rounded-lg hover:bg-red-50 hover:border-red-400 hover:text-red-600"
-                        onClick={() => onDelete(cat)}
-                      >
+                      <Button variant="outline" size="icon"
+                        className="h-9 w-9 rounded-lg border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-400 hover:text-red-600"
+                        onClick={() => onDelete(cat)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
