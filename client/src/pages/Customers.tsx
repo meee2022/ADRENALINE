@@ -62,6 +62,9 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { format, parseISO } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useForm, Controller } from "react-hook-form";
+import { useAction } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { LocationPicker } from "@/components/LocationPicker";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLanguage } from "@/lib/i18n";
@@ -187,10 +190,12 @@ const customerSchema = z.object({
   endDate: z.string(),
 
   address: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
   goals: z.string().optional(),
   allergies: z.string().optional(),
   notes: z.string().optional(),
-  
+
   // ✅ التفضيلات والممنوعات والكميات
   avoid: z.string().optional(),
   preferences: z.string().optional(),
@@ -255,6 +260,8 @@ export default function Customers() {
     [modifiers]
   );
 
+  const geocode = useAction(api.geo.geocodeAddress);
+  const [geocoding, setGeocoding] = useState(false);
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -449,6 +456,8 @@ export default function Customers() {
       isActive: customer.isActive,
 
       address: customer.address || "",
+      lat: customer.lat ?? undefined,
+      lng: customer.lng ?? undefined,
       goals: customer.goals || customer.program || "",
       allergies: customer.allergies || "",
       notes: customer.notes || "",
@@ -1174,6 +1183,53 @@ export default function Customers() {
                     <Label>{isRtl ? "العنوان" : "Address"}</Label>
                     <Textarea {...form.register("address")} />
                   </div>
+                </div>
+
+                {/* موقع التوصيل على الخريطة (تلقائي من العنوان أو تحديد يدوي) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <Label>{isRtl ? "موقع التوصيل على الخريطة" : "Delivery Location"}</Label>
+                    <div className="flex items-center gap-2">
+                      {(form.watch("lat") != null && form.watch("lng") != null) && (
+                        <span className="text-[11px] font-mono text-gray-400" dir="ltr">
+                          {Number(form.watch("lat")).toFixed(4)}, {Number(form.watch("lng")).toFixed(4)}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        disabled={geocoding}
+                        onClick={async () => {
+                          const addr = form.getValues("address");
+                          if (!addr || !addr.trim()) {
+                            alert(isRtl ? "أدخل العنوان أولاً" : "Enter an address first");
+                            return;
+                          }
+                          setGeocoding(true);
+                          try {
+                            const res: any = await geocode({ address: addr });
+                            if (res?.lat != null) {
+                              form.setValue("lat", res.lat, { shouldDirty: true });
+                              form.setValue("lng", res.lng, { shouldDirty: true });
+                            } else {
+                              alert(isRtl ? "تعذّر تحديد الموقع — حدّده يدوياً على الخريطة" : "Couldn't locate — pin it manually");
+                            }
+                          } finally { setGeocoding(false); }
+                        }}
+                        className="text-xs font-bold px-3 h-8 rounded-lg flex items-center gap-1.5 bg-[#3cc4f0]/10 text-[#0E76AC] hover:bg-[#3cc4f0]/20 disabled:opacity-60"
+                      >
+                        {geocoding ? (isRtl ? "جارٍ التحديد…" : "Locating…") : (isRtl ? "📍 تحديد من العنوان" : "📍 Locate from address")}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400">
+                    {isRtl ? "اضغط على الخريطة أو اسحب الدبوس لضبط الموقع بدقة." : "Click the map or drag the pin to set the exact location."}
+                  </p>
+                  <LocationPicker
+                    lat={form.watch("lat")}
+                    lng={form.watch("lng")}
+                    onChange={(la, ln) => { form.setValue("lat", la, { shouldDirty: true }); form.setValue("lng", ln, { shouldDirty: true }); }}
+                    height={220}
+                  />
                 </div>
 
                 <div

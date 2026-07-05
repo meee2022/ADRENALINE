@@ -100,10 +100,12 @@ export const create = mutation({
     endDate: v.string(),
 
     address: v.optional(v.string()),
+    lat: v.optional(v.number()),
+    lng: v.optional(v.number()),
     goals: v.optional(v.string()),
     allergies: v.optional(v.string()),
     notes: v.optional(v.string()),
-    
+
     // ✅ التفضيلات والممنوعات والكميات
     avoid: v.optional(v.string()),
     preferences: v.optional(v.string()),
