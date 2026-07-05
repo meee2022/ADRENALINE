@@ -115,6 +115,7 @@ export default function Kitchen() {
         deliveryTime: string;
         categoryName: string;
         program: string;       // ✅ البرنامج
+        allergies?: string;    // ✅ حساسية العميل
         avoid?: string;
         preferences?: string;
         portions?: string;
@@ -122,6 +123,20 @@ export default function Kitchen() {
         isPlain: boolean;     // ✅ هل عادية؟
       }>
     }> = {};
+
+    // helper: يحوّل modifierIds المختارة إلى أسماء مجمّعة حسب المجموعة
+    const resolveMods = (ids: string[] = []) => {
+      const av: string[] = [], pr: string[] = [], po: string[] = [];
+      ids.forEach((id) => {
+        const mod: any = modifiers.find((m: any) => m._id === id);
+        if (!mod) return;
+        const nm = isRtl ? (mod.nameAr || mod.name) : mod.name;
+        if (mod.group === "AVOID") av.push(nm);
+        else if (mod.group === "PREF") pr.push(nm);
+        else if (mod.group === "PORTION") po.push(nm);
+      });
+      return { av, pr, po };
+    };
 
     // helper: يحدد لو الوجبة عادية (مفيش أي تعديلات)
     const isPlainMeal = (item: any, customer: any): boolean => {
@@ -140,7 +155,7 @@ export default function Kitchen() {
     };
 
     allPlansToday.forEach((plan: any) => {
-      const customer = getCustomer(plan.customerId);
+      const customer: any = getCustomer(plan.customerId);
       const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
       const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
 
@@ -148,7 +163,7 @@ export default function Kitchen() {
         .filter((item: any) => !item.isOff)
         .forEach((item: any) => {
           const mealId = item.menuItemId || item.mealId;
-          const meal = getMenuItem(mealId);
+          const meal: any = getMenuItem(mealId);
           const mealName = meal
             ? (isRtl ? meal.nameAr || meal.name : meal.name)
             : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unknown Meal"));
@@ -181,15 +196,22 @@ export default function Kitchen() {
           else if (program.includes("CUSTOMIZED")) summary[mealName].customizedCount += 1;
           else summary[mealName].standardCount += 1;
 
+          // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
+          const { av, pr, po } = resolveMods(item.modifierIds);
+          const joinUniq = (arr: (string | undefined)[]) =>
+            Array.from(new Set(arr.map((x) => String(x || "").trim()).filter(Boolean)))
+              .join(isRtl ? "، " : ", ") || undefined;
+
           summary[mealName].details.push({
             customerName,
             deliveryTime: plan.deliveryTime,
             categoryName,
             program: customer?.program || "Standard",
-            avoid: item.avoid || customer?.avoid || undefined,
-            preferences: item.preferences || customer?.preferences || undefined,
-            portions: item.portions || customer?.portions || undefined,
-            specialNotes: item.specialNotes || undefined,
+            allergies: joinUniq([customer?.allergies]),
+            avoid: joinUniq([item.avoid, customer?.avoid, ...av]),
+            preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
+            portions: joinUniq([item.portions, customer?.portions, ...po]),
+            specialNotes: joinUniq([item.specialNotes]),
             isPlain: plain,
           });
         });
@@ -198,7 +220,7 @@ export default function Kitchen() {
     return Object.entries(summary)
       .map(([name, data]) => ({ name, ...data }))
       .sort((a, b) => b.count - a.count);
-  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, categories, modifiers, isRtl]);
 
   const handleMarkPrepared = async (planId: string) => {
     try {
@@ -234,7 +256,7 @@ export default function Kitchen() {
     const portion: string[] = [];
 
     modifierIds.forEach((id) => {
-      const mod = modifiers.find((m: any) => m._id === id);
+      const mod: any = modifiers.find((m: any) => m._id === id);
       if (!mod) return;
       const name = isRtl ? mod.nameAr || mod.name : mod.name;
       if (mod.group === "AVOID") avoid.push(name);
@@ -528,6 +550,12 @@ export default function Kitchen() {
                                           </div>
                                         </div>
                                         <div className="space-y-1 pt-1 font-bold">
+                                          {detail.allergies && (
+                                            <p className="text-[11px] leading-tight text-white bg-red-600 rounded px-1.5 py-0.5">
+                                              <span className="font-black">{isRtl ? "⚠ حساسية: " : "⚠ Allergy: "}</span>
+                                              {detail.allergies}
+                                            </p>
+                                          )}
                                           {detail.avoid && (
                                             <p className="text-[11px] leading-tight text-red-700">
                                               <span className="font-bold">{isRtl ? "🚫 ممنوع: " : "🚫 Avoid: "}</span>
@@ -550,6 +578,11 @@ export default function Kitchen() {
                                             <p className="text-[11px] leading-tight text-blue-700 italic">
                                               <span className="font-bold not-italic">{isRtl ? "📝 ملاحظة: " : "📝 Note: "}</span>
                                               {detail.specialNotes}
+                                            </p>
+                                          )}
+                                          {!detail.allergies && !detail.avoid && !detail.preferences && !detail.portions && !detail.specialNotes && (
+                                            <p className="text-[11px] leading-tight text-amber-700">
+                                              {isRtl ? "⚠ تعديل مطلوب — راجع تفاصيل الطلب" : "⚠ Modification required — check order"}
                                             </p>
                                           )}
                                         </div>
@@ -580,7 +613,7 @@ export default function Kitchen() {
               </Card>
             ) : (
               plans.map((plan: any) => {
-              const customer = getCustomer(plan.customerId);
+              const customer: any = getCustomer(plan.customerId);
               // ✅ إذا لم يوجد customer مربوط، نعرض الطلب بدون بيانات العميل المفصلة
               
               const hasAllergy = customer?.allergies && customer.allergies.trim().length > 0;
@@ -642,7 +675,7 @@ export default function Kitchen() {
                         .map((item: any, idx: number) => {
                           // ✅ دعم كلا النوعين: menuItemId (خطط يدوية) و mealId (طلبات عملاء)
                           const mealId = item.menuItemId || item.mealId;
-                          const meal = getMenuItem(mealId);
+                          const meal: any = getMenuItem(mealId);
                           const category = getCategory(item.categoryId);
                           
                           // ✅ إذا لم يوجد meal في menuItems، استخدم البيانات من item نفسه
@@ -978,11 +1011,12 @@ export default function Kitchen() {
                                 if (dIdx % 2 === 1) progColor = "bg-slate-50/50";
 
                                 const modifications = [
+                                  d.allergies ? `${isRtl ? "⚠ حساسية: " : "⚠ Allergy: "}${d.allergies}` : null,
                                   d.avoid ? `${isRtl ? "ممنوع: " : "Avoid: "}${d.avoid}` : null,
                                   d.preferences ? `${isRtl ? "تفضيل: " : "Pref: "}${d.preferences}` : null,
                                   d.portions ? `${isRtl ? "الكمية: " : "Portion: "}${d.portions}` : null,
                                   d.specialNotes ? `${isRtl ? "ملاحظة: " : "Note: "}${d.specialNotes}` : null,
-                                ].filter(Boolean).join(" | ");
+                                ].filter(Boolean).join(" | ") || (isRtl ? "تعديل مطلوب — راجع الطلب" : "Modification required");
 
                                 return (
                                   <tr key={dIdx} className={progColor}>
@@ -1174,8 +1208,31 @@ export default function Kitchen() {
                   </div>
                 </div>
 
+                {/* Allergy — prominent full-width bar */}
+                {detail.allergies && (
+                  <div className="mt-3 rounded-lg overflow-hidden flex items-stretch"
+                    style={{ background: "#fef2f2", border: "1.5px solid #ef4444" }}>
+                    <div className="px-3 flex items-center justify-center text-white font-black"
+                      style={{ background: "#ef4444", minWidth: "38px" }}>⚠</div>
+                    <div className="flex-1 px-3 py-2 min-w-0">
+                      <p className="text-[10px] font-black text-red-600 uppercase tracking-wider leading-none">
+                        {isRtl ? "حساسية" : "Allergy"}
+                      </p>
+                      <p className="text-sm font-bold text-red-800 mt-0.5 leading-tight">{detail.allergies}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback when modified but no textual detail */}
+                {!detail.isPlain && !detail.allergies && !detail.avoid && !detail.preferences && !detail.portions && !detail.specialNotes && (
+                  <div className="mt-3 rounded-lg px-3 py-2 text-xs font-bold text-amber-800"
+                    style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
+                    {isRtl ? "⚠ تعديل مطلوب — راجع تفاصيل الطلب" : "⚠ Modification required — check order"}
+                  </div>
+                )}
+
                 {/* Modifications */}
-                {!detail.isPlain && (
+                {!detail.isPlain && (detail.avoid || detail.preferences || detail.portions) && (
                   <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {detail.avoid && (
                       <div className="rounded-lg px-3 py-2"
