@@ -49,6 +49,19 @@ function canTransition(from: PlanStatus, to: PlanStatus): boolean {
   return false;
 }
 
+// ✅ تقديم حالة طلب العميل المرتبط (لتتبّع العميل) — للأمام فقط، لا يلمس الملغي.
+const ORDER_RANK: Record<string, number> = { pending: 0, confirmed: 1, active: 2, completed: 3 };
+async function advanceOrder(ctx: any, sourceOrderId: any, target: "active" | "completed") {
+  if (!sourceOrderId) return;
+  const order = await ctx.db.get(sourceOrderId);
+  if (!order) return;
+  const cur = String(order.status || "pending");
+  if (cur === "cancelled" || cur === "completed") return;
+  if ((ORDER_RANK[target] ?? 0) > (ORDER_RANK[cur] ?? 0)) {
+    await ctx.db.patch(sourceOrderId, { status: target, updatedAt: Date.now() });
+  }
+}
+
 function stripSystemFields(obj: any) {
   if (!obj || typeof obj !== "object") return obj;
   const safe = { ...(obj || {}) };
@@ -214,10 +227,24 @@ export const update = mutation({
             console.error("Inventory deduction error:", e);
           }
         }
+        // ✅ تتبّع العميل: الطلب دخل مرحلة التنفيذ (قيد التحضير/التوصيل)
+        await advanceOrder(ctx, (plan as any)?.sourceOrderId, "active");
       } else if (finalStatus === "DELIVERED") {
         // ✅ ختم وقت التسليم الحقيقي (مرة واحدة)
         if (!(plan as any)?.deliveredAt) {
           await ctx.db.patch(id, { deliveredAt: Date.now() });
+        }
+        // ✅ تتبّع العميل: أكمل الطلب فقط لو كل خطط نفس الطلب اتسلّمت، وإلا يفضل "قيد التنفيذ"
+        const srcOrderId = (plan as any)?.sourceOrderId;
+        if (srcOrderId) {
+          const siblings = await ctx.db
+            .query("dailyPlans")
+            .withIndex("by_source_order", (q: any) => q.eq("sourceOrderId", srcOrderId))
+            .collect();
+          const allDelivered = siblings.length > 0 && siblings.every(
+            (p: any) => normalizeStatus(p.status) === "DELIVERED",
+          );
+          await advanceOrder(ctx, srcOrderId, allDelivered ? "completed" : "active");
         }
         await ctx.db.insert("notifications", {
           targetRole: "ADMIN",
