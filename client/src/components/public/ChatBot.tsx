@@ -42,18 +42,31 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Launcher */}
-      <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
-        className="no-print"
-        style={{
-          position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
-          width: 58, height: 58, borderRadius: "50%", border: "none", cursor: "pointer",
-          background: `linear-gradient(145deg,${B.brand},${B.accent})`,
-          boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-        }}>
-        {open ? "✕" : "💬"}
-      </button>
+      {/* Launcher — الأيقونة + عنوان "المساعد الذكي" تحتها */}
+      <div className="no-print" style={{
+        position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
+        display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+      }}>
+        <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
+          style={{
+            width: 58, height: 58, borderRadius: "50%", border: "none", cursor: "pointer",
+            background: `linear-gradient(145deg,${B.brand},${B.accent})`,
+            boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+          }}>
+          {open ? "✕" : "💬"}
+        </button>
+        {!open && (
+          <span style={{
+            fontFamily: "'Cairo',sans-serif", fontSize: 11, fontWeight: 800, color: "#fff",
+            background: `linear-gradient(145deg,${B.brand},${B.accent})`,
+            padding: "2px 10px", borderRadius: 50, whiteSpace: "nowrap",
+            boxShadow: "0 4px 12px -4px rgba(14,118,172,.5)",
+          }}>
+            {isRtl ? "المساعد الذكي" : "Smart Assistant"}
+          </span>
+        )}
+      </div>
 
       {/* Panel */}
       {open && (
