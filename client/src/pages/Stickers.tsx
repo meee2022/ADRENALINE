@@ -28,7 +28,8 @@ export default function Stickers() {
   // وضع الطباعة: "label" = طابعة استيكرات (كل استيكر صفحة بمقاسه) · "sheet" = ورقة A4 شبكة
   const [printerMode, setPrinterMode] = useState<"label" | "sheet">("label");
 
-  const DEFAULTS = useMemo(() => ({ w: 70, h: 35, gap: 4, pad: 3.2 }), []);
+  // مقاس ليبل الطابعة الفعلي: 58×39 مم (Direct Thermal)
+  const DEFAULTS = useMemo(() => ({ w: 58, h: 39, gap: 3, pad: 3 }), []);
   const [labelW, setLabelW] = useState(DEFAULTS.w);
   const [labelH, setLabelH] = useState(DEFAULTS.h);
   const [gap, setGap] = useState(DEFAULTS.gap);
