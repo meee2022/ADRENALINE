@@ -42,31 +42,30 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Launcher — الأيقونة + عنوان "المساعد الذكي" تحتها */}
-      <div className="no-print" style={{
-        position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
-      }}>
-        <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
-          style={{
-            width: 58, height: 58, borderRadius: "50%", border: "none", cursor: "pointer",
-            background: `linear-gradient(145deg,${B.brand},${B.accent})`,
-            boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
-            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
-          }}>
-          {open ? "✕" : "💬"}
-        </button>
+      {/* Launcher — الأيقونة مع عنوان "المساعد الذكي" جنبها في شارة واحدة أنيقة */}
+      <button onClick={() => setOpen(!open)} aria-label={isRtl ? "المساعد الذكي" : "Smart Assistant"}
+        className="no-print"
+        style={{
+          position: "fixed", bottom: "calc(90px + env(safe-area-inset-bottom))", right: 18, zIndex: 1000,
+          border: "none", cursor: "pointer", borderRadius: 999,
+          background: `linear-gradient(145deg,${B.brand},${B.accent})`,
+          boxShadow: "0 10px 26px -8px rgba(14,118,172,.6)",
+          display: "flex", alignItems: "center", gap: open ? 0 : 8,
+          padding: open ? 0 : "0 16px 0 0",
+          height: 56, width: open ? 56 : "auto",
+          justifyContent: "center", transition: "all .2s ease",
+          fontFamily: "'Cairo',sans-serif",
+        }}>
+        <span style={{
+          width: 56, height: 56, borderRadius: "50%", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24,
+        }}>{open ? "✕" : "💬"}</span>
         {!open && (
-          <span style={{
-            fontFamily: "'Cairo',sans-serif", fontSize: 11, fontWeight: 800, color: "#fff",
-            background: `linear-gradient(145deg,${B.brand},${B.accent})`,
-            padding: "2px 10px", borderRadius: 50, whiteSpace: "nowrap",
-            boxShadow: "0 4px 12px -4px rgba(14,118,172,.5)",
-          }}>
+          <span style={{ color: "#fff", fontSize: 13.5, fontWeight: 800, whiteSpace: "nowrap" }}>
             {isRtl ? "المساعد الذكي" : "Smart Assistant"}
           </span>
         )}
-      </div>
+      </button>
 
       {/* Panel */}
       {open && (
