@@ -31,6 +31,7 @@ import Kitchen from "@/pages/Kitchen";
 import Delivery from "@/pages/Delivery";
 import Stickers from "@/pages/Stickers";
 import Payroll from "@/pages/Payroll";
+import Leaves from "@/pages/Leaves";
 import OrdersPending from "@/pages/OrdersPending";
 import OrderReviewDetail from "@/pages/OrderReviewDetail";
 import RestaurantSettings from "@/pages/RestaurantSettings";
@@ -199,6 +200,9 @@ function Router() {
       </Route>
       <Route path="/payroll">
         <ProtectedRoute component={Payroll} />
+      </Route>
+      <Route path="/leaves">
+        <ProtectedRoute component={Leaves} />
       </Route>
       <Route path="/orders/pending">
         <ProtectedRoute component={OrdersPending} />

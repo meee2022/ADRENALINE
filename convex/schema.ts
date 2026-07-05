@@ -22,6 +22,28 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
+  // ===== Leaves (إجازات الموظفين) =====
+  leaves: defineTable({
+    name: v.string(),                 // اسم الموظف
+    type: v.union(
+      v.literal("annual"),            // سنوية
+      v.literal("sick"),              // مرضية
+      v.literal("unpaid"),            // بدون راتب
+      v.literal("emergency"),         // طارئة
+      v.literal("other"),             // أخرى
+    ),
+    startDate: v.string(),            // yyyy-MM-dd
+    endDate: v.string(),              // yyyy-MM-dd
+    days: v.number(),                 // عدد أيام الإجازة
+    paid: v.boolean(),                // مدفوعة؟
+    reason: v.optional(v.string()),
+    status: v.optional(v.string()),   // approved / pending
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_name", ["name"])
+    .index("by_type", ["type"]),
+
   // ===== Payroll (كشف رواتب الموظفين) =====
   payroll: defineTable({
     name: v.string(),
