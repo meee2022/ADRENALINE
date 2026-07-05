@@ -22,6 +22,17 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
+  // ===== Sessions (server-side auth tokens) =====
+  sessions: defineTable({
+    token: v.string(),
+    accountType: v.union(v.literal("staff"), v.literal("customer")),
+    userId: v.optional(v.id("users")),
+    customerAccountId: v.optional(v.id("customerAccounts")),
+    role: v.optional(v.string()),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]),
+
   // ===== Customer Accounts (for public login) =====
   customerAccounts: defineTable({
     email: v.string(),

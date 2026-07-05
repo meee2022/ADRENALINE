@@ -5,6 +5,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
+import { validateSession } from "./sessions";
 
 /**
  * Simple hash function (same as users.ts)
@@ -192,7 +193,11 @@ export const updateProfile = mutation({
  * List all customer accounts
  */
 export const listCustomers = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    // 🔒 بيانات حسّاسة (PII) — للموظفين فقط. غير المصرّح يحصل على قائمة فارغة.
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff") return [];
     const accounts = await ctx.db.query("customerAccounts").collect();
     return accounts.map(acc => ({
       id: acc._id,

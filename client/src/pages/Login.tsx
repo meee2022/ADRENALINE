@@ -29,13 +29,13 @@ export default function Login() {
     setError("");
     setIsLoading(true);
     try {
-      const result = await convex.query(api.auth.authenticateUnified, { email, password });
+      const result = await convex.mutation(api.auth.authenticateUnified, { email, password });
       if (result.success) {
         if (result.accountType === "staff" && result.user) {
-          login(result.user.email, result.user.role, result.user.id, result.user.name);
+          login(result.user.email, result.user.role, result.user.id, result.user.name, (result as any).sessionToken);
           setLocation("/");
         } else if (result.accountType === "customer" && result.customer) {
-          customerLogin(result.customer);
+          customerLogin(result.customer, (result as any).sessionToken);
           setLocation("/");
         }
       } else {

@@ -1,15 +1,17 @@
 /**
  * @file convex/auth.ts
- * @description نظام مصادقة موحد للأدمن والعملاء
+ * @description نظام مصادقة موحد للأدمن والعملاء + إصدار جلسة (توكن) للسيرفر
  */
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { mutation } from "./_generated/server";
 import { verifyPassword } from "./passwords";
+import { createSession, destroySession } from "./sessions";
 
 /**
- * Unified authentication - checks both users and customerAccounts tables
+ * Unified authentication - checks both users and customerAccounts tables.
+ * الآن mutation (بدل query) عشان تقدر تُنشئ جلسة وترجّع sessionToken.
  */
-export const authenticateUnified = query({
+export const authenticateUnified = mutation({
   args: {
     email: v.string(),
     password: v.string(),
@@ -33,9 +35,16 @@ export const authenticateUnified = query({
         return INVALID;
       }
 
+      const sessionToken = await createSession(ctx, {
+        accountType: "staff",
+        userId: user._id,
+        role: user.role,
+      });
+
       return {
         success: true,
         accountType: "staff", // admin, kitchen, delivery, etc.
+        sessionToken,
         user: {
           id: user._id,
           email: user.email,
@@ -60,9 +69,15 @@ export const authenticateUnified = query({
         return INVALID;
       }
 
+      const sessionToken = await createSession(ctx, {
+        accountType: "customer",
+        customerAccountId: customer._id,
+      });
+
       return {
         success: true,
         accountType: "customer",
+        sessionToken,
         customer: {
           id: customer._id,
           email: customer.email,
@@ -75,5 +90,14 @@ export const authenticateUnified = query({
 
     // Not found in either table — رسالة موحّدة
     return INVALID;
+  },
+});
+
+/** تسجيل الخروج — يبطل التوكن على السيرفر */
+export const logout = mutation({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await destroySession(ctx, args.sessionToken);
+    return { success: true };
   },
 });

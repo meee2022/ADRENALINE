@@ -5,6 +5,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
+import { requireAdmin } from "./sessions";
 
 /**
  * Simple hash function for passwords (FOR DEMO ONLY)
@@ -101,8 +102,10 @@ export const createUser = mutation({
       v.literal("NUTRITIONIST"),
       v.literal("INVENTORY_MANAGER")
     ),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     // Check if user already exists
     const existing = await ctx.db
       .query("users")
@@ -135,8 +138,10 @@ export const updateUserStatus = mutation({
   args: {
     userId: v.id("users"),
     isActive: v.boolean(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     await ctx.db.patch(args.userId, {
       isActive: args.isActive,
       updatedAt: Date.now(),
@@ -151,8 +156,10 @@ export const changePassword = mutation({
   args: {
     userId: v.id("users"),
     newPassword: v.string(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const passwordHash = await hashPassword(args.newPassword);
     await ctx.db.patch(args.userId, {
       passwordHash,
@@ -167,8 +174,10 @@ export const changePassword = mutation({
 export const deleteUser = mutation({
   args: {
     userId: v.id("users"),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     await ctx.db.delete(args.userId);
   },
 });
@@ -190,8 +199,10 @@ export const updateUser = mutation({
         v.literal("INVENTORY_MANAGER")
       )
     ),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const updates: any = { updatedAt: Date.now() };
     
     if (args.name) updates.name = args.name;

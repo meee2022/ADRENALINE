@@ -43,6 +43,7 @@ import type * as seedMealSchedule from "../seedMealSchedule.js";
 import type * as seedPublicWebsite from "../seedPublicWebsite.js";
 import type * as seedRealPlans from "../seedRealPlans.js";
 import type * as seedUsers from "../seedUsers.js";
+import type * as sessions from "../sessions.js";
 import type * as stickers from "../stickers.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
@@ -90,6 +91,7 @@ declare const fullApi: ApiFromModules<{
   seedPublicWebsite: typeof seedPublicWebsite;
   seedRealPlans: typeof seedRealPlans;
   seedUsers: typeof seedUsers;
+  sessions: typeof sessions;
   stickers: typeof stickers;
   units: typeof units;
   updateBanners: typeof updateBanners;

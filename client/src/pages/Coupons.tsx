@@ -15,9 +15,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { useStore } from "@/lib/store";
 
 export default function Coupons() {
   const { toast } = useToast();
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const coupons = useQuery(api.coupons.list) || [];
   const createMutation = useMutation(api.coupons.create);
   const removeMutation = useMutation(api.coupons.remove);
@@ -44,6 +46,7 @@ export default function Coupons() {
         discountValue: parseFloat(form.discountValue),
         maxUses: form.maxUses ? parseInt(form.maxUses) : undefined,
         expiresAt: form.expiresAt || undefined,
+        sessionToken,
       });
       toast({ title: "تم الإنشاء", description: `كود ${form.code} جاهز للاستخدام` });
       setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "" });
@@ -137,7 +140,7 @@ export default function Coupons() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => toggleMutation({ id: c._id })}
+                          onClick={() => toggleMutation({ id: c._id, sessionToken })}
                           title="تفعيل/إيقاف"
                         >
                           <Power className="h-4 w-4" />
@@ -146,7 +149,7 @@ export default function Coupons() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            if (confirm(`حذف الكود ${c.code}؟`)) removeMutation({ id: c._id });
+                            if (confirm(`حذف الكود ${c.code}؟`)) removeMutation({ id: c._id, sessionToken });
                           }}
                           className="text-red-500"
                         >

@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,6 +101,7 @@ export default function Users() {
         password: promotePassword,
         name: promoteCustomer.fullName,
         role: promoteRole,
+        sessionToken,
       });
       toast({
         title: isRtl ? "تم الرفع بنجاح" : "Promoted successfully",
@@ -118,9 +120,12 @@ export default function Users() {
     }
   };
 
+  // 🔒 توكن الجلسة يُرسل مع العمليات الحسّاسة
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+
   // Fetch users from Convex
   const users = useQuery(api.users.listUsers) || [];
-  const customers = useQuery(api.customerAuth.listCustomers) || [];
+  const customers = useQuery(api.customerAuth.listCustomers, { sessionToken }) || [];
 
   const handleAdd = () => {
     setFormData({ name: "", email: "", password: "", role: "DELIVERY" });
@@ -142,7 +147,7 @@ export default function Users() {
     if (!confirm(t("users.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.users.deleteUser, { userId });
+      await convex.mutation(api.users.deleteUser, { userId, sessionToken });
       toast({
         title: isRtl ? "تم الحذف" : "Deleted",
         description: isRtl ? "تم حذف المستخدم بنجاح" : "User deleted successfully",
@@ -172,6 +177,7 @@ export default function Users() {
         email: formData.email,
         password: formData.password,
         role: formData.role,
+        sessionToken,
       });
 
       toast({
@@ -205,6 +211,7 @@ export default function Users() {
         name: formData.name,
         email: formData.email,
         role: formData.role,
+        sessionToken,
       });
 
       // If password is provided, update it separately
@@ -212,6 +219,7 @@ export default function Users() {
         await convex.mutation(api.users.changePassword, {
           userId: selectedUserId,
           newPassword: formData.password,
+          sessionToken,
         });
       }
 
@@ -235,6 +243,7 @@ export default function Users() {
       await convex.mutation(api.users.updateUserStatus, {
         userId,
         isActive: !currentStatus,
+        sessionToken,
       });
 
       toast({
