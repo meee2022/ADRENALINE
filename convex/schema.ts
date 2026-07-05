@@ -131,6 +131,9 @@ export default defineSchema({
     sourceOrderId: v.optional(v.id("customerOrders")),
     // ✅ ختم خصم المخزون (idempotent) — يُملأ عند تحضير الخطة وخصم المكوّنات
     inventoryConsumedAt: v.optional(v.number()),
+    // ✅ أختام التوصيل الحقيقية (بدل وقت العرض المتغيّر)
+    outForDeliveryAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
   })
     .index("by_date", ["date"])
     .index("by_customerId", ["customerId"])

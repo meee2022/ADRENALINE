@@ -50,8 +50,18 @@ export default function Delivery() {
   // تحسين المسار: تجميع/ترتيب المحطات حسب المنطقة + فتح كل عنوان في الخرائط
   const getArea = (addr?: string) =>
     !addr ? (isRtl ? "غير محدّد" : "Unknown") : String(addr).split(/[,،\-|]/)[0].trim() || (isRtl ? "غير محدّد" : "Unknown");
+  // ✅ توجيه فعلي (turn-by-turn) من موقع السائق الحالي إلى العنوان
   const mapsUrl = (addr?: string) =>
-    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr || "Doha Qatar")}`;
+    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr || "Doha Qatar")}&travelmode=driving`;
+  // ✅ رابط المسار الكامل: كل المحطات بالترتيب (آخر عنوان = الوجهة، الباقي waypoints)
+  const buildRouteUrl = (addresses: string[]) => {
+    const list = addresses.map((a) => String(a || "").trim()).filter(Boolean);
+    if (list.length === 0) return null;
+    const destination = list[list.length - 1];
+    const waypoints = list.slice(0, -1).slice(0, 9); // خرائط جوجل تدعم حتى ~9 محطات وسطية
+    const wp = waypoints.length ? `&waypoints=${waypoints.map(encodeURIComponent).join("|")}` : "";
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}${wp}&travelmode=driving`;
+  };
 
   const handleDeliver = async (planId: string) => {
     try {
@@ -93,6 +103,11 @@ export default function Delivery() {
 
   const isRtl = language === "ar" || dir === "rtl";
 
+  // ✅ محطات اليوم مرتّبة حسب المنطقة + رابط المسار الكامل للسائق
+  const sortedPlans = [...plans].sort((a: any, b: any) =>
+    getArea(getCustomer(a.customerId)?.address).localeCompare(getArea(getCustomer(b.customerId)?.address), "ar"));
+  const routeUrl = buildRouteUrl(sortedPlans.map((p: any) => getCustomer(p.customerId)?.address).filter(Boolean) as string[]);
+
   return (
     <>
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 print:hidden">
@@ -108,14 +123,27 @@ export default function Delivery() {
             { value: deliveredPlans.length, labelAr: "تم التسليم", labelEn: "Delivered" },
           ]}
           actions={
-            <Button
-              onClick={() => window.print()}
-              className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
-              title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
-            >
-              <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
-              {isRtl ? "طباعة" : "Print"}
-            </Button>
+            <>
+              {routeUrl && (
+                <Button
+                  onClick={() => window.open(routeUrl, "_blank")}
+                  className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
+                  style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}
+                  title={isRtl ? "افتح مسار اليوم كامل في خرائط جوجل" : "Open full route in Google Maps"}
+                >
+                  <Map className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+                  {isRtl ? "المسار الكامل" : "Full Route"}
+                </Button>
+              )}
+              <Button
+                onClick={() => window.print()}
+                className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
+                title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
+              >
+                <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+                {isRtl ? "طباعة" : "Print"}
+              </Button>
+            </>
           }
         />
       </div>
@@ -172,8 +200,7 @@ export default function Delivery() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {[...plans]
-              .sort((a: any, b: any) => getArea(getCustomer(a.customerId)?.address).localeCompare(getArea(getCustomer(b.customerId)?.address), "ar"))
+            {sortedPlans
               .map((plan: any, idx: number, arr: any[]) => {
               const customer = getCustomer(plan.customerId);
               if (!customer) return null;
@@ -210,6 +237,11 @@ export default function Delivery() {
                             <p className="text-xs text-gray-600">
                               {plan.items?.filter((i: any) => !i.isOff).length || 0} {isRtl ? "وجبة" : "meals"} - {customer.program || (isRtl ? "كيتو دايت" : "Keto")}
                             </p>
+                            {customer.phone && (
+                              <a href={`tel:${customer.phone}`} dir="ltr" className="text-xs font-bold text-[#0E76AC] hover:underline">
+                                {customer.phone}
+                              </a>
+                            )}
                           </div>
                         </div>
                         <Badge className="bg-[#e8f8fd] text-[#0E76AC] border-0 text-xs px-3 py-1 rounded-full font-semibold">
@@ -320,7 +352,7 @@ export default function Delivery() {
                               {customer.fullName}
                             </h3>
                             <p className="text-xs text-gray-500">
-                              {isRtl ? "تم التوصيل" : "Delivered"} • {format(new Date(), "HH:mm", { locale: dateLocale })}
+                              {isRtl ? "تم التوصيل" : "Delivered"}{plan.deliveredAt ? " • " + format(new Date(plan.deliveredAt), "HH:mm", { locale: dateLocale }) : ""}
                             </p>
                           </div>
                         </div>

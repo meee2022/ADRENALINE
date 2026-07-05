@@ -215,6 +215,10 @@ export const update = mutation({
           }
         }
       } else if (finalStatus === "DELIVERED") {
+        // ✅ ختم وقت التسليم الحقيقي (مرة واحدة)
+        if (!(plan as any)?.deliveredAt) {
+          await ctx.db.patch(id, { deliveredAt: Date.now() });
+        }
         await ctx.db.insert("notifications", {
           targetRole: "ADMIN",
           type: "MEAL_DELIVERED",

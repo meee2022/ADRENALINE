@@ -659,10 +659,19 @@ export default function Kitchen() {
                       )}
                     </div>
 
-                    {/* Meals */}
+                    {/* Meals — مرتّبة حسب ترتيب الوجبة (فطور ← غداء ← عشاء ← سناك) لسهولة التحضير */}
                     <div className="space-y-4 mb-4">
-                      {(plan.items || [])
-                        .filter((item: any) => !item.isOff)
+                      {(() => {
+                        const courseRank = (item: any) => {
+                          const c = String(getCategory(item.categoryId)?.name || item.category || "").toUpperCase();
+                          if (c.includes("BREAKFAST") || c.includes("فطور")) return 0;
+                          if (c.includes("LUNCH") || c.includes("غداء")) return 1;
+                          if (c.includes("DINNER") || c.includes("عشاء")) return 2;
+                          if (c.includes("SNACK") || c.includes("سناك")) return 3;
+                          return 4;
+                        };
+                        return [...(plan.items || [])].filter((item: any) => !item.isOff).sort((a: any, b: any) => courseRank(a) - courseRank(b));
+                      })()
                         .map((item: any, idx: number) => {
                           // ✅ دعم كلا النوعين: menuItemId (خطط يدوية) و mealId (طلبات عملاء)
                           const mealId = item.menuItemId || item.mealId;
@@ -814,9 +823,7 @@ export default function Kitchen() {
                           <span className="text-2xl">💬</span>
                           <div className="flex-1">
                             <p className="text-xs font-bold text-[#0f1516] mb-1 uppercase">
-                              {isRtl
-                                ? "الرجاء التأكد من تشريح اللحم جيداً وعدم إضافة أي نوع من المكسرات."
-                                : "Please ensure meat is well-cooked and do not add any nuts."}
+                              {isRtl ? "ملاحظة الطلب" : "Order Note"}
                             </p>
                             <p className="text-sm text-[#47759c] font-medium italic">
                               {plan.notes}
