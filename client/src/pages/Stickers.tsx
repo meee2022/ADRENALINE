@@ -386,8 +386,8 @@ export default function Stickers() {
           line-height: 1;
         }
         .brand-heart {
-          width: 6mm;
-          height: 6mm;
+          width: 5mm;
+          height: 5mm;
           object-fit: contain;
           flex-shrink: 0;
           /* keep heart visible in print */
@@ -419,7 +419,7 @@ export default function Stickers() {
           height: 0.5mm;
           width: 100%;
           background: #000 !important;
-          margin: 1mm 0 0.4mm;
+          margin: 0.6mm 0 0.3mm;
           opacity: 1;
         }
 
@@ -430,8 +430,8 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.4mm 0;
-          gap: 0.5mm;
+          padding: 0.2mm 0;
+          gap: 0.3mm;
           min-height: 0;
           overflow: hidden;
           text-align: center;
@@ -447,11 +447,11 @@ export default function Stickers() {
           font-weight: 900;
           letter-spacing: 0.2px;
           text-align: center !important;
-          line-height: 1.2;
+          line-height: 1.12;
           width: 100%;
           margin: 0 auto;
           overflow: visible;
-          padding: 0.15mm 1mm;
+          padding: 0.1mm 1mm;
           text-transform: uppercase;
         }
 
@@ -461,14 +461,14 @@ export default function Stickers() {
           font-weight: 900;
           letter-spacing: 0.3px;
           text-align: center !important;
-          line-height: 1.2;
+          line-height: 1.12;
           overflow: visible;
           margin: 0 auto;
           width: 100%;
           color: #000 !important;
           -webkit-text-fill-color: #000 !important;
           text-transform: uppercase;
-          padding: 0.3mm 1mm;
+          padding: 0.15mm 1mm;
         }
 
         /* Macros + Calories row */
@@ -486,7 +486,7 @@ export default function Stickers() {
           display: inline-flex;
           align-items: baseline;
           gap: 0.6mm;
-          padding: 0.5mm 2mm;
+          padding: 0.35mm 2mm;
           border-radius: 1mm;
           background: #000 !important;
           border: none;
@@ -517,14 +517,14 @@ export default function Stickers() {
         /* Warnings — red pill, centered */
         .warn-line {
           display: inline-block;
-          font-size: 8px;
+          font-size: 7.5px;
           font-weight: 900;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
-          line-height: 1.2;
+          line-height: 1.15;
           margin: 0 auto;
-          padding: 0.4mm 1.5mm;
+          padding: 0.3mm 1.2mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
           border: 0.5px solid rgba(220,38,38,0.5);
