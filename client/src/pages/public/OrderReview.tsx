@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { ChevronRight, ChevronDown, Package, Calendar } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
+import { useLanguage } from "@/lib/i18n";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
@@ -13,6 +14,10 @@ const dayNameAr: Record<string, string> = {
   wednesday: "الأربعاء",
   // ⚠️ الخميس والجمعة: أيام إجازة
 };
+const dayNameEn: Record<string, string> = {
+  saturday: "Saturday", sunday: "Sunday", monday: "Monday",
+  tuesday: "Tuesday", wednesday: "Wednesday",
+};
 
 const categoryNameAr: Record<string, string> = {
   breakfast: "الإفطار",
@@ -21,9 +26,17 @@ const categoryNameAr: Record<string, string> = {
   snack: "سناك",
   salad: "سلطة",
 };
+const categoryNameEn: Record<string, string> = {
+  breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack", salad: "Salad",
+};
 
 export default function OrderReview() {
   const [, setLocation] = useLocation();
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
+  const dayName = (d: string) => isRtl ? (dayNameAr[d] || d) : (dayNameEn[d] || d);
+  const catName = (c: string) => isRtl ? (categoryNameAr[c] || c) : (categoryNameEn[c] || c);
   
   // Cart Store
   const {
@@ -81,12 +94,12 @@ export default function OrderReview() {
 
   const handleSubmit = async () => {
     if (!customerName || !customerPhone) {
-      alert("يرجى إدخال الاسم ورقم الجوال");
+      alert(t("يرجى إدخال الاسم ورقم الجوال", "Please enter your name and phone number"));
       return;
     }
-    
+
     if (selectedMeals.length === 0) {
-      alert("يرجى اختيار وجبات أولاً");
+      alert(t("يرجى اختيار وجبات أولاً", "Please select meals first"));
       return;
     }
 
@@ -117,12 +130,12 @@ export default function OrderReview() {
         })),
       });
 
-      alert(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`);
+      alert(t(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`, `✅ Your order was sent successfully!\nOrder number: ${result.orderNumber}\nWe'll contact you soon.`));
       clearCart();
       setLocation("/");
     } catch (error) {
       console.error("Error submitting order:", error);
-      alert("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.");
+      alert(t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -131,16 +144,16 @@ export default function OrderReview() {
   // Redirect if cart is empty
   if (selectedMeals.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 flex items-center justify-center" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30 flex items-center justify-center" dir={isRtl ? "rtl" : "ltr"}>
         <div className="text-center">
           <Package className="h-20 w-20 text-slate-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-slate-900 mb-2">السلة فارغة</h2>
-          <p className="text-slate-500 mb-6">لم تقم باختيار أي وجبات بعد</p>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">{t("السلة فارغة", "Your cart is empty")}</h2>
+          <p className="text-slate-500 mb-6">{t("لم تقم باختيار أي وجبات بعد", "You haven't selected any meals yet")}</p>
           <button
             onClick={() => setLocation("/public/menu")}
             className="px-6 py-3 bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold rounded-xl transition-all"
           >
-            تصفح المنيو
+            {t("تصفح المنيو", "Browse Menu")}
           </button>
         </div>
       </div>
@@ -148,7 +161,7 @@ export default function OrderReview() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-cyan-50/30" dir={isRtl ? "rtl" : "ltr"}>
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -157,9 +170,9 @@ export default function OrderReview() {
             className="text-slate-600 hover:text-slate-900 flex items-center gap-2"
           >
             <ChevronRight className="h-5 w-5" />
-            <span>رجوع</span>
+            <span>{t("رجوع", "Back")}</span>
           </button>
-          <h1 className="text-xl font-bold text-slate-900">مراجعة وتأكيد الطلب</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t("مراجعة وتأكيد الطلب", "Review & Confirm Order")}</h1>
         </div>
       </div>
 
@@ -171,17 +184,17 @@ export default function OrderReview() {
               <Package className="h-6 w-6 text-cyan-600" />
             </div>
             <div className="flex-1">
-              <h2 className="text-lg font-bold text-slate-900 mb-1">ملخص اختياراتك</h2>
-              <p className="text-sm text-slate-500">خطة وجبات مخصصة لمدة {totalWeeks} أسابيع</p>
+              <h2 className="text-lg font-bold text-slate-900 mb-1">{t("ملخص اختياراتك", "Your Selection Summary")}</h2>
+              <p className="text-sm text-slate-500">{t(`خطة وجبات مخصصة لمدة ${totalWeeks} أسابيع`, `Custom meal plan for ${totalWeeks} weeks`)}</p>
 
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-900">{totalMeals} وجبة</div>
-                  <div className="text-xs text-slate-500">إجمالي الوجبات</div>
+                  <div className="text-2xl font-bold text-slate-900">{totalMeals} {t("وجبة", "meals")}</div>
+                  <div className="text-xs text-slate-500">{t("إجمالي الوجبات", "Total meals")}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-slate-900">{totalWeeks} أسابيع</div>
-                  <div className="text-xs text-slate-500">الفترة الزمنية</div>
+                  <div className="text-2xl font-bold text-slate-900">{totalWeeks} {t("أسابيع", "weeks")}</div>
+                  <div className="text-xs text-slate-500">{t("الفترة الزمنية", "Duration")}</div>
                 </div>
               </div>
             </div>
@@ -203,10 +216,10 @@ export default function OrderReview() {
                     <div className="w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold">
                       {week}
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-slate-900">الأسبوع {week}</div>
+                    <div className={isRtl ? "text-right" : "text-left"}>
+                      <div className="font-bold text-slate-900">{t("الأسبوع", "Week")} {week}</div>
                       <div className="text-sm text-slate-500">
-                        {Object.keys(days).length} أيام • {Object.values(days).flat().length} وجبات
+                        {Object.keys(days).length} {t("أيام", "days")} • {Object.values(days).flat().length} {t("وجبات", "meals")}
                       </div>
                     </div>
                   </div>
@@ -230,10 +243,7 @@ export default function OrderReview() {
                         <div key={day} className="border-b last:border-b-0 p-4 bg-slate-50/50">
                           <div className="flex items-center gap-2 mb-3">
                             <Calendar className="h-4 w-4 text-slate-400" />
-                            <span className="font-semibold text-slate-700">{dayNameAr[day]}</span>
-                            <span className="text-xs text-slate-500">
-                              01 {day === "saturday" ? "مارس" : "مارس"}
-                            </span>
+                            <span className="font-semibold text-slate-700">{dayName(day)}</span>
                           </div>
 
                           <div className="space-y-2">
@@ -254,13 +264,13 @@ export default function OrderReview() {
                                   </div>
                                 )}
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-slate-900 truncate">{meal.nameAr}</div>
+                                  <div className="font-semibold text-slate-900 truncate">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
                                   <div className="flex items-center gap-2 text-xs text-slate-500">
                                     <span className="text-cyan-600 font-medium">
-                                      {categoryNameAr[meal.category]}
+                                      {catName(meal.category)}
                                     </span>
                                     <span>•</span>
-                                    <span>{meal.calories} سعرة</span>
+                                    <span>{meal.calories} {t("سعرة", "kcal")}</span>
                                   </div>
                                 </div>
                               </div>
@@ -276,43 +286,43 @@ export default function OrderReview() {
 
         {/* معلومات العميل */}
         <div className="bg-white rounded-2xl shadow-sm border p-6">
-          <h3 className="font-bold text-slate-900 mb-4">معلومات التواصل</h3>
+          <h3 className="font-bold text-slate-900 mb-4">{t("معلومات التواصل", "Contact Information")}</h3>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                الاسم الكامل <span className="text-red-500">*</span>
+                {t("الاسم الكامل", "Full name")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
-                placeholder="أدخل اسمك الكامل"
+                placeholder={t("أدخل اسمك الكامل", "Enter your full name")}
                 required
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                رقم الجوال <span className="text-red-500">*</span>
+                {t("رقم الجوال", "Phone number")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="tel"
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
-                placeholder="مثال: +974 1234 5678"
+                placeholder={t("مثال: +974 1234 5678", "e.g. +974 1234 5678")}
                 required
               />
               {/* ✅ مؤشر الربط التلقائي */}
               {findCustomerByPhone && (
                 <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                   <p className="text-xs text-green-800 flex items-center gap-1">
-                    <span className="font-bold">✅ تم العثور على حساب:</span>
+                    <span className="font-bold">{t("✅ تم العثور على حساب:", "✅ Account found:")}</span>
                     <span className="font-semibold">{findCustomerByPhone.fullName}</span>
                   </p>
                   <p className="text-xs text-green-600 mt-1">
-                    سيتم ربط الطلب تلقائياً بحسابك (مع مراعاة الحساسيات والتفضيلات المسجلة)
+                    {t("سيتم ربط الطلب تلقائياً بحسابك (مع مراعاة الحساسيات والتفضيلات المسجلة)", "The order will be linked automatically to your account (allergies and preferences considered)")}
                   </p>
                 </div>
               )}
@@ -320,7 +330,7 @@ export default function OrderReview() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                البريد الإلكتروني <span className="text-slate-400">(اختياري)</span>
+                {t("البريد الإلكتروني", "Email")} <span className="text-slate-400">{t("(اختياري)", "(optional)")}</span>
               </label>
               <input
                 type="email"
@@ -336,18 +346,18 @@ export default function OrderReview() {
         {/* ملخص الطلب وزر التأكيد */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-cyan-100 p-6 sticky bottom-4">
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="text-right p-3 rounded-xl bg-cyan-50 border border-cyan-100">
-              <div className="text-xs text-slate-500 font-semibold mb-1">إجمالي الوجبات</div>
+            <div className={`${isRtl ? "text-right" : "text-left"} p-3 rounded-xl bg-cyan-50 border border-cyan-100`}>
+              <div className="text-xs text-slate-500 font-semibold mb-1">{t("إجمالي الوجبات", "Total meals")}</div>
               <div className="text-2xl font-black text-cyan-700 tabular-nums">
                 {totalMeals}{" "}
-                <span className="text-sm font-normal text-slate-500">وجبة</span>
+                <span className="text-sm font-normal text-slate-500">{t("وجبة", "meals")}</span>
               </div>
             </div>
-            <div className="text-left p-3 rounded-xl bg-emerald-50 border border-emerald-100">
-              <div className="text-xs text-slate-500 font-semibold mb-1">إجمالي السعرات</div>
+            <div className={`${isRtl ? "text-left" : "text-right"} p-3 rounded-xl bg-emerald-50 border border-emerald-100`}>
+              <div className="text-xs text-slate-500 font-semibold mb-1">{t("إجمالي السعرات", "Total calories")}</div>
               <div className="text-2xl font-black text-emerald-700 tabular-nums">
                 {totalCalories.toLocaleString()}{" "}
-                <span className="text-sm font-normal text-slate-500">سعرة</span>
+                <span className="text-sm font-normal text-slate-500">{t("سعرة", "kcal")}</span>
               </div>
             </div>
           </div>
@@ -360,19 +370,19 @@ export default function OrderReview() {
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>جاري الإرسال...</span>
+                <span>{t("جاري الإرسال...", "Sending...")}</span>
               </>
             ) : (
               <>
-                <span>تأكيد وإرسال الطلب</span>
+                <span>{t("تأكيد وإرسال الطلب", "Confirm & Send Order")}</span>
                 <ChevronRight className="h-5 w-5" />
               </>
             )}
           </button>
 
           <p className="text-xs text-slate-500 text-center mt-3">
-            بالضغط على "تأكيد"، أنت توافق على{" "}
-            <button className="text-cyan-600 underline">الشروط والأحكام</button>
+            {t('بالضغط على "تأكيد"، أنت توافق على ', 'By clicking "Confirm", you agree to the ')}
+            <button className="text-cyan-600 underline">{t("الشروط والأحكام", "Terms & Conditions")}</button>
           </p>
         </div>
       </div>

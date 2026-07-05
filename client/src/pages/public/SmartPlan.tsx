@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles } from "lucide-react";
@@ -16,6 +17,10 @@ const WEEKDAYS_AR: Record<string,string> = {
   saturday:"السبت", sunday:"الأحد", monday:"الإثنين", tuesday:"الثلاثاء",
   wednesday:"الأربعاء", thursday:"الخميس", friday:"الجمعة",
 };
+const WEEKDAYS_EN: Record<string,string> = {
+  saturday:"Saturday", sunday:"Sunday", monday:"Monday", tuesday:"Tuesday",
+  wednesday:"Wednesday", thursday:"Thursday", friday:"Friday",
+};
 
 const B = {
   brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A",
@@ -23,6 +28,11 @@ const B = {
 };
 
 export default function SmartPlan() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (ar: string, en: string) => (isRtl ? ar : en);
+  const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);
+
   const { currentCustomer } = useStore();
   const generate = useAction(api.ai.generateSmartPlan);
   const generateWeekly = useAction((api.ai as any).generateWeeklyPlan);
@@ -54,19 +64,19 @@ export default function SmartPlan() {
           });
         }
       }
-      if (!items.length) { setError("لا توجد وجبات في الخطة."); setOrdering(false); return; }
+      if (!items.length) { setError(t("لا توجد وجبات في الخطة.", "No meals in the plan.")); setOrdering(false); return; }
       const totalPrice = items.reduce((s, i) => s + (i.priceQAR || 0), 0);
       const totalCalories = items.reduce((s, i) => s + (i.calories || 0), 0);
       const res: any = await createOrder({
-        customerName: currentCustomer?.fullName || "عميل ذكاء اصطناعي",
+        customerName: currentCustomer?.fullName || "AI customer",
         customerPhone: currentCustomer?.phone || phone.trim() || "—",
         customerId: (currentCustomer?.customerId as any) || undefined,
         totalMeals: items.length, totalPrice, totalCalories, items,
-        notes: "خطة أسبوعية من مولّد الوجبات الذكي",
+        notes: "Weekly plan from the smart meal generator",
       });
-      setOrderNo(res?.orderNumber || "تم");
+      setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
-      setError("تعذّر إنشاء الطلب، حاول مرة أخرى.");
+      setError(t("تعذّر إنشاء الطلب، حاول مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -85,15 +95,15 @@ export default function SmartPlan() {
       const totalPrice = items.reduce((s: number, i: any) => s + (i.priceQAR || 0), 0);
       const totalCalories = items.reduce((s: number, i: any) => s + (i.calories || 0), 0);
       const res: any = await createOrder({
-        customerName: currentCustomer?.fullName || "عميل ذكاء اصطناعي",
+        customerName: currentCustomer?.fullName || "AI customer",
         customerPhone: currentCustomer?.phone || phone.trim() || "—",
         customerId: (currentCustomer?.customerId as any) || undefined,
         totalMeals: items.length, totalPrice, totalCalories, items,
-        notes: "طلب من مولّد الوجبات الذكي",
+        notes: "Order from the smart meal generator",
       });
-      setOrderNo(res?.orderNumber || "تم");
+      setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
-      setError("تعذّر إنشاء الطلب، حاول مرة أخرى.");
+      setError(t("تعذّر إنشاء الطلب، حاول مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -105,15 +115,15 @@ export default function SmartPlan() {
     try {
       if (mode === "week") {
         const res: any = await generateWeekly(source);
-        if (!res.ok) { setError("لا توجد وجبات مجدولة لهذا الأسبوع."); }
+        if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذا الأسبوع.", "No meals scheduled for this week.")); }
         else setWeekly(res);
       } else {
         const res: any = await generate(source);
-        if (!res.ok) { setError(res.error || "تعذّر توليد الخطة"); }
+        if (!res.ok) { setError(res.error || t("تعذّر توليد الخطة", "Could not generate the plan")); }
         else setResult(res);
       }
     } catch (e: any) {
-      setError("حصل خطأ أثناء التوليد، حاول مرة أخرى.");
+      setError(t("حصل خطأ أثناء التوليد، حاول مرة أخرى.", "An error occurred while generating, please try again."));
     } finally {
       setLoading(false);
     }
@@ -128,7 +138,7 @@ export default function SmartPlan() {
         subtitleAr="اختر خطة اليوم أو الأسبوع — نختار لك من الوجبات المتاحة حسب هدفك وما تفضّله."
         subtitleEn="Pick a daily or weekly plan — we choose from available meals by your goal and preferences."
       />
-      <div dir="rtl" style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
+      <div dir={isRtl ? "rtl" : "ltr"} style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
         {/* Entry */}
         <div style={{
           background: "#fff", border: `1px solid ${B.line}`, borderRadius: 18,
@@ -137,8 +147,8 @@ export default function SmartPlan() {
           {/* Day / Week toggle */}
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {([
-              { k: "day", label: "خطة اليوم" },
-              { k: "week", label: "خطة الأسبوع" },
+              { k: "day", label: t("خطة اليوم", "Daily plan"), emoji: "📅 " },
+              { k: "week", label: t("خطة الأسبوع", "Weekly plan"), emoji: "🗓️ " },
             ] as const).map((m) => (
               <button key={m.k} onClick={() => { setMode(m.k); setResult(null); setWeekly(null); setOrderNo(""); }}
                 style={{
@@ -148,7 +158,7 @@ export default function SmartPlan() {
                   background: mode === m.k ? B.accent : "#fff",
                   color: mode === m.k ? "#fff" : B.ink2,
                 }}>
-                {m.k === "week" ? "🗓️ " : "📅 "}{m.label}
+                {m.emoji}{m.label}
               </button>
             ))}
           </div>
@@ -156,23 +166,23 @@ export default function SmartPlan() {
           {loggedInId ? (
             <button onClick={() => run(true)} disabled={loading}
               style={btnPrimary(loading)}>
-              {loading ? "جاري التوليد…" : `توليد خطتي (${currentCustomer?.fullName || "حسابي"})`}
+              {loading ? t("جاري التوليد…", "Generating…") : t(`توليد خطتي (${currentCustomer?.fullName || "حسابي"})`, `Generate my plan (${currentCustomer?.fullName || "my account"})`)}
             </button>
           ) : (
             <>
               <p style={{ fontSize: 14, color: B.ink2, margin: "0 0 12px", fontWeight: 700 }}>
-أدخل رقم هاتفك لجلب بيانات اشتراكك (أو سجّل الدخول):
+                {t("أدخل رقم هاتفك لجلب بيانات اشتراكك (أو سجّل الدخول):", "Enter your phone to fetch your subscription (or sign in):")}
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <input value={phone} onChange={(e) => setPhone(e.target.value)}
-                  placeholder="رقم الهاتف" inputMode="tel"
+                  placeholder={t("رقم الهاتف", "Phone number")} inputMode="tel" dir="ltr"
                   style={{
                     flex: 1, minWidth: 200, padding: "12px 16px", borderRadius: 12,
                     border: `1px solid ${B.line}`, fontSize: 15, fontFamily: "'Cairo',sans-serif",
                   }} />
                 <button onClick={() => run(false)} disabled={loading || phone.trim().length < 6}
                   style={btnPrimary(loading || phone.trim().length < 6)}>
-                  {loading ? "جاري التوليد…" : "ولّد خطتي"}
+                  {loading ? t("جاري التوليد…", "Generating…") : t("ولّد خطتي", "Generate my plan")}
                 </button>
               </div>
             </>
@@ -188,11 +198,11 @@ export default function SmartPlan() {
               marginBottom: 14, flexWrap: "wrap", gap: 8,
             }}>
               <p style={{ fontSize: 16, color: B.ink, fontWeight: 800, margin: 0 }}>
-                🗓️ خطة الأسبوع — {weekly.totalMeals} وجبة عبر {weekly.days.length} أيام
+                🗓️ {t(`خطة الأسبوع — ${weekly.totalMeals} وجبة عبر ${weekly.days.length} أيام`, `Weekly plan — ${weekly.totalMeals} meals across ${weekly.days.length} days`)}
               </p>
               {!weekly.profileFound && (
                 <span style={{ fontSize: 12, color: "#8A6A1F", background: "#FFF7E6", border: "1px solid #F4D58A", borderRadius: 50, padding: "4px 12px" }}>
-                  خطة عامة — سجّل الدخول لتخصيص كامل
+                  {t("خطة عامة — سجّل الدخول لتخصيص كامل", "General plan — sign in for full personalization")}
                 </span>
               )}
             </div>
@@ -204,12 +214,12 @@ export default function SmartPlan() {
                     background: B.ink, color: "#fff", padding: "10px 16px",
                     display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6,
                   }}>
-                    <span style={{ fontWeight: 800, fontSize: 15 }}>{WEEKDAYS_AR[d.day] || d.day} · {d.date}</span>
-                    <span style={{ fontSize: 12, opacity: 0.85 }}>{d.picks.length} وجبة</span>
+                    <span style={{ fontWeight: 800, fontSize: 15 }}>{dayName(d.day)} · {d.date}</span>
+                    <span style={{ fontSize: 12, opacity: 0.85 }}>{d.picks.length} {t("وجبة", "meals")}</span>
                   </div>
                   {d.empty ? (
                     <p style={{ padding: "14px 16px", color: B.ink2, fontSize: 13, margin: 0 }}>
-                      لا توجد وجبات مجدولة لهذا اليوم.
+                      {t("لا توجد وجبات مجدولة لهذا اليوم.", "No meals scheduled for this day.")}
                     </p>
                   ) : (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, padding: 12 }}>
@@ -219,8 +229,8 @@ export default function SmartPlan() {
                             {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
                           </div>
                           <div style={{ padding: "7px 9px" }}>
-                            <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{m.nameAr}</div>
-                            <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{m.calories} سعرة</div>
+                            <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{isRtl ? m.nameAr : (m.nameEn || m.nameAr)}</div>
+                            <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{m.calories} {t("سعرة", "kcal")}</div>
                           </div>
                         </div>
                       ))}
@@ -237,20 +247,20 @@ export default function SmartPlan() {
                   background: "#E8F8EF", border: "1px solid #9FDCB8", color: "#1E7A45",
                   borderRadius: 14, padding: "16px 20px", fontSize: 15, fontWeight: 700, display: "inline-block",
                 }}>
-                  <div style={{ fontSize: 16 }}>✅ تم إرسال خطتك الأسبوعية للمراجعة!</div>
+                  <div style={{ fontSize: 16 }}>✅ {t("تم إرسال خطتك الأسبوعية للمراجعة!", "Your weekly plan was sent for review!")}</div>
                   <div style={{ fontWeight: 400, fontSize: 13.5, marginTop: 6, lineHeight: 1.8 }}>
-                    📋 رقم الطلب: <b>{orderNo}</b><br />
-                    ⏱️ يراجعها أخصائي التغذية عادةً خلال ساعات قليلة<br />
-                    📞 سنتواصل معك على {currentCustomer?.phone || phone || "رقمك"} للتأكيد
+                    📋 {t("رقم الطلب:", "Order number:")} <b>{orderNo}</b><br />
+                    ⏱️ {t("يراجعها أخصائي التغذية عادةً خلال ساعات قليلة", "A nutritionist usually reviews it within a few hours")}<br />
+                    📞 {t(`سنتواصل معك على ${currentCustomer?.phone || phone || "رقمك"} للتأكيد`, `We'll contact you on ${currentCustomer?.phone || phone || "your number"} to confirm`)}
                   </div>
                 </div>
               ) : (
                 <>
                   <button onClick={placeWeeklyOrder} disabled={ordering} style={btnPrimary(ordering)}>
-                    {ordering ? "جارٍ الإرسال…" : "📋 أرسل خطة الأسبوع لمراجعة الأخصائي"}
+                    {ordering ? t("جارٍ الإرسال…", "Sending…") : t("📋 أرسل خطة الأسبوع لمراجعة الأخصائي", "📋 Send weekly plan for nutritionist review")}
                   </button>
                   <p style={{ fontSize: 12, color: B.ink2, marginTop: 10 }}>
-                    يراجع أخصائي التغذية خطة الأسبوع كاملة للتأكد من ملاءمتها قبل التأكيد.
+                    {t("يراجع أخصائي التغذية خطة الأسبوع كاملة للتأكد من ملاءمتها قبل التأكيد.", "The nutritionist reviews the full weekly plan to ensure it fits before confirming.")}
                   </p>
                 </>
               )}
@@ -270,14 +280,14 @@ export default function SmartPlan() {
                 padding: "12px 18px", marginBottom: 16,
               }}>
                 <span style={{ fontWeight: 800, fontSize: 15 }}>
-                  📅 منيو يوم {WEEKDAYS_AR[result.meta.day] || ""} — {result.meta.date}
+                  📅 {t(`منيو يوم ${WEEKDAYS_AR[result.meta.day] || ""} — ${result.meta.date}`, `${WEEKDAYS_EN[result.meta.day] || ""} menu — ${result.meta.date}`)}
                 </span>
                 <span style={{ background: "rgba(255,255,255,.18)", borderRadius: 50, padding: "3px 12px", fontSize: 12, fontWeight: 700 }}>
-                  أسبوع الدورة {result.meta.rotationWeek}
+                  {t(`أسبوع الدورة ${result.meta.rotationWeek}`, `Rotation week ${result.meta.rotationWeek}`)}
                 </span>
                 {result.meta.started === false && (
                   <span style={{ fontSize: 12, color: "#FFD9A6" }}>
-                    (اشتراكك لم يبدأ بعد — هذه خطة الأسبوع الأول)
+                    {t("(اشتراكك لم يبدأ بعد — هذه خطة الأسبوع الأول)", "(Your subscription hasn't started yet — this is the first week's plan)")}
                   </span>
                 )}
               </div>
@@ -288,7 +298,7 @@ export default function SmartPlan() {
                 background: "#FFF7E6", border: "1px solid #F4D58A", color: "#8A6A1F",
                 borderRadius: 12, padding: "12px 16px", marginBottom: 18, fontSize: 14,
               }}>
-                لم نجد اشتراكاً مرتبطاً — جهّزنا خطة عامة. اشترك أو سجّل الدخول لخطة مخصّصة بالكامل.
+                {t("لم نجد اشتراكاً مرتبطاً — جهّزنا خطة عامة. اشترك أو سجّل الدخول لخطة مخصّصة بالكامل.", "No linked subscription found — we prepared a general plan. Subscribe or sign in for a fully personalized plan.")}
               </div>
             )}
 
@@ -298,7 +308,7 @@ export default function SmartPlan() {
             }}>
               <p style={{ fontSize: 15, color: B.ink, fontWeight: 800, margin: 0 }}>{result.summary}</p>
               <span style={{ fontSize: 11, color: B.ink2, background: B.bg2, borderRadius: 50, padding: "4px 12px" }}>
-                {result.engine === "ai" ? "✨ ذكاء اصطناعي" : "⚙️ ترشيح ذكي"}
+                {result.engine === "ai" ? t("✨ ذكاء اصطناعي", "✨ AI") : t("⚙️ ترشيح ذكي", "⚙️ Smart pick")}
               </span>
             </div>
 
@@ -314,11 +324,11 @@ export default function SmartPlan() {
                   </div>
                   <div style={{ padding: "14px 16px" }}>
                     <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 16, fontWeight: 800, color: B.ink, margin: "0 0 6px" }}>
-                      {m.nameAr}
+                      {isRtl ? m.nameAr : (m.nameEn || m.nameAr)}
                     </h3>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                      <span style={chip}>{m.calories} سعرة</span>
-                      <span style={chip}>بروتين {m.protein}جم</span>
+                      <span style={chip}>{m.calories} {t("سعرة", "kcal")}</span>
+                      <span style={chip}>{t("بروتين", "Protein")} {m.protein}{t("جم", "g")}</span>
                     </div>
                     {m.reason && (
                       <p style={{ fontSize: 13, color: B.accent, margin: 0, lineHeight: 1.6 }}>
@@ -338,20 +348,20 @@ export default function SmartPlan() {
                   borderRadius: 14, padding: "16px 20px", fontSize: 15, fontWeight: 700,
                   display: "inline-block",
                 }}>
-                  <div style={{ fontSize: 16 }}>✅ تم إرسال خطتك للمراجعة!</div>
+                  <div style={{ fontSize: 16 }}>✅ {t("تم إرسال خطتك للمراجعة!", "Your plan was sent for review!")}</div>
                   <span style={{ fontWeight: 400, fontSize: 13.5, display: "block", marginTop: 6, lineHeight: 1.8 }}>
-                    📋 رقم الطلب: <b>{orderNo}</b><br />
-                    ⏱️ يراجعها أخصائي التغذية عادةً خلال ساعات قليلة<br />
-                    📞 سنتواصل معك على {currentCustomer?.phone || phone || "رقمك"} للتأكيد
+                    📋 {t("رقم الطلب:", "Order number:")} <b>{orderNo}</b><br />
+                    ⏱️ {t("يراجعها أخصائي التغذية عادةً خلال ساعات قليلة", "A nutritionist usually reviews it within a few hours")}<br />
+                    📞 {t(`سنتواصل معك على ${currentCustomer?.phone || phone || "رقمك"} للتأكيد`, `We'll contact you on ${currentCustomer?.phone || phone || "your number"} to confirm`)}
                   </span>
                 </div>
               ) : (
                 <>
                   <button onClick={placeOrder} disabled={ordering} style={btnPrimary(ordering)}>
-                    {ordering ? "جارٍ الإرسال…" : "📋 أرسل الخطة لمراجعة الأخصائي"}
+                    {ordering ? t("جارٍ الإرسال…", "Sending…") : t("📋 أرسل الخطة لمراجعة الأخصائي", "📋 Send plan for nutritionist review")}
                   </button>
                   <p style={{ fontSize: 12, color: B.ink2, marginTop: 10 }}>
-                    لن يتم تأكيد الطلب مباشرة — يراجع أخصائي التغذية الخطة أولاً للتأكد من ملاءمتها لليوم.
+                    {t("لن يتم تأكيد الطلب مباشرة — يراجع أخصائي التغذية الخطة أولاً للتأكد من ملاءمتها لليوم.", "The order won't be confirmed instantly — the nutritionist reviews the plan first to ensure it fits the day.")}
                   </p>
                 </>
               )}
@@ -361,7 +371,7 @@ export default function SmartPlan() {
             {bestSellers.length > 0 && (
               <div style={{ marginTop: 34 }}>
                 <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, marginBottom: 14, textAlign: "center" }}>
-                  قد يعجبك أيضًا — الأكثر طلبًا 🔥
+                  {t("قد يعجبك أيضًا — الأكثر طلبًا 🔥", "You might also like — best sellers 🔥")}
                 </h3>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 12 }}>
                   {bestSellers.map((m: any) => (
@@ -374,11 +384,11 @@ export default function SmartPlan() {
                       </div>
                       <div style={{ padding: "8px 10px" }}>
                         <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, color: B.ink, marginBottom: 3 }}>
-                          {m.nameAr}
+                          {isRtl ? m.nameAr : (m.nameEn || m.nameAr)}
                         </div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: B.ink2 }}>
-                          <span>{m.calories} سعرة</span>
-                          <span style={{ fontWeight: 700, color: B.accent }}>{m.priceQAR} ر.ق</span>
+                          <span>{m.calories} {t("سعرة", "kcal")}</span>
+                          <span style={{ fontWeight: 700, color: B.accent }}>{m.priceQAR} {t("ر.ق", "QAR")}</span>
                         </div>
                       </div>
                     </a>

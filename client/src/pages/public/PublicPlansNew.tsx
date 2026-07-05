@@ -23,7 +23,8 @@ export default function PublicPlansNew() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   // اسم الباقة: إنجليزي في الوضع الإنجليزي، وعربي مع استبدال "حزمة" بـ"باقة"
   const planName = (p: any) => isRtl ? String(p.nameAr || "").replace(/حزمة/g, "باقة") : (p.nameEn || p.nameAr);
-  const planDesc = (p: any) => isRtl ? p.descriptionAr : (p.descriptionEn || p.descriptionAr);
+  // في الإنجليزي: لا نرجع للعربي حتى لا يظهر وصف عربي في وضع اللغة الإنجليزية
+  const planDesc = (p: any) => isRtl ? p.descriptionAr : (p.descriptionEn || "");
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);

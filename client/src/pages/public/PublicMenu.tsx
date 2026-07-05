@@ -888,46 +888,47 @@ export default function PublicMenuPage() {
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-3xl",
+                    "group flex flex-col transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-3xl shadow-sm",
                     hasConflict
-                      ? "border-2 border-red-300 hover:border-red-500 hover:shadow-lg"
-                      : "border-2 border-gray-100 hover:border-[#3CC4F0] hover:shadow-xl"
+                      ? "border border-red-200 hover:border-red-400 hover:shadow-lg"
+                      : "border border-gray-100 hover:border-[#3CC4F0]/50 hover:shadow-xl hover:-translate-y-1"
                   )}
                   onClick={() => setSelectedMeal(meal)}
                 >
-                  {/* Avoid conflict ribbon */}
-                  {hasConflict && (
-                    <div className="absolute top-0 inset-x-0 z-20 px-3 py-1.5 flex items-center justify-center gap-1.5 text-[10px] font-black text-white"
-                      style={{ background: "linear-gradient(90deg, #ef4444, #f97316)" }}>
-                      <AlertTriangle className="h-3 w-3" />
-                      {isRtl ? "تحذير: قد تحتوي على ممنوعاتك" : "Warning: May contain restricted items"}
-                    </div>
-                  )}
-
                   {/* Meal Image */}
-                  <div className={cn("relative h-48 overflow-hidden", hasConflict && "mt-7")}>
+                  <div className="relative h-52 overflow-hidden">
                     <img
                       src={meal.imageUrl}
                       alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+
+                    {/* Avoid conflict ribbon */}
+                    {hasConflict && (
+                      <div className="absolute top-0 inset-x-0 z-20 px-3 py-1.5 flex items-center justify-center gap-1.5 text-[10px] font-black text-white"
+                        style={{ background: "linear-gradient(90deg, #ef4444, #f97316)" }}>
+                        <AlertTriangle className="h-3 w-3" />
+                        {isRtl ? "تحذير: قد تحتوي على ممنوعاتك" : "Warning: May contain restricted items"}
+                      </div>
+                    )}
+
                     {/* Calories Badge */}
-                    <div className="absolute top-3 right-3">
-                      <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                    <div className={cn("absolute top-3", isRtl ? "right-3" : "left-3", hasConflict && "top-10")}>
+                      <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md">
                         <Flame className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-bold text-[#0F1516]">
+                        <span className="text-sm font-black text-[#0F1516] tabular-nums">
                           {meal.calories}
                         </span>
+                        <span className="text-[10px] font-bold text-gray-400">{isRtl ? "سعرة" : "kcal"}</span>
                       </div>
                     </div>
 
                     {/* Category Badge */}
-                    <div className="absolute bottom-3 left-3">
+                    <div className={cn("absolute bottom-3", isRtl ? "right-3" : "left-3")}>
                       <Badge
                         className={cn(
-                          "text-xs font-bold px-3 py-1 border-0",
+                          "text-xs font-bold px-3 py-1 border-0 shadow-md",
                           meal.category === "breakfast" && "bg-orange-500 text-white",
                           meal.category === "lunch" && "bg-cyan-500 text-white",
                           meal.category === "dinner" && "bg-indigo-500 text-white",
@@ -944,52 +945,48 @@ export default function PublicMenuPage() {
                     </div>
                   </div>
 
-                  <CardContent className="p-5">
+                  <CardContent className="p-5 flex flex-col flex-1">
                     {/* Meal Name */}
-                    <h3 className="text-xl font-bold text-[#0F1516] mb-2 line-clamp-1">
+                    <h3 className="text-lg font-black text-[#0F1516] mb-1 line-clamp-1 leading-tight">
                       {isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
                     </h3>
 
-                    {/* Subtitle (if exists) */}
+                    {/* Subtitle (English under Arabic) */}
                     {meal.nameEn && isRtl && (
-                      <p className="text-sm text-[#47759C] mb-3">{meal.nameEn}</p>
+                      <p className="text-xs text-[#8AA6BD] mb-2 line-clamp-1">{meal.nameEn}</p>
                     )}
 
                     {/* Description */}
-                    <p className="text-sm text-[#47759C] mb-4 line-clamp-2">
-                      {isRtl ? meal.descriptionAr : meal.descriptionEn || meal.descriptionAr}
-                    </p>
+                    {(isRtl ? meal.descriptionAr : meal.descriptionEn) && (
+                      <p className="text-sm text-[#47759C] mb-4 line-clamp-2 leading-relaxed">
+                        {isRtl ? meal.descriptionAr : meal.descriptionEn}
+                      </p>
+                    )}
 
-                    {/* Macros */}
-                    <div className="flex items-center gap-3 mb-4 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-red-500" />
-                        <span className="text-[#47759C]">
-                          {isRtl ? "بروتين" : "P"}: {meal.protein}g
-                        </span>
+                    {/* Macros — neat 3-column stat row */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="rounded-xl py-2 text-center" style={{ background: "#fef2f2" }}>
+                        <div className="text-sm font-black text-red-600 tabular-nums leading-none">{meal.protein}<span className="text-[10px]">g</span></div>
+                        <div className="text-[10px] font-bold text-red-400 mt-1">{isRtl ? "بروتين" : "Protein"}</div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-yellow-500" />
-                        <span className="text-[#47759C]">
-                          {isRtl ? "كارب" : "C"}: {meal.carbs}g
-                        </span>
+                      <div className="rounded-xl py-2 text-center" style={{ background: "#fefce8" }}>
+                        <div className="text-sm font-black text-yellow-600 tabular-nums leading-none">{meal.carbs}<span className="text-[10px]">g</span></div>
+                        <div className="text-[10px] font-bold text-yellow-500 mt-1">{isRtl ? "كارب" : "Carbs"}</div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-blue-500" />
-                        <span className="text-[#47759C]">
-                          {isRtl ? "دهون" : "F"}: {meal.fats}g
-                        </span>
+                      <div className="rounded-xl py-2 text-center" style={{ background: "#eff6ff" }}>
+                        <div className="text-sm font-black text-blue-600 tabular-nums leading-none">{meal.fats}<span className="text-[10px]">g</span></div>
+                        <div className="text-[10px] font-bold text-blue-400 mt-1">{isRtl ? "دهون" : "Fats"}</div>
                       </div>
                     </div>
 
                     {/* Tags */}
                     {meal.tags && meal.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex flex-wrap gap-1.5 mb-4">
                         {meal.tags.slice(0, 3).map((tag: string, idx: number) => (
                           <Badge
                             key={idx}
                             variant="secondary"
-                            className="text-xs bg-[#3CC4F0]/10 text-[#3CC4F0] border-0"
+                            className="text-[11px] bg-[#3CC4F0]/10 text-[#0E76AC] border-0 font-semibold"
                           >
                             {tagLabel(tag, isRtl)}
                           </Badge>
@@ -997,14 +994,11 @@ export default function PublicMenuPage() {
                       </div>
                     )}
 
-                    {/* Calories & Button (no price — included in subscription) */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                          style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
-                          {meal.calories} {isRtl ? "كالوري" : "kcal"}
-                        </span>
-                      </div>
+                    {/* Footer — button (no price, included in subscription) */}
+                    <div className="flex items-center justify-between pt-4 mt-auto border-t border-gray-100">
+                      <span className="text-xs font-semibold text-[#8AA6BD]">
+                        {isRtl ? "ضمن اشتراكك" : "In your plan"}
+                      </span>
                       {browseMode && !isPhoneVerified ? (
                         // Browse mode: replace add button with subscribe CTA
                         <Button
