@@ -238,32 +238,6 @@ export const changePassword = mutation({
   },
 });
 
-// ===== إعادة تعيين كلمة المرور (تحقّق بالبريد + رقم الهاتف المسجّلين) =====
-export const resetPassword = mutation({
-  args: {
-    email: v.string(),
-    phone: v.string(),
-    newPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    if (args.newPassword.length < 6) {
-      return { success: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
-    }
-    const account = await ctx.db
-      .query("customerAccounts")
-      .withIndex("by_email", (q) => q.eq("email", args.email.trim().toLowerCase()))
-      .first();
-
-    // تحقّق أن البريد والهاتف يخصّان نفس الحساب (رسالة موحّدة لمنع الكشف)
-    const norm = (s: string) => String(s || "").replace(/\D/g, "");
-    if (!account || norm(account.phone) !== norm(args.phone)) {
-      return { success: false, error: "البريد الإلكتروني ورقم الهاتف غير متطابقين مع أي حساب" };
-    }
-
-    await ctx.db.patch(account._id, {
-      passwordHash: await hashPassword(args.newPassword),
-      updatedAt: Date.now(),
-    });
-    return { success: true };
-  },
-});
+// ملاحظة: استعادة كلمة المرور انتقلت إلى نظام OTP الآمن عبر البريد
+// (convex/passwordReset.ts). أُزيلت الطريقة القديمة (بريد + هاتف) لأنها كانت
+// تسمح بالاستيلاء على الحساب لمن يعرف البريد والهاتف.

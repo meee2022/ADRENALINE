@@ -26,6 +26,9 @@ export default function CustomerAuth() {
     && new URLSearchParams(window.location.search).get("reset") === "1";
 
   const [mode, setMode] = useState<Mode>(initialReset ? "reset" : "register");
+  const [resetStep, setResetStep] = useState<"request" | "verify">("request");
+  const [code, setCode] = useState("");
+  const [devHint, setDevHint] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -61,9 +64,26 @@ export default function CustomerAuth() {
     } finally { setIsLoading(false); }
   };
 
-  const handleReset = async (e: React.FormEvent) => {
+  // خطوة 1: طلب كود الاستعادة عبر البريد
+  const handleRequestCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setDevHint("");
+    if (!form.email) { setError(isRtl ? "أدخل بريدك الإلكتروني" : "Enter your email"); return; }
+    setIsLoading(true);
+    try {
+      const res: any = await convex.action((api as any).passwordReset.requestReset, { email: form.email });
+      setResetStep("verify");
+      if (res?.devCode) setDevHint(res.devCode); // يظهر فقط قبل تفعيل خدمة البريد
+    } catch (err: any) {
+      setError(err.message || (isRtl ? "تعذّر إرسال الكود" : "Could not send code"));
+    } finally { setIsLoading(false); }
+  };
+
+  // خطوة 2: التحقق من الكود وتعيين كلمة مرور جديدة
+  const handleVerifyReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!code || code.trim().length < 4) { setError(isRtl ? "أدخل الكود المُرسل" : "Enter the code"); return; }
     if (form.password !== form.confirmPassword) {
       setError(isRtl ? "كلمة المرور غير متطابقة" : "Passwords do not match"); return;
     }
@@ -72,8 +92,8 @@ export default function CustomerAuth() {
     }
     setIsLoading(true);
     try {
-      const res: any = await convex.mutation((api.customerAuth as any).resetPassword, {
-        email: form.email, phone: form.phone, newPassword: form.password,
+      const res: any = await convex.mutation((api as any).passwordReset.verifyAndReset, {
+        email: form.email, code: code.trim(), newPassword: form.password,
       });
       if (res.success) { setResetDone(true); }
       else setError(res.error || (isRtl ? "تعذّر إعادة التعيين" : "Reset failed"));
@@ -114,7 +134,7 @@ export default function CustomerAuth() {
             className="h-20 w-auto mx-auto mb-3 drop-shadow-2xl" />
           <p className="text-sm font-medium" style={{ color: "#bcbebf" }}>
             {mode === "reset"
-              ? (isRtl ? "أدخل بريدك ورقمك المسجّلين لتعيين كلمة مرور جديدة" : "Enter your registered email and phone to reset your password")
+              ? (isRtl ? "أدخل بريدك المسجّل وسنرسل لك كود استعادة" : "Enter your registered email and we'll send you a reset code")
               : (isRtl ? "أنشئ حسابك للبدء في رحلتك الصحية" : "Create your account to start your healthy journey")}
           </p>
         </div>
@@ -152,7 +172,7 @@ export default function CustomerAuth() {
               </Button>
             </div>
           ) : (
-            <form onSubmit={mode === "reset" ? handleReset : handleRegister} className="space-y-5">
+            <form onSubmit={mode === "register" ? handleRegister : (resetStep === "request" ? handleRequestCode : handleVerifyReset)} className="space-y-5">
               {mode === "register" && (
                 <div className="space-y-1.5">
                   <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
@@ -166,55 +186,91 @@ export default function CustomerAuth() {
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
-                  {isRtl ? "رقم الهاتف" : "Phone Number"}
-                </Label>
-                <div className="relative">
-                  <Phone className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
-                  <Input value={form.phone} onChange={(e) => set("phone", e.target.value)}
-                    placeholder="+974 1234 5678" required dir="ltr" className={inputCls} style={fieldStyle} />
+              {mode === "register" && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
+                    {isRtl ? "رقم الهاتف" : "Phone Number"}
+                  </Label>
+                  <div className="relative">
+                    <Phone className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
+                    <Input value={form.phone} onChange={(e) => set("phone", e.target.value)}
+                      placeholder="+974 1234 5678" required dir="ltr" className={inputCls} style={fieldStyle} />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-1.5">
-                <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
-                  {isRtl ? "البريد الإلكتروني" : "Email"}
-                </Label>
-                <div className="relative">
-                  <Mail className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
-                  <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
-                    placeholder="user@example.com" required dir="ltr" className={inputCls} style={fieldStyle} />
+              {/* Email — register + first reset step (hidden after code sent) */}
+              {(mode === "register" || (mode === "reset" && resetStep === "request")) && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
+                    {isRtl ? "البريد الإلكتروني" : "Email"}
+                  </Label>
+                  <div className="relative">
+                    <Mail className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
+                    <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)}
+                      placeholder="user@example.com" required dir="ltr" className={inputCls} style={fieldStyle} />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="space-y-1.5">
-                <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
-                  {mode === "reset" ? (isRtl ? "كلمة المرور الجديدة" : "New Password") : (isRtl ? "كلمة المرور" : "Password")}
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
-                  <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)}
-                    placeholder="••••••••" required dir="ltr" className={inputCls}
-                    style={{ paddingLeft: isRtl ? "40px" : "38px", paddingRight: isRtl ? "38px" : "40px", borderColor: "#e2e8f0" }} />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute top-1/2 -translate-y-1/2 transition-colors"
-                    style={{ [isRtl ? "left" : "right"]: "12px", color: "#bcbebf" }} tabIndex={-1}>
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+              {/* Reset — verify step: show which email + the code field */}
+              {mode === "reset" && resetStep === "verify" && (
+                <>
+                  <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EAF3FB", color: "#0E76AC" }}>
+                    {isRtl ? "أرسلنا كوداً إلى " : "We sent a code to "}<b dir="ltr">{form.email}</b>
+                  </div>
+                  {devHint && (
+                    <div className="rounded-xl px-4 py-2 text-xs font-bold text-center"
+                      style={{ background: "#fff7ed", border: "1px dashed #fdba74", color: "#9a3412" }}>
+                      {isRtl ? "وضع الاختبار (قبل تفعيل البريد) — الكود: " : "Test mode (email not activated) — code: "}<span dir="ltr">{devHint}</span>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
+                      {isRtl ? "كود التحقق" : "Verification Code"}
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
+                      <Input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric"
+                        placeholder="______" required dir="ltr"
+                        className={`${inputCls} text-center tracking-[6px] font-black`} style={fieldStyle} />
+                    </div>
+                  </div>
+                </>
+              )}
 
-              <div className="space-y-1.5">
-                <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
-                  {isRtl ? "تأكيد كلمة المرور" : "Confirm Password"}
-                </Label>
-                <div className="relative">
-                  <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
-                  <Input type={showPassword ? "text" : "password"} value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)}
-                    placeholder="••••••••" required dir="ltr" className={inputCls} style={fieldStyle} />
-                </div>
-              </div>
+              {/* Password + confirm — register + reset verify step */}
+              {(mode === "register" || (mode === "reset" && resetStep === "verify")) && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
+                      {mode === "reset" ? (isRtl ? "كلمة المرور الجديدة" : "New Password") : (isRtl ? "كلمة المرور" : "Password")}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
+                      <Input type={showPassword ? "text" : "password"} value={form.password} onChange={(e) => set("password", e.target.value)}
+                        placeholder="••••••••" required dir="ltr" className={inputCls}
+                        style={{ paddingLeft: isRtl ? "40px" : "38px", paddingRight: isRtl ? "38px" : "40px", borderColor: "#e2e8f0" }} />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className="absolute top-1/2 -translate-y-1/2 transition-colors"
+                        style={{ [isRtl ? "left" : "right"]: "12px", color: "#bcbebf" }} tabIndex={-1}>
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
+                      {isRtl ? "تأكيد كلمة المرور" : "Confirm Password"}
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" style={{ color: "#bcbebf", ...iconSide }} />
+                      <Input type={showPassword ? "text" : "password"} value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)}
+                        placeholder="••••••••" required dir="ltr" className={inputCls} style={fieldStyle} />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {error && (
                 <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium"
@@ -232,10 +288,19 @@ export default function CustomerAuth() {
                 }}>
                 {isLoading
                   ? (isRtl ? "جارٍ التحميل..." : "Loading...")
-                  : mode === "reset"
-                    ? (isRtl ? "تعيين كلمة المرور" : "Set New Password")
-                    : (isRtl ? "إنشاء الحساب" : "Sign Up")}
+                  : mode === "register"
+                    ? (isRtl ? "إنشاء الحساب" : "Sign Up")
+                    : resetStep === "request"
+                      ? (isRtl ? "إرسال الكود" : "Send Code")
+                      : (isRtl ? "تعيين كلمة المرور" : "Set New Password")}
               </Button>
+
+              {mode === "reset" && resetStep === "verify" && (
+                <button type="button" onClick={() => { setResetStep("request"); setCode(""); setError(""); setDevHint(""); }}
+                  className="w-full text-xs font-bold hover:underline" style={{ color: "#47759c" }}>
+                  {isRtl ? "لم يصلك الكود؟ إعادة الإرسال" : "Didn't get the code? Resend"}
+                </button>
+              )}
             </form>
           )}
 

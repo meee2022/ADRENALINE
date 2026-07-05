@@ -22,6 +22,15 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
+  // ===== Password reset codes (OTP via email) =====
+  passwordResetCodes: defineTable({
+    email: v.string(),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    createdAt: v.number(),
+  }).index("by_email", ["email"]),
+
   // ===== Sessions (server-side auth tokens) =====
   sessions: defineTable({
     token: v.string(),
