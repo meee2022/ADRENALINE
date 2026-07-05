@@ -104,21 +104,12 @@ export default function Payroll() {
   const rateNum = Number(otRate) || 1;
   const suggestedOT = Math.round(otHoursNum * hourlyRate * rateNum);
 
-  const cols = [
-    { k: "sr", ar: "#", en: "#" },
-    { k: "name", ar: "الاسم", en: "Name" },
-    { k: "designation", ar: "الوظيفة", en: "Designation" },
-    { k: "basic", ar: "الأساسي", en: "Basic" },
-    { k: "allowance", ar: "البدل", en: "Allow." },
-    { k: "days", ar: "أيام", en: "Days" },
-    { k: "package", ar: "الباقة", en: "Package" },
-    { k: "salary", ar: "الراتب", en: "Salary" },
-    { k: "overtime", ar: "إضافي", en: "OT" },
-    { k: "total", ar: "الإجمالي", en: "Total" },
-    { k: "advance", ar: "سلفة", en: "Advance" },
-    { k: "paid", ar: "مدفوع", en: "Paid" },
-    { k: "balance", ar: "الرصيد", en: "Balance" },
-  ];
+  // ألوان ثابتة لأيقونة كل موظف حسب أول حرف
+  const avatarBg = (name: string) => {
+    const g = ["linear-gradient(135deg,#3cc4f0,#0E76AC)", "linear-gradient(135deg,#8b5cf6,#6d28d9)", "linear-gradient(135deg,#10b981,#047857)", "linear-gradient(135deg,#f59e0b,#b45309)", "linear-gradient(135deg,#47759c,#2d5c82)"];
+    let s = 0; for (const c of name) s += c.charCodeAt(0);
+    return g[s % g.length];
+  };
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6 print:space-y-2">
@@ -186,37 +177,58 @@ export default function Payroll() {
       ) : (
         <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm whitespace-nowrap">
+            <table className="w-full text-sm whitespace-nowrap border-collapse">
               <thead>
-                <tr className="bg-[#f4f8fb] text-[#47759c]">
-                  {cols.map((c) => (
-                    <th key={c.k} className={cn("px-3 py-3 font-bold text-xs uppercase", ["name", "designation"].includes(c.k) ? (isRtl ? "text-right" : "text-left") : "text-center")}>
-                      {isRtl ? c.ar : c.en}
-                    </th>
-                  ))}
-                  {isAdmin && <th className="px-3 py-3 text-center text-xs font-bold uppercase print:hidden">{t("إجراء", "")}</th>}
+                <tr className="bg-[#f4f8fb] text-[#47759c] sticky top-0 z-10">
+                  <th className="px-2 py-3 text-center text-[11px] font-bold w-10">#</th>
+                  <th className={cn("px-3 py-3 text-[11px] font-bold uppercase", isRtl ? "text-right" : "text-left")}>{t("الموظف", "Employee")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("الأساسي", "Basic")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("البدل", "Allow.")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("أيام", "Days")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("الباقة", "Package")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("الراتب", "Salary")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase text-[#0E76AC]">{t("إضافي", "OT")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-black uppercase text-[#0f1516]">{t("الإجمالي", "Total")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase border-s-2 border-[#dbe7f2]">{t("سلفة", "Advance")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("مدفوع", "Paid")}</th>
+                  <th className="px-3 py-3 text-center text-[11px] font-bold uppercase">{t("الرصيد", "Balance")}</th>
+                  {isAdmin && <th className="px-3 py-3 text-center text-[11px] font-bold uppercase print:hidden">{t("إجراء", "")}</th>}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={r._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                    <td className="px-3 py-2.5 text-center text-gray-400 font-semibold">{i + 1}</td>
-                    <td className={cn("px-3 py-2.5 font-bold text-[#0f1516]", isRtl ? "text-right" : "text-left")}>{r.name}</td>
-                    <td className={cn("px-3 py-2.5 text-gray-500 text-xs", isRtl ? "text-right" : "text-left")}>{r.designation}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{money(r.basic)}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{r.allowance ? money(r.allowance) : "—"}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{r.days}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums font-semibold">{money(r.package)}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{money(r.salary)}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums text-[#0E76AC]">{r.overtime ? money(r.overtime) : "—"}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums font-black text-[#0f1516]">{money(r.total)}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{r.advance ? money(r.advance) : "—"}</td>
-                    <td className="px-3 py-2.5 text-center tabular-nums">{r.paid ? money(r.paid) : "—"}</td>
-                    <td className={cn("px-3 py-2.5 text-center tabular-nums font-black", r.balance < 0 ? "text-red-600" : r.balance > 0 ? "text-emerald-600" : "text-gray-400")}>
-                      {money(r.balance)}
+                  <tr key={r._id} className={cn("border-t border-gray-100 hover:bg-[#eef7fd] transition-colors", i % 2 === 1 && "bg-[#fafcff]")}>
+                    <td className="px-2 py-2 text-center text-gray-300 font-bold tabular-nums">{i + 1}</td>
+                    <td className={cn("px-3 py-2", isRtl ? "text-right" : "text-left")}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0" style={{ background: avatarBg(r.name) }}>
+                          {(r.name || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-[#0f1516] leading-tight truncate max-w-[160px]">{r.name}</div>
+                          <div className="text-[11px] text-gray-400 leading-tight truncate max-w-[160px]">{r.designation}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-400">{money(r.basic)}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-400">{r.allowance ? money(r.allowance) : "—"}</td>
+                    <td className="px-3 py-2 text-center tabular-nums">
+                      <span className={cn("text-xs font-bold px-2 py-0.5 rounded-full", r.days >= 31 ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600")}>{r.days}</span>
+                    </td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-500">{money(r.package)}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-600 font-semibold">{money(r.salary)}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-[#0E76AC] font-semibold">{r.overtime ? money(r.overtime) : "—"}</td>
+                    <td className="px-3 py-2 text-center tabular-nums font-black text-[#0f1516] bg-[#f7fbfe]">{money(r.total)}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-500 border-s-2 border-[#eef3f8]">{r.advance ? money(r.advance) : "—"}</td>
+                    <td className="px-3 py-2 text-center tabular-nums text-gray-500">{r.paid ? money(r.paid) : "—"}</td>
+                    <td className="px-3 py-2 text-center">
+                      <span className={cn("inline-block min-w-[54px] tabular-nums text-xs font-black px-2.5 py-1 rounded-full",
+                        r.balance < 0 ? "bg-red-50 text-red-600" : r.balance > 0 ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-400")}>
+                        {money(r.balance)}
+                      </span>
                     </td>
                     {isAdmin && (
-                      <td className="px-3 py-2.5 text-center print:hidden">
+                      <td className="px-3 py-2 text-center print:hidden">
                         <div className="flex items-center justify-center gap-1">
                           <Button variant="outline" size="icon" className="h-8 w-8 rounded-lg border-gray-200 text-gray-500 hover:text-[#0E76AC] hover:border-[#3cc4f0]" onClick={() => openEdit(r)}>
                             <Pencil className="h-3.5 w-3.5" />
@@ -230,16 +242,18 @@ export default function Payroll() {
                   </tr>
                 ))}
                 {summary && (
-                  <tr className="border-t-2 border-[#e8eef4] bg-[#f4f8fb] font-black text-[#0f1516]">
-                    <td className="px-3 py-3" colSpan={3}>{t("الإجمالي", "TOTAL")}</td>
-                    <td></td><td></td><td></td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.package)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.salary)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.overtime)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.total)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.advance)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.paid)}</td>
-                    <td className="px-3 py-3 text-center tabular-nums">{money(summary.balance)}</td>
+                  <tr className="border-t-2 border-[#dbe7f2] bg-[#eef4fa] font-black text-[#0E2A4A]">
+                    <td className="px-3 py-3.5" colSpan={2}>{t("الإجمالي", "TOTAL")}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums text-gray-400">{money(rows.reduce((s: number, r: any) => s + (r.basic || 0), 0))}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums text-gray-400">{money(rows.reduce((s: number, r: any) => s + (r.allowance || 0), 0))}</td>
+                    <td></td>
+                    <td className="px-3 py-3.5 text-center tabular-nums">{money(summary.package)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums">{money(summary.salary)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums text-[#0E76AC]">{money(summary.overtime)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums bg-[#e3eef7]">{money(summary.total)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums border-s-2 border-[#dbe7f2]">{money(summary.advance)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums">{money(summary.paid)}</td>
+                    <td className="px-3 py-3.5 text-center tabular-nums">{money(summary.balance)}</td>
                     {isAdmin && <td className="print:hidden"></td>}
                   </tr>
                 )}
