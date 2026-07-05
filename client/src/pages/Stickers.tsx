@@ -335,14 +335,14 @@ export default function Stickers() {
             color: #000 !important;
             -webkit-text-fill-color: #000 !important;
           }
-          /* Calorie pill: solid black fill + white text (knockout) */
-          .label .macros-cal {
+          /* Calorie pill + category tag: solid black fill + white text (knockout) */
+          .label .macros-cal, .label .meal-cat {
             background: #000 !important;
             border: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          .label .macros-val, .label .macros-unit {
+          .label .macros-val, .label .macros-unit, .label .meal-cat {
             color: #fff !important;
             -webkit-text-fill-color: #fff !important;
           }
@@ -455,6 +455,24 @@ export default function Stickers() {
           overflow: visible;
           padding: 0.1mm 1mm;
           text-transform: uppercase;
+        }
+
+        /* Meal category tag — نوع الوجبة (LUNCH / BREAKFAST / SNACK …) */
+        .meal-cat {
+          display: inline-block;
+          font-size: 7.5px;
+          font-weight: 900;
+          letter-spacing: 0.8px;
+          line-height: 1;
+          color: #fff !important;
+          -webkit-text-fill-color: #fff !important;
+          background: #000 !important;
+          border-radius: 1mm;
+          padding: 0.5mm 1.8mm;
+          text-transform: uppercase;
+          flex-shrink: 0;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
 
         /* Meal name — under customer, biggest info after the name */
@@ -688,9 +706,10 @@ function MealSticker({ s }: any) {
         )}
         <div className="meal-line">{mealName}</div>
 
-        {/* Macros + Calories — صف معلومات غذائية */}
-        {(macrosLine || s.calories) && (
+        {/* التصنيف + السعرات + الماكروز في صف واحد */}
+        {(macrosLine || s.calories || s.category) && (
           <div className="macros-row">
+            {s.category ? <span className="meal-cat">{s.category}</span> : null}
             {s.calories ? (
               <span className="macros-cal">
                 <span className="macros-val">{s.calories}</span>

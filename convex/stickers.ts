@@ -133,6 +133,21 @@ export const get = query({
       .filter(Boolean)
       .forEach((m: any) => menuMap.set(String(m._id), m));
 
+    // ✅ خريطة التصنيفات (categoryId → اسم) لعرض نوع الوجبة على الستيكر
+    const categoriesAll = await ctx.db.query("mealCategories").collect();
+    const categoryById = new Map<string, string>();
+    categoriesAll.forEach((cat: any) => categoryById.set(String(cat._id), String(cat.name || "")));
+    // تطبيع اسم التصنيف لعرض موحّد
+    const catLabel = (raw: string): string => {
+      const n = String(raw || "").toUpperCase();
+      if (n.includes("BREAKFAST") || n.includes("فطور") || n.includes("فطار")) return "BREAKFAST";
+      if (n.includes("LUNCH") || n.includes("غداء")) return "LUNCH";
+      if (n.includes("DINNER") || n.includes("عشاء")) return "DINNER";
+      if (n.includes("SNACK") || n.includes("سناك")) return "SNACK";
+      if (n.includes("SALAD") || n.includes("سلطة") || n.includes("سلطات")) return "SALAD";
+      return String(raw || "").trim().toUpperCase();
+    };
+
     // ✅ تحميل publicMeals كمصدر إضافي للماكروز (مطابقة بالاسم)
     const publicMealsAll = await ctx.db.query("publicMeals").collect();
     const publicMealsByName = new Map<string, any>();
@@ -256,6 +271,10 @@ export const get = query({
       for (const it of items) {
         const menu = menuMap.get(String(it.menuItemId));
         const mealName = menu?.name || "UNKNOWN";
+        // ✅ تصنيف الوجبة (Lunch / Breakfast / Snack / Dinner)
+        const category = catLabel(
+          categoryById.get(String((menu as any)?.categoryId || (it as any).categoryId || "")) || String((it as any).category || ""),
+        );
 
         // ✅ مطابقة بـ publicMeals بالاسم للحصول على ماكروز كاملة
         const pmLookup = publicMealsByName.get(String(mealName).trim().toLowerCase())
@@ -298,6 +317,7 @@ export const get = query({
           customerName: c.fullName || "",
           customerNumber: normalizePhone(c.phone) || "",
           goal: String((c as any).goalType || (c as any).goals || "").trim(),
+          category,
           mealName,
           mealTitle,
           warnings,
