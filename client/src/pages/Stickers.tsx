@@ -739,10 +739,9 @@ function BoxSticker({ s }: any) {
 
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
-        {(s.goal || s.customerNumber) && (
+        {s.customerNumber && (
           <div className="cust-sub">
-            {s.goal ? <span className="goal-badge">{s.goal}</span> : null}
-            {s.customerNumber ? <span className="cust-phone">{s.customerNumber}</span> : null}
+            <span className="cust-phone">{s.customerNumber}</span>
           </div>
         )}
         <div className="meal-line">{s.planLabel}</div>
@@ -755,13 +754,13 @@ function BoxSticker({ s }: any) {
         </div>
         <div className="date-divider" />
         <div className="date-cell">
-          <div className="date-label">{s.deliveryTime === "MORNING" ? "AM" : "PM"}</div>
-          <div className="date-value">{s.deliveryTime === "MORNING" ? "صباحي" : "مسائي"}</div>
+          <div className="date-label">SHIFT</div>
+          <div className="date-value">{s.deliveryTime === "MORNING" ? "Morning" : "Evening"}</div>
         </div>
         <div className="date-divider" />
         <div className="date-cell">
-          <div className="date-label">DATE</div>
-          <div className="date-value">{s.dateText}</div>
+          <div className="date-label">GOAL</div>
+          <div className="date-value">{(s.program || s.goal || "—").toString().toUpperCase()}</div>
         </div>
       </div>
     </div>

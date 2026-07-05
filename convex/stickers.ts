@@ -212,6 +212,8 @@ export const get = query({
           customerName: c.fullName || "",
           customerNumber: normalizePhone(c.phone) || "",
           goal: String((c as any).goalType || (c as any).goals || "").trim(),
+          // ✅ هدف/برنامج العميل (BULK / DIET / FITNESS) لعرضه على ستيكر البوكس
+          program: String(c.program || (c as any).goalType || "").trim(),
           deliveryTime: args.deliveryTime,
           planLabel,
           dateText,
