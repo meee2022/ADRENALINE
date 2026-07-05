@@ -1131,7 +1131,7 @@ export default function PublicMenuPage() {
                 <h3 className="font-bold text-[#0F1516] mb-3">
                   {isRtl ? "القيم الغذائية" : "Nutrition Facts"}
                 </h3>
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-orange-50 rounded-lg p-4 text-center">
                     <Flame className="h-6 w-6 text-orange-500 mx-auto mb-2" />
                     <p className="text-2xl font-bold text-[#0F1516]">{selectedMeal.calories}</p>

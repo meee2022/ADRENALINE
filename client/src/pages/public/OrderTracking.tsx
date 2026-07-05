@@ -166,7 +166,7 @@ function OrderCard({ order, isRtl, t }: { order: any; isRtl: boolean; t: (a: str
                     <Icon className="h-5 w-5" />
                   </div>
                   <span
-                    className={`text-[10px] font-medium text-center ${
+                    className={`text-[10px] leading-tight font-medium text-center ${
                       isActive ? "text-slate-800" : "text-slate-400"
                     }`}
                   >

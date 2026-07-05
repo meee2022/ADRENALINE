@@ -395,6 +395,7 @@ export default function Delivery() {
         </div>
 
         {/* Delivery table */}
+        <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr style={{ background: "#f3f4f6" }}>
@@ -431,6 +432,7 @@ export default function Delivery() {
             })}
           </tbody>
         </table>
+        </div>
 
         {/* Footer */}
         <div className="border-t border-black mt-6 pt-3 text-center">

@@ -82,7 +82,7 @@ export default function PublicPlansNew() {
 
         {/* Plans Grid */}
         <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-6 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
             {plans
               .sort((a, b) => {
                 // Featured plans first
@@ -198,9 +198,9 @@ export default function PublicPlansNew() {
                 <table className="w-full">
                   <thead className="bg-[#3CC4F0] text-white">
                     <tr>
-                      <th className="py-4 px-6 text-right text-lg font-bold">{isRtl ? "الميزة" : "Feature"}</th>
+                      <th className="py-4 px-6 text-right text-lg font-bold whitespace-nowrap">{isRtl ? "الميزة" : "Feature"}</th>
                       {comparisonPlans.map((plan) => (
-                        <th key={plan._id} className="py-4 px-6 text-center text-lg font-bold">
+                        <th key={plan._id} className="py-4 px-6 text-center text-lg font-bold whitespace-nowrap">
                           {planName(plan)}
                         </th>
                       ))}
@@ -214,7 +214,7 @@ export default function PublicPlansNew() {
                       )
                     ).map((feature, idx) => (
                       <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                        <td className="py-4 px-6 text-right text-sm font-medium text-gray-700">
+                        <td className="py-4 px-6 text-right text-sm font-medium text-gray-700 whitespace-nowrap">
                           {feature}
                         </td>
                         {comparisonPlans.map((plan) => (

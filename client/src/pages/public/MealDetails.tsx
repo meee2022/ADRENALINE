@@ -40,7 +40,7 @@ export default function MealDetailsPage() {
   return (
     <PublicLayout>
       {/* Hero Image */}
-      <section className="relative h-96 overflow-hidden">
+      <section className="relative h-56 md:h-96 overflow-hidden">
         <img
           src={meal.imageUrl}
           alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
@@ -108,8 +108,8 @@ export default function MealDetailsPage() {
             <div className="grid grid-cols-3 gap-6">
               {/* Protein */}
               <div className="text-center">
-                <div className="relative w-28 h-28 mx-auto mb-3">
-                  <svg className="transform -rotate-90 w-28 h-28">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 mx-auto mb-3">
+                  <svg className="transform -rotate-90 w-20 h-20 md:w-28 md:h-28">
                     <circle
                       cx="56"
                       cy="56"
@@ -143,8 +143,8 @@ export default function MealDetailsPage() {
 
               {/* Carbs */}
               <div className="text-center">
-                <div className="relative w-28 h-28 mx-auto mb-3">
-                  <svg className="transform -rotate-90 w-28 h-28">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 mx-auto mb-3">
+                  <svg className="transform -rotate-90 w-20 h-20 md:w-28 md:h-28">
                     <circle
                       cx="56"
                       cy="56"
@@ -178,8 +178,8 @@ export default function MealDetailsPage() {
 
               {/* Fats */}
               <div className="text-center">
-                <div className="relative w-28 h-28 mx-auto mb-3">
-                  <svg className="transform -rotate-90 w-28 h-28">
+                <div className="relative w-20 h-20 md:w-28 md:h-28 mx-auto mb-3">
+                  <svg className="transform -rotate-90 w-20 h-20 md:w-28 md:h-28">
                     <circle
                       cx="56"
                       cy="56"
@@ -245,7 +245,7 @@ export default function MealDetailsPage() {
       </section>
 
       {/* Sticky Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-100 shadow-2xl z-50">
+      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t-2 border-gray-100 shadow-2xl z-50">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <div>

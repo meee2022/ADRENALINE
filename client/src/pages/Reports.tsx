@@ -168,11 +168,12 @@ function SalesReport({ from, to }: { from: string; to: string }) {
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <StatBox label="عدد الطلبات" value={filtered.length} />
           <StatBox label="إجمالي الوجبات" value={totalMeals} />
           <StatBox label="إجمالي الإيرادات" value={`${total.toLocaleString()} ر.ق`} highlight />
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -201,6 +202,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -241,12 +243,13 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-4 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
           <StatBox label="الخطط" value={filtered.length} />
           <StatBox label="الوجبات" value={totalMeals} />
           <StatBox label="جاهز" value={byStatus.PREPARED || 0} highlight />
           <StatBox label="تم التوصيل" value={byStatus.DELIVERED || 0} highlight />
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -271,6 +274,7 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -288,7 +292,7 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
         <CardTitle>تقرير التوصيل</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <StatBox label="عدد التوصيلات" value={filtered.length} highlight />
           <StatBox
             label="إجمالي الوجبات"
@@ -298,6 +302,7 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
             )}
           />
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -320,6 +325,7 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -351,10 +357,11 @@ function CustomersReport() {
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <StatBox label="إجمالي العملاء" value={customers.length} />
           <StatBox label="العملاء النشطون" value={active} highlight />
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -381,6 +388,7 @@ function CustomersReport() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -412,10 +420,11 @@ function InventoryReport() {
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <StatBox label="إجمالي المنتجات" value={items.length} />
           <StatBox label="مخزون منخفض" value={lowStock} highlight={lowStock > 0} />
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -448,6 +457,7 @@ function InventoryReport() {
             ))}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );
