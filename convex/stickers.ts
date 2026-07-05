@@ -68,18 +68,19 @@ function buildModifierText(
 export const get = query({
   args: {
     date: v.string(), // yyyy-MM-dd
-    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING")),
+    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
   },
   handler: async (ctx, args) => {
-    // 1) Plans of date + deliveryTime (confirmed only)
+    // 1) Plans of date + deliveryTime (confirmed only). "ALL" = صباحي + مسائي معاً.
     const plansAll = await ctx.db
       .query("dailyPlans")
       .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
 
+    const wantAll = args.deliveryTime === "ALL";
     const plans = plansAll.filter(
       (p: any) =>
-        String(p.deliveryTime || "") === args.deliveryTime &&
+        (wantAll || String(p.deliveryTime || "") === args.deliveryTime) &&
         isPrintableStatus(p.status),
     );
 
@@ -229,7 +230,8 @@ export const get = query({
           goal: String((c as any).goalType || (c as any).goals || "").trim(),
           // ✅ هدف/برنامج العميل (BULK / DIET / FITNESS) لعرضه على ستيكر البوكس
           program: String(c.program || (c as any).goalType || "").trim(),
-          deliveryTime: args.deliveryTime,
+          // وقت التوصيل من الخطة نفسها (عشان خيار "الكل" يعرض الوردية الصح لكل عميل)
+          deliveryTime: String(p.deliveryTime || args.deliveryTime),
           planLabel,
           dateText,
           prodDate,

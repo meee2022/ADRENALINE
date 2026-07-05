@@ -78,7 +78,7 @@ export interface DailyPlan {
 
 export type StickerQuery = {
   date: string; // yyyy-MM-dd
-  deliveryTime: "MORNING" | "EVENING";
+  deliveryTime: "MORNING" | "EVENING" | "ALL";
 };
 
 export type StickerMealRow = {

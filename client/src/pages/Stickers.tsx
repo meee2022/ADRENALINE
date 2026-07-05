@@ -4,10 +4,10 @@ import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed } from "lucide-react";
+import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers } from "lucide-react";
 import { useStickers } from "@/lib/api";
 
-type DeliveryTime = "MORNING" | "EVENING";
+type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX";
 
 function clamp(n: number, min: number, max: number) {
@@ -128,31 +128,25 @@ export default function Stickers() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 {isRtl ? "وقت التوصيل" : "Delivery Time"}
               </p>
-              <div className="grid grid-cols-2 gap-2">
-                {(["MORNING", "EVENING"] as DeliveryTime[]).map((t) => {
-                  const active = deliveryTime === t;
-                  const isMorn = t === "MORNING";
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "ALL" as DeliveryTime, ar: "الكل", en: "All", Icon: Layers, grad: "linear-gradient(135deg, #3cc4f0, #0E76AC)", shadow: "#3cc4f040" },
+                  { key: "MORNING" as DeliveryTime, ar: "صباحي", en: "Morning", Icon: Sun, grad: "linear-gradient(135deg, #f59e0b, #fcd34d)", shadow: "#f59e0b40" },
+                  { key: "EVENING" as DeliveryTime, ar: "مسائي", en: "Evening", Icon: Moon, grad: "linear-gradient(135deg, #47759c, #5a8ab5)", shadow: "#47759c40" },
+                ]).map(({ key, ar, en, Icon, grad, shadow }) => {
+                  const active = deliveryTime === key;
                   return (
                     <button
-                      key={t}
-                      onClick={() => setDeliveryTime(t)}
+                      key={key}
+                      onClick={() => setDeliveryTime(key)}
                       className={cn(
                         "h-10 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all border",
-                        active
-                          ? isMorn
-                            ? "text-white border-transparent"
-                            : "text-white border-transparent"
-                          : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
+                        active ? "text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300"
                       )}
-                      style={active ? {
-                        background: isMorn
-                          ? "linear-gradient(135deg, #f59e0b, #fcd34d)"
-                          : "linear-gradient(135deg, #47759c, #5a8ab5)",
-                        boxShadow: `0 3px 10px ${isMorn ? "#f59e0b40" : "#47759c40"}`,
-                      } : {}}
+                      style={active ? { background: grad, boxShadow: `0 3px 10px ${shadow}` } : {}}
                     >
-                      {isMorn ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                      {isRtl ? (isMorn ? "صباحي" : "مسائي") : (isMorn ? "Morning" : "Evening")}
+                      <Icon className="h-4 w-4" />
+                      {isRtl ? ar : en}
                     </button>
                   );
                 })}
