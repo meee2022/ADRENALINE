@@ -6,6 +6,11 @@ import { mutation } from "./_generated/server";
 
 export const seedRealPlans = mutation({
   handler: async (ctx) => {
+    // 🔒 حماية: يمسح كل الباقات ثم يعيد زرعها — معطّل افتراضياً.
+    // فعّله مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true
+    if (process.env.ALLOW_DESTRUCTIVE !== "true") {
+      throw new Error("إعادة زرع الباقات معطّلة لأسباب أمنية (تمسح البيانات الحالية)");
+    }
     // Delete existing plans
     const existingPlans = await ctx.db.query("publicPlans").collect();
     for (const plan of existingPlans) {
