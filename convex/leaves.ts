@@ -63,6 +63,19 @@ export const summary = query({
   },
 });
 
+/** من في إجازة في تاريخ محدد (افتراضي اليوم) — للوحة التحكم. للموظفين فقط. */
+export const onLeaveToday = query({
+  args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff") return null;
+    const today = args.date || new Date().toISOString().slice(0, 10);
+    const rows = await ctx.db.query("leaves").collect();
+    const on = rows.filter((r) => r.startDate <= today && r.endDate >= today);
+    return { count: on.length, names: on.map((r) => ({ name: r.name, type: r.type })) };
+  },
+});
+
 const leaveArgs = {
   name: v.string(),
   type: v.union(v.literal("annual"), v.literal("sick"), v.literal("travel"), v.literal("unpaid"), v.literal("emergency"), v.literal("other")),

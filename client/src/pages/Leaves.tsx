@@ -105,7 +105,7 @@ export default function Leaves() {
 
       {/* Per-employee annual balance */}
       {summary?.employees?.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {summary.employees.map((e: any) => (
             <div key={e.name} className="bg-white rounded-2xl p-3" style={{ border: "1px solid #e8eef4" }}>
               <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}</div>

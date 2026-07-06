@@ -191,6 +191,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { href: "/inventory", iconKey: "inventory", labelAr: "المخزون", labelEn: "Inventory",
         roles: ["ADMIN", "INVENTORY_MANAGER"] },
+      { href: "/inventory-reports", iconKey: "inventoryReports", labelAr: "تقارير المخزون", labelEn: "Inventory Reports",
+        roles: ["ADMIN", "INVENTORY_MANAGER"] },
       { href: "/suppliers", iconKey: "suppliers", labelAr: "الموردين", labelEn: "Suppliers",
         roles: ["ADMIN", "INVENTORY_MANAGER"] },
     ],

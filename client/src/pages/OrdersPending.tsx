@@ -81,9 +81,12 @@ export default function OrdersPending() {
       ) : (
         <div className="grid gap-4">
           {pendingOrders.map((order) => {
-            const createdDate = order.createdAt
-              ? format(new Date(order.createdAt), "dd MMMM yyyy - hh:mm a", { locale: ar })
-              : "غير محدد";
+            const createdDate = (() => {
+              const d = order.createdAt ? new Date(order.createdAt) : null;
+              return d && !isNaN(d.getTime())
+                ? format(d, "dd MMMM yyyy - hh:mm a", { locale: ar })
+                : "غير محدد";
+            })();
 
             return (
               <Card

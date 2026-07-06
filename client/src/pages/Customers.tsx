@@ -314,7 +314,7 @@ export default function Customers() {
       color: "bg-sky-100 text-[#47759c] hover:bg-sky-200 border-sky-300" },
     { key: "BULK",        label: "BULK",
       color: "bg-slate-200 text-[#0f1516] hover:bg-slate-300 border-slate-400" },
-    { key: "CUSTOMIZED",  label: isRtl ? "مخصص" : "CUSTOMIZED",
+    { key: "CUSTOMIZED",  label: "CUSTOMIZED",
       color: "bg-blue-50 text-[#47759c] hover:bg-blue-100 border-blue-200" },
     { key: "STANDARD",    label: isRtl ? "قياسي" : "STANDARD",
       color: "bg-gray-100 text-gray-500 hover:bg-gray-200 border-gray-300" },

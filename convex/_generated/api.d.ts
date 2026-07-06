@@ -11,6 +11,7 @@
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as applySchedulePairs from "../applySchedulePairs.js";
+import type * as attendance from "../attendance.js";
 import type * as auditLog from "../auditLog.js";
 import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   ai: typeof ai;
   analytics: typeof analytics;
   applySchedulePairs: typeof applySchedulePairs;
+  attendance: typeof attendance;
   auditLog: typeof auditLog;
   auth: typeof auth;
   banners: typeof banners;

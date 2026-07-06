@@ -22,6 +22,7 @@ import { api } from "@/../../convex/_generated/api";
 
 export default function Delivery() {
   const { language, dir } = useLanguage();
+  const isRtl = language === "ar" || dir === "rtl";
   const dateLocale = language === "ar" ? ar : enUS;
   const { toast } = useToast();
 
@@ -104,8 +105,6 @@ export default function Delivery() {
       });
     }
   };
-
-  const isRtl = language === "ar" || dir === "rtl";
 
   // ✅ محطات اليوم مرتّبة حسب المنطقة + رابط المسار الكامل للسائق
   const sortedPlans = [...plans].sort((a: any, b: any) =>
@@ -438,7 +437,10 @@ export default function Delivery() {
                               {customer.fullName}
                             </h3>
                             <p className="text-xs text-gray-500">
-                              {isRtl ? "تم التوصيل" : "Delivered"}{plan.deliveredAt ? " • " + format(new Date(plan.deliveredAt), "HH:mm", { locale: dateLocale }) : ""}
+                              {isRtl ? "تم التوصيل" : "Delivered"}{(() => {
+                                const d = plan.deliveredAt ? new Date(plan.deliveredAt) : null;
+                                return d && !isNaN(d.getTime()) ? " • " + format(d, "HH:mm", { locale: dateLocale }) : "";
+                              })()}
                             </p>
                           </div>
                         </div>

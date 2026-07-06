@@ -215,9 +215,12 @@ export default function OrderReviewDetail() {
     }
   };
 
-  const createdDate = order.createdAt
-    ? format(new Date(order.createdAt), "dd MMMM yyyy - hh:mm a", { locale: ar })
-    : "غير محدد";
+  const createdDate = (() => {
+    const d = order.createdAt ? new Date(order.createdAt) : null;
+    return d && !isNaN(d.getTime())
+      ? format(d, "dd MMMM yyyy - hh:mm a", { locale: ar })
+      : "غير محدد";
+  })();
 
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">

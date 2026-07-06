@@ -66,7 +66,7 @@ export default function CustomerProfile() {
   const loadProfile = async () => {
     if (!currentCustomer) return;
     try {
-      const data = await convex.query(api.customerAuth.getProfile, { accountId: currentCustomer.id });
+      const data = await convex.query(api.customerAuth.getProfile, { accountId: currentCustomer.id as any });
       setProfile(data);
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -109,6 +109,7 @@ export default function CustomerProfile() {
     const out: string[] = [];
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const start = new Date(sub.startDate);
+    if (isNaN(start.getTime())) return [];
     const end = sub.endDate ? new Date(sub.endDate) : null;
     let d = new Date(Math.max(today.getTime(), start.getTime()));
     for (let i = 0; i < 10; i++) {
@@ -139,9 +140,11 @@ export default function CustomerProfile() {
   let daysRemaining = 0;
   if (subscription?.endDate) {
     const endDate = new Date(subscription.endDate);
-    const today = new Date();
-    const diffTime = endDate.getTime() - today.getTime();
-    daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (!isNaN(endDate.getTime())) {
+      const today = new Date();
+      const diffTime = endDate.getTime() - today.getTime();
+      daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    }
   }
 
   return (
@@ -217,7 +220,8 @@ export default function CustomerProfile() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {notifs.slice(0, 8).map((n: any) => {
-                  const created = n.createdAt ? new Date(Number(n.createdAt)) : null;
+                  const createdRaw = n.createdAt ? new Date(Number(n.createdAt)) : null;
+                  const created = createdRaw && !isNaN(createdRaw.getTime()) ? createdRaw : null;
                   return (
                     <div key={n._id} className={`p-3 rounded-lg border ${n.isRead ? "bg-white border-slate-100" : "bg-cyan-50 border-cyan-200"}`}>
                       <div className="flex items-start justify-between gap-3">

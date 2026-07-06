@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
+import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 
 interface PlanOption {
@@ -146,7 +147,7 @@ export default function PlansManagement() {
     if (!confirm(t("plans_management.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.publicPlans.remove, { id });
+      await convex.mutation(api.publicPlans.remove, { id: id as Id<"publicPlans"> });
       toast({
         title: "تم الحذف",
         description: "تم حذف الخطة بنجاح",

@@ -29,6 +29,11 @@ export default function DashboardNew() {
   const { data: dailyPlans = [] } = useDailyPlans();
   const inventorySummary = useInventorySummary();
   const inventoryItems = useQuery(api.inventory.list, {}) || [];
+  // ✅ حضور وإجازات اليوم للوحة التحكم
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const dashDate = format(selectedDate, "yyyy-MM-dd");
+  const attToday = useQuery(api.attendance.todayCounts, { date: dashDate, sessionToken }) as any;
+  const leaveToday = useQuery(api.leaves.onLeaveToday, { date: dashDate, sessionToken }) as any;
 
   const stats = useMemo(() => {
     const today = format(selectedDate, "yyyy-MM-dd");
@@ -37,13 +42,22 @@ export default function DashboardNew() {
     const eveningPlans = todayPlans.filter(p => p.deliveryTime === "EVENING");
     const now = new Date();
 
-    const activeCustomers   = customers.filter(c => differenceInDays(parseISO(c.endDate), now) >= 0);
-    const expiredCustomers  = customers.filter(c => differenceInDays(parseISO(c.endDate), now) < 0);
-    const expiringCustomers = customers.filter(c => { const d = differenceInDays(parseISO(c.endDate), now); return d >= 0 && d <= 3; });
-    const expiringToday     = customers.filter(c => format(parseISO(c.endDate), "yyyy-MM-dd") === format(now, "yyyy-MM-dd"));
+    // ✅ تحويل آمن للتاريخ — يرجّع null لو التاريخ فاضي أو غير صالح (يمنع Invalid time value)
+    const safeDate = (s?: string) => {
+      if (!s) return null;
+      const d = parseISO(s);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const endDaysLeft = (c: any) => { const d = safeDate(c.endDate); return d ? differenceInDays(d, now) : null; };
+
+    const activeCustomers   = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d >= 0; });
+    const expiredCustomers  = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d < 0; });
+    const expiringCustomers = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d >= 0 && d <= 3; });
+    const todayStr = format(now, "yyyy-MM-dd");
+    const expiringToday     = customers.filter(c => { const d = safeDate(c.endDate); return d ? format(d, "yyyy-MM-dd") === todayStr : false; });
     const lowStockItems     = inventoryItems.filter((i:any) => i.current_stock <= i.min_stock);
     const cm = now.getMonth(), cy = now.getFullYear();
-    const newThisMonth = customers.filter(c => { const s = parseISO(c.startDate); return s.getMonth()===cm && s.getFullYear()===cy; });
+    const newThisMonth = customers.filter(c => { const s = safeDate(c.startDate); return s ? (s.getMonth()===cm && s.getFullYear()===cy) : false; });
 
     const morningRate = todayPlans.length > 0 ? Math.round((morningPlans.length / todayPlans.length) * 100) : 0;
 
@@ -193,6 +207,27 @@ export default function DashboardNew() {
           })}
         </div>
       </div>
+
+      {/* ── الموظفين اليوم (حضور/إجازات) ── */}
+      {(attToday || leaveToday) && (
+        <button onClick={() => setLocation("/attendance")}
+          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-right hover:border-[#3cc4f0]/40 transition-colors shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
+          <span className="text-[11px] sm:text-xs font-black text-gray-400 uppercase tracking-wider ml-auto sm:ml-0">الموظفون اليوم</span>
+          {[
+            { l: "حاضر", v: attToday?.present ?? 0, c: "#10b981" },
+            { l: "غائب", v: attToday?.absent ?? 0, c: "#ef4444" },
+            { l: "إجازة", v: leaveToday?.count ?? 0, c: "#3cc4f0" },
+            { l: "متأخر", v: attToday?.late ?? 0, c: "#f59e0b" },
+          ].map((x, i) => (
+            <div key={i} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ background: x.c }} />
+              <span className="text-lg sm:text-2xl font-black tabular-nums" style={{ color: x.c }}>{x.v}</span>
+              <span className="text-[11px] sm:text-xs font-bold text-gray-500">{x.l}</span>
+            </div>
+          ))}
+          <span className="text-[10px] text-gray-300 mr-auto hidden sm:inline">اضغط لإدارة الحضور ←</span>
+        </button>
+      )}
 
       {/* ── Row 1: 4 Gorgeous top-accented KPI cards with real operational micro-metrics ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

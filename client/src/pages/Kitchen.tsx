@@ -112,6 +112,7 @@ export default function Kitchen() {
       bulkCount: number;
       customizedCount: number;
       standardCount: number;
+      category: string;
       details: Array<{
         customerName: string;
         deliveryTime: string;
@@ -174,16 +175,17 @@ export default function Kitchen() {
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
 
           if (!summary[mealName]) {
-            summary[mealName] = { 
-              count: 0, 
-              plainCount: 0, 
-              modifiedCount: 0, 
+            summary[mealName] = {
+              count: 0,
+              plainCount: 0,
+              modifiedCount: 0,
               dietCount: 0,
               fitnessCount: 0,
               bulkCount: 0,
               customizedCount: 0,
               standardCount: 0,
-              details: [] 
+              category: categoryName,
+              details: []
             };
           }
 
@@ -219,10 +221,120 @@ export default function Kitchen() {
         });
     });
 
+    // ✅ ترتيب الطبخ حسب نوع الوجبة (فطور → غدا → عشا → سلطة → سناك) زي كشف الأخصائية
+    const catRank = (c: string): number => {
+      const s = String(c || "").toLowerCase();
+      if (/break|فطور|فطار/.test(s)) return 1;
+      if (/lunch|غدا|غداء/.test(s)) return 2;
+      if (/dinner|عشا|عشاء/.test(s)) return 3;
+      if (/salad|سلط/.test(s)) return 4;
+      if (/snack|سناك|وجبة خفيفة/.test(s)) return 5;
+      return 6;
+    };
+
+    // ✅ يجمّع التعديلات المتشابهة في سطر واحد بعدّاد ("بدون فطر ×3") بدل سطر لكل عميل
+    const buildModGroups = (details: any[]) => {
+      const groups: Record<string, any> = {};
+      details.filter((d) => !d.isPlain).forEach((d) => {
+        const parts = [
+          d.avoid && `${isRtl ? "بدون" : "No"}: ${d.avoid}`,
+          d.preferences && `${isRtl ? "تفضيل" : "Pref"}: ${d.preferences}`,
+          d.portions && `${isRtl ? "كمية" : "Portion"}: ${d.portions}`,
+          d.allergies && `${isRtl ? "حساسية" : "Allergy"}: ${d.allergies}`,
+          d.specialNotes && `${isRtl ? "ملاحظة" : "Note"}: ${d.specialNotes}`,
+        ].filter(Boolean);
+        const label = parts.join(isRtl ? " • " : " • ");
+        const key = label.toLowerCase();
+        if (!groups[key]) groups[key] = { label, count: 0, customers: [] };
+        groups[key].count += 1;
+        groups[key].customers.push({ name: d.customerName, program: d.program, deliveryTime: d.deliveryTime });
+      });
+      return Object.values(groups).sort((a: any, b: any) => b.count - a.count);
+    };
+
     return Object.entries(summary)
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.count - a.count);
+      .map(([name, data]) => ({ name, ...data, catRank: catRank(data.category), modGroups: buildModGroups(data.details) }))
+      .sort((a, b) => (a.catRank - b.catRank) || (b.count - a.count));
   }, [dailyPlans, formattedDate, customers, menuItems, categories, modifiers, isRtl]);
+
+  // ✅ المشتركون المخصّصون مجمّعون باسم كل عميل (بوكس كامل للشخص) — زي كشف الأخصائية
+  const customizedByPerson = useMemo(() => {
+    const allPlansToday = dailyPlans.filter(
+      (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
+    );
+    const byPerson: Record<string, { name: string; deliveryTime: string; items: Array<{ meal: string; note: string }> }> = {};
+    allPlansToday.forEach((plan: any) => {
+      const customer: any = getCustomer(plan.customerId);
+      const program = (customer?.program || plan.program || "").toUpperCase();
+      if (!program.includes("CUSTOM")) return;
+      const name = customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer");
+      (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
+        const meal: any = getMenuItem(item.menuItemId || item.mealId);
+        const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) : (item.mealNameAr || item.mealNameEn || "—");
+        const note = [item.avoid, item.preferences, item.portions, item.specialNotes, customer?.avoid, customer?.allergies]
+          .map((x) => String(x || "").trim()).filter(Boolean).join(isRtl ? "، " : ", ");
+        const key = name + "|" + plan.deliveryTime;
+        if (!byPerson[key]) byPerson[key] = { name, deliveryTime: plan.deliveryTime, items: [] };
+        byPerson[key].items.push({ meal: mealName, note });
+      });
+    });
+    return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
+  }, [dailyPlans, formattedDate, customers, menuItems, isRtl]);
+
+  // ✅ طباعة كشف الشيف — نافذة نظيفة A4 (إجمالي + أطباق مرتّبة + تعديلات مجمّعة + مخصّصين)
+  const handlePrintChefSheet = () => {
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
+    const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
+    const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
+    const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
+    const dishHtml = mealSummary.map((m: any) => `
+      <div class="dish">
+        <div class="dhead"><span class="dname">${esc(m.name)}</span><span class="dcount">${m.count}</span></div>
+        <div class="dsub">عادي: <b>${m.plainCount}</b> &nbsp;·&nbsp; معدّل: <b>${m.modifiedCount}</b></div>
+        ${m.modGroups.map((g: any) => `<div class="mod"><span class="x">×${g.count}</span><span class="ml">${esc(g.label || "تعديل مطلوب — راجع الطلب")}</span><span class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</span></div>`).join("")}
+      </div>`).join("");
+    const custHtml = customizedByPerson.length ? `
+      <h2 class="sec">الوجبات المخصّصة (${customizedByPerson.length})</h2>
+      <div class="pgrid">${customizedByPerson.map((p: any) => `
+        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "صباحي ☀" : "مسائي 🌙"}</span></div>
+        <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b>${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كشف المطبخ ${esc(formattedDate)}</title>
+      <style>
+        *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+        body{margin:0;padding:16px;color:#0f1516}
+        h1{font-size:20px;margin:0 0 2px} .date{color:#47759c;font-weight:700;margin-bottom:10px;font-size:13px}
+        .kpis{display:flex;gap:10px;margin-bottom:14px}
+        .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
+        .kpi .v{font-size:24px;font-weight:900} .kpi .l{font-size:11px;color:#47759c;font-weight:700}
+        .dish{border:1px solid #e8eef4;border-radius:10px;padding:8px 10px;margin-bottom:8px;break-inside:avoid}
+        .dhead{display:flex;justify-content:space-between;align-items:center}
+        .dname{font-size:16px;font-weight:800} .dcount{font-size:18px;font-weight:900;background:#0E76AC;color:#fff;border-radius:8px;padding:1px 12px}
+        .dsub{font-size:12px;color:#555;margin:3px 0 5px}
+        .mod{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:2px 0;border-top:1px dashed #eee}
+        .mod .x{font-weight:900;color:#fff;background:#d97706;border-radius:5px;padding:0 6px;font-size:12px}
+        .mod .ml{font-weight:700;flex:1} .mod .cst{color:#999;font-size:10px}
+        .sec{font-size:16px;margin:16px 0 8px;border-top:2px solid #0E76AC;padding-top:8px}
+        .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+        .person{border:1px solid #e8eef4;border-radius:10px;padding:8px;break-inside:avoid}
+        .ph{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:4px;font-size:13px}
+        .person ul{margin:0;padding-inline-start:16px} .person li{font-size:12.5px;margin:2px 0}
+        @page{size:A4;margin:10mm}
+      </style></head><body>
+      <h1>كشف المطبخ — ADRENALINE</h1><div class="date">تاريخ: ${esc(formattedDate)}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" style="color:#0E76AC">${tMeals}</div><div class="l">إجمالي الوجبات</div></div>
+        <div class="kpi"><div class="v" style="color:#3cc4f0">${tPlain}</div><div class="l">عادي</div></div>
+        <div class="kpi"><div class="v" style="color:#c2410c">${tMod}</div><div class="l">معدّل</div></div>
+        <div class="kpi"><div class="v" style="color:#47759c">${mealSummary.length}</div><div class="l">أنواع الأطباق</div></div>
+      </div>
+      ${dishHtml}
+      ${custHtml}
+      </body></html>`;
+    const w = window.open("", "_blank", "width=900,height=1000");
+    if (!w) { alert(isRtl ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); return; }
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => { w.print(); }, 300);
+  };
 
   const handleMarkPrepared = async (planId: string) => {
     try {
@@ -383,10 +495,44 @@ export default function Kitchen() {
                 </Card>
               ) : (
                 <>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
-                    {isRtl ? "تفاصيل وجبات اليوم المحدد" : "Today's Meal Details"}
-                  </h2>
-                  
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="hidden sm:block sm:w-[110px]" />
+                    <h2 className="text-2xl font-bold text-gray-900 text-center flex-1">
+                      {isRtl ? "تفاصيل وجبات اليوم المحدد" : "Today's Meal Details"}
+                    </h2>
+                    <button
+                      onClick={handlePrintChefSheet}
+                      className="h-11 px-5 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all shrink-0"
+                      style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
+                    >
+                      <Printer className="h-4 w-4" />
+                      {isRtl ? "طباعة كشف الشيف" : "Print Chef Sheet"}
+                    </button>
+                  </div>
+
+                  {/* ✅ ملخّص إجمالي اليوم للشيف (كل الوجبات · عادي · معدّل) */}
+                  {(() => {
+                    const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
+                    const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
+                    const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
+                    const cards = [
+                      { label: isRtl ? "إجمالي الوجبات" : "Total Meals", value: tMeals, bg: "linear-gradient(135deg,#3cc4f0,#0E76AC)", text: "#fff" },
+                      { label: isRtl ? "عادي" : "Plain", value: tPlain, bg: "#e8f8fd", text: "#0E76AC" },
+                      { label: isRtl ? "معدّل" : "Modified", value: tMod, bg: "#fff7ed", text: "#c2410c" },
+                      { label: isRtl ? "أنواع الأطباق" : "Dishes", value: mealSummary.length, bg: "#eaf1f7", text: "#47759c" },
+                    ];
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                        {cards.map((c, i) => (
+                          <div key={i} className="rounded-2xl px-4 py-3 text-center" style={{ background: c.bg, border: "1px solid #e8eef4" }}>
+                            <div className="text-3xl font-black tabular-nums" style={{ color: c.text }}>{c.value}</div>
+                            <div className="text-[11px] font-bold mt-0.5" style={{ color: c.text, opacity: 0.85 }}>{c.label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
                   {mealSummary.map((meal, index) => {
                     const colors = [
                       "bg-[#3cc4f0]",
@@ -488,104 +634,72 @@ export default function Kitchen() {
                               )}
                             </div>
 
-                            {/* ✅ Modified meals details shown inline directly under the card */}
-                            {(() => {
-                              const modifiedDetails = meal.details.filter((d: any) => !d.isPlain);
-                              if (modifiedDetails.length === 0) return null;
-                              
-                              // ✅ ترتيب التعديلات على الشاشة أيضاً بنفس ترتيب الطباعة (DIET -> FITNESS -> BULK -> CUSTOMIZED)
-                              const programOrder = ["DIET", "FITNESS", "BULK", "CUSTOMIZED"];
-                              const sortedDetails = [...modifiedDetails].sort((a: any, b: any) => {
-                                const progA = (a.program || "").toUpperCase();
-                                const progB = (b.program || "").toUpperCase();
-                                const indexA = programOrder.findIndex(p => progA.includes(p));
-                                const indexB = programOrder.findIndex(p => progB.includes(p));
-                                const valA = indexA === -1 ? 999 : indexA;
-                                const valB = indexB === -1 ? 999 : indexB;
-                                return valA - valB;
-                              });
-
-                              return (
-                                <div className="mt-3 pt-3 border-t-2 border-dashed border-amber-200/60 bg-amber-50/20 rounded-xl p-3">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-xs font-black text-amber-700 flex items-center gap-1.5">
-                                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                                      {isRtl ? "تفاصيل الوجبات المعدّلة (" : "Modified Meals Details ("}
-                                      {modifiedDetails.length}
-                                      {isRtl ? "):" : "):"}
-                                    </h4>
-                                  </div>
-                                  <div className="flex flex-col gap-2">
-                                    {sortedDetails.map((detail: any, idx: number) => (
-                                      <div
-                                        key={idx}
-                                        className="bg-white rounded-lg p-2.5 border border-amber-200/50 shadow-sm text-xs space-y-1 relative"
-                                      >
-                                        <div className="flex items-center justify-between gap-1 pb-1 border-b border-gray-100">
-                                          <span className="font-bold text-gray-900 truncate max-w-[120px]">
-                                            {detail.customerName}
-                                          </span>
-                                          <div className="flex items-center gap-1 flex-shrink-0">
-                                            <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                                              {detail.program}
-                                            </span>
-                                            <span className="text-[8px] font-bold px-1 py-0.5 rounded-full"
-                                              style={{
-                                                background: detail.deliveryTime === "MORNING" ? "#fffbeb" : "#eff6ff",
-                                                color: detail.deliveryTime === "MORNING" ? "#92400e" : "#1e40af",
-                                              }}>
-                                              {detail.deliveryTime === "MORNING" ? "☀" : "🌙"}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="space-y-1 pt-1 font-bold">
-                                          {detail.allergies && (
-                                            <p className="text-[11px] leading-tight text-white bg-red-600 rounded px-1.5 py-0.5">
-                                              <span className="font-black">{isRtl ? "⚠ حساسية: " : "⚠ Allergy: "}</span>
-                                              {detail.allergies}
-                                            </p>
-                                          )}
-                                          {detail.avoid && (
-                                            <p className="text-[11px] leading-tight text-red-700">
-                                              <span className="font-bold">{isRtl ? "🚫 ممنوع: " : "🚫 Avoid: "}</span>
-                                              {detail.avoid}
-                                            </p>
-                                          )}
-                                          {detail.preferences && (
-                                            <p className="text-[11px] leading-tight text-cyan-700">
-                                              <span className="font-bold">{isRtl ? "★ تفضيل: " : "★ Pref: "}</span>
-                                              {detail.preferences}
-                                            </p>
-                                          )}
-                                          {detail.portions && (
-                                            <p className="text-[11px] leading-tight text-slate-700">
-                                              <span className="font-bold">{isRtl ? "⚖ الكمية: " : "⚖ Portion: "}</span>
-                                              {detail.portions}
-                                            </p>
-                                          )}
-                                          {detail.specialNotes && (
-                                            <p className="text-[11px] leading-tight text-blue-700 italic">
-                                              <span className="font-bold not-italic">{isRtl ? "📝 ملاحظة: " : "📝 Note: "}</span>
-                                              {detail.specialNotes}
-                                            </p>
-                                          )}
-                                          {!detail.allergies && !detail.avoid && !detail.preferences && !detail.portions && !detail.specialNotes && (
-                                            <p className="text-[11px] leading-tight text-amber-700">
-                                              {isRtl ? "⚠ تعديل مطلوب — راجع تفاصيل الطلب" : "⚠ Modification required — check order"}
-                                            </p>
-                                          )}
+                            {/* ✅ تعديلات مجمّعة بعدّاد (chef-friendly): "بدون فطر ×3" + أسماء العملاء */}
+                            {meal.modGroups.length > 0 && (
+                              <div className="mt-3 pt-3 border-t-2 border-dashed border-amber-200/60 bg-amber-50/20 rounded-xl p-3">
+                                <h4 className="text-xs font-black text-amber-700 flex items-center gap-1.5 mb-2">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                                  {isRtl ? `التعديلات المطلوبة (${meal.modGroups.length} نوع · ${meal.modifiedCount} وجبة)` : `Required Modifications (${meal.modGroups.length} types · ${meal.modifiedCount} meals)`}
+                                </h4>
+                                <div className="flex flex-col gap-1.5">
+                                  {meal.modGroups.map((g: any, gi: number) => (
+                                    <div key={gi} className="bg-white rounded-lg px-3 py-2 border border-amber-200/50 shadow-sm">
+                                      <div className="flex items-start gap-2">
+                                        <span className="shrink-0 text-sm font-black text-white bg-amber-500 rounded-md px-2 py-0.5 tabular-nums">
+                                          ×{g.count}
+                                        </span>
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-[13px] font-bold text-gray-900 leading-snug break-words">
+                                            {g.label || (isRtl ? "تعديل مطلوب — راجع الطلب" : "Modification — check order")}
+                                          </p>
+                                          <p className="text-[10px] text-gray-400 mt-0.5 truncate">
+                                            {g.customers.map((c: any) => `${c.name}${c.deliveryTime === "MORNING" ? " ☀" : " 🌙"}`).join(isRtl ? "، " : ", ")}
+                                          </p>
                                         </div>
                                       </div>
-                                    ))}
-                                  </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              );
-                            })()}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     );
                   })}
+
+                  {/* ✅ قسم المشتركين المخصّصين — بوكس كامل لكل عميل باسمه (زي كشف الأخصائية) */}
+                  {customizedByPerson.length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">CUSTOMIZED</span>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {isRtl ? `الوجبات المخصّصة (${customizedByPerson.length} عميل)` : `Customized Orders (${customizedByPerson.length})`}
+                        </h3>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {customizedByPerson.map((p, i) => (
+                          <div key={i} className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 10px 24px -14px rgba(14,42,74,.16)" }}>
+                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
+                              <span className="font-black text-gray-900">{p.name}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                style={{ background: p.deliveryTime === "MORNING" ? "#fffbeb" : "#eff6ff", color: p.deliveryTime === "MORNING" ? "#92400e" : "#1e40af" }}>
+                                {p.deliveryTime === "MORNING" ? (isRtl ? "☀ صباحي" : "☀ Morning") : (isRtl ? "🌙 مسائي" : "🌙 Evening")}
+                              </span>
+                            </div>
+                            <ul className="space-y-1.5">
+                              {p.items.map((it, j) => (
+                                <li key={j} className="text-sm">
+                                  <span className="font-bold text-[#0f1516]">• {it.meal}</span>
+                                  {it.note && <span className="text-[12px] text-red-600 font-semibold"> — {it.note}</span>}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </>

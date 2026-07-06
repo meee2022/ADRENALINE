@@ -32,12 +32,14 @@ export default function HomePage() {
   const bestSellersLoading = bestSellersRaw === undefined;
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
 
-  // Real dish images for the hero carousel (fallback to banner/stock images)
+  // Hero carousel: prefer admin-managed banners (lifestyle hero shots),
+  // fall back to real dish images, then stock.
   const heroImages: string[] = (() => {
+    const bannerImgs = (banners || []).map((b: any) => b.imageUrl).filter(Boolean);
+    if (bannerImgs.length) return bannerImgs;
     const dishImgs = allMeals.filter((m: any) => m.imageUrl).slice(0, 5).map((m: any) => m.imageUrl);
     if (dishImgs.length) return dishImgs;
-    const bannerImgs = (banners || []).map((b: any) => b.imageUrl).filter(Boolean);
-    return bannerImgs.length ? bannerImgs : ["/1.png", "/2.png", "/3.png"];
+    return ["/1.png", "/2.png", "/3.png"];
   })();
 
   const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");

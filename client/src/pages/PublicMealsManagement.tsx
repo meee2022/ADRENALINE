@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import type { Id } from "@/../../convex/_generated/dataModel";
 import { convex } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,7 +111,7 @@ export default function PublicMealsManagement() {
     if (!confirm("هل أنت متأكد من حذف هذه الوجبة؟")) return;
 
     try {
-      await convex.mutation(api.publicMeals.remove, { id });
+      await convex.mutation(api.publicMeals.remove, { id: id as Id<"publicMeals"> });
       toast({ title: "تم الحذف", description: "تم حذف الوجبة بنجاح" });
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });

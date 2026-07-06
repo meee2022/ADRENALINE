@@ -106,6 +106,24 @@ export const summary = query({
   },
 });
 
+/** عدّادات حضور اليوم للوحة التحكم (حاضر/غائب/إجازة/نصف يوم/متأخر). للموظفين فقط. */
+export const todayCounts = query({
+  args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff" || !args.date) return null;
+    const rows = await ctx.db.query("attendance").withIndex("by_date", (q) => q.eq("date", args.date!)).collect();
+    return {
+      present: rows.filter((x) => x.status === "present").length,
+      absent: rows.filter((x) => x.status === "absent").length,
+      leave: rows.filter((x) => x.status === "leave").length,
+      half: rows.filter((x) => x.status === "half").length,
+      late: rows.filter((x) => x.late).length,
+      marked: rows.length,
+    };
+  },
+});
+
 /** أسماء الموظفين (من كشف الرواتب) لاختيارهم. */
 export const employeeNames = query({
   args: { sessionToken: v.optional(v.string()) },

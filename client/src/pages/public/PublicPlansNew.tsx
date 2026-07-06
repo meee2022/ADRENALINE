@@ -66,7 +66,7 @@ export default function PublicPlansNew() {
             <button
               key={tab.value}
               onClick={() => setSelectedDuration(tab.value as any)}
-              className={`px-6 md:px-8 py-2 md:py-3 rounded-full font-bold text-base md:text-lg transition-all ${
+              className={`px-3 md:px-8 py-2 md:py-3 rounded-full font-bold text-sm md:text-lg transition-all ${
                 selectedDuration === tab.value
                   ? "bg-[#3CC4F0] text-white shadow-lg scale-105"
                   : "bg-gray-100 text-[#47759C] hover:bg-gray-200"
@@ -198,9 +198,9 @@ export default function PublicPlansNew() {
                 <table className="w-full">
                   <thead className="bg-[#3CC4F0] text-white">
                     <tr>
-                      <th className="py-4 px-6 text-right text-lg font-bold whitespace-nowrap">{isRtl ? "الميزة" : "Feature"}</th>
+                      <th className="py-2 md:py-4 px-2 md:px-6 text-right text-xs md:text-base font-bold whitespace-nowrap sticky right-0 md:right-auto bg-[#3CC4F0] z-10">{isRtl ? "الميزة" : "Feature"}</th>
                       {comparisonPlans.map((plan) => (
-                        <th key={plan._id} className="py-4 px-6 text-center text-lg font-bold whitespace-nowrap">
+                        <th key={plan._id} className="py-2 md:py-4 px-2 md:px-6 text-center text-xs md:text-base font-bold whitespace-nowrap">
                           {planName(plan)}
                         </th>
                       ))}
@@ -214,11 +214,11 @@ export default function PublicPlansNew() {
                       )
                     ).map((feature, idx) => (
                       <tr key={idx} className={idx % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                        <td className="py-4 px-6 text-right text-sm font-medium text-gray-700 whitespace-nowrap">
+                        <td className={`py-2 md:py-4 px-2 md:px-6 text-right text-xs md:text-base font-medium text-gray-700 whitespace-nowrap sticky right-0 md:right-auto z-10 ${idx % 2 === 0 ? "bg-gray-50" : "bg-white"}`}>
                           {feature}
                         </td>
                         {comparisonPlans.map((plan) => (
-                          <td key={plan._id} className="py-4 px-6 text-center">
+                          <td key={plan._id} className="py-2 md:py-4 px-2 md:px-6 text-center">
                             {plan.features?.includes(feature) ? (
                               <Check className="h-6 w-6 text-[#3CC4F0] mx-auto" />
                             ) : (

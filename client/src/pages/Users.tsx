@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
+import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 import { Role } from "@/lib/types";
 
@@ -147,7 +148,7 @@ export default function Users() {
     if (!confirm(t("users.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.users.deleteUser, { userId, sessionToken });
+      await convex.mutation(api.users.deleteUser, { userId: userId as Id<"users">, sessionToken });
       toast({
         title: isRtl ? "تم الحذف" : "Deleted",
         description: isRtl ? "تم حذف المستخدم بنجاح" : "User deleted successfully",
@@ -207,7 +208,7 @@ export default function Users() {
 
     try {
       await convex.mutation(api.users.updateUser, {
-        userId: selectedUserId,
+        userId: selectedUserId as Id<"users">,
         name: formData.name,
         email: formData.email,
         role: formData.role,
@@ -217,7 +218,7 @@ export default function Users() {
       // If password is provided, update it separately
       if (formData.password) {
         await convex.mutation(api.users.changePassword, {
-          userId: selectedUserId,
+          userId: selectedUserId as Id<"users">,
           newPassword: formData.password,
           sessionToken,
         });
@@ -241,7 +242,7 @@ export default function Users() {
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
       await convex.mutation(api.users.updateUserStatus, {
-        userId,
+        userId: userId as Id<"users">,
         isActive: !currentStatus,
         sessionToken,
       });

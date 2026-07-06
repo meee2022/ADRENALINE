@@ -15,3 +15,30 @@ vite.config.ts.*
 # Sensitive: salary/payroll source files
 *SALARY*
 *salary*.pdf
+
+# Sensitive subscriber data (PII) — never commit
+*.xls
+*.xlsx
+subscribers_review*.csv
+
+# ===== Data imports / customer PII / dev artifacts (never commit) =====
+customers-import.json
+customers-backup*.json
+convex-import-payload.json
+meals_raw.json
+meal_data.json
+meal_array.txt
+schedule_pairs.json
+pairs_array.ts
+excel_slots.json
+temp_arg.json
+update_payload.json
+xl_dump.txt
+*.py
+ADRENALINE*.xlsx
+DATABASE*.xls
+calculation*.xlsx
+subscribers_review*.csv
+new image/
+panner/
+photo/

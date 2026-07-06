@@ -194,7 +194,7 @@ export default function Attendance() {
       <div className="flex flex-wrap items-end gap-3">
         <div className="space-y-1">
           <Label className="text-xs text-gray-500">{t("تاريخ اليوم", "Day")}</Label>
-          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10 w-[170px]" />
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10 w-full sm:w-[170px]" />
         </div>
         {isAdmin && (
           <Button onClick={openAdd} variant="outline" className="h-10 rounded-xl border-[#3cc4f0] text-[#0E76AC] font-bold">
@@ -204,7 +204,7 @@ export default function Attendance() {
         <div className="flex-1" />
         <div className="space-y-1">
           <Label className="text-xs text-gray-500">{t("شهر الملخّص", "Summary month")}</Label>
-          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10 w-[150px]" />
+          <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10 w-full sm:w-[150px]" />
         </div>
         {isAdmin && (
           <Button onClick={runSync} className="h-10 rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
@@ -358,8 +358,8 @@ export default function Attendance() {
               const cur = bulkRows[e.name] || { status: "present", checkIn: "", checkOut: "" };
               const already = marked.has(e.name);
               return (
-                <div key={e.name} className="flex items-center gap-2 py-1.5 border-b border-gray-50">
-                  <div className="w-40 min-w-0">
+                <div key={e.name} className="flex flex-wrap items-center gap-2 py-1.5 border-b border-gray-50">
+                  <div className="w-full sm:w-40 min-w-0">
                     <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}{already && <span className="ml-1 text-[9px] text-emerald-500">●</span>}</div>
                     <div className="text-[10px] text-gray-400 truncate">{e.designation}</div>
                   </div>

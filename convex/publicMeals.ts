@@ -124,6 +124,7 @@ export const create = mutation({
     // NEW: Scheduling
     weeks: v.optional(v.array(v.number())),
     days: v.optional(v.array(v.string())),
+    schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
     cutoffTime: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -149,6 +150,7 @@ export const create = mutation({
       isActive: args.isActive ?? true,
       weeks: args.weeks,
       days: args.days,
+      schedule: args.schedule,
       cutoffTime: args.cutoffTime,
       createdAt: Date.now(),
     });
@@ -186,6 +188,7 @@ export const update = mutation({
     // NEW: Scheduling
     weeks: v.optional(v.array(v.number())),
     days: v.optional(v.array(v.string())),
+    schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
     cutoffTime: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

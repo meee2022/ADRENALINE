@@ -11,6 +11,7 @@ import { useLanguage } from "@/lib/i18n";
 interface Props {
   image?: string;                // صورة واحدة (توافق قديم)
   images?: string[];             // عدة صور حقيقية للكاروسيل
+  videoUrl?: string;             // فيديو خلفية متحرك (اختياري) — يُشغَّل بدل الكاروسيل
   titleAr: string; titleEn: string;
   subtitleAr: string; subtitleEn: string;
   onSubscribeClick: () => void;
@@ -24,7 +25,7 @@ const TRUST = [
   { ar: "توصيل عبر 5 تطبيقات", en: "5 delivery apps" },
 ];
 
-export function HeroClean({ image, images, titleAr, titleEn, subtitleAr, subtitleEn, onSubscribeClick, onMenuClick, onSmartPlanClick }: Props) {
+export function HeroClean({ image, images, videoUrl, titleAr, titleEn, subtitleAr, subtitleEn, onSubscribeClick, onMenuClick, onSmartPlanClick }: Props) {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
@@ -46,19 +47,29 @@ export function HeroClean({ image, images, titleAr, titleEn, subtitleAr, subtitl
     <section dir={isRtl ? "rtl" : "ltr"}
       className="relative w-full overflow-hidden flex items-center py-12 md:py-0"
       style={{ minHeight: "min(74vh, 720px)", background: "#0E2A4A" }}>
-      {/* Background photos — soft crossfade */}
-      <AnimatePresence mode="sync">
-        <motion.img
-          key={idx}
-          src={slides[idx]} alt={isRtl ? "وجبة صحية طازجة من أدرينالين" : "Fresh healthy meal by Adrenaline"}
-          initial={{ opacity: 0, scale: 1.06 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
+      {/* Background — video (if provided) else soft-crossfade photos */}
+      {videoUrl ? (
+        <video
+          src={videoUrl}
+          poster={slides[0]}
+          autoPlay muted loop playsInline
           className="absolute inset-0 w-full h-full object-cover"
           style={{ filter: "brightness(0.55) saturate(1.05)" }}
         />
-      </AnimatePresence>
+      ) : (
+        <AnimatePresence mode="sync">
+          <motion.img
+            key={idx}
+            src={slides[idx]} alt={isRtl ? "وجبة صحية طازجة من أدرينالين" : "Fresh healthy meal by Adrenaline"}
+            initial={{ opacity: 0, scale: 1.06 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ filter: "brightness(0.55) saturate(1.05)" }}
+          />
+        </AnimatePresence>
+      )}
       {/* Directional gradient for text legibility */}
       <div className="absolute inset-0" style={{
         background: isRtl
@@ -132,7 +143,7 @@ export function HeroClean({ image, images, titleAr, titleEn, subtitleAr, subtitl
           </div>
 
           {/* Carousel dots */}
-          {hasMultiple && (
+          {!videoUrl && hasMultiple && (
             <div className="flex items-center gap-2.5 mt-5 md:mt-8 justify-center md:justify-start">
               {slides.map((_, i) => (
                 <button key={i} onClick={() => setIdx(i)} aria-label={`صورة ${i + 1}`}

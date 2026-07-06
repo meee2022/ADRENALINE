@@ -42,7 +42,7 @@ export default function MealDetailsPage() {
       {/* Hero Image */}
       <section className="relative h-56 md:h-96 overflow-hidden">
         <img
-          src={meal.imageUrl}
+          src={meal.imageUrl ?? undefined}
           alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
           className="w-full h-full object-cover"
         />

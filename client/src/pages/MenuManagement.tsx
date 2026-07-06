@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
 import { api } from "@/../../convex/_generated/api";
+import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 
 export default function MenuManagement() {
@@ -87,7 +88,7 @@ export default function MenuManagement() {
     if (!confirm(t("menu_management.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.menuItems.remove, { id });
+      await convex.mutation(api.menuItems.remove, { id: id as Id<"menuItems"> });
       toast({
         title: t("menu_management.delete_meal"),
         description: "تم حذف الوجبة بنجاح",
@@ -114,7 +115,7 @@ export default function MenuManagement() {
     try {
       const data = {
         name: formData.name,
-        categoryId: formData.categoryId,
+        categoryId: formData.categoryId as Id<"mealCategories">,
         calories: formData.calories ? parseInt(formData.calories) : undefined,
         macros: formData.macros || undefined,
         tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : undefined,

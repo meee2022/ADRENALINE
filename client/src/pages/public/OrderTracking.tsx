@@ -138,7 +138,12 @@ function OrderCard({ order, isRtl, t }: { order: any; isRtl: boolean; t: (a: str
           <div>
             <CardTitle className="text-lg">{order.orderNumber}</CardTitle>
             <p className="text-xs text-slate-500 mt-1">
-              {format(new Date(order.createdAt), "dd MMMM yyyy", { locale: isRtl ? ar : enUS })}
+              {(() => {
+                const d = order.createdAt ? new Date(order.createdAt) : null;
+                return d && !isNaN(d.getTime())
+                  ? format(d, "dd MMMM yyyy", { locale: isRtl ? ar : enUS })
+                  : "—";
+              })()}
             </p>
           </div>
           <Badge className={isCancelled ? "bg-red-100 text-red-700" : "bg-cyan-100 text-cyan-700"}>

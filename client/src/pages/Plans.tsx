@@ -15,6 +15,8 @@ import {
 } from "@/lib/api";
 import type { DailyPlan } from "@/lib/api";
 import { DailyPlanItem } from "@/lib/types";
+import { useQuery } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,7 @@ import {
   ChevronsUpDown,
   Copy,
   Search,
+  Sparkles,
   Download,
   Plus,
   Trash2,
@@ -88,13 +91,16 @@ function stripSystemFields<T>(obj: T): T {
 
 /* ─── MealPicker ──────────────────────────────────────── */
 function MealPicker({
-  value, onChange, items, placeholder, isRtl,
+  value, onChange, items, placeholder, isRtl, suggestedIds = [],
 }: {
   value: string | null; onChange: (id: string) => void;
-  items: any[]; placeholder: string; isRtl: boolean;
+  items: any[]; placeholder: string; isRtl: boolean; suggestedIds?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const selected = items.find((m) => m._id === value);
+  const sugSet = new Set(suggestedIds);
+  const suggested = items.filter((m) => sugSet.has(m._id));
+  const rest = items.filter((m) => !sugSet.has(m._id));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -126,8 +132,23 @@ function MealPicker({
           <CommandInput placeholder={placeholder} className={isRtl ? "text-right" : "text-left"} />
           <CommandList>
             <CommandEmpty>{isRtl ? "لا توجد نتائج" : "No results"}</CommandEmpty>
-            <CommandGroup>
-              {items.map((m) => (
+            {suggested.length > 0 && (
+              <CommandGroup heading={isRtl ? "⭐ وجبات اليوم" : "⭐ Today's meals"}>
+                {suggested.map((m) => (
+                  <CommandItem
+                    key={m._id}
+                    value={`${m.name}`}
+                    onSelect={() => { onChange(m._id); setOpen(false); }}
+                    className={cn("flex items-center justify-between", isRtl ? "flex-row-reverse" : "")}
+                  >
+                    <span className="font-bold text-sm text-[#0E76AC]">{m.name}</span>
+                    {value === m._id && <Check className="h-4 w-4 text-[#3cc4f0]" />}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+            <CommandGroup heading={suggested.length > 0 ? (isRtl ? "كل الأصناف" : "All items") : undefined}>
+              {rest.map((m) => (
                 <CommandItem
                   key={m._id}
                   value={`${m.name}`}
@@ -288,6 +309,9 @@ export default function PlansPage() {
   const { data: categories = [] } = useCategories();
   const { data: menuItems = [] } = useMenuItems();
   const { data: modifiers = [] } = useModifiers();
+  // ✅ منيو العميل (مصدر الجدول الأسبوعي الوحيد) — للتعبئة التلقائية واقتراحات اليوم
+  const publicMeals = (useQuery(api.publicMeals.list, {}) as any[] | undefined) || [];
+  const [weekOverride, setWeekOverride] = useState<number | null>(null);
 
   const formattedDate = format(date, "yyyy-MM-dd");
   const { data: dailyPlans = [] } = useDailyPlans(formattedDate);
@@ -318,6 +342,41 @@ export default function PlansPage() {
     () => [...(categories || [])].sort((a: any, b: any) => (a?.sortOrder ?? 0) - (b?.sortOrder ?? 0)),
     [categories]
   );
+
+  // ✅ اسم يوم الأسبوع من التاريخ (JS: 0=أحد..6=سبت)
+  const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const planDayName = DAY_NAMES[date.getDay()];
+  const DAY_AR: Record<string, string> = { saturday: "السبت", sunday: "الأحد", monday: "الإثنين", tuesday: "الثلاثاء", wednesday: "الأربعاء", thursday: "الخميس", friday: "الجمعة" };
+
+  // ✅ أسبوع الدورة (1-4): من تاريخ اشتراك العميل (كل عميل على دورته)، مع تجاوز يدوي اختياري
+  const rotationWeek = useMemo(() => {
+    if (weekOverride) return weekOverride;
+    const s = (selectedCustomer as any)?.startDate;
+    const start = s ? new Date(s) : null;
+    if (!start || isNaN(start.getTime())) return 1;
+    const days = Math.floor((date.getTime() - start.getTime()) / 86400000);
+    return (Math.floor(Math.max(0, days) / 7) % 4) + 1;
+  }, [weekOverride, selectedCustomer, date]);
+
+  // ✅ خريطة وجبات اليوم: categoryId → [menuItemId] — من جدول publicMeals (مصدر واحد، مطابقة مطبّعة بالاسم)
+  const scheduledByCategory = useMemo(() => {
+    const normName = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/s/g, "").replace(/(.)\1+/g, "$1");
+    const miByNorm = new Map<string, any>();
+    (menuItems as any[]).forEach((m) => { const k = normName(m.name); if (k && !miByNorm.has(k)) miByNorm.set(k, m); });
+    const map: Record<string, string[]> = {};
+    (publicMeals as any[]).forEach((pm) => {
+      if (!Array.isArray(pm.schedule)) return;
+      if (!pm.schedule.some((x: any) => x.week === rotationWeek && x.day === planDayName)) return;
+      const mi = miByNorm.get(normName(pm.nameEn)) || miByNorm.get(normName(pm.nameAr));
+      if (!mi) return;
+      const cat = String(mi.categoryId);
+      (map[cat] ||= []);
+      if (!map[cat].includes(mi._id)) map[cat].push(mi._id);
+    });
+    return map;
+  }, [publicMeals, menuItems, rotationWeek, planDayName]);
+
+  const scheduledCount = useMemo(() => Object.values(scheduledByCategory).reduce((s, a) => s + a.length, 0), [scheduledByCategory]);
 
   useEffect(() => {
     if (!selectedCustomerId || !formattedDate) { setCurrentPlan(null); return; }
@@ -383,6 +442,26 @@ export default function PlansPage() {
       notes: yesterdayPlan.notes || "",
     });
     toast({ title: isRtl ? "✓ تم نسخ خطة الأمس" : "Copied" });
+  };
+
+  // ✅ ملء الخانات الفارغة تلقائياً بوجبات اليوم من الجدول الأسبوعي (لا يستبدل المُختار)
+  const handleAutoFillDay = () => {
+    if (!currentPlan) return;
+    let filled = 0;
+    const items = (currentPlan.items as any[]).map((it: any) => {
+      if (it.isOff || it.menuItemId) return it;
+      const candidates = scheduledByCategory[String(it.categoryId)] || [];
+      if (!candidates.length) return it;
+      const idx = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
+      filled++;
+      return { ...it, menuItemId: candidates[idx] };
+    });
+    if (!filled) {
+      toast({ title: isRtl ? "لا توجد وجبات مجدولة لهذا اليوم" : "No scheduled meals for this day", variant: "destructive" });
+      return;
+    }
+    setCurrentPlan({ ...currentPlan, items });
+    toast({ title: isRtl ? `✓ تم ملء ${filled} وجبة من منيو اليوم` : `Filled ${filled} meals from today's menu` });
   };
 
   const updateItemById = (itemId: string, updates: Partial<DailyPlanItem>) => {
@@ -1084,6 +1163,36 @@ export default function PlansPage() {
                   <Copy className="h-3.5 w-3.5" />
                   {isRtl ? "نسخ خطة أمس" : "Copy Yesterday's Plan"}
                 </button>
+
+                {/* ✅ التعبئة التلقائية من منيو اليوم (الجدول الأسبوعي) */}
+                {selectedCustomer && (
+                  <div className="mt-2 rounded-xl p-2.5" style={{ background: "#eaf6fd", border: "1px solid #bfe6f7" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-[#0E76AC]">
+                        {isRtl ? `منيو ${DAY_AR[planDayName] || planDayName} · أسبوع ${rotationWeek}` : `${planDayName} · Week ${rotationWeek}`}
+                      </span>
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4].map((w) => (
+                          <button key={w} onClick={() => setWeekOverride(w === rotationWeek && weekOverride ? null : w)}
+                            className={cn("h-6 w-6 rounded-md text-[10px] font-bold transition-all",
+                              rotationWeek === w ? "text-white" : "bg-white text-gray-400 border border-gray-200")}
+                            style={rotationWeek === w ? { background: "#0E76AC" } : {}}>
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleAutoFillDay}
+                      disabled={scheduledCount === 0}
+                      className="w-full h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-2 text-white transition-all hover:opacity-90 disabled:opacity-40"
+                      style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {isRtl ? `املأ من منيو اليوم (${scheduledCount})` : `Fill from today's menu (${scheduledCount})`}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1363,6 +1472,7 @@ export default function PlansPage() {
                                     items={categoryItems}
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}
+                                    suggestedIds={scheduledByCategory[String(item.categoryId)] || []}
                                   />
 
                                   {/* Customer warnings — clean single-line strip */}

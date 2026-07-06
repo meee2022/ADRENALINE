@@ -266,17 +266,15 @@ export function useUpdateMenuItem() {
   return {
     mutate: ({ id, data }: { id: string; data: any }) =>
       mutation({
+        ...data,
         id: id as any,
-        data: data.categoryId
-          ? { ...data, categoryId: data.categoryId as any }
-          : data,
+        ...(data.categoryId ? { categoryId: data.categoryId as any } : {}),
       }),
     mutateAsync: ({ id, data }: { id: string; data: any }) =>
       mutation({
+        ...data,
         id: id as any,
-        data: data.categoryId
-          ? { ...data, categoryId: data.categoryId as any }
-          : data,
+        ...(data.categoryId ? { categoryId: data.categoryId as any } : {}),
       }),
     isLoading: false,
   };
