@@ -33,6 +33,84 @@ function computeHours(checkIn?: string, checkOut?: string) {
   return { workedHours, otHours };
 }
 
+// أقصى مدة شيفت (12 ساعة + هامش). يفصل خروج الشيفت عن دخول الشيفت اللي بعده،
+// وبيسمح للشيفت الليلي يعدّي منتصف الليل من غير ما يتلغبط مع اليوم الجديد.
+const MAX_SHIFT_MIN = 16 * 60;
+
+/** "YYYY-MM-DD" → عدد الأيام منذ حقبة (لحساب زمن مطلق يعدّي منتصف الليل). */
+function dateToDays(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+}
+
+/**
+ * يحوّل بصمات خام {name,date,time} إلى شيفتات فعلية {name, date(=يوم الدخول), checkIn, checkOut}.
+ * لكل موظف: يرتّب كل بصماته زمنيًا، يقرن كل دخول بالبصمة التالية كخروج طالما الفرق ≤ 16 ساعة
+ * (فبصمة 3 الفجر تُقرن كخروج للشيفت اللي بدأ 3 العصر إمبارح، مش دخول يوم جديد).
+ * الشيفتات اللي ليها نفس يوم الدخول تُدمج (أول دخول/آخر خروج) لمعالجة فترات الراحة.
+ */
+function buildShifts(raw: { name: string; date: string; time: string }[]) {
+  const byEmp = new Map<string, { date: string; time: string; abs: number }[]>();
+  for (const p of raw) {
+    const name = (p.name || "").trim();
+    const date = (p.date || "").trim();
+    const tm = timeToMin(p.time);
+    if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(date) || tm == null) continue;
+    let arr = byEmp.get(name);
+    if (!arr) { arr = []; byEmp.set(name, arr); }
+    arr.push({ date, time: p.time.trim(), abs: dateToDays(date) * 1440 + tm });
+  }
+  // name|يوم-الدخول → مُجمّع الشيفت
+  const acc = new Map<string, { name: string; date: string; inAbs: number; inTime: string; outAbs: number | null; outTime: string | null }>();
+  for (const [name, list] of byEmp) {
+    list.sort((a, b) => a.abs - b.abs);
+    // إزالة البصمات المكررة القريبة (أقل من دقيقتين)
+    const dd: typeof list = [];
+    for (const p of list) if (!dd.length || p.abs - dd[dd.length - 1].abs >= 2) dd.push(p);
+    let i = 0;
+    while (i < dd.length) {
+      const inn = dd[i];
+      const nxt = dd[i + 1];
+      let out: typeof inn | null = null;
+      if (nxt && nxt.abs - inn.abs <= MAX_SHIFT_MIN) { out = nxt; i += 2; } else { i += 1; }
+      const key = name + "|" + inn.date;
+      const cur = acc.get(key);
+      if (!cur) acc.set(key, { name, date: inn.date, inAbs: inn.abs, inTime: inn.time, outAbs: out ? out.abs : null, outTime: out ? out.time : null });
+      else {
+        if (inn.abs < cur.inAbs) { cur.inAbs = inn.abs; cur.inTime = inn.time; }
+        if (out && (cur.outAbs == null || out.abs > cur.outAbs)) { cur.outAbs = out.abs; cur.outTime = out.time; }
+      }
+    }
+  }
+  return Array.from(acc.values()).map((s) => ({ name: s.name, date: s.date, checkIn: s.inTime, checkOut: s.outTime || undefined }));
+}
+
+/** يكتب شيفتات البصمة، ويحذف سجلّات البصمة القديمة على أيام لم تعُد يوم دخول (خروج شيفت ليلي). */
+async function applyShifts(
+  ctx: any,
+  shifts: { name: string; date: string; checkIn: string; checkOut?: string }[],
+  rawKeys: Set<string>,
+) {
+  const shiftKeys = new Set(shifts.map((s) => s.name + "|" + s.date));
+  for (const key of rawKeys) {
+    if (shiftKeys.has(key)) continue;
+    const [name, date] = key.split("|");
+    const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", date)).first();
+    if (ex && ex.source === "biometric") await ctx.db.delete(ex._id);
+  }
+  for (const s of shifts) {
+    const { workedHours, otHours } = computeHours(s.checkIn, s.checkOut);
+    const doc = {
+      name: s.name, date: s.date, month: monthOf(s.date), status: "present" as const,
+      checkIn: s.checkIn, checkOut: s.checkOut, workedHours, otHours, source: "biometric" as const,
+    };
+    const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", s.date)).first();
+    if (ex) await ctx.db.patch(ex._id, { ...doc, updatedAt: Date.now() });
+    else await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() });
+  }
+  return { ok: true, days: shifts.length, employees: new Set(shifts.map((s) => s.name)).size };
+}
+
 /** مسافة ليفنشتاين (لمطابقة الأسماء التقريبية). */
 function lev(a: string, b: string): number {
   const m = a.length, n = b.length;
@@ -270,37 +348,13 @@ export const importPunches = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    // تجميع بالاسم+التاريخ
-    const groups = new Map<string, { name: string; date: string; times: string[] }>();
+    const rawKeys = new Set<string>();
     for (const p of args.punches) {
-      const name = (p.name || "").trim();
-      const date = (p.date || "").trim();
-      if (!name || !date || timeToMin(p.time) == null) continue;
-      const key = name + "|" + date;
-      const g = groups.get(key) || { name, date, times: [] };
-      g.times.push(p.time.trim());
-      groups.set(key, g);
+      const name = (p.name || "").trim(), date = (p.date || "").trim();
+      if (name && date) rawKeys.add(name + "|" + date);
     }
-    let n = 0;
-    const groupList = Array.from(groups.values());
-    for (const g of groupList) {
-      g.times.sort((a: string, b: string) => (timeToMin(a)! - timeToMin(b)!));
-      const checkIn = g.times[0];
-      const checkOut = g.times.length > 1 ? g.times[g.times.length - 1] : undefined;
-      const { workedHours, otHours } = computeHours(checkIn, checkOut);
-      const doc = {
-        name: g.name, date: g.date, month: monthOf(g.date), status: "present" as const,
-        checkIn, checkOut, workedHours, otHours, source: "biometric" as const,
-      };
-      const existing = await ctx.db
-        .query("attendance")
-        .withIndex("by_name_date", (q) => q.eq("name", g.name).eq("date", g.date))
-        .first();
-      if (existing) await ctx.db.patch(existing._id, { ...doc, updatedAt: Date.now() });
-      else await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() });
-      n++;
-    }
-    return { ok: true, days: n, employees: new Set(groupList.map((g) => g.name)).size };
+    const shifts = buildShifts(args.punches);
+    return await applyShifts(ctx, shifts, rawKeys);
   },
 });
 
@@ -319,37 +373,13 @@ export const importPunchesDevice = mutation({
     if (!expected || args.key !== expected) throw new Error("Unauthorized device");
     // ✅ يطابق أسماء البصمة بأسماء الرواتب تلقائيًا ويتجاهل غير المسجّلين (شركة تانية إلخ)
     const resolve = await buildPayrollResolver(ctx);
-    const groups = new Map<string, { name: string; date: string; times: string[] }>();
-    for (const p of args.punches) {
-      const canonical = resolve((p.name || "").trim());
-      const name = canonical || "";
-      const date = (p.date || "").trim();
-      if (!name || !date || timeToMin(p.time) == null) continue;
-      const gkey = name + "|" + date;
-      const g = groups.get(gkey) || { name, date, times: [] };
-      g.times.push(p.time.trim());
-      groups.set(gkey, g);
-    }
-    let n = 0;
-    const groupList = Array.from(groups.values());
-    for (const g of groupList) {
-      g.times.sort((a: string, b: string) => (timeToMin(a)! - timeToMin(b)!));
-      const checkIn = g.times[0];
-      const checkOut = g.times.length > 1 ? g.times[g.times.length - 1] : undefined;
-      const { workedHours, otHours } = computeHours(checkIn, checkOut);
-      const doc = {
-        name: g.name, date: g.date, month: monthOf(g.date), status: "present" as const,
-        checkIn, checkOut, workedHours, otHours, source: "biometric" as const,
-      };
-      const existing = await ctx.db
-        .query("attendance")
-        .withIndex("by_name_date", (q) => q.eq("name", g.name).eq("date", g.date))
-        .first();
-      if (existing) await ctx.db.patch(existing._id, { ...doc, updatedAt: Date.now() });
-      else await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() });
-      n++;
-    }
-    return { ok: true, days: n, employees: new Set(groupList.map((g) => g.name)).size };
+    const resolved = args.punches
+      .map((p) => ({ name: resolve((p.name || "").trim()) || "", date: (p.date || "").trim(), time: p.time }))
+      .filter((p) => p.name && p.date);
+    const rawKeys = new Set<string>();
+    for (const p of resolved) rawKeys.add(p.name + "|" + p.date);
+    const shifts = buildShifts(resolved);
+    return await applyShifts(ctx, shifts, rawKeys);
   },
 });
 
