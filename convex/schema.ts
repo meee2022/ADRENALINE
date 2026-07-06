@@ -22,6 +22,14 @@ export default defineSchema({
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
 
+  // ===== OT approvals (أوفرتايم معتمد يدويًا يتجاوز المحسوب من البصمة) =====
+  otApprovals: defineTable({
+    name: v.string(),      // اسم الموظف
+    month: v.string(),     // yyyy-MM
+    otHours: v.number(),   // الأوفرتايم المعتمد (ساعات)
+    updatedAt: v.number(),
+  }).index("by_month", ["month"]).index("by_name_month", ["name", "month"]),
+
   // ===== Leaves (إجازات الموظفين) =====
   leaves: defineTable({
     name: v.string(),                 // اسم الموظف

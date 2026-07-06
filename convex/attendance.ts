@@ -33,6 +33,30 @@ function computeHours(checkIn?: string, checkOut?: string) {
   return { workedHours, otHours };
 }
 
+/** مسافة ليفنشتاين (لمطابقة الأسماء التقريبية). */
+function lev(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  const d: number[][] = Array.from({ length: m + 1 }, (_, i) => { const r = new Array(n + 1).fill(0); r[0] = i; return r; });
+  for (let j = 0; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
+/** يبني دالة تطابق اسم جهاز البصمة باسم من الرواتب (توحيد التهجئة) أو null لو مش مسجّل. */
+async function buildPayrollResolver(ctx: any) {
+  const pay = await ctx.db.query("payroll").collect();
+  const names = Array.from(new Set(pay.map((p: any) => p.name).filter(Boolean))) as string[];
+  const nm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const payNorm = names.map((n) => ({ n, k: nm(n) }));
+  const cache = new Map<string, string | null>();
+  return (name: string): string | null => {
+    const k = nm(name);
+    if (cache.has(k)) return cache.get(k)!;
+    let best: string | null = null, bd = 1;
+    for (const p of payNorm) { const dd = lev(k, p.k) / Math.max(k.length, p.k.length, 1); if (dd < bd) { bd = dd; best = p.n; } }
+    const r = bd <= 0.20 ? best : null; cache.set(k, r); return r;
+  };
+}
+
 /** حضور يوم معيّن (افتراضي اليوم). للموظفين فقط. */
 export const listByDate = query({
   args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
@@ -93,9 +117,19 @@ export const summary = query({
       if (x.late) b.late++;
       b.otHours = r2(b.otHours + (x.otHours || 0));
     }
+    // ✅ الأوفرتايم المعتمد يدويًا (يتجاوز المحسوب)
+    const approvals = args.month
+      ? await ctx.db.query("otApprovals").withIndex("by_month", (q) => q.eq("month", args.month!)).collect()
+      : [];
+    const approvedByName: Record<string, number> = {};
+    for (const a of approvals) approvedByName[a.name] = a.otHours;
+
     const employees = Object.values(byName).map((b: any) => ({
       ...b,
       workedDays: r2(b.present + b.half * 0.5),
+      otComputed: b.otHours,
+      otApproved: approvedByName[b.name] ?? null,
+      otHours: approvedByName[b.name] ?? b.otHours, // المعتمد إن وُجد وإلا المحسوب
     }));
 
     // الأشهر المتاحة
@@ -270,6 +304,73 @@ export const importPunches = mutation({
   },
 });
 
+/**
+ * استيراد بصمات من جهاز البصمة (Bridge) — مُؤمّن بمفتاح سري بدل تسجيل دخول.
+ * المفتاح يُضبط في متغيّرات Convex: npx convex env set DEVICE_BRIDGE_KEY <key>
+ * نفس منطق importPunches: يجمّع لكل موظف/يوم أول وآخر بصمة ويحسب الأوفرتايم.
+ */
+export const importPunchesDevice = mutation({
+  args: {
+    key: v.string(),
+    punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string() })),
+  },
+  handler: async (ctx, args) => {
+    const expected = process.env.DEVICE_BRIDGE_KEY;
+    if (!expected || args.key !== expected) throw new Error("Unauthorized device");
+    // ✅ يطابق أسماء البصمة بأسماء الرواتب تلقائيًا ويتجاهل غير المسجّلين (شركة تانية إلخ)
+    const resolve = await buildPayrollResolver(ctx);
+    const groups = new Map<string, { name: string; date: string; times: string[] }>();
+    for (const p of args.punches) {
+      const canonical = resolve((p.name || "").trim());
+      const name = canonical || "";
+      const date = (p.date || "").trim();
+      if (!name || !date || timeToMin(p.time) == null) continue;
+      const gkey = name + "|" + date;
+      const g = groups.get(gkey) || { name, date, times: [] };
+      g.times.push(p.time.trim());
+      groups.set(gkey, g);
+    }
+    let n = 0;
+    const groupList = Array.from(groups.values());
+    for (const g of groupList) {
+      g.times.sort((a: string, b: string) => (timeToMin(a)! - timeToMin(b)!));
+      const checkIn = g.times[0];
+      const checkOut = g.times.length > 1 ? g.times[g.times.length - 1] : undefined;
+      const { workedHours, otHours } = computeHours(checkIn, checkOut);
+      const doc = {
+        name: g.name, date: g.date, month: monthOf(g.date), status: "present" as const,
+        checkIn, checkOut, workedHours, otHours, source: "biometric" as const,
+      };
+      const existing = await ctx.db
+        .query("attendance")
+        .withIndex("by_name_date", (q) => q.eq("name", g.name).eq("date", g.date))
+        .first();
+      if (existing) await ctx.db.patch(existing._id, { ...doc, updatedAt: Date.now() });
+      else await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() });
+      n++;
+    }
+    return { ok: true, days: n, employees: new Set(groupList.map((g) => g.name)).size };
+  },
+});
+
+/** اعتماد/تعديل الأوفرتايم الإجمالي لموظف في شهر (يتجاوز المحسوب من البصمة). للمدير. */
+export const setOtApproval = mutation({
+  args: { name: v.string(), month: v.string(), otHours: v.optional(v.number()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const existing = await ctx.db.query("otApprovals")
+      .withIndex("by_name_month", (q) => q.eq("name", args.name).eq("month", args.month)).first();
+    // لو otHours undefined أو null → إزالة الاعتماد (رجوع للمحسوب)
+    if (args.otHours == null) {
+      if (existing) await ctx.db.delete(existing._id);
+      return { ok: true, cleared: true };
+    }
+    if (existing) await ctx.db.patch(existing._id, { otHours: args.otHours, updatedAt: Date.now() });
+    else await ctx.db.insert("otApprovals", { name: args.name, month: args.month, otHours: args.otHours, updatedAt: Date.now() });
+    return { ok: true };
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("attendance"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -298,6 +399,11 @@ export const syncToPayroll = mutation({
       else if (x.status === "half") b.workedDays += 0.5;
       b.otHours += x.otHours || 0;
     }
+    // ✅ الأوفرتايم المعتمد يدويًا يتجاوز المحسوب
+    const approvals = await ctx.db.query("otApprovals").withIndex("by_month", (q) => q.eq("month", args.month)).collect();
+    const approvedByName: Record<string, number> = {};
+    for (const a of approvals) approvedByName[a.name] = a.otHours;
+
     const payroll = await ctx.db.query("payroll").withIndex("by_month", (q) => q.eq("month", args.month)).collect();
     let updated = 0;
     const unmatched: string[] = [];
@@ -306,7 +412,7 @@ export const syncToPayroll = mutation({
       if (!pay) { unmatched.push(name); continue; }
       const pkg = (pay.basic || 0) + (pay.allowance || 0);
       const hourly = pkg / (DAYS_PER_MONTH * WORK_HOURS_PER_DAY);
-      const otHours = r2(agg.otHours);
+      const otHours = r2(approvedByName[name] ?? agg.otHours);
       const overtime = Math.round(otHours * hourly * rate);
       await ctx.db.patch(pay._id, {
         days: Math.min(31, Math.round(agg.workedDays)),

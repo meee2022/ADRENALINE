@@ -5,6 +5,8 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { ConvexHttpClient } from "convex/browser";
+import { makeFunctionReference } from "convex/server";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -13,8 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { CalendarCheck, Plus, Trash2, Users, Fingerprint, ArrowRightLeft, Clock } from "lucide-react";
+import { CalendarCheck, Plus, Trash2, Users, Fingerprint, ArrowRightLeft, Clock, Upload, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import * as XLSX from "xlsx";
 
 const STATUSES = [
   { key: "present", ar: "حاضر", en: "Present", cls: "bg-emerald-50 text-emerald-700", dot: "#10b981" },
@@ -42,8 +45,33 @@ function normTime(s: string): string | null {
   return m ? `${pad(m[1])}:${m[2]}` : null;
 }
 
-/** يحلّل نص مُلصق من جهاز البصمة إلى نقاط بصمة {name, date, time}. مرن: يقبل CSV/TSV/سجلّ خام. */
+/** مُحلّل مخصّص لتقرير iVMS-4200 "Attendance Details" (أعمدة Name/Date/Check-In/Check-out). */
+function parseIvmsReport(text: string): { name: string; date: string; time: string }[] | null {
+  const lines = text.split(/\r?\n/);
+  const hi = lines.findIndex((l) => /person\s*id/i.test(l) && /name/i.test(l) && /check.?in/i.test(l));
+  if (hi < 0) return null;
+  const cols = lines[hi].split(",").map((c) => c.trim().toLowerCase());
+  const idx = (names: string[]) => cols.findIndex((c) => names.some((n) => c === n || c.includes(n)));
+  const iName = idx(["name"]), iDate = idx(["date"]), iIn = idx(["check-in", "check in", "checkin"]), iOut = idx(["check-out", "check out", "checkout"]);
+  if (iName < 0 || iDate < 0 || iIn < 0) return null;
+  const out: { name: string; date: string; time: string }[] = [];
+  for (let i = hi + 1; i < lines.length; i++) {
+    const parts = lines[i].split(",");
+    const date = (parts[iDate] || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue; // يتخطّى صفوف التفاصيل/الملخّص
+    const name = (parts[iName] || "").trim();
+    if (!name) continue;
+    const ci = normTime(parts[iIn] || ""), co = iOut >= 0 ? normTime(parts[iOut] || "") : null;
+    if (ci) out.push({ name, date, time: ci });
+    if (co && co !== ci) out.push({ name, date, time: co });
+  }
+  return out.length ? out : null;
+}
+
+/** يحلّل نص/ملف الحضور إلى نقاط بصمة {name, date, time}. يكتشف تقرير iVMS تلقائيًا، وإلا يستخدم المُحلّل العام. */
 function parsePunches(text: string): { name: string; date: string; time: string }[] {
+  const ivms = parseIvmsReport(text);
+  if (ivms) return ivms;
   const out: { name: string; date: string; time: string }[] = [];
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
@@ -88,6 +116,14 @@ export default function Attendance() {
   const importM = useMutation(api.attendance.importPunches);
   const removeM = useMutation(api.attendance.remove);
   const syncM = useMutation(api.attendance.syncToPayroll);
+  const otApprovalM = useMutation(api.attendance.setOtApproval);
+  const [editOt, setEditOt] = useState<{ name: string; val: string } | null>(null);
+  const saveOtApproval = async (name: string, raw: string) => {
+    const v = raw.trim() === "" ? undefined : Number(raw);
+    if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { alert(t("رقم غير صحيح", "Invalid number")); return; }
+    try { await otApprovalM({ name, month, otHours: v, sessionToken }); setEditOt(null); }
+    catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+  };
 
   // ---- Single add/edit ----
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -143,16 +179,86 @@ export default function Attendance() {
   // ---- Biometric import ----
   const [importOpen, setImportOpen] = useState(false);
   const [importText, setImportText] = useState("");
-  const parsed = useMemo(() => parsePunches(importText), [importText]);
+  const [importFileName, setImportFileName] = useState("");
+  const rawParsed = useMemo(() => parsePunches(importText), [importText]);
+  // ✅ فلترة على أسماء الرواتب فقط + توحيد التهجئة (يتجاهل شركة تانية/غير المسجّلين)
+  const [payrollOnly, setPayrollOnly] = useState(true);
+  const mapped = useMemo(() => {
+    const payNames = (emps || []).map((e) => e.name).filter(Boolean);
+    if (!payrollOnly || payNames.length === 0) return { punches: rawParsed, ignored: [] as string[] };
+    const nm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const lev = (a: string, b: string) => {
+      const m = a.length, n = b.length; const d: number[][] = Array.from({ length: m + 1 }, (_, i) => { const r = new Array(n + 1).fill(0); r[0] = i; return r; });
+      for (let j = 0; j <= n; j++) d[0][j] = j;
+      for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      return d[m][n];
+    };
+    const payNorm = payNames.map((n2) => ({ n: n2, k: nm(n2) }));
+    const cache = new Map<string, string | null>();
+    const resolve = (name: string): string | null => {
+      const k = nm(name);
+      if (cache.has(k)) return cache.get(k)!;
+      let best: string | null = null, bd = 1;
+      for (const p of payNorm) { const d = lev(k, p.k) / Math.max(k.length, p.k.length, 1); if (d < bd) { bd = d; best = p.n; } }
+      const r = bd <= 0.20 ? best : null; cache.set(k, r); return r;
+    };
+    const punches: { name: string; date: string; time: string }[] = [];
+    const ignored = new Set<string>();
+    for (const p of rawParsed) { const to = resolve(p.name); if (to) punches.push({ ...p, name: to }); else ignored.add(p.name); }
+    return { punches, ignored: Array.from(ignored) };
+  }, [rawParsed, emps, payrollOnly]);
+  const parsed = mapped.punches;
   const parsedDays = useMemo(() => new Set(parsed.map((p) => p.name + "|" + p.date)).size, [parsed]);
   const parsedEmps = useMemo(() => new Set(parsed.map((p) => p.name)).size, [parsed]);
+  // ✅ رفع ملف (Excel/CSV) من تصدير الجهاز/iVMS → يحوّله لنص للمُحلّل
+  const onImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setImportFileName(file.name);
+      const isCsvTxt = /\.(csv|txt)$/i.test(file.name);
+      if (isCsvTxt) {
+        setImportText(await file.text());
+      } else {
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const lines: string[] = [];
+        for (const sn of wb.SheetNames) {
+          const csv = XLSX.utils.sheet_to_csv(wb.Sheets[sn]);
+          if (csv.trim()) lines.push(csv);
+        }
+        setImportText(lines.join("\n"));
+      }
+    } catch (e: any) {
+      alert(t("تعذّر قراءة الملف — جرّب تصديره كـ CSV", "Couldn't read file — try exporting as CSV"));
+    }
+  };
+  const [importing, setImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
   const runImport = async () => {
     if (parsed.length === 0) { alert(t("لم يتم التعرّف على أي سجلّ", "No records recognized")); return; }
+    // ✅ حماية: لو عدد ضخم غير منطقي، أكّد قبل ما نكمّل
+    const empCount = new Set(parsed.map((p) => p.name)).size;
+    if (empCount > 400 && !confirm(t(
+      `تم التعرّف على ${empCount} "موظف" — ده رقم كبير وقد يعني إن الملف اتقرأ غلط. تكمّل؟`,
+      `Detected ${empCount} "employees" — that's unusually high and may mean the file was misread. Continue?`))) return;
+    setImporting(true); setImportProgress(0);
     try {
-      const res: any = await importM({ punches: parsed, sessionToken });
-      alert(t(`تم استيراد ${res.days} يوم لـ ${res.employees} موظف`, `Imported ${res.days} days for ${res.employees} employees`));
-      setImportOpen(false); setImportText("");
+      // ✅ اتصال HTTP منفصل (بمعزل عن الاتصال التفاعلي) عشان الاستيراد الكبير مايهنّجش الموقع
+      const httpClient = new ConvexHttpClient(import.meta.env.VITE_CONVEX_URL as string);
+      const importRef = makeFunctionReference<"mutation">("attendance:importPunches");
+      const CHUNK = 120;
+      const empSet = new Set<string>();
+      for (let i = 0; i < parsed.length; i += CHUNK) {
+        const slice = parsed.slice(i, i + CHUNK);
+        await httpClient.mutation(importRef, { punches: slice, sessionToken } as any);
+        slice.forEach((p) => empSet.add(p.name));
+        setImportProgress(Math.min(100, Math.round(((i + slice.length) / parsed.length) * 100)));
+        await new Promise((r) => setTimeout(r, 40)); // يترك الشاشة تتنفّس وتحدّث المؤشّر
+      }
+      alert(t(`تم استيراد ${parsed.length} بصمة (${empSet.size} موظف)`, `Imported ${parsed.length} punches (${empSet.size} employees)`));
+      setImportOpen(false); setImportText(""); setImportFileName("");
     } catch (e: any) { alert(e?.message || t("فشل الاستيراد", "Import failed")); }
+    finally { setImporting(false); setImportProgress(0); }
   };
 
   // ---- Sync to payroll ----
@@ -164,6 +270,54 @@ export default function Attendance() {
         + (res.unmatched?.length ? "\n" + t("غير مطابق: ", "Unmatched: ") + res.unmatched.join(", ") : "");
       alert(msg);
     } catch (e: any) { alert(e?.message || t("فشل الترحيل", "Sync failed")); }
+  };
+
+  // ---- طباعة تقرير شهري شامل (A4) ----
+  const handlePrintMonthly = () => {
+    const emps2 = (summary?.employees || []) as any[];
+    if (!emps2.length) { alert(t("لا توجد بيانات لهذا الشهر", "No data for this month")); return; }
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
+    const sorted = [...emps2].sort((a, b) => (b.workedDays || 0) - (a.workedDays || 0));
+    const tot = {
+      present: sorted.reduce((s, e) => s + (e.present || 0), 0),
+      absent: sorted.reduce((s, e) => s + (e.absent || 0), 0),
+      late: sorted.reduce((s, e) => s + (e.late || 0), 0),
+      ot: sorted.reduce((s, e) => s + (e.otHours || 0), 0),
+    };
+    const rows = sorted.map((e, i) => `<tr>
+      <td class="c">${i + 1}</td><td class="r">${esc(e.name)}</td>
+      <td class="c b">${e.workedDays ?? 0}</td><td class="c">${e.absent || 0}</td>
+      <td class="c">${e.late || 0}</td><td class="c ot">${Math.round((e.otHours || 0) * 10) / 10}</td>
+    </tr>`).join("");
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الحضور ${esc(month)}</title>
+      <style>
+        *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+        body{margin:0;padding:18px;color:#0f1516}
+        h1{font-size:20px;margin:0} .sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
+        .kpis{display:flex;gap:10px;margin-bottom:14px}
+        .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
+        .kpi .v{font-size:22px;font-weight:900} .kpi .l{font-size:11px;color:#47759c;font-weight:700}
+        table{width:100%;border-collapse:collapse;font-size:13px}
+        th{background:#0E76AC;color:#fff;padding:8px 6px;font-weight:800} td{padding:6px;border-bottom:1px solid #eef2f6}
+        tr:nth-child(even) td{background:#f7fbfe} .c{text-align:center} .r{text-align:right;font-weight:700}
+        .b{font-weight:900} .ot{color:#0E76AC;font-weight:800}
+        @page{size:A4;margin:12mm}
+      </style></head><body>
+      <h1>تقرير الحضور الشهري — ADRENALINE</h1>
+      <div class="sub">الشهر: ${esc(month)} · عدد الموظفين: ${sorted.length}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" style="color:#10b981">${tot.present}</div><div class="l">إجمالي أيام الحضور</div></div>
+        <div class="kpi"><div class="v" style="color:#ef4444">${tot.absent}</div><div class="l">إجمالي الغياب</div></div>
+        <div class="kpi"><div class="v" style="color:#f59e0b">${tot.late}</div><div class="l">مرات التأخير</div></div>
+        <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(tot.ot)}</div><div class="l">إجمالي الأوفرتايم (ساعة)</div></div>
+      </div>
+      <table><thead><tr><th>#</th><th>الموظف</th><th>أيام الحضور</th><th>الغياب</th><th>التأخير</th><th>الأوفرتايم (س)</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      </body></html>`;
+    const w = window.open("", "_blank", "width=900,height=1000");
+    if (!w) { alert(t("اسمح بالنوافذ المنبثقة للطباعة", "Allow pop-ups to print")); return; }
+    w.document.write(html); w.document.close(); w.focus();
+    setTimeout(() => w.print(), 300);
   };
 
   return (
@@ -206,6 +360,9 @@ export default function Attendance() {
           <Label className="text-xs text-gray-500">{t("شهر الملخّص", "Summary month")}</Label>
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10 w-full sm:w-[150px]" />
         </div>
+        <Button onClick={handlePrintMonthly} variant="outline" className="h-10 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]">
+          <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقرير شهري", "Monthly Report")}
+        </Button>
         {isAdmin && (
           <Button onClick={runSync} className="h-10 rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
             <ArrowRightLeft className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("ترحيل للرواتب", "Sync to Payroll")}
@@ -291,9 +448,33 @@ export default function Attendance() {
                   {e.absent > 0 && <span className="text-red-500 font-bold">{t("غياب", "A")} {e.absent}</span>}
                   {e.late > 0 && <span className="text-amber-600 font-bold">{t("تأخير", "L")} {e.late}</span>}
                 </div>
-                {e.otHours > 0 && (
-                  <div className="mt-1 text-[11px] font-bold text-[#0E76AC]">{t("أوفرتايم", "OT")}: {e.otHours} {t("ساعة", "h")}</div>
-                )}
+                {/* الأوفرتايم — قابل للتعديل (اعتماد يدوي يتجاوز المحسوب) */}
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  {editOt?.name === e.name ? (
+                    <>
+                      <span className="text-[11px] font-bold text-[#0E76AC]">{t("أوفرتايم", "OT")}:</span>
+                      <input autoFocus type="number" value={editOt!.val}
+                        onChange={(ev) => setEditOt({ name: e.name, val: ev.target.value })}
+                        onKeyDown={(ev) => { if (ev.key === "Enter") saveOtApproval(e.name, editOt!.val); if (ev.key === "Escape") setEditOt(null); }}
+                        className="w-16 h-6 text-[11px] rounded border border-[#3cc4f0] px-1" dir="ltr" />
+                      <button onClick={() => saveOtApproval(e.name, editOt!.val)} className="text-[10px] font-bold text-white bg-[#0E76AC] rounded px-1.5 h-6">{t("حفظ", "OK")}</button>
+                      <button onClick={() => setEditOt(null)} className="text-[10px] text-gray-400">✕</button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-[11px] font-bold text-[#0E76AC]">
+                        {t("أوفرتايم", "OT")}: {e.otHours} {t("ساعة", "h")}
+                      </span>
+                      {e.otApproved != null && (
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 rounded px-1" title={t(`المحسوب: ${e.otComputed}`, `Computed: ${e.otComputed}`)}>{t("معتمد", "set")}</span>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => setEditOt({ name: e.name, val: e.otApproved != null ? String(e.otApproved) : "" })}
+                          className="text-[10px] text-gray-400 hover:text-[#0E76AC]" title={t("تعديل الأوفرتايم المعتمد", "Edit approved OT")}>✎</button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -392,22 +573,43 @@ export default function Attendance() {
               {t("الصق تصدير الجهاز (Excel/CSV/سجلّ). كل سطر: الاسم، التاريخ، الوقت (أو أوقات). يتعرّف تلقائيًا على أول بصمة كدخول وآخر بصمة كخروج ويحسب الأوفرتايم.",
                  "Paste device export (Excel/CSV/log). Each line: name, date, time(s). First punch = check-in, last = check-out; OT computed automatically.")}
             </p>
+            {/* ✅ رفع ملف Excel/CSV من تصدير الجهاز/iVMS */}
+            <label className="flex items-center justify-center gap-2 h-11 rounded-xl border-2 border-dashed border-[#3cc4f0]/50 bg-[#e8f8fd]/40 text-[#0E76AC] text-sm font-bold cursor-pointer hover:bg-[#e8f8fd] transition-colors">
+              <Upload className="h-4 w-4" />
+              <span className="truncate max-w-[240px]">{importFileName || t("اختر ملف Excel / CSV", "Choose Excel / CSV file")}</span>
+              <input type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden"
+                onChange={(e) => onImportFile(e.target.files?.[0])} />
+            </label>
+            <div className="text-center text-[11px] text-gray-400">{t("— أو الصق النص —", "— or paste text —")}</div>
             <textarea
               value={importText} onChange={(e) => setImportText(e.target.value)} dir="ltr"
               placeholder={"Ahmed, 2026-07-07, 08:02\nAhmed, 2026-07-07, 18:35\nKhalid, 2026-07-07, 08:15\nKhalid, 2026-07-07, 19:40"}
               className="w-full h-40 rounded-xl border border-gray-200 p-3 text-xs font-mono focus:outline-none focus:border-[#3cc4f0]"
             />
+            {/* ✅ خيار: الرواتب فقط */}
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" checked={payrollOnly} onChange={(e) => setPayrollOnly(e.target.checked)} className="h-4 w-4 accent-[#0E76AC]" />
+              <span className="font-semibold text-[#0f1516]">{t("المسجّلين في الرواتب فقط (تجاهل غيرهم)", "Payroll employees only (ignore others)")}</span>
+            </label>
             {importText.trim() && (
-              <div className={cn("text-xs font-bold rounded-lg px-3 py-2", parsed.length ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600")}>
-                {parsed.length
-                  ? t(`تم التعرّف على ${parsed.length} بصمة — ${parsedDays} يوم لـ ${parsedEmps} موظف`, `${parsed.length} punches — ${parsedDays} days for ${parsedEmps} employees`)
-                  : t("لم يتم التعرّف على أي سجلّ — تأكد من وجود التاريخ والوقت", "No records recognized — check date & time format")}
-              </div>
+              <>
+                <div className={cn("text-xs font-bold rounded-lg px-3 py-2", parsed.length ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600")}>
+                  {parsed.length
+                    ? t(`سيتم استيراد ${parsed.length} بصمة — ${parsedDays} يوم لـ ${parsedEmps} موظف`, `${parsed.length} punches — ${parsedDays} days for ${parsedEmps} employees`)
+                    : t("لم يتم التعرّف على أي سجلّ مطابق", "No matching records recognized")}
+                </div>
+                {payrollOnly && mapped.ignored.length > 0 && (
+                  <div className="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                    {t(`تم تجاهل ${mapped.ignored.length} اسم غير مسجّل في الرواتب:`, `Ignored ${mapped.ignored.length} names not in payroll:`)}
+                    <span className="text-amber-600"> {mapped.ignored.slice(0, 12).join("، ")}{mapped.ignored.length > 12 ? " …" : ""}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <DialogFooter>
-            <Button disabled={!parsed.length} onClick={runImport} className="rounded-xl font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
-              {t("استيراد", "Import")}
+            <Button disabled={!parsed.length || importing} onClick={runImport} className="rounded-xl font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              {importing ? t(`جارٍ الاستيراد… ${importProgress}%`, `Importing… ${importProgress}%`) : t("استيراد", "Import")}
             </Button>
           </DialogFooter>
         </DialogContent>
