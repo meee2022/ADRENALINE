@@ -312,7 +312,7 @@ export default function SmartPlan() {
               </span>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 16 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,230px),1fr))", gap: 16 }}>
               {result.picks.map((m: any, i: number) => (
                 <div key={i} style={{
                   background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16,

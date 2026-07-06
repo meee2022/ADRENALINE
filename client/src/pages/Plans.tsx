@@ -936,7 +936,7 @@ export default function PlansPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}>
                   {filtered.map((customer: any) => {
                     const hasPlan = customersWithPlans.has(String(customer._id));
                     const meals = customer.mealsPerDay ?? 0;
@@ -1397,7 +1397,7 @@ export default function PlansPage() {
 
                       <div
                         className="grid gap-3"
-                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))" }}
                       >
                         {orderedItems.map((item: any) => {
                           const category = sortedCategories.find((c: any) => c._id === item.categoryId);

@@ -246,7 +246,7 @@ export default function DashboardNew() {
             </div>
             
             <div className="mt-1">
-              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
                 {stats.activeCustomersCount}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
@@ -287,7 +287,7 @@ export default function DashboardNew() {
             </div>
             
             <div className="mt-1">
-              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
                 {stats.todayMeals}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
@@ -328,7 +328,7 @@ export default function DashboardNew() {
             </div>
             
             <div className="mt-1">
-              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
                 {stats.morningDelivery}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
@@ -368,7 +368,7 @@ export default function DashboardNew() {
             </div>
             
             <div className="mt-1">
-              <p className="text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
                 {stats.eveningDelivery}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">

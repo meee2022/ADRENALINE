@@ -69,7 +69,7 @@ export default function HowToSubscribe() {
 
       <div dir={isRtl ? "rtl" : "ltr"} style={{ maxWidth: 1080, margin: "0 auto", padding: "40px 18px" }}>
         {/* Steps */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,230px),1fr))", gap: 18 }}>
           {steps.map((s, i) => {
             const Icon = s.icon;
             return (
@@ -124,7 +124,7 @@ export default function HowToSubscribe() {
           textAlign: "center", margin: "44px 0 20px" }}>
           {t("أسئلة شائعة", "Frequently Asked")}
         </h2>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: 14 }}>
           {faqs.map((f, i) => (
             <div key={i} style={{ background: B.bg2, border: `1px solid ${B.line}`, borderRadius: 14, padding: "16px 18px" }}>
               <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 15, fontWeight: 800, color: B.ink, marginBottom: 6 }}>
