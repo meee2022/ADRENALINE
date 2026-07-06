@@ -259,8 +259,9 @@ export const get = query({
       const customerId = String(c._id);
       const customerNo = customerNoById.get(customerId) ?? 0;
 
+      // ✅ لا نشترط menuItemId — الخطط المستوردة/اليدوية تحمل الاسم نصاً (mealNameEn)
       const items = (p.items || [])
-        .filter((it: any) => it && !it.isOff && it.menuItemId)
+        .filter((it: any) => it && !it.isOff && (it.menuItemId || it.mealNameEn || it.mealNameAr))
         .slice();
 
       // ترتيب حسب meta.index لو موجود
@@ -271,8 +272,9 @@ export const get = query({
       let mealIndex = 1;
 
       for (const it of items) {
-        const menu = menuMap.get(String(it.menuItemId));
-        const mealName = menu?.name || "UNKNOWN";
+        const menu = it.menuItemId ? menuMap.get(String(it.menuItemId)) : null;
+        // ✅ fallback للاسم النصّي من الخطط المستوردة
+        const mealName = menu?.name || it.mealNameAr || it.mealNameEn || "UNKNOWN";
         // ✅ تصنيف الوجبة (Lunch / Breakfast / Snack / Dinner)
         const category = catLabel(
           categoryById.get(String((menu as any)?.categoryId || (it as any).categoryId || "")) || String((it as any).category || ""),
@@ -302,13 +304,17 @@ export const get = query({
           .replace(/\[(?:⚠|✕|⚖|★)[^\]]*\]/g, "")
           .trim();
 
-        const extraParts = [special, modText].filter(Boolean);
+        // ✅ الكمية النصّية من الخطط المستوردة (مثال: 200 جم لمون تشيكن + 180 جم رز)
+        const portionsText = String(it.portions || "").trim();
+        const extraParts = [special, portionsText, modText].filter(Boolean);
         const mealTitle = extraParts.length
           ? `${mealName} — ${extraParts.join(" | ")}`
           : mealName;
 
-        // تحذيرات نظيفة منفصلة (avoid + allergies)
-        const warnings = buildWarnings(c, it.modifierIds);
+        // تحذيرات نظيفة منفصلة (avoid على مستوى العميل + الوجبة + الحساسية)
+        const warnings = [buildWarnings(c, it.modifierIds), String(it.avoid || "").trim()]
+          .filter(Boolean)
+          .join(" • ");
 
         // Macros string fallback من menuItem
         const macrosStr = String((menu as any)?.macros || "").trim();
