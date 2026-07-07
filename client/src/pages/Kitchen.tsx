@@ -167,9 +167,35 @@ export default function Kitchen() {
         .forEach((item: any) => {
           const mealId = item.menuItemId || item.mealId;
           const meal: any = getMenuItem(mealId);
-          const mealName = meal
-            ? (isRtl ? meal.nameAr || meal.name : meal.name)
-            : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unknown Meal"));
+          const rawMealName = String(
+            meal
+              ? (isRtl ? meal.nameAr || meal.name : meal.name)
+              : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unknown Meal")),
+          ).trim();
+
+          // ✅ توحيد الاسم الأساسي (زي كشف الإكسيل): "LEMON CHICKEN + RICE /NO TOMATO"
+          //    → الطبق: LEMON CHICKEN، و"+ RICE" و"NO TOMATO" تعديلات تحته بعدّاد
+          const slashParts = rawMealName.split("/");
+          let mealName = slashParts[0];
+          const nameMods = slashParts.slice(1).map((s: string) => s.trim()).filter(Boolean);
+          let sideNote = "";
+          const plusIdx = mealName.indexOf("+");
+          if (plusIdx > -1) { sideNote = mealName.slice(plusIdx).replace(/\s+/g, " ").trim(); mealName = mealName.slice(0, plusIdx); }
+          mealName = mealName.replace(/\s+/g, " ").trim() || rawMealName;
+
+          // ✅ كمية/عدد في أول الاسم ("150 G LEMON CHICKEN"، "3 EGG WHITES") → الطبق بدون الكمية،
+          //    والكمية تظهر كتعديل تحته عشان الشيف يشوفها
+          let qtyNote = "";
+          const qm = mealName.match(/^\d+\s*(?:G\b)?\s+(.+)$/i);
+          if (qm) { qtyNote = mealName; mealName = qm[1].trim(); }
+          // "EGGS (NEW EGG SHAKSHOUKA)" → الطبق الحقيقي هو اللي جوّه الأقواس
+          const pm = mealName.match(/^(.*?)\(([^)]+)\)$/);
+          if (pm && pm[2].trim().length > 3) {
+            if (!qtyNote) qtyNote = pm[1].trim();
+            mealName = pm[2].trim();
+          }
+          qtyNote = qtyNote.replace(/\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+          mealName = mealName.replace(/IRANAIN/gi, "IRANIAN"); // تصحيح إملائي شائع من الشيتات
 
           const category = getCategory(item.categoryId);
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
@@ -189,7 +215,7 @@ export default function Kitchen() {
             };
           }
 
-          const plain = isPlainMeal(item, customer);
+          const plain = isPlainMeal(item, customer) && nameMods.length === 0 && !sideNote && !qtyNote;
           summary[mealName].count += 1;
           if (plain) summary[mealName].plainCount += 1;
           else summary[mealName].modifiedCount += 1;
@@ -212,9 +238,9 @@ export default function Kitchen() {
             categoryName,
             program: customer?.program || "Standard",
             allergies: joinUniq([customer?.allergies]),
-            avoid: joinUniq([item.avoid, customer?.avoid, ...av]),
+            avoid: joinUniq([item.avoid, customer?.avoid, ...av, ...nameMods.map((m: string) => m.replace(/^NO\s+/i, ""))]),
             preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
-            portions: joinUniq([item.portions, customer?.portions, ...po]),
+            portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
             isPlain: plain,
           });
@@ -287,47 +313,56 @@ export default function Kitchen() {
     const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
     const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
     const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
+    // ✅ كشف مضغوط زي الإكسيل: عمودان، كل طبق = اسم + إجمالي، تحته "عادي ×N" ثم كل تعديل ×N بأسماء أصحابه
     const dishHtml = mealSummary.map((m: any) => `
       <div class="dish">
         <div class="dhead"><span class="dname">${esc(m.name)}</span><span class="dcount">${m.count}</span></div>
-        <div class="dsub">عادي: <b>${m.plainCount}</b> &nbsp;·&nbsp; معدّل: <b>${m.modifiedCount}</b></div>
-        ${m.modGroups.map((g: any) => `<div class="mod"><span class="x">×${g.count}</span><span class="ml">${esc(g.label || "تعديل مطلوب — راجع الطلب")}</span><span class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</span></div>`).join("")}
+        <div class="mod plain"><span class="x">×${m.plainCount}</span><span class="ml">عادي — بدون تعديلات</span></div>
+        ${m.modGroups.map((g: any) => `
+          <div class="mod"><span class="x">×${g.count}</span><span class="ml">${esc(g.label || "تعديل — راجع الطلب")}</span></div>
+          <div class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</div>`).join("")}
+        <div class="tp">Total Portions: <b>${m.count}</b></div>
       </div>`).join("");
     const custHtml = customizedByPerson.length ? `
-      <h2 class="sec">الوجبات المخصّصة (${customizedByPerson.length})</h2>
-      <div class="pgrid">${customizedByPerson.map((p: any) => `
+      <h2 class="sec">الوجبات المخصّصة — بوكس لكل عميل (${customizedByPerson.length})</h2>
+      <div class="pwrap">${customizedByPerson.map((p: any) => `
         <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "صباحي ☀" : "مسائي 🌙"}</span></div>
-        <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b>${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
+        <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b class="nt">${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
     const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>كشف المطبخ ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
-        body{margin:0;padding:16px;color:#0f1516}
-        h1{font-size:20px;margin:0 0 2px} .date{color:#47759c;font-weight:700;margin-bottom:10px;font-size:13px}
-        .kpis{display:flex;gap:10px;margin-bottom:14px}
-        .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
-        .kpi .v{font-size:24px;font-weight:900} .kpi .l{font-size:11px;color:#47759c;font-weight:700}
-        .dish{border:1px solid #e8eef4;border-radius:10px;padding:8px 10px;margin-bottom:8px;break-inside:avoid}
-        .dhead{display:flex;justify-content:space-between;align-items:center}
-        .dname{font-size:16px;font-weight:800} .dcount{font-size:18px;font-weight:900;background:#0E76AC;color:#fff;border-radius:8px;padding:1px 12px}
-        .dsub{font-size:12px;color:#555;margin:3px 0 5px}
-        .mod{display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:2px 0;border-top:1px dashed #eee}
-        .mod .x{font-weight:900;color:#fff;background:#d97706;border-radius:5px;padding:0 6px;font-size:12px}
-        .mod .ml{font-weight:700;flex:1} .mod .cst{color:#999;font-size:10px}
-        .sec{font-size:16px;margin:16px 0 8px;border-top:2px solid #0E76AC;padding-top:8px}
-        .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-        .person{border:1px solid #e8eef4;border-radius:10px;padding:8px;break-inside:avoid}
-        .ph{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding-bottom:4px;margin-bottom:4px;font-size:13px}
-        .person ul{margin:0;padding-inline-start:16px} .person li{font-size:12.5px;margin:2px 0}
-        @page{size:A4;margin:10mm}
+        body{margin:0;padding:10px;color:#0f1516;font-size:11px}
+        h1{font-size:16px;margin:0 0 1px} .date{color:#47759c;font-weight:700;margin-bottom:8px;font-size:11px}
+        .kpis{display:flex;gap:6px;margin-bottom:10px}
+        .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
+        .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
+        .wrap{column-count:2;column-gap:10px}
+        .dish{border:1.5px solid #9db8cc;border-radius:8px;padding:5px 7px;margin-bottom:7px;break-inside:avoid}
+        .dhead{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #0E76AC;padding-bottom:2px;margin-bottom:3px}
+        .dname{font-size:12.5px;font-weight:900} .dcount{font-size:13px;font-weight:900;background:#0E76AC;color:#fff;border-radius:6px;padding:0 8px}
+        .mod{display:flex;gap:5px;align-items:baseline;font-size:10.5px;padding:1.5px 0;border-top:1px dashed #e3ebf2}
+        .mod.plain{border-top:none}
+        .mod .x{font-weight:900;color:#fff;background:#d97706;border-radius:4px;padding:0 5px;font-size:10px;min-width:26px;text-align:center}
+        .mod.plain .x{background:#0E76AC}
+        .mod .ml{font-weight:700;flex:1;line-height:1.35}
+        .cst{color:#8296a8;font-size:8.5px;padding-inline-start:32px;line-height:1.3;margin-top:-1px}
+        .tp{border-top:1px solid #cdd9e4;margin-top:3px;padding-top:2px;font-size:10px;color:#0E76AC;font-weight:700;text-align:left}
+        .sec{font-size:13px;margin:12px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:page}
+        .pwrap{column-count:3;column-gap:8px}
+        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin-bottom:6px;break-inside:avoid}
+        .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
+        .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
+        .nt{color:#c2410c}
+        @page{size:A4;margin:8mm}
       </style></head><body>
-      <h1>كشف المطبخ — ADRENALINE</h1><div class="date">تاريخ: ${esc(formattedDate)}</div>
+      <h1>كشف المطبخ — ADRENALINE</h1><div class="date">تاريخ: ${esc(formattedDate)} · الأرقام تشمل المشتركين المخصّصين</div>
       <div class="kpis">
         <div class="kpi"><div class="v" style="color:#0E76AC">${tMeals}</div><div class="l">إجمالي الوجبات</div></div>
         <div class="kpi"><div class="v" style="color:#3cc4f0">${tPlain}</div><div class="l">عادي</div></div>
         <div class="kpi"><div class="v" style="color:#c2410c">${tMod}</div><div class="l">معدّل</div></div>
         <div class="kpi"><div class="v" style="color:#47759c">${mealSummary.length}</div><div class="l">أنواع الأطباق</div></div>
       </div>
-      ${dishHtml}
+      <div class="wrap">${dishHtml}</div>
       ${custHtml}
       </body></html>`;
     const w = window.open("", "_blank", "width=900,height=1000");
