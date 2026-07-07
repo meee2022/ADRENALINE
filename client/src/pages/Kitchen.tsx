@@ -228,9 +228,17 @@ export default function Kitchen() {
 
           // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
           const { av, pr, po } = resolveMods(item.modifierIds);
-          const joinUniq = (arr: (string | undefined)[]) =>
-            Array.from(new Set(arr.map((x) => String(x || "").trim()).filter(Boolean)))
-              .join(isRtl ? "، " : ", ") || undefined;
+          // ✅ دمج بدون تكرار على مستوى العنصر: "MUSHROOM ,BROCOLI" + "MUSHROOM، BROCOLI" = مرة واحدة
+          const joinUniq = (arr: (string | undefined)[]) => {
+            const seen = new Set<string>();
+            const out: string[] = [];
+            arr.flatMap((x) => String(x || "").split(/[,،]/)).forEach((tok) => {
+              const t = tok.replace(/\s+/g, " ").trim();
+              const k = t.toUpperCase();
+              if (t && !seen.has(k)) { seen.add(k); out.push(t); }
+            });
+            return out.join(isRtl ? "، " : ", ") || undefined;
+          };
 
           summary[mealName].details.push({
             customerName,
@@ -313,16 +321,15 @@ export default function Kitchen() {
     const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
     const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
     const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
-    // ✅ كشف مضغوط زي الإكسيل: عمودان، كل طبق = اسم + إجمالي، تحته "عادي ×N" ثم كل تعديل ×N بأسماء أصحابه
+    // ✅ كشف زي الإكسيل بالظبط: جدول بحدود لكل طبق — صف العنوان، صف "عادي"، صف لكل تعديل، وصف Total Portions
     const dishHtml = mealSummary.map((m: any) => `
-      <div class="dish">
-        <div class="dhead"><span class="dname">${esc(m.name)}</span><span class="dcount">${m.count}</span></div>
-        <div class="mod plain"><span class="x">×${m.plainCount}</span><span class="ml">عادي — بدون تعديلات</span></div>
+      <table class="dish">
+        <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
+        <tr class="plain"><td class="lb">عادي — بدون تعديلات</td><td class="ct">${m.plainCount}</td></tr>
         ${m.modGroups.map((g: any) => `
-          <div class="mod"><span class="x">×${g.count}</span><span class="ml">${esc(g.label || "تعديل — راجع الطلب")}</span></div>
-          <div class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</div>`).join("")}
-        <div class="tp">Total Portions: <b>${m.count}</b></div>
-      </div>`).join("");
+        <tr><td class="lb">${esc(g.label || "تعديل — راجع الطلب")}<div class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
+        <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
+      </table>`).join("");
     const custHtml = customizedByPerson.length ? `
       <h2 class="sec">الوجبات المخصّصة — بوكس لكل عميل (${customizedByPerson.length})</h2>
       <div class="pwrap">${customizedByPerson.map((p: any) => `
@@ -337,16 +344,17 @@ export default function Kitchen() {
         .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
         .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
         .wrap{column-count:2;column-gap:10px}
-        .dish{border:1.5px solid #9db8cc;border-radius:8px;padding:5px 7px;margin-bottom:7px;break-inside:avoid}
-        .dhead{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #0E76AC;padding-bottom:2px;margin-bottom:3px}
-        .dname{font-size:12.5px;font-weight:900} .dcount{font-size:13px;font-weight:900;background:#0E76AC;color:#fff;border-radius:6px;padding:0 8px}
-        .mod{display:flex;gap:5px;align-items:baseline;font-size:10.5px;padding:1.5px 0;border-top:1px dashed #e3ebf2}
-        .mod.plain{border-top:none}
-        .mod .x{font-weight:900;color:#fff;background:#d97706;border-radius:4px;padding:0 5px;font-size:10px;min-width:26px;text-align:center}
-        .mod.plain .x{background:#0E76AC}
-        .mod .ml{font-weight:700;flex:1;line-height:1.35}
-        .cst{color:#8296a8;font-size:8.5px;padding-inline-start:32px;line-height:1.3;margin-top:-1px}
-        .tp{border-top:1px solid #cdd9e4;margin-top:3px;padding-top:2px;font-size:10px;color:#0E76AC;font-weight:700;text-align:left}
+        table.dish{width:100%;border-collapse:collapse;margin-bottom:8px;break-inside:avoid;font-size:10.5px}
+        table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
+        tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
+        .dn{font-size:12.5px;font-weight:900}
+        .dc{font-size:13px;font-weight:900;text-align:center;width:44px}
+        .lb{font-weight:700;line-height:1.35}
+        .ct{font-weight:900;text-align:center;width:44px;font-size:11.5px}
+        tr.plain td{background:#e8f4fb}
+        tr:nth-child(even):not(.dh):not(.tp):not(.plain) td{background:#f6fafd}
+        .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
+        tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
         .sec{font-size:13px;margin:12px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:page}
         .pwrap{column-count:3;column-gap:8px}
         .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin-bottom:6px;break-inside:avoid}
