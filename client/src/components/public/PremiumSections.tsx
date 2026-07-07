@@ -109,7 +109,7 @@ export function PremiumAbout() {
                 }} />
               <div className="relative aspect-square rounded-[2.5rem] overflow-hidden rotate-2"
                 style={{ border: "8px solid white", boxShadow: "0 25px 50px rgba(0,0,0,0.15)" }}>
-                <img src="/hero-banner.png" alt="Adrenaline" loading="lazy" className="w-full h-full object-cover" />
+                <img src="/hero-banner.webp" alt="Adrenaline" loading="lazy" className="w-full h-full object-cover" />
                 <div className="absolute inset-0"
                   style={{ background: "linear-gradient(180deg, transparent 60%, rgba(15,21,22,0.4) 100%)" }} />
               </div>
@@ -199,10 +199,10 @@ export function PremiumMenuHighlights({ onBrowseMenu }: { onBrowseMenu: () => vo
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
   const dishes = [
-    { img: "/hero-banner.png", tagAr: "الأكثر طلباً", tagEn: "Bestseller", titleAr: "كيتو بولز", titleEn: "Keto Bowls", descAr: "بروتين عالي وكارب منخفض", descEn: "High protein, low carb", kcal: 450 },
-    { img: "/hero-banner.png", tagAr: "صباحي", tagEn: "Breakfast", titleAr: "أوتميل التوت", titleEn: "Berry Oatmeal", descAr: "بداية يوم متوازنة", descEn: "Balanced morning start", kcal: 380 },
-    { img: "/hero-banner.png", tagAr: "خفيف", tagEn: "Light", titleAr: "سلطة سيزر", titleEn: "Caesar Salad", descAr: "خضروات طازجة وبروتين", descEn: "Fresh greens with protein", kcal: 320 },
-    { img: "/hero-banner.png", tagAr: "مميز", tagEn: "Signature", titleAr: "ستيك مع كينوا", titleEn: "Steak & Quinoa", descAr: "وجبة كاملة العناصر", descEn: "Complete nutrition plate", kcal: 520 },
+    { img: "/hero-banner.webp", tagAr: "الأكثر طلباً", tagEn: "Bestseller", titleAr: "كيتو بولز", titleEn: "Keto Bowls", descAr: "بروتين عالي وكارب منخفض", descEn: "High protein, low carb", kcal: 450 },
+    { img: "/hero-banner.webp", tagAr: "صباحي", tagEn: "Breakfast", titleAr: "أوتميل التوت", titleEn: "Berry Oatmeal", descAr: "بداية يوم متوازنة", descEn: "Balanced morning start", kcal: 380 },
+    { img: "/hero-banner.webp", tagAr: "خفيف", tagEn: "Light", titleAr: "سلطة سيزر", titleEn: "Caesar Salad", descAr: "خضروات طازجة وبروتين", descEn: "Fresh greens with protein", kcal: 320 },
+    { img: "/hero-banner.webp", tagAr: "مميز", tagEn: "Signature", titleAr: "ستيك مع كينوا", titleEn: "Steak & Quinoa", descAr: "وجبة كاملة العناصر", descEn: "Complete nutrition plate", kcal: 520 },
   ];
 
   return (

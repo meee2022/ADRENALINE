@@ -9,7 +9,7 @@ export const run = mutation({
     if (banners.length >= 3) {
       // Update second banner
       await ctx.db.patch(banners[1]._id, {
-        imageUrl: "/hero-banner.png",
+        imageUrl: "/hero-banner.webp",
       });
       // Update third banner
       await ctx.db.patch(banners[2]._id, {

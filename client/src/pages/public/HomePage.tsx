@@ -39,7 +39,7 @@ export default function HomePage() {
     if (bannerImgs.length) return bannerImgs;
     const dishImgs = allMeals.filter((m: any) => m.imageUrl).slice(0, 5).map((m: any) => m.imageUrl);
     if (dishImgs.length) return dishImgs;
-    return ["/1.png", "/2.png", "/3.png"];
+    return ["/1.webp", "/2.webp", "/3.webp"];
   })();
 
   const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
