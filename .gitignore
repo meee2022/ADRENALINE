@@ -42,3 +42,12 @@ subscribers_review*.csv
 new image/
 panner/
 photo/
+
+# Attendance bridge (local device tool — secrets)
+attendance-bridge/config.json
+attendance-bridge/state.json
+attendance-bridge/node_modules/
+
+# Attendance exports (PII — device/iVMS reports)
+*Attendance*.csv
+Attendance Details*.csv
