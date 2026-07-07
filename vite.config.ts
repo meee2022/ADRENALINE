@@ -32,6 +32,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // ✅ افصل مكتبات vendor التقيلة في حِزم مستقلة (تُخزَّن مؤقتاً بالمتصفح وتخرج من حزمة الصفحة)
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "wouter"],
+          "vendor-charts": ["recharts"],
+          "vendor-xlsx": ["xlsx"],
+        },
+      },
+    },
   },
   server: {
     host: "0.0.0.0",

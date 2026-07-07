@@ -1,5 +1,5 @@
 // client/src/App.tsx
-import React, { useEffect } from "react";
+import React, { useEffect, lazy, Suspense } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
@@ -7,53 +7,55 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/Login";
 
+// ✅ كل الصفحات تُحمّل عند الطلب (code-splitting) — يقلّل حجم أول تحميل بشكل كبير
+//    (المكتبات التقيلة مثل recharts/xlsx تخرج من الحزمة الأولى).
 // Admin Pages (Protected)
-import Dashboard from "@/pages/DashboardNew1";
-import Customers from "@/pages/Customers";
-import Users from "@/pages/Users";
-import Menu from "@/pages/Menu";
-import MenuManagement from "@/pages/MenuManagement";
-import PublicMealsManagement from "@/pages/PublicMealsManagement";
-import BannersManagement from "@/pages/BannersManagement";
-import PlansManagement from "@/pages/PlansManagement";
-import Plans from "@/pages/Plans";
-import PlansReview from "@/pages/PlansReview";
-import Inventory from "@/pages/Inventory";
-import InventoryItemDetails from "@/pages/InventoryItemDetails";
-import InventoryReports from "@/pages/InventoryReports";
-import WasteReport from "@/pages/WasteReport";
-import ReceiveGoods from "@/pages/ReceiveGoods";
-import InventoryAlerts from "@/pages/InventoryAlerts";
-import PurchaseOrders from "@/pages/PurchaseOrders";
-import StockTake from "@/pages/StockTake";
-import Suppliers from "@/pages/Suppliers";
-import Kitchen from "@/pages/Kitchen";
-import Delivery from "@/pages/Delivery";
-import Stickers from "@/pages/Stickers";
-import Payroll from "@/pages/Payroll";
-import Leaves from "@/pages/Leaves";
-import Attendance from "@/pages/Attendance";
-import OrdersPending from "@/pages/OrdersPending";
-import OrderReviewDetail from "@/pages/OrderReviewDetail";
-import RestaurantSettings from "@/pages/RestaurantSettings";
-import AuditLog from "@/pages/AuditLog";
-import Reports from "@/pages/Reports";
-import AnalyticsDashboard from "@/pages/AnalyticsDashboard";
-import OrderTracking from "@/pages/public/OrderTracking";
-import Coupons from "@/pages/Coupons";
+const Dashboard = lazy(() => import("@/pages/DashboardNew1"));
+const Customers = lazy(() => import("@/pages/Customers"));
+const Users = lazy(() => import("@/pages/Users"));
+const Menu = lazy(() => import("@/pages/Menu"));
+const MenuManagement = lazy(() => import("@/pages/MenuManagement"));
+const PublicMealsManagement = lazy(() => import("@/pages/PublicMealsManagement"));
+const BannersManagement = lazy(() => import("@/pages/BannersManagement"));
+const PlansManagement = lazy(() => import("@/pages/PlansManagement"));
+const Plans = lazy(() => import("@/pages/Plans"));
+const PlansReview = lazy(() => import("@/pages/PlansReview"));
+const Inventory = lazy(() => import("@/pages/Inventory"));
+const InventoryItemDetails = lazy(() => import("@/pages/InventoryItemDetails"));
+const InventoryReports = lazy(() => import("@/pages/InventoryReports"));
+const WasteReport = lazy(() => import("@/pages/WasteReport"));
+const ReceiveGoods = lazy(() => import("@/pages/ReceiveGoods"));
+const InventoryAlerts = lazy(() => import("@/pages/InventoryAlerts"));
+const PurchaseOrders = lazy(() => import("@/pages/PurchaseOrders"));
+const StockTake = lazy(() => import("@/pages/StockTake"));
+const Suppliers = lazy(() => import("@/pages/Suppliers"));
+const Kitchen = lazy(() => import("@/pages/Kitchen"));
+const Delivery = lazy(() => import("@/pages/Delivery"));
+const Stickers = lazy(() => import("@/pages/Stickers"));
+const Payroll = lazy(() => import("@/pages/Payroll"));
+const Leaves = lazy(() => import("@/pages/Leaves"));
+const Attendance = lazy(() => import("@/pages/Attendance"));
+const OrdersPending = lazy(() => import("@/pages/OrdersPending"));
+const OrderReviewDetail = lazy(() => import("@/pages/OrderReviewDetail"));
+const RestaurantSettings = lazy(() => import("@/pages/RestaurantSettings"));
+const AuditLog = lazy(() => import("@/pages/AuditLog"));
+const Reports = lazy(() => import("@/pages/Reports"));
+const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
+const OrderTracking = lazy(() => import("@/pages/public/OrderTracking"));
+const Coupons = lazy(() => import("@/pages/Coupons"));
 
 // Public Pages (No Auth)
-import HomePage from "@/pages/public/HomePage";
-import PublicPlans from "@/pages/public/PublicPlansNew";
-import PublicMenu from "@/pages/public/PublicMenu";
-import MealDetails from "@/pages/public/MealDetails";
-import CustomerAuth from "@/pages/public/CustomerAuth";
-import CustomerProfile from "@/pages/public/CustomerProfile";
-import OrderReview from "@/pages/public/OrderReview";
-import AboutPage from "@/pages/public/AboutPage";
-import SmartPlan from "@/pages/public/SmartPlan";
-import HowToSubscribe from "@/pages/public/HowToSubscribe";
-import ContactPage from "@/pages/public/ContactPage";
+const HomePage = lazy(() => import("@/pages/public/HomePage"));
+const PublicPlans = lazy(() => import("@/pages/public/PublicPlansNew"));
+const PublicMenu = lazy(() => import("@/pages/public/PublicMenu"));
+const MealDetails = lazy(() => import("@/pages/public/MealDetails"));
+const CustomerAuth = lazy(() => import("@/pages/public/CustomerAuth"));
+const CustomerProfile = lazy(() => import("@/pages/public/CustomerProfile"));
+const OrderReview = lazy(() => import("@/pages/public/OrderReview"));
+const AboutPage = lazy(() => import("@/pages/public/AboutPage"));
+const SmartPlan = lazy(() => import("@/pages/public/SmartPlan"));
+const HowToSubscribe = lazy(() => import("@/pages/public/HowToSubscribe"));
+const ContactPage = lazy(() => import("@/pages/public/ContactPage"));
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useStore } from "@/lib/store";
@@ -111,6 +113,14 @@ function ProtectedRoute({
     <AppLayout>
       <Component />
     </AppLayout>
+  );
+}
+
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-[60vh] w-full">
+      <div className="h-10 w-10 rounded-full border-4 border-[#3cc4f0]/30 border-t-[#0E76AC] animate-spin" />
+    </div>
   );
 }
 
@@ -242,7 +252,9 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
           <AppDirSync />
-          <Router />
+          <Suspense fallback={<PageLoader />}>
+            <Router />
+          </Suspense>
           <Toaster />
         </LanguageProvider>
       </QueryClientProvider>
