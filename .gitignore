@@ -51,3 +51,7 @@ attendance-bridge/node_modules/
 # Attendance exports (PII — device/iVMS reports)
 *Attendance*.csv
 Attendance Details*.csv
+
+# Scratch analysis outputs
+appmeals.json
+xlmeals.json
