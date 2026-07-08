@@ -52,16 +52,19 @@ async function digestRequest(method, path, body) {
   return fetch(base + path, o);
 }
 
-// إعادة المحاولة تلقائيًا عند تقطّع الشبكة (بدل ما يقف)
-async function req(method, path, body, tries = 4) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// إعادة المحاولة تلقائيًا عند تقطّع الشبكة أو 401 لحظي (الجهاز بيتخنق من الطلبات السريعة أحيانًا).
+// بنعيد الـhandshake من جديد في كل محاولة (nonce جديد) فالـ401 المؤقت بيتصلح.
+async function req(method, path, body, tries = 6) {
   let last;
   for (let i = 1; i <= tries; i++) {
     try {
       const r = await digestRequest(method, path, body);
-      if (r.ok || r.status === 401) return r;
-      last = new Error(`HTTP ${r.status}`);
+      if (r.ok) return r;                 // 200 = تمام
+      last = new Error(`HTTP ${r.status}`); // بما فيها 401 اللحظي → نعيد المحاولة
     } catch (e) { last = e; }
-    if (i < tries) { log(`   … الشبكة متقطّعة، إعادة المحاولة (${i}/${tries - 1})`); await new Promise((r) => setTimeout(r, 2500)); }
+    if (i < tries) { log(`   … تعذّر مؤقتًا، إعادة المحاولة (${i}/${tries - 1})`); await sleep(3000); }
   }
   throw last;
 }
@@ -97,13 +100,13 @@ async function fetchUsers() {
 async function fetchEvents(startTime, endTime, users = {}) {
   const punches = [];
   let pos = 0;
-  for (let guard = 0; guard < 400; guard++) {
+  for (let guard = 0; guard < 2000; guard++) {
     const body = JSON.stringify({
       AcsEventCond: { searchID: "adr", searchResultPosition: pos, maxResults: 50, major: 0, minor: 0, startTime, endTime },
     });
-    const res = await req("POST", "/ISAPI/AccessControl/AcsEvent?format=json", body);
-    if (res.status === 401) throw new Error("بيانات دخول الجهاز غير صحيحة (401) — راجع username/password في config.json");
+    const res = await req("POST", "/ISAPI/AccessControl/AcsEvent?format=json", body); // req بيعيد المحاولة على 401 اللحظي
     if (!res.ok) throw new Error(`الجهاز رجّع خطأ ${res.status}`);
+    await sleep(120); // مهلة بسيطة بين الطلبات عشان ميخنقش الجهاز
     const json = await res.json();
     const ev = json.AcsEvent || {};
     const list = ev.InfoList || [];
@@ -176,25 +179,41 @@ if (process.argv[2] === "backfill") {
     process.exit(1);
   }
   log(`⏳ سحب فترة من ${from} إلى ${to} ...`);
-  const users = await fetchUsers();
+  let users = {};
+  try {
+    users = await fetchUsers();
+  } catch (e) {
+    log(`⚠️ مش قادر أوصل للجهاز (${e.message}).`);
+    log(`   • تأكد إن الكمبيوتر موصول بالجهاز، وجرّب الأمر تاني (بيكمّل من غير تكرار).`);
+    process.exit(1);
+  }
+  if (!Object.keys(users).length) { log("⚠️ الاتصال بالجهاز ضعيف — جرّب تاني."); process.exit(1); }
   log(`👥 ${Object.keys(users).length} موظف على الجهاز`);
   // نسحب أسبوع أسبوع — كل مقطع يُرفع لوحده (تقدّم واضح ورفعات صغيرة تتحمّل تقطّع الشبكة)
   const chunks = weekChunks(from, to);
   let totPunches = 0, totDays = 0;
-  const emps = new Set();
+  const failed = [];
   for (let i = 0; i < chunks.length; i++) {
     const [cf, ct] = chunks[i];
     log(`— مقطع ${i + 1}/${chunks.length}: ${cf} ← ${ct}`);
-    const punches = await fetchEvents(`${cf}T00:00:00${cfg.timezone}`, `${ct}T23:59:59${cfg.timezone}`, users);
-    if (punches.length) {
-      const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
-      totPunches += punches.length; totDays += r.days || 0;
-      log(`   ✓ ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
-    } else {
-      log("   (لا بصمات في المقطع ده)");
+    try {
+      const punches = await fetchEvents(`${cf}T00:00:00${cfg.timezone}`, `${ct}T23:59:59${cfg.timezone}`, users);
+      if (punches.length) {
+        const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
+        totPunches += punches.length; totDays += r.days || 0;
+        log(`   ✓ ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
+      } else {
+        log("   (لا بصمات في المقطع ده)");
+      }
+    } catch (e) {
+      // مقطع فشل (الجهاز اتخنق مؤقتًا) → نكمّل الباقي، ونستنى شوية عشان الجهاز يفكّ
+      failed.push(`${cf}←${ct}`);
+      log(`   ⚠️ فشل المقطع ده مؤقتًا (${e.message}) — هيكمّل الباقي. استنى شوية...`);
+      await sleep(15000);
     }
   }
-  log(`✅ انتهى سحب الفترة — إجمالي ${totPunches} بصمة / ${totDays} يوم.`);
+  log(`✅ انتهى — إجمالي ${totPunches} بصمة / ${totDays} يوم.`);
+  if (failed.length) log(`⚠️ مقاطع فشلت: ${failed.join("، ")} — شغّل نفس الأمر تاني عشان يكمّلها (آمن، مبيكررش).`);
   process.exit(0);
 }
 
