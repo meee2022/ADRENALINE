@@ -231,6 +231,8 @@ try {
 const beat = () => { try { fs.writeFileSync(LOCK, JSON.stringify({ pid: process.pid, beat: Date.now() })); } catch {} };
 beat();
 setInterval(beat, 30000);   // نبضة كل 30 ثانية تثبت إن النسخة دي حيّة
+// عند الخروج الطبيعي/الاستثناء: امسح القفل بتاعنا فقط (عشان run.bat يقدر يعيد التشغيل بعد كراش)
+process.on("exit", () => { try { const st = JSON.parse(fs.readFileSync(LOCK)); if (st.pid === process.pid) fs.unlinkSync(LOCK); } catch {} });
 
 // ---- الوضع العادي: سحب مستمر كل X دقيقة ----
 log(`جسر بصمة أدرينالين يعمل — الجهاز ${cfg.deviceIp}:${cfg.httpPort} — كل ${cfg.intervalMinutes} دقيقة`);
