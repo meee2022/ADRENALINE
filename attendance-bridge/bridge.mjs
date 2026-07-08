@@ -56,14 +56,20 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // إعادة المحاولة تلقائيًا عند تقطّع الشبكة أو 401 لحظي (الجهاز بيتخنق من الطلبات السريعة أحيانًا).
 // بنعيد الـhandshake من جديد في كل محاولة (nonce جديد) فالـ401 المؤقت بيتصلح.
-async function req(method, path, body, tries = 6) {
+async function req(method, path, body, tries = 4) {
   let last;
   for (let i = 1; i <= tries; i++) {
     try {
       const r = await digestRequest(method, path, body);
       if (r.ok) return r;                 // 200 = تمام
-      last = new Error(`HTTP ${r.status}`); // بما فيها 401 اللحظي → نعيد المحاولة
-    } catch (e) { last = e; }
+      // ❗ 401 = الجهاز رافض الدخول (غالبًا مقفول مؤقتًا من محاولات كتير).
+      // منعيدش الضغط عليه — كل محاولة بتطوّل القفل. نرمي فورًا ونستنى الدورة الجاية.
+      if (r.status === 401) throw new Error("HTTP 401 — الجهاز مقفول مؤقتًا، بنستنى بدل ما نضغط عليه");
+      last = new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      if (String(e.message).startsWith("HTTP 401")) throw e; // متعيدش على 401 نهائيًا
+      last = e; // أخطاء الشبكة (fetch failed / timeout) → نعيد المحاولة عادي
+    }
     if (i < tries) { log(`   … تعذّر مؤقتًا، إعادة المحاولة (${i}/${tries - 1})`); await sleep(3000); }
   }
   throw last;
@@ -208,8 +214,8 @@ if (process.argv[2] === "backfill") {
     } catch (e) {
       // مقطع فشل (الجهاز اتخنق مؤقتًا) → نكمّل الباقي، ونستنى شوية عشان الجهاز يفكّ
       failed.push(`${cf}←${ct}`);
-      log(`   ⚠️ فشل المقطع ده مؤقتًا (${e.message}) — هيكمّل الباقي. استنى شوية...`);
-      await sleep(15000);
+      log(`   ⚠️ فشل المقطع ده مؤقتًا (${e.message}) — هيكمّل الباقي. استنى دقيقة...`);
+      await sleep(60000); // ننتظر أطول عشان الجهاز يفكّ لو كان اتخنق
     }
   }
   log(`✅ انتهى — إجمالي ${totPunches} بصمة / ${totDays} يوم.`);
