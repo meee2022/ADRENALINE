@@ -35,6 +35,7 @@ const Stickers = lazy(() => import("@/pages/Stickers"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Leaves = lazy(() => import("@/pages/Leaves"));
 const Attendance = lazy(() => import("@/pages/Attendance"));
+const MealIssuance = lazy(() => import("@/pages/MealIssuance"));
 const OrdersPending = lazy(() => import("@/pages/OrdersPending"));
 const OrderReviewDetail = lazy(() => import("@/pages/OrderReviewDetail"));
 const RestaurantSettings = lazy(() => import("@/pages/RestaurantSettings"));
@@ -202,6 +203,9 @@ function Router() {
       </Route>
       <Route path="/kitchen">
         <ProtectedRoute component={Kitchen} />
+      </Route>
+      <Route path="/meal-issuance">
+        <ProtectedRoute component={MealIssuance} />
       </Route>
       <Route path="/delivery">
         <ProtectedRoute component={Delivery} />

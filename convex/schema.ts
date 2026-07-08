@@ -30,6 +30,31 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_month", ["month"]).index("by_name_month", ["name", "month"]),
 
+  // ===== Meal Issuances (حصر الوجبات الصادرة داخليًا: مدير/موظفين/تجربة/ضيافة/هدر) =====
+  mealIssuances: defineTable({
+    date: v.string(),                 // yyyy-MM-dd
+    month: v.string(),                // yyyy-MM (للتقارير الشهرية)
+    mealName: v.string(),             // اسم الوجبة (نصي)
+    publicMealId: v.optional(v.id("publicMeals")),
+    menuItemId: v.optional(v.id("menuItems")), // للخصم من المخزون لاحقًا لو فيه وصفة
+    quantity: v.number(),
+    category: v.union(
+      v.literal("MANAGER"),           // مدير الفرع
+      v.literal("STAFF"),             // موظفين
+      v.literal("TASTING"),           // تجربة وتذوق
+      v.literal("GUEST"),             // ضيافة
+      v.literal("WASTE"),             // هدر/تالف
+      v.literal("OTHER"),
+    ),
+    recipient: v.optional(v.string()),// اسم المستلم (للموظفين مثلاً)
+    note: v.optional(v.string()),
+    loggedBy: v.optional(v.string()), // مين سجّل
+    inventoryConsumedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_month", ["month"]),
+
   // ===== Leaves (إجازات الموظفين) =====
   leaves: defineTable({
     name: v.string(),                 // اسم الموظف

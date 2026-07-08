@@ -56,6 +56,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/",
     "/kitchen",
     "/stickers",
+    "/meal-issuance",    // حصر الوجبات الصادرة
     "/plans",            // قراءة الخطط لمعرفة الوجبات
     "/plans-review/*",
   ],
@@ -107,6 +108,7 @@ export interface MenuItemDef {
     | "publicMenu"
     | "banners"
     | "stickers"
+    | "mealIssuance"
     | "plansManagement"
     | "plans"
     | "ordersPending"
@@ -180,6 +182,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/kitchen", iconKey: "kitchen", labelAr: "المطبخ", labelEn: "Kitchen",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/stickers", iconKey: "stickers", labelAr: "طباعة الستيكرات", labelEn: "Stickers Print",
+        roles: ["ADMIN", "KITCHEN"] },
+      { href: "/meal-issuance", iconKey: "mealIssuance", labelAr: "حصر الصادر", labelEn: "Meal Issuance",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/delivery", iconKey: "delivery", labelAr: "التوصيل", labelEn: "Delivery",
         roles: ["ADMIN", "DELIVERY"] },
