@@ -57,3 +57,4 @@ appmeals.json
 xlmeals.json
 attendance-bridge/bridge.log
 attendance-bridge/status.json
+attendance-bridge/bridge.lock

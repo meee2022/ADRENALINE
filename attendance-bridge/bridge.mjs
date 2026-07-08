@@ -217,6 +217,21 @@ if (process.argv[2] === "backfill") {
   process.exit(0);
 }
 
+// ---- نسخة واحدة فقط: لو فيه نسخة شغّالة نخرج فورًا (يمنع تعدد النسخ اللي بتخنق الجهاز) ----
+const LOCK = new URL("./bridge.lock", import.meta.url);
+try {
+  if (fs.existsSync(LOCK)) {
+    const st = JSON.parse(fs.readFileSync(LOCK));
+    if (st && Date.now() - (st.beat || 0) < 90000) {   // نبضة أحدث من 90 ثانية = نسخة حيّة
+      console.log("نسخة تانية من الجسر شغّالة بالفعل — بخرج (نسخة واحدة تكفي).");
+      process.exit(0);   // خروج نظيف (0) → run.bat ميعيدش التشغيل
+    }
+  }
+} catch {}
+const beat = () => { try { fs.writeFileSync(LOCK, JSON.stringify({ pid: process.pid, beat: Date.now() })); } catch {} };
+beat();
+setInterval(beat, 30000);   // نبضة كل 30 ثانية تثبت إن النسخة دي حيّة
+
 // ---- الوضع العادي: سحب مستمر كل X دقيقة ----
 log(`جسر بصمة أدرينالين يعمل — الجهاز ${cfg.deviceIp}:${cfg.httpPort} — كل ${cfg.intervalMinutes} دقيقة`);
 tick();

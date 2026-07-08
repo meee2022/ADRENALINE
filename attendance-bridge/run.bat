@@ -24,7 +24,12 @@ echo   %date% %time%
 echo   Keep this window open. Pulls attendance every few minutes.
 echo ==================================================
 node bridge.mjs
+REM exit code 0 = another instance already running (or clean stop) -> do NOT restart
+if not errorlevel 1 (
+  echo Another instance is already running, or stopped cleanly. Exiting.
+  exit /b 0
+)
 echo.
-echo [!] Bridge stopped (network drop or error). Restarting in 15s... (close window to quit)
+echo [!] Bridge crashed (network/error). Restarting in 15s... (close window to quit)
 timeout /t 15 /nobreak >nul
 goto loop
