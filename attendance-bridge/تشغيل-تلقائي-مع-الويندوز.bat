@@ -20,9 +20,9 @@ if errorlevel 1 (
   echo [OK] Done. The bridge will now start automatically ^(HIDDEN, no window^)
   echo      every time this PC turns on / logs in.
   echo.
-  echo   - To verify it is pulling:   حالة-الجسر.bat
-  echo   - To start it now:           run-hidden.vbs
-  echo   - To stop it:                إيقاف-الجسر.bat
+  echo   - To START it now:      double-click  run-hidden.vbs
+  echo   - To VERIFY it pulls:   double-click  the STATUS file  (shows recent pulls)
+  echo   - To STOP it:           double-click  the STOP file
 )
 echo.
 pause

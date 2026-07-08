@@ -1,9 +1,8 @@
 @echo off
-chcp 65001 >nul
 title Adrenaline Bridge - Stop
-echo جاري إيقاف الجسر...
+echo Stopping the bridge...
 taskkill /f /im node.exe >nul 2>nul
-if errorlevel 1 ( echo الجسر مش شغّال أصلاً. ) else ( echo تم إيقاف الجسر. )
-echo عشان تشغّله تاني: دبل كليك على run-hidden.vbs
+if errorlevel 1 ( echo Bridge was not running. ) else ( echo Bridge stopped. )
+echo To start it again: double-click  run-hidden.vbs
 echo.
 pause

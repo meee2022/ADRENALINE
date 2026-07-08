@@ -2,23 +2,23 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 title Adrenaline Bridge - Status
-echo ==================  حالة جسر البصمة  ==================
+echo ==================  BRIDGE STATUS  ==================
 echo.
 if exist status.json (
-  echo [ آخر حالة مسجّلة ]
+  echo [ Last status ]
   type status.json
 ) else (
-  echo لسه مفيش حالة مسجّلة - يعني الجسر ماشتغلش لسه.
+  echo No status yet - the bridge has not run.
 )
 echo.
-echo --------  آخر 15 سطر من السجل  --------
+echo --------  Last 15 log lines  --------
 if exist bridge.log (
   powershell -NoProfile -Command "Get-Content -LiteralPath 'bridge.log' -Tail 15 -Encoding UTF8"
 ) else (
-  echo لسه مفيش سجل bridge.log
+  echo No bridge.log yet.
 )
 echo.
-echo ملاحظة: لو آخر وقت في السجل قريب من دلوقتي = الجسر شغّال وبيسحب فعليًا.
-echo         لو آخر وقت من ساعات = الجسر واقف (شغّله من run-hidden.vbs او run.bat).
+echo NOTE: if the last time above is close to NOW  = bridge is running and pulling.
+echo       if the last time is hours ago          = bridge is stopped (run run-hidden.vbs).
 echo.
 pause
