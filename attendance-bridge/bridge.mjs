@@ -11,12 +11,26 @@ import { makeFunctionReference } from "convex/server";
 const HERE = new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const cfg = JSON.parse(fs.readFileSync(new URL("./config.json", import.meta.url)));
 const STATE = new URL("./state.json", import.meta.url);
+const LOG = new URL("./bridge.log", import.meta.url);      // سجل يقدر أي حد يفتحه ويتأكد إنه بيسحب
+const STATUS = new URL("./status.json", import.meta.url);  // آخر حالة (للعرض السريع)
 
 const md5 = (s) => crypto.createHash("md5").update(s).digest("hex");
 const importFn = makeFunctionReference("attendance:importPunchesDevice");
 const convex = new ConvexHttpClient(cfg.convexUrl);
 
-function log(...a) { console.log(new Date().toLocaleString(), "|", ...a); }
+// يكتب في الشاشة + في ملف bridge.log (مع تحديد الحجم) عشان يبقى فيه دليل فعلي حتى لو شغّال مخفي
+function log(...a) {
+  const line = `${new Date().toLocaleString()} | ${a.join(" ")}`;
+  console.log(line);
+  try {
+    if (fs.existsSync(LOG) && fs.statSync(LOG).size > 1_000_000) fs.writeFileSync(LOG, ""); // تصفير لو كبر
+    fs.appendFileSync(LOG, line + "\n");
+  } catch {}
+}
+// يسجّل آخر حالة في ملف صغير (لعرضها في زرار "حالة الجسر")
+function writeStatus(obj) {
+  try { fs.writeFileSync(STATUS, JSON.stringify({ ...obj, at: new Date().toLocaleString() }, null, 2)); } catch {}
+}
 
 // ---- HTTP Digest auth (Hikvision ISAPI) — بمهلة زمنية لكل طلب ----
 const REQ_TIMEOUT = 25000; // 25 ثانية لكل طلب — يمنع التعليق للأبد لو الشبكة قطعت
@@ -140,12 +154,15 @@ async function tick() {
     if (punches.length) {
       const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
       log(`✓ ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
+      writeStatus({ ok: true, lastPull: punches.length, days: r.days, employees: r.employees, note: "تم السحب والرفع بنجاح" });
     } else {
-      log("لا بصمات جديدة");
+      log("لا بصمات جديدة (الاتصال بالجهاز تمام)");
+      writeStatus({ ok: true, lastPull: 0, note: "متصل بالجهاز — لا بصمات جديدة" });
     }
     fs.writeFileSync(STATE, JSON.stringify({ lastEnd: now.toISOString() }));
   } catch (e) {
     log("⚠️ خطأ:", e.message);
+    writeStatus({ ok: false, note: "خطأ: " + e.message });
   }
 }
 

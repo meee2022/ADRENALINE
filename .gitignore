@@ -55,3 +55,5 @@ Attendance Details*.csv
 # Scratch analysis outputs
 appmeals.json
 xlmeals.json
+attendance-bridge/bridge.log
+attendance-bridge/status.json
