@@ -18,10 +18,12 @@ const convex = new ConvexHttpClient(cfg.convexUrl);
 
 function log(...a) { console.log(new Date().toLocaleString(), "|", ...a); }
 
-// ---- HTTP Digest auth (Hikvision ISAPI) ----
+// ---- HTTP Digest auth (Hikvision ISAPI) — بمهلة زمنية لكل طلب ----
+const REQ_TIMEOUT = 25000; // 25 ثانية لكل طلب — يمنع التعليق للأبد لو الشبكة قطعت
 async function digestRequest(method, path, body) {
   const base = `http://${cfg.deviceIp}:${cfg.httpPort}`;
-  const first = await fetch(base + path, { method, body, headers: { "Content-Type": "application/json" } });
+  const opts = () => ({ method, body, headers: { "Content-Type": "application/json" }, signal: AbortSignal.timeout(REQ_TIMEOUT) });
+  const first = await fetch(base + path, opts());
   if (first.status !== 401) return first;
   const wa = first.headers.get("www-authenticate") || "";
   const get = (k) => (wa.match(new RegExp(`${k}="?([^",]+)"?`)) || [])[1];
@@ -32,7 +34,22 @@ async function digestRequest(method, path, body) {
   const response = md5(`${ha1}:${nonce}:${nc}:${cnonce}:${qop}:${ha2}`);
   let auth = `Digest username="${cfg.username}", realm="${realm}", nonce="${nonce}", uri="${path}", qop=${qop}, nc=${nc}, cnonce="${cnonce}", response="${response}"`;
   if (opaque) auth += `, opaque="${opaque}"`;
-  return fetch(base + path, { method, body, headers: { "Content-Type": "application/json", Authorization: auth } });
+  const o = opts(); o.headers.Authorization = auth;
+  return fetch(base + path, o);
+}
+
+// إعادة المحاولة تلقائيًا عند تقطّع الشبكة (بدل ما يقف)
+async function req(method, path, body, tries = 4) {
+  let last;
+  for (let i = 1; i <= tries; i++) {
+    try {
+      const r = await digestRequest(method, path, body);
+      if (r.ok || r.status === 401) return r;
+      last = new Error(`HTTP ${r.status}`);
+    } catch (e) { last = e; }
+    if (i < tries) { log(`   … الشبكة متقطّعة، إعادة المحاولة (${i}/${tries - 1})`); await new Promise((r) => setTimeout(r, 2500)); }
+  }
+  throw last;
 }
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -46,7 +63,7 @@ async function fetchUsers() {
   let pos = 0;
   for (let guard = 0; guard < 100; guard++) {
     const body = JSON.stringify({ UserInfoSearchCond: { searchID: "adrusr", searchResultPosition: pos, maxResults: 50 } });
-    const res = await digestRequest("POST", "/ISAPI/AccessControl/UserInfo/Search?format=json", body);
+    const res = await req("POST", "/ISAPI/AccessControl/UserInfo/Search?format=json", body);
     if (!res.ok) break;
     const json = await res.json();
     const s = json.UserInfoSearch || {};
@@ -70,7 +87,7 @@ async function fetchEvents(startTime, endTime, users = {}) {
     const body = JSON.stringify({
       AcsEventCond: { searchID: "adr", searchResultPosition: pos, maxResults: 50, major: 0, minor: 0, startTime, endTime },
     });
-    const res = await digestRequest("POST", "/ISAPI/AccessControl/AcsEvent?format=json", body);
+    const res = await req("POST", "/ISAPI/AccessControl/AcsEvent?format=json", body);
     if (res.status === 401) throw new Error("بيانات دخول الجهاز غير صحيحة (401) — راجع username/password في config.json");
     if (!res.ok) throw new Error(`الجهاز رجّع خطأ ${res.status}`);
     const json = await res.json();
@@ -88,10 +105,26 @@ async function fetchEvents(startTime, endTime, users = {}) {
       punches.push({ name: empName, date, time });
     }
     const total = ev.totalMatches || 0;
+    const prev = pos;
     pos += list.length;
+    if (total > 200 && Math.floor(pos / 200) > Math.floor(prev / 200)) log(`   … جاري القراءة ${pos}/${total}`);
     if (ev.responseStatusStrg !== "MORE" || list.length === 0 || pos >= total) break;
   }
   return punches;
+}
+
+// يقسّم فترة كبيرة لمقاطع أسبوعية — يسحب ويرفع كل مقطع لوحده (تقدّم واضح + رفعات صغيرة)
+function weekChunks(from, to) {
+  const chunks = [];
+  const day = (s) => { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); };
+  const fmt = (t) => { const d = new Date(t); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+  let s = day(from); const end = day(to);
+  while (s <= end) {
+    const e = Math.min(s + 6 * 86400000, end);
+    chunks.push([fmt(s), fmt(e)]);
+    s = e + 86400000;
+  }
+  return chunks;
 }
 
 async function tick() {
@@ -128,14 +161,23 @@ if (process.argv[2] === "backfill") {
   log(`⏳ سحب فترة من ${from} إلى ${to} ...`);
   const users = await fetchUsers();
   log(`👥 ${Object.keys(users).length} موظف على الجهاز`);
-  const punches = await fetchEvents(`${from}T00:00:00${cfg.timezone}`, `${to}T23:59:59${cfg.timezone}`, users);
-  if (punches.length) {
-    const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
-    log(`✓ تم سحب ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
-  } else {
-    log("لا توجد بصمات في هذه الفترة");
+  // نسحب أسبوع أسبوع — كل مقطع يُرفع لوحده (تقدّم واضح ورفعات صغيرة تتحمّل تقطّع الشبكة)
+  const chunks = weekChunks(from, to);
+  let totPunches = 0, totDays = 0;
+  const emps = new Set();
+  for (let i = 0; i < chunks.length; i++) {
+    const [cf, ct] = chunks[i];
+    log(`— مقطع ${i + 1}/${chunks.length}: ${cf} ← ${ct}`);
+    const punches = await fetchEvents(`${cf}T00:00:00${cfg.timezone}`, `${ct}T23:59:59${cfg.timezone}`, users);
+    if (punches.length) {
+      const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
+      totPunches += punches.length; totDays += r.days || 0;
+      log(`   ✓ ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
+    } else {
+      log("   (لا بصمات في المقطع ده)");
+    }
   }
-  log("✅ انتهى سحب الفترة.");
+  log(`✅ انتهى سحب الفترة — إجمالي ${totPunches} بصمة / ${totDays} يوم.`);
   process.exit(0);
 }
 
