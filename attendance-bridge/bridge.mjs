@@ -40,11 +40,33 @@ function isoLocal(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${cfg.timezone}`;
 }
 
-// ---- اسحب أحداث الحضور من الجهاز في فترة ----
-async function fetchEvents(startTime, endTime) {
+// ---- اجلب قائمة الموظفين (رقم → اسم) — أحداث الجهاز فيها الرقم فقط بدون الاسم ----
+async function fetchUsers() {
+  const map = {};
+  let pos = 0;
+  for (let guard = 0; guard < 100; guard++) {
+    const body = JSON.stringify({ UserInfoSearchCond: { searchID: "adrusr", searchResultPosition: pos, maxResults: 50 } });
+    const res = await digestRequest("POST", "/ISAPI/AccessControl/UserInfo/Search?format=json", body);
+    if (!res.ok) break;
+    const json = await res.json();
+    const s = json.UserInfoSearch || {};
+    const list = s.UserInfo || [];
+    for (const u of list) {
+      const no = String(u.employeeNo ?? "").trim();
+      const nm = String(u.name ?? "").trim();
+      if (no && nm) map[no] = nm;
+    }
+    pos += list.length;
+    if (s.responseStatusStrg !== "MORE" || list.length === 0 || pos >= (s.totalMatches || 0)) break;
+  }
+  return map;
+}
+
+// ---- اسحب أحداث الحضور من الجهاز في فترة (يحوّل رقم الموظف لاسمه) ----
+async function fetchEvents(startTime, endTime, users = {}) {
   const punches = [];
   let pos = 0;
-  for (let guard = 0; guard < 200; guard++) {
+  for (let guard = 0; guard < 400; guard++) {
     const body = JSON.stringify({
       AcsEventCond: { searchID: "adr", searchResultPosition: pos, maxResults: 50, major: 0, minor: 0, startTime, endTime },
     });
@@ -55,8 +77,10 @@ async function fetchEvents(startTime, endTime) {
     const ev = json.AcsEvent || {};
     const list = ev.InfoList || [];
     for (const it of list) {
-      const t = it.time; // e.g. 2026-07-06T10:27:00+03:00
-      const empName = (it.name || "").trim() || (it.employeeNoString || "").trim();
+      const t = it.time; // e.g. 2026-07-06T05:08:32+08:00 — ناخد وقت وتاريخ الجهاز المحلي كما هو
+      const empNo = String(it.employeeNoString ?? it.employeeNo ?? "").trim();
+      // الاسم من قائمة الموظفين (بالرقم)، وإلا الاسم المضمّن، وإلا الرقم نفسه
+      const empName = users[empNo] || (it.name || "").trim() || empNo;
       if (!t || !empName) continue;
       const date = t.slice(0, 10);
       const time = t.slice(11, 16);
@@ -78,7 +102,8 @@ async function tick() {
     // تداخل رجوعي 18 ساعة: يضمن إن الشيفت الليلي (دخول العصر/خروج الفجر) يوصل بدخوله وخروجه معًا
     // فيتقرنوا صح. الاستيراد idempotent (upsert بيوم الدخول) فالتكرار مالوش أثر.
     start = new Date(start.getTime() - 18 * 3600 * 1000);
-    const punches = await fetchEvents(isoLocal(start), isoLocal(now));
+    const users = await fetchUsers();
+    const punches = await fetchEvents(isoLocal(start), isoLocal(now), users);
     if (punches.length) {
       const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
       log(`✓ ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
@@ -101,7 +126,9 @@ if (process.argv[2] === "backfill") {
     process.exit(1);
   }
   log(`⏳ سحب فترة من ${from} إلى ${to} ...`);
-  const punches = await fetchEvents(`${from}T00:00:00${cfg.timezone}`, `${to}T23:59:59${cfg.timezone}`);
+  const users = await fetchUsers();
+  log(`👥 ${Object.keys(users).length} موظف على الجهاز`);
+  const punches = await fetchEvents(`${from}T00:00:00${cfg.timezone}`, `${to}T23:59:59${cfg.timezone}`, users);
   if (punches.length) {
     const r = await convex.mutation(importFn, { key: cfg.bridgeKey, punches });
     log(`✓ تم سحب ${punches.length} بصمة → ${r.days} يوم لـ ${r.employees} موظف`);
