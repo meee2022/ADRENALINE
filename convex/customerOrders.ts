@@ -298,6 +298,11 @@ export const approve = mutation({
     const deliveryTime = "MORNING" as const;
 
     for (const [date, dayMeals] of Object.entries(mealsByDate)) {
+      // ⛔ لا تُنشأ خطط داخل فترة تجميد المشترك — هذا المسار يكتب في dailyPlans
+      //    مباشرةً، فلا يمرّ على الحارس الموجود في dailyPlans.create.
+      const pausedFrom = (linkedCustomer as any)?.pausedFrom as string | undefined;
+      if (pausedFrom && String(date).slice(0, 10) >= pausedFrom) continue;
+
       const planItems = dayMeals.map((meal) => ({
         mealId: meal.mealId,
         mealNameAr: meal.mealNameAr,

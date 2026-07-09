@@ -15,6 +15,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 
 const fmt = (n: number) => (Math.round((n || 0) * 100) / 100).toLocaleString();
 
@@ -27,6 +28,7 @@ export default function SuppliersPage() {
   const stats: any[] = useQuery(api.inventory.getSupplierStats, {}) || [];
   const createSupplier = useMutation(api.inventory.createSupplier);
   const updateSupplier = useMutation(api.inventory.updateSupplier);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const statsMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -48,8 +50,8 @@ export default function SuppliersPage() {
     if (!form.name.trim()) { toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "الاسم مطلوب" : "Name is required", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      if (editing) { await updateSupplier({ id: editing._id, name: form.name.trim(), phone: form.phone.trim() || undefined }); toast({ title: isRtl ? "تم التعديل" : "Updated" }); }
-      else { await createSupplier({ name: form.name.trim(), phone: form.phone.trim() || undefined }); toast({ title: isRtl ? "تمت الإضافة" : "Added" }); }
+      if (editing) { await updateSupplier({ id: editing._id, name: form.name.trim(), phone: form.phone.trim() || undefined, sessionToken }); toast({ title: isRtl ? "تم التعديل" : "Updated" }); }
+      else { await createSupplier({ name: form.name.trim(), phone: form.phone.trim() || undefined, sessionToken }); toast({ title: isRtl ? "تمت الإضافة" : "Added" }); }
       setShowModal(false); setForm({ name: "", phone: "" }); setEditing(null);
     } catch (error: any) {
       toast({ title: isRtl ? "خطأ" : "Error", description: error?.message || (isRtl ? "فشلت العملية" : "Operation failed"), variant: "destructive" });

@@ -6,6 +6,7 @@
 import { mutation, query } from "./_generated/server";
 import { convertUnit } from "./units";
 import { v } from "convex/values";
+import { requireStaff } from "./sessions";
 
 type PlanStatus =
   | "DRAFT"
@@ -113,8 +114,13 @@ export const create = mutation({
     status: v.string(),
     notes: v.optional(v.string()),
     items: v.any(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    // ⚠️ sessionToken لا يُخزَّن — الـinsert أدناه يعمل ...fields وليس ...args
+    const { sessionToken: _t, ...fields } = args;
+
     // مشترك مجمّد (سفر) لا تُنشأ له خطط في أو بعد يوم التجميد — وإلا يطبخ له المطبخ
     // رغم أنه غير موجود، ويخسر يومه مرتين. انظر convex/subscriptionPause.ts
     const customer = await ctx.db.get(args.customerId);
@@ -131,7 +137,7 @@ export const create = mutation({
         : requested;
 
     return await ctx.db.insert("dailyPlans", {
-      ...args,
+      ...fields,
       status: safeStatus,
       createdAt: Date.now(),
     });
@@ -142,8 +148,11 @@ export const update = mutation({
   args: {
     id: v.id("dailyPlans"),
     data: v.any(),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { id, data }) => {
+  handler: async (ctx, { id, data, sessionToken }) => {
+    // انتقال الحالة إلى PREPARED يخصم المخزون ويُطلق إشعارات — موظفون فقط
+    await requireStaff(ctx, sessionToken);
     const existing = await ctx.db.get(id);
     if (!existing) throw new Error("Daily plan not found");
 
@@ -285,8 +294,9 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("dailyPlans") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     await ctx.db.delete(id);
     return true;
   },

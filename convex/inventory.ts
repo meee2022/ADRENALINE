@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { convertUnit } from "./units";
+import { requireStaff } from "./sessions";
 
 // ينشئ إشعار "مخزون منخفض" لمدير المخزون عند هبوط الصنف للحد الأدنى — بدون تكرار
 async function maybeLowStockAlert(ctx: any, itemId: Id<"inventoryItems">, newStock: number) {
@@ -301,8 +302,10 @@ export const createItem = mutation({
     supplierId: v.optional(v.id("suppliers")),
     minStock: v.number(),
     targetStock: v.number(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // Check if barcode already exists
     if (args.barcode) {
       const existing = await ctx.db
@@ -362,9 +365,12 @@ export const updateItem = mutation({
     supplierId: v.optional(v.id("suppliers")),
     minStock: v.optional(v.number()),
     targetStock: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    await requireStaff(ctx, args.sessionToken);
+    // ⚠️ sessionToken يُستبعد من الـrest-spread وإلا خُزِّن داخل الوثيقة
+    const { id, sessionToken: _t, ...updates } = args;
 
     // Check if barcode already exists (excluding current item)
     if (updates.barcode) {
@@ -396,8 +402,10 @@ export const receiveStock = mutation({
     expiryDate: v.optional(v.string()),
     receivedAt: v.string(),
     notes: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     if (args.quantity <= 0) {
       throw new Error("Quantity must be positive");
     }
@@ -450,8 +458,10 @@ export const consumeStock = mutation({
     itemId: v.id("inventoryItems"),
     quantity: v.number(),
     note: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     if (args.quantity <= 0) {
       throw new Error("Quantity must be positive");
     }
@@ -516,8 +526,10 @@ export const adjustStock = mutation({
     itemId: v.id("inventoryItems"),
     newQuantity: v.number(),
     note: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     if (args.newQuantity < 0) {
       throw new Error("Quantity cannot be negative");
     }
@@ -554,8 +566,9 @@ export const adjustStock = mutation({
 // Adds a priced batch + kitchen-consume + waste movements to the first few items.
 // Safe to ignore/clean later; only affects movement history (not current stock here).
 export const seedWasteDemo = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const now = Date.now();
     const items = (await ctx.db.query("inventoryItems").collect()).slice(0, 6);
     if (items.length === 0) throw new Error("لا توجد أصناف في المخزون — أضف أصناف أولاً");
@@ -596,8 +609,10 @@ export const recordWaste = mutation({
     itemId: v.id("inventoryItems"),
     quantity: v.number(),
     reason: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     if (args.quantity <= 0) throw new Error("الكمية يجب أن تكون أكبر من صفر");
     const item = await ctx.db.get(args.itemId);
     if (!item) throw new Error("الصنف غير موجود");
@@ -709,8 +724,10 @@ export const receiveMany = mutation({
         expiryDate: v.optional(v.string()),
       }),
     ),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const now = Date.now();
     const note = args.invoiceNo ? `فاتورة: ${args.invoiceNo}` : "استلام بضاعة";
     let count = 0, totalQty = 0, totalCost = 0;
@@ -769,8 +786,10 @@ export const createSupplier = mutation({
   args: {
     name: v.string(),
     phone: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const supplierId = await ctx.db.insert("suppliers", {
       name: args.name,
       phone: args.phone,
@@ -785,9 +804,12 @@ export const updateSupplier = mutation({
     id: v.id("suppliers"),
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...rest } = args;
+    await requireStaff(ctx, args.sessionToken);
+    // ⚠️ sessionToken يُستبعد من الـrest-spread وإلا خُزِّن داخل الوثيقة
+    const { id, sessionToken: _t, ...rest } = args;
     await ctx.db.patch(id, rest);
     return id;
   },
@@ -821,8 +843,9 @@ export const getSupplierStats = query({
 // ===== تحضير خطة + خصم المخزون تلقائياً حسب الرسيبي (idempotent) =====
 // يستدعيه المطبخ عند تأكيد تحضير خطة اليوم. يخصم مكوّنات كل وجبة من المخزون.
 export const prepareAndConsume = mutation({
-  args: { planId: v.id("dailyPlans") },
-  handler: async (ctx, { planId }) => {
+  args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { planId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const plan = await ctx.db.get(planId);
     if (!plan) throw new Error("Plan not found");
 

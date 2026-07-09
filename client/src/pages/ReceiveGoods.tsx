@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +36,7 @@ export default function ReceiveGoods() {
   const suppliers: any[] = useQuery(api.inventory.getSuppliers) || [];
   const receiveMany = useMutation(api.inventory.receiveMany);
   const createSupplier = useMutation(api.inventory.createSupplier);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const today = new Date().toISOString().slice(0, 10);
   const [supplierId, setSupplierId] = useState("");
@@ -86,7 +88,7 @@ export default function ReceiveGoods() {
   const handleAddSupplier = async () => {
     if (!newSupplier.trim()) return;
     try {
-      const id = await createSupplier({ name: newSupplier.trim() });
+      const id = await createSupplier({ name: newSupplier.trim(), sessionToken });
       setSupplierId(id as string); setNewSupplier("");
       toast({ title: isRtl ? "تم إضافة المورّد" : "Supplier added" });
     } catch (e: any) { toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" }); }
@@ -98,6 +100,7 @@ export default function ReceiveGoods() {
     setSaving(true);
     try {
       const res: any = await receiveMany({
+        sessionToken,
         supplierId: (supplierId || undefined) as any,
         receivedAt,
         invoiceNo: invoiceNo || undefined,

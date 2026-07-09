@@ -35,6 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 
 const CATEGORY_LABELS = {
   all: { ar: "الكل", en: "All" },
@@ -74,6 +75,7 @@ export default function InventoryPage() {
   // Consumption & waste (الهالك) report
   const wasteReport: any = useQuery(api.inventory.getConsumptionReport, { days: 30 });
   const recordWaste = useMutation(api.inventory.recordWaste);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const [wasteItem, setWasteItem] = useState<any>(null);
   const [wasteQty, setWasteQty] = useState("");
   const [wasteReason, setWasteReason] = useState("");
@@ -100,7 +102,7 @@ export default function InventoryPage() {
       return;
     }
     try {
-      await recordWaste({ itemId: wasteItem._id, quantity: Number(wasteQty), reason: wasteReason });
+      await recordWaste({ itemId: wasteItem._id, quantity: Number(wasteQty), reason: wasteReason, sessionToken });
       toast({ title: isRtl ? "تم تسجيل الهالك" : "Waste recorded", description: `${wasteItem.nameAr} − ${wasteQty} ${wasteItem.unit}` });
       setWasteItem(null); setWasteQty(""); setWasteReason("");
     } catch (e: any) {

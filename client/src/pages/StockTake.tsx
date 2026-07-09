@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ClipboardCheck, ArrowRight, Search, Check, AlertTriangle } from "lucide-react";
@@ -24,6 +25,7 @@ export default function StockTake() {
 
   const items: any[] = useQuery(api.inventory.listItems, {}) || [];
   const adjustStock = useMutation(api.inventory.adjustStock);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
@@ -58,7 +60,7 @@ export default function StockTake() {
     let ok = 0;
     try {
       for (const c of changes) {
-        await adjustStock({ itemId: c.it._id, newQuantity: c.actual, note: isRtl ? "جرد فعلي" : "Stock take" });
+        await adjustStock({ itemId: c.it._id, newQuantity: c.actual, note: isRtl ? "جرد فعلي" : "Stock take", sessionToken });
         ok++;
       }
       toast({ title: isRtl ? `تم تطبيق الجرد على ${ok} صنف` : `Stock take applied to ${ok} items`, description: isRtl ? "تم تسجيل التسويات في حركات المخزون" : "Adjustments logged as inventory movements" });

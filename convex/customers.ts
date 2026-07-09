@@ -4,6 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireStaff } from "./sessions";
 
 /* =========================
    Date helpers (server)
@@ -127,12 +128,16 @@ export const create = mutation({
     status: v.optional(v.string()),
 
     isActive: v.boolean(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    // ⚠️ sessionToken لا يُخزَّن — نستبعده قبل الـinsert (الـhandler يعمل ...args)
+    const { sessionToken: _t, ...fields } = args;
     const phone = normalizePhone(args.phone);
 
     return await ctx.db.insert("customers", {
-      ...args,
+      ...fields,
       phone,
       // نخزن ISO نظيف
       startDate: normalizeToISODate(args.startDate) ?? args.startDate,
@@ -147,12 +152,16 @@ export const update = mutation({
   args: {
     id: v.id("customers"),
     data: v.any(),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { id, data }) => {
+  handler: async (ctx, { id, data, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     // نحمي من حقول Convex الإضافية اللي بتكسر الvalidator (لو جت بالغلط)
     const safe = { ...(data || {}) };
     delete (safe as any)._id;
     delete (safe as any)._creationTime;
+    // ولا نسمح بتسريب التوكن داخل الوثيقة لو أُرسل ضمن data بالخطأ
+    delete (safe as any).sessionToken;
 
     // normalize
     if (safe.phone) safe.phone = normalizePhone(safe.phone);
@@ -170,8 +179,9 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("customers") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("customers"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     await ctx.db.delete(id);
     return true;
   },
@@ -204,8 +214,9 @@ export const setSubscriptionActive = mutation({
    ✅ NEW: Activate ALL customers
 ========================= */
 export const activateAll = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db.query("customers").collect();
     let updated = 0;
 
@@ -224,8 +235,9 @@ export const activateAll = mutation({
    ✅ NEW: Migrate/Fix dates for all customers
 ========================= */
 export const migrateDates = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db.query("customers").collect();
     let fixed = 0;
     let skipped = 0;
@@ -262,8 +274,10 @@ export const migrateDates = mutation({
 export const deleteAll = mutation({
   args: {
     deleteDailyPlans: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // 🔒 حماية: عملية مدمّرة (مسح كل العملاء) — معطّلة افتراضياً.
     // لتشغيلها مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true (ثم أعدها false).
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
@@ -331,8 +345,11 @@ export const importMany = mutation({
         isActive: v.boolean(),
       }),
     ),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { rows }) => {
+  handler: async (ctx, { rows, sessionToken }) => {
+    // 🔒 عملية مدمّرة: تحذف كل المشتركين قبل الاستيراد — موظفون فقط.
+    await requireStaff(ctx, sessionToken);
     let added = 0;
     let skipped = 0;
 

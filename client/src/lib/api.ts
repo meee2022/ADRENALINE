@@ -4,6 +4,20 @@ import {
   useMutation as useConvexMutation,
 } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useStore } from "@/lib/store";
+
+/**
+ * جلسة الموظف الحالية. الطفرات (mutations) التي تعدّل بيانات حسّاسة تتحقق منها
+ * على السيرفر عبر requireStaff — لا يكفي إخفاء الأزرار في الواجهة.
+ */
+function useSessionToken(): string | undefined {
+  return useStore((s) => s.sessionToken) || undefined;
+}
+
+/** يضيف sessionToken لأي payload قبل إرساله لطفرة محميّة. */
+function withToken<T extends object>(data: T, sessionToken?: string) {
+  return { ...data, sessionToken };
+}
 
 // =========================
 // Types
@@ -117,71 +131,56 @@ export function useCustomers() {
 
 export function useCreateCustomer() {
   const mutation = useConvexMutation(api.customers.create);
-  return {
-    mutate: (data: any) => mutation(data),
-    mutateAsync: (data: any) => mutation(data),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (data: any) => mutation(withToken(data, sessionToken));
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 export function useUpdateCustomer() {
   const mutation = useConvexMutation(api.customers.update);
-  return {
-    mutate: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
-    mutateAsync: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = ({ id, data }: { id: string; data: any }) =>
+    mutation({ id: id as any, data, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 export function useDeleteCustomer() {
   const mutation = useConvexMutation(api.customers.remove);
-  return {
-    mutate: (id: string) => mutation({ id: id as any }),
-    mutateAsync: (id: string) => mutation({ id: id as any }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (id: string) => mutation({ id: id as any, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 /** ✅ Bulk import (upsert by phone) */
 export function useImportCustomers() {
   const mutation = useConvexMutation(api.customers.importMany);
-  return {
-    mutate: (rows: any[]) => mutation({ rows }),
-    mutateAsync: (rows: any[]) => mutation({ rows }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (rows: any[]) => mutation({ rows, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 /** ✅ Fix/Migrate old dates */
 export function useMigrateCustomerDates() {
   const mutation = useConvexMutation(api.customers.migrateDates);
-  return {
-    mutate: () => mutation({}),
-    mutateAsync: () => mutation({}),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = () => mutation({ sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 /** ✅ Activate all customers */
 export function useActivateAllCustomers() {
   const mutation = useConvexMutation(api.customers.activateAll);
-  return {
-    mutate: () => mutation({}),
-    mutateAsync: () => mutation({}),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = () => mutation({ sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 /** ✅ Delete all customers (+ optionally dailyPlans) */
 export function useDeleteAllCustomers() {
   const mutation = useConvexMutation(api.customers.deleteAll);
-  return {
-    mutate: (deleteDailyPlans = true) => mutation({ deleteDailyPlans }),
-    mutateAsync: (deleteDailyPlans = true) => mutation({ deleteDailyPlans }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (deleteDailyPlans = true) => mutation({ deleteDailyPlans, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 // =========================
@@ -361,51 +360,40 @@ export function useDailyPlans(date?: string) {
 
 export function useCreateDailyPlan() {
   const mutation = useConvexMutation(api.dailyPlans.create);
-  return {
-    mutate: (data: any) =>
-      mutation({ ...data, customerId: data.customerId as any }),
-    mutateAsync: (data: any) =>
-      mutation({ ...data, customerId: data.customerId as any }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (data: any) =>
+    mutation({ ...data, customerId: data.customerId as any, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 export function useUpdateDailyPlan() {
   const mutation = useConvexMutation(api.dailyPlans.update);
-  return {
-    mutate: ({ id, data }: { id: string; data: any }) =>
-      mutation({
-        id: id as any,
-        data: data.customerId
-          ? { ...data, customerId: data.customerId as any }
-          : data,
-      }),
-    mutateAsync: ({ id, data }: { id: string; data: any }) =>
-      mutation({
-        id: id as any,
-        data: data.customerId
-          ? { ...data, customerId: data.customerId as any }
-          : data,
-      }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = ({ id, data }: { id: string; data: any }) =>
+    mutation({
+      id: id as any,
+      data: data.customerId
+        ? { ...data, customerId: data.customerId as any }
+        : data,
+      sessionToken,
+    });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 // تحضير خطة + خصم المخزون تلقائياً حسب الرسيبي
 export function usePrepareAndConsume() {
   const mutation = useConvexMutation(api.inventory.prepareAndConsume);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (planId: string) => mutation({ planId: planId as any }),
+    mutateAsync: (planId: string) => mutation({ planId: planId as any, sessionToken }),
   };
 }
 
 export function useDeleteDailyPlan() {
   const mutation = useConvexMutation(api.dailyPlans.remove);
-  return {
-    mutate: (id: string) => mutation({ id: id as any }),
-    mutateAsync: (id: string) => mutation({ id: id as any }),
-    isLoading: false,
-  };
+  const sessionToken = useSessionToken();
+  const run = (id: string) => mutation({ id: id as any, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
 // =========================
@@ -542,48 +530,54 @@ export function useSuppliers() {
 // Mutations
 export function useCreateInventoryItem() {
   const mutation = useConvexMutation(api.inventory.createItem);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation(data),
+    mutateAsync: (data: any) => mutation(withToken(data, sessionToken)),
     isLoading: false,
   };
 }
 
 export function useUpdateInventoryItem() {
   const mutation = useConvexMutation(api.inventory.updateItem);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation({ ...data, id: data.id as any }),
+    mutateAsync: (data: any) => mutation({ ...data, id: data.id as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useReceiveStock() {
   const mutation = useConvexMutation(api.inventory.receiveStock);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any, supplierId: data.supplierId as any }),
+    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any, supplierId: data.supplierId as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useConsumeStock() {
   const mutation = useConvexMutation(api.inventory.consumeStock);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any }),
+    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useAdjustStock() {
   const mutation = useConvexMutation(api.inventory.adjustStock);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any }),
+    mutateAsync: (data: any) => mutation({ ...data, itemId: data.itemId as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useCreateSupplier() {
   const mutation = useConvexMutation(api.inventory.createSupplier);
+  const sessionToken = useSessionToken();
   return {
-    mutateAsync: (data: any) => mutation(data),
+    mutateAsync: (data: any) => mutation(withToken(data, sessionToken)),
     isLoading: false,
   };
 }
