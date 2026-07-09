@@ -31,6 +31,7 @@ import type * as leaves from "../leaves.js";
 import type * as mealCategories from "../mealCategories.js";
 import type * as mealImages from "../mealImages.js";
 import type * as mealIngredients from "../mealIngredients.js";
+import type * as mealIssuances from "../mealIssuances.js";
 import type * as menuItems from "../menuItems.js";
 import type * as modifiers from "../modifiers.js";
 import type * as notifications from "../notifications.js";
@@ -84,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   mealCategories: typeof mealCategories;
   mealImages: typeof mealImages;
   mealIngredients: typeof mealIngredients;
+  mealIssuances: typeof mealIssuances;
   menuItems: typeof menuItems;
   modifiers: typeof modifiers;
   notifications: typeof notifications;

@@ -58,3 +58,7 @@ xlmeals.json
 attendance-bridge/bridge.log
 attendance-bridge/status.json
 attendance-bridge/bridge.lock
+
+# Deployment artifacts (contain device password)
+adrenaline-bridge.zip
+adrenaline-bridge/
