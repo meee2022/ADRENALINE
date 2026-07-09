@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /customer/profile
+Disallow: /login
+
+Sitemap: https://adrenalinehealthy.com/sitemap.xml
