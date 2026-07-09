@@ -55,6 +55,28 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_month", ["month"]),
 
+  // ===== Online Orders (حصر طلبات المنصّات: طلبات/سنونو/رفيق/ديليفرو/كيتا) =====
+  onlineOrders: defineTable({
+    date: v.string(),                 // yyyy-MM-dd
+    month: v.string(),                // yyyy-MM
+    platform: v.union(
+      v.literal("TALABAT"),
+      v.literal("SNOONU"),
+      v.literal("RAFEEQ"),
+      v.literal("DELIVEROO"),
+      v.literal("KEETA"),
+      v.literal("OTHER"),
+    ),
+    mealsCount: v.number(),           // عدد الوجبات في الطلب
+    amount: v.number(),               // قيمة الطلب بالريال
+    orderRef: v.optional(v.string()), // رقم الطلب (اختياري)
+    note: v.optional(v.string()),
+    loggedBy: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_month", ["month"]),
+
   // ===== Leaves (إجازات الموظفين) =====
   leaves: defineTable({
     name: v.string(),                 // اسم الموظف

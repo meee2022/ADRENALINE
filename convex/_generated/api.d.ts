@@ -35,6 +35,7 @@ import type * as mealIssuances from "../mealIssuances.js";
 import type * as menuItems from "../menuItems.js";
 import type * as modifiers from "../modifiers.js";
 import type * as notifications from "../notifications.js";
+import type * as onlineOrders from "../onlineOrders.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as passwords from "../passwords.js";
 import type * as payroll from "../payroll.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   menuItems: typeof menuItems;
   modifiers: typeof modifiers;
   notifications: typeof notifications;
+  onlineOrders: typeof onlineOrders;
   passwordReset: typeof passwordReset;
   passwords: typeof passwords;
   payroll: typeof payroll;

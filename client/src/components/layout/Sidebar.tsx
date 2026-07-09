@@ -28,6 +28,7 @@ import {
   Banknote,
   CalendarCheck,
   ClipboardList,
+  ShoppingBag,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -56,6 +57,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   settings: Settings,
   kitchen: ChefHat,
   mealIssuance: ClipboardList,
+  onlineOrders: ShoppingBag,
   delivery: Truck,
   audit: ScrollText,
   reports: FileText,
