@@ -129,7 +129,26 @@ export const getById = query({
   },
 });
 
-// ===== GET ORDER BY NUMBER =====
+/**
+ * الحقول التي يعرضها تتبّع الطلب العام. تعمداً بلا customerName/Phone/Email:
+ * الاستعلامان أدناه مفتوحان للجمهور (تتبّع برقم الطلب أو الهاتف)، فلا يجوز أن
+ * يكشف تخمين رقم طلب هويةَ صاحبه. الصفحتان العامتان لا تعرضان هذه الحقول أصلاً.
+ */
+function publicOrderView(o: any) {
+  return {
+    _id: o._id,
+    orderNumber: o.orderNumber,
+    status: o.status,
+    totalMeals: o.totalMeals,
+    totalPrice: o.totalPrice,
+    totalCalories: o.totalCalories,
+    rejectionReason: o.rejectionReason,
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
+  };
+}
+
+// ===== GET ORDER BY NUMBER (عام — تتبّع الطلب) =====
 export const getByOrderNumber = query({
   args: { orderNumber: v.string() },
   handler: async (ctx, { orderNumber }) => {
@@ -140,15 +159,13 @@ export const getByOrderNumber = query({
 
     if (!order) return null;
 
+    // الوجبات ليست بيانات شخصية — نُبقيها كما كانت
     const items = await ctx.db
       .query("customerOrderItems")
       .withIndex("by_orderId", (q) => q.eq("orderId", order._id))
       .collect();
 
-    return {
-      ...order,
-      items,
-    };
+    return { ...publicOrderView(order), items };
   },
 });
 
@@ -203,7 +220,7 @@ export const updateStatus = mutation({
   },
 });
 
-// ===== GET ORDERS BY PHONE =====
+// ===== GET ORDERS BY PHONE (عام — تتبّع الطلبات) =====
 export const getByPhone = query({
   args: { phone: v.string() },
   handler: async (ctx, { phone }) => {
@@ -213,7 +230,7 @@ export const getByPhone = query({
       .order("desc")
       .collect();
 
-    return orders;
+    return orders.map(publicOrderView);
   },
 });
 
