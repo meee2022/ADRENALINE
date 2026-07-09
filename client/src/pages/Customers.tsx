@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomerCard } from "@/components/CustomerCard";
+import { SubscriptionPauseDialog } from "@/components/SubscriptionPauseDialog";
 import {
   Table,
   TableBody,
@@ -220,6 +221,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 
 export default function Customers() {
   const { data: customers = [] } = useCustomers();
+  const [pauseTarget, setPauseTarget] = useState<any | null>(null);
   const createCustomer = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
@@ -1357,6 +1359,7 @@ export default function Customers() {
               key={customer._id}
               customer={customer}
               onEdit={handleEdit}
+              onPause={setPauseTarget}
               onDelete={async (id, name) => {
                 const ok = confirm(
                   isRtl ? `حذف ${name}؟` : `Delete ${name}?`
@@ -1368,6 +1371,13 @@ export default function Customers() {
           ))
         )}
       </div>
+
+      <SubscriptionPauseDialog
+        customerId={pauseTarget?._id ?? null}
+        customerName={pauseTarget?.fullName ?? ""}
+        open={Boolean(pauseTarget)}
+        onOpenChange={(v) => !v && setPauseTarget(null)}
+      />
 
       <div className="text-[10px] text-muted-foreground/50 mt-8">
         Customers.tsx

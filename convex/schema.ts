@@ -209,6 +209,23 @@ export default defineSchema({
 
     isActive: v.boolean(),
 
+    // ✅ تجميد الاشتراك (سفر/ظرف طارئ) — الأيام المجمّدة تُعوَّض في آخر الاشتراك.
+    //    التعويض يُحسب بأيام التوصيل (السبت→الأربعاء)، لا بالأيام التقويمية،
+    //    لأن الخميس والجمعة إجازة أصلاً ولا يُخصمان من العميل.
+    pausedFrom: v.optional(v.string()),           // yyyy-MM-dd — أول يوم تجميد (غير موجود = نشط)
+    pauseExpectedResume: v.optional(v.string()),  // yyyy-MM-dd — تاريخ رجوع متوقّع (اختياري)
+    pauseHistory: v.optional(
+      v.array(
+        v.object({
+          from: v.string(),          // أول يوم تجميد
+          to: v.string(),            // أول يوم بعد الرجوع (غير مشمول)
+          deliveryDays: v.number(),  // عدد أيام التوصيل التي عُوِّضت
+          by: v.optional(v.string()),
+          at: v.number(),
+        })
+      )
+    ),
+
     // الخدمة الذاتية + الولاء
     skippedDates: v.optional(v.array(v.string())), // أيام التوصيل المتخطّاة yyyy-MM-dd
     loyaltyPoints: v.optional(v.number()),         // نقاط الولاء

@@ -11,6 +11,7 @@ import { v } from "convex/values";
 import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { hashPassword } from "./passwords";
+import { findAccountByEmail } from "./accountLookup";
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 دقائق
 const MAX_ATTEMPTS = 5;
@@ -34,17 +35,9 @@ export const createCode = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const email = normEmail(args.email);
-    // ابحث بالبريد (نتحقق من الجدولين: عملاء + موظفين)
-    const account = await ctx.db
-      .query("customerAccounts")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
-    // بعض الحسابات القديمة قد تكون بحروف مختلطة — جرّب أيضاً بدون توحيد
-    const accountRaw = account
-      ? account
-      : await ctx.db.query("customerAccounts").withIndex("by_email", (q) => q.eq("email", args.email.trim())).first();
-
-    if (!accountRaw) return { ok: false as const };
+    // نفس ترتيب تسجيل الدخول: موظف أولاً ثم عميل
+    const found = await findAccountByEmail(ctx, args.email);
+    if (!found) return { ok: false as const };
 
     // احذف أي أكواد سابقة لنفس البريد
     const old = await ctx.db.query("passwordResetCodes").withIndex("by_email", (q) => q.eq("email", email)).collect();
@@ -130,15 +123,14 @@ export const verifyAndReset = mutation({
       return { success: false, error: "الكود غير صحيح" };
     }
 
-    // ابحث عن الحساب وعيّن كلمة المرور الجديدة
-    const account = await ctx.db.query("customerAccounts").withIndex("by_email", (q) => q.eq("email", email)).first()
-      || await ctx.db.query("customerAccounts").withIndex("by_email", (q) => q.eq("email", args.email.trim())).first();
-    if (!account) {
+    // نفس ترتيب تسجيل الدخول — نُحدّث الحساب الذي سيستخدمه المستخدم فعلاً للدخول
+    const found = await findAccountByEmail(ctx, args.email);
+    if (!found) {
       await ctx.db.delete(record._id);
       return { success: false, error: "الحساب غير موجود" };
     }
 
-    await ctx.db.patch(account._id, { passwordHash: await hashPassword(args.newPassword), updatedAt: Date.now() });
+    await ctx.db.patch(found.doc._id, { passwordHash: await hashPassword(args.newPassword), updatedAt: Date.now() });
     await ctx.db.delete(record._id);
     return { success: true };
   },

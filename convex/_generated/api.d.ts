@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accountLookup from "../accountLookup.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as applySchedulePairs from "../applySchedulePairs.js";
@@ -52,6 +53,7 @@ import type * as seedRealPlans from "../seedRealPlans.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as sessions from "../sessions.js";
 import type * as stickers from "../stickers.js";
+import type * as subscriptionPause from "../subscriptionPause.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
 import type * as users from "../users.js";
@@ -63,6 +65,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accountLookup: typeof accountLookup;
   ai: typeof ai;
   analytics: typeof analytics;
   applySchedulePairs: typeof applySchedulePairs;
@@ -107,6 +110,7 @@ declare const fullApi: ApiFromModules<{
   seedUsers: typeof seedUsers;
   sessions: typeof sessions;
   stickers: typeof stickers;
+  subscriptionPause: typeof subscriptionPause;
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;

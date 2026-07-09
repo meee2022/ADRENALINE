@@ -6,6 +6,7 @@ import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { verifyPassword } from "./passwords";
 import { createSession, destroySession } from "./sessions";
+import { findStaffByEmail, findCustomerByEmail } from "./accountLookup";
 
 /**
  * Unified authentication - checks both users and customerAccounts tables.
@@ -21,10 +22,7 @@ export const authenticateUnified = mutation({
     const INVALID = { success: false as const, error: "بيانات الدخول غير صحيحة" };
 
     // First, try to find in users table (Admin, Staff)
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
+    const user = await findStaffByEmail(ctx, args.email);
 
     if (user) {
       if (!user.isActive) {
@@ -56,10 +54,7 @@ export const authenticateUnified = mutation({
     }
 
     // If not found in users, try customerAccounts table
-    const customer = await ctx.db
-      .query("customerAccounts")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
+    const customer = await findCustomerByEmail(ctx, args.email);
 
     if (customer) {
       if (!customer.isActive) {

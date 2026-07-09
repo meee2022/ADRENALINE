@@ -115,6 +115,14 @@ export const create = mutation({
     items: v.any(),
   },
   handler: async (ctx, args) => {
+    // مشترك مجمّد (سفر) لا تُنشأ له خطط في أو بعد يوم التجميد — وإلا يطبخ له المطبخ
+    // رغم أنه غير موجود، ويخسر يومه مرتين. انظر convex/subscriptionPause.ts
+    const customer = await ctx.db.get(args.customerId);
+    const pausedFrom = (customer as any)?.pausedFrom as string | undefined;
+    if (pausedFrom && String(args.date).slice(0, 10) >= pausedFrom) {
+      throw new Error("اشتراك هذا المشترك مجمّد — لا يمكن إنشاء خطة في فترة التجميد");
+    }
+
     const requested = normalizeStatus(args.status);
 
     const safeStatus: PlanStatus =
