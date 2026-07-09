@@ -79,9 +79,24 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause }: CustomerCa
 
             {/* Name & Phone */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">
-                {customer.fullName}
-              </h3>
+              <div className="flex items-center gap-2 min-w-0">
+                <h3 className="font-bold text-base sm:text-lg text-gray-900 truncate">
+                  {customer.fullName}
+                </h3>
+                {customer.pausedFrom && (
+                  <span
+                    className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 text-[10px] font-bold"
+                    title={
+                      isRtl
+                        ? `مجمّد منذ ${customer.pausedFrom}`
+                        : `Paused since ${customer.pausedFrom}`
+                    }
+                  >
+                    <PauseCircle className="h-3 w-3" />
+                    {isRtl ? "مجمّد" : "Paused"}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-1.5 text-xs sm:text-sm text-gray-500">
                 <Phone className="h-3 w-3 flex-shrink-0" />
                 <span dir="ltr" className="truncate">{customer.phone}</span>

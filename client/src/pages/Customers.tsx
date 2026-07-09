@@ -58,6 +58,7 @@ import {
   ChevronDown,
   X,
   Users,
+  PauseCircle,
 } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { format, parseISO } from "date-fns";
@@ -230,6 +231,7 @@ export default function Customers() {
   const { data: modifiers = [] } = useModifiers();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [showPausedOnly, setShowPausedOnly] = useState(false);
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -297,6 +299,12 @@ export default function Customers() {
   });
 
   // ✅ حساب عدد كل برنامج
+  // ✅ المشتركون المجمّدون (سفر) — pausedFrom موجود = مجمّد
+  const pausedCustomers = useMemo(
+    () => (customers as any[]).filter((c: any) => Boolean(c.pausedFrom)),
+    [customers]
+  );
+
   const programCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const c of customers as any[]) {
@@ -328,6 +336,11 @@ export default function Customers() {
 
     let base = customers as any[];
 
+    // فلتر "المجمّدين فقط"
+    if (showPausedOnly) {
+      base = base.filter((c: any) => Boolean(c.pausedFrom));
+    }
+
     // فلتر البرنامج
     if (selectedProgram) {
       base = base.filter((c: any) =>
@@ -344,6 +357,10 @@ export default function Customers() {
     }
 
     return base.slice().sort((a: any, b: any) => {
+      // المجمّدون أولاً — يحتاجون متابعة (متى يرجع؟)
+      const ap = a.pausedFrom ? 1 : 0;
+      const bp = b.pausedFrom ? 1 : 0;
+      if (ap !== bp) return bp - ap;
       const aa = a.isActive ? 1 : 0;
       const bb = b.isActive ? 1 : 0;
       if (aa !== bb) return bb - aa;
@@ -351,7 +368,7 @@ export default function Customers() {
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm, selectedProgram]);
+  }, [customers, searchTerm, selectedProgram, showPausedOnly]);
 
   const resetForm = () => {
     setEditingCustomer(null);
@@ -670,6 +687,7 @@ export default function Customers() {
         kpis={[
           { value: (customers as any[]).length, labelAr: "إجمالي المشتركين", labelEn: "Total Subscribers" },
           { value: (customers as any[]).filter((c: any) => c.isActive).length, labelAr: "نشط", labelEn: "Active" },
+          { value: pausedCustomers.length, labelAr: "مجمّد (سفر)", labelEn: "Paused" },
         ]}
         actions={
           <Button
@@ -723,6 +741,24 @@ export default function Customers() {
               </button>
             );
           })}
+
+          {/* شريحة "المجمّدون" — تظهر فقط لو فيه مجمّد فعلاً */}
+          {pausedCustomers.length > 0 && (
+            <button
+              onClick={() => setShowPausedOnly((v) => !v)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
+                "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-300",
+                showPausedOnly && "ring-2 ring-offset-1 ring-current shadow-sm scale-105"
+              )}
+            >
+              <PauseCircle className="h-3.5 w-3.5" />
+              {isRtl ? "مجمّد (سفر)" : "Paused"}
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-white/80">
+                {pausedCustomers.length}
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
