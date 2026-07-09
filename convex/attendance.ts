@@ -124,14 +124,28 @@ async function buildPayrollResolver(ctx: any) {
   const pay = await ctx.db.query("payroll").collect();
   const names = Array.from(new Set(pay.map((p: any) => p.name).filter(Boolean))) as string[];
   const nm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const payNorm = names.map((n) => ({ n, k: nm(n) }));
+  const toks = (s: string) => String(s || "").toLowerCase().split(/\s+/).map(nm).filter((t) => t.length >= 3);
+  const payNorm = names.map((n) => ({ n, k: nm(n), t: toks(n) }));
+  const ratio = (a: string, b: string) => lev(a, b) / Math.max(a.length, b.length, 1);
   const cache = new Map<string, string | null>();
   return (name: string): string | null => {
     const k = nm(name);
     if (cache.has(k)) return cache.get(k)!;
-    let best: string | null = null, bd = 1;
-    for (const p of payNorm) { const dd = lev(k, p.k) / Math.max(k.length, p.k.length, 1); if (dd < bd) { bd = dd; best = p.n; } }
-    const r = bd <= 0.20 ? best : null; cache.set(k, r); return r;
+    const dt = toks(name);
+    let best: string | null = null, bestScore = 0;
+    for (const p of payNorm) {
+      // 1) تطابق الاسم الكامل (تقريبي) — قوي
+      let score = ratio(k, p.k) <= 0.20 ? 2 : 0;
+      // 2) تطابق أي كلمة مشتركة (اسم أول/أخير) — يعالج "Mary" ↔ "Mary Wanjiru Kangethe"
+      for (const a of dt) {
+        let bestTok = 1;
+        for (const b of p.t) { const r = ratio(a, b); if (r < bestTok) bestTok = r; }
+        if (bestTok <= 0.20) score += 1 - bestTok; // كلمة شبه مطابقة تزوّد النقاط
+      }
+      if (score > bestScore) { bestScore = score; best = p.n; }
+    }
+    // كلمة واحدة شبه مطابقة (score≈1) كفاية؛ العتبة 0.8 تسمح بفرق حرف بسيط
+    const r = bestScore >= 0.8 ? best : null; cache.set(k, r); return r;
   };
 }
 
