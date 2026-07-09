@@ -85,7 +85,7 @@ function AppDirSync() {
   return null;
 }
 
-import { canAccess, ROLE_HOME, type Role } from "@/lib/permissions";
+import { canAccessUser, ROLE_HOME, type Role } from "@/lib/permissions";
 import { useLocation as useWouterLocation } from "wouter";
 
 function ProtectedRoute({
@@ -100,12 +100,12 @@ function ProtectedRoute({
     return <Redirect to="/login" />;
   }
 
-  // Role-based access check
+  // Role + per-user permission check
   const role = currentUser.role as Role | undefined;
   if (!role) {
     return <Redirect to="/login" />;
   }
-  if (!canAccess(role, location)) {
+  if (!canAccessUser(currentUser, location)) {
     // Redirect to the role's default home
     const home = ROLE_HOME[role] || "/";
     return <Redirect to={home} />;

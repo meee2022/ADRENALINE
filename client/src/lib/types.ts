@@ -1,10 +1,12 @@
-export type Role = 'ADMIN' | 'KITCHEN' | 'DELIVERY' | 'NUTRITIONIST' | 'INVENTORY_MANAGER';
+export type Role = 'ADMIN' | 'KITCHEN' | 'DELIVERY' | 'NUTRITIONIST' | 'INVENTORY_MANAGER' | 'ACCOUNTANT' | 'FINANCE_MANAGER';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: Role;
+  /** صلاحيات صفحات مخصّصة (لو موجودة تتجاوز قالب الدور) */
+  permissions?: string[];
 }
 
 export type DeliveryTime = 'MORNING' | 'EVENING';

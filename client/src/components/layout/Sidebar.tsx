@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
-import { MENU_SECTIONS, ROLE_LABEL, ROLE_COLOR, type Role, type MenuItemDef } from "@/lib/permissions";
+import { MENU_SECTIONS, ROLE_LABEL, ROLE_COLOR, canAccessUser, type Role, type MenuItemDef } from "@/lib/permissions";
 
 /** Map iconKey → lucide component */
 const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
@@ -81,7 +81,8 @@ export function Sidebar() {
   const visibleSections = MENU_SECTIONS
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => role && item.roles.includes(role)),
+      // ✅ يظهر بند القائمة لو الشخص عنده صلاحية دخوله (صلاحياته الخاصة أو قالب دوره)
+      items: section.items.filter((item) => canAccessUser(currentUser, item.href)),
     }))
     .filter((section) => section.items.length > 0);
 

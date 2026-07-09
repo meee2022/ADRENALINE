@@ -81,6 +81,7 @@ export const listUsers = query({
       email: user.email,
       name: user.name,
       role: user.role,
+      permissions: (user as any).permissions || undefined,
       isActive: user.isActive,
       createdAt: user.createdAt,
     }));
@@ -100,8 +101,11 @@ export const createUser = mutation({
       v.literal("KITCHEN"),
       v.literal("DELIVERY"),
       v.literal("NUTRITIONIST"),
-      v.literal("INVENTORY_MANAGER")
+      v.literal("INVENTORY_MANAGER"),
+      v.literal("ACCOUNTANT"),
+      v.literal("FINANCE_MANAGER")
     ),
+    permissions: v.optional(v.array(v.string())),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -123,6 +127,7 @@ export const createUser = mutation({
       passwordHash,
       name: args.name,
       role: args.role,
+      permissions: args.permissions,
       isActive: true,
       createdAt: Date.now(),
     });
@@ -196,18 +201,22 @@ export const updateUser = mutation({
         v.literal("KITCHEN"),
         v.literal("DELIVERY"),
         v.literal("NUTRITIONIST"),
-        v.literal("INVENTORY_MANAGER")
+        v.literal("INVENTORY_MANAGER"),
+        v.literal("ACCOUNTANT"),
+        v.literal("FINANCE_MANAGER")
       )
     ),
+    permissions: v.optional(v.array(v.string())),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const updates: any = { updatedAt: Date.now() };
-    
+
     if (args.name) updates.name = args.name;
     if (args.email) updates.email = args.email;
     if (args.role) updates.role = args.role;
+    if (args.permissions !== undefined) updates.permissions = args.permissions;
 
     await ctx.db.patch(args.userId, updates);
   },

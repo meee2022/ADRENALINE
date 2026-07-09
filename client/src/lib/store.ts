@@ -15,7 +15,7 @@ interface AppState {
   currentCustomer: CustomerAccount | null;
   /** توكن جلسة السيرفر — يُرسل مع العمليات الحسّاسة لفرض الصلاحيات */
   sessionToken: string | null;
-  login: (email: string, role: User['role'], id?: string, name?: string, sessionToken?: string) => void;
+  login: (email: string, role: User['role'], id?: string, name?: string, sessionToken?: string, permissions?: string[]) => void;
   logout: () => void;
   customerLogin: (account: CustomerAccount, sessionToken?: string) => void;
   customerLogout: () => void;
@@ -28,12 +28,13 @@ export const useStore = create<AppState>()(
       currentCustomer: null,
       sessionToken: null,
 
-      login: (email, role, id, name, sessionToken) => set({
+      login: (email, role, id, name, sessionToken, permissions) => set({
         currentUser: {
           id: id || 'user_' + Math.random(),
           name: name || email.split('@')[0],
           email,
-          role
+          role,
+          permissions,
         },
         ...(sessionToken ? { sessionToken } : {}),
       }),

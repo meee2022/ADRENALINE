@@ -13,8 +13,13 @@ export default defineSchema({
       v.literal("KITCHEN"),
       v.literal("DELIVERY"),
       v.literal("NUTRITIONIST"),
-      v.literal("INVENTORY_MANAGER")
+      v.literal("INVENTORY_MANAGER"),
+      v.literal("ACCOUNTANT"),
+      v.literal("FINANCE_MANAGER")
     ),
+    // ✅ صلاحيات صفحات مخصّصة لكل حساب (قايمة مسارات). لو موجودة تتجاوز صلاحيات الدور.
+    //    الدور بيفضل قالب افتراضي. ADMIN دايمًا كامل الصلاحيات.
+    permissions: v.optional(v.array(v.string())),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),

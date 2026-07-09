@@ -10,7 +10,7 @@
  *   - INVENTORY_MANAGER  مدير مخزون (المخزون + الموردين + التقارير)
  */
 
-export type Role = "ADMIN" | "NUTRITIONIST" | "KITCHEN" | "DELIVERY" | "INVENTORY_MANAGER";
+export type Role = "ADMIN" | "NUTRITIONIST" | "KITCHEN" | "DELIVERY" | "INVENTORY_MANAGER" | "ACCOUNTANT" | "FINANCE_MANAGER";
 
 export const ALL_ROLES: Role[] = [
   "ADMIN",
@@ -18,6 +18,8 @@ export const ALL_ROLES: Role[] = [
   "KITCHEN",
   "DELIVERY",
   "INVENTORY_MANAGER",
+  "ACCOUNTANT",
+  "FINANCE_MANAGER",
 ];
 
 /** الصفحة الافتراضية اللي يتوجّه لها كل دور بعد تسجيل الدخول */
@@ -27,6 +29,8 @@ export const ROLE_HOME: Record<Role, string> = {
   KITCHEN: "/kitchen",
   DELIVERY: "/delivery",
   INVENTORY_MANAGER: "/inventory",
+  ACCOUNTANT: "/reports",
+  FINANCE_MANAGER: "/reports",
 };
 
 /**
@@ -76,21 +80,63 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/inventory-reports",
     "/suppliers",
   ],
+
+  ACCOUNTANT: [
+    "/",
+    "/reports",
+    "/payroll",
+  ],
+
+  FINANCE_MANAGER: [
+    "/",
+    "/reports",
+    "/analytics",
+    "/payroll",
+  ],
 };
 
-/** يفحص لو الدور مسموح له بالـ path ده */
+/** صفحات فرعية غير ظاهرة في القائمة تُمنح تلقائيًا مع صفحة أساسية */
+const PAGE_EXTRA: Record<string, string[]> = {
+  "/plans": ["/plans-review/*"],
+  "/plans-management": ["/plans-review/*"],
+  "/orders/pending": ["/orders/review/*"],
+};
+function expandPerms(perms: string[]): string[] {
+  const out = [...perms];
+  for (const p of perms) if (PAGE_EXTRA[p]) out.push(...PAGE_EXTRA[p]);
+  return out;
+}
+
+/** يطابق مسار مع قايمة أنماط (يدعم * و prefix — منح قسم يمنح صفحاته الفرعية) */
+function matchPaths(list: string[], pathname: string): boolean {
+  if (list.includes("*")) return true;
+  return list.some((p) => {
+    if (p === "/") return pathname === "/";
+    if (p.endsWith("/*")) { const pre = p.slice(0, -2); return pathname === pre || pathname.startsWith(pre + "/"); }
+    return pathname === p || pathname.startsWith(p + "/");
+  });
+}
+
+/** يفحص لو الدور (القالب الافتراضي) مسموح له بالـ path */
 export function canAccess(role: Role | undefined | null, pathname: string): boolean {
   if (!role) return false;
-  const allowed = ROLE_ALLOWED_PATHS[role] || [];
-  if (allowed.includes("*")) return true;
+  return matchPaths(ROLE_ALLOWED_PATHS[role] || [], pathname);
+}
 
-  return allowed.some((pattern) => {
-    if (pattern.endsWith("/*")) {
-      const prefix = pattern.slice(0, -2);
-      return pathname === prefix || pathname.startsWith(prefix + "/");
-    }
-    return pattern === pathname;
-  });
+/**
+ * ✅ الفحص الأساسي: صلاحيات الشخص أولًا، وإلا قالب الدور.
+ * ADMIN دايمًا كامل. الرئيسية "/" مسموحة لأي موظف مسجّل دخول.
+ */
+export function canAccessUser(
+  user: { role?: Role | null; permissions?: string[] | null } | null | undefined,
+  pathname: string,
+): boolean {
+  if (!user?.role) return false;
+  if (user.role === "ADMIN") return true;
+  if (pathname === "/") return true;
+  const perms = user.permissions;
+  if (perms && perms.length) return matchPaths(expandPerms(perms), pathname);
+  return canAccess(user.role, pathname);
 }
 
 /**
@@ -252,6 +298,8 @@ export const ROLE_LABEL: Record<Role, { ar: string; en: string }> = {
   KITCHEN: { ar: "مطبخ", en: "Kitchen" },
   DELIVERY: { ar: "توصيل", en: "Delivery" },
   INVENTORY_MANAGER: { ar: "مدير مخزون", en: "Inventory Manager" },
+  ACCOUNTANT: { ar: "محاسب", en: "Accountant" },
+  FINANCE_MANAGER: { ar: "مدير مالي", en: "Finance Manager" },
 };
 
 /** لون الدور (للـ badge) */
@@ -262,4 +310,20 @@ export const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string
   KITCHEN:           { bg: "#f0f4f7", text: "#47759c",  border: "#bcbebf" },  // رصاصي/فولاذي
   DELIVERY:          { bg: "#e8f8fd", text: "#3cc4f0",  border: "#3cc4f0" },  // سيان
   INVENTORY_MANAGER: { bg: "#f5f6f7", text: "#0f1516",  border: "#bcbebf" },  // رمادي داكن
+  ACCOUNTANT:        { bg: "#eef7ee", text: "#166534",  border: "#16a34a" },  // أخضر
+  FINANCE_MANAGER:   { bg: "#eef2ff", text: "#3730a3",  border: "#6366f1" },  // بنفسجي
 };
+
+/** كل الصفحات القابلة للتخصيص (مسطّحة من أقسام القائمة) — للـchecklist في إدارة الحسابات */
+export const ALL_PAGES = MENU_SECTIONS.flatMap((s) =>
+  s.items
+    .filter((i) => i.href !== "/") // الرئيسية دايمًا مسموحة
+    .map((i) => ({ href: i.href, labelAr: i.labelAr, labelEn: i.labelEn, sectionAr: s.titleAr, sectionEn: s.titleEn })),
+);
+
+/** الصفحات الافتراضية لدور — لتعبئة الـcheckboxes عند اختيار الدور */
+export function defaultPermsForRole(role: Role): string[] {
+  const paths = ROLE_ALLOWED_PATHS[role] || [];
+  if (paths.includes("*")) return ALL_PAGES.map((p) => p.href); // ADMIN = كل الصفحات
+  return ALL_PAGES.filter((p) => matchPaths(paths, p.href)).map((p) => p.href);
+}

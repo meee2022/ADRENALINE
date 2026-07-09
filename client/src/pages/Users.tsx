@@ -48,12 +48,14 @@ import { api } from "@/../../convex/_generated/api";
 import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 import { Role } from "@/lib/types";
+import { ALL_PAGES, ALL_ROLES, ROLE_LABEL, defaultPermsForRole } from "@/lib/permissions";
 
 interface UserFormData {
   name: string;
   email: string;
   password: string;
   role: Role;
+  permissions: string[];
 }
 
 export default function Users() {
@@ -74,7 +76,63 @@ export default function Users() {
     email: "",
     password: "",
     role: "DELIVERY",
+    permissions: defaultPermsForRole("DELIVERY"),
   });
+
+  // اختيار دور → يعبّي الصفحات الافتراضية (يقدر يعدّلها بعدها)
+  const pickRole = (role: Role) => setFormData((f) => ({ ...f, role, permissions: defaultPermsForRole(role) }));
+  const togglePerm = (href: string) => setFormData((f) => ({
+    ...f,
+    permissions: f.permissions.includes(href) ? f.permissions.filter((p) => p !== href) : [...f.permissions, href],
+  }));
+  // الصفحات مجمّعة بالأقسام للـchecklist
+  const groupedPages = (() => {
+    const m = new Map<string, typeof ALL_PAGES>();
+    for (const p of ALL_PAGES) {
+      const key = isRtl ? p.sectionAr : p.sectionEn;
+      if (!m.has(key)) m.set(key, [] as any);
+      (m.get(key) as any).push(p);
+    }
+    return Array.from(m.entries());
+  })();
+  // قسم الدور + قائمة الصفحات المسموحة (مشترك بين إضافة/تعديل)
+  const roleAndPerms = (
+    <>
+      <div className="space-y-2">
+        <Label>{t("users.role")}</Label>
+        <Select value={formData.role} onValueChange={(v) => pickRole(v as Role)} dir={isRtl ? "rtl" : "ltr"}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {ALL_ROLES.map((r) => (
+              <SelectItem key={r} value={r}>{isRtl ? ROLE_LABEL[r].ar : ROLE_LABEL[r].en}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-gray-400">{isRtl ? "الدور بيعبّي الصفحات الافتراضية — عدّلها تحت زي ما تحب" : "Role sets default pages — customize below"}</p>
+      </div>
+      {formData.role === "ADMIN" ? (
+        <p className="text-xs font-bold text-emerald-600">{isRtl ? "المسؤول (ADMIN) عنده كل الصلاحيات تلقائيًا." : "Admin has full access automatically."}</p>
+      ) : (
+        <div className="space-y-2">
+          <Label>{isRtl ? "الصفحات المسموحة لهذا الحساب" : "Pages this account can access"}</Label>
+          <div className="max-h-56 overflow-auto rounded-xl border border-gray-200 p-2 space-y-2">
+            {groupedPages.map(([title, pages]) => (
+              <div key={title}>
+                <div className="text-[11px] font-bold text-[#47759c] px-1 mb-1">{title}</div>
+                {pages.map((p) => (
+                  <label key={p.href} className="flex items-center gap-2 px-1 py-1 rounded hover:bg-gray-50 cursor-pointer">
+                    <input type="checkbox" checked={formData.permissions.includes(p.href)} onChange={() => togglePerm(p.href)} className="h-4 w-4 accent-[#0E76AC]" />
+                    <span className="text-sm">{isRtl ? p.labelAr : p.labelEn}</span>
+                  </label>
+                ))}
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-gray-400">{formData.permissions.length} {isRtl ? "صفحة مختارة" : "pages selected"}</p>
+        </div>
+      )}
+    </>
+  );
 
   // Promote-to-staff mutation
   const createUserMutation = useMutation(api.users.createUser);
@@ -129,7 +187,7 @@ export default function Users() {
   const customers = useQuery(api.customerAuth.listCustomers, { sessionToken }) || [];
 
   const handleAdd = () => {
-    setFormData({ name: "", email: "", password: "", role: "DELIVERY" });
+    setFormData({ name: "", email: "", password: "", role: "DELIVERY", permissions: defaultPermsForRole("DELIVERY") });
     setIsAddDialogOpen(true);
   };
 
@@ -140,6 +198,7 @@ export default function Users() {
       email: user.email,
       password: "",
       role: user.role,
+      permissions: (user.permissions && user.permissions.length) ? user.permissions : defaultPermsForRole(user.role),
     });
     setIsEditDialogOpen(true);
   };
@@ -178,6 +237,7 @@ export default function Users() {
         email: formData.email,
         password: formData.password,
         role: formData.role,
+        permissions: formData.permissions,
         sessionToken,
       });
 
@@ -212,6 +272,7 @@ export default function Users() {
         name: formData.name,
         email: formData.email,
         role: formData.role,
+        permissions: formData.permissions,
         sessionToken,
       });
 
@@ -279,10 +340,7 @@ export default function Users() {
     }
   };
 
-  const getRoleLabel = (role: Role) => {
-    const roleKey = `role.${role.toLowerCase()}` as any;
-    return t(roleKey);
-  };
+  const getRoleLabel = (role: Role) => isRtl ? (ROLE_LABEL[role]?.ar || role) : (ROLE_LABEL[role]?.en || role);
 
   return (
     <div className="space-y-6">
@@ -502,7 +560,7 @@ export default function Users() {
 
       {/* Add User Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent dir={isRtl ? "rtl" : "ltr"}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("users.add_title")}</DialogTitle>
             <DialogDescription>{t("users.subtitle")}</DialogDescription>
@@ -544,25 +602,7 @@ export default function Users() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">{t("users.role")}</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as Role })}
-                dir={isRtl ? "rtl" : "ltr"}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADMIN">{t("role.admin")}</SelectItem>
-                  <SelectItem value="KITCHEN">{t("role.kitchen")}</SelectItem>
-                  <SelectItem value="DELIVERY">{t("role.delivery")}</SelectItem>
-                  <SelectItem value="NUTRITIONIST">{t("role.nutritionist")}</SelectItem>
-                  <SelectItem value="INVENTORY_MANAGER">{t("role.inventory_manager")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {roleAndPerms}
           </div>
 
           <DialogFooter>
@@ -576,7 +616,7 @@ export default function Users() {
 
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent dir={isRtl ? "rtl" : "ltr"}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t("users.edit_title")}</DialogTitle>
             <DialogDescription>{t("users.subtitle")}</DialogDescription>
@@ -617,25 +657,7 @@ export default function Users() {
               <p className="text-xs text-muted-foreground">{t("users.password_note")}</p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-role">{t("users.role")}</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value as Role })}
-                dir={isRtl ? "rtl" : "ltr"}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ADMIN">{t("role.admin")}</SelectItem>
-                  <SelectItem value="KITCHEN">{t("role.kitchen")}</SelectItem>
-                  <SelectItem value="DELIVERY">{t("role.delivery")}</SelectItem>
-                  <SelectItem value="NUTRITIONIST">{t("role.nutritionist")}</SelectItem>
-                  <SelectItem value="INVENTORY_MANAGER">{t("role.inventory_manager")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {roleAndPerms}
           </div>
 
           <DialogFooter>

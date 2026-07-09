@@ -50,6 +50,7 @@ export const authenticateUnified = mutation({
           email: user.email,
           name: user.name,
           role: user.role,
+          permissions: user.permissions || undefined,
         },
       };
     }

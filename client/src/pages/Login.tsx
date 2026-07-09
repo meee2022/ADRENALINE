@@ -32,7 +32,7 @@ export default function Login() {
       const result = await convex.mutation(api.auth.authenticateUnified, { email, password });
       if (result.success) {
         if (result.accountType === "staff" && result.user) {
-          login(result.user.email, result.user.role, result.user.id, result.user.name, (result as any).sessionToken);
+          login(result.user.email, result.user.role, result.user.id, result.user.name, (result as any).sessionToken, (result.user as any).permissions);
           setLocation("/");
         } else if (result.accountType === "customer" && result.customer) {
           customerLogin(result.customer, (result as any).sessionToken);
