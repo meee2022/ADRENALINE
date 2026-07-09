@@ -231,7 +231,8 @@ export default function Customers() {
   const { data: modifiers = [] } = useModifiers();
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [showPausedOnly, setShowPausedOnly] = useState(false);
+  /** فلتر بطاقات الهيدر: الكل / النشطين / المجمّدين */
+  const [viewFilter, setViewFilter] = useState<"all" | "active" | "paused">("all");
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -336,9 +337,11 @@ export default function Customers() {
 
     let base = customers as any[];
 
-    // فلتر "المجمّدين فقط"
-    if (showPausedOnly) {
+    // فلتر بطاقات الهيدر
+    if (viewFilter === "paused") {
       base = base.filter((c: any) => Boolean(c.pausedFrom));
+    } else if (viewFilter === "active") {
+      base = base.filter((c: any) => c.isActive);
     }
 
     // فلتر البرنامج
@@ -368,7 +371,7 @@ export default function Customers() {
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm, selectedProgram, showPausedOnly]);
+  }, [customers, searchTerm, selectedProgram, viewFilter]);
 
   const resetForm = () => {
     setEditingCustomer(null);
@@ -685,9 +688,26 @@ export default function Customers() {
         titleAr="المشتركين" titleEn="Subscribers"
         subtitleAr="إدارة العملاء والاشتراكات" subtitleEn="Manage customers & subscriptions"
         kpis={[
-          { value: (customers as any[]).length, labelAr: "إجمالي المشتركين", labelEn: "Total Subscribers" },
-          { value: (customers as any[]).filter((c: any) => c.isActive).length, labelAr: "نشط", labelEn: "Active" },
-          { value: pausedCustomers.length, labelAr: "مجمّد (سفر)", labelEn: "Paused" },
+          {
+            value: (customers as any[]).length,
+            labelAr: "إجمالي المشتركين", labelEn: "Total Subscribers",
+            active: viewFilter === "all",
+            onClick: () => setViewFilter("all"),
+          },
+          {
+            value: (customers as any[]).filter((c: any) => c.isActive).length,
+            labelAr: "نشط", labelEn: "Active",
+            active: viewFilter === "active",
+            // ضغطة ثانية على بطاقة مفعّلة تُرجِع "الكل"
+            onClick: () => setViewFilter((v) => (v === "active" ? "all" : "active")),
+          },
+          {
+            value: pausedCustomers.length,
+            labelAr: "مجمّد (سفر)", labelEn: "Paused",
+            color: pausedCustomers.length > 0 ? "#fcd34d" : undefined,
+            active: viewFilter === "paused",
+            onClick: () => setViewFilter((v) => (v === "paused" ? "all" : "paused")),
+          },
         ]}
         actions={
           <Button
@@ -742,24 +762,34 @@ export default function Customers() {
             );
           })}
 
-          {/* شريحة "المجمّدون" — تظهر فقط لو فيه مجمّد فعلاً */}
-          {pausedCustomers.length > 0 && (
-            <button
-              onClick={() => setShowPausedOnly((v) => !v)}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all",
-                "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-300",
-                showPausedOnly && "ring-2 ring-offset-1 ring-current shadow-sm scale-105"
-              )}
-            >
-              <PauseCircle className="h-3.5 w-3.5" />
-              {isRtl ? "مجمّد (سفر)" : "Paused"}
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-white/80">
-                {pausedCustomers.length}
-              </span>
-            </button>
-          )}
         </div>
+
+        {/* شريط الفلتر المفعّل — يوضّح لماذا القائمة أقصر من المتوقّع */}
+        {viewFilter !== "all" && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-semibold border",
+              viewFilter === "paused"
+                ? "bg-amber-50 text-amber-700 border-amber-300"
+                : "bg-cyan-50 text-cyan-700 border-cyan-300"
+            )}>
+              {viewFilter === "paused" && <PauseCircle className="h-3.5 w-3.5" />}
+              {viewFilter === "paused"
+                ? (isRtl ? "المجمّدون فقط" : "Paused only")
+                : (isRtl ? "النشطون فقط" : "Active only")}
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-white/80">
+                {filteredCustomers.length}
+              </span>
+            </span>
+            <button
+              onClick={() => setViewFilter("all")}
+              className="inline-flex items-center gap-1 text-gray-500 hover:text-gray-800 font-semibold"
+            >
+              <X className="h-3.5 w-3.5" />
+              {isRtl ? "إلغاء الفلتر" : "Clear filter"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Action Buttons */}
