@@ -31,7 +31,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, Printer } from "lucide-react";
+import { printMealPlan } from "@/lib/printMealPlan";
 
 export default function PlansReviewPage() {
   const { t, isRtl } = useLanguage();
@@ -110,6 +111,57 @@ export default function PlansReviewPage() {
     setTimeout(() => {
       setLocation("/plans");
     }, 1500);
+  };
+
+  /** طباعة/PDF: كل عميل معتمد في هذا اليوم كمجموعة مستقلة */
+  const handlePrintDay = () => {
+    const menuMap = new Map((menuItems as any[]).map((m: any) => [String(m._id), m]));
+    const catMap = new Map((categories as any[]).map((c: any) => [String(c._id), c.name]));
+    const modMap = new Map((modifiers as any[]).map((m: any) => [String(m._id), m.name]));
+
+    const groups = plansList.map((plan: any) => {
+      const c = plan.customer;
+      const rows = (plan.items || [])
+        .filter((it: any) => !it.isOff && (it.menuItemId || it.mealNameAr || it.mealNameEn))
+        .map((it: any, i: number) => {
+          const menu = it.menuItemId ? menuMap.get(String(it.menuItemId)) : null;
+          const mods = (it.modifierIds || []).map((id: any) => modMap.get(String(id))).filter(Boolean);
+          const notes = [
+            ...mods,
+            it.avoid || c?.avoid,
+            it.preferences || c?.preferences,
+            it.portions || c?.portions,
+            c?.allergies ? `حساسية: ${c.allergies}` : "",
+          ]
+            .filter(Boolean)
+            .join(" • ");
+          return {
+            label: String(i + 1),
+            category: menu ? catMap.get(String(menu.categoryId)) || "" : "",
+            meal: menu?.name || it.mealNameAr || it.mealNameEn || "غير محدد",
+            notes,
+          };
+        });
+
+      return {
+        title: c?.fullName || plan.customerName || "مشترك",
+        subtitle: [c?.phone, c?.program, c?.deliveryTime === "MORNING" ? "صباحي" : "مسائي"]
+          .filter(Boolean)
+          .join(" · "),
+        rows,
+      };
+    });
+
+    printMealPlan({
+      title: `جدول وجبات اليوم — ${format(date, "dd MMMM yyyy", { locale: dateLocale })}`,
+      subtitle: `${plansList.length} مشترك معتمد · ${stats.totalMeals} وجبة`,
+      kpis: [
+        { label: "مشتركون معتمدون", value: plansList.length },
+        { label: "إجمالي الوجبات", value: stats.totalMeals },
+        { label: "طلبات خاصة", value: stats.specialRequests },
+      ],
+      groups,
+    });
   };
 
   const getPlanIcons = (plan: any) => {
@@ -360,6 +412,16 @@ export default function PlansReviewPage() {
       {/* Fixed Bottom Actions */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-lg z-40">
         <div className="max-w-3xl mx-auto space-y-3">
+          <Button
+            onClick={handlePrintDay}
+            disabled={plansList.length === 0}
+            variant="outline"
+            className="w-full h-12 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]"
+          >
+            <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+            {isRtl ? "تنزيل / طباعة جدول الوجبات" : "Download / Print meal plan"}
+          </Button>
+
           <Button
             onClick={handleSendToKitchen}
             disabled={plansList.length === 0}

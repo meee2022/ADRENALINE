@@ -1,6 +1,6 @@
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle } from "lucide-react";
+import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,11 @@ interface CustomerCardProps {
   onDelete: (customerId: string, customerName: string) => void;
   /** فتح نافذة تجميد/استئناف الاشتراك */
   onPause?: (customer: any) => void;
+  /** فتح نافذة تنزيل/طباعة جدول الوجبات */
+  onPrintPlan?: (customer: any) => void;
 }
 
-export function CustomerCard({ customer, onEdit, onDelete, onPause }: CustomerCardProps) {
+export function CustomerCard({ customer, onEdit, onDelete, onPause, onPrintPlan }: CustomerCardProps) {
   const { t, dir, language } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const dateLocale = language === "ar" ? ar : enUS;
@@ -114,6 +116,17 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause }: CustomerCa
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
+            {onPrintPlan && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title={isRtl ? "تنزيل / طباعة جدول الوجبات" : "Download / print meal plan"}
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg hover:bg-sky-50"
+                onClick={() => onPrintPlan(customer)}
+              >
+                <Printer className="h-4 w-4 text-[#0E76AC]" />
+              </Button>
+            )}
             {onPause && (
               <Button
                 variant="ghost"

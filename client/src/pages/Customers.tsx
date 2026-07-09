@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CustomerCard } from "@/components/CustomerCard";
 import { SubscriptionPauseDialog } from "@/components/SubscriptionPauseDialog";
+import { CustomerMealPlanDialog } from "@/components/CustomerMealPlanDialog";
 import {
   Table,
   TableBody,
@@ -223,6 +224,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 export default function Customers() {
   const { data: customers = [] } = useCustomers();
   const [pauseTarget, setPauseTarget] = useState<any | null>(null);
+  const [printTarget, setPrintTarget] = useState<any | null>(null);
   const createCustomer = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
@@ -1426,6 +1428,7 @@ export default function Customers() {
               customer={customer}
               onEdit={handleEdit}
               onPause={setPauseTarget}
+              onPrintPlan={setPrintTarget}
               onDelete={async (id, name) => {
                 const ok = confirm(
                   isRtl ? `حذف ${name}؟` : `Delete ${name}?`
@@ -1443,6 +1446,12 @@ export default function Customers() {
         customerName={pauseTarget?.fullName ?? ""}
         open={Boolean(pauseTarget)}
         onOpenChange={(v) => !v && setPauseTarget(null)}
+      />
+
+      <CustomerMealPlanDialog
+        customer={printTarget}
+        open={Boolean(printTarget)}
+        onOpenChange={(v) => !v && setPrintTarget(null)}
       />
 
       <div className="text-[10px] text-muted-foreground/50 mt-8">

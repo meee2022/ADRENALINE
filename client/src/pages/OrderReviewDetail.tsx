@@ -8,7 +8,8 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Printer } from "lucide-react";
+import { printMealPlan } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import type { Id } from "@/../../convex/_generated/dataModel";
@@ -228,16 +229,59 @@ export default function OrderReviewDetail() {
       : "غير محدد";
   })();
 
+  /** طباعة/PDF لجدول وجبات الطلب — مجمّعاً بالأسبوع، مرتّباً بأيام التوصيل */
+  const handlePrintPlan = () => {
+    const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
+    const groups = weeks.map((w) => {
+      const days = Object.keys(groupedByWeek[w]).sort(
+        (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
+      );
+      return {
+        title: `الأسبوع ${w}`,
+        rows: days.flatMap((d) =>
+          groupedByWeek[w][d].map((it: any) => ({
+            label: dayNameAr[d] || d,
+            category: categoryNameAr[it.category] || it.category,
+            meal: it.mealNameAr || it.mealNameEn || "-",
+            // الممنوعات/التفضيلات تأتي من المشترك المرتبط (لو الأخصائية ربطته)
+            notes: [linked?.avoid, linked?.preferences, linked?.portions]
+              .filter(Boolean)
+              .join(" • "),
+            calories: it.calories ?? "",
+            price: it.priceQAR != null ? `${it.priceQAR} ر.ق` : "",
+          })),
+        ),
+      };
+    });
+
+    printMealPlan({
+      title: `جدول وجبات — ${order.customerName || "مشترك"}`,
+      subtitle: `طلب ${order.orderNumber || ""} · ${order.customerPhone || ""} · ${createdDate}`,
+      kpis: [
+        { label: "إجمالي الوجبات", value: order.totalMeals ?? items.length },
+        { label: "إجمالي السعرات", value: order.totalCalories ?? "-" },
+        { label: "الإجمالي", value: `${order.totalPrice ?? 0} ر.ق` },
+      ],
+      groups,
+    });
+  };
+
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
-      {/* Back Button */}
-      <Button
-        variant="outline"
-        onClick={() => navigate("/orders/pending")}
-        className="mb-4"
-      >
-        ← العودة للقائمة
-      </Button>
+      {/* Back + Print */}
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <Button variant="outline" onClick={() => navigate("/orders/pending")}>
+          ← العودة للقائمة
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handlePrintPlan}
+          className="font-bold border-[#3cc4f0] text-[#0E76AC]"
+        >
+          <Printer className="h-4 w-4 ml-2" />
+          تنزيل / طباعة جدول الوجبات
+        </Button>
+      </div>
 
       {/* Subscriber Header Card */}
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-primary/20">

@@ -85,6 +85,35 @@ export const list = query({
   },
 });
 
+/**
+ * كل خطط مشترك واحد (اختيارياً ضمن مدى تواريخ) — لطباعة جدول وجباته.
+ * نفلتر على السيرفر بدل تنزيل كل الخطط للمتصفح.
+ */
+export const listByCustomer = query({
+  args: {
+    customerId: v.id("customers"),
+    from: v.optional(v.string()), // yyyy-MM-dd (شامل)
+    to: v.optional(v.string()),   // yyyy-MM-dd (شامل)
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const rows = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_customerId", (q) => q.eq("customerId", args.customerId))
+      .collect();
+
+    return rows
+      .filter((p) => {
+        const d = String(p.date).slice(0, 10);
+        if (args.from && d < args.from) return false;
+        if (args.to && d > args.to) return false;
+        return true;
+      })
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  },
+});
+
 export const getByDateAndCustomer = query({
   args: {
     date: v.string(),
