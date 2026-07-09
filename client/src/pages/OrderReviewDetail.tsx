@@ -10,6 +10,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/lib/store";
 import type { Id } from "@/../../convex/_generated/dataModel";
 
 const dayNameAr: Record<string, string> = {
@@ -43,13 +44,15 @@ export default function OrderReviewDetail() {
   // ✅ تواريخ يدوية لـ (week, day) — اختيارية، تطغى على التاريخ المحسوب
   const [dateOverrides, setDateOverrides] = useState<Record<string, Date | undefined>>({});
 
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+
   const orderData = useQuery(
     api.customerOrders.getById,
-    orderId ? { orderId } : "skip"
+    orderId ? { orderId, sessionToken } : "skip"
   );
-  
+
   // ✅ جلب قائمة المشتركين للربط
-  const customers = useQuery(api.customers.list) || [];
+  const customers = useQuery(api.customers.list, { sessionToken }) || [];
 
   const approveMutation = useMutation(api.customerOrders.approve);
   const rejectMutation = useMutation(api.customerOrders.reject);
@@ -64,6 +67,7 @@ export default function OrderReviewDetail() {
     setSwapping(true);
     try {
       await swapMealMutation({
+        sessionToken,
         itemId: swapTarget._id,
         newMealId: m._id,
         newMealNameAr: m.nameAr,
@@ -154,6 +158,7 @@ export default function OrderReviewDetail() {
 
     try {
       await approveMutation({
+        sessionToken,
         orderId,
         customerId: selectedCustomerId || undefined,
         startDate: effectiveStartDate,
@@ -190,6 +195,7 @@ export default function OrderReviewDetail() {
     }
     try {
       await rejectMutation({
+        sessionToken,
         orderId,
         reason: rejectReason,
       });

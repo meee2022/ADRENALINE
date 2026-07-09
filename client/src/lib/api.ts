@@ -121,7 +121,8 @@ export type StickersResult = {
 // =========================
 
 export function useCustomers() {
-  const data = useConvexQuery(api.customers.list);
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(api.customers.list, { sessionToken });
   return {
     data: data as Customer[] | undefined,
     isLoading: data === undefined,

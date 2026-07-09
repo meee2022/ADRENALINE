@@ -77,6 +77,40 @@ export async function requireAdmin(ctx: QueryCtx | MutationCtx, token?: string |
   return id;
 }
 
+/**
+ * يتطلّب: موظف، أو العميل صاحب حساب `customerAccounts` المطلوب نفسه.
+ * تُستخدم للاستعلامات/الطفرات التي يملكها العميل (بروفايله، تخطّي يوم…).
+ */
+export async function requireStaffOrAccountOwner(
+  ctx: QueryCtx | MutationCtx,
+  token: string | null | undefined,
+  accountId: string,
+): Promise<Identity> {
+  const id = await validateSession(ctx, token);
+  if (!id) throw new Error(AUTH_ERR);
+  if (id.accountType === "staff") return id;
+  if (String(id.customerAccountId) !== String(accountId)) throw new Error(AUTH_ERR);
+  return id;
+}
+
+/**
+ * يتطلّب: موظف، أو العميل المرتبط باشتراك `customerId` المحدّد.
+ * الربط: customerAccounts.customerId → customers._id
+ */
+export async function requireStaffOrSubscriptionOwner(
+  ctx: QueryCtx | MutationCtx,
+  token: string | null | undefined,
+  customerId: string,
+): Promise<Identity> {
+  const id = await validateSession(ctx, token);
+  if (!id) throw new Error(AUTH_ERR);
+  if (id.accountType === "staff") return id;
+  if (!id.customerAccountId) throw new Error(AUTH_ERR);
+  const account: any = await ctx.db.get(id.customerAccountId as any);
+  if (!account || String(account.customerId) !== String(customerId)) throw new Error(AUTH_ERR);
+  return id;
+}
+
 /** حذف جلسة (تسجيل خروج) */
 export async function destroySession(ctx: MutationCtx, token?: string | null): Promise<void> {
   if (!token) return;

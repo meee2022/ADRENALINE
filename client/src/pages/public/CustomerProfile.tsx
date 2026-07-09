@@ -41,6 +41,7 @@ export default function CustomerProfile() {
   const isRtl = dir === "rtl";
   const [, setLocation] = useLocation();
   const { currentCustomer } = useStore();
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const [profile, setProfile] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +67,10 @@ export default function CustomerProfile() {
   const loadProfile = async () => {
     if (!currentCustomer) return;
     try {
-      const data = await convex.query(api.customerAuth.getProfile, { accountId: currentCustomer.id as any });
+      const data = await convex.query(api.customerAuth.getProfile, {
+        accountId: currentCustomer.id as any,
+        sessionToken,
+      });
       setProfile(data);
     } catch (error) {
       console.error("Failed to fetch profile:", error);
@@ -87,7 +91,7 @@ export default function CustomerProfile() {
     if (!profile?.subscription?.id || busy) return;
     setBusy(true);
     try {
-      await setActive({ id: profile.subscription.id, active: !profile.subscription.isActive });
+      await setActive({ id: profile.subscription.id, active: !profile.subscription.isActive, sessionToken });
       await loadProfile();
     } catch (e) { console.error(e); } finally { setBusy(false); }
   };
@@ -95,7 +99,7 @@ export default function CustomerProfile() {
     if (!profile?.subscription?.id || busy) return;
     setBusy(true);
     try {
-      await toggleSkipMut({ id: profile.subscription.id, date });
+      await toggleSkipMut({ id: profile.subscription.id, date, sessionToken });
       await loadProfile();
     } catch (e) { console.error(e); } finally { setBusy(false); }
   };

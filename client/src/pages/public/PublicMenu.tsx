@@ -62,19 +62,13 @@ export default function PublicMenuPage() {
   });
   const [phoneError, setPhoneError] = useState("");
 
-  // Query: use existing `list` query (deployed) and filter client-side
-  // This avoids dependency on a Convex function that may not be deployed yet
-  const allCustomersList = useQuery(api.customers.list);
-
-  const matchingCustomers = useMemo(() => {
-    if (!verifiedPhone) return undefined; // skip state
-    if (!allCustomersList) return undefined; // loading
-    const normalized = verifiedPhone.replace(/\D/g, "");
-    return allCustomersList.filter((c: any) => {
-      const cPhone = String(c.phone || "").replace(/\D/g, "");
-      return cPhone === normalized;
-    });
-  }, [allCustomersList, verifiedPhone]);
+  // ✅ البحث يجري على السيرفر ويُرجع حقولاً محدودة للرقم المطلوب وحده.
+  //    سابقاً كانت الصفحة تنزّل قائمة المشتركين كاملة وتفلتر في المتصفح، فكان
+  //    أي زائر يقرأ كل الأسماء والهواتف والعناوين والأسعار من DevTools.
+  const matchingCustomers = useQuery(
+    api.customers.findPublicByPhone,
+    verifiedPhone ? { phone: verifiedPhone } : "skip"
+  );
 
   const verifiedCustomer = useMemo(() => {
     if (!matchingCustomers || !verifiedCustomerId) return null;

@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireStaff } from "./sessions";
+import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
 
 /* =========================
    Date helpers (server)
@@ -48,10 +48,50 @@ function normalizePhone(input: any) {
    Queries
 ========================= */
 
-// ✅ البحث عن مشترك برقم الجوال (للربط التلقائي - أول مطابق)
-export const findByPhone = query({
+/**
+ * الحقول الوحيدة التي يحتاجها الموقع العام بعد تأكيد رقم الجوال.
+ * لا عنوان، لا سعر، لا ملاحظات، لا تواريخ اشتراك — هذه بيانات داخلية.
+ */
+function publicCustomerView(c: any) {
+  return {
+    _id: c._id,
+    fullName: c.fullName,
+    phone: c.phone,
+    program: c.program,
+    mealsPerDay: c.mealsPerDay,
+    snacksPerDay: c.snacksPerDay,
+    allergies: c.allergies,
+    avoid: c.avoid,
+  };
+}
+
+/**
+ * ✅ للموقع العام: يبحث بالرقم على **السيرفر** ويرجّع حقولاً محدودة فقط.
+ * العائلات قد تتشارك رقماً واحداً، لذلك يرجّع مصفوفة.
+ *
+ * ⚠️ لا تستبدلها بـ list + فلترة في المتصفح: ذلك كان يُنزّل قاعدة المشتركين
+ *    كاملة (أسماء/عناوين/أسعار/حساسية) لأي زائر يفتح DevTools.
+ */
+export const findPublicByPhone = query({
   args: { phone: v.string() },
   handler: async (ctx, { phone }) => {
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return [];
+
+    const customers = await ctx.db
+      .query("customers")
+      .filter((q) => q.eq(q.field("phone"), normalizedPhone))
+      .collect();
+
+    return customers.map(publicCustomerView);
+  },
+});
+
+// ✅ البحث عن مشترك برقم الجوال (للربط التلقائي - أول مطابق) — موظفون فقط
+export const findByPhone = query({
+  args: { phone: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { phone, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) return null;
 
@@ -64,10 +104,11 @@ export const findByPhone = query({
   },
 });
 
-// ✅ كل المشتركين بنفس الرقم (للعائلات اللي بتشارك رقم واحد)
+// ✅ كل المشتركين بنفس الرقم (للعائلات اللي بتشارك رقم واحد) — موظفون فقط
 export const findAllByPhone = query({
-  args: { phone: v.string() },
-  handler: async (ctx, { phone }) => {
+  args: { phone: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { phone, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) return [];
 
@@ -80,9 +121,11 @@ export const findAllByPhone = query({
   },
 });
 
+/** كل بيانات المشتركين — موظفون فقط (أسماء، هواتف، عناوين، حساسية، أسعار). */
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     return await ctx.db.query("customers").order("desc").collect();
   },
 });
@@ -188,9 +231,11 @@ export const remove = mutation({
 });
 
 // خدمة ذاتية: تبديل يوم توصيل في قائمة skippedDates (yyyy-MM-dd)
+// يسمح بها لصاحب الاشتراك نفسه أو لموظف — وليس لأي شخص يعرف الـid.
 export const toggleSkipDay = mutation({
-  args: { id: v.id("customers"), date: v.string() },
+  args: { id: v.id("customers"), date: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, args.id);
     const c = await ctx.db.get(args.id);
     if (!c) return null;
     const cur: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
@@ -203,8 +248,9 @@ export const toggleSkipDay = mutation({
 
 // خدمة ذاتية: إيقاف/استئناف الاشتراك
 export const setSubscriptionActive = mutation({
-  args: { id: v.id("customers"), active: v.boolean() },
+  args: { id: v.id("customers"), active: v.boolean(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, args.id);
     await ctx.db.patch(args.id, { isActive: args.active, updatedAt: Date.now() });
     return { isActive: args.active };
   },

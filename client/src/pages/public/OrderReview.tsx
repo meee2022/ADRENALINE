@@ -56,10 +56,13 @@ export default function OrderReview() {
   
   // Convex Mutation & Query (بعد تعريف customerPhone)
   const createOrder = useMutation(api.customerOrders.create);
-  const findCustomerByPhone = useQuery(
-    api.customers.findByPhone,
+  // ✅ استعلام عام بحقول محدودة (بلا عنوان/سعر/ملاحظات).
+  //    العائلات قد تتشارك رقماً واحداً، فنأخذ أول مطابق كما كان السلوك سابقاً.
+  const matchesByPhone = useQuery(
+    api.customers.findPublicByPhone,
     customerPhone ? { phone: customerPhone } : "skip"
   );
+  const findCustomerByPhone = matchesByPhone?.[0] ?? null;
   const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   

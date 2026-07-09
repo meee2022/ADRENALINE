@@ -5,7 +5,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
-import { validateSession } from "./sessions";
+import { validateSession, requireStaffOrAccountOwner } from "./sessions";
 
 /**
  * Simple hash function (same as users.ts)
@@ -109,8 +109,10 @@ export const authenticate = query({
  * Get customer profile with subscription details
  */
 export const getProfile = query({
-  args: { accountId: v.id("customerAccounts") },
+  args: { accountId: v.id("customerAccounts"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    // بدون هذا الفحص يقرأ أي شخص بروفايل أي عميل (هاتف، عنوان، سعر) بمعرفة الـid فقط
+    await requireStaffOrAccountOwner(ctx, args.sessionToken, args.accountId);
     const account = await ctx.db.get(args.accountId);
     if (!account) return null;
 
@@ -161,8 +163,10 @@ export const linkSubscription = mutation({
   args: {
     accountId: v.id("customerAccounts"),
     customerId: v.id("customers"),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaffOrAccountOwner(ctx, args.sessionToken, args.accountId);
     await ctx.db.patch(args.accountId, {
       customerId: args.customerId,
       updatedAt: Date.now(),
@@ -178,8 +182,10 @@ export const updateProfile = mutation({
     accountId: v.id("customerAccounts"),
     fullName: v.optional(v.string()),
     phone: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaffOrAccountOwner(ctx, args.sessionToken, args.accountId);
     const updates: any = { updatedAt: Date.now() };
     
     if (args.fullName) updates.fullName = args.fullName;

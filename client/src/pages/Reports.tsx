@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,7 +136,8 @@ function ReportToolbar({ onExport, onPrint }: { onExport: () => void; onPrint: (
 }
 
 function SalesReport({ from, to }: { from: string; to: string }) {
-  const orders = useQuery(api.customerOrders.list, { limit: 1000 }) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const orders = useQuery(api.customerOrders.list, { limit: 1000, sessionToken }) || [];
   const filtered = orders.filter((o: any) => {
     const d = new Date(o.createdAt).toISOString().split("T")[0];
     return d >= from && d <= to && o.status !== "cancelled";
@@ -332,7 +334,8 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
 }
 
 function CustomersReport() {
-  const customers = useQuery(api.customers.list) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const customers = useQuery(api.customers.list, { sessionToken }) || [];
   const active = customers.filter((c: any) => c.isActive).length;
 
   const handleExport = () => {

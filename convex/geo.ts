@@ -48,7 +48,9 @@ export const geocodeAddress = action({
 export const geocodeAllCustomers = action({
   args: { sessionToken: v.optional(v.string()), limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<{ updated: number; failed: number; remaining: number }> => {
-    const customers: any[] = await ctx.runQuery(api.customers.list, {} as any);
+    const customers: any[] = await ctx.runQuery(api.customers.list, {
+      sessionToken: args.sessionToken,
+    } as any);
     const targets = customers.filter(
       (c) => c.address && String(c.address).trim() && (c.lat == null || c.lng == null),
     );

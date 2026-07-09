@@ -6,10 +6,12 @@ import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { ClipboardList, CheckCircle2 } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { useStore } from "@/lib/store";
 
 export default function OrdersPending() {
   const [, navigate] = useLocation();
-  const pendingOrders = useQuery(api.customerOrders.list, { status: "pending" });
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const pendingOrders = useQuery(api.customerOrders.list, { status: "pending", sessionToken });
   const pendingCount = useQuery(api.customerOrders.countPending);
 
   if (!pendingOrders) {

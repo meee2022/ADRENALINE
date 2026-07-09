@@ -4,8 +4,8 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { hashPassword, verifyPassword } from "./passwords";
-import { requireAdmin } from "./sessions";
+import { hashPassword } from "./passwords";
+import { requireAdmin, requireStaff } from "./sessions";
 
 /**
  * Simple hash function for passwords (FOR DEMO ONLY)
@@ -13,50 +13,17 @@ import { requireAdmin } from "./sessions";
  */
 // التشفير الآمن في convex/passwords.ts (PBKDF2 + توافق رجعي)
 
-/**
- * Authenticate user with email and password
- */
-export const authenticate = query({
-  args: {
-    email: v.string(),
-    password: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
-
-    if (!user) {
-      return { success: false, error: "البريد الإلكتروني غير موجود" };
-    }
-
-    if (!user.isActive) {
-      return { success: false, error: "الحساب غير نشط" };
-    }
-
-    if (!(await verifyPassword(args.password, user.passwordHash))) {
-      return { success: false, error: "بيانات الدخول غير صحيحة" };
-    }
-
-    return {
-      success: true,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-    };
-  },
-});
+// ملاحظة: `authenticate` القديمة أُزيلت. كانت query عامة تتحقق من كلمة المرور،
+// غير مستخدمة من أي مكان، وتكشف "البريد غير موجود" (تعداد حسابات).
+// تسجيل الدخول يمرّ عبر auth.authenticateUnified وحدها.
 
 /**
- * Get user by ID
+ * Get user by ID — موظفون فقط
  */
 export const getUserById = query({
-  args: { userId: v.id("users") },
+  args: { userId: v.id("users"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const user = await ctx.db.get(args.userId);
     if (!user) return null;
 
@@ -74,7 +41,10 @@ export const getUserById = query({
  * List all users (admin only)
  */
 export const listUsers = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    // يكشف كل الموظفين وأدوارهم وصلاحياتهم — خريطة جاهزة لاستهدافهم
+    await requireAdmin(ctx, args.sessionToken);
     const users = await ctx.db.query("users").collect();
     return users.map((user) => ({
       id: user._id,

@@ -1,6 +1,7 @@
 // convex/customerOrders.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 
 // Helper: Generate unique order number
 function generateOrderNumber(): string {
@@ -110,8 +111,9 @@ export const create = mutation({
 
 // ===== GET ORDER BY ID =====
 export const getById = query({
-  args: { orderId: v.id("customerOrders") },
-  handler: async (ctx, { orderId }) => {
+  args: { orderId: v.id("customerOrders"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { orderId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const order = await ctx.db.get(orderId);
     if (!order) return null;
 
@@ -155,8 +157,10 @@ export const list = query({
   args: {
     status: v.optional(v.string()),
     limit: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { status, limit = 50 }) => {
+  handler: async (ctx, { status, limit = 50, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     if (status) {
       const orders = await ctx.db
         .query("customerOrders")
@@ -186,8 +190,10 @@ export const updateStatus = mutation({
       v.literal("completed"),
       v.literal("cancelled")
     ),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { orderId, status }) => {
+  handler: async (ctx, { orderId, status, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     await ctx.db.patch(orderId, {
       status,
       updatedAt: Date.now(),
@@ -233,8 +239,10 @@ export const approve = mutation({
     // ✅ تعديلات اختيارية لتاريخ يوم محدد. المفتاح هو "week-day" (مثال: "1-saturday")
     // والقيمة تاريخ بصيغة YYYY-MM-DD يستبدل التاريخ المحسوب تلقائياً
     dateOverrides: v.optional(v.record(v.string(), v.string())),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides }) => {
+  handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
@@ -436,8 +444,10 @@ export const reject = mutation({
   args: {
     orderId: v.id("customerOrders"),
     reason: v.string(),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { orderId, reason }) => {
+  handler: async (ctx, { orderId, reason, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const order = await ctx.db.get(orderId);
     await ctx.db.patch(orderId, {
       status: "cancelled",
@@ -478,8 +488,10 @@ export const updateOrderItemMeal = mutation({
     newCategory: v.string(),
     newImageUrl: v.optional(v.string()),
     newPriceQAR: v.number(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.patch(args.itemId, {
       mealId: args.newMealId,
       mealNameAr: args.newMealNameAr,

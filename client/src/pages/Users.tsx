@@ -183,7 +183,7 @@ export default function Users() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   // Fetch users from Convex
-  const users = useQuery(api.users.listUsers) || [];
+  const users = useQuery(api.users.listUsers, { sessionToken }) || [];
   const customers = useQuery(api.customerAuth.listCustomers, { sessionToken }) || [];
 
   const handleAdd = () => {
