@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles, UtensilsCrossed } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import {
   Dialog,
@@ -36,6 +37,7 @@ type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "t
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
+  useSeo({ title: "المنيو | أدرينالين للوجبات الصحية", description: "تصفّح منيو أدرينالين: وجبات صحية متنوعة بسعرات وماكروز واضحة — فطار، غدا، عشا، سلطات وسناكس.", path: "/public/menu" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
   

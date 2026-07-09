@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import {
@@ -18,6 +19,7 @@ const B = { brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A", ink2: "#2D4A67"
 
 export default function HowToSubscribe() {
   const { language, dir } = useLanguage();
+  useSeo({ title: "طريقة الاشتراك | أدرينالين للوجبات الصحية", description: "اعرف إزاي تشترك في وجبات أدرينالين الصحية خطوة بخطوة — اختيار الباقة، الدفع، والتوصيل اليومي في قطر.", path: "/public/how-to-subscribe" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
   const settings = useQuery(api.restaurantSettings.get);

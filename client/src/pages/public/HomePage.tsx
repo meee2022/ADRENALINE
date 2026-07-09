@@ -14,12 +14,14 @@ import {
   ChevronDown, Leaf, ChefHat, Truck, Award,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { language, dir } = useLanguage();
+  useSeo({ title: "أدرينالين للوجبات الصحية | وجبات دايت وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل لباب بيتك في قطر. اشترك في باقتك دلوقتي.", path: "/" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
 

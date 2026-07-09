@@ -8,6 +8,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { MessageCircle, Printer, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 
 /* ─── Brand tokens ─── */
 const B = {
@@ -136,6 +137,7 @@ const IcCheck = ({ color }: { color:string }) => (
 ══════════════════════════════════════════════════ */
 export default function AboutPage() {
   const { language } = useLanguage();
+  useSeo({ title: "من نحن | أدرينالين للوجبات الصحية", description: "أدرينالين — مطبخ وجبات صحية في قطر يقدّم أكل لذيذ محسوب السعرات بإشراف أخصائيي تغذية.", path: "/public/about" });
   const [isAr, setIsAr] = React.useState(language === "ar");
   const settings = useQuery(api.restaurantSettings.get);
   const phone = String(settings?.phone || "97451144366").replace(/\D/g, "");

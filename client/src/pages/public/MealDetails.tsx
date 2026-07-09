@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Flame, ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { tagLabel } from "@/lib/tagLabels";
+import { useSeo } from "@/lib/seo";
 
 export default function MealDetailsPage() {
   const { language, dir } = useLanguage();
@@ -19,6 +20,17 @@ export default function MealDetailsPage() {
   const slug = params.slug || "";
 
   const { data: meal } = usePublicMealBySlug(slug);
+
+  useSeo({
+    title: meal
+      ? `${isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)} | أدرينالين للوجبات الصحية`
+      : "أدرينالين للوجبات الصحية",
+    description: meal
+      ? `${isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)} — ${meal.calories} سعرة · بروتين ${meal.protein}غ · كارب ${meal.carbs}غ · دهون ${meal.fats}غ. اطلبها من أدرينالين، توصيل يومي في قطر.`
+      : undefined,
+    path: `/public/meal/${slug}`,
+    image: meal?.imageUrl || undefined,
+  });
 
   if (!meal) {
     return (

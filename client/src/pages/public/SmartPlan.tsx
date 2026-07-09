@@ -8,6 +8,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles } from "lucide-react";
@@ -29,6 +30,7 @@ const B = {
 
 export default function SmartPlan() {
   const { language, dir } = useLanguage();
+  useSeo({ title: "خطتي الذكية | أدرينالين للوجبات الصحية", description: "دع الذكاء الاصطناعي يختار لك وجبات اليوم حسب هدفك وسعراتك وما لا تحبه — ثم يراجعها أخصائي التغذية.", path: "/customer/smart-plan" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (ar: string, en: string) => (isRtl ? ar : en);
   const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);

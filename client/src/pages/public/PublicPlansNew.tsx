@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Check, X, Sparkles, TrendingUp, Briefcase, Tag, Zap } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useSeo } from "@/lib/seo";
 
 const badgeConfig = {
   most_requested: { ar: "⭐ الأكثر طلبًا", en: "⭐ Most Requested", color: "bg-gradient-to-r from-yellow-400 to-yellow-500", textColor: "text-gray-900", icon: Sparkles },
@@ -20,6 +21,7 @@ const badgeConfig = {
 
 export default function PublicPlansNew() {
   const { language, dir } = useLanguage();
+  useSeo({ title: "الباقات والأسعار | أدرينالين للوجبات الصحية", description: "اختر باقتك: تنحيف، لياقة، أو تضخيم — وجبات صحية محسوبة السعرات بأسعار مناسبة وتوصيل يومي في قطر.", path: "/public/plans" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   // اسم الباقة: إنجليزي في الوضع الإنجليزي، وعربي مع استبدال "حزمة" بـ"باقة"
   const planName = (p: any) => isRtl ? String(p.nameAr || "").replace(/حزمة/g, "باقة") : (p.nameEn || p.nameAr);
