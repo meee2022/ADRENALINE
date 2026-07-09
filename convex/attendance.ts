@@ -218,6 +218,17 @@ export const summary = query({
   },
 });
 
+/** تفاصيل حضور موظف واحد في شهر (كل الأيام بالترتيب). للموظفين فقط. */
+export const employeeMonth = query({
+  args: { name: v.string(), month: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff") return [];
+    const rows = await ctx.db.query("attendance").withIndex("by_month", (q) => q.eq("month", args.month)).collect();
+    return rows.filter((r) => r.name === args.name).sort((a, b) => a.date.localeCompare(b.date));
+  },
+});
+
 /** عدّادات حضور اليوم للوحة التحكم (حاضر/غائب/إجازة/نصف يوم/متأخر). للموظفين فقط. */
 export const todayCounts = query({
   args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },

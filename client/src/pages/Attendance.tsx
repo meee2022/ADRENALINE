@@ -118,6 +118,11 @@ export default function Attendance() {
   const syncM = useMutation(api.attendance.syncToPayroll);
   const otApprovalM = useMutation(api.attendance.setOtApproval);
   const [editOt, setEditOt] = useState<{ name: string; val: string } | null>(null);
+  const [detailName, setDetailName] = useState<string | null>(null);
+  const detailRows = (useQuery(
+    api.attendance.employeeMonth,
+    detailName ? { name: detailName, month, sessionToken } : "skip",
+  ) as any[] | undefined) || [];
   const saveOtApproval = async (name: string, raw: string) => {
     const v = raw.trim() === "" ? undefined : Number(raw);
     if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { alert(t("رقم غير صحيح", "Invalid number")); return; }
@@ -442,7 +447,11 @@ export default function Attendance() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {summary.employees.map((e: any) => (
               <div key={e.name} className="bg-white rounded-2xl p-3" style={{ border: "1px solid #e8eef4" }}>
-                <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}</div>
+                <button onClick={() => setDetailName(e.name)}
+                  className="text-sm font-bold text-[#0E76AC] hover:underline truncate w-full text-start flex items-center gap-1"
+                  title={t("عرض أيام الحضور", "View attendance days")}>
+                  {e.name}
+                </button>
                 <div className="flex items-center gap-3 mt-2 text-xs">
                   <span className="text-emerald-600 font-bold">{t("حضور", "P")} {e.workedDays}</span>
                   {e.absent > 0 && <span className="text-red-500 font-bold">{t("غياب", "A")} {e.absent}</span>}
@@ -480,6 +489,64 @@ export default function Attendance() {
           </div>
         </div>
       )}
+
+      {/* ===== Employee attendance days dialog ===== */}
+      <Dialog open={!!detailName} onOpenChange={(o) => !o && setDetailName(null)}>
+        <DialogContent className="max-w-2xl" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{detailName} — {t(`أيام حضور شهر ${month}`, `${month} attendance`)}</DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const present = detailRows.filter((r) => r.status === "present").length;
+            const totOt = detailRows.reduce((s, r) => s + (r.otHours || 0), 0);
+            const totHrs = detailRows.reduce((s, r) => s + (r.workedHours || 0), 0);
+            const dow = (d: string) => { const days = isRtl ? ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; const [y, m, dd] = d.split("-").map(Number); return days[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()]; };
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { v: present, l: t("أيام حضور", "Days") },
+                    { v: Math.round(totHrs * 100) / 100, l: t("إجمالي ساعات", "Total hrs") },
+                    { v: Math.round(totOt * 100) / 100, l: t("أوفرتايم", "Overtime") },
+                  ].map((c, i) => (
+                    <div key={i} className="rounded-xl bg-[#f4f8fb] p-2 text-center" style={{ border: "1px solid #e8eef4" }}>
+                      <div className="text-xl font-black text-[#0E76AC] tabular-nums">{c.v}</div>
+                      <div className="text-[11px] font-bold text-[#47759c]">{c.l}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="max-h-[55vh] overflow-auto rounded-xl" style={{ border: "1px solid #e8eef4" }}>
+                  {detailRows.length === 0 ? (
+                    <p className="text-center text-gray-400 py-8 text-sm">{t("لا حضور مسجّل هذا الشهر", "No records this month")}</p>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-[#0E76AC] text-white text-xs">
+                        <tr>
+                          {[t("التاريخ", "Date"), t("اليوم", "Day"), t("دخول", "In"), t("خروج", "Out"), t("ساعات", "Hrs"), t("أوفر", "OT")].map((h, i) => (
+                            <th key={i} className="px-2 py-2 font-bold">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {detailRows.map((r) => (
+                          <tr key={r._id} className="border-t border-gray-100 text-center odd:bg-[#f9fbfd]">
+                            <td className="px-2 py-1.5 font-bold text-[#0f1516]" dir="ltr">{r.date}</td>
+                            <td className="px-2 py-1.5 text-gray-500">{dow(r.date)}</td>
+                            <td className="px-2 py-1.5 tabular-nums" dir="ltr">{r.checkIn || "—"}</td>
+                            <td className="px-2 py-1.5 tabular-nums" dir="ltr">{r.checkOut || "—"}</td>
+                            <td className="px-2 py-1.5 tabular-nums font-bold">{r.workedHours ?? "—"}</td>
+                            <td className="px-2 py-1.5 tabular-nums font-bold text-[#0E76AC]">{r.otHours ? r.otHours : ""}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* ===== Single add/edit dialog ===== */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
