@@ -518,58 +518,57 @@ export default function OrderReviewDetail() {
                         </div>
                       </div>
 
-                      <div className="grid md:grid-cols-3 gap-3 p-4">
+                      <div
+                        className="grid gap-2.5 p-3"
+                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))" }}
+                      >
                         {dayMeals.map((meal) => (
                           <div
                             key={meal._id}
-                            className="bg-[#F7FBFE] border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                            className="bg-[#F7FBFE] border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
                           >
-                            {meal.imageUrl && (
-                              <img
-                                src={meal.imageUrl}
-                                alt={meal.mealNameAr}
-                                className="w-full h-32 object-cover"
-                              />
-                            )}
-                            <div className="p-3">
-                              <div className="flex items-start justify-between mb-2">
-                                <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
-                                  {categoryNameAr[meal.category] || meal.category}
-                                </span>
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => setSwapTarget(meal)}
-                                    className="text-gray-400 hover:text-primary transition-colors"
-                                    title="تبديل الوجبة"
-                                  >
-                                    ✏️
-                                  </button>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`حذف "${meal.mealNameAr}" من الطلب؟`)) return;
-                                      try {
-                                        await removeItemMutation({ itemId: meal._id, sessionToken });
-                                      } catch (e: any) {
-                                        alert(e?.message || "تعذّر الحذف");
-                                      }
-                                    }}
-                                    className="text-gray-400 hover:text-red-600 transition-colors"
-                                    title="حذف الوجبة من الطلب"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
-                              </div>
-                              <h6 className="font-bold text-gray-900 text-sm mb-1">
+                            <div className="relative">
+                              {meal.imageUrl && (
+                                <img
+                                  src={meal.imageUrl}
+                                  alt={meal.mealNameAr}
+                                  className="w-full h-24 object-cover"
+                                />
+                              )}
+                              <span className="absolute top-1.5 start-1.5 text-[10px] font-bold text-primary bg-white/90 px-1.5 py-0.5 rounded-md">
+                                {categoryNameAr[meal.category] || meal.category}
+                              </span>
+                            </div>
+                            <div className="p-2.5 flex flex-col flex-1">
+                              <h6 className="font-bold text-gray-900 text-[12.5px] leading-snug mb-1 line-clamp-2">
                                 {meal.mealNameAr}
                               </h6>
-                              <div className="flex items-center justify-between text-xs text-gray-600">
+                              <div className="flex items-center justify-between text-[11px] text-gray-600 mb-2">
                                 <span>{meal.calories} سعرة</span>
-                                {meal.protein && (
-                                  <span className="text-xs">
-                                    🥩 {meal.protein}g بروتين
-                                  </span>
-                                )}
+                                {meal.protein ? <span>🥩 {meal.protein}g</span> : null}
+                              </div>
+                              <div className="flex items-center justify-end gap-3 mt-auto pt-1.5 border-t border-gray-100">
+                                <button
+                                  onClick={() => setSwapTarget(meal)}
+                                  className="text-gray-400 hover:text-primary transition-colors text-sm"
+                                  title="تبديل الوجبة"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`حذف "${meal.mealNameAr}" من الطلب؟`)) return;
+                                    try {
+                                      await removeItemMutation({ itemId: meal._id, sessionToken });
+                                    } catch (e: any) {
+                                      alert(e?.message || "تعذّر الحذف");
+                                    }
+                                  }}
+                                  className="text-gray-400 hover:text-red-600 transition-colors text-sm"
+                                  title="حذف الوجبة من الطلب"
+                                >
+                                  🗑️
+                                </button>
                               </div>
                             </div>
                           </div>
