@@ -47,6 +47,7 @@ import type * as publicPlans from "../publicPlans.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as ratings from "../ratings.js";
+import type * as resetTestData from "../resetTestData.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
 import type * as seedInventory from "../seedInventory.js";
@@ -107,6 +108,7 @@ declare const fullApi: ApiFromModules<{
   purchaseOrders: typeof purchaseOrders;
   rateLimit: typeof rateLimit;
   ratings: typeof ratings;
+  resetTestData: typeof resetTestData;
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;
   seedInventory: typeof seedInventory;
