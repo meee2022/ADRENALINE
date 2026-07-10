@@ -156,8 +156,11 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
   const tr = T(lang);
   const dir = lang === "ar" ? "rtl" : "ltr";
 
+  // ⚠️ عنصر مفصول (لا يُلحَق بالصفحة) — html2pdf يُلحقه داخلياً في موضع محايد
+  //    فيصوّره html2canvas صحيحاً. إلحاقه على left:-10000px كان ينتج PDF فارغاً.
   const el = document.createElement("div");
-  el.style.cssText = "position:absolute;left:-10000px;top:0;width:1120px;background:#ffffff";
+  el.style.width = "1120px";
+  el.style.background = "#ffffff";
   el.innerHTML = `
     <style>
       .kp-doc *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -195,30 +198,17 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       </div>
       <div class="foot">ADRENALINE Healthy Food — ${esc(tr.title)} ${esc(dateStr)}</div>
     </div>`;
-  document.body.appendChild(el);
-  await Promise.all(
-    Array.from(el.querySelectorAll("img")).map((img) =>
-      (img as HTMLImageElement).complete ? Promise.resolve() : new Promise<void>((res) => {
-        (img as HTMLImageElement).onload = () => res();
-        (img as HTMLImageElement).onerror = () => res();
-      }),
-    ),
-  );
 
-  try {
-    const html2pdf = (await import("html2pdf.js")).default as any;
-    await html2pdf()
-      .set({
-        margin: 5,
-        filename: `ADRENALINE-kitchen-${dateStr}.pdf`,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-        pagebreak: { mode: ["css", "legacy"] },
-      })
-      .from(el)
-      .save();
-  } finally {
-    el.remove();
-  }
+  const html2pdf = (await import("html2pdf.js")).default as any;
+  await html2pdf()
+    .set({
+      margin: 5,
+      filename: `ADRENALINE-kitchen-${dateStr}.pdf`,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+      pagebreak: { mode: ["css", "legacy"] },
+    })
+    .from(el)
+    .save();
 }
