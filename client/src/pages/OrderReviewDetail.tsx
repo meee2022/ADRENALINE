@@ -9,7 +9,7 @@ import { ar } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Printer } from "lucide-react";
-import { printMealPlan } from "@/lib/printMealPlan";
+import { printWeeklyReport } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import type { Id } from "@/../../convex/_generated/dataModel";
@@ -229,44 +229,66 @@ export default function OrderReviewDetail() {
       : "غير محدد";
   })();
 
-  /** طباعة/PDF لجدول وجبات الطلب — مجمّعاً بالأسبوع، مرتّباً بأيام التوصيل */
+  /** اسم اليوم بالإنجليزية كما يظهر في التقرير المرسل للعميل. */
+  const DAY_EN: Record<string, string> = {
+    saturday: "Saturday", sunday: "Sunday", monday: "Monday",
+    tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday",
+  };
+
+  /**
+   * يوزّع وجبات يوم واحد على أعمدة التقرير.
+   * أي وجبة لا تجد عمودها (سلطة، سناك ثالث…) تذهب إلى Extra — لا تُسقط أبداً.
+   */
+  const buildDayRow = (dayKey: string, dayItems: any[]) => {
+    const mealName = (it: any) => it.mealNameEn || it.mealNameAr || "-";
+    const of = (cat: string) =>
+      dayItems.filter((it) => String(it.category).toLowerCase() === cat).map(mealName);
+
+    const snacks = of("snack");
+    const known = new Set(["breakfast", "snack", "lunch", "dinner"]);
+
+    return {
+      day: DAY_EN[dayKey] || dayKey,
+      breakfast: of("breakfast"),
+      snack1: snacks.slice(0, 1),
+      lunch: of("lunch"),
+      snack2: snacks.slice(1, 2),
+      dinner: of("dinner"),
+      extra: [
+        // أصناف غير معروفة (salad…)
+        ...dayItems.filter((it) => !known.has(String(it.category).toLowerCase())).map(mealName),
+        // سناك ثالث فما فوق
+        ...snacks.slice(2),
+      ],
+    };
+  };
+
+  /** التقرير الأسبوعي المرسل للعميل: الأيام صفوف، الأصناف أعمدة. */
   const handlePrintPlan = () => {
     const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
-    // الممنوعات/التفضيلات تأتي من المشترك المرتبط (لو الأخصائية ربطته) — واحدة لكل الوجبات
-    const customerNotes = [linked?.avoid, linked?.preferences, linked?.portions]
+    const note = [
+      linked?.allergies ? `Allergies: ${linked.allergies}` : "",
+      linked?.avoid ? `Avoid: ${linked.avoid}` : "",
+      linked?.preferences ? `Preferences: ${linked.preferences}` : "",
+      linked?.portions ? `Portions: ${linked.portions}` : "",
+    ]
       .filter(Boolean)
-      .join(" • ");
+      .join("  •  ");
 
-    const groups = weeks.map((w) => {
-      const days = Object.keys(groupedByWeek[w]).sort(
-        (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
-      );
-      return {
-        title: `الأسبوع ${w}`,
-        // اليوم عنوان، ووجباته تحته — بدل تكرار اسم اليوم في كل سطر
-        sections: days.map((d) => ({
-          title: dayNameAr[d] || d,
-          rows: groupedByWeek[w][d].map((it: any, i: number) => ({
-            label: String(i + 1),
-            category: categoryNameAr[it.category] || it.category,
-            meal: it.mealNameAr || it.mealNameEn || "-",
-            notes: customerNotes,
-            calories: it.calories ?? "",
-          })),
-        })),
-      };
-    });
-
-    printMealPlan({
-      title: `جدول وجبات — ${order.customerName || "مشترك"}`,
-      subtitle: `طلب ${order.orderNumber || ""} · ${order.customerPhone || ""} · ${createdDate}`,
-      kpis: [
-        { label: "إجمالي الوجبات", value: order.totalMeals ?? items.length },
-        { label: "إجمالي السعرات", value: order.totalCalories ?? "-" },
-      ],
-      groups,
-      // ✅ جدول العميل بلا أسعار — الأسعار داخلية ولا تخصّ الشيف ولا العميل
-      showPrice: false,
+    printWeeklyReport({
+      customerName: order.customerName || "—",
+      phone: order.customerPhone || undefined,
+      dateText: createdDate,
+      note: note || undefined,
+      weeks: weeks.map((w) => {
+        const days = Object.keys(groupedByWeek[w]).sort(
+          (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
+        );
+        return {
+          title: `week${w}`,
+          days: days.map((d) => buildDayRow(d, groupedByWeek[w][d])),
+        };
+      }),
     });
   };
 

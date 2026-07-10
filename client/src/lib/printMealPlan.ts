@@ -167,6 +167,11 @@ export function printMealPlan(input: PrintMealPlanInput): void {
     <div class="foot">ADRENALINE Healthy Food — طُبع في ${new Date().toLocaleString("ar-EG")}</div>
     </body></html>`;
 
+  openPrintWindow(html);
+}
+
+/** يفتح نافذة الطباعة ويطبع. مشترك بين كل التقارير. */
+function openPrintWindow(html: string): void {
   const w = window.open("", "_blank", "width=980,height=1000");
   if (!w) {
     alert("اسمح بالنوافذ المنبثقة (pop-ups) للطباعة");
@@ -176,4 +181,117 @@ export function printMealPlan(input: PrintMealPlanInput): void {
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 350);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   التقرير الأسبوعي — مصفوفة: الأيام صفوف، والأصناف أعمدة.
+   هذا ما يُرسل للعميل، فهو مقروء من نظرة واحدة بلا تكرار.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/** خانة واحدة قد تحتوي أكثر من وجبة (يوم بغداءين مثلاً) — لا نُسقط شيئاً بصمت. */
+export type WeeklyCell = string[];
+
+export type WeeklyDay = {
+  /** Saturday / السبت */
+  day: string;
+  breakfast: WeeklyCell;
+  snack1: WeeklyCell;
+  lunch: WeeklyCell;
+  snack2: WeeklyCell;
+  dinner: WeeklyCell;
+  /** أي وجبة لم تجد عموداً (سلطة، سناك ثالث…) — يظهر العمود فقط عند وجود محتوى */
+  extra: WeeklyCell;
+};
+
+export type WeeklyReportInput = {
+  customerName: string;
+  phone?: string;
+  dateText: string;
+  weeks: { title: string; days: WeeklyDay[] }[];
+  /** الممنوعات/الحساسية — تُطبع تحت الجدول */
+  note?: string;
+};
+
+export function printWeeklyReport(input: WeeklyReportInput): void {
+  const weeks = input.weeks.filter((w) => w.days.length > 0);
+  if (weeks.length === 0) {
+    alert("لا توجد وجبات لطباعتها");
+    return;
+  }
+
+  const anyExtra = weeks.some((w) => w.days.some((d) => d.extra.length > 0));
+
+  const cell = (c: WeeklyCell) =>
+    `<td>${c.length ? c.map((m) => `<span class="m">${esc(m)}</span>`).join("") : ""}</td>`;
+
+  const weeksHtml = weeks
+    .map(
+      (w) => `<section class="wk">
+        <div class="wk-t">${esc(w.title)}</div>
+        <table>
+          <thead><tr>
+            <th class="dayh">Day</th>
+            <th>Breakfast</th><th>Snack 1</th><th>Lunch</th><th>Snack 2</th><th>Dinner</th>
+            ${anyExtra ? "<th>Extra</th>" : ""}
+          </tr></thead>
+          <tbody>
+            ${w.days
+              .map(
+                (d) => `<tr>
+              <td class="dayc">${esc(d.day)}</td>
+              ${cell(d.breakfast)}${cell(d.snack1)}${cell(d.lunch)}${cell(d.snack2)}${cell(d.dinner)}
+              ${anyExtra ? cell(d.extra) : ""}
+            </tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+      </section>`,
+    )
+    .join("");
+
+  const html = `<!doctype html><html dir="ltr" lang="en"><head><meta charset="utf-8">
+    <title>${esc(input.customerName)} — Weekly Report</title>
+    <style>
+      *{box-sizing:border-box}
+      body{margin:0;padding:22px;color:#1f2937;font-family:Cairo,Tahoma,Arial,sans-serif;background:#fff}
+      h1{font-size:26px;font-weight:900;text-align:center;margin:0 0 18px;color:#111827}
+
+      .card{border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:18px;
+            display:flex;gap:40px;flex-wrap:wrap}
+      .card .k{font-size:9.5px;letter-spacing:.06em;color:#6b7280;font-weight:800;text-transform:uppercase}
+      .card .v{font-size:13px;font-weight:800;color:#111827;margin-top:3px}
+
+      .wk{margin-bottom:20px;break-inside:avoid}
+      .wk-t{background:#eef1fd;border:1px solid #e0e4fa;border-bottom:none;border-radius:8px 8px 0 0;
+            text-align:center;font-weight:900;color:#3b5bdb;padding:9px;font-size:14px}
+
+      table{width:100%;border-collapse:collapse;table-layout:fixed}
+      th{background:#f9fafb;color:#374151;font-size:10.5px;font-weight:800;padding:9px 6px;
+         border:1px solid #e5e7eb;text-align:center}
+      td{border:1px solid #e5e7eb;padding:8px 6px;font-size:9.5px;color:#374151;vertical-align:middle;
+         word-wrap:break-word}
+      td.dayc{font-weight:800;color:#111827;text-align:center;font-size:11px;background:#fff}
+      th.dayh,td.dayc{width:78px}
+      .m{display:block}
+      .m + .m{margin-top:3px;padding-top:3px;border-top:1px dashed #e5e7eb}
+
+      .note{margin-top:6px;border:1px solid #fde68a;background:#fffbeb;color:#92400e;
+            border-radius:8px;padding:9px 12px;font-size:11px;font-weight:700}
+      .foot{margin-top:16px;font-size:10px;color:#9ca3af;text-align:center}
+      @page{size:A4;margin:12mm}
+      @media print{.wk{break-inside:avoid}thead{display:table-header-group}}
+    </style></head><body>
+    <h1>Weekly Report</h1>
+    <div class="card">
+      <div><div class="k">Name</div><div class="v">${esc(input.customerName)}</div></div>
+      ${input.phone ? `<div><div class="k">Phone Number</div><div class="v">${esc(input.phone)}</div></div>` : ""}
+      <div><div class="k">Date &amp; Time</div><div class="v">${esc(input.dateText)}</div></div>
+    </div>
+    ${weeksHtml}
+    ${input.note ? `<div class="note">⚠ ${esc(input.note)}</div>` : ""}
+    <div class="foot">ADRENALINE Healthy Food</div>
+    </body></html>`;
+
+  openPrintWindow(html);
 }
