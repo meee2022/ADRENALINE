@@ -99,6 +99,15 @@ export default function Kitchen() {
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);
   const getCategory = (id: string) => categories.find((c: any) => c._id === id);
 
+  const getCategoryLabel = (categoryName: string) => {
+    const n = categoryName.toUpperCase();
+    if (n.includes("BREAKFAST") || n.includes("فطور")) return isRtl ? "فطور" : "BREAKFAST";
+    if (n.includes("LUNCH") || n.includes("غداء")) return isRtl ? "غداء" : "LUNCH";
+    if (n.includes("DINNER") || n.includes("عشاء")) return isRtl ? "عشاء" : "DINNER";
+    if (n.includes("SNACK") || n.includes("سناك")) return isRtl ? "سناك" : "SNACKS";
+    return categoryName.toUpperCase();
+  };
+
   // ✅ حساب إجمالي الوجبات لليوم (كل فترات التوصيل)
   const mealSummary = useMemo(() => {
     const allPlansToday = dailyPlans.filter(
@@ -484,15 +493,6 @@ export default function Kitchen() {
 
   const handlePrint = () => {
     window.print();
-  };
-
-  const getCategoryLabel = (categoryName: string) => {
-    const n = categoryName.toUpperCase();
-    if (n.includes("BREAKFAST") || n.includes("فطور")) return isRtl ? "فطور" : "BREAKFAST";
-    if (n.includes("LUNCH") || n.includes("غداء")) return isRtl ? "غداء" : "LUNCH";
-    if (n.includes("DINNER") || n.includes("عشاء")) return isRtl ? "عشاء" : "DINNER";
-    if (n.includes("SNACK") || n.includes("سناك")) return isRtl ? "سناك" : "SNACKS";
-    return categoryName.toUpperCase();
   };
 
   const getModifiersByGroup = (modifierIds: string[] = []) => {
