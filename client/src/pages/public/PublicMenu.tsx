@@ -164,6 +164,27 @@ export default function PublicMenuPage() {
     String(i.category).toLowerCase() === "snack"
   ).length;
 
+  /** كم وجبة/سناك اختار العميل ليوم معيّن في الأسبوع الحالي، وهل اكتمل؟ */
+  const dayProgress = (dayValue: string) => {
+    const picked = items.filter((i: any) => i.week === selectedWeek && i.day === dayValue);
+    const meals = picked.filter((i: any) =>
+      ["breakfast", "lunch", "dinner"].includes(String(i.category).toLowerCase()),
+    ).length;
+    const snacks = picked.filter((i: any) => String(i.category).toLowerCase() === "snack").length;
+    // بدون حدود مسجّلة لا نعتبر اليوم "مكتملاً" أبداً — نتركه مفتوحاً
+    const complete =
+      (hasMealLimit || hasSnackLimit) &&
+      (!hasMealLimit || meals >= mealsPerDay) &&
+      (!hasSnackLimit || snacks >= snacksPerDay);
+    return { meals, snacks, complete, count: picked.length };
+  };
+
+  const todayProgress = selectedDay ? dayProgress(selectedDay) : null;
+
+  /** أول يوم لسه ناقص في هذا الأسبوع — لزر "اليوم التالي". */
+  const nextIncompleteDay = () =>
+    DELIVERY_DAYS.find((d) => d !== selectedDay && !dayProgress(d).complete) ?? null;
+
   // Avoid keywords from customer (lowercase tokens)
   const avoidTokens = useMemo(() => {
     const text = [verifiedCustomer?.allergies, verifiedCustomer?.avoid]
@@ -188,26 +209,34 @@ export default function PublicMenuPage() {
     e?.stopPropagation();
 
     if (!selectedDay) {
-      alert(isRtl ? "يرجى اختيار اليوم أولاً" : "Please select a day first");
+      // لا يُفترض حدوثه (يوم مختار دائماً)، لكن نبقيه كشبكة أمان بلا alert مُعطِّل
+      toast({
+        title: isRtl ? "اختر اليوم أولاً" : "Pick a day first",
+        description: isRtl ? "اختر يومًا من الشريط بالأعلى ثم أضف وجباتك" : "Choose a day above, then add your meals",
+      });
       return;
     }
 
-    // ✅ Check subscription limits
+    // ✅ Check subscription limits — نُخبره بما يفعله بعدها، لا نكتفي بالرفض
     const isSnack = String(meal.category).toLowerCase() === "snack";
-    if (isSnack) {
-      if (snacksToday >= snacksPerDay) {
-        alert(isRtl
-          ? `وصلت للحد الأقصى من السناكات (${snacksPerDay}) لهذا اليوم`
-          : `Reached daily snack limit (${snacksPerDay})`);
-        return;
-      }
-    } else {
-      if (mainMealsToday >= mealsPerDay) {
-        alert(isRtl
-          ? `وصلت للحد الأقصى من الوجبات (${mealsPerDay}) لهذا اليوم`
-          : `Reached daily meal limit (${mealsPerDay})`);
-        return;
-      }
+    const dayLabelNow = isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay;
+    if (isSnack && snacksToday >= snacksPerDay) {
+      toast({
+        title: isRtl ? `اكتملت سناكات ${dayLabelNow}` : `Snacks are full for ${dayLabelNow}`,
+        description: isRtl
+          ? `اشتراكك ${snacksPerDay} سناك يوميًا. اختر يومًا آخر لإضافة المزيد.`
+          : `Your plan allows ${snacksPerDay} snacks/day. Pick another day to add more.`,
+      });
+      return;
+    }
+    if (!isSnack && mainMealsToday >= mealsPerDay) {
+      toast({
+        title: isRtl ? `اكتملت وجبات ${dayLabelNow}` : `Meals are full for ${dayLabelNow}`,
+        description: isRtl
+          ? `اشتراكك ${mealsPerDay} وجبات يوميًا. اختر يومًا آخر لإضافة المزيد.`
+          : `Your plan allows ${mealsPerDay} meals/day. Pick another day to add more.`,
+      });
+      return;
     }
 
     // ⚠ Warn about avoid conflict
@@ -755,6 +784,65 @@ export default function PublicMenuPage() {
       {/* NEW: Week & Day Scheduling Section */}
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
+
+          {/* ✅ شريط الخطوات — يشرح للعميل الجديد ماذا يفعل، بالترتيب */}
+          <div className="mb-5 rounded-2xl border border-[#3CC4F0]/30 bg-[#F2FBFF] p-3 sm:p-4">
+            <p className="text-xs font-black text-[#0E2A4A] mb-2.5">
+              {isRtl ? "كيف تختار وجباتك؟" : "How to pick your meals"}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              {[
+                {
+                  n: 1,
+                  title: isRtl ? "اختر الأسبوع" : "Pick the week",
+                  value: isRtl ? `الأسبوع ${selectedWeek}` : `Week ${selectedWeek}`,
+                  done: true,
+                },
+                {
+                  n: 2,
+                  title: isRtl ? "اختر اليوم" : "Pick the day",
+                  value: selectedDay
+                    ? (isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay)
+                    : (isRtl ? "لم تختر بعد" : "not chosen"),
+                  done: Boolean(selectedDay),
+                },
+                {
+                  n: 3,
+                  title: isRtl ? "أضف وجباتك" : "Add your meals",
+                  value: todayProgress
+                    ? hasMealLimit || hasSnackLimit
+                      ? isRtl
+                        ? `${todayProgress.meals}${hasMealLimit ? `/${mealsPerDay}` : ""} وجبة · ${todayProgress.snacks}${hasSnackLimit ? `/${snacksPerDay}` : ""} سناك`
+                        : `${todayProgress.meals}${hasMealLimit ? `/${mealsPerDay}` : ""} meals · ${todayProgress.snacks}${hasSnackLimit ? `/${snacksPerDay}` : ""} snacks`
+                      : isRtl ? `${todayProgress.count} مختارة` : `${todayProgress.count} picked`
+                    : "—",
+                  done: Boolean(todayProgress?.complete),
+                },
+              ].map((s) => (
+                <div
+                  key={s.n}
+                  className={cn(
+                    "flex-1 flex items-center gap-2.5 rounded-xl px-3 py-2 bg-white border",
+                    s.done ? "border-emerald-300" : "border-gray-200",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-6 w-6 shrink-0 rounded-full grid place-items-center text-[11px] font-black text-white",
+                      s.done ? "bg-emerald-500" : "bg-[#3CC4F0]",
+                    )}
+                  >
+                    {s.done ? <Check className="h-3.5 w-3.5" /> : s.n}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold text-[#47759C] leading-none">{s.title}</p>
+                    <p className="text-[12px] font-black text-[#0E2A4A] truncate mt-0.5">{s.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Week Tabs */}
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
@@ -780,21 +868,40 @@ export default function PublicMenuPage() {
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {days.map((day) => (
-                <button
-                  key={day.value}
-                  // يوم واحد مختار دائماً — إلغاء الاختيار كان يعيد العميل لرسالة "اختر اليوم أولاً"
-                  onClick={() => setSelectedDay(day.value)}
-                  className={cn(
-                    "px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
-                    selectedDay === day.value
-                      ? "bg-[#3CC4F0] text-white shadow-md"
-                      : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5"
-                  )}
-                >
-                  {day.label}
-                </button>
-              ))}
+              {days.map((day) => {
+                const prog = dayProgress(day.value);
+                const isSel = selectedDay === day.value;
+                return (
+                  <button
+                    key={day.value}
+                    // يوم واحد مختار دائماً — إلغاء الاختيار كان يعيد العميل لرسالة "اختر اليوم أولاً"
+                    onClick={() => setSelectedDay(day.value)}
+                    className={cn(
+                      "px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5",
+                      isSel
+                        ? "bg-[#3CC4F0] text-white shadow-md"
+                        : prog.complete
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
+                          : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5",
+                    )}
+                  >
+                    {day.label}
+                    {/* ✓ لليوم المكتمل، أو عدّاد صغير لما اختار بعض الوجبات */}
+                    {prog.complete ? (
+                      <Check className={cn("h-3.5 w-3.5", isSel ? "text-white" : "text-emerald-600")} />
+                    ) : prog.count > 0 ? (
+                      <span
+                        className={cn(
+                          "text-[10px] font-black rounded-full px-1.5 leading-4",
+                          isSel ? "bg-white/25 text-white" : "bg-[#3CC4F0]/15 text-[#0E76AC]",
+                        )}
+                      >
+                        {prog.count}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -842,12 +949,28 @@ export default function PublicMenuPage() {
                       {hasSnackLimit && <span className="text-xs text-gray-400">/{snacksPerDay}</span>}
                     </p>
                   </div>
-                  {/* Status pill */}
-                  {mainMealsToday >= mealsPerDay && snacksToday >= snacksPerDay && (
-                    <span className="text-[11px] font-black px-3 py-1.5 rounded-full bg-emerald-500 text-white flex items-center gap-1">
-                      <Check className="h-3 w-3" />
-                      {isRtl ? "مكتمل" : "Done"}
-                    </span>
+                  {/* Status pill + الخطوة التالية */}
+                  {todayProgress?.complete && (
+                    <>
+                      <span className="text-[11px] font-black px-3 py-1.5 rounded-full bg-emerald-500 text-white flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        {isRtl ? "مكتمل" : "Done"}
+                      </span>
+                      {/* لا نتركه في طريق مسدود — نوجّهه لليوم الناقص التالي */}
+                      {(() => {
+                        const nxt = nextIncompleteDay();
+                        if (!nxt) return null;
+                        const lbl = isRtl ? DAY_LABEL_AR[nxt] || nxt : nxt;
+                        return (
+                          <button
+                            onClick={() => setSelectedDay(nxt)}
+                            className="text-[11px] font-black px-3 py-1.5 rounded-full bg-[#3CC4F0] text-white hover:brightness-95 transition"
+                          >
+                            {isRtl ? `التالي: ${lbl} ←` : `Next: ${lbl} →`}
+                          </button>
+                        );
+                      })()}
+                    </>
                   )}
                 </div>
               </div>
