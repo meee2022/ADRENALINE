@@ -1,7 +1,7 @@
 // convex/customerOrders.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireStaff } from "./sessions";
+import { requireStaff, requireAdmin } from "./sessions";
 import { getDayOffset } from "./lib/dates";
 
 // Helper: Generate unique order number
@@ -561,5 +561,38 @@ export const removeOrderItem = mutation({
     });
 
     return { success: true, remaining: rest.length };
+  },
+});
+
+/**
+ * ✅ حذف الطلب/الخطة نهائياً (hard delete) — للأدمن فقط.
+ *    يختلف عن reject: الرفض يُبقي الطلب بحالة cancelled للسجل؛ هذا يمحوه تماماً
+ *    مع أصنافه وأي خطط مطبخ تولّدت منه (sourceOrderId). مخصّص لتنظيف تجارب الأدمن.
+ */
+export const deleteOrder = mutation({
+  args: { orderId: v.id("customerOrders"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { orderId, sessionToken }) => {
+    await requireAdmin(ctx, sessionToken);
+    const order = await ctx.db.get(orderId);
+    if (!order) return { success: false, error: "الطلب غير موجود" };
+
+    // 1) احذف أصناف الطلب.
+    const items = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", orderId))
+      .collect();
+    for (const it of items) await ctx.db.delete(it._id);
+
+    // 2) احذف خطط المطبخ التي وُلّدت من هذا الطلب (لو كان معتمداً من قبل).
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_source_order", (q) => q.eq("sourceOrderId", orderId))
+      .collect();
+    for (const p of plans) await ctx.db.delete(p._id);
+
+    // 3) احذف الطلب نفسه.
+    await ctx.db.delete(orderId);
+
+    return { success: true, removedItems: items.length, removedPlans: plans.length };
   },
 });

@@ -46,6 +46,7 @@ export default function OrderReviewDetail() {
   const [dateOverrides, setDateOverrides] = useState<Record<string, Date | undefined>>({});
 
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const isAdmin = useStore((s) => s.currentUser?.role) === "ADMIN";
 
   const orderData = useQuery(
     api.customerOrders.getById,
@@ -59,6 +60,26 @@ export default function OrderReviewDetail() {
   const rejectMutation = useMutation(api.customerOrders.reject);
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
   const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
+  const deleteOrderMutation = useMutation(api.customerOrders.deleteOrder);
+
+  // ✅ حذف الطلب نهائياً (أدمن فقط) — لتنظيف التجارب، غير الرفض.
+  const handleDeleteOrder = async () => {
+    if (!orderId) return;
+    const ok = confirm(
+      "⚠️ حذف نهائي للخطة كلها (وأصنافها وأي خطط مطبخ منها). لا يمكن التراجع.\nمتأكد؟"
+    );
+    if (!ok) return;
+    try {
+      const r: any = await deleteOrderMutation({ orderId: orderId as any, sessionToken });
+      if (r?.success) {
+        navigate("/orders/pending");
+      } else {
+        alert(r?.error || "❌ تعذّر الحذف");
+      }
+    } catch (e: any) {
+      alert(String(e?.message || e));
+    }
+  };
 
   // ✅ املأ تاريخ البداية تلقائياً بما اختاره العميل (الأخصائية تقدر تعدّله)
   useEffect(() => {
@@ -737,6 +758,17 @@ export default function OrderReviewDetail() {
             >
               ❌ رفض الخطة
             </Button>
+
+            {isAdmin && (
+              <Button
+                onClick={handleDeleteOrder}
+                variant="outline"
+                title="حذف نهائي للخطة (للتجربة) — غير الرفض"
+                className="px-6 py-4 text-lg font-bold gap-2 border-red-700 text-red-700 bg-red-50 hover:bg-red-100"
+              >
+                🗑️ حذف نهائي
+              </Button>
+            )}
 
             <Button
               variant="outline"
