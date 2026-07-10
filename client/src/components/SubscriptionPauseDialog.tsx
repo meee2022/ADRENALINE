@@ -252,7 +252,7 @@ export function SubscriptionPauseDialog({
                       ? "للحالات مثل: يستلم الأحد والاثنين ثم مسافر باقي الأسبوع. تُحذف وجبات الأيام المختارة من المطبخ."
                       : "e.g. receives Sun & Mon then travels the rest of the week. Selected days' meals are removed from the kitchen."}
                   </p>
-                  <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {upcomingDeliveryDays.map((d) => {
                       const on = Boolean(skipPick[d.iso]);
                       return (
