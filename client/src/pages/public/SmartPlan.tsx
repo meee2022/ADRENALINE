@@ -47,6 +47,11 @@ export default function SmartPlan() {
   const [phone, setPhone] = useState<string>(() => getVerifiedPhone());
   const [changingPhone, setChangingPhone] = useState(false);
 
+  // ✅ توليد متعدد الأسابيع: عدد الأسابيع + أسبوع الدورة الذي يبدأ منه.
+  //    0 = لم تلمسه الأخصائية بعد ⇒ نستخدم الاقتراح التلقائي.
+  const [weeksSel, setWeeksSel] = useState(0);
+  const [startRot, setStartRot] = useState(0);
+
   /**
    * ✅ نجلب المشترك بالرقم كما تفعل صفحة الطلب اليدوي.
    * بدونه كان الطلب يُسجَّل باسم "AI customer" حرفياً وبلا customerId،
@@ -57,6 +62,20 @@ export default function SmartPlan() {
     !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim() } : "skip",
   ) as any[] | undefined;
   const matchedCustomer = matchesByPhone?.[0] ?? null;
+
+  // ✅ اقتراحات التوليد (عدد الأسابيع + دورة المطبخ الحالية) — بلا تكلفة AI.
+  const suggestions = useQuery(
+    (api.ai as any).getPlanSuggestions,
+    currentCustomer?.customerId
+      ? { customerId: currentCustomer.customerId as any }
+      : phone.trim().length >= 6
+        ? { phone: phone.trim() }
+        : "skip",
+  ) as any;
+
+  // القيم الفعّالة: ما اختارته الأخصائية، وإلا الاقتراح، وإلا 1.
+  const effWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
+  const effStartRot = startRot || suggestions?.currentRotationWeek || 1;
 
   /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
   const orderIdentity = () => ({
@@ -134,8 +153,12 @@ export default function SmartPlan() {
     const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
     try {
       if (mode === "week") {
-        const res: any = await generateWeekly(source);
-        if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذا الأسبوع.", "No meals scheduled for this week.")); }
+        const res: any = await generateWeekly({
+          ...source,
+          weeks: effWeeks,
+          startRotationWeek: effStartRot,
+        });
+        if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذه الأسابيع.", "No meals scheduled for these weeks.")); }
         else setWeekly(res);
       } else {
         const res: any = await generate(source);
@@ -182,6 +205,71 @@ export default function SmartPlan() {
               </button>
             ))}
           </div>
+
+          {/* ✅ ضبط التوليد المتعدد — يظهر في وضع الأسبوع فقط */}
+          {mode === "week" && (
+            <div style={{
+              display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16,
+              padding: 14, borderRadius: 12, background: "#F2FBFF", border: `1px solid ${B.line}`,
+            }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
+                  {t("عدد الأسابيع", "Number of weeks")}
+                  {suggestions?.durationWeeks ? (
+                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                      {" "}{t(`(اشتراكه ${suggestions.durationWeeks})`, `(sub: ${suggestions.durationWeeks})`)}
+                    </span>
+                  ) : null}
+                </label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[1, 2, 3, 4].map((n) => (
+                    <button key={n} onClick={() => setWeeksSel(n)}
+                      style={{
+                        flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontWeight: 900, fontSize: 14,
+                        fontFamily: "'Cairo',sans-serif",
+                        border: `1.5px solid ${effWeeks === n ? "#0E76AC" : B.line}`,
+                        background: effWeeks === n ? "#0E76AC" : "#fff",
+                        color: effWeeks === n ? "#fff" : B.ink2,
+                      }}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
+                  {t("يبدأ من دورة الأسبوع", "Start rotation week")}
+                  {suggestions?.currentRotationWeek ? (
+                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                      {" "}{t(`(المطبخ الآن ${suggestions.currentRotationWeek})`, `(kitchen now ${suggestions.currentRotationWeek})`)}
+                    </span>
+                  ) : null}
+                </label>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {[1, 2, 3, 4].map((n) => (
+                    <button key={n} onClick={() => setStartRot(n)}
+                      style={{
+                        flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontWeight: 900, fontSize: 14,
+                        fontFamily: "'Cairo',sans-serif",
+                        border: `1.5px solid ${effStartRot === n ? "#0E76AC" : B.line}`,
+                        background: effStartRot === n ? "#0E76AC" : "#fff",
+                        color: effStartRot === n ? "#fff" : B.ink2,
+                      }}>
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <p style={{ width: "100%", margin: 0, fontSize: 11.5, color: B.ink2, fontWeight: 600 }}>
+                {t(
+                  `سيولّد ${effWeeks} أسبوع، يبدأ من دورة ${effStartRot} ثم يتقدّم.`,
+                  `Will generate ${effWeeks} week(s), starting at rotation ${effStartRot}.`,
+                )}
+              </p>
+            </div>
+          )}
 
           {loggedInId ? (
             /* 1) مسجّل دخول — لا سؤال أصلاً */
@@ -243,7 +331,9 @@ export default function SmartPlan() {
               marginBottom: 14, flexWrap: "wrap", gap: 8,
             }}>
               <p style={{ fontSize: 16, color: B.ink, fontWeight: 800, margin: 0 }}>
-                🗓️ {t(`خطة الأسبوع — ${weekly.totalMeals} وجبة عبر ${weekly.days.length} أيام`, `Weekly plan — ${weekly.totalMeals} meals across ${weekly.days.length} days`)}
+                🗓️ {weekly.weeksCount > 1
+                  ? t(`الخطة — ${weekly.weeksCount} أسابيع · ${weekly.totalMeals} وجبة`, `Plan — ${weekly.weeksCount} weeks · ${weekly.totalMeals} meals`)
+                  : t(`خطة الأسبوع — ${weekly.totalMeals} وجبة عبر ${weekly.days.length} أيام`, `Weekly plan — ${weekly.totalMeals} meals across ${weekly.days.length} days`)}
               </p>
               {!weekly.profileFound && (
                 <span style={{ fontSize: 12, color: "#8A6A1F", background: "#FFF7E6", border: "1px solid #F4D58A", borderRadius: 50, padding: "4px 12px" }}>
@@ -253,8 +343,22 @@ export default function SmartPlan() {
             </div>
 
             <div style={{ display: "grid", gap: 14 }}>
-              {weekly.days.map((d: any, di: number) => (
-                <div key={di} style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16, overflow: "hidden" }}>
+              {weekly.days.map((d: any, di: number) => {
+                // فاصل أسبوع: يظهر قبل أول يوم في كل أسبوع دورة جديد
+                const prev = weekly.days[di - 1];
+                const showWeekHeader = weekly.weeksCount > 1 && (!prev || prev.rotationWeek !== d.rotationWeek);
+                return (
+                <div key={di}>
+                {showWeekHeader && (
+                  <div style={{
+                    margin: di === 0 ? "0 0 10px" : "18px 0 10px", padding: "8px 14px", borderRadius: 10,
+                    background: "#EAF3FB", border: "1px solid #CFE4F3", color: "#0E2A4A",
+                    fontWeight: 900, fontSize: 14,
+                  }}>
+                    {t(`الأسبوع (دورة ${d.rotationWeek})`, `Week (rotation ${d.rotationWeek})`)}
+                  </div>
+                )}
+                <div style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16, overflow: "hidden" }}>
                   <div style={{
                     background: B.ink, color: "#fff", padding: "10px 16px",
                     display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6,
@@ -282,7 +386,9 @@ export default function SmartPlan() {
                     </div>
                   )}
                 </div>
-              ))}
+                </div>
+                );
+              })}
             </div>
 
             {/* Weekly order CTA */}

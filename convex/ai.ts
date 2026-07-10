@@ -47,6 +47,9 @@ export const getSmartPlanData = query({
     phone: v.optional(v.string()),
     todayDay: v.optional(v.string()),  // اسم اليوم بالإنجليزي؛ يُمرّر من الـaction
     todayDate: v.optional(v.string()), // yyyy-MM-dd؛ يُمرّر من الـaction
+    // ✅ فرض أسبوع دورة معيّن (1..4) بدل حسابه من التاريخ — يستخدمه توليد
+    //    عدة أسابيع ليختار وجبات كل دورة على حدة.
+    overrideRotationWeek: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // 1) جلب اشتراك العميل
@@ -98,6 +101,12 @@ export const getSmartPlanData = query({
       }
     }
 
+    // فرض أسبوع دورة محدّد (توليد عدة أسابيع) — يتجاوز الحساب أعلاه.
+    if (args.overrideRotationWeek && args.overrideRotationWeek >= 1 && args.overrideRotationWeek <= 4) {
+      rotationWeek = Math.floor(args.overrideRotationWeek);
+      started = true;
+    }
+
     // 3) الوجبات المجدولة فعلاً لـ(أسبوع الدورة + يوم اليوم) — فلترة صارمة
     const all = await ctx.db
       .query("publicMeals")
@@ -146,7 +155,14 @@ export const getSmartPlanData = query({
     return {
       profile,
       candidates,
-      meta: { rotationWeek, started, day, date: args.todayDate || "" },
+      meta: {
+        rotationWeek,
+        started,
+        day,
+        date: args.todayDate || "",
+        // مدة اشتراك العميل — تقترحها الواجهة كعدد أسابيع افتراضي
+        durationWeeks: (customer as any)?.durationWeeks ?? null,
+      },
     };
   },
 });
@@ -420,77 +436,154 @@ export const generateSmartPlan = action({
 // ═══════════════════════════════════════════════════════════
 const WORKING_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday"];
 
+/**
+ * ✅ اقتراحات التوليد قبل تشغيل الذكاء الاصطناعي (بلا تكلفة):
+ *    - suggestedWeeks: من مدة اشتراك العميل (شهر=4، أسبوعين=2…)
+ *    - currentRotationWeek: أسبوع الدورة الذي يعمل عليه العميل اليوم
+ *  الواجهة تملأ بها الحقول افتراضياً، والأخصائية تعدّلها.
+ */
+export const getPlanSuggestions = query({
+  args: {
+    customerId: v.optional(v.id("customers")),
+    phone: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    const today = new Date();
+    const wd = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][today.getDay()];
+    const dateStr = today.toISOString().slice(0, 10);
+    const { meta, profile } = await ctx.runQuery(api.ai.getSmartPlanData, {
+      customerId: args.customerId,
+      phone: args.phone,
+      todayDay: wd,
+      todayDate: dateStr,
+    });
+    // مدة الاشتراك قد تكون 5+ أسابيع، لكن دورة الوجبات 4 أسابيع فقط،
+    // فنقترح حتى 4 (لا 1). القيمة صفر/غير معروفة ⇒ نقترح أسبوعاً واحداً.
+    const dur = Number(meta?.durationWeeks || 0);
+    const suggestedWeeks = dur >= 1 ? Math.min(4, dur) : 1;
+    return {
+      found: profile.found,
+      suggestedWeeks,
+      currentRotationWeek: meta?.rotationWeek ?? 1,
+      durationWeeks: meta?.durationWeeks ?? null,
+    };
+  },
+});
+
 export const generateWeeklyPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
     startDate: v.optional(v.string()), // yyyy-MM-dd (افتراضي: أقرب يوم عمل من اليوم)
+    // ✅ عدد الأسابيع المطلوب توليدها (1..4). افتراضي 1 للتوافق الرجعي.
+    weeks: v.optional(v.number()),
+    // ✅ أسبوع الدورة الذي يبدأ منه (1..4). لكل أسبوع تالٍ نلفّ +1 على دورة 4.
+    //    غير محدّد ⇒ يُحسب من تاريخ اشتراك العميل كما كان.
+    startRotationWeek: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<any> => {
-    // 💸 حدّ معدّل: لكل هاتف + دلو عام (استدعاء مدفوع لواجهة Anthropic)
+    const weeksCount = Math.min(4, Math.max(1, Math.floor(args.weeks || 1)));
+
+    // 💸 حدّ معدّل: نستهلك وحدة لكل أسبوع (كل أسبوع = 5 استدعاءات مدفوعة).
     const rlKey = args.phone ? `ai:generateWeeklyPlan:${args.phone}` : "ai:generateWeeklyPlan:anon";
     for (const [key, limit] of [[rlKey, 6], ["ai:generateWeeklyPlan:global", 60]] as const) {
-      const gate = await ctx.runMutation(internal.rateLimit.consume, {
-        key, limit, windowMs: 10 * 60 * 1000,
-      });
-      if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+      for (let w = 0; w < weeksCount; w++) {
+        const gate = await ctx.runMutation(internal.rateLimit.consume, {
+          key, limit, windowMs: 10 * 60 * 1000,
+        });
+        if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+      }
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
-    // نبدأ من startDate أو من اليوم، ونتقدّم حتى نجمع 5 أيام عمل
-    const base = args.startDate ? new Date(args.startDate + "T00:00:00") : new Date();
-    const days: any[] = [];
-    let profileFound = false;
-    const cur = new Date(base);
+    /** يولّد أيام عمل أسبوع واحد ابتداءً من تاريخ، بأسبوع دورة مفروض اختيارياً. */
+    const buildWeek = async (
+      cur: Date,
+      forcedRotation: number | undefined,
+    ): Promise<{ days: any[]; profileFound: boolean }> => {
+      const out: any[] = [];
+      let profileFound = false;
+      for (let guard = 0; guard < 10 && out.length < WORKING_DAYS.length; guard++) {
+        const dow = cur.getDay();
+        if (dow !== 4 && dow !== 5) {
+          const dayName = WEEKDAYS[dow];
+          const dateStr = cur.toISOString().slice(0, 10);
 
-    for (let guard = 0; guard < 14 && days.length < WORKING_DAYS.length; guard++) {
-      const dow = cur.getDay(); // 4=خميس، 5=جمعة (إجازة)
-      if (dow !== 4 && dow !== 5) {
-        const dayName = WEEKDAYS[dow];
-        const dateStr = cur.toISOString().slice(0, 10);
+          const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
+            customerId: args.customerId,
+            phone: args.phone,
+            todayDay: dayName,
+            todayDate: dateStr,
+            overrideRotationWeek: forcedRotation,
+          });
+          profileFound = profile.found;
 
-        const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
-          customerId: args.customerId,
-          phone: args.phone,
-          todayDay: dayName,
-          todayDate: dateStr,
-        });
-        profileFound = profile.found;
-
-        let picks: any[] = [];
-        let summary = "";
-        let engine = "none";
-        if (candidates && candidates.length > 0) {
-          let result;
-          if (apiKey) {
-            try { result = await aiPlan(profile, candidates, apiKey); }
-            catch { result = ruleBasedPlan(profile, candidates); }
-          } else {
-            result = ruleBasedPlan(profile, candidates);
+          let picks: any[] = [];
+          let summary = "";
+          let engine = "none";
+          if (candidates && candidates.length > 0) {
+            let result;
+            if (apiKey) {
+              try { result = await aiPlan(profile, candidates, apiKey); }
+              catch { result = ruleBasedPlan(profile, candidates); }
+            } else {
+              result = ruleBasedPlan(profile, candidates);
+            }
+            const byId = new Map(candidates.map((c: any) => [c.id, c]));
+            picks = (result.picks || [])
+              .filter((p: any) => byId.has(p.id))
+              .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
+            summary = result.summary;
+            engine = result.engine;
           }
-          const byId = new Map(candidates.map((c: any) => [c.id, c]));
-          picks = (result.picks || [])
-            .filter((p: any) => byId.has(p.id))
-            .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
-          summary = result.summary;
-          engine = result.engine;
-        }
 
-        days.push({
-          date: dateStr,
-          day: dayName,
-          rotationWeek: meta?.rotationWeek ?? 1,
-          picks,
-          summary,
-          engine,
-          empty: picks.length === 0,
-        });
+          out.push({
+            date: dateStr,
+            day: dayName,
+            rotationWeek: meta?.rotationWeek ?? forcedRotation ?? 1,
+            picks,
+            summary,
+            engine,
+            empty: picks.length === 0,
+          });
+        }
+        cur.setDate(cur.getDate() + 1);
       }
-      cur.setDate(cur.getDate() + 1);
+      return { days: out, profileFound };
+    };
+
+    // نبدأ من startDate أو من اليوم
+    const cursor = args.startDate ? new Date(args.startDate + "T00:00:00") : new Date();
+    const weeks: any[] = [];
+    let anyProfile = false;
+
+    for (let w = 0; w < weeksCount; w++) {
+      // أسبوع الدورة لكل أسبوع: startRotationWeek + w، ملفوفة على 1..4
+      const forced = args.startRotationWeek
+        ? ((Math.floor(args.startRotationWeek) - 1 + w) % 4) + 1
+        : undefined;
+      const { days, profileFound } = await buildWeek(cursor, forced);
+      anyProfile = anyProfile || profileFound;
+      weeks.push({
+        index: w + 1,
+        rotationWeek: days[0]?.rotationWeek ?? forced ?? w + 1,
+        days,
+      });
+      // cursor يكون قد تجاوز أيام هذا الأسبوع؛ تخطَّ الخميس/الجمعة للأسبوع التالي
     }
 
-    const totalMeals = days.reduce((s, d) => s + d.picks.length, 0);
-    return { ok: totalMeals > 0, profileFound, days, totalMeals };
+    const allDays = weeks.flatMap((wk) => wk.days);
+    const totalMeals = allDays.reduce((s, d) => s + d.picks.length, 0);
+
+    // للتوافق الرجعي: نُبقي `days` مسطّحة، ونضيف `weeks` للعرض المتعدد.
+    return {
+      ok: totalMeals > 0,
+      profileFound: anyProfile,
+      weeks,
+      days: allDays,
+      weeksCount,
+      totalMeals,
+    };
   },
 });
