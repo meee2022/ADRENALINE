@@ -5,6 +5,8 @@
 import { Component, type ReactNode } from "react";
 import { logError } from "@/lib/logger";
 import { AlertTriangle, RefreshCw } from "lucide-react";
+import { isAuthError } from "@/lib/authError";
+import { useStore } from "@/lib/store";
 
 interface Props {
   children: ReactNode;
@@ -24,6 +26,19 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    // جلسة منتهية أو مُبطَلة (تغيير كلمة المرور يُبطل الجلسات): لا تُظهر
+    // شاشة انهيار — نظّف الجلسة وأعد الموظف لصفحة الدخول.
+    if (isAuthError(error)) {
+      try {
+        useStore.getState().logout();
+      } catch {
+        // لو انهار الـstore نفسه، لا نمنع إعادة التوجيه
+      }
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+      return;
+    }
     logError(error.message, error.stack || errorInfo.componentStack);
   }
 
@@ -37,6 +52,17 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // جلسة منتهية: componentDidCatch يعيد التوجيه — لا تومض شاشة الانهيار
+      if (isAuthError(this.state.error)) {
+        return (
+          <div dir="rtl" className="min-h-screen flex items-center justify-center">
+            <p className="text-sm font-bold text-[#47759C]">
+              انتهت الجلسة — جاري تحويلك لتسجيل الدخول…
+            </p>
+          </div>
+        );
+      }
+
       if (this.props.fallback) return this.props.fallback;
 
       return (

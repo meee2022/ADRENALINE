@@ -44,14 +44,18 @@ export function NotificationBell() {
   const { dir, language } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
+  // بلا توكن لا معنى للاستعلام: السيرفر سيرميه ويسقط التطبيق كله.
+  // (يحدث عندما يبقى currentUser في التخزين بينما بطلت الجلسة على السيرفر.)
+  const canQuery = Boolean(role && sessionToken);
+
   const notifications = useQuery(
     api.notifications.listForRole,
-    role ? { role, onlyUnread: false, sessionToken } : "skip",
+    canQuery ? { role, onlyUnread: false, sessionToken } : "skip",
   ) || [];
 
   const unreadCount = useQuery(
     api.notifications.unreadCount,
-    role ? { role, sessionToken } : "skip",
+    canQuery ? { role, sessionToken } : "skip",
   ) || 0;
 
   const markAsRead = useMutation(api.notifications.markAsRead);
