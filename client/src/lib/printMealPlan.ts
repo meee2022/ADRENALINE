@@ -408,44 +408,24 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
 
   // ✅ صفحة واحدة متصلة بطول المحتوى (لا تقسيم على أوراق A4) — أنسب للاطلاع والإرسال.
   //    نقيس ارتفاع المحتوى عند العرض الثابت (760px) ونضبط ورقة PDF بنفس النسبة.
-  const PAGE_W = 760; // px — نفس عرض .mp-doc
+  // ⚠️ الإعداد المثبت الذي يرسم الصور فعلاً: عنصر **مفصول** (html2pdf يُلحقه
+  //    داخلياً)، صفحة A4، وخيارات html2canvas بسيطة. تمرير عنصر مُلحق على
+  //    left:-10000px أو صيغة صفحة مخصّصة كان ينتج PDF فارغاً.
   const el = document.createElement("div");
-  // ⚠️ absolute (لا fixed) وضمن تدفّق الصفحة — html2canvas يفشل مع position:fixed.
-  el.style.cssText = `position:absolute;left:-10000px;top:0;width:${PAGE_W}px;background:#ffffff`;
+  el.style.width = "760px"; // نفس عرض .mp-doc — يمنع تضخّم الكروت
+  el.style.background = "#ffffff";
   el.innerHTML = content;
-  document.body.appendChild(el);
-  // انتظر تحميل الصور حتى يُقاس الارتفاع بدقة وتُرسم في الـ canvas
-  await Promise.all(
-    Array.from(el.querySelectorAll("img")).map((img) =>
-      (img as HTMLImageElement).complete
-        ? Promise.resolve()
-        : new Promise<void>((res) => {
-            (img as HTMLImageElement).onload = () => res();
-            (img as HTMLImageElement).onerror = () => res();
-          }),
-    ),
-  );
-  const heightPx = el.scrollHeight;
 
-  try {
-    const mmPerPx = 210 / PAGE_W; // A4 عرض 210مم يقابل 760px
-    const pageWmm = 210;
-    const pageHmm = Math.max(120, Math.round(heightPx * mmPerPx) + 4);
-
-    const html2pdf = (await import("html2pdf.js")).default as any;
-    await html2pdf()
-      .set({
-        margin: 0,
-        filename: `${safeName}.pdf`,
-        image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-        jsPDF: { unit: "mm", format: [pageWmm, pageHmm], orientation: "portrait" },
-        // صفحة واحدة طويلة، لكن نُبقي mode صالحاً حتى لا يفشل الرسم.
-        pagebreak: { mode: ["css", "legacy"] },
-      })
-      .from(el)
-      .save();
-  } finally {
-    el.remove();
-  }
+  const html2pdf = (await import("html2pdf.js")).default as any;
+  await html2pdf()
+    .set({
+      margin: 6,
+      filename: `${safeName}.pdf`,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card", ".grp"] },
+    })
+    .from(el)
+    .save();
 }
