@@ -355,8 +355,9 @@ export default function Kitchen() {
         const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) : (item.mealNameAr || item.mealNameEn || "—");
         const cat: any = item.menuItemId ? getCategory(meal?.categoryId) : null;
         const label = getCategoryLabel(cat?.name || item.category || "");
-        const notes = [item.avoid, item.preferences, item.portions, item.specialNotes]
-          .map((x) => String(x || "").trim()).filter(Boolean).join(" • ");
+        // ملاحظة خاصة بهذه الوجبة فقط — لا نكرّر ممنوعات/برنامج العميل العام
+        // (فهي ظاهرة أصلاً في عمودَي Allergies و Remarks).
+        const notes = String(item.specialNotes || "").trim();
         const text = notes ? `${mealName} (${notes})` : mealName;
 
         if (label.includes("فطور") || label.includes("BREAKFAST")) slots.breakfast.push(text);
