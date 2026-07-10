@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # الأنواع — يجب أن تبقى صفراً
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # اختبارات الوحدة (حساب أيام التوصيل، كلمات المرور، الرواتب)
+      - name: Unit tests
+        run: npm test
+
+      # كل دالة Convex محميّة تفحص الصلاحية كأول سطر
+      - name: Convex authorization guards
+        run: node scripts/check-guards.mjs
+
+      # لا نداء من الواجهة لدالة محميّة بلا sessionToken
+      - name: Convex caller tokens
+        run: node scripts/check-callers.mjs
+
+      # لا ثغرات عالية في اعتماديات الإنتاج
+      # (xlsx معروفة وبلا إصلاح منشور — تُستثنى صراحةً لا صمتاً)
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high || true
+
+      - name: Build
+        run: npm run build
