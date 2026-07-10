@@ -1,5 +1,6 @@
 // convex/stickers.ts
 import { query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 type PlanStatus =
@@ -72,6 +73,7 @@ export const get = query({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // 1) Plans of date + deliveryTime (confirmed only). "ALL" = صباحي + مسائي معاً.
     const plansAll = await ctx.db
       .query("dailyPlans")

@@ -3,12 +3,14 @@
  * @description Queries لإحصائيات وتحليلات النظام
  */
 import { query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 // نظرة عامة للأعمال
 export const overview = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const customers = await ctx.db.query("customers").collect();
     const orders = await ctx.db.query("customerOrders").collect();
     const plans = await ctx.db.query("dailyPlans").collect();
@@ -50,6 +52,7 @@ export const overview = query({
 export const salesLast30Days = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const orders = await ctx.db
       .query("customerOrders")
@@ -87,6 +90,7 @@ export const salesLast30Days = query({
 export const orderStatusDistribution = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const orders = await ctx.db.query("customerOrders").collect();
     const counts = new Map<string, number>();
     for (const o of orders) {
@@ -100,6 +104,7 @@ export const orderStatusDistribution = query({
 export const topMeals = query({
   args: { limit: v.optional(v.number()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { limit = 10, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const orderItems = await ctx.db.query("customerOrderItems").collect();
     const counts = new Map<string, { name: string; count: number; revenue: number }>();
 
@@ -121,6 +126,7 @@ export const topMeals = query({
 export const customerGrowth = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const customers = await ctx.db.query("customers").collect();
     const byMonth = new Map<string, number>();
 
@@ -148,6 +154,7 @@ export const customerGrowth = query({
 export const kitchenPerformance = query({
   args: { days: v.optional(v.number()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { days = 7, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
     const plans = await ctx.db.query("dailyPlans").collect();
     const recent = plans.filter((p) => (p.createdAt || 0) > cutoff);

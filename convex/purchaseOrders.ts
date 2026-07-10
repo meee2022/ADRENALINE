@@ -2,10 +2,12 @@
 // أوامر الشراء — توليد من النواقص مجمّعة حسب المورّد + متابعة الحالة (هوية أدرينالين)
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const rows = await ctx.db.query("purchaseOrders").collect();
     return rows.sort((a, z) => z.createdAt - a.createdAt);
   },
@@ -16,6 +18,7 @@ export const list = query({
 export const generateFromLowStock = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const items = await ctx.db.query("inventoryItems").collect();
     const low = items.filter((it) => Number(it.currentStock) <= Number(it.minStock));
     if (!low.length) return { count: 0, created: [] as string[] };
@@ -81,6 +84,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const totalEst = (args.items || []).reduce((s, i) => s + Number(i.estLineCost || 0), 0);
     return await ctx.db.insert("purchaseOrders", {
       supplierId: args.supplierId,
@@ -101,6 +105,7 @@ export const updateStatus = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const patch: any = { status: args.status };
     if (args.status === "SENT") patch.sentAt = Date.now();
     if (args.status === "RECEIVED") patch.receivedAt = Date.now();
@@ -112,6 +117,7 @@ export const updateStatus = mutation({
 export const remove = mutation({
   args: { id: v.id("purchaseOrders"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.delete(args.id);
     return { success: true };
   },

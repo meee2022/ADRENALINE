@@ -9,6 +9,7 @@ import { requireStaff, requireAdmin } from "./sessions";
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     return await ctx.db.query("coupons").order("desc").collect();
   },
 });

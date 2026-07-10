@@ -3,7 +3,7 @@
  * @description إدارة الوجبات العامة للموقع
  */
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
@@ -130,6 +130,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: args.nameAr,
       nameEn: args.nameEn,
@@ -195,6 +196,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...updates } = args;
     await ctx.db.patch(id, updates);
     return id;
@@ -204,6 +206,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("publicMeals"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.delete(args.id);
     return { success: true };
   },

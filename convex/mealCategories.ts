@@ -3,7 +3,7 @@
  * @description Convex functions لأصناف الوجبات
  */
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 function normalizeName(s: string) {
@@ -20,6 +20,7 @@ const DEFAULT_CATEGORIES = [
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const cats = await ctx.db
       .query("mealCategories")
       .withIndex("by_sortOrder")
@@ -40,6 +41,7 @@ export const get = query({
 export const create = mutation({
   args: { name: v.string(), sortOrder: v.number(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const existing = await ctx.db.query("mealCategories").collect();
     const exists = existing.some(
       (c: any) => normalizeName(c.name) === normalizeName(args.name),
@@ -61,6 +63,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { id, data, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     if (data.name) {
       const all = await ctx.db.query("mealCategories").collect();
       const exists = all.some(
@@ -87,6 +90,7 @@ export const reorder = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { categories, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     for (const cat of categories) {
       await ctx.db.patch(cat.id, { sortOrder: cat.sortOrder });
     }
@@ -97,6 +101,7 @@ export const reorder = mutation({
 export const remove = mutation({
   args: { id: v.id("mealCategories"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     const items = await ctx.db
       .query("menuItems")
       .withIndex("by_categoryId", (q) => q.eq("categoryId", id))

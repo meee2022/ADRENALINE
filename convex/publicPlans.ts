@@ -3,7 +3,7 @@
  * @description إدارة الخطط العامة للموقع
  */
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
@@ -60,6 +60,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const { badge, sessionToken: _t, ...rest } = args;
     
     const planId = await ctx.db.insert("publicPlans", {
@@ -106,6 +107,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const { id, badge, sessionToken: _t, ...updates } = args;
     
     // If badge is "none", set it to undefined
@@ -122,6 +124,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("publicPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.delete(args.id);
     return { success: true };
   },

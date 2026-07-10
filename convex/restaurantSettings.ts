@@ -1,6 +1,7 @@
 // convex/restaurantSettings.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 
 // ===== GET SETTINGS (Single) =====
 export const get = query({
@@ -49,6 +50,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
     const { sessionToken: _t, ...fields } = args;
     const existing = await ctx.db.query("restaurantSettings").first();
@@ -78,6 +80,7 @@ export const updateHeroLogo = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {
@@ -115,6 +118,7 @@ export const updateHeroLogo = mutation({
 export const deleteHeroLogo = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {
@@ -145,6 +149,7 @@ export const deleteHeroLogo = mutation({
 export const initializeDefault = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {

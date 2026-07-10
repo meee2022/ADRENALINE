@@ -3,7 +3,7 @@
  * @description نظام الإشعارات الداخلية - للأدوار والمستخدمين
  */
 import { mutation, query, internalMutation } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 const NOTIF_TYPE = v.union(
@@ -55,6 +55,7 @@ export const create = mutation({
 export const listForRole = query({
   args: { role: ROLE, onlyUnread: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_createdAt")
@@ -80,6 +81,7 @@ export const listForRole = query({
 export const unreadCount = query({
   args: { role: ROLE, sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_targetRole", (q) => q.eq("targetRole", args.role).eq("isRead", false))
@@ -102,6 +104,7 @@ export const unreadCount = query({
 export const markAsRead = mutation({
   args: { id: v.id("notifications"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.patch(args.id, { isRead: true, readAt: Date.now() });
   },
 });
@@ -112,6 +115,7 @@ export const markAsRead = mutation({
 export const markAllAsRead = mutation({
   args: { role: ROLE, sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_targetRole", (q) => q.eq("targetRole", args.role).eq("isRead", false))

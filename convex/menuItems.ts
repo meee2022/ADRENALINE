@@ -3,11 +3,13 @@
  * @description Convex functions لعناصر القائمة (Menu Items)
  */
 import { mutation, query } from "./_generated/server";
+import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     return await ctx.db.query("menuItems").collect();
   },
 });
@@ -30,6 +32,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const menuItemId = await ctx.db.insert("menuItems", {
       name: args.name,
       categoryId: args.categoryId,
@@ -54,6 +57,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...updates } = args;
     await ctx.db.patch(id, updates);
     return id;
@@ -63,6 +67,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("menuItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await ctx.db.delete(args.id);
     return { success: true };
   },
@@ -78,6 +83,7 @@ export const remove = mutation({
 export const syncFromPublicMeals = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // 1) جلب كل البيانات
     const publicMeals = await ctx.db.query("publicMeals").collect();
     const existingMenuItems = await ctx.db.query("menuItems").collect();

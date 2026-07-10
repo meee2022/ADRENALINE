@@ -3,7 +3,7 @@
  * @description سجل الأحداث الحساسة - للأمان والمراجعة
  */
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 export const log = mutation({
@@ -35,6 +35,7 @@ export const list = query({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { limit = 100, entityType, action, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     let logs = await ctx.db
       .query("auditLog")
       .withIndex("by_createdAt")
@@ -51,6 +52,7 @@ export const list = query({
 export const stats = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const all = await ctx.db.query("auditLog").order("desc").take(1000);
     const last24h = all.filter((l) => l.createdAt > Date.now() - 24 * 60 * 60 * 1000);
     const byAction = new Map<string, number>();

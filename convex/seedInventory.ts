@@ -1,10 +1,12 @@
 // convex/seedInventory.ts
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireStaff } from "./sessions";
 
 export const seedInventoryData = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // Check if already seeded
     const existing = await ctx.db.query("inventoryItems").first();
     if (existing) {

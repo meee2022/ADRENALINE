@@ -1,11 +1,12 @@
 // convex/modifiers.ts
 import { query, mutation } from "./_generated/server";
-import { requireAdmin } from "./sessions";
+import { requireAdmin, requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     // نجيب كل الجروبات مرتبة
     const portion = await ctx.db
       .query("modifiers")
@@ -35,6 +36,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const sortOrder =
       typeof args.sortOrder === "number" ? args.sortOrder : Date.now(); // fallback
     // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
@@ -57,6 +59,7 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { id, data, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     await ctx.db.patch(id, data);
     return true;
   },
@@ -65,6 +68,7 @@ export const update = mutation({
 export const remove = mutation({
   args: { id: v.id("modifiers"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
     await ctx.db.delete(id);
     return true;
   },
