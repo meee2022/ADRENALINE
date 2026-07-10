@@ -4,10 +4,11 @@
  *   بنفس فكرة ملف الإكسيل اليومي (SHEET + CUSTOMIZED).
  *
  *   صيغتان (المطبخ يختار):
- *     - Excel (.xlsx) عبر SheetJS — الأوثق، قابل للتعديل، عربي مضبوط.
+ *     - Excel (.xlsx) عبر xlsx-js-style — بحدود وتنسيق (SheetJS المجاني بلا حدود).
  *     - PDF مصمّم يتحمّل مباشرةً (لا نافذة طباعة) عبر html2pdf (تحميل ديناميكي).
  *
- *   لا صور هنا عمداً: كشف المطبخ نصّي كثيف — الصور تُبطئه وتشتّت الشيف.
+ *   يدعم لغتين: عند الإنجليزية تخرج كل اللافتات إنجليزية (أسماء الوجبات تُبنى
+ *   بلغة العرض في Kitchen.tsx قبل تمريرها هنا).
  */
 
 export type KitchenPerson = {
@@ -31,42 +32,87 @@ export type KitchenPerson = {
   customized: boolean;
 };
 
-const STD_HEADERS = [
+export type Lang = "ar" | "en";
+
+const HEADERS = [
   "NO.", "Phone", "Customer Name", "START/LAST Day", "Remarks",
   "Allergies & Dislikes", "Breakfast", "SNACK 1", "LUNCH", "SNACK 2",
   "DINNER", "MEAL 4", "Time",
 ];
 
-const rowArray = (p: KitchenPerson): (string | number)[] => [
+const T = (lang: Lang) => ({
+  title: lang === "ar" ? "كشف المطبخ اليومي" : "Daily Kitchen Sheet",
+  date: lang === "ar" ? "تاريخ" : "Date",
+  customers: lang === "ar" ? "عميل" : "customers",
+  standard: lang === "ar" ? "الخطط القياسية" : "Standard Plans",
+  customizedSec: lang === "ar" ? "الخطط المخصّصة" : "Customized Plans",
+  morning: lang === "ar" ? "صباحي" : "Morning",
+  evening: lang === "ar" ? "مسائي" : "Evening",
+});
+
+const timeLabel = (t: string, lang: Lang) =>
+  t === "MORNING" ? T(lang).morning : T(lang).evening;
+
+const rowArray = (p: KitchenPerson, lang: Lang): (string | number)[] => [
   p.no, p.phone, p.name, p.dates, p.remarks, p.allergies,
-  p.breakfast, p.snack1, p.lunch, p.snack2, p.dinner, p.meal4, p.time,
+  p.breakfast, p.snack1, p.lunch, p.snack2, p.dinner, p.meal4, timeLabel(p.time, lang),
 ];
 
-/* ───────────────────────── Excel ───────────────────────── */
+/* ───────────────────────── Excel (بحدود وتنسيق) ───────────────────────── */
 
-export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson[]): Promise<void> {
-  const XLSX = await import("xlsx");
+export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson[], lang: Lang = "ar"): Promise<void> {
+  const XLSX = (await import("xlsx-js-style")).default as any;
   const std = people.filter((p) => !p.customized);
   const cust = people.filter((p) => p.customized);
 
-  const wb = XLSX.utils.book_new();
+  const border = {
+    top: { style: "thin", color: { rgb: "B9C7D6" } },
+    bottom: { style: "thin", color: { rgb: "B9C7D6" } },
+    left: { style: "thin", color: { rgb: "B9C7D6" } },
+    right: { style: "thin", color: { rgb: "B9C7D6" } },
+  };
+  const headerStyle = {
+    fill: { fgColor: { rgb: "0E76AC" } },
+    font: { color: { rgb: "FFFFFF" }, bold: true, sz: 10 },
+    alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    border,
+  };
+  const titleStyle = { font: { bold: true, sz: 13, color: { rgb: "0E2A4A" } } };
+  const cellStyle = { alignment: { vertical: "top", wrapText: true }, border, font: { sz: 10 } };
+  const altStyle = { ...cellStyle, fill: { fgColor: { rgb: "F5F9FC" } } };
 
-  const mkSheet = (title: string, rows: KitchenPerson[]) => {
+  const cols = [
+    { wch: 5 }, { wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 24 },
+    { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 10 },
+  ];
+
+  const mkSheet = (rows: KitchenPerson[], sectionTitle: string) => {
     const aoa: (string | number)[][] = [
-      [`FOOD FOR DATE ${dateStr}${title === "CUSTOMIZED" ? " — CUSTOMIZED" : ""}`],
-      STD_HEADERS,
-      ...rows.map(rowArray),
+      [`${T(lang).title} — ${dateStr}${sectionTitle ? ` — ${sectionTitle}` : ""}`],
+      HEADERS,
+      ...rows.map((p) => rowArray(p, lang)),
     ];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws["!cols"] = [
-      { wch: 5 }, { wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 26 },
-      { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 10 },
-    ];
+    ws["!cols"] = cols;
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: HEADERS.length - 1 } }];
+
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+    for (let r = range.s.r; r <= range.e.r; r++) {
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const ref = XLSX.utils.encode_cell({ r, c });
+        if (!ws[ref]) ws[ref] = { t: "s", v: "" };
+        if (r === 0) ws[ref].s = titleStyle;
+        else if (r === 1) ws[ref].s = headerStyle;
+        else ws[ref].s = (r % 2 === 0) ? cellStyle : altStyle;
+      }
+    }
+    ws["!rows"] = [{ hpt: 22 }, { hpt: 20 }];
     return ws;
   };
 
-  XLSX.utils.book_append_sheet(wb, mkSheet("SHEET", std), "SHEET");
-  if (cust.length) XLSX.utils.book_append_sheet(wb, mkSheet("CUSTOMIZED", cust), "CUSTOMIZED");
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, mkSheet(std, T(lang).standard), "SHEET");
+  if (cust.length) XLSX.utils.book_append_sheet(wb, mkSheet(cust, T(lang).customizedSec), "CUSTOMIZED");
 
   XLSX.writeFile(wb, `ADRENALINE-kitchen-${dateStr}.xlsx`);
 }
@@ -76,9 +122,9 @@ export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
 
-function tableHtml(title: string, rows: KitchenPerson[]): string {
+function tableHtml(title: string, rows: KitchenPerson[], lang: Lang): string {
   if (!rows.length) return "";
-  const head = STD_HEADERS.map((h) => `<th>${esc(h)}</th>`).join("");
+  const head = HEADERS.map((h) => `<th>${esc(h)}</th>`).join("");
   const body = rows
     .map(
       (p) => `<tr>
@@ -94,21 +140,24 @@ function tableHtml(title: string, rows: KitchenPerson[]): string {
       <td>${esc(p.snack2)}</td>
       <td>${esc(p.dinner)}</td>
       <td>${esc(p.meal4)}</td>
-      <td class="c sm">${p.time === "MORNING" ? "صباحي" : "مسائي"}</td>
+      <td class="c sm">${esc(timeLabel(p.time, lang))}</td>
     </tr>`,
     )
     .join("");
   return `<section class="sec">
-    <div class="sec-t">${esc(title)} <span>${rows.length} عميل</span></div>
+    <div class="sec-t">${esc(title)} <span>${rows.length} ${esc(T(lang).customers)}</span></div>
     <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
   </section>`;
 }
 
-export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[]): Promise<void> {
+export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[], lang: Lang = "ar"): Promise<void> {
   const std = people.filter((p) => !p.customized);
   const cust = people.filter((p) => p.customized);
+  const tr = T(lang);
+  const dir = lang === "ar" ? "rtl" : "ltr";
 
   const el = document.createElement("div");
+  el.style.cssText = "position:absolute;left:-10000px;top:0;width:1120px;background:#ffffff";
   el.innerHTML = `
     <style>
       .kp-doc *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -123,40 +172,53 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .sec{margin-bottom:14px}
       .sec-t{font-weight:900;font-size:13px;color:#0E2A4A;background:#eaf3fb;border:1px solid #cfe4f3;
              border-radius:8px;padding:6px 10px;margin-bottom:6px}
-      .sec-t span{float:left;color:#0E76AC;font-size:11px}
+      .sec-t span{float:${lang === "ar" ? "left" : "right"};color:#0E76AC;font-size:11px}
       table{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed}
       th{background:#0E76AC;color:#fff;padding:4px 3px;font-weight:800;border:1px solid #0b5f8a;font-size:8.5px}
-      td{padding:3px 4px;border:1px solid #dbe6ef;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}
+      td{padding:3px 4px;border:1px solid #cfd9e4;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}
       tr:nth-child(even) td{background:#f7fbfe}
       .c{text-align:center} .nm{font-weight:800} .sm{font-size:8px;color:#47759c}
       .al{color:#b45309;font-size:8px;font-weight:700}
       .foot{margin:6px 16px 12px;font-size:9px;color:#94a3b8;text-align:center}
     </style>
-    <div class="kp-doc">
+    <div class="kp-doc" dir="${dir}">
       <div class="kp-hero">
         <div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div>
-        <div style="text-align:end">
-          <h1>كشف المطبخ اليومي</h1>
-          <div class="sub">تاريخ: ${esc(dateStr)} · ${people.length} عميل</div>
+        <div style="text-align:${lang === "ar" ? "end" : "start"}">
+          <h1>${esc(tr.title)}</h1>
+          <div class="sub">${esc(tr.date)}: ${esc(dateStr)} · ${people.length} ${esc(tr.customers)}</div>
         </div>
       </div>
       <div class="kp-wrap">
-        ${tableHtml("الخطط القياسية", std)}
-        ${tableHtml("الخطط المخصّصة", cust)}
+        ${tableHtml(tr.standard, std, lang)}
+        ${tableHtml(tr.customizedSec, cust, lang)}
       </div>
-      <div class="foot">ADRENALINE Healthy Food — كشف المطبخ ${esc(dateStr)}</div>
+      <div class="foot">ADRENALINE Healthy Food — ${esc(tr.title)} ${esc(dateStr)}</div>
     </div>`;
+  document.body.appendChild(el);
+  await Promise.all(
+    Array.from(el.querySelectorAll("img")).map((img) =>
+      (img as HTMLImageElement).complete ? Promise.resolve() : new Promise<void>((res) => {
+        (img as HTMLImageElement).onload = () => res();
+        (img as HTMLImageElement).onerror = () => res();
+      }),
+    ),
+  );
 
-  const html2pdf = (await import("html2pdf.js")).default as any;
-  await html2pdf()
-    .set({
-      margin: 6,
-      filename: `ADRENALINE-kitchen-${dateStr}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-      pagebreak: { mode: ["css", "legacy"] },
-    })
-    .from(el)
-    .save();
+  try {
+    const html2pdf = (await import("html2pdf.js")).default as any;
+    await html2pdf()
+      .set({
+        margin: 5,
+        filename: `ADRENALINE-kitchen-${dateStr}.pdf`,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
+        pagebreak: { mode: ["css", "legacy"] },
+      })
+      .from(el)
+      .save();
+  } finally {
+    el.remove();
+  }
 }

@@ -352,7 +352,9 @@ export default function Kitchen() {
 
       (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
         const meal: any = getMenuItem(item.menuItemId || item.mealId);
-        const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) : (item.mealNameAr || item.mealNameEn || "—");
+        const mealName = meal
+          ? (isRtl ? (meal.nameAr || meal.name || meal.nameEn) : (meal.nameEn || meal.name || meal.nameAr))
+          : ((isRtl ? (item.mealNameAr || item.mealNameEn) : (item.mealNameEn || item.mealNameAr)) || "—");
         const cat: any = item.menuItemId ? getCategory(meal?.categoryId) : null;
         const label = getCategoryLabel(cat?.name || item.category || "");
         // ملاحظة خاصة بهذه الوجبة فقط — لا نكرّر ممنوعات/برنامج العميل العام
@@ -404,8 +406,9 @@ export default function Kitchen() {
     }
     setExporting(kind);
     try {
-      if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, kitchenPeople);
-      else await downloadKitchenPdf(formattedDate, kitchenPeople);
+      const lang = isRtl ? "ar" : "en";
+      if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, kitchenPeople, lang);
+      else await downloadKitchenPdf(formattedDate, kitchenPeople, lang);
     } catch (e: any) {
       alert((isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e));
     } finally {
