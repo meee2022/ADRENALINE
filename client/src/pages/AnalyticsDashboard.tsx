@@ -4,6 +4,7 @@
  */
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -47,12 +48,13 @@ const STATUS_AR: Record<string, string> = {
 };
 
 export default function AnalyticsDashboard() {
-  const overview = useQuery(api.analytics.overview);
-  const sales30 = useQuery(api.analytics.salesLast30Days) || [];
-  const statusDist = useQuery(api.analytics.orderStatusDistribution) || [];
-  const topMeals = useQuery(api.analytics.topMeals, { limit: 10 }) || [];
-  const growth = useQuery(api.analytics.customerGrowth) || [];
-  const kitchen = useQuery(api.analytics.kitchenPerformance, { days: 7 }) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const overview = useQuery(api.analytics.overview, { sessionToken });
+  const sales30 = useQuery(api.analytics.salesLast30Days, { sessionToken }) || [];
+  const statusDist = useQuery(api.analytics.orderStatusDistribution, { sessionToken }) || [];
+  const topMeals = useQuery(api.analytics.topMeals, { limit: 10, sessionToken }) || [];
+  const growth = useQuery(api.analytics.customerGrowth, { sessionToken }) || [];
+  const kitchen = useQuery(api.analytics.kitchenPerformance, { days: 7, sessionToken }) || [];
 
   return (
     <div className="space-y-6">

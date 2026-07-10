@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, Boxes } from "lucide-react";
@@ -21,8 +22,9 @@ export function IngredientsDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
-  const ingredients = useQuery(api.mealIngredients.listByMeal, { menuItemId: meal._id }) || [];
+  const ingredients = useQuery(api.mealIngredients.listByMeal, { menuItemId: meal._id, sessionToken }) || [];
   const inventoryItems = useQuery(api.inventory.listItems, {}) || [];
 
   const createMutation = useMutation(api.mealIngredients.create);
@@ -40,6 +42,7 @@ export function IngredientsDialog({
     const item = inventoryItems.find((i: any) => i._id === selectedItemId);
     try {
       await createMutation({
+        sessionToken,
         menuItemId: meal._id,
         inventoryItemId: selectedItemId as any,
         quantityPerServing: parseFloat(quantity),
@@ -56,7 +59,7 @@ export function IngredientsDialog({
 
   const handleRemove = async (id: string) => {
     if (!confirm("حذف هذا المكوّن من الوجبة؟")) return;
-    await removeMutation({ id: id as any });
+    await removeMutation({ id: id as any, sessionToken });
     toast({ title: "تم الحذف" });
   };
 

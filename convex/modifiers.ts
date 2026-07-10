@@ -4,8 +4,8 @@ import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     // نجيب كل الجروبات مرتبة
     const portion = await ctx.db
       .query("modifiers")
@@ -32,11 +32,14 @@ export const create = mutation({
     group: v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION")),
     isActive: v.boolean(),
     sortOrder: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const sortOrder =
       typeof args.sortOrder === "number" ? args.sortOrder : Date.now(); // fallback
-    return await ctx.db.insert("modifiers", { ...args, sortOrder });
+    // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
+    const { sessionToken: _t, ...fields } = args;
+    return await ctx.db.insert("modifiers", { ...fields, sortOrder });
   },
 });
 
@@ -51,16 +54,17 @@ export const update = mutation({
       isActive: v.optional(v.boolean()),
       sortOrder: v.optional(v.number()),
     }),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { id, data }) => {
+  handler: async (ctx, { id, data, sessionToken }) => {
     await ctx.db.patch(id, data);
     return true;
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("modifiers") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("modifiers"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
     await ctx.db.delete(id);
     return true;
   },

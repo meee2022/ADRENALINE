@@ -46,21 +46,24 @@ export const update = mutation({
     heroCta2TextAr: v.optional(v.string()),
     heroCta2TextEn: v.optional(v.string()),
     heroCta2Link: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
+    const { sessionToken: _t, ...fields } = args;
     const existing = await ctx.db.query("restaurantSettings").first();
 
     if (existing) {
       // Update existing
       await ctx.db.patch(existing._id, {
-        ...args,
+        ...fields,
         updatedAt: Date.now(),
       });
       return { success: true, id: existing._id };
     } else {
       // Create new (first time)
       const id = await ctx.db.insert("restaurantSettings", {
-        ...args,
+        ...fields,
         updatedAt: Date.now(),
       });
       return { success: true, id };
@@ -72,6 +75,7 @@ export const update = mutation({
 export const updateHeroLogo = mutation({
   args: {
     storageId: v.id("_storage"),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("restaurantSettings").first();
@@ -109,8 +113,8 @@ export const updateHeroLogo = mutation({
 
 // ===== DELETE HERO LOGO =====
 export const deleteHeroLogo = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {
@@ -139,7 +143,8 @@ export const deleteHeroLogo = mutation({
 
 // ===== INITIALIZE DEFAULT SETTINGS (if none exist) =====
 export const initializeDefault = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {

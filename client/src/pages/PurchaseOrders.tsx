@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ClipboardList, ArrowRight, Sparkles, Send, Truck, XCircle, Trash2, PackageCheck } from "lucide-react";
@@ -21,18 +22,19 @@ const STATUS: Record<string, { ar: string; en: string; cls: string }> = {
 };
 
 export default function PurchaseOrders() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { isRtl } = useLanguage();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const orders: any[] = useQuery(api.purchaseOrders.list, {}) || [];
+  const orders: any[] = useQuery(api.purchaseOrders.list, { sessionToken }) || [];
   const generate = useMutation(api.purchaseOrders.generateFromLowStock);
   const updateStatus = useMutation(api.purchaseOrders.updateStatus);
   const remove = useMutation(api.purchaseOrders.remove);
 
   const handleGenerate = async () => {
     try {
-      const res: any = await generate({});
+      const res: any = await generate({ sessionToken });
       toast(
         res?.count > 0
           ? { title: isRtl ? `تم إنشاء ${res.count} أمر شراء` : `${res.count} purchase orders created`, description: isRtl ? "من الأصناف الناقصة، مجمّعة حسب المورّد" : "From low-stock items, grouped by supplier" }
@@ -43,11 +45,11 @@ export default function PurchaseOrders() {
     }
   };
   const setStatus = async (id: string, status: string) => {
-    try { await updateStatus({ id: id as any, status: status as any }); }
+    try { await updateStatus({ id: id as any, status: status as any, sessionToken }); }
     catch (e: any) { toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" }); }
   };
   const del = async (id: string) => {
-    try { await remove({ id: id as any }); }
+    try { await remove({ id: id as any, sessionToken }); }
     catch (e: any) { toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" }); }
   };
 

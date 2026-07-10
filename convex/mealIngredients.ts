@@ -6,8 +6,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const listByMeal = query({
-  args: { menuItemId: v.id("menuItems") },
-  handler: async (ctx, { menuItemId }) => {
+  args: { menuItemId: v.id("menuItems"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { menuItemId, sessionToken }) => {
     const ingredients = await ctx.db
       .query("mealIngredients")
       .withIndex("by_menuItem", (q) => q.eq("menuItemId", menuItemId))
@@ -28,8 +28,8 @@ export const listByMeal = query({
 });
 
 export const listAll = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     return await ctx.db.query("mealIngredients").collect();
   },
 });
@@ -40,6 +40,7 @@ export const create = mutation({
     inventoryItemId: v.id("inventoryItems"),
     quantityPerServing: v.number(),
     unit: v.string(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("mealIngredients", {
@@ -54,16 +55,18 @@ export const update = mutation({
     id: v.id("mealIngredients"),
     quantityPerServing: v.optional(v.number()),
     unit: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { id, ...rest }) => {
+  // sessionToken قبل الـrest حتى لا يُخزَّن داخل الوثيقة
+  handler: async (ctx, { id, sessionToken, ...rest }) => {
     await ctx.db.patch(id, rest);
     return id;
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("mealIngredients") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("mealIngredients"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
     await ctx.db.delete(id);
     return { success: true };
   },

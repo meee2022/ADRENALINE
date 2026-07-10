@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,8 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function BannersManagement() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
-  const banners = useQuery(api.banners.list) || [];
+  const banners = useQuery(api.banners.list, { sessionToken }) || [];
   const createBanner = useMutation(api.banners.create);
   const deleteBanner = useMutation(api.banners.remove);
   const toggleActive = useMutation(api.banners.toggleActive);
@@ -54,7 +56,7 @@ export default function BannersManagement() {
     setIsUploading(true);
     try {
       // 1. Get upload URL
-      const uploadUrl = await generateUploadUrl();
+      const uploadUrl = await generateUploadUrl({ sessionToken });
 
       // 2. Upload file
       const result = await fetch(uploadUrl, {
@@ -71,6 +73,7 @@ export default function BannersManagement() {
 
       // 3. Create banner record
       await createBanner({
+        sessionToken,
         titleAr,
         titleEn: titleEn || undefined,
         subtitleAr: subtitleAr || undefined,
@@ -107,7 +110,7 @@ export default function BannersManagement() {
     if (!confirm("هل أنت متأكد من حذف هذا البانر؟")) return;
 
     try {
-      await deleteBanner({ id: id as any });
+      await deleteBanner({ id: id as any, sessionToken });
       toast({
         title: "نجاح",
         description: "تم حذف البانر بنجاح",
@@ -123,7 +126,7 @@ export default function BannersManagement() {
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
     try {
-      await toggleActive({ id: id as any });
+      await toggleActive({ id: id as any, sessionToken });
       toast({
         title: "نجاح",
         description: currentStatus ? "تم إخفاء البانر" : "تم إظهار البانر",

@@ -57,9 +57,10 @@ export const create = mutation({
     showInComparison: v.optional(v.boolean()),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { badge, ...rest } = args;
+    const { badge, sessionToken: _t, ...rest } = args;
     
     const planId = await ctx.db.insert("publicPlans", {
       ...rest,
@@ -102,9 +103,10 @@ export const update = mutation({
     isFeatured: v.optional(v.boolean()),
     showInComparison: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, badge, ...updates } = args;
+    const { id, badge, sessionToken: _t, ...updates } = args;
     
     // If badge is "none", set it to undefined
     const finalUpdates = {
@@ -118,7 +120,7 @@ export const update = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("publicPlans") },
+  args: { id: v.id("publicPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return { success: true };

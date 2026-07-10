@@ -189,7 +189,8 @@ export function useDeleteAllCustomers() {
 // =========================
 
 export function useCategories() {
-  const data = useConvexQuery(api.mealCategories.list);
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(api.mealCategories.list, { sessionToken });
   return {
     data: data as MealCategory[] | undefined,
     isLoading: data === undefined,
@@ -198,41 +199,45 @@ export function useCategories() {
 }
 
 export function useCreateCategory() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.mealCategories.create);
   return {
-    mutate: (data: any) => mutation(data),
-    mutateAsync: (data: any) => mutation(data),
+    mutate: (data: any) => mutation(withToken(data, sessionToken)),
+    mutateAsync: (data: any) => mutation(withToken(data, sessionToken)),
     isLoading: false,
   };
 }
 
 export function useUpdateCategory() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.mealCategories.update);
   return {
     mutate: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
+      mutation({ id: id as any, data, sessionToken }),
     mutateAsync: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
+      mutation({ id: id as any, data, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useReorderCategories() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.mealCategories.reorder);
   return {
     mutate: (categories: Array<{ id: string; sortOrder: number }>) =>
-      mutation({ categories: categories as any }),
+      mutation({ categories: categories as any, sessionToken }),
     mutateAsync: (categories: Array<{ id: string; sortOrder: number }>) =>
-      mutation({ categories: categories as any }),
+      mutation({ categories: categories as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useDeleteCategory() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.mealCategories.remove);
   return {
-    mutate: (id: string) => mutation({ id: id as any }),
-    mutateAsync: (id: string) => mutation({ id: id as any }),
+    mutate: (id: string) => mutation({ id: id as any, sessionToken }),
+    mutateAsync: (id: string) => mutation({ id: id as any, sessionToken }),
     isLoading: false,
   };
 }
@@ -242,7 +247,8 @@ export function useDeleteCategory() {
 // =========================
 
 export function useMenuItems() {
-  const data = useConvexQuery(api.menuItems.list);
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(api.menuItems.list, { sessionToken });
   return {
     data: data as MenuItem[] | undefined,
     isLoading: data === undefined,
@@ -251,17 +257,19 @@ export function useMenuItems() {
 }
 
 export function useCreateMenuItem() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.menuItems.create);
   return {
     mutate: (data: any) =>
-      mutation({ ...data, categoryId: data.categoryId as any }),
+      mutation({ ...data, categoryId: data.categoryId as any, sessionToken }),
     mutateAsync: (data: any) =>
-      mutation({ ...data, categoryId: data.categoryId as any }),
+      mutation({ ...data, categoryId: data.categoryId as any, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useUpdateMenuItem() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.menuItems.update);
   return {
     mutate: ({ id, data }: { id: string; data: any }) =>
@@ -269,22 +277,25 @@ export function useUpdateMenuItem() {
         ...data,
         id: id as any,
         ...(data.categoryId ? { categoryId: data.categoryId as any } : {}),
+        sessionToken,
       }),
     mutateAsync: ({ id, data }: { id: string; data: any }) =>
       mutation({
         ...data,
         id: id as any,
         ...(data.categoryId ? { categoryId: data.categoryId as any } : {}),
+        sessionToken,
       }),
     isLoading: false,
   };
 }
 
 export function useDeleteMenuItem() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.menuItems.remove);
   return {
-    mutate: (id: string) => mutation({ id: id as any }),
-    mutateAsync: (id: string) => mutation({ id: id as any }),
+    mutate: (id: string) => mutation({ id: id as any, sessionToken }),
+    mutateAsync: (id: string) => mutation({ id: id as any, sessionToken }),
     isLoading: false,
   };
 }
@@ -302,7 +313,8 @@ export type Modifier = {
 };
 
 export function useModifiers() {
-  const data = useConvexQuery(api.modifiers.list);
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(api.modifiers.list, { sessionToken });
   return {
     data: data as Modifier[] | undefined,
     isLoading: data === undefined,
@@ -311,30 +323,33 @@ export function useModifiers() {
 }
 
 export function useCreateModifier() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.modifiers.create);
   return {
-    mutate: (data: any) => mutation(data),
-    mutateAsync: (data: any) => mutation(data),
+    mutate: (data: any) => mutation(withToken(data, sessionToken)),
+    mutateAsync: (data: any) => mutation(withToken(data, sessionToken)),
     isLoading: false,
   };
 }
 
 export function useUpdateModifier() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.modifiers.update);
   return {
     mutate: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
+      mutation({ id: id as any, data, sessionToken }),
     mutateAsync: ({ id, data }: { id: string; data: any }) =>
-      mutation({ id: id as any, data }),
+      mutation({ id: id as any, data, sessionToken }),
     isLoading: false,
   };
 }
 
 export function useDeleteModifier() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.modifiers.remove);
   return {
-    mutate: (id: string) => mutation({ id: id as any }),
-    mutateAsync: (id: string) => mutation({ id: id as any }),
+    mutate: (id: string) => mutation({ id: id as any, sessionToken }),
+    mutateAsync: (id: string) => mutation({ id: id as any, sessionToken }),
     isLoading: false,
   };
 }
@@ -584,9 +599,10 @@ export function useCreateSupplier() {
 }
 
 export function useSeedInventory() {
+  const sessionToken = useSessionToken();
   const mutation = useConvexMutation(api.seedInventory.seedInventoryData);
   return {
-    mutateAsync: () => mutation({}),
+    mutateAsync: () => mutation({ sessionToken }),
     isLoading: false,
   };
 }
@@ -644,6 +660,7 @@ export function useSeedPublicWebsite() {
  * لو اسمها مختلف، غيره هنا فقط.
  */
 export function useStickers(args: StickerQuery) {
-  const data = useConvexQuery(api.stickers.get, args as any);
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(api.stickers.get, { ...(args as any), sessionToken });
   return data as StickersResult | undefined;
 }

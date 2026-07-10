@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +22,7 @@ import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 
 export default function MenuManagement() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -62,8 +64,8 @@ export default function MenuManagement() {
     }
   };
 
-  const meals = useQuery(api.menuItems.list) || [];
-  const categories = useQuery(api.mealCategories.list) || [];
+  const meals = useQuery(api.menuItems.list, { sessionToken }) || [];
+  const categories = useQuery(api.mealCategories.list, { sessionToken }) || [];
 
   const handleAdd = () => {
     setSelectedMeal(null);
@@ -88,7 +90,7 @@ export default function MenuManagement() {
     if (!confirm(t("menu_management.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.menuItems.remove, { id: id as Id<"menuItems"> });
+      await convex.mutation(api.menuItems.remove, { id: id as Id<"menuItems">, sessionToken });
       toast({
         title: t("menu_management.delete_meal"),
         description: "تم حذف الوجبة بنجاح",
@@ -123,10 +125,10 @@ export default function MenuManagement() {
       };
 
       if (selectedMeal) {
-        await convex.mutation(api.menuItems.update, { id: selectedMeal._id, ...data });
+        await convex.mutation(api.menuItems.update, { id: selectedMeal._id, ...data, sessionToken });
         toast({ title: "تم التحديث", description: "تم تحديث الوجبة بنجاح" });
       } else {
-        await convex.mutation(api.menuItems.create, data);
+        await convex.mutation(api.menuItems.create, { ...data, sessionToken });
         toast({ title: "تم الإضافة", description: "تم إضافة الوجبة بنجاح" });
       }
 

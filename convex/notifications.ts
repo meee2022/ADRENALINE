@@ -53,7 +53,7 @@ export const create = mutation({
  * جلب إشعارات حسب الدور (آخر 50)
  */
 export const listForRole = query({
-  args: { role: ROLE, onlyUnread: v.optional(v.boolean()) },
+  args: { role: ROLE, onlyUnread: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const all = await ctx.db
       .query("notifications")
@@ -78,7 +78,7 @@ export const listForRole = query({
  * عدد الإشعارات غير المقروءة لدور معين
  */
 export const unreadCount = query({
-  args: { role: ROLE },
+  args: { role: ROLE, sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const all = await ctx.db
       .query("notifications")
@@ -100,7 +100,7 @@ export const unreadCount = query({
  * تعليم إشعار كمقروء
  */
 export const markAsRead = mutation({
-  args: { id: v.id("notifications") },
+  args: { id: v.id("notifications"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { isRead: true, readAt: Date.now() });
   },
@@ -110,7 +110,7 @@ export const markAsRead = mutation({
  * تعليم كل إشعارات الدور كمقروءة
  */
 export const markAllAsRead = mutation({
-  args: { role: ROLE },
+  args: { role: ROLE, sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const all = await ctx.db
       .query("notifications")

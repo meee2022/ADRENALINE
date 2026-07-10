@@ -6,7 +6,8 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
 export const list = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     return await ctx.db.query("menuItems").collect();
   },
 });
@@ -26,6 +27,7 @@ export const create = mutation({
     macros: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const menuItemId = await ctx.db.insert("menuItems", {
@@ -49,16 +51,17 @@ export const update = mutation({
     macros: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     isActive: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    const { id, sessionToken: _t, ...updates } = args;
     await ctx.db.patch(id, updates);
     return id;
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("menuItems") },
+  args: { id: v.id("menuItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return { success: true };
@@ -73,8 +76,8 @@ export const remove = mutation({
  * - بيحفظ macros كـ string موحد "P:30 C:40 F:15"
  */
 export const syncFromPublicMeals = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     // 1) جلب كل البيانات
     const publicMeals = await ctx.db.query("publicMeals").collect();
     const existingMenuItems = await ctx.db.query("menuItems").collect();

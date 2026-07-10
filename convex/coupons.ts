@@ -7,8 +7,8 @@ import { v } from "convex/values";
 import { requireStaff, requireAdmin } from "./sessions";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     return await ctx.db.query("coupons").order("desc").collect();
   },
 });

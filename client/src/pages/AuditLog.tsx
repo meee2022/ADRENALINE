@@ -4,6 +4,7 @@
  */
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -29,8 +30,9 @@ function getActionColor(action: string) {
 }
 
 export default function AuditLog() {
-  const logs = useQuery(api.auditLog.list, { limit: 200 }) || [];
-  const stats = useQuery(api.auditLog.stats);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const logs = useQuery(api.auditLog.list, { limit: 200, sessionToken }) || [];
+  const stats = useQuery(api.auditLog.stats, { sessionToken });
 
   return (
     <div className="space-y-6">

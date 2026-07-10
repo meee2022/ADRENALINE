@@ -18,8 +18,8 @@ const DEFAULT_CATEGORIES = [
 ] as const;
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const cats = await ctx.db
       .query("mealCategories")
       .withIndex("by_sortOrder")
@@ -38,14 +38,16 @@ export const get = query({
 });
 
 export const create = mutation({
-  args: { name: v.string(), sortOrder: v.number() },
+  args: { name: v.string(), sortOrder: v.number(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("mealCategories").collect();
     const exists = existing.some(
       (c: any) => normalizeName(c.name) === normalizeName(args.name),
     );
     if (exists) throw new Error("Category name already exists");
-    return await ctx.db.insert("mealCategories", args);
+    // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
+    const { sessionToken: _t, ...fields } = args;
+    return await ctx.db.insert("mealCategories", fields);
   },
 });
 
@@ -56,8 +58,9 @@ export const update = mutation({
       name: v.optional(v.string()),
       sortOrder: v.optional(v.number()),
     }),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { id, data }) => {
+  handler: async (ctx, { id, data, sessionToken }) => {
     if (data.name) {
       const all = await ctx.db.query("mealCategories").collect();
       const exists = all.some(
@@ -81,8 +84,9 @@ export const reorder = mutation({
         sortOrder: v.number(),
       }),
     ),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { categories }) => {
+  handler: async (ctx, { categories, sessionToken }) => {
     for (const cat of categories) {
       await ctx.db.patch(cat.id, { sortOrder: cat.sortOrder });
     }
@@ -91,8 +95,8 @@ export const reorder = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("mealCategories") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("mealCategories"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
     const items = await ctx.db
       .query("menuItems")
       .withIndex("by_categoryId", (q) => q.eq("categoryId", id))

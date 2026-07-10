@@ -69,6 +69,7 @@ export const get = query({
   args: {
     date: v.string(), // yyyy-MM-dd
     deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // 1) Plans of date + deliveryTime (confirmed only). "ALL" = صباحي + مسائي معاً.

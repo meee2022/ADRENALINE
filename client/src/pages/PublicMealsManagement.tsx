@@ -8,6 +8,7 @@ import { api } from "@/../../convex/_generated/api";
 import type { Id } from "@/../../convex/_generated/dataModel";
 import { convex } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function PublicMealsManagement() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -111,7 +113,7 @@ export default function PublicMealsManagement() {
     if (!confirm("هل أنت متأكد من حذف هذه الوجبة؟")) return;
 
     try {
-      await convex.mutation(api.publicMeals.remove, { id: id as Id<"publicMeals"> });
+      await convex.mutation(api.publicMeals.remove, { id: id as Id<"publicMeals">, sessionToken });
       toast({ title: "تم الحذف", description: "تم حذف الوجبة بنجاح" });
     } catch (error: any) {
       toast({ title: "خطأ", description: error.message, variant: "destructive" });
@@ -154,10 +156,10 @@ export default function PublicMealsManagement() {
       };
 
       if (selectedMeal) {
-        await convex.mutation(api.publicMeals.update, { id: selectedMeal._id, ...data });
+        await convex.mutation(api.publicMeals.update, { id: selectedMeal._id, ...data, sessionToken });
         toast({ title: "تم التحديث", description: "تم تحديث الوجبة بنجاح" });
       } else {
-        await convex.mutation(api.publicMeals.create, data);
+        await convex.mutation(api.publicMeals.create, { ...data, sessionToken });
         toast({ title: "تم الإضافة", description: "تم إضافة الوجبة بنجاح" });
       }
 

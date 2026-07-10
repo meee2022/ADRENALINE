@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +30,7 @@ const HORIZONS = [
 const fmt = (n: number) => (Math.round((n || 0) * 100) / 100).toLocaleString();
 
 export default function InventoryAlerts() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { isRtl } = useLanguage();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -44,7 +46,7 @@ export default function InventoryAlerts() {
 
   const handleReorder = async () => {
     try {
-      const res: any = await generatePO({});
+      const res: any = await generatePO({ sessionToken });
       if (res?.count > 0) {
         toast({ title: isRtl ? `تم إنشاء ${res.count} أمر شراء` : `${res.count} purchase orders created`, description: isRtl ? "من الأصناف الناقصة، مجمّعة حسب المورّد" : "From low-stock items, grouped by supplier" });
         setLocation("/inventory/purchase-orders");

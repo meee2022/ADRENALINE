@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +28,7 @@ interface PlanOption {
 }
 
 export default function PlansManagement() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { t } = useLanguage();
   const { toast } = useToast();
 
@@ -49,7 +51,7 @@ export default function PlansManagement() {
 
     setIsUploading(true);
     try {
-      const uploadUrl = await generateUploadUrl();
+      const uploadUrl = await generateUploadUrl({ sessionToken });
       const result = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": file.type },
@@ -59,7 +61,7 @@ export default function PlansManagement() {
       if (!result.ok) throw new Error("فشل رفع الصورة");
 
       const { storageId } = await result.json();
-      const imageUrl = await convex.query(api.files.getFileUrl, { storageId });
+      const imageUrl = await convex.query(api.files.getFileUrl, { storageId, sessionToken });
 
       if (imageUrl) {
         setFormData((prev) => ({ ...prev, imageUrl }));
@@ -147,7 +149,7 @@ export default function PlansManagement() {
     if (!confirm(t("plans_management.delete_confirm"))) return;
 
     try {
-      await convex.mutation(api.publicPlans.remove, { id: id as Id<"publicPlans"> });
+      await convex.mutation(api.publicPlans.remove, { id: id as Id<"publicPlans">, sessionToken });
       toast({
         title: "تم الحذف",
         description: "تم حذف الخطة بنجاح",
@@ -193,10 +195,10 @@ export default function PlansManagement() {
       };
 
       if (selectedPlan) {
-        await convex.mutation(api.publicPlans.update, { id: selectedPlan._id, ...data });
+        await convex.mutation(api.publicPlans.update, { id: selectedPlan._id, ...data, sessionToken });
         toast({ title: "تم التحديث", description: "تم تحديث الخطة بنجاح" });
       } else {
-        await convex.mutation(api.publicPlans.create, data);
+        await convex.mutation(api.publicPlans.create, { ...data, sessionToken });
         toast({ title: "تم الإضافة", description: "تم إضافة الخطة بنجاح" });
       }
 

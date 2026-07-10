@@ -20,7 +20,7 @@ import { useStore } from "@/lib/store";
 export default function Coupons() {
   const { toast } = useToast();
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const coupons = useQuery(api.coupons.list) || [];
+  const coupons = useQuery(api.coupons.list, { sessionToken }) || [];
   const createMutation = useMutation(api.coupons.create);
   const removeMutation = useMutation(api.coupons.remove);
   const toggleMutation = useMutation(api.coupons.toggleActive);

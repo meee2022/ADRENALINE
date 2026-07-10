@@ -4,8 +4,8 @@ import { v } from "convex/values";
 
 // ===== LIST ALL BANNERS (Admin) =====
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const banners = await ctx.db
       .query("banners")
       .collect();
@@ -60,6 +60,7 @@ export const create = mutation({
     subtitleEn: v.optional(v.string()),
     imageStorageId: v.id("_storage"),
     sortOrder: v.number(),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Generate URL from storage ID
@@ -81,8 +82,8 @@ export const create = mutation({
 
 // ===== DELETE BANNER =====
 export const remove = mutation({
-  args: { id: v.id("banners") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("banners"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
     const banner = await ctx.db.get(id);
     if (!banner) {
       throw new Error("Banner not found");
@@ -100,8 +101,8 @@ export const remove = mutation({
 
 // ===== TOGGLE ACTIVE STATUS =====
 export const toggleActive = mutation({
-  args: { id: v.id("banners") },
-  handler: async (ctx, { id }) => {
+  args: { id: v.id("banners"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
     const banner = await ctx.db.get(id);
     if (!banner) {
       throw new Error("Banner not found");

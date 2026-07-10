@@ -35,6 +35,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 export function NotificationBell() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { currentUser } = useStore();
   const [open, setOpen] = useState(false);
   const role = currentUser?.role as any;
@@ -45,12 +46,12 @@ export function NotificationBell() {
 
   const notifications = useQuery(
     api.notifications.listForRole,
-    role ? { role, onlyUnread: false } : "skip",
+    role ? { role, onlyUnread: false, sessionToken } : "skip",
   ) || [];
 
   const unreadCount = useQuery(
     api.notifications.unreadCount,
-    role ? { role } : "skip",
+    role ? { role, sessionToken } : "skip",
   ) || 0;
 
   const markAsRead = useMutation(api.notifications.markAsRead);
@@ -107,7 +108,7 @@ export function NotificationBell() {
           <h3 className="font-bold text-slate-800 text-sm">الإشعارات</h3>
           {unreadCount > 0 && (
             <button
-              onClick={() => markAllAsRead({ role })}
+              onClick={() => markAllAsRead({ role, sessionToken })}
               className="text-[11px] text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="h-3 w-3" />
@@ -134,7 +135,7 @@ export function NotificationBell() {
                     Icon={Icon}
                     color={color}
                     onClick={() => {
-                      if (!n.isRead) markAsRead({ id: n._id });
+                      if (!n.isRead) markAsRead({ id: n._id, sessionToken });
                       setOpen(false);
                     }}
                   />

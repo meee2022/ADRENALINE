@@ -127,6 +127,7 @@ export const create = mutation({
     days: v.optional(v.array(v.string())),
     schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
     cutoffTime: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const mealId = await ctx.db.insert("publicMeals", {
@@ -191,16 +192,17 @@ export const update = mutation({
     days: v.optional(v.array(v.string())),
     schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
     cutoffTime: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    const { id, sessionToken: _t, ...updates } = args;
     await ctx.db.patch(id, updates);
     return id;
   },
 });
 
 export const remove = mutation({
-  args: { id: v.id("publicMeals") },
+  args: { id: v.id("publicMeals"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return { success: true };

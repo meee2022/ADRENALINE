@@ -32,8 +32,9 @@ export const list = query({
     limit: v.optional(v.number()),
     entityType: v.optional(v.string()),
     action: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { limit = 100, entityType, action }) => {
+  handler: async (ctx, { limit = 100, entityType, action, sessionToken }) => {
     let logs = await ctx.db
       .query("auditLog")
       .withIndex("by_createdAt")
@@ -48,8 +49,8 @@ export const list = query({
 });
 
 export const stats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const all = await ctx.db.query("auditLog").order("desc").take(1000);
     const last24h = all.filter((l) => l.createdAt > Date.now() - 24 * 60 * 60 * 1000);
     const byAction = new Map<string, number>();

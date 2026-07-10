@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Settings, Phone, Mail, MapPin, Instagram, Twitter, Facebook, Clock, Sav
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function RestaurantSettings() {
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const settings = useQuery(api.restaurantSettings.get);
   const updateSettings = useMutation(api.restaurantSettings.update);
   const updateHeroLogo = useMutation(api.restaurantSettings.updateHeroLogo);
@@ -95,7 +97,7 @@ export default function RestaurantSettings() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateSettings(formData);
+      await updateSettings({ ...formData, sessionToken });
       alert("✅ تم حفظ الإعدادات بنجاح!");
     } catch (error) {
       console.error(error);
@@ -107,7 +109,7 @@ export default function RestaurantSettings() {
 
   const handleInitialize = async () => {
     try {
-      await initializeDefault();
+      await initializeDefault({ sessionToken });
       alert("✅ تم إنشاء الإعدادات الافتراضية!");
     } catch (error) {
       console.error(error);
@@ -133,7 +135,7 @@ export default function RestaurantSettings() {
     setIsUploadingLogo(true);
     try {
       // 1. Get upload URL
-      const uploadUrl = await generateUploadUrl();
+      const uploadUrl = await generateUploadUrl({ sessionToken });
 
       // 2. Upload file
       const uploadResult = await fetch(uploadUrl, {
@@ -149,7 +151,7 @@ export default function RestaurantSettings() {
       const { storageId } = await uploadResult.json();
 
       // 3. Update settings with new logo
-      await updateHeroLogo({ storageId });
+      await updateHeroLogo({ storageId, sessionToken });
 
       alert("✅ تم رفع الشعار بنجاح!");
     } catch (error: any) {
@@ -170,7 +172,7 @@ export default function RestaurantSettings() {
 
     setIsDeletingLogo(true);
     try {
-      await deleteHeroLogo();
+      await deleteHeroLogo({ sessionToken });
       alert("✅ تم حذف الشعار بنجاح!");
     } catch (error: any) {
       console.error("Logo delete error:", error);

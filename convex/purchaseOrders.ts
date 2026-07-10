@@ -4,8 +4,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 export const list = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const rows = await ctx.db.query("purchaseOrders").collect();
     return rows.sort((a, z) => z.createdAt - a.createdAt);
   },
@@ -14,8 +14,8 @@ export const list = query({
 // يبني أوامر شراء مسودة من الأصناف الناقصة، مجمّعة حسب المورّد الافتراضي،
 // ويعيد طلب كل صنف حتى مخزونه المستهدف بتكلفة آخر دفعة.
 export const generateFromLowStock = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
     const items = await ctx.db.query("inventoryItems").collect();
     const low = items.filter((it) => Number(it.currentStock) <= Number(it.minStock));
     if (!low.length) return { count: 0, created: [] as string[] };
@@ -78,6 +78,7 @@ export const create = mutation({
       })
     ),
     note: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const totalEst = (args.items || []).reduce((s, i) => s + Number(i.estLineCost || 0), 0);
@@ -97,6 +98,7 @@ export const updateStatus = mutation({
   args: {
     id: v.id("purchaseOrders"),
     status: v.union(v.literal("DRAFT"), v.literal("SENT"), v.literal("RECEIVED"), v.literal("CANCELLED")),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const patch: any = { status: args.status };
@@ -108,7 +110,7 @@ export const updateStatus = mutation({
 });
 
 export const remove = mutation({
-  args: { id: v.id("purchaseOrders") },
+  args: { id: v.id("purchaseOrders"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return { success: true };
