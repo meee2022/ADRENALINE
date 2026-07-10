@@ -2,7 +2,7 @@
  * @file client/src/pages/Customers.tsx
  * @description إدارة العملاء (المشتركين) + Import JSON/CSV
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useCustomers,
   useCreateCustomer,
@@ -65,7 +65,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { format, parseISO } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useForm, Controller } from "react-hook-form";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { LocationPicker } from "@/components/LocationPicker";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -144,6 +144,36 @@ function parsePackToMealsSnacks(pack: any) {
   const totalMealsPerDay =
     (mealsPerDay ?? 0) + (snacksPerDay ?? 0) || undefined;
   return { mealsPerDay, snacksPerDay, totalMealsPerDay };
+}
+
+/** مدة الباقة على الموقع → عدد الأسابيع */
+const PLAN_DURATION_WEEKS: Record<string, number> = {
+  week: 1,
+  two_weeks: 2,
+  month: 4,
+};
+
+const PLAN_DURATION_LABEL: Record<string, { ar: string; en: string }> = {
+  week: { ar: "أسبوع", en: "1 week" },
+  two_weeks: { ar: "أسبوعان", en: "2 weeks" },
+  month: { ar: "شهر", en: "1 month" },
+};
+
+/** عدد أسابيع الاشتراك من تاريخَي البداية والنهاية (يُقرّب لأقرب أسبوع، وأدناه 1) */
+function weeksBetween(startISO?: string, endISO?: string): number | undefined {
+  if (!startISO || !endISO) return undefined;
+  const a = new Date(startISO + "T00:00:00Z").getTime();
+  const b = new Date(endISO + "T00:00:00Z").getTime();
+  if (isNaN(a) || isNaN(b) || b < a) return undefined;
+  const days = Math.round((b - a) / 86400000) + 1; // شامل يوم النهاية
+  return Math.max(1, Math.round(days / 7));
+}
+
+/** يضيف عدد أسابيع لتاريخ ISO ويرجّع آخر يوم في المدة */
+function addWeeksISO(startISO: string, weeks: number): string {
+  const d = new Date(startISO + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() + weeks * 7 - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 function parseNumberish(x: any) {
@@ -225,6 +255,11 @@ export default function Customers() {
   const { data: customers = [] } = useCustomers();
   const [pauseTarget, setPauseTarget] = useState<any | null>(null);
   const [printTarget, setPrintTarget] = useState<any | null>(null);
+
+  // ✅ باقات الموقع — نفسها اللي بيشوفها العميل. الاختيار منها يملأ الوجبات والسعر والمدة.
+  const sitePlans = (useQuery(api.publicPlans.list, {}) as any[] | undefined) ?? [];
+  const [planId, setPlanId] = useState<string>("");
+  const [optionIdx, setOptionIdx] = useState<string>("");
   const createCustomer = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
@@ -375,8 +410,47 @@ export default function Customers() {
     });
   }, [customers, searchTerm, selectedProgram, viewFilter]);
 
+  const selectedPlan = sitePlans.find((p: any) => String(p._id) === planId);
+  const planOptions: any[] = selectedPlan?.options ?? [];
+
+  /**
+   * اختيار خيار من باقة الموقع يملأ الحقول تلقائياً:
+   * الوجبات/السناكات/الإجمالي/السعر/اسم الباقة + تاريخ النهاية حسب مدة الباقة.
+   * الموظّف يقدر يعدّل السعر أو التاريخ بعدها لو حبّ.
+   */
+  const applyPlanOption = (plan: any, idx: number) => {
+    const opt = plan?.options?.[idx];
+    if (!plan || !opt) return;
+
+    const meals = Number(opt.mealsCount ?? 0);
+    const snacks = Number(opt.snacksCount ?? 0);
+    const weeks = PLAN_DURATION_WEEKS[plan.duration] ?? 4;
+
+    form.setValue("packageLabel", `${plan.nameEn ?? plan.nameAr} — ${meals} MEALS/${snacks} SNACKS`, { shouldDirty: true });
+    form.setValue("mealsPerDay", meals, { shouldDirty: true });
+    form.setValue("snacksPerDay", snacks, { shouldDirty: true });
+    form.setValue("totalMealsPerDay", meals + snacks, { shouldDirty: true });
+    form.setValue("durationWeeks", weeks, { shouldDirty: true });
+    if (opt.priceQAR != null) form.setValue("price", Number(opt.priceQAR), { shouldDirty: true });
+
+    // تاريخ النهاية = البداية + مدة الباقة
+    const start = form.getValues("startDate");
+    if (start) form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
+  };
+
+  // مدة الاشتراك تُقرأ من التاريخين — لا تُكتب يدوياً
+  const watchedStart = form.watch("startDate");
+  const watchedEnd = form.watch("endDate");
+  const computedWeeks = weeksBetween(watchedStart, watchedEnd);
+
+  useEffect(() => {
+    if (computedWeeks) form.setValue("durationWeeks", computedWeeks);
+  }, [computedWeeks]);
+
   const resetForm = () => {
     setEditingCustomer(null);
+    setPlanId("");
+    setOptionIdx("");
     setSelectedAvoid([]);
     setSelectedPref([]);
     setSelectedPortions([]);
@@ -454,7 +528,28 @@ export default function Customers() {
 
   const handleEdit = (customer: any) => {
     setEditingCustomer(customer);
-    
+
+    // ✅ حاول مطابقة باقة الموقع الحالية (بعدد الوجبات/السناكات + مدة الاشتراك)
+    //    حتى تفتح القائمة على اختياره بدل أن تظهر فارغة.
+    const meals = Number(customer.mealsPerDay ?? 0);
+    const snacks = Number(customer.snacksPerDay ?? 0);
+    const weeks = weeksBetween(customer.startDate, customer.endDate) ?? customer.durationWeeks;
+    const findMatch = (requireSameDuration: boolean) => {
+      for (const p of sitePlans) {
+        if (requireSameDuration && weeks && PLAN_DURATION_WEEKS[p.duration] !== weeks) continue;
+        const i = (p.options ?? []).findIndex(
+          (o: any) => Number(o.mealsCount) === meals && Number(o.snacksCount) === snacks,
+        );
+        if (i >= 0) return [String(p._id), String(i)] as const;
+      }
+      return null;
+    };
+    // اشتراك مدته 5 أسابيع مثلاً لا يطابق أي باقة بالضبط — نرجع للمطابقة بالوجبات وحدها
+    const match = (meals || snacks) ? (findMatch(true) ?? findMatch(false)) : null;
+    setPlanId(match?.[0] ?? "");
+    setOptionIdx(match?.[1] ?? "");
+
+
     // ✅ تحميل القيم من strings إلى arrays
     const avoidArr = customer.avoid
       ? customer.avoid.split(",").map((s: string) => s.trim()).filter(Boolean)
@@ -1181,41 +1276,100 @@ export default function Customers() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{isRtl ? "الباقة" : "Package"}</Label>
-                    <Input
-                      {...form.register("packageLabel")}
-                      placeholder="3 MEALS/2 SNACKS"
-                    />
+                {/* ===== الباقة: تُختار من باقات الموقع فتملأ باقي الحقول ===== */}
+                <div className="rounded-xl border border-[#3cc4f0]/40 bg-[#f2fbff] p-4 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الباقة" : "Package"}</Label>
+                      <Select
+                        value={planId}
+                        onValueChange={(v) => {
+                          setPlanId(v);
+                          setOptionIdx("");
+                          const p = sitePlans.find((x: any) => String(x._id) === v);
+                          // لو الباقة لها خيار واحد، طبّقه فوراً
+                          if (p?.options?.length === 1) {
+                            setOptionIdx("0");
+                            applyPlanOption(p, 0);
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={isRtl ? "اختر باقة من الموقع" : "Pick a site plan"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sitePlans.map((p: any) => (
+                            <SelectItem key={p._id} value={String(p._id)}>
+                              {(isRtl ? p.nameAr : p.nameEn) || p.slug}
+                              {" · "}
+                              {isRtl
+                                ? PLAN_DURATION_LABEL[p.duration]?.ar ?? p.duration
+                                : PLAN_DURATION_LABEL[p.duration]?.en ?? p.duration}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "الوجبات والسعر" : "Meals & price"}</Label>
+                      <Select
+                        value={optionIdx}
+                        disabled={!selectedPlan}
+                        onValueChange={(v) => {
+                          setOptionIdx(v);
+                          applyPlanOption(selectedPlan, Number(v));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue
+                            placeholder={
+                              selectedPlan
+                                ? isRtl ? "اختر عدد الوجبات" : "Pick meals"
+                                : isRtl ? "اختر الباقة أولاً" : "Pick a plan first"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {planOptions.map((o: any, i: number) => (
+                            <SelectItem key={i} value={String(i)}>
+                              {isRtl
+                                ? `${o.mealsCount} وجبات + ${o.snacksCount} سناك — ${o.priceQAR} ر.ق`
+                                : `${o.mealsCount} meals + ${o.snacksCount} snacks — ${o.priceQAR} QAR`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>
-                      {isRtl ? "مدة الاشتراك (أسابيع)" : "Duration (weeks)"}
-                    </Label>
-                    <Input type="number" {...form.register("durationWeeks")} />
+                  {/* ملخّص محسوب — لا يُكتب يدوياً */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                      { l: isRtl ? "وجبات/يوم" : "Meals/day", v: form.watch("mealsPerDay") ?? "—" },
+                      { l: isRtl ? "سناك/يوم" : "Snacks/day", v: form.watch("snacksPerDay") ?? "—" },
+                      { l: isRtl ? "الإجمالي/يوم" : "Total/day", v: form.watch("totalMealsPerDay") ?? "—" },
+                      { l: isRtl ? "المدة (أسابيع)" : "Weeks", v: computedWeeks ?? "—" },
+                    ].map((k, i) => (
+                      <div key={i} className="rounded-lg bg-white border p-2 text-center">
+                        <div className="text-xl font-black text-[#0E76AC]">{String(k.v)}</div>
+                        <div className="text-[10px] text-muted-foreground font-semibold">{k.l}</div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>{isRtl ? "عدد الوجبات يوميًا" : "Meals/day"}</Label>
-                    <Input type="number" {...form.register("mealsPerDay")} />
-                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {isRtl
+                      ? "المدة تُحسب من تاريخَي البداية والنهاية فوق. اختيار الباقة يضبط تاريخ النهاية تلقائياً، وتقدر تعدّله."
+                      : "Weeks are computed from the start/end dates above. Picking a plan sets the end date; you can still change it."}
+                  </p>
 
-                  <div className="space-y-2">
-                    <Label>
-                      {isRtl ? "عدد السناكات يوميًا" : "Snacks/day"}
-                    </Label>
-                    <Input type="number" {...form.register("snacksPerDay")} />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>{isRtl ? "الإجمالي يوميًا" : "Total/day"}</Label>
-                    <Input
-                      type="number"
-                      {...form.register("totalMealsPerDay")}
-                    />
-                  </div>
+                  {/* قيم مخفيّة تُرسل مع النموذج */}
+                  <input type="hidden" {...form.register("packageLabel")} />
+                  <input type="hidden" {...form.register("durationWeeks")} />
+                  <input type="hidden" {...form.register("mealsPerDay")} />
+                  <input type="hidden" {...form.register("snacksPerDay")} />
+                  <input type="hidden" {...form.register("totalMealsPerDay")} />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
