@@ -9,7 +9,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useCategories, useMenuItems, useModifiers } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
-import { printMealPlan } from "@/lib/printMealPlan";
+import { printMealPlanCards } from "@/lib/printMealPlan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +61,14 @@ export function CustomerMealPlanDialog({
     const catMap = new Map((categories as any[]).map((c: any) => [String(c._id), c.name]));
     const modMap = new Map((modifiers as any[]).map((m: any) => [String(m._id), m.name]));
 
+    // اسم اليوم بالعربي من التاريخ — أوضح للعميل من رقم التاريخ وحده.
+    const dayAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const dayLabel = (isoDate: string) => {
+      const d = new Date(isoDate + "T00:00:00");
+      const nm = isNaN(d.getTime()) ? "" : dayAr[d.getDay()];
+      return nm ? `${nm} · ${isoDate}` : isoDate;
+    };
+
     const groups = plans.map((plan: any) => {
       const rows = (plan.items || [])
         .filter((it: any) => !it.isOff && (it.menuItemId || it.mealNameAr || it.mealNameEn))
@@ -69,19 +77,22 @@ export function CustomerMealPlanDialog({
           const mods = (it.modifierIds || []).map((id: any) => modMap.get(String(id))).filter(Boolean);
           return {
             label: String(i + 1),
-            category: menu ? catMap.get(String(menu.categoryId)) || "" : "",
+            category: menu ? catMap.get(String(menu.categoryId)) || "" : (it.category || ""),
             meal: menu?.name || it.mealNameAr || it.mealNameEn || "غير محدد",
             notes: [...mods, it.avoid, it.preferences, it.portions].filter(Boolean).join(" • "),
+            imageUrl: it.imageUrl || menu?.imageUrl || undefined,
+            calories: it.calories ?? menu?.calories ?? "",
+            protein: it.protein ?? menu?.protein ?? "",
           };
         });
       return {
-        title: String(plan.date).slice(0, 10),
+        title: dayLabel(String(plan.date).slice(0, 10)),
         subtitle: plan.deliveryTime === "MORNING" ? "صباحي" : "مسائي",
         rows,
       };
     });
 
-    printMealPlan({
+    printMealPlanCards({
       title: `جدول وجبات — ${customer.fullName}`,
       subtitle: [
         customer.phone,

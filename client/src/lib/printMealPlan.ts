@@ -18,6 +18,9 @@ export type MealRow = {
   notes?: string;
   calories?: number | string;
   price?: number | string;
+  /** صورة الوجبة — تُستخدم في تصميم الكروت (printMealPlanCards) */
+  imageUrl?: string;
+  protein?: number | string;
 };
 
 /** قسم داخل المجموعة — مثلاً يوم واحد داخل الأسبوع. */
@@ -170,8 +173,9 @@ export function printMealPlan(input: PrintMealPlanInput): void {
   openPrintWindow(html);
 }
 
-/** يفتح نافذة الطباعة ويطبع. مشترك بين كل التقارير. */
-function openPrintWindow(html: string): void {
+/** يفتح نافذة الطباعة ويطبع. مشترك بين كل التقارير.
+ *  autoPrint=false لو الـ HTML يتكفّل بالطباعة بنفسه (مثلاً بعد تحميل الصور). */
+function openPrintWindow(html: string, autoPrint = true): void {
   const w = window.open("", "_blank", "width=980,height=1000");
   if (!w) {
     alert("اسمح بالنوافذ المنبثقة (pop-ups) للطباعة");
@@ -180,7 +184,7 @@ function openPrintWindow(html: string): void {
   w.document.write(html);
   w.document.close();
   w.focus();
-  setTimeout(() => w.print(), 350);
+  if (autoPrint) setTimeout(() => w.print(), 350);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -294,4 +298,129 @@ export function printWeeklyReport(input: WeeklyReportInput): void {
     </body></html>`;
 
   openPrintWindow(html);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   تصميم الكروت بالصور — النسخة الفخمة التي تُرسل للعميل كـ PDF.
+   نفس شكل المنيو/الخطة الذكية: يوم بعنوان غامق، ووجباته كروت بالصور.
+   ══════════════════════════════════════════════════════════════════════ */
+
+export function printMealPlanCards(input: PrintMealPlanInput): void {
+  const groups = input.groups.filter((g) => groupRows(g).length > 0);
+  if (groups.length === 0) {
+    alert("لا توجد وجبات لطباعتها");
+    return;
+  }
+
+  const cardHtml = (r: MealRow) => `<div class="card">
+    <div class="ph">
+      ${r.imageUrl ? `<img src="${esc(r.imageUrl)}" alt="${esc(r.meal)}" loading="eager">` : `<div class="noimg">🍽️</div>`}
+      ${r.category ? `<span class="cat">${esc(r.category)}</span>` : ""}
+    </div>
+    <div class="body">
+      <div class="name">${esc(r.meal)}</div>
+      <div class="macros">
+        ${r.calories != null && r.calories !== "" ? `<span>${esc(r.calories)} سعرة</span>` : ""}
+        ${r.protein != null && r.protein !== "" ? `<span>🥩 ${esc(r.protein)}g</span>` : ""}
+      </div>
+      ${r.notes ? `<div class="note">${esc(r.notes)}</div>` : ""}
+    </div>
+  </div>`;
+
+  const sectionHtml = (title: string, rows: MealRow[]) => `<section class="day">
+    <div class="day-h">
+      <span class="day-t">${esc(title)}</span>
+      <span class="day-n">${rows.length} وجبة</span>
+    </div>
+    <div class="cards">${rows.map(cardHtml).join("")}</div>
+  </section>`;
+
+  const groupsHtml = groups
+    .map((g) => {
+      const inner = g.sections
+        ? g.sections.filter((s) => s.rows.length > 0).map((s) => sectionHtml(s.title, s.rows)).join("")
+        : sectionHtml(g.title, g.rows ?? []);
+      // لو المجموعة فيها أقسام، اعرض عنوان المجموعة (الأسبوع) كبانر فوقها.
+      const banner = g.sections
+        ? `<div class="wk-banner">🗓️ ${esc(g.title)}${g.subtitle ? ` · ${esc(g.subtitle)}` : ""}</div>`
+        : "";
+      return `<div class="grp">${banner}${inner}</div>`;
+    })
+    .join("");
+
+  const kpisHtml = (input.kpis || []).length
+    ? `<div class="kpis">${(input.kpis || [])
+        .map((k) => `<div class="kpi"><div class="v">${esc(k.value)}</div><div class="l">${esc(k.label)}</div></div>`)
+        .join("")}</div>`
+    : "";
+
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <title>${esc(input.title)}</title>
+    <style>
+      *{box-sizing:border-box}
+      body{margin:0;color:#0E2A4A;font-family:Cairo,Tahoma,Arial,sans-serif;background:#fff}
+
+      .hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:22px 26px;
+            display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
+      .hero .brand{font-size:22px;font-weight:900;letter-spacing:.14em}
+      .hero .brand small{display:block;font-size:9px;letter-spacing:.4em;opacity:.8;font-weight:700}
+      .hero h1{font-size:20px;margin:0;font-weight:900}
+      .hero .sub{font-size:12px;opacity:.9;font-weight:700;margin-top:3px;max-width:520px}
+
+      .wrap{padding:18px 22px}
+      .kpis{display:flex;gap:10px;margin-bottom:16px}
+      .kpi{flex:1;border:1px solid #e8eef4;border-radius:12px;padding:10px;text-align:center;background:#f7fbfe}
+      .kpi .v{font-size:22px;font-weight:900;color:#0E76AC}
+      .kpi .l{font-size:11px;color:#47759c;font-weight:700}
+
+      .grp{margin-bottom:14px;break-inside:avoid}
+      .wk-banner{background:#eaf3fb;border:1px solid #cfe4f3;border-radius:12px;padding:9px 14px;
+                 font-weight:900;font-size:15px;color:#0E2A4A;margin-bottom:12px}
+
+      .day{border:1px solid #e5e9ef;border-radius:16px;overflow:hidden;margin-bottom:14px;break-inside:avoid}
+      .day-h{background:#0E2A4A;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center}
+      .day-t{font-weight:800;font-size:15px}
+      .day-n{font-size:11px;background:rgba(255,255,255,.16);border-radius:50px;padding:3px 10px}
+
+      .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px}
+      .card{border:1px solid #eef1f4;border-radius:12px;overflow:hidden;background:#f7fbfe;break-inside:avoid}
+      .ph{position:relative;height:96px;background:#eaf3fb}
+      .ph img{width:100%;height:100%;object-fit:cover;display:block}
+      .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px}
+      .ph .cat{position:absolute;top:6px;inset-inline-start:6px;background:rgba(255,255,255,.92);
+               color:#0E76AC;font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px}
+      .body{padding:9px 10px}
+      .name{font-weight:800;font-size:12.5px;line-height:1.35;color:#0E2A4A}
+      .macros{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#47759c;font-weight:700;margin-top:4px}
+      .note{margin-top:6px;font-size:10.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
+            border-radius:7px;padding:4px 7px;font-weight:700}
+
+      .foot{margin:8px 22px 20px;font-size:10.5px;color:#94a3b8;text-align:center}
+      @page{size:A4;margin:10mm}
+      @media print{.grp,.day,.card{break-inside:avoid}}
+    </style></head><body>
+    <div class="hero">
+      <div><div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div></div>
+      <div style="text-align:end">
+        <h1>${esc(input.title)}</h1>
+        ${input.subtitle ? `<div class="sub">${esc(input.subtitle)}</div>` : ""}
+      </div>
+    </div>
+    <div class="wrap">
+      ${kpisHtml}
+      ${groupsHtml}
+    </div>
+    <div class="foot">ADRENALINE Healthy Food — ${new Date().toLocaleDateString("ar-EG")}</div>
+    <script>
+      (function(){
+        var imgs = Array.prototype.slice.call(document.images);
+        var done = imgs.map(function(i){
+          return i.complete ? Promise.resolve() : new Promise(function(res){ i.onload = i.onerror = res; });
+        });
+        Promise.all(done).then(function(){ setTimeout(function(){ window.print(); }, 250); });
+      })();
+    </script>
+    </body></html>`;
+
+  openPrintWindow(html, false);
 }
