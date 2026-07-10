@@ -73,9 +73,23 @@ export default function SmartPlan() {
         : "skip",
   ) as any;
 
-  // القيم الفعّالة: ما اختارته الأخصائية، وإلا الاقتراح، وإلا 1.
+  // ✅ تاريخ بداية الاشتراك (من الحساب أو من الرقم) — منه نشتق دورة البداية
+  //    بنفس منطق المنيو اليدوي (rotationWeekAt)، بدل «دورة المطبخ الآن».
+  const subStartDate: string | null =
+    (matchedCustomer as any)?.startDate || suggestions?.startDate || null;
+  const subEndDate: string | null =
+    (matchedCustomer as any)?.endDate || suggestions?.endDate || null;
+
+  const startRotInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    subStartDate ? { targetDate: subStartDate } : "skip",
+  ) as { rotationWeek: number; currentCookingWeek: number } | undefined;
+
+  // القيم الفعّالة: ما اختارته الأخصائية، وإلا المشتقّ من تاريخ الاشتراك،
+  // وإلا اقتراح المطبخ، وإلا 1.
   const effWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
-  const effStartRot = startRot || suggestions?.currentRotationWeek || 1;
+  const effStartRot =
+    startRot || startRotInfo?.rotationWeek || suggestions?.currentRotationWeek || 1;
 
   /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
   const orderIdentity = () => ({
@@ -212,6 +226,27 @@ export default function SmartPlan() {
               display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16,
               padding: 14, borderRadius: 12, background: "#F2FBFF", border: `1px solid ${B.line}`,
             }}>
+              {/* ✅ بطاقة الاشتراك — بداية/نهاية/مدة + دورة البداية المشتقّة من التاريخ */}
+              {subStartDate && (
+                <div style={{
+                  width: "100%", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
+                  padding: "10px 12px", borderRadius: 10, background: "#fff", border: `1px solid ${B.line}`,
+                }}>
+                  <span style={{ fontWeight: 900, color: B.ink, fontSize: 13 }}>
+                    👤 {t("اشتراكك", "Your subscription")}
+                  </span>
+                  <span style={pill}>{t("يبدأ", "Starts")}: {subStartDate}</span>
+                  {subEndDate && <span style={pill}>{t("ينتهي", "Ends")}: {subEndDate}</span>}
+                  {suggestions?.durationWeeks && (
+                    <span style={pill}>{t(`المدة: ${suggestions.durationWeeks} أسابيع`, `${suggestions.durationWeeks} weeks`)}</span>
+                  )}
+                  {startRotInfo?.rotationWeek && (
+                    <span style={{ ...pill, background: "#0E76AC", color: "#fff", border: "none" }}>
+                      {t(`يبدأ من دورة ${startRotInfo.rotationWeek}`, `Starts at rotation ${startRotInfo.rotationWeek}`)}
+                    </span>
+                  )}
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
                   {t("عدد الأسابيع", "Number of weeks")}
@@ -240,7 +275,11 @@ export default function SmartPlan() {
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
                   {t("يبدأ من دورة الأسبوع", "Start rotation week")}
-                  {suggestions?.currentRotationWeek ? (
+                  {startRotInfo?.rotationWeek ? (
+                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                      {" "}{t(`(اشتراكك يبدأ من ${startRotInfo.rotationWeek})`, `(sub starts at ${startRotInfo.rotationWeek})`)}
+                    </span>
+                  ) : suggestions?.currentRotationWeek ? (
                     <span style={{ fontWeight: 600, color: "#0E76AC" }}>
                       {" "}{t(`(المطبخ الآن ${suggestions.currentRotationWeek})`, `(kitchen now ${suggestions.currentRotationWeek})`)}
                     </span>
@@ -557,6 +596,12 @@ export default function SmartPlan() {
 const chip: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: "#0E2A4A",
   background: "#EAF3FB", borderRadius: 50, padding: "3px 10px",
+};
+
+const pill: React.CSSProperties = {
+  fontSize: 12, fontWeight: 800, color: "#2D4A67",
+  background: "#F7FBFE", border: "1px solid #D9E6F1",
+  borderRadius: 50, padding: "4px 12px",
 };
 
 function btnPrimary(disabled: boolean): React.CSSProperties {

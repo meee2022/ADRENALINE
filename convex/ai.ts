@@ -160,6 +160,9 @@ export const getSmartPlanData = query({
         date: args.todayDate || "",
         // مدة اشتراك العميل — تقترحها الواجهة كعدد أسابيع افتراضي
         durationWeeks: (customer as any)?.durationWeeks ?? null,
+        // ✅ تواريخ الاشتراك — تعرضها الواجهة وتشتق منها دورة البداية (كالمنيو اليدوي)
+        startDate: (customer as any)?.startDate ?? null,
+        endDate: (customer as any)?.endDate ?? null,
       },
     };
   },
@@ -471,6 +474,9 @@ export const getPlanSuggestions = query({
       suggestedWeeks,
       currentRotationWeek,
       durationWeeks: meta?.durationWeeks ?? null,
+      // ✅ تواريخ الاشتراك — لتعرضها الواجهة وتشتق منها دورة البداية عبر rotationWeekAt
+      startDate: meta?.startDate ?? null,
+      endDate: meta?.endDate ?? null,
     };
   },
 });
