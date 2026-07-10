@@ -2,19 +2,39 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { ClipboardList, CheckCircle2 } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
+import { cn } from "@/lib/utils";
+
+/** التبويبات: قيد المراجعة / المعتمدة / الكل */
+type Tab = "pending" | "confirmed" | "all";
+
+const STATUS_LABEL: Record<string, { ar: string; cls: string }> = {
+  pending:   { ar: "قيد المراجعة", cls: "bg-amber-50 text-amber-700" },
+  confirmed: { ar: "معتمد",        cls: "bg-emerald-50 text-emerald-700" },
+  active:    { ar: "نشط",          cls: "bg-emerald-50 text-emerald-700" },
+  completed: { ar: "مكتمل",        cls: "bg-slate-100 text-slate-700" },
+  cancelled: { ar: "ملغي",         cls: "bg-red-50 text-red-700" },
+};
 
 export default function OrdersPending() {
   const [, navigate] = useLocation();
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const pendingOrders = useQuery(api.customerOrders.list, { status: "pending", sessionToken });
+  const [tab, setTab] = useState<Tab>("pending");
+
+  // status: undefined = كل الطلبات؛ وإلا يفلتر على السيرفر
+  const orders = useQuery(api.customerOrders.list, {
+    status: tab === "all" ? undefined : tab,
+    limit: 200,
+    sessionToken,
+  });
   const pendingCount = useQuery(api.customerOrders.countPending);
 
-  if (!pendingOrders) {
+  if (!orders) {
     return (
       <div className="flex items-center justify-center h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -22,50 +42,50 @@ export default function OrdersPending() {
     );
   }
 
-  const totalPending = pendingCount || pendingOrders.length;
-  const progressPercentage = totalPending > 0 ? ((totalPending - pendingOrders.length) / totalPending) * 100 : 0;
+  const TABS: { key: Tab; label: string }[] = [
+    { key: "pending", label: "قيد المراجعة" },
+    { key: "confirmed", label: "المعتمدة" },
+    { key: "all", label: "الكل" },
+  ];
 
   return (
     <div className="space-y-6 p-6">
       <DashboardHeader
         icon={<ClipboardList className="h-6 w-6 sm:h-7 sm:w-7" />}
-        titleAr="مراجعة الطلبات المعلقة" titleEn="Pending Orders Review"
-        subtitleAr="قائمة المشتركين الذين أرسلوا جداولهم الأسبوعية وينتظرون الاعتماد"
-        subtitleEn="Subscribers who submitted their weekly plans awaiting approval"
+        titleAr="الطلبات" titleEn="Orders"
+        subtitleAr="مراجعة الطلبات المعلقة والرجوع إلى المعتمدة في أي وقت"
+        subtitleEn="Review pending orders and revisit approved ones anytime"
         kpis={[
-          { value: pendingOrders.length, labelAr: "قيد المراجعة", labelEn: "Pending" },
-          { value: `${Math.round(progressPercentage)}%`, labelAr: "التقدم", labelEn: "Progress" },
+          { value: pendingCount ?? 0, labelAr: "قيد المراجعة", labelEn: "Pending" },
+          { value: orders.length, labelAr: "معروض", labelEn: "Showing" },
         ]}
       />
 
-      {/* Progress Bar */}
-      <Card
-        className="p-6 bg-white rounded-2xl"
-        style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">
-              التقدم اليومي
-            </h3>
-            <p className="text-sm text-gray-500">
-              {pendingOrders.length} طلب ينتظر المراجعة
-            </p>
-          </div>
-          <div className="text-3xl font-black tabular-nums text-[#0E76AC]">
-            {Math.round(progressPercentage)}%
-          </div>
-        </div>
-        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ width: `${progressPercentage}%`, background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
-          />
-        </div>
-      </Card>
+      {/* تبويبات الفلتر */}
+      <div className="flex gap-2 flex-wrap">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={cn(
+              "px-5 py-2 rounded-full font-bold text-sm transition-all",
+              tab === t.key
+                ? "bg-[#0E76AC] text-white shadow-sm"
+                : "bg-white text-[#47759C] border border-gray-200 hover:border-[#3CC4F0]",
+            )}
+          >
+            {t.label}
+            {t.key === "pending" && (pendingCount ?? 0) > 0 && (
+              <span className="mr-1.5 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-black bg-amber-400 text-white">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
 
       {/* Orders List */}
-      {pendingOrders.length === 0 ? (
+      {orders.length === 0 ? (
         <Card
           className="p-12 text-center bg-white rounded-2xl"
           style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
@@ -77,12 +97,12 @@ export default function OrdersPending() {
             رائع! لا توجد طلبات معلقة
           </h3>
           <p className="text-gray-500">
-            تم مراجعة جميع الطلبات
+            {tab === "pending" ? "تم مراجعة جميع الطلبات" : "لا توجد طلبات في هذا التصنيف"}
           </p>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {pendingOrders.map((order) => {
+          {orders.map((order) => {
             const createdDate = (() => {
               const d = order.createdAt ? new Date(order.createdAt) : null;
               return d && !isNaN(d.getTime())
@@ -150,8 +170,11 @@ export default function OrdersPending() {
 
                   {/* Left Side - Status Badge */}
                   <div className="mr-4">
-                    <div className="bg-amber-50 text-amber-700 px-4 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap">
-                      قيد المراجعة
+                    <div className={cn(
+                      "px-4 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap",
+                      STATUS_LABEL[order.status]?.cls || "bg-slate-100 text-slate-700",
+                    )}>
+                      {STATUS_LABEL[order.status]?.ar || order.status}
                     </div>
                   </div>
                 </div>
@@ -167,7 +190,7 @@ export default function OrdersPending() {
                 {/* Action Hint */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-sm text-[#47759c] font-semibold text-center">
-                    اضغط للمراجعة التفصيلية
+                    {order.status === "pending" ? "اضغط للمراجعة التفصيلية" : "اضغط لعرض التفاصيل"}
                   </p>
                 </div>
               </Card>
