@@ -32,13 +32,17 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
-    // ✅ افصل مكتبات vendor التقيلة في حِزم مستقلة (تُخزَّن مؤقتاً بالمتصفح وتخرج من حزمة الصفحة)
+    // ✅ react/wouter فقط في حزمة vendor ثابتة — كل صفحة تحتاجهما.
+    //
+    // ⚠️ لا تُضِف recharts/xlsx هنا. تسمية حزمة يدوياً تجعلها جزءاً من رسم
+    //    استيراد الدخول، فيُضاف لها `modulepreload` في index.html وتُحمَّل على
+    //    كل زيارة للموقع العام (كانت 103KB من recharts لكل زائر) رغم أنها
+    //    لا تُستخدم إلا في لوحة التحكم. اتركهما لتقسيم Vite التلقائي
+    //    ليُحمَّلا مع الصفحة الكسولة التي تستوردهما.
     rollupOptions: {
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "wouter"],
-          "vendor-charts": ["recharts"],
-          "vendor-xlsx": ["xlsx"],
         },
       },
     },
