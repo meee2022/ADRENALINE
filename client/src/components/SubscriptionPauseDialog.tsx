@@ -42,6 +42,8 @@ export function SubscriptionPauseDialog({
   const [expectedResume, setExpectedResume] = useState("");
   const [resumeOn, setResumeOn] = useState(today());
   const [busy, setBusy] = useState(false);
+  // ✅ أيام محددة يختارها الموظف لتخطّيها (سفر نصف أسبوع)
+  const [skipPick, setSkipPick] = useState<Record<string, boolean>>({});
 
   const status = useQuery(
     api.subscriptionPause.status,
@@ -50,6 +52,23 @@ export function SubscriptionPauseDialog({
 
   const pause = useMutation(api.subscriptionPause.pause);
   const resume = useMutation(api.subscriptionPause.resume);
+  const setSkippedDays = useMutation(api.subscriptionPause.setSkippedDays);
+
+  /** أيام التوصيل الـ12 القادمة (يتخطّى الجمعة) لعرضها كخيارات تخطّي. */
+  const upcomingDeliveryDays = (() => {
+    const out: { iso: string; label: string }[] = [];
+    const AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const d = new Date();
+    for (let i = 0; out.length < 12 && i < 20; i++) {
+      if (d.getDay() !== 5) { // الجمعة وحدها بلا توصيل
+        const iso = d.toISOString().slice(0, 10);
+        out.push({ iso, label: `${(isRtl ? AR : EN)[d.getDay()]} ${iso.slice(5)}` });
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  })();
 
   const run = async (fn: () => Promise<any>) => {
     setBusy(true);
@@ -176,8 +195,8 @@ export function SubscriptionPauseDialog({
 
                 <p className="text-xs text-muted-foreground">
                   {isRtl
-                    ? "أيام التوصيل (السبت→الأربعاء) المجمّدة تُضاف لآخر الاشتراك عند الاستئناف. الخميس والجمعة إجازة ولا تُحتسب."
-                    : "Frozen delivery days (Sat→Wed) are added to the end of the subscription on resume. Thu & Fri are off days and are not counted."}
+                    ? "أيام التوصيل (السبت→الخميس) المجمّدة تُضاف لآخر الاشتراك عند الاستئناف. الجمعة وحدها بلا توصيل ولا تُحتسب."
+                    : "Frozen delivery days (Sat→Thu) are added to the end of the subscription on resume. Only Friday has no delivery and is not counted."}
                 </p>
 
                 <Button
@@ -198,6 +217,75 @@ export function SubscriptionPauseDialog({
                   <PauseCircle className="h-4 w-4" />
                   {isRtl ? "تجميد الاشتراك" : "Pause subscription"}
                 </Button>
+
+                {/* ───── تخطّي أيام محددة (سفر نصف أسبوع) ───── */}
+                <div className="pt-3 mt-1 border-t">
+                  <p className="text-sm font-bold mb-1">
+                    {isRtl ? "أو تخطّي أيام محددة فقط" : "Or skip specific days only"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mb-2">
+                    {isRtl
+                      ? "للحالات مثل: يستلم الأحد والاثنين ثم مسافر باقي الأسبوع. تُحذف وجبات الأيام المختارة من المطبخ."
+                      : "e.g. receives Sun & Mon then travels the rest of the week. Selected days' meals are removed from the kitchen."}
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5 max-h-40 overflow-y-auto">
+                    {upcomingDeliveryDays.map((d) => {
+                      const on = Boolean(skipPick[d.iso]);
+                      return (
+                        <button
+                          key={d.iso}
+                          type="button"
+                          onClick={() => setSkipPick((p) => ({ ...p, [d.iso]: !p[d.iso] }))}
+                          className={
+                            "px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all " +
+                            (on
+                              ? "bg-amber-500 text-white border-amber-500"
+                              : "bg-white text-gray-700 border-gray-200 hover:border-amber-300")
+                          }
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 mt-2 border-amber-400 text-amber-700"
+                    disabled={busy || !Object.values(skipPick).some(Boolean)}
+                    onClick={async () => {
+                      const dates = Object.keys(skipPick).filter((k) => skipPick[k]);
+                      setBusy(true);
+                      try {
+                        const r: any = await setSkippedDays({
+                          id: customerId as any,
+                          dates,
+                          mode: "skip",
+                          sessionToken,
+                        });
+                        if (r?.success) {
+                          toast({
+                            title: isRtl ? "تم تخطّي الأيام المحددة" : "Selected days skipped",
+                            description: isRtl
+                              ? `${dates.length} يوم — حُذفت ${r.removedPlans} خطة مطبخ`
+                              : `${dates.length} day(s) — ${r.removedPlans} kitchen plan(s) removed`,
+                          });
+                          setSkipPick({});
+                          onOpenChange(false);
+                        } else {
+                          toast({ title: r?.error || (isRtl ? "فشل" : "Failed"), variant: "destructive" });
+                        }
+                      } catch (e: any) {
+                        toast({ title: String(e?.message || e), variant: "destructive" });
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    {isRtl
+                      ? `تخطّي الأيام المختارة (${Object.values(skipPick).filter(Boolean).length})`
+                      : `Skip selected days (${Object.values(skipPick).filter(Boolean).length})`}
+                  </Button>
+                </div>
               </div>
             )}
           </>
