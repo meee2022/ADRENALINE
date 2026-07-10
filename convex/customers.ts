@@ -5,6 +5,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
+import { normalizePhone } from "./lib/phone";
 
 /* =========================
    Date helpers (server)
@@ -38,11 +39,6 @@ function normalizeToISODate(input: any): string | undefined {
   return undefined;
 }
 
-function normalizePhone(input: any) {
-  const s = String(input ?? "").trim();
-  const digits = s.replace(/\D/g, "");
-  return digits || "";
-}
 
 /* =========================
    Queries

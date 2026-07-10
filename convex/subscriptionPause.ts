@@ -16,58 +16,14 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
 
-/* ========== أدوات التاريخ (UTC حتى لا ينزلق اليوم مع المنطقة الزمنية) ========== */
-
-/** yyyy-MM-dd → Date (UTC midnight) */
-function parseDate(s: string): Date {
-  const [y, m, d] = String(s).split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d));
-}
-
-/** Date → yyyy-MM-dd */
-function fmtDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function addDays(d: Date, n: number): Date {
-  const out = new Date(d);
-  out.setUTCDate(out.getUTCDate() + n);
-  return out;
-}
-
-/**
- * أيام التوصيل: السبت(6) الأحد(0) الاثنين(1) الثلاثاء(2) الأربعاء(3).
- * الخميس(4) والجمعة(5) إجازة.
- */
-function isDeliveryDay(d: Date): boolean {
-  const dow = d.getUTCDay();
-  return dow !== 4 && dow !== 5;
-}
-
-/** عدد أيام التوصيل في المدى [from, toExclusive) مع استبعاد أيام تخطّاها العميل مسبقاً. */
-function countDeliveryDays(from: string, toExclusive: string, skipped: string[] = []): number {
-  const skip = new Set(skipped);
-  let n = 0;
-  let cur = parseDate(from);
-  const end = parseDate(toExclusive);
-  // حدّ احترازي: سنة كاملة
-  for (let i = 0; i < 400 && cur.getTime() < end.getTime(); i++) {
-    if (isDeliveryDay(cur) && !skip.has(fmtDate(cur))) n++;
-    cur = addDays(cur, 1);
-  }
-  return n;
-}
-
-/** يمدّ تاريخاً إلى الأمام بعدد `n` من أيام التوصيل، ويرجّع آخر يوم توصيل مضاف. */
-function addDeliveryDays(fromDate: string, n: number): string {
-  let cur = parseDate(fromDate);
-  let added = 0;
-  for (let i = 0; i < 800 && added < n; i++) {
-    cur = addDays(cur, 1);
-    if (isDeliveryDay(cur)) added++;
-  }
-  return fmtDate(cur);
-}
+/* ========== أدوات التاريخ — مصدر واحد في convex/lib/dates.ts ========== */
+import {
+  parseDate,
+  fmtDate,
+  addDays,
+  countDeliveryDays,
+  addDeliveryDays,
+} from "./lib/dates";
 
 /* ========== الاستعلام: حالة الاشتراك والمتبقّي ========== */
 

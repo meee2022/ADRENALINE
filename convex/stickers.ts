@@ -1,5 +1,6 @@
 // convex/stickers.ts
 import { query } from "./_generated/server";
+import { normalizePhone } from "./lib/phone";
 import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
@@ -22,11 +23,6 @@ function isoToDDMMYYYY(iso: string) {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-function normalizePhone(input: any) {
-  const s = String(input ?? "").trim();
-  const digits = s.replace(/\D/g, "");
-  return digits || "";
-}
 
 function buildModifierText(
   modifierIds: string[] | undefined,

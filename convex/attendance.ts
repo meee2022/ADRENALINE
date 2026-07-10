@@ -5,6 +5,7 @@
  *   يوم العمل القياسي 9 ساعات؛ الأوفرتايم = max(0, ساعات العمل − 9).
  */
 import { v } from "convex/values";
+import { dateToDays } from "./lib/dates";
 import { mutation, query } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
 
@@ -23,7 +24,7 @@ function timeToMin(t?: string): number | null {
 }
 
 /** يحسب ساعات العمل والأوفرتايم من وقت الدخول والخروج (يعالج الدوام العابر لمنتصف الليل). */
-function computeHours(checkIn?: string, checkOut?: string) {
+export function computeHours(checkIn?: string, checkOut?: string) {
   const a = timeToMin(checkIn), b = timeToMin(checkOut);
   if (a == null || b == null) return { workedHours: undefined as number | undefined, otHours: undefined as number | undefined };
   let diff = b - a;
@@ -38,10 +39,6 @@ function computeHours(checkIn?: string, checkOut?: string) {
 const MAX_SHIFT_MIN = 16 * 60;
 
 /** "YYYY-MM-DD" → عدد الأيام منذ حقبة (لحساب زمن مطلق يعدّي منتصف الليل). */
-function dateToDays(date: string): number {
-  const [y, m, d] = date.split("-").map(Number);
-  return Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-}
 
 /**
  * يحوّل بصمات خام {name,date,time} إلى شيفتات فعلية {name, date(=يوم الدخول), checkIn, checkOut}.
@@ -112,7 +109,7 @@ async function applyShifts(
 }
 
 /** مسافة ليفنشتاين (لمطابقة الأسماء التقريبية). */
-function lev(a: string, b: string): number {
+export function lev(a: string, b: string): number {
   const m = a.length, n = b.length;
   const d: number[][] = Array.from({ length: m + 1 }, (_, i) => { const r = new Array(n + 1).fill(0); r[0] = i; return r; });
   for (let j = 0; j <= n; j++) d[0][j] = j;

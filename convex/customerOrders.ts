@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
+import { getDayOffset } from "./lib/dates";
 
 // Helper: Generate unique order number
 function generateOrderNumber(): string {
@@ -434,27 +435,6 @@ export const approve = mutation({
 // Helper: تحويل اسم اليوم إلى رقم
 // Helper: Get day offset (0 = Saturday, 4 = Wednesday)
 // ⚠️ الخميس والجمعة ليسوا أيام عمل في المطعم
-function getDayOffset(day: string): number {
-  const dayMap: Record<string, number> = {
-    saturday: 0,
-    sunday: 1,
-    monday: 2,
-    tuesday: 3,
-    wednesday: 4,
-    // ⚠️ الخميس والجمعة غير مدعومين (أيام إجازة)
-    // thursday: 5,
-    // friday: 6,
-  };
-  const offset = dayMap[day.toLowerCase()];
-
-  // ✅ الخميس/الجمعة إجازة — بدل رمي خطأ يوقف اعتماد الطلب كله،
-  //    نُرجّع أقرب يوم عمل (الأربعاء) حتى لا يتعطّل الاعتماد.
-  if (offset === undefined) {
-    return 4; // wednesday
-  }
-
-  return offset;
-}
 
 // ===== REJECT ORDER (Admin) =====
 export const reject = mutation({
