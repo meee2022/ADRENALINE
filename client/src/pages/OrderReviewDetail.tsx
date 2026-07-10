@@ -412,11 +412,11 @@ export default function OrderReviewDetail() {
 
           return (
             <Card key={weekNum} className="p-6">
-              <h4 className="text-xl font-bold text-primary mb-4">
-                الأسبوع {weekNum}
-              </h4>
+              <div className="mb-4 px-4 py-2.5 rounded-xl bg-[#EAF3FB] border border-[#CFE4F3] text-[#0E2A4A] font-black text-lg">
+                🗓️ الأسبوع (دورة {weekNum})
+              </div>
 
-              <div className="grid gap-4">
+              <div className="grid gap-5">
                 {days.map((day) => {
                   const dayMeals = weekData[day];
                   const dayCalories = dayMeals.reduce((sum, m) => sum + m.calories, 0);
@@ -437,15 +437,20 @@ export default function OrderReviewDetail() {
                   return (
                     <div
                       key={day}
-                      className="p-4 bg-gray-50 rounded-lg border-r-4 border-r-primary"
+                      className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm"
                     >
-                      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                        <div className="flex items-center gap-3">
-                          <h5 className="text-lg font-bold text-gray-900">
+                      <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2 bg-[#0E2A4A] text-white">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h5 className="text-base font-bold">
                             {dayNameAr[day] || day}
                           </h5>
-                          <span className="text-sm font-semibold text-gray-600">
-                            {dayCalories} سعرة
+                          {effectiveDate && (
+                            <span className="text-sm font-semibold opacity-80">
+                              · {format(effectiveDate, "d MMM yyyy", { locale: ar })}
+                            </span>
+                          )}
+                          <span className="text-xs bg-white/15 rounded-full px-2.5 py-0.5">
+                            {dayMeals.length} وجبة · {dayCalories} سعرة
                           </span>
                         </div>
 
@@ -459,8 +464,8 @@ export default function OrderReviewDetail() {
                                 className={cn(
                                   "h-8 text-xs gap-1.5",
                                   overrideDate
-                                    ? "bg-[#3CC4F0] hover:bg-[#2bb0dc] text-white"
-                                    : "border-dashed border-gray-300 text-gray-600 hover:border-[#3CC4F0]"
+                                    ? "bg-[#3CC4F0] hover:bg-[#2bb0dc] text-white border-transparent"
+                                    : "bg-white/10 border-dashed border-white/40 text-white hover:bg-white/20"
                                 )}
                               >
                                 <CalendarIcon className="h-3 w-3" />
@@ -513,11 +518,11 @@ export default function OrderReviewDetail() {
                         </div>
                       </div>
 
-                      <div className="grid md:grid-cols-3 gap-3">
+                      <div className="grid md:grid-cols-3 gap-3 p-4">
                         {dayMeals.map((meal) => (
                           <div
                             key={meal._id}
-                            className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                            className="bg-[#F7FBFE] border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
                           >
                             {meal.imageUrl && (
                               <img
