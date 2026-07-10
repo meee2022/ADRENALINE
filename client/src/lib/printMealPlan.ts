@@ -20,10 +20,20 @@ export type MealRow = {
   price?: number | string;
 };
 
+/** قسم داخل المجموعة — مثلاً يوم واحد داخل الأسبوع. */
+export type MealSection = {
+  /** يُطبع كسطر عنوان يمتد على عرض الجدول (اسم اليوم مثلاً) */
+  title: string;
+  rows: MealRow[];
+};
+
 export type MealGroup = {
   title: string;
   subtitle?: string;
-  rows: MealRow[];
+  /** إمّا صفوف مباشرة… */
+  rows?: MealRow[];
+  /** …أو أقسام (يوم ثم وجباته تحته) — أوضح للشيف من تكرار اسم اليوم كل سطر */
+  sections?: MealSection[];
 };
 
 export type PrintMealPlanInput = {
@@ -42,20 +52,28 @@ export type PrintMealPlanInput = {
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>"]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[m] as string));
 
+/** كل صفوف المجموعة، سواء كانت مباشرة أو موزّعة على أقسام. */
+function groupRows(g: MealGroup): MealRow[] {
+  return g.sections ? g.sections.flatMap((s) => s.rows) : g.rows ?? [];
+}
+
 export function printMealPlan(input: PrintMealPlanInput): void {
-  const groups = input.groups.filter((g) => g.rows.length > 0);
+  const groups = input.groups.filter((g) => groupRows(g).length > 0);
   if (groups.length === 0) {
     alert("لا توجد وجبات لطباعتها");
     return;
   }
 
-  const showCal = input.showCalories ?? groups.some((g) => g.rows.some((r) => r.calories != null && r.calories !== ""));
-  const showPrice = input.showPrice ?? groups.some((g) => g.rows.some((r) => r.price != null && r.price !== ""));
-  const hasNotes = groups.some((g) => g.rows.some((r) => (r.notes || "").trim()));
-  const hasCategory = groups.some((g) => g.rows.some((r) => (r.category || "").trim()));
+  const allRows = groups.flatMap(groupRows);
+  const showCal = input.showCalories ?? allRows.some((r) => r.calories != null && r.calories !== "");
+  const showPrice = input.showPrice ?? allRows.some((r) => r.price != null && r.price !== "");
+  const hasNotes = allRows.some((r) => (r.notes || "").trim());
+  const hasCategory = allRows.some((r) => (r.category || "").trim());
+
+  const cols = 1 + (hasCategory ? 1 : 0) + 1 + (hasNotes ? 1 : 0) + (showCal ? 1 : 0) + (showPrice ? 1 : 0);
 
   const headCells = [
-    "<th style='width:88px'>#</th>",
+    "<th style='width:44px'>#</th>",
     hasCategory ? "<th style='width:90px'>الصنف</th>" : "",
     "<th>الوجبة</th>",
     hasNotes ? "<th>ملاحظات / تعديلات</th>" : "",
@@ -63,26 +81,34 @@ export function printMealPlan(input: PrintMealPlanInput): void {
     showPrice ? "<th style='width:80px'>السعر</th>" : "",
   ].join("");
 
+  const rowHtml = (r: MealRow) => `<tr>
+    <td class="c b">${esc(r.label)}</td>
+    ${hasCategory ? `<td class="c cat">${esc(r.category || "-")}</td>` : ""}
+    <td class="meal">${esc(r.meal)}</td>
+    ${hasNotes ? `<td class="note">${esc(r.notes || "")}</td>` : ""}
+    ${showCal ? `<td class="c">${esc(r.calories ?? "")}</td>` : ""}
+    ${showPrice ? `<td class="c">${esc(r.price ?? "")}</td>` : ""}
+  </tr>`;
+
+  /** سطر عنوان يمتد على الجدول: اسم اليوم، ووجباته تحته مباشرةً. */
+  const sectionHeadHtml = (s: MealSection) =>
+    `<tr class="day"><td colspan="${cols}">${esc(s.title)}
+      <span class="day-n">${s.rows.length} وجبة</span></td></tr>`;
+
   const groupsHtml = groups
     .map((g) => {
-      const body = g.rows
-        .map(
-          (r) => `<tr>
-            <td class="c b">${esc(r.label)}</td>
-            ${hasCategory ? `<td class="c cat">${esc(r.category || "-")}</td>` : ""}
-            <td class="meal">${esc(r.meal)}</td>
-            ${hasNotes ? `<td class="note">${esc(r.notes || "")}</td>` : ""}
-            ${showCal ? `<td class="c">${esc(r.calories ?? "")}</td>` : ""}
-            ${showPrice ? `<td class="c">${esc(r.price ?? "")}</td>` : ""}
-          </tr>`,
-        )
-        .join("");
+      const body = g.sections
+        ? g.sections
+            .filter((s) => s.rows.length > 0)
+            .map((s) => sectionHeadHtml(s) + s.rows.map(rowHtml).join(""))
+            .join("")
+        : (g.rows ?? []).map(rowHtml).join("");
 
       return `<section class="grp">
         <div class="grp-h">
           <span class="grp-t">${esc(g.title)}</span>
           ${g.subtitle ? `<span class="grp-s">${esc(g.subtitle)}</span>` : ""}
-          <span class="grp-n">${g.rows.length} وجبة</span>
+          <span class="grp-n">${groupRows(g).length} وجبة</span>
         </div>
         <table><thead><tr>${headCells}</tr></thead><tbody>${body}</tbody></table>
       </section>`;
@@ -123,6 +149,12 @@ export function printMealPlan(input: PrintMealPlanInput): void {
       .meal{font-weight:700}
       .cat{color:#47759c;font-weight:700;font-size:11.5px}
       .note{color:#b45309;font-size:11.5px}
+
+      /* سطر اليوم: يمتد على الجدول، ووجباته تحته */
+      tr.day td{background:#eaf3fb !important;color:#0E2A4A;font-weight:900;
+                font-size:13px;padding:6px 10px;border:1px solid #cfe4f3}
+      tr.day .day-n{float:left;font-size:11px;font-weight:800;color:#0E76AC}
+      tr.day{break-inside:avoid;break-after:avoid}
 
       .foot{margin-top:14px;font-size:10.5px;color:#94a3b8;text-align:center}
       @page{size:A4;margin:12mm}

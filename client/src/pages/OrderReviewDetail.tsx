@@ -232,25 +232,28 @@ export default function OrderReviewDetail() {
   /** طباعة/PDF لجدول وجبات الطلب — مجمّعاً بالأسبوع، مرتّباً بأيام التوصيل */
   const handlePrintPlan = () => {
     const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
+    // الممنوعات/التفضيلات تأتي من المشترك المرتبط (لو الأخصائية ربطته) — واحدة لكل الوجبات
+    const customerNotes = [linked?.avoid, linked?.preferences, linked?.portions]
+      .filter(Boolean)
+      .join(" • ");
+
     const groups = weeks.map((w) => {
       const days = Object.keys(groupedByWeek[w]).sort(
         (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
       );
       return {
         title: `الأسبوع ${w}`,
-        rows: days.flatMap((d) =>
-          groupedByWeek[w][d].map((it: any) => ({
-            label: dayNameAr[d] || d,
+        // اليوم عنوان، ووجباته تحته — بدل تكرار اسم اليوم في كل سطر
+        sections: days.map((d) => ({
+          title: dayNameAr[d] || d,
+          rows: groupedByWeek[w][d].map((it: any, i: number) => ({
+            label: String(i + 1),
             category: categoryNameAr[it.category] || it.category,
             meal: it.mealNameAr || it.mealNameEn || "-",
-            // الممنوعات/التفضيلات تأتي من المشترك المرتبط (لو الأخصائية ربطته)
-            notes: [linked?.avoid, linked?.preferences, linked?.portions]
-              .filter(Boolean)
-              .join(" • "),
+            notes: customerNotes,
             calories: it.calories ?? "",
-            price: it.priceQAR != null ? `${it.priceQAR} ر.ق` : "",
           })),
-        ),
+        })),
       };
     });
 
@@ -260,9 +263,10 @@ export default function OrderReviewDetail() {
       kpis: [
         { label: "إجمالي الوجبات", value: order.totalMeals ?? items.length },
         { label: "إجمالي السعرات", value: order.totalCalories ?? "-" },
-        { label: "الإجمالي", value: `${order.totalPrice ?? 0} ر.ق` },
       ],
       groups,
+      // ✅ جدول العميل بلا أسعار — الأسعار داخلية ولا تخصّ الشيف ولا العميل
+      showPrice: false,
     });
   };
 
