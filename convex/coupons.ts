@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireStaff } from "./sessions";
+import { requireStaff, requireAdmin } from "./sessions";
 
 export const list = query({
   args: {},
@@ -99,8 +99,9 @@ export const validate = query({
 });
 
 export const incrementUsage = mutation({
-  args: { code: v.string() },
-  handler: async (ctx, { code }) => {
+  args: { code: v.string() , sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { code, sessionToken }) => {
+    await requireAdmin(ctx, sessionToken);
     const coupon = await ctx.db
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))

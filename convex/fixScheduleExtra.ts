@@ -1,4 +1,6 @@
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 const FIXES = [
   // شكشوكة بيض جديدة — remove W2-wednesday and W4-wednesday
@@ -23,7 +25,9 @@ const FIXES = [
 ];
 
 export const run = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     let patched = 0;
     for (const fix of FIXES) {
       const meal = await ctx.db.get(fix.id as any);

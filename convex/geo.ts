@@ -4,8 +4,8 @@
  *   + حفظ إحداثيات العملاء (تلقائي أو يدوي). للاستخدام في خريطة التوصيل.
  */
 import { v } from "convex/values";
-import { action, mutation } from "./_generated/server";
-import { api } from "./_generated/api";
+import { action, internalMutation } from "./_generated/server";
+import { api, internal } from "./_generated/api";
 
 type GeoResult = { lat: number; lng: number } | null;
 
@@ -60,8 +60,8 @@ export const geocodeAllCustomers = action({
     for (const c of batch) {
       const geo = await geocodeOne(c.address);
       if (geo) {
-        await ctx.runMutation(api.geo.setCustomerCoords, {
-          customerId: c._id, lat: geo.lat, lng: geo.lng, sessionToken: args.sessionToken,
+        await ctx.runMutation(internal.geo.setCustomerCoords, {
+          customerId: c._id, lat: geo.lat, lng: geo.lng,
         });
         updated++;
       } else {
@@ -73,13 +73,16 @@ export const geocodeAllCustomers = action({
   },
 });
 
-/** حفظ إحداثيات عميل (تلقائي أو يدوي). */
-export const setCustomerCoords = mutation({
+/**
+ * حفظ إحداثيات عميل. داخلية (internalMutation): تُستدعى من geocodeAllCustomers فقط
+ * ولا يمكن نداؤها من الإنترنت. كانت mutation عامة تقبل sessionToken وتتجاهله،
+ * فكان أي شخص يقدر يغيّر إحداثيات أي عميل.
+ */
+export const setCustomerCoords = internalMutation({
   args: {
     customerId: v.id("customers"),
     lat: v.number(),
     lng: v.number(),
-    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.customerId, { lat: args.lat, lng: args.lng, updatedAt: Date.now() });

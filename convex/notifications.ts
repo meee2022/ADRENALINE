@@ -3,6 +3,7 @@
  * @description نظام الإشعارات الداخلية - للأدوار والمستخدمين
  */
 import { mutation, query, internalMutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 const NOTIF_TYPE = v.union(
@@ -35,8 +36,10 @@ export const create = mutation({
     message: v.string(),
     link: v.optional(v.string()),
     relatedId: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const id = await ctx.db.insert("notifications", {
       ...args,
       isRead: false,
@@ -162,8 +165,9 @@ export const markAllAsReadForCustomer = mutation({
  * حذف الإشعارات القديمة (أكثر من 30 يوم)
  */
 export const cleanupOld = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const old = await ctx.db
       .query("notifications")
@@ -188,8 +192,10 @@ export const broadcast = mutation({
     message: v.string(),
     link: v.optional(v.string()),
     relatedId: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const ids: any[] = [];
     for (const role of args.roles) {
       const id = await ctx.db.insert("notifications", {

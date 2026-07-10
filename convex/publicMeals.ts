@@ -3,6 +3,7 @@
  * @description إدارة الوجبات العامة للموقع
  */
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
@@ -207,7 +208,9 @@ export const remove = mutation({
 });
 
 export const deleteAll = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     // 🔒 حماية: عملية مدمّرة (مسح كل وجبات الموقع) — معطّلة افتراضياً.
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
       throw new Error("عملية المسح الجماعي معطّلة لأسباب أمنية");

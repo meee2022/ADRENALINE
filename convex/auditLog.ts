@@ -3,6 +3,7 @@
  * @description سجل الأحداث الحساسة - للأمان والمراجعة
  */
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const log = mutation({
@@ -14,8 +15,10 @@ export const log = mutation({
     entityType: v.string(),
     entityId: v.optional(v.string()),
     details: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     await ctx.db.insert("auditLog", {
       ...args,
       createdAt: Date.now(),

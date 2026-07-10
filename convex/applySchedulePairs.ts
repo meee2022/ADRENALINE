@@ -3,7 +3,9 @@
  * @description Set exact schedule [{week, day}] pairs on publicMeals
  * Run once: applySchedulePairs:run
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 // Generated from build_schedule_pairs.py — exact pairs from Excel
 // Each entry: DB meal id → exact (week, day) combinations it appears in
@@ -149,7 +151,9 @@ const PAIRS: { id: string; schedule: { week: number; day: string }[] }[] = [
 ];
 
 export const run = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     let patched = 0;
     for (const entry of PAIRS) {
       const meal = await ctx.db.get(entry.id as any);

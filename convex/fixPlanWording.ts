@@ -2,14 +2,17 @@
  * @file convex/fixPlanWording.ts
  * @description مِيوتيشن لمرة واحدة: استبدال كلمة "حزمة" بـ"باقة" في أسماء/أوصاف الباقات.
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 const swap = (s: unknown) =>
   typeof s === "string" ? s.replace(/حزمة/g, "باقة").replace(/حزم/g, "باقات") : s;
 
 export const run = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     let updated = 0;
     const plans = await ctx.db.query("publicPlans").collect();
     for (const p of plans) {

@@ -2,10 +2,14 @@
  * @file convex/seedRealPlans.ts
  * @description Add all plans for all durations (week, two_weeks, month) with correct prices
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 export const seedRealPlans = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     // 🔒 حماية: يمسح كل الباقات ثم يعيد زرعها — معطّل افتراضياً.
     // فعّله مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {

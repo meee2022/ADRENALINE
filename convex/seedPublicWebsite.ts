@@ -2,10 +2,14 @@
  * @file convex/seedPublicWebsite.ts
  * @description Seed data for public website (banners, plans, meals)
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 export const seedPublicWebsite = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     // Check if already seeded
     const existingBanner = await ctx.db.query("banners").first();
     if (existingBanner) {

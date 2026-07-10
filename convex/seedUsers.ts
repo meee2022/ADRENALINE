@@ -2,7 +2,9 @@
  * @file convex/seedUsers.ts
  * @description Seed initial admin user
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { hashPassword } from "./passwords";
 
 // ⚠️ يُقرأ من بيئة Convex — لا تضع كلمة مرور حقيقية في الكود.
@@ -14,7 +16,9 @@ const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || "ChangeMe!2024";
  * Seed admin user
  */
 export const seedAdminUser = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     // Check if admin already exists
     const existing = await ctx.db
       .query("users")

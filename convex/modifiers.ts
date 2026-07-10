@@ -1,5 +1,6 @@
 // convex/modifiers.ts
 import { query, mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
@@ -66,8 +67,9 @@ export const remove = mutation({
 });
 
 export const seedDefaults = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const anyRow = await ctx.db.query("modifiers").first();
     if (anyRow) return { ok: true, message: "Already seeded" };
 

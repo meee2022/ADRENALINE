@@ -3,6 +3,7 @@
  * @description إدارة الخطط العامة للموقع
  */
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const list = query({
@@ -125,8 +126,9 @@ export const remove = mutation({
 });
 
 export const updateDefaultPlanImages = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const plans = await ctx.db.query("publicPlans").collect();
     for (const plan of plans) {
       if (plan.slug === "tanshif" || plan.slug.includes("tanshif") || plan.nameAr.includes("تنشيف") || plan.nameAr.includes("التنشيف")) {

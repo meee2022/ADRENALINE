@@ -4,11 +4,13 @@
  * Run once after seedMealSchedule:seed
  */
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 export const deleteMeals = mutation({
-  args: { ids: v.array(v.id("publicMeals")) },
-  handler: async (ctx, { ids }) => {
+  args: { ids: v.array(v.id("publicMeals")) , sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { ids, sessionToken }) => {
+    await requireAdmin(ctx, sessionToken);
     // 🔒 حماية: حذف جماعي — معطّل افتراضياً. فعّله مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
       throw new Error("عملية الحذف الجماعي معطّلة لأسباب أمنية");

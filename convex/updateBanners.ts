@@ -1,7 +1,11 @@
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 export const run = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const banners = await ctx.db.query("banners").collect();
     // Sort them so we get consistent ordering
     banners.sort((a, b) => a.sortOrder - b.sortOrder);

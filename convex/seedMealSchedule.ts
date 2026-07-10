@@ -3,7 +3,9 @@
  * @description Seed all 140 meals from the 4-week Adrenaline schedule (Excel)
  * Run from Convex dashboard: seedMealSchedule.seed
  */
+import { v } from "convex/values";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 
 type MealCategory = "breakfast" | "lunch" | "dinner" | "snack" | "salad";
 
@@ -176,7 +178,9 @@ function normalize(s: string) {
 }
 
 export const seed = mutation({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const existing = await ctx.db.query("publicMeals").collect();
     const existingMap = new Map<string, typeof existing[0]>();
     for (const m of existing) {

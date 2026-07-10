@@ -3,6 +3,7 @@
  * @description Convex functions لأصناف الوجبات
  */
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./sessions";
 import { v } from "convex/values";
 
 function normalizeName(s: string) {
@@ -107,8 +108,9 @@ export const remove = mutation({
 });
 
 export const seedDefaults = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
     const existing = await ctx.db.query("mealCategories").collect();
     if (existing.length > 0) return { seeded: false, created: 0 };
 
