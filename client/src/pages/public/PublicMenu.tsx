@@ -2,7 +2,7 @@
  * @file client/src/pages/public/PublicMenu.tsx
  * @description صفحة المنيو للموقع العام - مع نظام جدولة الأسابيع والأيام
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import { usePublicMeals } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
@@ -349,6 +349,23 @@ export default function PublicMenuPage() {
     const w = Number(rotationInfo?.rotationWeek);
     if (!weekTouched && w >= 1 && w <= 4) setSelectedWeek(w);
   }, [rotationInfo, weekTouched]);
+
+  // ✅ املأ تاريخ البداية تلقائياً من اشتراك العميل المسجَّل (بعد تأكيد رقمه).
+  //    الأخصائية سجّلت بدايته ونهايته، فلا يخمّن العميل — المينو يُبنى على اشتراكه.
+  //    نتبنّاه مرة واحدة لكل مشترك، ولو كان في الماضي (بدأ فعلاً) نُبقي أقرب يوم توصيل.
+  const appliedSubRef = useRef<string | null>(null);
+  useEffect(() => {
+    const sub = verifiedCustomer as any;
+    if (!sub?._id) return;
+    if (appliedSubRef.current === String(sub._id)) return;
+    appliedSubRef.current = String(sub._id);
+    const subStart = sub.startDate;
+    const todayISO = new Date().toISOString().slice(0, 10);
+    if (subStart && /^\d{4}-\d{2}-\d{2}$/.test(subStart) && subStart >= todayISO) {
+      setStartDate(subStart);
+      setWeekTouched(false);
+    }
+  }, [verifiedCustomer]);
 
   // ✅ احفظ تاريخ البداية في السلة ليصل مع الطلب للأخصائية
   useEffect(() => {
@@ -891,6 +908,45 @@ export default function PublicMenuPage() {
               ))}
             </div>
           </div>
+
+          {/* ✅ بطاقة اشتراكك — تظهر لو رقمك مرتبط باشتراك مسجَّل عند الأخصائية */}
+          {(verifiedCustomer as any)?.startDate && (
+            <div className="mb-4 rounded-2xl border border-[#3CC4F0]/30 bg-[#3CC4F0]/5 p-4">
+              <h3 className="text-sm font-black text-[#0E2A4A] mb-2 flex items-center gap-1.5">
+                <User className="h-4 w-4 text-[#3CC4F0]" />
+                {isRtl ? "اشتراكك المسجَّل" : "Your registered subscription"}
+              </h3>
+              <div className="flex flex-wrap gap-2 text-[12px] font-bold">
+                <span className="bg-white rounded-full px-3 py-1.5 text-[#47759C] border border-gray-100">
+                  {isRtl ? "يبدأ" : "Starts"}: {(verifiedCustomer as any).startDate}
+                </span>
+                {(verifiedCustomer as any).endDate && (
+                  <span className="bg-white rounded-full px-3 py-1.5 text-[#47759C] border border-gray-100">
+                    {isRtl ? "ينتهي" : "Ends"}: {(verifiedCustomer as any).endDate}
+                  </span>
+                )}
+                {(verifiedCustomer as any).durationWeeks && (
+                  <span className="bg-white rounded-full px-3 py-1.5 text-[#47759C] border border-gray-100">
+                    {isRtl
+                      ? `المدة: ${(verifiedCustomer as any).durationWeeks} أسابيع`
+                      : `${(verifiedCustomer as any).durationWeeks} weeks`}
+                  </span>
+                )}
+                {rotationInfo?.rotationWeek && (
+                  <span className="bg-emerald-500 text-white rounded-full px-3 py-1.5">
+                    {isRtl
+                      ? `الأسبوع ${rotationInfo.rotationWeek} من الدورة`
+                      : `Cycle week ${rotationInfo.rotationWeek}`}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#47759C] mt-2">
+                {isRtl
+                  ? "المينو مضبوط تلقائياً على بداية اشتراكك. تقدر تعدّل تاريخ البداية تحت لو حابب."
+                  : "The menu is auto-aligned to your subscription start. You can still adjust the start date below."}
+              </p>
+            </div>
+          )}
 
           {/* ✅ تاريخ بداية التوصيل — منه يُشتق أسبوع الدورة */}
           <div className="mb-4">

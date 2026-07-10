@@ -46,7 +46,11 @@ function normalizeToISODate(input: any): string | undefined {
 
 /**
  * الحقول الوحيدة التي يحتاجها الموقع العام بعد تأكيد رقم الجوال.
- * لا عنوان، لا سعر، لا ملاحظات، لا تواريخ اشتراك — هذه بيانات داخلية.
+ * لا عنوان، لا سعر، لا ملاحظات.
+ *
+ * ✅ تواريخ الاشتراك (بداية/نهاية/مدة) مكشوفة عمداً: العميل بعد تأكيد رقمه
+ *    يحتاجها ليعرف موقعه في الدورة، فيُبنى المينو على تاريخ بداية اشتراكه
+ *    تلقائياً بدل أن يخمّن. تخصّ اشتراكه هو المرتبط برقمه.
  */
 function publicCustomerView(c: any) {
   return {
@@ -58,6 +62,9 @@ function publicCustomerView(c: any) {
     snacksPerDay: c.snacksPerDay,
     allergies: c.allergies,
     avoid: c.avoid,
+    startDate: c.startDate,
+    endDate: c.endDate,
+    durationWeeks: c.durationWeeks,
   };
 }
 
