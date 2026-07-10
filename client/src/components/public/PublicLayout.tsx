@@ -47,13 +47,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center gap-3 lg:gap-5">
-              <a href="/" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "الرئيسية" : "Home"}
               </a>
-              <a href="/public/plans" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/public/plans" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "الخطط" : "Plans"}
               </a>
-              <a href="/public/menu" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/public/menu" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "المنيو" : "Menu"}
               </a>
               <a href="/customer/smart-plan"
@@ -62,13 +62,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <Sparkles className="h-3.5 w-3.5" />
                 {isRtl ? "خطتي الذكية" : "Smart Plan"}
               </a>
-              <a href="/public/how-to-subscribe" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/public/how-to-subscribe" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "كيف تشترك" : "Subscribe"}
               </a>
-              <a href="/public/about" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/public/about" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "من نحن" : "About"}
               </a>
-              <a href="/public/contact" className="text-[15px] font-medium text-[#0F1516] hover:text-[#3CC4F0] transition-colors whitespace-nowrap">
+              <a href="/public/contact" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "تواصل" : "Contact"}
               </a>
             </nav>
@@ -81,7 +81,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   <Button
                     onClick={() => window.location.href = "/dashboard"}
                     variant="outline"
-                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white font-bold items-center gap-2"
+                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold items-center gap-2"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
@@ -96,6 +96,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                     }}
                     variant="outline"
                     className="hidden md:flex h-10 px-4 rounded-full border-2 border-red-500 text-red-600 hover:bg-red-50"
+                    aria-label={isRtl ? "تسجيل الخروج" : "Logout"}
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
@@ -109,8 +110,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 size="sm"
                 className="hidden md:flex items-center gap-2 h-10 px-4 rounded-full hover:bg-[#3CC4F0]/10"
               >
-                <Globe className="h-4 w-4 text-[#3CC4F0]" />
-                <span className="font-bold text-[#3CC4F0]">
+                <Globe className="h-4 w-4 text-[#0E76AC]" />
+                <span className="font-bold text-[#0E76AC]">
                   {language === "ar" ? "EN" : "ع"}
                 </span>
               </Button>
@@ -120,7 +121,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <Button
                   onClick={() => window.location.href = "/login"}
                   variant="outline"
-                  className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white font-bold"
+                  className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold"
                 >
                   {isRtl ? "تسجيل دخول" : "Login"}
                 </Button>
@@ -138,7 +139,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   <Button
                     onClick={() => window.location.href = "/customer/profile"}
                     variant="outline"
-                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white font-bold items-center gap-2"
+                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold items-center gap-2"
                   >
                     <User className="h-4 w-4" />
                     {isRtl ? "حسابي" : "My Profile"}
@@ -155,13 +156,14 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   }}
                   variant="ghost"
                   className="hidden md:flex h-10 px-4 rounded-full hover:bg-red-50 hover:text-red-600"
+                  aria-label={isRtl ? "تسجيل الخروج" : "Logout"}
                 >
                   <LogOut className="h-4 w-4" />
                 </Button>
               )}
 
               {/* Subscribe Button */}
-              <Button className="hidden md:flex h-10 px-6 rounded-full bg-[#3CC4F0] hover:bg-[#47759C] text-white font-bold">
+              <Button className="hidden md:flex h-10 px-6 rounded-full bg-[#0E76AC] hover:bg-[#47759C] text-white font-bold">
                 {isRtl ? "اشترك الآن" : "Subscribe"}
               </Button>
 
@@ -169,6 +171,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
+                aria-label={isRtl ? "فتح القائمة" : "Open menu"}
                 className="md:hidden"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
@@ -186,7 +189,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <>
                   <a
                     href="/dashboard"
-                    className="block py-2 px-4 text-[#3CC4F0] font-bold hover:bg-[#3CC4F0]/10 rounded-lg flex items-center gap-2"
+                    className="block py-2 px-4 text-[#0E76AC] font-bold hover:bg-[#3CC4F0]/10 rounded-lg flex items-center gap-2"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
@@ -252,7 +255,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               </a>
               <a
                 href="/public/track"
-                className="block py-2 px-4 text-[#3CC4F0] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
+                className="block py-2 px-4 text-[#0E76AC] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
               >
                 📦 {isRtl ? "تتبع طلبي" : "Track Order"}
               </a>
@@ -260,7 +263,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 onClick={toggleLanguage}
                 className="w-full text-left py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium flex items-center gap-2"
               >
-                <Globe className="h-4 w-4 text-[#3CC4F0]" />
+                <Globe className="h-4 w-4 text-[#0E76AC]" />
                 {language === "ar" ? "English" : "العربية"}
               </button>
               
@@ -270,12 +273,12 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   <div className="py-2 px-4 bg-[#3CC4F0]/10 rounded-lg">
                     <p className="text-sm font-medium text-[#0F1516]">
                       {isRtl ? "مرحباً، " : "Hi, "}
-                      <span className="font-bold text-[#3CC4F0]">{currentCustomer.fullName}</span>
+                      <span className="font-bold text-[#0E76AC]">{currentCustomer.fullName}</span>
                     </p>
                   </div>
                   <a
                     href="/customer/profile"
-                    className="block py-2 px-4 text-[#3CC4F0] font-bold hover:bg-[#3CC4F0]/10 rounded-lg flex items-center gap-2"
+                    className="block py-2 px-4 text-[#0E76AC] font-bold hover:bg-[#3CC4F0]/10 rounded-lg flex items-center gap-2"
                   >
                     <User className="h-4 w-4" />
                     {isRtl ? "حسابي" : "My Profile"}
@@ -298,7 +301,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <Button
                   onClick={() => window.location.href = "/login"}
                   variant="outline"
-                  className="w-full justify-center h-10 rounded-full border-2 border-[#3CC4F0] text-[#3CC4F0] font-bold"
+                  className="w-full justify-center h-10 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] font-bold"
                 >
                   {isRtl ? "تسجيل دخول" : "Login"}
                 </Button>
@@ -319,28 +322,28 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             <>
               <a
                 href="/"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <Home className="h-5 w-5" />
                 <span className="text-xs font-medium">{isRtl ? "الرئيسية" : "Home"}</span>
               </a>
               <a
                 href="/public/plans"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <CalendarDays className="h-5 w-5" />
                 <span className="text-xs font-medium">{isRtl ? "الخطط" : "Plans"}</span>
               </a>
               <a
                 href="/public/menu"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <UtensilsCrossed className="h-5 w-5" />
                 <span className="text-xs font-medium">{isRtl ? "المنيو" : "Menu"}</span>
               </a>
               <a
                 href="/dashboard"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#3CC4F0] hover:text-[#47759C] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#0E76AC] hover:text-[#47759C] transition-colors"
               >
                 <LayoutDashboard className="h-6 w-6" />
                 <span className="text-xs font-bold">{isRtl ? "لوحة التحكم" : "Dashboard"}</span>
@@ -350,28 +353,28 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             <>
               <a
                 href="/"
-                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <Home className="h-6 w-6" />
                 <span className="text-xs font-medium">{isRtl ? "الرئيسية" : "Home"}</span>
               </a>
               <a
                 href="/public/plans"
-                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-4 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <CalendarDays className="h-6 w-6" />
                 <span className="text-xs font-medium">{isRtl ? "الخطط" : "Plans"}</span>
               </a>
               <a
                 href="/public/menu"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <UtensilsCrossed className="h-6 w-6" />
                 <span className="text-xs font-medium">{isRtl ? "المنيو" : "Menu"}</span>
               </a>
               <a
                 href="/public/about"
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <circle cx="12" cy="8" r="3"/><path d="M6 20v-1a6 6 0 0 1 12 0v1"/>
@@ -380,7 +383,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               </a>
               <button
                 onClick={toggleLanguage}
-                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#3CC4F0] transition-colors"
+                className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <Globe className="h-6 w-6" />
                 <span className="text-xs font-medium">{language === "ar" ? "EN" : "ع"}</span>

@@ -94,7 +94,24 @@ export default function ContactPage() {
                   transition={{ duration: 0.5, delay: i * 0.08 }}
                   whileHover={{ y: -6 }}
                   onClick={c.action}
-                  className={`group relative bg-white rounded-3xl p-5 md:p-6 ${c.action ? "cursor-pointer" : ""}`}
+                  // ♿ البطاقات القابلة للنقر (واتساب/اتصال/خريطة) كانت <div onClick>
+                  //    بلا دور ولا tabIndex — غير قابلة للوصول بلوحة المفاتيح إطلاقاً.
+                  {...(c.action
+                    ? {
+                        role: "button" as const,
+                        tabIndex: 0,
+                        "aria-label": isRtl
+                          ? `${c.titleAr}: ${c.ctaAr}`
+                          : `${c.titleEn}: ${c.ctaEn}`,
+                        onKeyDown: (e: React.KeyboardEvent) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            c.action?.();
+                          }
+                        },
+                      }
+                    : {})}
+                  className={`group relative bg-white rounded-3xl p-5 md:p-6 ${c.action ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0E76AC] focus-visible:ring-offset-2" : ""}`}
                   style={{
                     boxShadow: "0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03)",
                     border: "1px solid rgba(0,0,0,0.05)",
@@ -235,9 +252,11 @@ export default function ContactPage() {
                   {isRtl ? "إرسال عبر واتساب" : "Send via WhatsApp"}
                 </motion.button>
 
-                <p className="text-xs text-center" style={{ color: "#94a3b8" }}>
+                {/* ♿ #94a3b8 على أبيض = 2.56:1 (راسب) · #47759C = 4.89:1
+                       و #3CC4F0 = 2.03:1 (راسب) · #0E76AC = 4.99:1 */}
+                <p className="text-xs text-center" style={{ color: "#47759C" }}>
                   {isRtl ? "أو اتصل بنا مباشرة على " : "Or call us directly at "}
-                  <a href={`tel:+${phoneClean}`} className="font-bold" style={{ color: "#3CC4F0" }} dir="ltr">
+                  <a href={`tel:+${phoneClean}`} className="font-bold" style={{ color: "#0E76AC" }} dir="ltr">
                     {settings?.phone || "+974 1234 5678"}
                   </a>
                 </p>
