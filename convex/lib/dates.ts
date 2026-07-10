@@ -10,16 +10,22 @@
  */
 
 /** أرقام أيام الأسبوع في JS: الأحد 0 … السبت 6 */
-export const THURSDAY = 4;
 export const FRIDAY = 5;
 
-/** أيام التوصيل بالاسم، بترتيب أسبوع العمل في قطر. */
+/**
+ * أيام التوصيل: السبت → الخميس (6 أيام). الجمعة فقط لا توصيل فيها.
+ *
+ * ⚠️ آلية عمل المطعم: التوصيل 6 أيام أسبوعياً، الجمعة وحدها بلا توصيل
+ *    (المطبخ يعمل فيها عادةً للتحضير). إجازة *الموظفين* يوم الخميس شيء
+ *    منفصل تماماً يخصّ الحضور — لا علاقة له بجدول التوصيل هذا.
+ */
 export const DELIVERY_DAYS = [
   "saturday",
   "sunday",
   "monday",
   "tuesday",
   "wednesday",
+  "thursday",
 ] as const;
 
 export type DeliveryDay = (typeof DELIVERY_DAYS)[number];
@@ -46,10 +52,10 @@ export function dateToDays(date: string): number {
   return Math.floor(parseDate(date).getTime() / 86400000);
 }
 
-/** هل هذا يوم توصيل؟ الخميس والجمعة إجازة. */
+/** هل هذا يوم توصيل؟ الجمعة وحدها لا توصيل فيها (السبت→الخميس = 6 أيام). */
 export function isDeliveryDay(d: Date): boolean {
   const dow = d.getUTCDay();
-  return dow !== THURSDAY && dow !== FRIDAY;
+  return dow !== FRIDAY;
 }
 
 /**
@@ -84,11 +90,11 @@ export function addDeliveryDays(fromDate: string, n: number): string {
 }
 
 /**
- * ترتيب يوم التوصيل داخل الأسبوع (السبت = 0 … الأربعاء = 4).
- * الخميس والجمعة إجازة، فنُرجّع أقرب يوم عمل (الأربعاء) بدل رمي خطأ
+ * ترتيب يوم التوصيل داخل الأسبوع (السبت = 0 … الخميس = 5).
+ * الجمعة وحدها ليست يوم توصيل، فنُرجّع لها أقرب يوم (الخميس) بدل رمي خطأ
  * يعطّل اعتماد الطلب كله.
  */
 export function getDayOffset(day: string): number {
   const idx = DELIVERY_DAYS.indexOf(String(day).toLowerCase() as DeliveryDay);
-  return idx >= 0 ? idx : DELIVERY_DAYS.length - 1; // wednesday
+  return idx >= 0 ? idx : DELIVERY_DAYS.length - 1; // thursday
 }

@@ -76,10 +76,9 @@ export const getSmartPlanData = query({
         }
       : { found: false, goal: "", allergies: "", avoid: "", preferences: "", mealsPerDay: 3, snacksPerDay: 1 };
 
-    // 2.5) حساب أسبوع الدورة (1..4) من تاريخ بداية اشتراك العميل
-    //   weekIndex = عدد الأسابيع منذ البداية، ثم نلفّها على دورة 4 أسابيع.
-    // أسبوع الدورة يتقدّم كل 6 أيام عمل (السبت→الأربعاء، باستثناء الخميس والجمعة)
-    // ليطابق جدول التوصيل الفعلي بدلاً من 7 أيام تقويمية.
+    // 2.5) حساب أسبوع الدورة (1..4) من تاريخ بداية اشتراك العميل.
+    // أسبوع التوصيل = 6 أيام (السبت→الخميس، الجمعة وحدها بلا توصيل)، فالدورة
+    // تتقدّم كل 6 أيام توصيل. (كان يعدّ 5 ويقسم على 6 — تقدُّم غير منتظم؛ صار متّسقاً.)
     let rotationWeek = 1;
     let started = true;
     if (customer?.startDate && args.todayDate) {
@@ -88,12 +87,11 @@ export const getSmartPlanData = query({
       if (today.getTime() < start.getTime()) {
         started = false; rotationWeek = 1;
       } else {
-        // عُدّ أيام العمل من البداية حتى اليوم (شامل)، مع حدّ أقصى احترازي
+        // عُدّ أيام التوصيل من البداية حتى اليوم (شامل)، مع حدّ أقصى احترازي
         let workingDays = 0;
         const cur = new Date(start);
         for (let i = 0; i < 400 && cur.getTime() <= today.getTime(); i++) {
-          const dow = cur.getDay(); // 4=الخميس، 5=الجمعة (عطلة)
-          if (dow !== 4 && dow !== 5) workingDays++;
+          if (cur.getDay() !== 5) workingDays++; // الجمعة وحدها بلا توصيل
           cur.setDate(cur.getDate() + 1);
         }
         const idx = Math.max(0, workingDays - 1); // 0-based لليوم الحالي ضمن أيام التوصيل
@@ -434,7 +432,8 @@ export const generateSmartPlan = action({
 // ═══════════════════════════════════════════════════════════
 //  خطة أسبوعية ذكية — تولّد خطة لكل أيام العمل (السبت→الأربعاء)
 // ═══════════════════════════════════════════════════════════
-const WORKING_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday"];
+// أيام التوصيل: السبت→الخميس (6 أيام). الجمعة وحدها بلا توصيل.
+const WORKING_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"];
 
 /**
  * ✅ اقتراحات التوليد قبل تشغيل الذكاء الاصطناعي (بلا تكلفة):
@@ -504,9 +503,9 @@ export const generateWeeklyPlan = action({
     ): Promise<{ days: any[]; profileFound: boolean }> => {
       const out: any[] = [];
       let profileFound = false;
-      for (let guard = 0; guard < 10 && out.length < WORKING_DAYS.length; guard++) {
+      for (let guard = 0; guard < 12 && out.length < WORKING_DAYS.length; guard++) {
         const dow = cur.getDay();
-        if (dow !== 4 && dow !== 5) {
+        if (dow !== 5) { // الجمعة وحدها بلا توصيل
           const dayName = WEEKDAYS[dow];
           const dateStr = cur.toISOString().slice(0, 10);
 

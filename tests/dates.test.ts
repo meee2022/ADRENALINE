@@ -3,7 +3,7 @@
  * @description أخطر حساب في النظام: أيام التوصيل.
  *
  * عليه يعتمد تعويض أيام التجميد (فلوس العميل) وجدولة الطلبات.
- * قاعدة العمل: التوصيل من السبت إلى الأربعاء. الخميس والجمعة إجازة.
+ * قاعدة العمل: التوصيل من السبت إلى الخميس (6 أيام). الجمعة وحدها بلا توصيل.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -39,22 +39,22 @@ describe("parseDate / fmtDate", () => {
 });
 
 describe("isDeliveryDay", () => {
-  it("السبت→الأربعاء أيام توصيل", () => {
-    for (const d of [SAT, "2026-07-12", "2026-07-13", "2026-07-14", WED]) {
+  it("السبت→الخميس أيام توصيل (6 أيام)", () => {
+    for (const d of [SAT, "2026-07-12", "2026-07-13", "2026-07-14", WED, THU]) {
       expect(isDeliveryDay(parseDate(d))).toBe(true);
     }
   });
 
-  it("الخميس والجمعة إجازة", () => {
-    expect(isDeliveryDay(parseDate(THU))).toBe(false);
+  it("الجمعة وحدها بلا توصيل", () => {
     expect(isDeliveryDay(parseDate(FRI))).toBe(false);
+    expect(isDeliveryDay(parseDate(THU))).toBe(true); // الخميس توصيل
   });
 });
 
 describe("countDeliveryDays", () => {
-  it("أسبوعان تقويميان (14 يوماً) = 10 أيام توصيل", () => {
-    // هذا بالضبط سيناريو المشترك المسافر
-    expect(countDeliveryDays(SAT, "2026-07-25")).toBe(10);
+  it("أسبوعان تقويميان (14 يوماً) = 12 يوم توصيل (جمعتان فقط إجازة)", () => {
+    // سيناريو المشترك المسافر: 14 يوم - جمعتان = 12 يوم توصيل
+    expect(countDeliveryDays(SAT, "2026-07-25")).toBe(12);
   });
 
   it("المدى نصف مفتوح: يوم النهاية غير محتسب", () => {
@@ -62,12 +62,12 @@ describe("countDeliveryDays", () => {
     expect(countDeliveryDays(SAT, "2026-07-12")).toBe(1); // السبت وحده
   });
 
-  it("تجميد الخميس وحده لا يكلّف العميل شيئاً", () => {
-    expect(countDeliveryDays(THU, FRI)).toBe(0);
+  it("تجميد الخميس يكلّف يوم توصيل (الخميس يوم توصيل)", () => {
+    expect(countDeliveryDays(THU, FRI)).toBe(1);
   });
 
-  it("الجمعة+السبت = يوم توصيل واحد (السبت)", () => {
-    expect(countDeliveryDays(FRI, "2026-07-19")).toBe(1);
+  it("الجمعة وحدها لا تُحتسب", () => {
+    expect(countDeliveryDays(FRI, "2026-07-18")).toBe(0); // الجمعة → السبت (exclusive)
   });
 
   it("تستبعد الأيام التي تخطّاها العميل مسبقاً (لا تعويض مزدوج)", () => {
@@ -76,8 +76,8 @@ describe("countDeliveryDays", () => {
 });
 
 describe("addDeliveryDays", () => {
-  it("تمديد 10 أيام توصيل يقفز فوق الإجازات", () => {
-    expect(addDeliveryDays("2026-07-31", 10)).toBe("2026-08-12");
+  it("تمديد 12 يوم توصيل يقفز فوق الجُمَع", () => {
+    expect(addDeliveryDays("2026-07-31", 12)).toBe("2026-08-13");
   });
 
   it("التمديد ينتهي دائماً على يوم توصيل", () => {
@@ -109,17 +109,17 @@ describe("dateToDays", () => {
 });
 
 describe("getDayOffset", () => {
-  it("السبت 0 … الأربعاء 4", () => {
+  it("السبت 0 … الخميس 5", () => {
     DELIVERY_DAYS.forEach((d, i) => expect(getDayOffset(d)).toBe(i));
+    expect(getDayOffset("thursday")).toBe(5); // الخميس يوم توصيل صحيح
   });
 
   it("لا تتأثر بحالة الحروف", () => {
     expect(getDayOffset("SATURDAY")).toBe(0);
   });
 
-  it("الخميس/الجمعة/المجهول → الأربعاء، لا خطأ يعطّل اعتماد الطلب", () => {
-    expect(getDayOffset("thursday")).toBe(4);
-    expect(getDayOffset("friday")).toBe(4);
-    expect(getDayOffset("")).toBe(4);
+  it("الجمعة/المجهول → الخميس (آخر يوم توصيل)، لا خطأ يعطّل اعتماد الطلب", () => {
+    expect(getDayOffset("friday")).toBe(5);
+    expect(getDayOffset("")).toBe(5);
   });
 });
