@@ -25,15 +25,19 @@ export interface CustomerInfo {
 interface CartState {
   // Cart Items
   items: CartMeal[];
-  
+
   // Customer Info
   customerInfo: CustomerInfo | null;
-  
+
+  // ✅ تاريخ بداية التوصيل الذي اختاره العميل (yyyy-MM-dd)
+  preferredStartDate: string | null;
+
   // Actions
   addItem: (meal: CartMeal) => void;
   removeItem: (mealId: string, week: number, day: string) => void;
   clearCart: () => void;
   updateCustomerInfo: (info: CustomerInfo) => void;
+  setPreferredStartDate: (date: string) => void;
   
   // Computed
   getTotalMeals: () => number;
@@ -48,6 +52,9 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       customerInfo: null,
+      preferredStartDate: null,
+
+      setPreferredStartDate: (date) => set({ preferredStartDate: date }),
 
       addItem: (meal) =>
         set((state) => {
@@ -80,6 +87,7 @@ export const useCartStore = create<CartState>()(
         set({
           items: [],
           customerInfo: null,
+          preferredStartDate: null,
         }),
 
       updateCustomerInfo: (info) =>

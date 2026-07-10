@@ -538,6 +538,8 @@ export default defineSchema({
     rejectedAt: v.optional(v.number()), // وقت الرفض
     rejectionReason: v.optional(v.string()), // سبب الرفض
     notes: v.optional(v.string()),
+    // ✅ تاريخ بداية التوصيل الذي اختاره العميل — تُملأ به الأخصائية عند الاعتماد
+    preferredStartDate: v.optional(v.string()),
   })
     .index("by_status", ["status"])
     .index("by_phone", ["customerPhone"])

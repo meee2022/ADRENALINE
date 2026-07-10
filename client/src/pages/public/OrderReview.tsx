@@ -44,7 +44,8 @@ export default function OrderReview() {
     getTotalMeals,
     getTotalCalories,
     getWeeks,
-    clearCart
+    clearCart,
+    preferredStartDate,
   } = useCartStore();
   
   // بيانات العميل — نملأ الرقم تلقائياً من الذي أدخله في المنيو
@@ -114,6 +115,7 @@ export default function OrderReview() {
         customerPhone,
         customerEmail,
         customerId: findCustomerByPhone?._id, // ✅ ربط تلقائي
+        preferredStartDate: preferredStartDate || undefined, // ✅ تاريخ البداية الذي اختاره العميل
         totalMeals,
         totalPrice,
         totalCalories,

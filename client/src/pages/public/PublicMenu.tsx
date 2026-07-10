@@ -55,6 +55,16 @@ function defaultDay(): DayOfWeek {
   return "saturday";
 }
 
+/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة) كـ yyyy-MM-dd. */
+function nextDeliveryDateISO(): string {
+  const d = new Date();
+  for (let i = 0; i < 8; i++) {
+    if (d.getDay() !== 5) return d.toISOString().slice(0, 10); // الجمعة = 5
+    d.setDate(d.getDate() + 1);
+  }
+  return d.toISOString().slice(0, 10);
+}
+
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
   useSeo({ title: "المنيو | أدرينالين للوجبات الصحية", description: "تصفّح منيو أدرينالين: وجبات صحية متنوعة بسعرات وماكروز واضحة — فطار، غدا، عشا، سلطات وسناكس.", path: "/public/menu" });
@@ -62,7 +72,7 @@ export default function PublicMenuPage() {
   const [, setLocation] = useLocation();
   
   // Cart State
-  const { items, addItem, getTotalMeals } = useCartStore();
+  const { items, addItem, getTotalMeals, setPreferredStartDate } = useCartStore();
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -153,9 +163,16 @@ export default function PublicMenuPage() {
     window.open(whatsappLink(msg), "_blank");
   };
 
+  // ✅ تاريخ بداية التوصيل الذي يختاره العميل. منه يعرف النظام أسبوع الدورة —
+  //    فالعميل يختار «متى يبدأ» لا «أي دورة». افتراضياً أقرب يوم توصيل (يتخطّى الجمعة).
+  const [startDate, setStartDate] = useState<string>(() => nextDeliveryDateISO());
+  const rotationInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    startDate ? { targetDate: startDate } : "skip",
+  ) as any;
+
   // NEW: Week & Day selection
-  // ✅ يبدأ من أسبوع الدورة الذي يطبخه المطبخ حالياً (لا من 1 ثابت)، حتى يختار
-  //    العميل وجبات ما يُطبخ فعلاً هذا الأسبوع. يُزامَن عند وصول الإعداد.
+  // ✅ أسبوع الدورة يُشتق من تاريخ البداية (rotationWeekAt). يبقى قابلاً لتغيير يدوي.
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [weekTouched, setWeekTouched] = useState(false);
   // ✅ نبدأ بيوم اليوم (أو أقرب يوم توصيل) بدل إجبار العميل على اختيار يوم
@@ -326,11 +343,17 @@ export default function PublicMenuPage() {
   const meals = filteredMeals;
 
   // Countdown timer logic - DISABLED (always allow ordering)
-  // ✅ زامن الأسبوع الافتراضي مع أسبوع المطبخ الحالي (ما لم يغيّره العميل يدوياً)
+  // ✅ زامن الأسبوع الافتراضي مع دورة المطبخ في تاريخ البداية المختار
+  //    (ما لم يغيّره العميل يدوياً). فلو بدأ الأسبوع الجاي، يفتح على دورته الصحيحة.
   useEffect(() => {
-    const w = Number((settings as any)?.currentCookingWeek);
+    const w = Number(rotationInfo?.rotationWeek);
     if (!weekTouched && w >= 1 && w <= 4) setSelectedWeek(w);
-  }, [settings, weekTouched]);
+  }, [rotationInfo, weekTouched]);
+
+  // ✅ احفظ تاريخ البداية في السلة ليصل مع الطلب للأخصائية
+  useEffect(() => {
+    if (startDate) setPreferredStartDate(startDate);
+  }, [startDate, setPreferredStartDate]);
 
   useEffect(() => {
     // ✅ تعطيل نظام قفل الوقت بالكامل - الطلبات مفتوحة دائماً
@@ -869,12 +892,41 @@ export default function PublicMenuPage() {
             </div>
           </div>
 
+          {/* ✅ تاريخ بداية التوصيل — منه يُشتق أسبوع الدورة */}
+          <div className="mb-4">
+            <h3 className="text-sm font-bold text-[#47759C] mb-2">
+              {isRtl ? "متى يبدأ توصيلك؟" : "When does delivery start?"}
+            </h3>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input
+                type="date"
+                value={startDate}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => { setStartDate(e.target.value); setWeekTouched(false); }}
+                className="h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white"
+              />
+              {rotationInfo?.rotationWeek && (
+                <span className="text-[12px] font-bold text-emerald-700 bg-emerald-50 rounded-full px-3 py-1.5">
+                  {isRtl
+                    ? `المطبخ سيكون على الأسبوع ${rotationInfo.rotationWeek} حينها`
+                    : `Kitchen will be on week ${rotationInfo.rotationWeek} then`}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-[#47759C] mt-1.5">
+              {isRtl
+                ? "اختر يوم بدايتك، والنظام يختار لك وجبات الأسبوع الصحيح تلقائياً — حتى لو تبدأ الأسبوع القادم."
+                : "Pick your start day; the system aligns the meals to the right week — even if you start next week."}
+            </p>
+          </div>
+
           {/* Week Tabs */}
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {weeks.map((week) => {
-                const isCooking = Number((settings as any)?.currentCookingWeek) === week.value;
+                // الأسبوع المطابق لتاريخ بدايتك — مختار تلقائياً
+                const isForYourStart = Number(rotationInfo?.rotationWeek) === week.value;
                 return (
                 <button
                   key={week.value}
@@ -887,26 +939,19 @@ export default function PublicMenuPage() {
                   )}
                 >
                   {week.label}
-                  {/* علامة الأسبوع الذي يطبخه المطبخ حالياً */}
-                  {isCooking && (
+                  {/* علامة الأسبوع المطابق لتاريخ بدايتك */}
+                  {isForYourStart && (
                     <span className={cn(
                       "text-[9px] font-black px-1.5 py-0.5 rounded-full",
                       selectedWeek === week.value ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-700",
                     )}>
-                      {isRtl ? "الحالي" : "now"}
+                      {isRtl ? "بدايتك" : "yours"}
                     </span>
                   )}
                 </button>
                 );
               })}
             </div>
-            {Number((settings as any)?.currentCookingWeek) >= 1 && (
-              <p className="text-[11px] text-[#47759C] mt-1.5">
-                {isRtl
-                  ? `المطبخ يجهّز حالياً وجبات الأسبوع ${(settings as any).currentCookingWeek} — اختره لتصلك وجباتك هذا الأسبوع.`
-                  : `The kitchen is currently preparing week ${(settings as any).currentCookingWeek} — pick it to get your meals this week.`}
-              </p>
-            )}
           </div>
 
           {/* Day Chips */}

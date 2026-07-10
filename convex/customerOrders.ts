@@ -41,6 +41,9 @@ export const create = mutation({
       })
     ),
     notes: v.optional(v.string()),
+    // ✅ تاريخ بداية التوصيل الذي اختاره العميل (yyyy-MM-dd). تراه الأخصائية
+    //    مقترحاً عند الاعتماد وتقدر تعدّله.
+    preferredStartDate: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const orderNumber = generateOrderNumber();
@@ -59,6 +62,7 @@ export const create = mutation({
       orderNumber,
       createdAt: now,
       notes: args.notes,
+      preferredStartDate: args.preferredStartDate,
     });
 
     // Create order items

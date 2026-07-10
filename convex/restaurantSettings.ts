@@ -35,6 +35,34 @@ export const setCookingWeek = mutation({
   },
 });
 
+/**
+ * ✅ أسبوع دورة المطبخ في تاريخ مستقبلي.
+ *    الدورة تتقدّم +1 كل جمعة، فنعدّ الجُمَع بين اليوم والتاريخ ونلفّها 1..4.
+ *    هكذا يختار العميل *تاريخ بداية* والنظام يعرف لوحده أي دورة سيطبخها المطبخ
+ *    حينها — دون أن يفهم العميل مفهوم «أسبوع الدورة».
+ */
+export const rotationWeekAt = query({
+  args: { targetDate: v.string() }, // yyyy-MM-dd
+  handler: async (ctx, args) => {
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const cur = Number((settings as any)?.currentCookingWeek) || 1;
+
+    const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // قطر
+    const target = String(args.targetDate).slice(0, 10);
+
+    // عدّ الجُمَع في المدى (اليوم، الهدف] — كل جمعة = تقدّم دورة.
+    let fridays = 0;
+    const c = new Date(todayISO + "T00:00:00Z");
+    const end = new Date(target + "T00:00:00Z");
+    for (let i = 0; i < 400 && c < end; i++) {
+      c.setUTCDate(c.getUTCDate() + 1);
+      if (c.getUTCDay() === 5) fridays++;
+    }
+    const week = ((cur - 1 + fridays) % 4) + 1;
+    return { rotationWeek: week, currentCookingWeek: cur, fridaysAhead: fridays };
+  },
+});
+
 /** yyyy-MM-dd لآخر جمعة (أو اليوم إن كان جمعة) بتوقيت +03 (قطر). */
 function lastFridayISO(now = Date.now()): string {
   // قطر +03:00؛ نحسب اليوم المحلي دون مكتبات.

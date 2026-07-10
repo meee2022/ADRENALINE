@@ -3,7 +3,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRoute, useLocation } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
@@ -59,6 +59,15 @@ export default function OrderReviewDetail() {
   const rejectMutation = useMutation(api.customerOrders.reject);
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
   const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
+
+  // ✅ املأ تاريخ البداية تلقائياً بما اختاره العميل (الأخصائية تقدر تعدّله)
+  useEffect(() => {
+    const pref = (orderData as any)?.preferredStartDate;
+    if (pref && !startDate) {
+      const d = new Date(pref + "T00:00:00");
+      if (!isNaN(d.getTime())) setStartDate(d);
+    }
+  }, [orderData]);
 
   // تبديل وجبة اقترحها الـAI قبل الاعتماد
   const allMeals: any[] = useQuery(api.publicMeals.listMeals, {}) || [];
