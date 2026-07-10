@@ -3,7 +3,7 @@
  * @description تجميد / استئناف اشتراك مشترك (سفر). الأيام المجمّدة تُعوَّض في آخر الاشتراك.
  * @convex convex/subscriptionPause.ts
  */
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
@@ -27,11 +27,14 @@ export function SubscriptionPauseDialog({
   customerName,
   open,
   onOpenChange,
+  initialSection = "pause",
 }: {
   customerId: string | null;
   customerName: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  /** "skip" يفتح النافذة مباشرة على قسم تخطّي الأيام (زر الكارت السريع). */
+  initialSection?: "pause" | "skip";
 }) {
   const { dir } = useLanguage();
   const isRtl = dir === "rtl";
@@ -44,6 +47,21 @@ export function SubscriptionPauseDialog({
   const [busy, setBusy] = useState(false);
   // ✅ أيام محددة يختارها الموظف لتخطّيها (سفر نصف أسبوع)
   const [skipPick, setSkipPick] = useState<Record<string, boolean>>({});
+
+  // عند الفتح من زر "تخطّي أيام" على الكارت: مرّر تلقائياً لقسم التخطّي وأبرِزه.
+  const skipSectionRef = useRef<HTMLDivElement | null>(null);
+  const [highlightSkip, setHighlightSkip] = useState(false);
+  useEffect(() => {
+    if (open && initialSection === "skip") {
+      const t = setTimeout(() => {
+        skipSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightSkip(true);
+        setTimeout(() => setHighlightSkip(false), 1600);
+      }, 120);
+      return () => clearTimeout(t);
+    }
+    setHighlightSkip(false);
+  }, [open, initialSection]);
 
   const status = useQuery(
     api.subscriptionPause.status,
@@ -219,7 +237,13 @@ export function SubscriptionPauseDialog({
                 </Button>
 
                 {/* ───── تخطّي أيام محددة (سفر نصف أسبوع) ───── */}
-                <div className="pt-3 mt-1 border-t">
+                <div
+                  ref={skipSectionRef}
+                  className={
+                    "pt-3 mt-1 border-t transition-all rounded-lg " +
+                    (highlightSkip ? "ring-2 ring-amber-400 bg-amber-50/60 -mx-1 px-1" : "")
+                  }
+                >
                   <p className="text-sm font-bold mb-1">
                     {isRtl ? "أو تخطّي أيام محددة فقط" : "Or skip specific days only"}
                   </p>

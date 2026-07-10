@@ -254,6 +254,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 export default function Customers() {
   const { data: customers = [] } = useCustomers();
   const [pauseTarget, setPauseTarget] = useState<any | null>(null);
+  const [pauseSection, setPauseSection] = useState<"pause" | "skip">("pause");
   const [printTarget, setPrintTarget] = useState<any | null>(null);
 
   // ✅ باقات الموقع — نفسها اللي بيشوفها العميل. الاختيار منها يملأ الوجبات والسعر والمدة.
@@ -1581,7 +1582,8 @@ export default function Customers() {
               key={customer._id}
               customer={customer}
               onEdit={handleEdit}
-              onPause={setPauseTarget}
+              onPause={(c) => { setPauseSection("pause"); setPauseTarget(c); }}
+              onSkipDays={(c) => { setPauseSection("skip"); setPauseTarget(c); }}
               onPrintPlan={setPrintTarget}
               onDelete={async (id, name) => {
                 const ok = confirm(
@@ -1599,6 +1601,7 @@ export default function Customers() {
         customerId={pauseTarget?._id ?? null}
         customerName={pauseTarget?.fullName ?? ""}
         open={Boolean(pauseTarget)}
+        initialSection={pauseSection}
         onOpenChange={(v) => !v && setPauseTarget(null)}
       />
 

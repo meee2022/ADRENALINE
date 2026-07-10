@@ -1,6 +1,6 @@
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle, Printer } from "lucide-react";
+import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle, Printer, CalendarX2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -12,11 +12,13 @@ interface CustomerCardProps {
   onDelete: (customerId: string, customerName: string) => void;
   /** فتح نافذة تجميد/استئناف الاشتراك */
   onPause?: (customer: any) => void;
+  /** فتح نافذة تخطّي أيام محددة مباشرة (سفر نصف أسبوع) */
+  onSkipDays?: (customer: any) => void;
   /** فتح نافذة تنزيل/طباعة جدول الوجبات */
   onPrintPlan?: (customer: any) => void;
 }
 
-export function CustomerCard({ customer, onEdit, onDelete, onPause, onPrintPlan }: CustomerCardProps) {
+export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, onPrintPlan }: CustomerCardProps) {
   const { t, dir, language } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const dateLocale = language === "ar" ? ar : enUS;
@@ -125,6 +127,17 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause, onPrintPlan 
                 onClick={() => onPrintPlan(customer)}
               >
                 <Printer className="h-4 w-4 text-[#0E76AC]" />
+              </Button>
+            )}
+            {onSkipDays && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title={isRtl ? "تخطّي أيام محددة (سفر كم يوم)" : "Skip specific days (short trip)"}
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg hover:bg-amber-50"
+                onClick={() => onSkipDays(customer)}
+              >
+                <CalendarX2 className="h-4 w-4 text-amber-600" />
               </Button>
             )}
             {onPause && (
