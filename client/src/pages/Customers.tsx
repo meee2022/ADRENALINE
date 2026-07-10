@@ -444,6 +444,12 @@ export default function Customers() {
   const watchedEnd = form.watch("endDate");
   const computedWeeks = weeksBetween(watchedStart, watchedEnd);
 
+  // ✅ الأسبوع الذي يصادفه تاريخ بداية الاشتراك في دورة المطبخ (للأخصائية).
+  const startRotation = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    watchedStart && /^\d{4}-\d{2}-\d{2}$/.test(watchedStart) ? { targetDate: watchedStart } : "skip"
+  ) as { rotationWeek: number; currentCookingWeek: number; fridaysAhead: number } | undefined;
+
   useEffect(() => {
     if (computedWeeks) form.setValue("durationWeeks", computedWeeks);
   }, [computedWeeks]);
@@ -1025,6 +1031,13 @@ export default function Customers() {
                       {t("customers.start_date")}
                     </Label>
                     <Input type="date" {...form.register("startDate")} />
+                    {startRotation && (
+                      <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 flex items-center gap-1">
+                        🗓️ {isRtl
+                          ? `هذا التاريخ يصادف الأسبوع ${startRotation.rotationWeek} من دورة المطبخ`
+                          : `Falls on cooking-cycle week ${startRotation.rotationWeek}`}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">

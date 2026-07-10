@@ -56,6 +56,14 @@ export default function OrderReviewDetail() {
   // ✅ جلب قائمة المشتركين للربط
   const customers = useQuery(api.customers.list, { sessionToken }) || [];
 
+  // ✅ الأسبوع الذي يصادفه تاريخ البداية المختار في دورة المطبخ.
+  //    يساعد الأخصائية: تحدد التاريخ فيعرف النظام هيصادف أي أسبوع دورة.
+  const startISO = startDate ? startDate.toISOString().split("T")[0] : undefined;
+  const rotationInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    startISO ? { targetDate: startISO } : "skip"
+  ) as { rotationWeek: number; currentCookingWeek: number; fridaysAhead: number } | undefined;
+
   const approveMutation = useMutation(api.customerOrders.approve);
   const rejectMutation = useMutation(api.customerOrders.reject);
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
@@ -626,6 +634,22 @@ export default function OrderReviewDetail() {
                 </Button>
               )}
             </div>
+
+            {/* ✅ الأسبوع الذي يصادفه هذا التاريخ في دورة المطبخ */}
+            {startDate && rotationInfo && (
+              <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 flex items-center gap-2">
+                <span className="text-lg">🗓️</span>
+                <span>
+                  هذا التاريخ يصادف <b>الأسبوع {rotationInfo.rotationWeek}</b> من دورة المطبخ
+                  {rotationInfo.fridaysAhead > 0 && (
+                    <span className="text-amber-600">
+                      {" "}(المطبخ الآن على الأسبوع {rotationInfo.currentCookingWeek})
+                    </span>
+                  )}
+                  . سيتلقّى العميل وجبات هذا الأسبوع عند بدء توصيله.
+                </span>
+              </div>
+            )}
             <p className="mt-2 text-xs text-gray-500 leading-relaxed">
               💡 <b>طريقة سهلة:</b> سيب الحقل ده فاضي وحدد بس تاريخ أول يوم تحت — هيمشي بالترتيب تلقائياً.
               <br />
