@@ -424,7 +424,9 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card", ".grp"] },
+      // avoid الوجبة فقط (لا تُقسَّم بطاقة عبر صفحتين) — تجنّب .grp/.day كان
+      //   يولّد صفحات كثيرة فارغة بمحاولة إبقاء أسبوع كامل بلا تقسيم.
+      pagebreak: { mode: ["css", "legacy"], avoid: ".card" },
     })
     .from(el)
     .save();
