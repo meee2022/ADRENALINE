@@ -377,18 +377,19 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       .mp-doc .day-h{background:#0E2A4A;color:#fff;padding:6px 12px;display:flex;justify-content:space-between;align-items:center}
       .mp-doc .day-t{font-weight:800;font-size:13px}
       .mp-doc .day-n{font-size:10px;background:rgba(255,255,255,.16);border-radius:50px;padding:2px 8px}
-      .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:7px;padding:8px}
-      .mp-doc .card{border:1px solid #eef1f4;border-radius:9px;overflow:hidden;background:#f7fbfe}
-      .mp-doc .ph{position:relative;height:66px;background:#eaf3fb}
+      /* نفس مقاسات كروت الخطة الذكية — صف من ~4 كروت، مقروء على الموبايل */
+      .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;padding:10px}
+      .mp-doc .card{border:1px solid #eef1f4;border-radius:11px;overflow:hidden;background:#f7fbfe}
+      .mp-doc .ph{position:relative;height:84px;background:#eaf3fb}
       .mp-doc .ph img{width:100%;height:100%;object-fit:cover;display:block}
-      .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px}
-      .mp-doc .ph .cat{position:absolute;top:4px;inset-inline-start:4px;background:rgba(255,255,255,.92);
-               color:#0E76AC;font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:6px}
-      .mp-doc .body{padding:6px 7px}
-      .mp-doc .name{font-weight:800;font-size:10.5px;line-height:1.3;color:#0E2A4A}
-      .mp-doc .macros{display:flex;gap:6px;flex-wrap:wrap;font-size:9px;color:#47759c;font-weight:700;margin-top:3px}
-      .mp-doc .note{margin-top:4px;font-size:8.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
-            border-radius:6px;padding:3px 5px;font-weight:700}
+      .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px}
+      .mp-doc .ph .cat{position:absolute;top:5px;inset-inline-start:5px;background:rgba(255,255,255,.92);
+               color:#0E76AC;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:7px}
+      .mp-doc .body{padding:8px 9px}
+      .mp-doc .name{font-weight:800;font-size:12px;line-height:1.3;color:#0E2A4A}
+      .mp-doc .macros{display:flex;gap:7px;flex-wrap:wrap;font-size:10.5px;color:#47759c;font-weight:700;margin-top:4px}
+      .mp-doc .note{margin-top:5px;font-size:9.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
+            border-radius:7px;padding:3px 6px;font-weight:700}
       .mp-doc .foot{margin:6px 18px 16px;font-size:9.5px;color:#94a3b8;text-align:center}
     </style>
     <div class="mp-doc" dir="rtl">
@@ -403,20 +404,46 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       <div class="foot">ADRENALINE Healthy Food</div>
     </div>`;
 
-  const el = document.createElement("div");
-  el.innerHTML = content;
   const safeName = String(input.title).replace(/[\\/:*?"<>|]+/g, " ").trim() || "meal-plan";
 
-  const html2pdf = (await import("html2pdf.js")).default as any;
-  await html2pdf()
-    .set({
-      margin: 6,
-      filename: `${safeName}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card", ".grp"] },
-    })
-    .from(el)
-    .save();
+  // ✅ صفحة واحدة متصلة بطول المحتوى (لا تقسيم على أوراق A4) — أنسب للاطلاع والإرسال.
+  //    نقيس ارتفاع المحتوى عند العرض الثابت (760px) ونضبط ورقة PDF بنفس النسبة.
+  const PAGE_W = 760; // px — نفس عرض .mp-doc
+  const el = document.createElement("div");
+  el.style.cssText = `position:fixed;left:-10000px;top:0;width:${PAGE_W}px;background:#fff`;
+  el.innerHTML = content;
+  document.body.appendChild(el);
+  // انتظر تحميل الصور حتى يُقاس الارتفاع بدقة
+  await Promise.all(
+    Array.from(el.querySelectorAll("img")).map((img) =>
+      (img as HTMLImageElement).complete
+        ? Promise.resolve()
+        : new Promise<void>((res) => {
+            (img as HTMLImageElement).onload = () => res();
+            (img as HTMLImageElement).onerror = () => res();
+          }),
+    ),
+  );
+  const heightPx = el.scrollHeight;
+
+  try {
+    const mmPerPx = 210 / PAGE_W; // A4 عرض 210مم يقابل 760px
+    const pageWmm = 210;
+    const pageHmm = Math.max(120, heightPx * mmPerPx);
+
+    const html2pdf = (await import("html2pdf.js")).default as any;
+    await html2pdf()
+      .set({
+        margin: 0,
+        filename: `${safeName}.pdf`,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: { scale: 2, useCORS: true, windowWidth: PAGE_W },
+        jsPDF: { unit: "mm", format: [pageWmm, pageHmm], orientation: "portrait" },
+        pagebreak: { mode: [] }, // صفحة واحدة — لا فواصل
+      })
+      .from(el)
+      .save();
+  } finally {
+    el.remove();
+  }
 }
