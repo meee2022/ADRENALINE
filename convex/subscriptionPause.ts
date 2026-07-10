@@ -58,6 +58,8 @@ export const status = query({
       remainingDeliveryDays: remaining,
       totalFrozenDays: history.reduce((s, h) => s + (h.deliveryDays || 0), 0),
       pauseCount: history.length,
+      // ✅ الأيام المتخطّاة القادمة (اليوم فصاعداً) لعرضها مع زر إلغاء التخطّي.
+      skippedDates: skipped.filter((d) => d >= today).sort(),
     };
   },
 });

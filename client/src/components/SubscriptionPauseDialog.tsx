@@ -309,6 +309,58 @@ export function SubscriptionPauseDialog({
                       ? `تخطّي الأيام المختارة (${Object.values(skipPick).filter(Boolean).length})`
                       : `Skip selected days (${Object.values(skipPick).filter(Boolean).length})`}
                   </Button>
+
+                  {/* ✅ الأيام المتخطّاة حالياً — مع زر إلغاء (لو العميل غيّر رأيه) */}
+                  {Array.isArray(status?.skippedDates) && status.skippedDates.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-sm font-bold mb-1 text-amber-700">
+                        {isRtl ? "أيام متخطّاة حالياً" : "Currently skipped days"}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mb-2">
+                        {isRtl
+                          ? "لو العميل غيّر رأيه، اضغط ✕ لإرجاع اليوم (يُسحب تعويضه من نهاية الاشتراك)."
+                          : "If the customer changed their mind, tap ✕ to restore the day (its credit is withdrawn)."}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {status.skippedDates.map((iso: string) => (
+                          <button
+                            key={iso}
+                            type="button"
+                            disabled={busy}
+                            onClick={async () => {
+                              setBusy(true);
+                              try {
+                                const r: any = await setSkippedDays({
+                                  id: customerId as any,
+                                  dates: [iso],
+                                  mode: "unskip",
+                                  sessionToken,
+                                });
+                                if (r?.success) {
+                                  toast({
+                                    title: isRtl ? "تمّ إرجاع اليوم" : "Day restored",
+                                    description: isRtl
+                                      ? `سُحب ${r.withdrawnDeliveryDays} يوم توصيل (النهاية: ${r.newEndDate})`
+                                      : `withdrew ${r.withdrawnDeliveryDays} delivery day(s) (ends: ${r.newEndDate})`,
+                                  });
+                                } else {
+                                  toast({ title: r?.error || (isRtl ? "فشل" : "Failed"), variant: "destructive" });
+                                }
+                              } catch (e: any) {
+                                toast({ title: String(e?.message || e), variant: "destructive" });
+                              } finally {
+                                setBusy(false);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold border border-amber-300 bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                          >
+                            {iso.slice(5)}
+                            <span className="text-amber-600">✕</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
