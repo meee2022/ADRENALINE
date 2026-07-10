@@ -162,10 +162,12 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 </Button>
               )}
 
-              {/* Subscribe Button */}
-              <Button className="hidden md:flex h-10 px-6 rounded-full bg-[#0E76AC] hover:bg-[#47759C] text-white font-bold">
-                {isRtl ? "اشترك الآن" : "Subscribe"}
-              </Button>
+              {/* Subscribe Button — يفتح صفحة الخطط لاختيار باقة */}
+              <a href="/public/plans" className="hidden md:block">
+                <Button className="h-10 px-6 rounded-full bg-[#0E76AC] hover:bg-[#47759C] text-white font-bold">
+                  {isRtl ? "اشترك الآن" : "Subscribe"}
+                </Button>
+              </a>
 
               {/* Mobile Menu Button */}
               <Button
