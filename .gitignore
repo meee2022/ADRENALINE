@@ -62,3 +62,4 @@ attendance-bridge/bridge.lock
 # Deployment artifacts (contain device password)
 adrenaline-bridge.zip
 adrenaline-bridge/
+assets-src/
