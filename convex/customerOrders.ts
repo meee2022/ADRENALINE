@@ -529,3 +529,33 @@ export const updateOrderItemMeal = mutation({
     return { success: true };
   },
 });
+
+/**
+ * ✅ حذف صنف (وجبة) من الطلب قبل الاعتماد، وإعادة حساب إجماليات الطلب.
+ *    تستخدمه الأخصائية في مراجعة الطلب للتجربة أو لإزالة وجبة زائدة.
+ */
+export const removeOrderItem = mutation({
+  args: { itemId: v.id("customerOrderItems"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const item = await ctx.db.get(args.itemId);
+    if (!item) return { success: false, error: "الصنف غير موجود" };
+
+    const orderId = item.orderId;
+    await ctx.db.delete(args.itemId);
+
+    const rest = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", orderId))
+      .collect();
+
+    await ctx.db.patch(orderId, {
+      totalCalories: rest.reduce((s, i) => s + (i.calories || 0), 0),
+      totalPrice: rest.reduce((s, i) => s + (i.priceQAR || 0), 0),
+      totalMeals: rest.length,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, remaining: rest.length };
+  },
+});

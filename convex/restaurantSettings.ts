@@ -16,7 +16,7 @@ export const get = query({
  * ✅ ضبط أسبوع دورة الوجبات الذي يطبخه المطبخ حالياً (1..4).
  *    تستخدمه الأخصائية يدوياً. mutation مستقلة صغيرة حتى لا تُجبَر على
  *    تمرير كل حقول الإعدادات لتغيير رقم واحد.
- *    الضبط اليدوي يُثبّت `cookingWeekAdvancedOn` على سبت هذا الأسبوع حتى لا
+ *    الضبط اليدوي يُثبّت `cookingWeekAdvancedOn` على جمعة هذا الأسبوع حتى لا
  *    يقفز التقدّم التلقائي فوق اختيار الأخصائية في نفس الأسبوع.
  */
 export const setCookingWeek = mutation({
@@ -28,26 +28,27 @@ export const setCookingWeek = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         currentCookingWeek: week,
-        cookingWeekAdvancedOn: lastSaturdayISO(),
+        cookingWeekAdvancedOn: lastFridayISO(),
       });
     }
     return { currentCookingWeek: week };
   },
 });
 
-/** yyyy-MM-dd لآخر سبت (أو اليوم إن كان سبتاً) بتوقيت +03 (قطر). */
-function lastSaturdayISO(now = Date.now()): string {
+/** yyyy-MM-dd لآخر جمعة (أو اليوم إن كان جمعة) بتوقيت +03 (قطر). */
+function lastFridayISO(now = Date.now()): string {
   // قطر +03:00؛ نحسب اليوم المحلي دون مكتبات.
   const qatar = new Date(now + 3 * 60 * 60 * 1000);
   const dow = qatar.getUTCDay(); // بعد الإزاحة، getUTCDay = يوم قطر
-  const back = (dow - 6 + 7) % 7; // السبت = 6
+  const back = (dow - 5 + 7) % 7; // الجمعة = 5
   qatar.setUTCDate(qatar.getUTCDate() - back);
   return qatar.toISOString().slice(0, 10);
 }
 
 /**
- * ✅ التقدّم التلقائي (crons): كل سبت يقدّم أسبوع الدورة +1 (يلفّ 4→1).
- *    محمي بـ`cookingWeekAdvancedOn`: لا يتقدّم أكثر من مرة في نفس السبت،
+ * ✅ التقدّم التلقائي (crons): كل جمعة يقدّم أسبوع الدورة +1 (يلفّ 4→1).
+ *    المطبخ يحضّر الجمعة على الأسبوع الجديد ليوصّل العميل السبت.
+ *    محمي بـ`cookingWeekAdvancedOn`: لا يتقدّم أكثر من مرة في نفس الجمعة،
  *    ولا يتجاوز ضبطاً يدوياً حصل هذا الأسبوع.
  */
 export const advanceCookingWeek = internalMutation({
@@ -56,8 +57,8 @@ export const advanceCookingWeek = internalMutation({
     const settings = await ctx.db.query("restaurantSettings").first();
     if (!settings) return { advanced: false, reason: "no settings" };
 
-    const sat = lastSaturdayISO();
-    if ((settings as any).cookingWeekAdvancedOn === sat) {
+    const fri = lastFridayISO();
+    if ((settings as any).cookingWeekAdvancedOn === fri) {
       return { advanced: false, reason: "already advanced this week", week: (settings as any).currentCookingWeek };
     }
 
@@ -65,9 +66,9 @@ export const advanceCookingWeek = internalMutation({
     const next = (cur % 4) + 1; // 1→2→3→4→1
     await ctx.db.patch(settings._id, {
       currentCookingWeek: next,
-      cookingWeekAdvancedOn: sat,
+      cookingWeekAdvancedOn: fri,
     });
-    return { advanced: true, from: cur, to: next, on: sat };
+    return { advanced: true, from: cur, to: next, on: fri };
   },
 });
 

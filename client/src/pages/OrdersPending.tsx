@@ -130,8 +130,8 @@ export default function OrdersPending() {
         {(settings as any)?.cookingWeekAdvancedOn && (
           <p className="text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-3 py-1.5 w-full">
             {isRtl
-              ? `يتقدّم تلقائياً كل سبت. آخر تقدّم/ضبط: ${(settings as any).cookingWeekAdvancedOn}. لو المطبخ متأخّر، اضبط الرقم يدوياً.`
-              : `Auto-advances every Saturday. Last change: ${(settings as any).cookingWeekAdvancedOn}. If the kitchen is behind, set it manually.`}
+              ? `يتقدّم تلقائياً كل جمعة (يجهّز المطبخ للسبت). آخر تقدّم/ضبط: ${(settings as any).cookingWeekAdvancedOn}. لو المطبخ متأخّر، اضبط الرقم يدوياً.`
+              : `Auto-advances every Friday (kitchen preps for Saturday). Last change: ${(settings as any).cookingWeekAdvancedOn}. If the kitchen is behind, set it manually.`}
           </p>
         )}
       </Card>

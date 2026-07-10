@@ -8,14 +8,14 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 /**
- * تقديم أسبوع دورة الطبخ +1 كل بداية أسبوع توصيل (السبت فجراً بتوقيت قطر).
- * قطر +03:00، فالسبت 00:15 محلياً = الجمعة 21:15 UTC.
- * المهمة نفسها محمية ضد التكرار عبر cookingWeekAdvancedOn، فحتى لو أُعيد
- * تشغيلها لا تتقدّم مرتين في نفس السبت.
+ * تقديم أسبوع دورة الطبخ +1 فجر الجمعة بتوقيت قطر — المطبخ يحضّر الجمعة على
+ * الأسبوع الجديد ليوصّل العميل السبت.
+ * قطر +03:00، فالجمعة 00:15 محلياً = الخميس 21:15 UTC.
+ * محمية ضد التكرار عبر cookingWeekAdvancedOn، فلا تتقدّم مرتين في نفس الجمعة.
  */
 crons.weekly(
   "advance cooking week",
-  { dayOfWeek: "friday", hourUTC: 21, minuteUTC: 15 },
+  { dayOfWeek: "thursday", hourUTC: 21, minuteUTC: 15 },
   internal.restaurantSettings.advanceCookingWeek,
 );
 

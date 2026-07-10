@@ -58,6 +58,7 @@ export default function OrderReviewDetail() {
   const approveMutation = useMutation(api.customerOrders.approve);
   const rejectMutation = useMutation(api.customerOrders.reject);
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
+  const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
 
   // تبديل وجبة اقترحها الـAI قبل الاعتماد
   const allMeals: any[] = useQuery(api.publicMeals.listMeals, {}) || [];
@@ -492,13 +493,29 @@ export default function OrderReviewDetail() {
                                 <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-1 rounded">
                                   {categoryNameAr[meal.category] || meal.category}
                                 </span>
-                                <button
-                                  onClick={() => setSwapTarget(meal)}
-                                  className="text-gray-400 hover:text-primary transition-colors"
-                                  title="تبديل الوجبة"
-                                >
-                                  ✏️
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => setSwapTarget(meal)}
+                                    className="text-gray-400 hover:text-primary transition-colors"
+                                    title="تبديل الوجبة"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`حذف "${meal.mealNameAr}" من الطلب؟`)) return;
+                                      try {
+                                        await removeItemMutation({ itemId: meal._id, sessionToken });
+                                      } catch (e: any) {
+                                        alert(e?.message || "تعذّر الحذف");
+                                      }
+                                    }}
+                                    className="text-gray-400 hover:text-red-600 transition-colors"
+                                    title="حذف الوجبة من الطلب"
+                                  >
+                                    🗑️
+                                  </button>
+                                </div>
                               </div>
                               <h6 className="font-bold text-gray-900 text-sm mb-1">
                                 {meal.mealNameAr}
