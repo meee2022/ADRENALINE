@@ -26,6 +26,15 @@ import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import {
+  getVerifiedPhone,
+  getVerifiedCustomerId,
+  isBrowseOnly,
+  saveVerifiedPhone,
+  saveVerifiedCustomerId,
+  setBrowseOnly,
+  clearIdentity,
+} from "@/lib/customerIdentity";
 
 const DAY_LABEL_AR: Record<string, string> = {
   saturday: "السبت", sunday: "الأحد", monday: "الإثنين",
@@ -34,6 +43,17 @@ const DAY_LABEL_AR: Record<string, string> = {
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
 type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
+
+/** أيام التوصيل: السبت → الأربعاء (الخميس والجمعة إجازة). */
+const DELIVERY_DAYS: DayOfWeek[] = ["saturday", "sunday", "monday", "tuesday", "wednesday"];
+
+/** يوم اليوم لو كان يوم توصيل، وإلا أقرب يوم توصيل قادم (السبت بعد الخميس/الجمعة). */
+function defaultDay(): DayOfWeek {
+  const names: string[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const today = names[new Date().getDay()];
+  if (DELIVERY_DAYS.includes(today as DayOfWeek)) return today as DayOfWeek;
+  return "saturday";
+}
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
@@ -52,14 +72,12 @@ export default function PublicMenuPage() {
   // ─── Phone gate ───
   const [phoneInput, setPhoneInput] = useState("");
   const [verifiedPhone, setVerifiedPhone] = useState<string>(() => {
-    return typeof window !== "undefined" ? (localStorage.getItem("menu_phone") || "") : "";
+    return getVerifiedPhone();
   });
   const [verifiedCustomerId, setVerifiedCustomerId] = useState<string>(() => {
-    return typeof window !== "undefined" ? (localStorage.getItem("menu_customer_id") || "") : "";
+    return getVerifiedCustomerId();
   });
-  const [browseMode, setBrowseMode] = useState<boolean>(() => {
-    return typeof window !== "undefined" ? localStorage.getItem("menu_browse") === "1" : false;
-  });
+  const [browseMode, setBrowseMode] = useState<boolean>(() => isBrowseOnly());
   const [phoneError, setPhoneError] = useState("");
 
   // ✅ البحث يجري على السيرفر ويُرجع حقولاً محدودة للرقم المطلوب وحده.
@@ -89,13 +107,13 @@ export default function PublicMenuPage() {
       return;
     }
     setVerifiedPhone(normalized);
-    localStorage.setItem("menu_phone", normalized);
+    saveVerifiedPhone(normalized);
     // customer will be picked from results below
   };
 
   const handlePickCustomer = (customer: any) => {
     setVerifiedCustomerId(String(customer._id));
-    localStorage.setItem("menu_customer_id", String(customer._id));
+    saveVerifiedCustomerId(String(customer._id));
   };
 
   const handleResetPhone = () => {
@@ -103,14 +121,12 @@ export default function PublicMenuPage() {
     setVerifiedCustomerId("");
     setPhoneInput("");
     setBrowseMode(false);
-    localStorage.removeItem("menu_phone");
-    localStorage.removeItem("menu_customer_id");
-    localStorage.removeItem("menu_browse");
+    clearIdentity();
   };
 
   const handleBrowseOnly = () => {
     setBrowseMode(true);
-    localStorage.setItem("menu_browse", "1");
+    setBrowseOnly();
   };
 
   const handleSignupViaWhatsApp = () => {
@@ -122,13 +138,20 @@ export default function PublicMenuPage() {
 
   // NEW: Week & Day selection
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(null);
+  // ✅ نبدأ بيوم اليوم (أو أقرب يوم توصيل) بدل إجبار العميل على اختيار يوم
+  //    قبل أن يستطيع إضافة أي وجبة.
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(() => defaultDay());
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState<boolean>(false);
 
   // ─── Subscription limits + warnings ───
-  const mealsPerDay = verifiedCustomer?.mealsPerDay ?? 0;
-  const snacksPerDay = verifiedCustomer?.snacksPerDay ?? 0;
+  // ⚠️ سجلّات قديمة قد تكون mealsPerDay = 0 (لم تُملأ عند الإدخال). كان الشرط
+  //    `mainMealsToday >= 0` يتحقق فوراً فيُمنع المشترك من إضافة أي وجبة برسالة
+  //    "وصلت للحد الأقصى (0)". صفر = لا يوجد حدّ مسجّل، لا "ممنوع".
+  const mealsPerDay = Number(verifiedCustomer?.mealsPerDay) || Infinity;
+  const snacksPerDay = Number(verifiedCustomer?.snacksPerDay) || Infinity;
+  const hasMealLimit = Number.isFinite(mealsPerDay);
+  const hasSnackLimit = Number.isFinite(snacksPerDay);
 
   // Count what's selected for current day
   const selectedToday = items.filter(
@@ -615,10 +638,12 @@ export default function PublicMenuPage() {
 
             {/* Plan info */}
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full"
-                style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
-                {mealsPerDay} {isRtl ? "وجبات" : "meals"} + {snacksPerDay} {isRtl ? "سناك" : "snacks"} {isRtl ? "يومياً" : "/day"}
-              </span>
+              {(hasMealLimit || hasSnackLimit) && (
+                <span className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full"
+                  style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
+                  {hasMealLimit ? mealsPerDay : "—"} {isRtl ? "وجبات" : "meals"} + {hasSnackLimit ? snacksPerDay : "—"} {isRtl ? "سناك" : "snacks"} {isRtl ? "يومياً" : "/day"}
+                </span>
+              )}
               {cust?.program && (
                 <span className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full"
                   style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)" }}>
@@ -758,7 +783,8 @@ export default function PublicMenuPage() {
               {days.map((day) => (
                 <button
                   key={day.value}
-                  onClick={() => setSelectedDay(selectedDay === day.value ? null : day.value)}
+                  // يوم واحد مختار دائماً — إلغاء الاختيار كان يعيد العميل لرسالة "اختر اليوم أولاً"
+                  onClick={() => setSelectedDay(day.value)}
                   className={cn(
                     "px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all",
                     selectedDay === day.value
@@ -803,7 +829,8 @@ export default function PublicMenuPage() {
                     <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "الوجبات" : "Meals"}</p>
                     <p className="text-lg font-black tabular-nums leading-none mt-1"
                       style={{ color: mainMealsToday >= mealsPerDay ? "#10b981" : "#3CC4F0" }}>
-                      {mainMealsToday}<span className="text-xs text-gray-400">/{mealsPerDay}</span>
+                      {mainMealsToday}
+                      {hasMealLimit && <span className="text-xs text-gray-400">/{mealsPerDay}</span>}
                     </p>
                   </div>
                   {/* Snacks counter */}
@@ -811,7 +838,8 @@ export default function PublicMenuPage() {
                     style={{ border: `2px solid ${snacksToday >= snacksPerDay ? "#10b981" : "#10b981"}` }}>
                     <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "السناك" : "Snacks"}</p>
                     <p className="text-lg font-black tabular-nums leading-none mt-1 text-emerald-600">
-                      {snacksToday}<span className="text-xs text-gray-400">/{snacksPerDay}</span>
+                      {snacksToday}
+                      {hasSnackLimit && <span className="text-xs text-gray-400">/{snacksPerDay}</span>}
                     </p>
                   </div>
                   {/* Status pill */}

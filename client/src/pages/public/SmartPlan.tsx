@@ -12,6 +12,7 @@ import { useSeo } from "@/lib/seo";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles } from "lucide-react";
+import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 const WEEKDAYS_AR: Record<string,string> = {
@@ -42,7 +43,9 @@ export default function SmartPlan() {
   const bestSellers = useQuery((api.publicMeals as any).bestSellers, { limit: 4 }) || [];
 
   const [mode, setMode] = useState<"day" | "week">("day");
-  const [phone, setPhone] = useState("");
+  // ✅ الرقم اللي أدخله العميل في المنيو — لا نسأله عنه مرة ثانية
+  const [phone, setPhone] = useState<string>(() => getVerifiedPhone());
+  const [changingPhone, setChangingPhone] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);   // خطة اليوم
   const [weekly, setWeekly] = useState<any>(null);    // خطة الأسبوع
@@ -166,11 +169,35 @@ export default function SmartPlan() {
           </div>
 
           {loggedInId ? (
+            /* 1) مسجّل دخول — لا سؤال أصلاً */
             <button onClick={() => run(true)} disabled={loading}
               style={btnPrimary(loading)}>
               {loading ? t("جاري التوليد…", "Generating…") : t(`توليد خطتي (${currentCustomer?.fullName || "حسابي"})`, `Generate my plan (${currentCustomer?.fullName || "my account"})`)}
             </button>
+          ) : phone.trim().length >= 6 && !changingPhone ? (
+            /* 2) رقمه محفوظ من المنيو — نعرضه ونمضي، بلا إعادة إدخال */
+            <>
+              <p style={{ fontSize: 14, color: B.ink2, margin: "0 0 12px", fontWeight: 700 }}>
+                {t("سنولّد الخطة على رقمك:", "We'll build the plan for your number:")}{" "}
+                <span dir="ltr" style={{ fontWeight: 900, color: B.accent }}>{phone}</span>
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <button onClick={() => run(false)} disabled={loading} style={btnPrimary(loading)}>
+                  {loading ? t("جاري التوليد…", "Generating…") : t("ولّد خطتي", "Generate my plan")}
+                </button>
+                <button
+                  onClick={() => setChangingPhone(true)}
+                  style={{
+                    background: "none", border: "none", cursor: "pointer",
+                    color: B.ink2, fontWeight: 700, fontSize: 13,
+                    textDecoration: "underline", fontFamily: "'Cairo',sans-serif",
+                  }}>
+                  {t("رقم مختلف؟", "Different number?")}
+                </button>
+              </div>
+            </>
           ) : (
+            /* 3) أول مرة — نسأل مرة واحدة ونحفظ الرقم للمنيو أيضاً */
             <>
               <p style={{ fontSize: 14, color: B.ink2, margin: "0 0 12px", fontWeight: 700 }}>
                 {t("أدخل رقم هاتفك لجلب بيانات اشتراكك (أو سجّل الدخول):", "Enter your phone to fetch your subscription (or sign in):")}
@@ -182,7 +209,8 @@ export default function SmartPlan() {
                     flex: 1, minWidth: 200, padding: "12px 16px", borderRadius: 12,
                     border: `1px solid ${B.line}`, fontSize: 15, fontFamily: "'Cairo',sans-serif",
                   }} />
-                <button onClick={() => run(false)} disabled={loading || phone.trim().length < 6}
+                <button onClick={() => { saveVerifiedPhone(phone); setChangingPhone(false); run(false); }}
+                  disabled={loading || phone.trim().length < 6}
                   style={btnPrimary(loading || phone.trim().length < 6)}>
                   {loading ? t("جاري التوليد…", "Generating…") : t("ولّد خطتي", "Generate my plan")}
                 </button>
