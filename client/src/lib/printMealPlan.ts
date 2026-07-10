@@ -410,10 +410,11 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
   //    نقيس ارتفاع المحتوى عند العرض الثابت (760px) ونضبط ورقة PDF بنفس النسبة.
   const PAGE_W = 760; // px — نفس عرض .mp-doc
   const el = document.createElement("div");
-  el.style.cssText = `position:fixed;left:-10000px;top:0;width:${PAGE_W}px;background:#fff`;
+  // ⚠️ absolute (لا fixed) وضمن تدفّق الصفحة — html2canvas يفشل مع position:fixed.
+  el.style.cssText = `position:absolute;left:-10000px;top:0;width:${PAGE_W}px;background:#ffffff`;
   el.innerHTML = content;
   document.body.appendChild(el);
-  // انتظر تحميل الصور حتى يُقاس الارتفاع بدقة
+  // انتظر تحميل الصور حتى يُقاس الارتفاع بدقة وتُرسم في الـ canvas
   await Promise.all(
     Array.from(el.querySelectorAll("img")).map((img) =>
       (img as HTMLImageElement).complete
@@ -429,7 +430,7 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
   try {
     const mmPerPx = 210 / PAGE_W; // A4 عرض 210مم يقابل 760px
     const pageWmm = 210;
-    const pageHmm = Math.max(120, heightPx * mmPerPx);
+    const pageHmm = Math.max(120, Math.round(heightPx * mmPerPx) + 4);
 
     const html2pdf = (await import("html2pdf.js")).default as any;
     await html2pdf()
@@ -437,9 +438,10 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
         margin: 0,
         filename: `${safeName}.pdf`,
         image: { type: "jpeg", quality: 0.95 },
-        html2canvas: { scale: 2, useCORS: true, windowWidth: PAGE_W },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
         jsPDF: { unit: "mm", format: [pageWmm, pageHmm], orientation: "portrait" },
-        pagebreak: { mode: [] }, // صفحة واحدة — لا فواصل
+        // صفحة واحدة طويلة، لكن نُبقي mode صالحاً حتى لا يفشل الرسم.
+        pagebreak: { mode: ["css", "legacy"] },
       })
       .from(el)
       .save();
