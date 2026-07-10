@@ -9,7 +9,7 @@ import { ar } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Printer } from "lucide-react";
-import { printWeeklyReport } from "@/lib/printMealPlan";
+import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import type { Id } from "@/../../convex/_generated/dataModel";
@@ -268,67 +268,63 @@ export default function OrderReviewDetail() {
       : "غير محدد";
   })();
 
-  /** اسم اليوم بالإنجليزية كما يظهر في التقرير المرسل للعميل. */
-  const DAY_EN: Record<string, string> = {
-    saturday: "Saturday", sunday: "Sunday", monday: "Monday",
-    tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday", friday: "Friday",
-  };
-
-  /**
-   * يوزّع وجبات يوم واحد على أعمدة التقرير.
-   * أي وجبة لا تجد عمودها (سلطة، سناك ثالث…) تذهب إلى Extra — لا تُسقط أبداً.
-   */
-  const buildDayRow = (dayKey: string, dayItems: any[]) => {
-    const mealName = (it: any) => it.mealNameEn || it.mealNameAr || "-";
-    const of = (cat: string) =>
-      dayItems.filter((it) => String(it.category).toLowerCase() === cat).map(mealName);
-
-    const snacks = of("snack");
-    const known = new Set(["breakfast", "snack", "lunch", "dinner"]);
-
-    return {
-      day: DAY_EN[dayKey] || dayKey,
-      breakfast: of("breakfast"),
-      snack1: snacks.slice(0, 1),
-      lunch: of("lunch"),
-      snack2: snacks.slice(1, 2),
-      dinner: of("dinner"),
-      extra: [
-        // أصناف غير معروفة (salad…)
-        ...dayItems.filter((it) => !known.has(String(it.category).toLowerCase())).map(mealName),
-        // سناك ثالث فما فوق
-        ...snacks.slice(2),
-      ],
-    };
-  };
-
-  /** التقرير الأسبوعي المرسل للعميل: الأيام صفوف، الأصناف أعمدة. */
-  const handlePrintPlan = () => {
+  /** التقرير المرسل للعميل — التصميم الفخم بالصور (نفس شكل المنيو/الخطة الذكية). */
+  const [downloadingPlan, setDownloadingPlan] = useState(false);
+  const handlePrintPlan = async () => {
+    if (downloadingPlan) return;
     const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
     const note = [
-      linked?.allergies ? `Allergies: ${linked.allergies}` : "",
-      linked?.avoid ? `Avoid: ${linked.avoid}` : "",
-      linked?.preferences ? `Preferences: ${linked.preferences}` : "",
-      linked?.portions ? `Portions: ${linked.portions}` : "",
+      linked?.allergies ? `الحساسية: ${linked.allergies}` : "",
+      linked?.avoid ? `ممنوعات: ${linked.avoid}` : "",
+      linked?.preferences ? `تفضيلات: ${linked.preferences}` : "",
+      linked?.portions ? `كميات: ${linked.portions}` : "",
     ]
       .filter(Boolean)
       .join("  •  ");
 
-    printWeeklyReport({
-      customerName: order.customerName || "—",
-      phone: order.customerPhone || undefined,
-      dateText: createdDate,
-      note: note || undefined,
-      weeks: weeks.map((w) => {
-        const days = Object.keys(groupedByWeek[w]).sort(
-          (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
-        );
-        return {
-          title: `week${w}`,
-          days: days.map((d) => buildDayRow(d, groupedByWeek[w][d])),
-        };
-      }),
+    const groups = weeks.map((w) => {
+      const days = Object.keys(groupedByWeek[w]).sort(
+        (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
+      );
+      return {
+        title: `الأسبوع (دورة ${w})`,
+        sections: days.map((d) => ({
+          title: dayNameAr[d] || d,
+          rows: groupedByWeek[w][d].map((it: any, i: number) => ({
+            label: String(i + 1),
+            category: categoryNameAr[it.category] || it.category || "",
+            meal: it.mealNameAr || it.mealNameEn || "-",
+            notes: [it.avoid, it.preferences, it.portions, it.specialNotes]
+              .map((x) => String(x || "").trim()).filter(Boolean).join(" • "),
+            calories: it.calories ?? "",
+            protein: it.protein ?? "",
+            imageUrl: it.imageUrl || undefined,
+          })),
+        })),
+      };
     });
+
+    const totalMeals = weeks.reduce(
+      (s, w) => s + Object.values(groupedByWeek[w]).reduce((a: number, arr: any) => a + arr.length, 0),
+      0,
+    );
+
+    setDownloadingPlan(true);
+    try {
+      await printMealPlanCards({
+        title: `جدول وجبات — ${order.customerName || "—"}`,
+        subtitle: [order.customerPhone, note].filter(Boolean).join("  ·  ") || undefined,
+        kpis: [
+          { label: "عدد الأسابيع", value: weeks.length },
+          { label: "إجمالي الوجبات", value: totalMeals },
+        ],
+        groups,
+      });
+    } catch (e: any) {
+      alert("تعذّر التحميل: " + String(e?.message || e));
+    } finally {
+      setDownloadingPlan(false);
+    }
   };
 
   return (
@@ -341,10 +337,11 @@ export default function OrderReviewDetail() {
         <Button
           variant="outline"
           onClick={handlePrintPlan}
+          disabled={downloadingPlan}
           className="font-bold border-[#3cc4f0] text-[#0E76AC]"
         >
           <Printer className="h-4 w-4 ml-2" />
-          تنزيل / طباعة جدول الوجبات
+          {downloadingPlan ? "جاري تجهيز الملف…" : "تنزيل جدول الوجبات PDF"}
         </Button>
       </div>
 
