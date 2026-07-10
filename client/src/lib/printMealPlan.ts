@@ -377,19 +377,19 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       .mp-doc .day-h{background:#0E2A4A;color:#fff;padding:6px 12px;display:flex;justify-content:space-between;align-items:center}
       .mp-doc .day-t{font-weight:800;font-size:13px}
       .mp-doc .day-n{font-size:10px;background:rgba(255,255,255,.16);border-radius:50px;padding:2px 8px}
-      /* نفس مقاسات كروت الخطة الذكية — صف من ~4 كروت، مقروء على الموبايل */
-      .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;padding:10px}
-      .mp-doc .card{border:1px solid #eef1f4;border-radius:11px;overflow:hidden;background:#f7fbfe}
-      .mp-doc .ph{position:relative;height:84px;background:#eaf3fb}
+      /* كروت مُصغّرة — ~5-6 كروت في الصف، مضغوطة وأنضف */
+      .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:7px;padding:9px}
+      .mp-doc .card{border:1px solid #eef1f4;border-radius:9px;overflow:hidden;background:#f7fbfe}
+      .mp-doc .ph{position:relative;height:66px;background:#eaf3fb}
       .mp-doc .ph img{width:100%;height:100%;object-fit:cover;display:block}
-      .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:24px}
-      .mp-doc .ph .cat{position:absolute;top:5px;inset-inline-start:5px;background:rgba(255,255,255,.92);
-               color:#0E76AC;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:7px}
-      .mp-doc .body{padding:8px 9px}
-      .mp-doc .name{font-weight:800;font-size:12px;line-height:1.3;color:#0E2A4A}
-      .mp-doc .macros{display:flex;gap:7px;flex-wrap:wrap;font-size:10.5px;color:#47759c;font-weight:700;margin-top:4px}
-      .mp-doc .note{margin-top:5px;font-size:9.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
-            border-radius:7px;padding:3px 6px;font-weight:700}
+      .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px}
+      .mp-doc .ph .cat{position:absolute;top:4px;inset-inline-start:4px;background:rgba(255,255,255,.92);
+               color:#0E76AC;font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:6px}
+      .mp-doc .body{padding:6px 7px}
+      .mp-doc .name{font-weight:800;font-size:10.5px;line-height:1.28;color:#0E2A4A}
+      .mp-doc .macros{display:flex;gap:6px;flex-wrap:wrap;font-size:9px;color:#47759c;font-weight:700;margin-top:3px}
+      .mp-doc .note{margin-top:4px;font-size:8.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
+            border-radius:6px;padding:3px 5px;font-weight:700}
       .mp-doc .foot{margin:6px 18px 16px;font-size:9.5px;color:#94a3b8;text-align:center}
     </style>
     <div class="mp-doc" dir="rtl">
