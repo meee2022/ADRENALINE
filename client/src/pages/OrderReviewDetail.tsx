@@ -42,6 +42,7 @@ export default function OrderReviewDetail() {
   const [approveNotes, setApproveNotes] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<Id<"customers"> | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined); // ✅ تاريخ بداية التوصيل
+  const [downloadingPlan, setDownloadingPlan] = useState(false);
   // ✅ تواريخ يدوية لـ (week, day) — اختيارية، تطغى على التاريخ المحسوب
   const [dateOverrides, setDateOverrides] = useState<Record<string, Date | undefined>>({});
 
@@ -269,7 +270,6 @@ export default function OrderReviewDetail() {
   })();
 
   /** التقرير المرسل للعميل — التصميم الفخم بالصور (نفس شكل المنيو/الخطة الذكية). */
-  const [downloadingPlan, setDownloadingPlan] = useState(false);
   const handlePrintPlan = async () => {
     if (downloadingPlan) return;
     const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
