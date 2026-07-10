@@ -9,7 +9,7 @@
  *   - مسار التليفون يرجّع الحد الأدنى من البيانات اللازمة للتوليد فقط.
  */
 import { action, query } from "./_generated/server";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
 
 // ─── أسماء أيام الأسبوع (تطابق publicMeals.schedule.day) ───
@@ -199,6 +199,19 @@ export const chat = action({
   },
   handler: async (ctx, args): Promise<any> => {
     const isEn = args.lang === "en";
+
+    // 💸 دلو عام: سقف تكلفة مطلق على المساعد الذكي (نقطة نهاية عامة)
+    const gate = await ctx.runMutation(internal.rateLimit.consume, {
+      key: "ai:chat",
+      limit: 120,
+      windowMs: 10 * 60 * 1000,
+    });
+    if (!gate.ok) {
+      return { ok: false, reply: isEn
+        ? "The assistant is busy right now. Please try again in a few minutes."
+        : "المساعد مشغول حالياً. جرّب بعد دقائق قليلة." };
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { ok: false, reply: isEn
@@ -344,6 +357,15 @@ export const generateSmartPlan = action({
     phone: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
+    // 💸 حدّ معدّل: لكل هاتف + دلو عام (استدعاء مدفوع لواجهة Anthropic)
+    const rlKey = args.phone ? `ai:generateSmartPlan:${args.phone}` : "ai:generateSmartPlan:anon";
+    for (const [key, limit] of [[rlKey, 6], ["ai:generateSmartPlan:global", 60]] as const) {
+      const gate = await ctx.runMutation(internal.rateLimit.consume, {
+        key, limit, windowMs: 10 * 60 * 1000,
+      });
+      if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+    }
+
     // اسم اليوم + التاريخ (يُحسبان هنا في الـaction)
     const now = new Date();
     const todayDay = WEEKDAYS[now.getDay()];
@@ -405,6 +427,15 @@ export const generateWeeklyPlan = action({
     startDate: v.optional(v.string()), // yyyy-MM-dd (افتراضي: أقرب يوم عمل من اليوم)
   },
   handler: async (ctx, args): Promise<any> => {
+    // 💸 حدّ معدّل: لكل هاتف + دلو عام (استدعاء مدفوع لواجهة Anthropic)
+    const rlKey = args.phone ? `ai:generateWeeklyPlan:${args.phone}` : "ai:generateWeeklyPlan:anon";
+    for (const [key, limit] of [[rlKey, 6], ["ai:generateWeeklyPlan:global", 60]] as const) {
+      const gate = await ctx.runMutation(internal.rateLimit.consume, {
+        key, limit, windowMs: 10 * 60 * 1000,
+      });
+      if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     // نبدأ من startDate أو من اليوم، ونتقدّم حتى نجمع 5 أيام عمل

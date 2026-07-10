@@ -43,6 +43,7 @@ import type * as payroll from "../payroll.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
+import type * as rateLimit from "../rateLimit.js";
 import type * as ratings from "../ratings.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
@@ -100,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
   purchaseOrders: typeof purchaseOrders;
+  rateLimit: typeof rateLimit;
   ratings: typeof ratings;
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;

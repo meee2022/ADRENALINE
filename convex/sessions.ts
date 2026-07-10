@@ -111,6 +111,28 @@ export async function requireStaffOrSubscriptionOwner(
   return id;
 }
 
+/**
+ * يبطل كل جلسات حساب معيّن. يُستدعى عند تغيير/إعادة تعيين كلمة المرور:
+ * من سرق توكناً يجب ألا يظل داخلاً بعد أن يغيّر الضحية كلمة مروره.
+ */
+export async function destroyAllSessionsFor(
+  ctx: MutationCtx,
+  opts: { userId?: string; customerAccountId?: string },
+): Promise<number> {
+  const all = await ctx.db.query("sessions").collect();
+  let n = 0;
+  for (const s of all) {
+    const match =
+      (opts.userId && String(s.userId) === String(opts.userId)) ||
+      (opts.customerAccountId && String(s.customerAccountId) === String(opts.customerAccountId));
+    if (match) {
+      await ctx.db.delete(s._id);
+      n++;
+    }
+  }
+  return n;
+}
+
 /** حذف جلسة (تسجيل خروج) */
 export async function destroySession(ctx: MutationCtx, token?: string | null): Promise<void> {
   if (!token) return;

@@ -5,8 +5,60 @@
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
 import { verifyPassword } from "./passwords";
-import { createSession, destroySession } from "./sessions";
+import { createSession, destroySession, requireAdmin } from "./sessions";
 import { findStaffByEmail, findCustomerByEmail } from "./accountLookup";
+
+/* ═══════════ تحديد محاولات تسجيل الدخول (منع تخمين كلمة المرور) ═══════════ */
+
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // نافذة 15 دقيقة
+const MAX_ATTEMPTS = 5;
+const THROTTLED = "محاولات كثيرة — حاول مرة أخرى بعد 15 دقيقة";
+
+const attemptKey = (email: string) => String(email || "").trim().toLowerCase();
+
+/** يرمي خطأً إذا تجاوز البريد الحدّ. يُستدعى قبل أي مقارنة لكلمة المرور. */
+async function assertNotThrottled(ctx: any, email: string) {
+  const key = attemptKey(email);
+  const row = await ctx.db
+    .query("loginAttempts")
+    .withIndex("by_key", (q: any) => q.eq("key", key))
+    .first();
+  if (!row) return;
+  // انتهت النافذة → صفّر العدّاد
+  if (Date.now() - row.firstAt > ATTEMPT_WINDOW_MS) {
+    await ctx.db.delete(row._id);
+    return;
+  }
+  if (row.count >= MAX_ATTEMPTS) throw new Error(THROTTLED);
+}
+
+/** يسجّل محاولة فاشلة. */
+async function recordFailure(ctx: any, email: string) {
+  const key = attemptKey(email);
+  const now = Date.now();
+  const row = await ctx.db
+    .query("loginAttempts")
+    .withIndex("by_key", (q: any) => q.eq("key", key))
+    .first();
+  if (!row) {
+    await ctx.db.insert("loginAttempts", { key, count: 1, firstAt: now, lastAt: now });
+    return;
+  }
+  if (now - row.firstAt > ATTEMPT_WINDOW_MS) {
+    await ctx.db.patch(row._id, { count: 1, firstAt: now, lastAt: now });
+  } else {
+    await ctx.db.patch(row._id, { count: row.count + 1, lastAt: now });
+  }
+}
+
+/** ينظّف العدّاد بعد نجاح الدخول. */
+async function clearFailures(ctx: any, email: string) {
+  const row = await ctx.db
+    .query("loginAttempts")
+    .withIndex("by_key", (q: any) => q.eq("key", attemptKey(email)))
+    .first();
+  if (row) await ctx.db.delete(row._id);
+}
 
 /**
  * Unified authentication - checks both users and customerAccounts tables.
@@ -18,6 +70,9 @@ export const authenticateUnified = mutation({
     password: v.string(),
   },
   handler: async (ctx, args) => {
+    // 🔒 قبل أي مقارنة لكلمة المرور
+    await assertNotThrottled(ctx, args.email);
+
     // رسالة موحّدة لمنع كشف وجود البريد (user enumeration)
     const INVALID = { success: false as const, error: "بيانات الدخول غير صحيحة" };
 
@@ -30,9 +85,11 @@ export const authenticateUnified = mutation({
       }
 
       if (!(await verifyPassword(args.password, user.passwordHash))) {
+        await recordFailure(ctx, args.email);
         return INVALID;
       }
 
+      await clearFailures(ctx, args.email);
       const sessionToken = await createSession(ctx, {
         accountType: "staff",
         userId: user._id,
@@ -62,9 +119,11 @@ export const authenticateUnified = mutation({
       }
 
       if (!(await verifyPassword(args.password, customer.passwordHash))) {
+        await recordFailure(ctx, args.email);
         return INVALID;
       }
 
+      await clearFailures(ctx, args.email);
       const sessionToken = await createSession(ctx, {
         accountType: "customer",
         customerAccountId: customer._id,
@@ -84,8 +143,33 @@ export const authenticateUnified = mutation({
       };
     }
 
-    // Not found in either table — رسالة موحّدة
+    // Not found in either table — رسالة موحّدة (ونحتسبها محاولة فاشلة أيضاً)
+    await recordFailure(ctx, args.email);
     return INVALID;
+  },
+});
+
+/**
+ * فكّ حظر بريد قُفل بعد محاولات كثيرة (للأدمن، أو للطوارئ من CLI).
+ * بلا وسيط `email` يمسح كل العدّادات.
+ */
+export const clearLoginAttempts = mutation({
+  args: { email: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    // متاح من CLI بلا توكن فقط عندما تُفعَّل الصلاحية الطارئة صراحةً،
+    // وإلا فهو للأدمن. هذا يمنع مهاجماً من مسح عدّاده بنفسه.
+    if (process.env.ALLOW_UNLOCK_FROM_CLI !== "true") {
+      await requireAdmin(ctx, args.sessionToken);
+    }
+    const rows = await ctx.db.query("loginAttempts").collect();
+    let cleared = 0;
+    for (const r of rows) {
+      if (!args.email || r.key === attemptKey(args.email)) {
+        await ctx.db.delete(r._id);
+        cleared++;
+      }
+    }
+    return { cleared };
   },
 });
 

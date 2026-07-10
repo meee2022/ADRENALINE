@@ -11,6 +11,29 @@
   to = "/index.html"
   status = 200
 
+# ═══════════════════════════════════════════════════════════════
+# ترويسات الأمان
+# ═══════════════════════════════════════════════════════════════
+# ⚠️ الـCSP في وضع Report-Only عمداً: تُسجَّل المخالفات في console
+#    المتصفح ولا تُمنع. راقب أسبوعاً، وإذا لم تظهر مخالفات حقيقية
+#    غيّر الاسم إلى Content-Security-Policy لتفعيل المنع.
+#
+# المصادر مستخرَجة من الكود الفعلي:
+#   convex.cloud  — البيانات (fetch + websocket) والصور المخزّنة
+#   fonts.g*      — خطوط Google في index.html
+#   *.tile.openstreetmap.org — بلاطات خرائط Leaflet (DeliveryMap/LocationPicker)
+#   images.unsplash.com — صور احتياطية للوجبات
+#   'unsafe-inline' في script-src مطلوب مؤقتاً لـ JSON-LD المضمَّن.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(self), camera=(), microphone=(), payment=(), usb=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.convex.cloud https://images.unsplash.com https://*.tile.openstreetmap.org; connect-src 'self' https://*.convex.cloud wss://*.convex.cloud; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
 # Cache static assets aggressively
 [[headers]]
   for = "/assets/*"

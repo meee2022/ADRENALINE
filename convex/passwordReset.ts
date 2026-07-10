@@ -12,6 +12,7 @@ import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { hashPassword } from "./passwords";
 import { findAccountByEmail } from "./accountLookup";
+import { destroyAllSessionsFor } from "./sessions";
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 دقائق
 const MAX_ATTEMPTS = 5;
@@ -102,8 +103,8 @@ export const requestReset = action({
 export const verifyAndReset = mutation({
   args: { email: v.string(), code: v.string(), newPassword: v.string() },
   handler: async (ctx, args) => {
-    if (args.newPassword.length < 6) {
-      return { success: false, error: "كلمة المرور يجب أن تكون 6 أحرف على الأقل" };
+    if (args.newPassword.length < 8) {
+      return { success: false, error: "كلمة المرور يجب أن تكون 8 أحرف على الأقل" };
     }
     const email = normEmail(args.email);
     const record = await ctx.db.query("passwordResetCodes").withIndex("by_email", (q) => q.eq("email", email)).first();
@@ -132,6 +133,15 @@ export const verifyAndReset = mutation({
 
     await ctx.db.patch(found.doc._id, { passwordHash: await hashPassword(args.newPassword), updatedAt: Date.now() });
     await ctx.db.delete(record._id);
-    return { success: true };
+
+    // 🔒 أبطل كل الجلسات القديمة — من سرق توكناً يجب أن يخرج
+    const revoked = await destroyAllSessionsFor(
+      ctx,
+      found.kind === "staff"
+        ? { userId: String(found.doc._id) }
+        : { customerAccountId: String(found.doc._id) },
+    );
+
+    return { success: true, revokedSessions: revoked };
   },
 });

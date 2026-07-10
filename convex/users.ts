@@ -5,7 +5,16 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword } from "./passwords";
-import { requireAdmin, requireStaff } from "./sessions";
+import { requireAdmin, requireStaff, destroyAllSessionsFor } from "./sessions";
+
+/** أقل طول مقبول لكلمة المرور — مطابق لما تفرضه شاشة استعادة كلمة المرور. */
+const MIN_PASSWORD_LENGTH = 8;
+
+function assertStrongEnough(password: string) {
+  if (!password || password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(`كلمة المرور يجب أن تكون ${MIN_PASSWORD_LENGTH} أحرف على الأقل`);
+  }
+}
 
 /**
  * Simple hash function for passwords (FOR DEMO ONLY)
@@ -80,6 +89,7 @@ export const createUser = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
+    assertStrongEnough(args.password);
     // Check if user already exists
     const existing = await ctx.db
       .query("users")
@@ -135,11 +145,14 @@ export const changePassword = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
+    assertStrongEnough(args.newPassword);
     const passwordHash = await hashPassword(args.newPassword);
     await ctx.db.patch(args.userId, {
       passwordHash,
       updatedAt: Date.now(),
     });
+    // 🔒 أبطل جلسات هذا الموظف بعد تغيير كلمة مروره
+    await destroyAllSessionsFor(ctx, { userId: String(args.userId) });
   },
 });
 

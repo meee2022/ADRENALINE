@@ -171,6 +171,28 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
 
+  /**
+   * محاولات تسجيل الدخول الفاشلة — لمنع تخمين كلمات المرور.
+   * المفتاح = البريد بحروف صغيرة. يُحذف الصف عند نجاح الدخول.
+   */
+  loginAttempts: defineTable({
+    key: v.string(),
+    count: v.number(),
+    firstAt: v.number(),
+    lastAt: v.number(),
+  }).index("by_key", ["key"]),
+
+  /**
+   * دلاء تحديد المعدّل للدوال العامة المكلِّفة (استدعاءات الذكاء الاصطناعي).
+   * Convex لا يكشف عنوان IP، لذلك المفتاح = اسم الدالة (دلو عام) أو
+   * "الدالة:الهاتف" عند توفّره.
+   */
+  rateLimits: defineTable({
+    key: v.string(),
+    count: v.number(),
+    windowStart: v.number(),
+  }).index("by_key", ["key"]),
+
   // ===== Customer Accounts (for public login) =====
   customerAccounts: defineTable({
     email: v.string(),
