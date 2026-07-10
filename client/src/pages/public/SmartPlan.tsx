@@ -46,6 +46,25 @@ export default function SmartPlan() {
   // ✅ الرقم اللي أدخله العميل في المنيو — لا نسأله عنه مرة ثانية
   const [phone, setPhone] = useState<string>(() => getVerifiedPhone());
   const [changingPhone, setChangingPhone] = useState(false);
+
+  /**
+   * ✅ نجلب المشترك بالرقم كما تفعل صفحة الطلب اليدوي.
+   * بدونه كان الطلب يُسجَّل باسم "AI customer" حرفياً وبلا customerId،
+   * فيصل للأخصائية مجهولاً وغير مرتبط باشتراك.
+   */
+  const matchesByPhone = useQuery(
+    api.customers.findPublicByPhone,
+    !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim() } : "skip",
+  ) as any[] | undefined;
+  const matchedCustomer = matchesByPhone?.[0] ?? null;
+
+  /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
+  const orderIdentity = () => ({
+    customerName:
+      currentCustomer?.fullName || matchedCustomer?.fullName || "عميل غير مسجّل",
+    customerPhone: currentCustomer?.phone || phone.trim() || "—",
+    customerId: ((currentCustomer?.customerId as any) || (matchedCustomer?._id as any)) || undefined,
+  });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);   // خطة اليوم
   const [weekly, setWeekly] = useState<any>(null);    // خطة الأسبوع
@@ -73,9 +92,7 @@ export default function SmartPlan() {
       const totalPrice = items.reduce((s, i) => s + (i.priceQAR || 0), 0);
       const totalCalories = items.reduce((s, i) => s + (i.calories || 0), 0);
       const res: any = await createOrder({
-        customerName: currentCustomer?.fullName || "AI customer",
-        customerPhone: currentCustomer?.phone || phone.trim() || "—",
-        customerId: (currentCustomer?.customerId as any) || undefined,
+        ...orderIdentity(),
         totalMeals: items.length, totalPrice, totalCalories, items,
         notes: "Weekly plan from the smart meal generator",
       });
@@ -100,9 +117,7 @@ export default function SmartPlan() {
       const totalPrice = items.reduce((s: number, i: any) => s + (i.priceQAR || 0), 0);
       const totalCalories = items.reduce((s: number, i: any) => s + (i.calories || 0), 0);
       const res: any = await createOrder({
-        customerName: currentCustomer?.fullName || "AI customer",
-        customerPhone: currentCustomer?.phone || phone.trim() || "—",
-        customerId: (currentCustomer?.customerId as any) || undefined,
+        ...orderIdentity(),
         totalMeals: items.length, totalPrice, totalCalories, items,
         notes: "Order from the smart meal generator",
       });
