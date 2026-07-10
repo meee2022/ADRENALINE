@@ -80,6 +80,23 @@ export default function PublicMenuPage() {
   const [browseMode, setBrowseMode] = useState<boolean>(() => isBrowseOnly());
   const [phoneError, setPhoneError] = useState("");
 
+  /**
+   * ⚡ وصف الوجبة (aboutAr/aboutEn) لا يُرسل ضمن القائمة — 28KB عبر 192 وجبة —
+   * بل يُجلب عند فتح نافذة الوجبة فقط. القائمة تحمل `hasAbout` فنعرف مسبقاً
+   * هل سيأتي نصّ فنحجز مكانه، بدل أن يظهر فجأة ويقفز التخطيط.
+   */
+  const selectedMealFull = useQuery(
+    api.publicMeals.getBySlug,
+    selectedMeal?.slug ? { slug: selectedMeal.slug } : "skip",
+  ) as any;
+
+  const aboutText = selectedMealFull
+    ? (isRtl
+        ? selectedMealFull.aboutAr || selectedMealFull.aboutEn
+        : selectedMealFull.aboutEn || selectedMealFull.aboutAr) || ""
+    : "";
+  const aboutLoading = Boolean(selectedMeal?.hasAbout) && !selectedMealFull;
+
   // ✅ البحث يجري على السيرفر ويُرجع حقولاً محدودة للرقم المطلوب وحده.
   //    سابقاً كانت الصفحة تنزّل قائمة المشتركين كاملة وتفلتر في المتصفح، فكان
   //    أي زائر يقرأ كل الأسماء والهواتف والعناوين والأسعار من DevTools.
@@ -1264,15 +1281,21 @@ export default function PublicMenuPage() {
                 ))}
               </div>
 
-              {/* Description */}
-              {(selectedMeal.aboutAr || selectedMeal.aboutEn) && (
+              {/* Description — يُجلب عند الفتح. نحجز المكان أثناء التحميل حتى لا يقفز التخطيط */}
+              {(aboutLoading || aboutText) && (
                 <div>
                   <h3 className="font-bold text-[#0F1516] mb-2">
                     {isRtl ? "الوصف" : "Description"}
                   </h3>
-                  <p className="text-[#47759C] leading-relaxed">
-                    {isRtl ? selectedMeal.aboutAr : selectedMeal.aboutEn || selectedMeal.aboutAr}
-                  </p>
+                  {aboutLoading ? (
+                    <div className="space-y-2 animate-pulse" aria-hidden="true">
+                      <div className="h-3.5 rounded bg-[#EAF3FB] w-full" />
+                      <div className="h-3.5 rounded bg-[#EAF3FB] w-11/12" />
+                      <div className="h-3.5 rounded bg-[#EAF3FB] w-2/3" />
+                    </div>
+                  ) : (
+                    <p className="text-[#47759C] leading-relaxed">{aboutText}</p>
+                  )}
                 </div>
               )}
 

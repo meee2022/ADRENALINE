@@ -51,11 +51,16 @@ export const listMeals = query({
     // Add imageUrl from storageId
     return Promise.all(
       results.map(async (meal) => {
-        if (meal.storageId) {
-          const imageUrl = await ctx.storage.getUrl(meal.storageId);
-          return { ...meal, imageUrl };
-        }
-        return meal;
+        // ⚡ aboutAr/aboutEn نصوص طويلة (~28KB عبر 192 وجبة) لا تُقرأ إلا داخل
+        //    نافذة تفاصيل الوجبة. نستبعدها من القائمة ونجلبها عند الفتح
+        //    (publicMeals.getBySlug). نُبقي `hasAbout` حتى تعرف النافذة أن
+        //    هناك نصاً قادماً فتحجز مكانه بدل أن يقفز التخطيط.
+        const { aboutAr, aboutEn, ...light } = meal as any;
+        const hasAbout = Boolean(
+          String(aboutAr || "").trim() || String(aboutEn || "").trim()
+        );
+        const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : undefined;
+        return imageUrl ? { ...light, hasAbout, imageUrl } : { ...light, hasAbout };
       })
     );
   },
