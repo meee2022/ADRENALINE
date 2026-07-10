@@ -18,6 +18,7 @@ import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
 import type * as cleanupDuplicateMeals from "../cleanupDuplicateMeals.js";
 import type * as coupons from "../coupons.js";
+import type * as crons from "../crons.js";
 import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
 import type * as customers from "../customers.js";
@@ -79,6 +80,7 @@ declare const fullApi: ApiFromModules<{
   banners: typeof banners;
   cleanupDuplicateMeals: typeof cleanupDuplicateMeals;
   coupons: typeof coupons;
+  crons: typeof crons;
   customerAuth: typeof customerAuth;
   customerOrders: typeof customerOrders;
   customers: typeof customers;
