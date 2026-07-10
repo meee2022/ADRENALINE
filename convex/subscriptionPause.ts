@@ -21,8 +21,10 @@ import {
   parseDate,
   fmtDate,
   addDays,
+  isDeliveryDay,
   countDeliveryDays,
   addDeliveryDays,
+  subDeliveryDays,
 } from "./lib/dates";
 
 /* ========== الاستعلام: حالة الاشتراك والمتبقّي ========== */
@@ -162,9 +164,14 @@ export const resume = mutation({
  *    - يحذف خطط المطبخ المستقبلية لتلك الأيام حتى لا يطبخها المطبخ.
  *    أبسط من التجميد الكامل: لا يمدّ endDate — العميل اختار تخطّي أيام معدودة.
  *
+ * تعويض العميل (قرار العمل): العميل لا يخسر أيامه — كل يوم توصيل يتخطّاه
+ * يُمدّ به `endDate` (تماماً كالتجميد). الجمعة لا تُحتسب (ليست يوم توصيل).
+ * التراجع (unskip) يقصّر `endDate` بنفس القدر حتى لا يتراكم التعويض.
+ *
  * mode:
- *   "skip"   → أضف التواريخ إلى skippedDates واحذف خططها.
- *   "unskip" → أزل التواريخ من skippedDates (لا يعيد إنشاء الخطط؛ تُعاد بالاعتماد).
+ *   "skip"   → أضف التواريخ إلى skippedDates، احذف خططها، ومدّ endDate بأيام التوصيل المضافة.
+ *   "unskip" → أزل التواريخ من skippedDates وقصّر endDate بأيام التوصيل المُزالة
+ *              (لا يعيد إنشاء الخطط؛ تُعاد بالاعتماد).
  */
 export const setSkippedDays = mutation({
   args: {
@@ -182,13 +189,38 @@ export const setSkippedDays = mutation({
     const cur: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
     const curSet = new Set(cur);
 
+    // احسب التغيير الفعلي فقط (لتفادي تعويض مكرّر لو أُرسل التاريخ نفسه مرتين)،
+    // وعُدّ منه أيام التوصيل وحدها — الجمعة لا تُعوَّض.
+    let changedDeliveryDays = 0;
     if (args.mode === "skip") {
-      for (const d of want) curSet.add(d);
+      for (const d of want) {
+        if (!curSet.has(d)) {
+          curSet.add(d);
+          if (isDeliveryDay(parseDate(d))) changedDeliveryDays++;
+        }
+      }
     } else {
-      for (const d of want) curSet.delete(d);
+      for (const d of want) {
+        if (curSet.has(d)) {
+          curSet.delete(d);
+          if (isDeliveryDay(parseDate(d))) changedDeliveryDays++;
+        }
+      }
     }
+
+    // تعويض/سحب أيام التوصيل من endDate.
+    const oldEndDate = c.endDate;
+    let newEndDate = oldEndDate;
+    if (changedDeliveryDays > 0) {
+      newEndDate =
+        args.mode === "skip"
+          ? addDeliveryDays(oldEndDate, changedDeliveryDays)
+          : subDeliveryDays(oldEndDate, changedDeliveryDays);
+    }
+
     await ctx.db.patch(args.id, {
       skippedDates: Array.from(curSet).sort(),
+      endDate: newEndDate,
       updatedAt: Date.now(),
     });
 
@@ -207,6 +239,14 @@ export const setSkippedDays = mutation({
       }
     }
 
-    return { success: true, skippedCount: curSet.size, removedPlans: removed };
+    return {
+      success: true,
+      skippedCount: curSet.size,
+      removedPlans: removed,
+      creditedDeliveryDays: args.mode === "skip" ? changedDeliveryDays : 0,
+      withdrawnDeliveryDays: args.mode === "unskip" ? changedDeliveryDays : 0,
+      oldEndDate,
+      newEndDate,
+    };
   },
 });

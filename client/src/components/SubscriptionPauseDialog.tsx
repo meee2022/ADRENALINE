@@ -266,8 +266,8 @@ export function SubscriptionPauseDialog({
                           toast({
                             title: isRtl ? "تم تخطّي الأيام المحددة" : "Selected days skipped",
                             description: isRtl
-                              ? `${dates.length} يوم — حُذفت ${r.removedPlans} خطة مطبخ`
-                              : `${dates.length} day(s) — ${r.removedPlans} kitchen plan(s) removed`,
+                              ? `${dates.length} يوم — حُذفت ${r.removedPlans} خطة مطبخ · عُوّض العميل ${r.creditedDeliveryDays} يوم توصيل (النهاية: ${r.newEndDate})`
+                              : `${dates.length} day(s) — ${r.removedPlans} kitchen plan(s) removed · credited ${r.creditedDeliveryDays} delivery day(s) (ends: ${r.newEndDate})`,
                           });
                           setSkipPick({});
                           onOpenChange(false);

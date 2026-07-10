@@ -90,6 +90,20 @@ export function addDeliveryDays(fromDate: string, n: number): string {
 }
 
 /**
+ * يقصّر تاريخاً إلى الخلف بعدد `n` من أيام التوصيل — عكس addDeliveryDays.
+ * يُستخدم عند التراجع عن تخطّي أيام: نُرجِع endDate كما كان.
+ */
+export function subDeliveryDays(fromDate: string, n: number): string {
+  let cur = parseDate(fromDate);
+  let removed = 0;
+  for (let i = 0; i < 800 && removed < n; i++) {
+    cur = addDays(cur, -1);
+    if (isDeliveryDay(cur)) removed++;
+  }
+  return fmtDate(cur);
+}
+
+/**
  * ترتيب يوم التوصيل داخل الأسبوع (السبت = 0 … الخميس = 5).
  * الجمعة وحدها ليست يوم توصيل، فنُرجّع لها أقرب يوم (الخميس) بدل رمي خطأ
  * يعطّل اعتماد الطلب كله.

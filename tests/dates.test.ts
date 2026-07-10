@@ -14,6 +14,7 @@ import {
   isDeliveryDay,
   countDeliveryDays,
   addDeliveryDays,
+  subDeliveryDays,
   getDayOffset,
   DELIVERY_DAYS,
 } from "../convex/lib/dates";
@@ -98,6 +99,30 @@ describe("addDeliveryDays", () => {
 
   it("صفر أيام لا يحرّك التاريخ", () => {
     expect(addDeliveryDays(SAT, 0)).toBe(SAT);
+  });
+});
+
+describe("subDeliveryDays", () => {
+  it("تقصير أيام التوصيل يقفز فوق الجُمَع للخلف", () => {
+    expect(subDeliveryDays("2026-08-13", 12)).toBe("2026-07-30");
+  });
+
+  it("التقصير ينتهي دائماً على يوم توصيل", () => {
+    for (let n = 1; n <= 20; n++) {
+      expect(isDeliveryDay(parseDate(subDeliveryDays("2026-08-31", n)))).toBe(true);
+    }
+  });
+
+  it("عكس addDeliveryDays تماماً (تخطّي أيام ثم التراجع يُرجِع endDate)", () => {
+    // سيناريو setSkippedDays: skip يمدّ n، ثم unskip يقصّر n → نفس التاريخ.
+    for (const n of [1, 2, 4, 5, 10, 13]) {
+      const extended = addDeliveryDays(WED, n);
+      expect(subDeliveryDays(extended, n)).toBe(WED);
+    }
+  });
+
+  it("صفر أيام لا يحرّك التاريخ", () => {
+    expect(subDeliveryDays(WED, 0)).toBe(WED);
   });
 });
 
