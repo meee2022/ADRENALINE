@@ -1044,9 +1044,12 @@ export default function PublicMenuPage() {
                 >
                   {/* Meal Image */}
                   <div className="relative h-52 overflow-hidden">
+                    {/* الشبكة قد تعرض عشرات الوجبات — لا تُحمَّل صورة قبل ظهورها */}
                     <img
                       src={meal.imageUrl}
                       alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
+                      loading="lazy"
+                      decoding="async"
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />

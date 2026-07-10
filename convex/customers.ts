@@ -76,7 +76,7 @@ export const findPublicByPhone = query({
 
     const customers = await ctx.db
       .query("customers")
-      .filter((q) => q.eq(q.field("phone"), normalizedPhone))
+      .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
       .collect();
 
     return customers.map(publicCustomerView);
@@ -93,7 +93,7 @@ export const findByPhone = query({
 
     const customer = await ctx.db
       .query("customers")
-      .filter((q) => q.eq(q.field("phone"), normalizedPhone))
+      .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
       .first();
 
     return customer || null;
@@ -110,7 +110,7 @@ export const findAllByPhone = query({
 
     const customers = await ctx.db
       .query("customers")
-      .filter((q) => q.eq(q.field("phone"), normalizedPhone))
+      .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
       .collect();
 
     return customers;

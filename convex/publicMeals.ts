@@ -81,7 +81,7 @@ export const getBySlug = query({
   handler: async (ctx, args) => {
     const meal = await ctx.db
       .query("publicMeals")
-      .filter((q) => q.eq(q.field("slug"), args.slug))
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
     
     if (!meal) return null;

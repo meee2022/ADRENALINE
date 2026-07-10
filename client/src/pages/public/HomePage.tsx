@@ -385,6 +385,7 @@ export default function HomePage() {
                   style={{ border: "1px solid #D9E6F1", boxShadow: "0 10px 30px -16px rgba(14,42,74,.3)", textDecoration: "none" }}>
                   <div className="relative w-full aspect-[4/3]" style={{ background: "#EAF3FB", overflow: "hidden" }}>
                     {m.imageUrl && <img src={m.imageUrl} alt={isRtl ? m.nameAr : m.nameEn}
+                      loading="lazy" decoding="async"
                       className="w-full h-full object-cover transition-transform group-hover:scale-105" />}
                     {i < 3 && (
                       <span className="absolute top-2 px-2 py-0.5 rounded-full text-[10px] font-black text-white"
