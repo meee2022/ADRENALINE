@@ -460,10 +460,16 @@ export const getPlanSuggestions = query({
     // فنقترح حتى 4 (لا 1). القيمة صفر/غير معروفة ⇒ نقترح أسبوعاً واحداً.
     const dur = Number(meta?.durationWeeks || 0);
     const suggestedWeeks = dur >= 1 ? Math.min(4, dur) : 1;
+
+    // الدورة موحّدة للمطعم: نفضّل إعداد المطبخ الحالي على الحساب لكل عميل.
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const cook = Number((settings as any)?.currentCookingWeek);
+    const currentRotationWeek = cook >= 1 && cook <= 4 ? cook : (meta?.rotationWeek ?? 1);
+
     return {
       found: profile.found,
       suggestedWeeks,
-      currentRotationWeek: meta?.rotationWeek ?? 1,
+      currentRotationWeek,
       durationWeeks: meta?.durationWeeks ?? null,
     };
   },

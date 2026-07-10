@@ -289,31 +289,35 @@ export const approve = mutation({
       ? await ctx.db.get((customerId || order.customerId)!)
       : null;
 
-    // 3. تجميع الوجبات حسب التاريخ (date) - بناءً على startDate من الأخصائية
+    // 3. تجميع الوجبات حسب التاريخ (date) - بناءً على startDate من الأخصائية.
+    //
+    // ⚠️ item.week هو أسبوع الدورة (1..4) الذي اختاره العميل، وليس ترتيباً من
+    //    البداية. لو اختار العميل دورة 3 فقط، يجب أن يبدأ توصيله من startDate
+    //    مباشرةً — لا بعد 12 يوماً. لذلك نرتّب أسابيع الدورة المختارة تصاعدياً
+    //    ونحوّلها إلى ترتيب متتالٍ 0،1،2… فالأسبوع الأول المختار = أول أسبوع توصيل.
     const mealsByDate: Record<string, typeof items> = {};
-    const startDateObj = new Date(startDate); // ✅ تاريخ البداية المحدد من الأخصائية
-    
+    const startDateObj = new Date(startDate);
+
+    const chosenWeeks = Array.from(new Set(items.map((it) => Number(it.week)))).sort((a, b) => a - b);
+    const weekRank = new Map(chosenWeeks.map((w, i) => [w, i])); // دورة → ترتيب متتالٍ
+
     for (const item of items) {
-      // ✅ إذا حدّدت الأخصائية تاريخ يدوي لـ (week, day) ده، استخدمه
       const overrideKey = `${item.week}-${item.day}`;
       const overrideDate = dateOverrides?.[overrideKey];
 
       let dateKey: string;
       if (overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)) {
-        // استخدم التاريخ اليدوي مباشرة
         dateKey = overrideDate;
       } else {
-        // احسب التاريخ تلقائياً (6 أيام عمل، السبت-الأربعاء)
-        const weekOffset = (item.week - 1) * 6;
+        // ترتيب الأسبوع بين الأسابيع المختارة (لا رقم الدورة نفسه) × 6 أيام توصيل
+        const weekOffset = (weekRank.get(Number(item.week)) ?? 0) * 6;
         const dayOffset = getDayOffset(item.day);
         const deliveryDate = new Date(startDateObj);
         deliveryDate.setDate(deliveryDate.getDate() + weekOffset + dayOffset);
         dateKey = deliveryDate.toISOString().split("T")[0];
       }
 
-      if (!mealsByDate[dateKey]) {
-        mealsByDate[dateKey] = [];
-      }
+      if (!mealsByDate[dateKey]) mealsByDate[dateKey] = [];
       mealsByDate[dateKey].push(item);
     }
 

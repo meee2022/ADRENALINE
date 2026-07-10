@@ -6,9 +6,9 @@
  * أثناء التجميد ونمدّ `endDate` بنفس العدد.
  *
  * لماذا أيام التوصيل وليس الأيام التقويمية:
- *   المطعم يوصّل السبت→الأربعاء فقط (الخميس والجمعة إجازة — انظر customerOrders.getDayOffset).
- *   لو جمّدنا 14 يوماً تقويمياً فذلك 10 أيام توصيل فقط؛ تمديد 14 يوماً يمنح العميل
- *   4 أيام لم يدفع مقابلها.
+ *   المطعم يوصّل السبت→الخميس (6 أيام)، الجمعة وحدها بلا توصيل — انظر lib/dates.
+ *   لو جمّدنا 14 يوماً تقويمياً فذلك 12 يوم توصيل؛ تمديد 14 يوماً يمنح العميل
+ *   يومين لم يدفع مقابلهما.
  *
  * الصلاحية: موظفون فقط (قرار العمل: العميل يتصل والموظف ينفّذ).
  */
@@ -153,5 +153,60 @@ export const resume = mutation({
       oldEndDate: c.endDate,
       newEndDate,
     };
+  },
+});
+
+/**
+ * ✅ إيقاف/إرجاع وجبات أيام محددة (سيناريو: "الأحد والاثنين نعم، باقي الأسبوع مسافر").
+ *    - يعلّم/يزيل الأيام في skippedDates.
+ *    - يحذف خطط المطبخ المستقبلية لتلك الأيام حتى لا يطبخها المطبخ.
+ *    أبسط من التجميد الكامل: لا يمدّ endDate — العميل اختار تخطّي أيام معدودة.
+ *
+ * mode:
+ *   "skip"   → أضف التواريخ إلى skippedDates واحذف خططها.
+ *   "unskip" → أزل التواريخ من skippedDates (لا يعيد إنشاء الخطط؛ تُعاد بالاعتماد).
+ */
+export const setSkippedDays = mutation({
+  args: {
+    id: v.id("customers"),
+    dates: v.array(v.string()), // yyyy-MM-dd
+    mode: v.union(v.literal("skip"), v.literal("unskip")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const c = await ctx.db.get(args.id);
+    if (!c) return { success: false, error: "المشترك غير موجود" };
+
+    const want = new Set(args.dates.map((d) => String(d).slice(0, 10)));
+    const cur: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
+    const curSet = new Set(cur);
+
+    if (args.mode === "skip") {
+      for (const d of want) curSet.add(d);
+    } else {
+      for (const d of want) curSet.delete(d);
+    }
+    await ctx.db.patch(args.id, {
+      skippedDates: Array.from(curSet).sort(),
+      updatedAt: Date.now(),
+    });
+
+    // عند التخطّي: احذف خطط المطبخ لتلك التواريخ (وإلا يظل المطبخ يطبخها).
+    let removed = 0;
+    if (args.mode === "skip") {
+      const plans = await ctx.db
+        .query("dailyPlans")
+        .withIndex("by_customerId", (q) => q.eq("customerId", args.id))
+        .collect();
+      for (const p of plans) {
+        if (want.has(String(p.date).slice(0, 10))) {
+          await ctx.db.delete(p._id);
+          removed++;
+        }
+      }
+    }
+
+    return { success: true, skippedCount: curSet.size, removedPlans: removed };
   },
 });

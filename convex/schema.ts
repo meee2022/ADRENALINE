@@ -666,6 +666,14 @@ export default defineSchema({
 
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({
+    /**
+     * ✅ أسبوع دورة الوجبات الذي يطبخه المطبخ حالياً (1..4). موحّد لكل المطعم.
+     * تضبطه الأخصائية أسبوعياً. عليه يعتمد:
+     *   - المنيو والخطة الذكية يبدآن من هذا الأسبوع (لا من 1) فيختار العميل
+     *     وجبات ما يُطبخ فعلاً.
+     *   - عرض المطبخ يعرف أي أسبوع يجهّز.
+     */
+    currentCookingWeek: v.optional(v.number()),
     // Contact Information
     phone: v.string(),
     email: v.string(),

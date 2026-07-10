@@ -12,6 +12,24 @@ export const get = query({
   },
 });
 
+/**
+ * ✅ ضبط أسبوع دورة الوجبات الذي يطبخه المطبخ حالياً (1..4).
+ *    تستخدمه الأخصائية أسبوعياً. mutation مستقلة صغيرة حتى لا تُجبَر على
+ *    تمرير كل حقول الإعدادات لتغيير رقم واحد.
+ */
+export const setCookingWeek = mutation({
+  args: { week: v.number(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const week = Math.min(4, Math.max(1, Math.floor(args.week)));
+    const existing = await ctx.db.query("restaurantSettings").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { currentCookingWeek: week });
+    }
+    return { currentCookingWeek: week };
+  },
+});
+
 // ===== UPDATE SETTINGS =====
 export const update = mutation({
   args: {

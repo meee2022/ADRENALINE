@@ -154,7 +154,10 @@ export default function PublicMenuPage() {
   };
 
   // NEW: Week & Day selection
+  // ✅ يبدأ من أسبوع الدورة الذي يطبخه المطبخ حالياً (لا من 1 ثابت)، حتى يختار
+  //    العميل وجبات ما يُطبخ فعلاً هذا الأسبوع. يُزامَن عند وصول الإعداد.
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
+  const [weekTouched, setWeekTouched] = useState(false);
   // ✅ نبدأ بيوم اليوم (أو أقرب يوم توصيل) بدل إجبار العميل على اختيار يوم
   //    قبل أن يستطيع إضافة أي وجبة.
   const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(() => defaultDay());
@@ -323,6 +326,12 @@ export default function PublicMenuPage() {
   const meals = filteredMeals;
 
   // Countdown timer logic - DISABLED (always allow ordering)
+  // ✅ زامن الأسبوع الافتراضي مع أسبوع المطبخ الحالي (ما لم يغيّره العميل يدوياً)
+  useEffect(() => {
+    const w = Number((settings as any)?.currentCookingWeek);
+    if (!weekTouched && w >= 1 && w <= 4) setSelectedWeek(w);
+  }, [settings, weekTouched]);
+
   useEffect(() => {
     // ✅ تعطيل نظام قفل الوقت بالكامل - الطلبات مفتوحة دائماً
     setIsLocked(false);
@@ -864,21 +873,40 @@ export default function PublicMenuPage() {
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {weeks.map((week) => (
+              {weeks.map((week) => {
+                const isCooking = Number((settings as any)?.currentCookingWeek) === week.value;
+                return (
                 <button
                   key={week.value}
-                  onClick={() => setSelectedWeek(week.value)}
+                  onClick={() => { setSelectedWeek(week.value); setWeekTouched(true); }}
                   className={cn(
-                    "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all",
+                    "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-1.5",
                     selectedWeek === week.value
                       ? "bg-[#3CC4F0] text-white shadow-md scale-105"
                       : "bg-white text-[#47759C] border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5"
                   )}
                 >
                   {week.label}
+                  {/* علامة الأسبوع الذي يطبخه المطبخ حالياً */}
+                  {isCooking && (
+                    <span className={cn(
+                      "text-[9px] font-black px-1.5 py-0.5 rounded-full",
+                      selectedWeek === week.value ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-700",
+                    )}>
+                      {isRtl ? "الحالي" : "now"}
+                    </span>
+                  )}
                 </button>
-              ))}
+                );
+              })}
             </div>
+            {Number((settings as any)?.currentCookingWeek) >= 1 && (
+              <p className="text-[11px] text-[#47759C] mt-1.5">
+                {isRtl
+                  ? `المطبخ يجهّز حالياً وجبات الأسبوع ${(settings as any).currentCookingWeek} — اختره لتصلك وجباتك هذا الأسبوع.`
+                  : `The kitchen is currently preparing week ${(settings as any).currentCookingWeek} — pick it to get your meals this week.`}
+              </p>
+            )}
           </div>
 
           {/* Day Chips */}

@@ -1,14 +1,16 @@
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
-import { ClipboardList, CheckCircle2 } from "lucide-react";
+import { ClipboardList, CheckCircle2, ChefHat } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/i18n";
 
 /** التبويبات: قيد المراجعة / المعتمدة / الكل */
 type Tab = "pending" | "confirmed" | "all";
@@ -33,6 +35,14 @@ export default function OrdersPending() {
     sessionToken,
   });
   const pendingCount = useQuery(api.customerOrders.countPending);
+
+  // ✅ أسبوع الدورة الذي يطبخه المطبخ حالياً — يوجّه اختيار العميل والخطة الذكية
+  const settings = useQuery(api.restaurantSettings.get);
+  const setCookingWeek = useMutation(api.restaurantSettings.setCookingWeek);
+  const { toast } = useToast();
+  const { dir } = useLanguage();
+  const isRtl = dir === "rtl";
+  const cookingWeek = Number((settings as any)?.currentCookingWeek) || 0;
 
   if (!orders) {
     return (
@@ -83,6 +93,41 @@ export default function OrdersPending() {
           </button>
         ))}
       </div>
+
+      {/* ✅ أسبوع المطبخ الحالي — يوجّه المنيو والخطة الذكية */}
+      <Card
+        className="p-4 bg-white rounded-2xl flex items-center gap-4 flex-wrap"
+        style={{ border: "1px solid #cfe4f3", boxShadow: "0 1px 2px rgba(15,21,22,.04)" }}
+      >
+        <div className="flex items-center gap-2 text-[#0E2A4A] font-bold">
+          <ChefHat className="h-5 w-5 text-[#0E76AC]" />
+          {isRtl ? "أسبوع الدورة الذي يطبخه المطبخ الآن:" : "Kitchen is cooking rotation week:"}
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map((w) => (
+            <button
+              key={w}
+              onClick={async () => {
+                await setCookingWeek({ week: w, sessionToken });
+                toast({ title: isRtl ? `تم ضبط المطبخ على الأسبوع ${w}` : `Kitchen set to week ${w}` });
+              }}
+              className={cn(
+                "w-10 h-10 rounded-full font-black transition-all",
+                cookingWeek === w
+                  ? "bg-[#0E76AC] text-white shadow-md scale-105"
+                  : "bg-white text-[#47759C] border border-gray-200 hover:border-[#0E76AC]",
+              )}
+            >
+              {w}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-[#47759C] w-full">
+          {isRtl
+            ? "العميل يختار وجبات هذا الأسبوع تلقائياً، فيصل للمطبخ ما يُطبخ فعلاً — بلا لخبطة."
+            : "Customers default to this week, so the kitchen gets what it actually cooks."}
+        </p>
+      </Card>
 
       {/* Orders List */}
       {orders.length === 0 ? (
