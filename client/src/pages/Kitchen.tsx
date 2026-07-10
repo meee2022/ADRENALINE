@@ -31,6 +31,8 @@ import {
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/lib/kitchenSheet";
+import { Download, FileSpreadsheet } from "lucide-react";
 
 import {
   Popover,
@@ -315,6 +317,92 @@ export default function Kitchen() {
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
   }, [dailyPlans, formattedDate, customers, menuItems, isRtl]);
 
+  /**
+   * ✅ صفوف كشف المطبخ (مصفوفة زي الإكسيل): صف لكل عميل، وجباته في أعمدة
+   *    (فطور/سناك1/غداء/سناك2/عشاء/وجبة4) حسب تصنيف كل صنف.
+   */
+  const kitchenPeople = useMemo<KitchenPerson[]>(() => {
+    const allPlansToday = dailyPlans.filter(
+      (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED"),
+    );
+
+    // "2026-07-11" → "11-7"
+    const shortDate = (iso?: string) => {
+      if (!iso) return "";
+      const [, m, d] = String(iso).slice(0, 10).split("-");
+      return m && d ? `${Number(d)}-${Number(m)}` : "";
+    };
+
+    const rows: KitchenPerson[] = [];
+    let no = 0;
+
+    allPlansToday.forEach((plan: any) => {
+      const customer: any = getCustomer(plan.customerId);
+      const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
+      const slots = { breakfast: [] as string[], snack: [] as string[], lunch: [] as string[], dinner: [] as string[], other: [] as string[] };
+
+      (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
+        const meal: any = getMenuItem(item.menuItemId || item.mealId);
+        const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) : (item.mealNameAr || item.mealNameEn || "—");
+        const cat: any = item.menuItemId ? getCategory(meal?.categoryId) : null;
+        const label = getCategoryLabel(cat?.name || item.category || "");
+        const notes = [item.avoid, item.preferences, item.portions, item.specialNotes]
+          .map((x) => String(x || "").trim()).filter(Boolean).join(" • ");
+        const text = notes ? `${mealName} (${notes})` : mealName;
+
+        if (label.includes("فطور") || label.includes("BREAKFAST")) slots.breakfast.push(text);
+        else if (label.includes("غداء") || label.includes("LUNCH")) slots.lunch.push(text);
+        else if (label.includes("عشاء") || label.includes("DINNER")) slots.dinner.push(text);
+        else if (label.includes("سناك") || label.includes("SNACK")) slots.snack.push(text);
+        else slots.other.push(text);
+      });
+
+      // لا تُنشئ صفاً فارغاً
+      const anyMeal = slots.breakfast.length + slots.snack.length + slots.lunch.length + slots.dinner.length + slots.other.length;
+      if (!anyMeal) return;
+
+      no += 1;
+      rows.push({
+        no,
+        phone: customer?.phone || plan.customerPhone || "",
+        name: customer?.fullName || plan.customerName || "عميل",
+        dates:
+          customer?.startDate || customer?.endDate
+            ? `${shortDate(customer?.startDate)} END ${shortDate(customer?.endDate)}`
+            : "",
+        remarks: program,
+        allergies: [customer?.avoid, customer?.allergies].map((x) => String(x || "").trim()).filter(Boolean).join(" • "),
+        breakfast: slots.breakfast.join(" + "),
+        snack1: slots.snack[0] || "",
+        lunch: slots.lunch.join(" + "),
+        snack2: slots.snack[1] || "",
+        dinner: slots.dinner.join(" + "),
+        meal4: [...slots.snack.slice(2), ...slots.other].join(" + "),
+        time: plan.deliveryTime,
+        customized: program.includes("CUSTOM"),
+      });
+    });
+
+    return rows;
+  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl]);
+
+  const [exporting, setExporting] = useState<null | "xlsx" | "pdf">(null);
+  const exportSheet = async (kind: "xlsx" | "pdf") => {
+    if (!kitchenPeople.length) {
+      alert(isRtl ? "لا توجد وجبات لهذا اليوم" : "No meals for this day");
+      return;
+    }
+    setExporting(kind);
+    try {
+      if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, kitchenPeople);
+      else await downloadKitchenPdf(formattedDate, kitchenPeople);
+    } catch (e: any) {
+      alert((isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e));
+    } finally {
+      setExporting(null);
+    }
+  };
+
   // ✅ طباعة كشف الشيف — نافذة نظيفة A4 (إجمالي + أطباق مرتّبة + تعديلات مجمّعة + مخصّصين)
   const handlePrintChefSheet = () => {
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
@@ -543,14 +631,36 @@ export default function Kitchen() {
                     <h2 className="text-2xl font-bold text-gray-900 text-center flex-1">
                       {isRtl ? "تفاصيل وجبات اليوم المحدد" : "Today's Meal Details"}
                     </h2>
-                    <button
-                      onClick={handlePrintChefSheet}
-                      className="h-11 px-5 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all shrink-0"
-                      style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
-                    >
-                      <Printer className="h-4 w-4" />
-                      {isRtl ? "طباعة كشف الشيف" : "Print Chef Sheet"}
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                      <button
+                        onClick={() => exportSheet("xlsx")}
+                        disabled={exporting !== null}
+                        title={isRtl ? "تحميل كشف اليوم Excel" : "Download today's sheet as Excel"}
+                        className="h-11 px-4 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-60"
+                        style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        {exporting === "xlsx" ? "…" : "Excel"}
+                      </button>
+                      <button
+                        onClick={() => exportSheet("pdf")}
+                        disabled={exporting !== null}
+                        title={isRtl ? "تحميل كشف اليوم PDF" : "Download today's sheet as PDF"}
+                        className="h-11 px-4 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-60"
+                        style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}
+                      >
+                        <Download className="h-4 w-4" />
+                        {exporting === "pdf" ? "…" : "PDF"}
+                      </button>
+                      <button
+                        onClick={handlePrintChefSheet}
+                        className="h-11 px-5 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all"
+                        style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
+                      >
+                        <Printer className="h-4 w-4" />
+                        {isRtl ? "طباعة كشف الشيف" : "Print Chef Sheet"}
+                      </button>
+                    </div>
                   </div>
 
                   {/* ✅ ملخّص إجمالي اليوم للشيف (كل الوجبات · عادي · معدّل) */}

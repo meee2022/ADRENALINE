@@ -305,7 +305,7 @@ export function printWeeklyReport(input: WeeklyReportInput): void {
    نفس شكل المنيو/الخطة الذكية: يوم بعنوان غامق، ووجباته كروت بالصور.
    ══════════════════════════════════════════════════════════════════════ */
 
-export function printMealPlanCards(input: PrintMealPlanInput): void {
+export async function printMealPlanCards(input: PrintMealPlanInput): Promise<void> {
   const groups = input.groups.filter((g) => groupRows(g).length > 0);
   if (groups.length === 0) {
     alert("لا توجد وجبات لطباعتها");
@@ -354,73 +354,71 @@ export function printMealPlanCards(input: PrintMealPlanInput): void {
         .join("")}</div>`
     : "";
 
-  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-    <title>${esc(input.title)}</title>
+  const content = `
     <style>
-      *{box-sizing:border-box}
-      body{margin:0;color:#0E2A4A;font-family:Cairo,Tahoma,Arial,sans-serif;background:#fff}
-
-      .hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:22px 26px;
+      .mp-doc *{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}
+      .mp-doc{color:#0E2A4A;background:#fff}
+      .mp-doc .hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:22px 26px;
             display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px}
-      .hero .brand{font-size:22px;font-weight:900;letter-spacing:.14em}
-      .hero .brand small{display:block;font-size:9px;letter-spacing:.4em;opacity:.8;font-weight:700}
-      .hero h1{font-size:20px;margin:0;font-weight:900}
-      .hero .sub{font-size:12px;opacity:.9;font-weight:700;margin-top:3px;max-width:520px}
-
-      .wrap{padding:18px 22px}
-      .kpis{display:flex;gap:10px;margin-bottom:16px}
-      .kpi{flex:1;border:1px solid #e8eef4;border-radius:12px;padding:10px;text-align:center;background:#f7fbfe}
-      .kpi .v{font-size:22px;font-weight:900;color:#0E76AC}
-      .kpi .l{font-size:11px;color:#47759c;font-weight:700}
-
-      .grp{margin-bottom:14px;break-inside:avoid}
-      .wk-banner{background:#eaf3fb;border:1px solid #cfe4f3;border-radius:12px;padding:9px 14px;
+      .mp-doc .brand{font-size:22px;font-weight:900;letter-spacing:.14em}
+      .mp-doc .brand small{display:block;font-size:9px;letter-spacing:.4em;opacity:.8;font-weight:700}
+      .mp-doc h1{font-size:20px;margin:0;font-weight:900}
+      .mp-doc .sub{font-size:12px;opacity:.9;font-weight:700;margin-top:3px;max-width:520px}
+      .mp-doc .wrap{padding:18px 22px}
+      .mp-doc .kpis{display:flex;gap:10px;margin-bottom:16px}
+      .mp-doc .kpi{flex:1;border:1px solid #e8eef4;border-radius:12px;padding:10px;text-align:center;background:#f7fbfe}
+      .mp-doc .kpi .v{font-size:22px;font-weight:900;color:#0E76AC}
+      .mp-doc .kpi .l{font-size:11px;color:#47759c;font-weight:700}
+      .mp-doc .grp{margin-bottom:14px}
+      .mp-doc .wk-banner{background:#eaf3fb;border:1px solid #cfe4f3;border-radius:12px;padding:9px 14px;
                  font-weight:900;font-size:15px;color:#0E2A4A;margin-bottom:12px}
-
-      .day{border:1px solid #e5e9ef;border-radius:16px;overflow:hidden;margin-bottom:14px;break-inside:avoid}
-      .day-h{background:#0E2A4A;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center}
-      .day-t{font-weight:800;font-size:15px}
-      .day-n{font-size:11px;background:rgba(255,255,255,.16);border-radius:50px;padding:3px 10px}
-
-      .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px}
-      .card{border:1px solid #eef1f4;border-radius:12px;overflow:hidden;background:#f7fbfe;break-inside:avoid}
-      .ph{position:relative;height:96px;background:#eaf3fb}
-      .ph img{width:100%;height:100%;object-fit:cover;display:block}
-      .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px}
-      .ph .cat{position:absolute;top:6px;inset-inline-start:6px;background:rgba(255,255,255,.92);
+      .mp-doc .day{border:1px solid #e5e9ef;border-radius:16px;overflow:hidden;margin-bottom:14px}
+      .mp-doc .day-h{background:#0E2A4A;color:#fff;padding:9px 14px;display:flex;justify-content:space-between;align-items:center}
+      .mp-doc .day-t{font-weight:800;font-size:15px}
+      .mp-doc .day-n{font-size:11px;background:rgba(255,255,255,.16);border-radius:50px;padding:3px 10px}
+      .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding:12px}
+      .mp-doc .card{border:1px solid #eef1f4;border-radius:12px;overflow:hidden;background:#f7fbfe}
+      .mp-doc .ph{position:relative;height:96px;background:#eaf3fb}
+      .mp-doc .ph img{width:100%;height:100%;object-fit:cover;display:block}
+      .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:26px}
+      .mp-doc .ph .cat{position:absolute;top:6px;inset-inline-start:6px;background:rgba(255,255,255,.92);
                color:#0E76AC;font-size:10px;font-weight:800;padding:2px 7px;border-radius:7px}
-      .body{padding:9px 10px}
-      .name{font-weight:800;font-size:12.5px;line-height:1.35;color:#0E2A4A}
-      .macros{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#47759c;font-weight:700;margin-top:4px}
-      .note{margin-top:6px;font-size:10.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
+      .mp-doc .body{padding:9px 10px}
+      .mp-doc .name{font-weight:800;font-size:12.5px;line-height:1.35;color:#0E2A4A}
+      .mp-doc .macros{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:#47759c;font-weight:700;margin-top:4px}
+      .mp-doc .note{margin-top:6px;font-size:10.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
             border-radius:7px;padding:4px 7px;font-weight:700}
-
-      .foot{margin:8px 22px 20px;font-size:10.5px;color:#94a3b8;text-align:center}
-      @page{size:A4;margin:10mm}
-      @media print{.grp,.day,.card{break-inside:avoid}}
-    </style></head><body>
-    <div class="hero">
-      <div><div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div></div>
-      <div style="text-align:end">
-        <h1>${esc(input.title)}</h1>
-        ${input.subtitle ? `<div class="sub">${esc(input.subtitle)}</div>` : ""}
+      .mp-doc .foot{margin:8px 22px 20px;font-size:10.5px;color:#94a3b8;text-align:center}
+    </style>
+    <div class="mp-doc" dir="rtl">
+      <div class="hero">
+        <div><div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div></div>
+        <div style="text-align:end">
+          <h1>${esc(input.title)}</h1>
+          ${input.subtitle ? `<div class="sub">${esc(input.subtitle)}</div>` : ""}
+        </div>
       </div>
-    </div>
-    <div class="wrap">
-      ${kpisHtml}
-      ${groupsHtml}
-    </div>
-    <div class="foot">ADRENALINE Healthy Food — ${new Date().toLocaleDateString("ar-EG")}</div>
-    <script>
-      (function(){
-        var imgs = Array.prototype.slice.call(document.images);
-        var done = imgs.map(function(i){
-          return i.complete ? Promise.resolve() : new Promise(function(res){ i.onload = i.onerror = res; });
-        });
-        Promise.all(done).then(function(){ setTimeout(function(){ window.print(); }, 250); });
-      })();
-    </script>
-    </body></html>`;
+      <div class="wrap">
+        ${kpisHtml}
+        ${groupsHtml}
+      </div>
+      <div class="foot">ADRENALINE Healthy Food</div>
+    </div>`;
 
-  openPrintWindow(html, false);
+  const el = document.createElement("div");
+  el.innerHTML = content;
+  const safeName = String(input.title).replace(/[\\/:*?"<>|]+/g, " ").trim() || "meal-plan";
+
+  const html2pdf = (await import("html2pdf.js")).default as any;
+  await html2pdf()
+    .set({
+      margin: 6,
+      filename: `${safeName}.pdf`,
+      image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card", ".grp"] },
+    })
+    .from(el)
+    .save();
 }

@@ -55,8 +55,9 @@ export function CustomerMealPlanDialog({
     [plans],
   );
 
-  const handlePrint = () => {
-    if (!customer || !plans?.length) return;
+  const [downloading, setDownloading] = useState(false);
+  const handlePrint = async () => {
+    if (!customer || !plans?.length || downloading) return;
     const menuMap = new Map((menuItems as any[]).map((m: any) => [String(m._id), m]));
     const catMap = new Map((categories as any[]).map((c: any) => [String(c._id), c.name]));
     const modMap = new Map((modifiers as any[]).map((m: any) => [String(m._id), m.name]));
@@ -92,23 +93,30 @@ export function CustomerMealPlanDialog({
       };
     });
 
-    printMealPlanCards({
-      title: `جدول وجبات — ${customer.fullName}`,
-      subtitle: [
-        customer.phone,
-        customer.program,
-        `من ${effFrom} إلى ${effTo}`,
-        customer.avoid ? `ممنوعات: ${customer.avoid}` : "",
-        customer.allergies ? `حساسية: ${customer.allergies}` : "",
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      kpis: [
-        { label: "عدد الأيام", value: plans.length },
-        { label: "إجمالي الوجبات", value: mealCount },
-      ],
-      groups,
-    });
+    setDownloading(true);
+    try {
+      await printMealPlanCards({
+        title: `جدول وجبات — ${customer.fullName}`,
+        subtitle: [
+          customer.phone,
+          customer.program,
+          `من ${effFrom} إلى ${effTo}`,
+          customer.avoid ? `ممنوعات: ${customer.avoid}` : "",
+          customer.allergies ? `حساسية: ${customer.allergies}` : "",
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        kpis: [
+          { label: "عدد الأيام", value: plans.length },
+          { label: "إجمالي الوجبات", value: mealCount },
+        ],
+        groups,
+      });
+    } catch (e: any) {
+      alert((isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e));
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -153,13 +161,15 @@ export function CustomerMealPlanDialog({
 
         <Button
           className="w-full gap-2"
-          disabled={!plans?.length}
+          disabled={!plans?.length || downloading}
           onClick={handlePrint}
         >
           <Printer className="h-4 w-4" />
-          {plans?.length
-            ? isRtl ? "تنزيل / طباعة" : "Download / Print"
-            : isRtl ? "لا توجد وجبات في هذه الفترة" : "No meals in this range"}
+          {!plans?.length
+            ? isRtl ? "لا توجد وجبات في هذه الفترة" : "No meals in this range"
+            : downloading
+              ? isRtl ? "جاري تجهيز الملف…" : "Preparing file…"
+              : isRtl ? "تنزيل PDF" : "Download PDF"}
         </Button>
       </DialogContent>
     </Dialog>
