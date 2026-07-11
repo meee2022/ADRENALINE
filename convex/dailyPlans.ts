@@ -322,6 +322,78 @@ export const update = mutation({
   },
 });
 
+/**
+ * ✅ تعليم وجبة واحدة داخل الخطة كـ"جاهزة" (تقدّم الشيف داخل الطلب) —
+ *    مستقلّ عن حالة الخطة، فلا يخصم مخزوناً (الخصم يبقى مع PREPARED للخطة كلها).
+ */
+export const toggleItemPrepared = mutation({
+  args: {
+    id: v.id("dailyPlans"),
+    itemIndex: v.number(),
+    prepared: v.boolean(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, itemIndex, prepared, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plan: any = await ctx.db.get(id);
+    if (!plan) return { success: false };
+    const items = Array.isArray(plan.items) ? [...plan.items] : [];
+    if (itemIndex < 0 || itemIndex >= items.length) return { success: false };
+    items[itemIndex] = { ...items[itemIndex], prepared };
+    await ctx.db.patch(id, { items, updatedAt: Date.now() });
+    return { success: true };
+  },
+});
+
+/**
+ * ✅ قائمة مكوّنات اليوم المجمّعة (mise-en-place) — تجمع كل مكوّنات وجبات اليوم
+ *    (CONFIRMED + PREPARED، الفترتين) وتحوّلها لوحدة المخزون، فيعرف الشيف
+ *    "محتاج كام كيلو دجاج، كام بيضة" بدل عدّ الأطباق فقط.
+ */
+export const todayIngredients = query({
+  args: { date: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { date, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plans = (
+      await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
+    ).filter((p: any) => p.status === "CONFIRMED" || p.status === "PREPARED");
+
+    // menuItemId → عدد الحصص المطلوبة اليوم
+    const servings = new Map<string, number>();
+    for (const p of plans as any[]) {
+      for (const it of (Array.isArray(p.items) ? p.items : [])) {
+        if (it?.isOff) continue;
+        const mid = it?.menuItemId || it?.mealId;
+        if (!mid) continue;
+        servings.set(String(mid), (servings.get(String(mid)) || 0) + 1);
+      }
+    }
+
+    // اجمع المكوّنات عبر كل الأطباق
+    const agg = new Map<string, { name: string; unit: string; qty: number; low: boolean }>();
+    for (const [mid, count] of servings) {
+      const ings = await ctx.db
+        .query("mealIngredients")
+        .withIndex("by_menuItem", (q) => q.eq("menuItemId", mid as any))
+        .collect();
+      for (const ing of ings) {
+        const inv: any = await ctx.db.get(ing.inventoryItemId);
+        if (!inv) continue;
+        const perServing = convertUnit(Number(ing.quantityPerServing), (ing as any).unit, inv.unit);
+        const key = String(ing.inventoryItemId);
+        const prev = agg.get(key) || { name: inv.nameAr || inv.nameEn || "-", unit: inv.unit, qty: 0, low: false };
+        prev.qty += perServing * count;
+        prev.low = (inv.currentStock || 0) < prev.qty; // المخزون الحالي لا يكفي احتياج اليوم
+        agg.set(key, prev);
+      }
+    }
+
+    return Array.from(agg.values())
+      .map((x) => ({ ...x, qty: Math.round(x.qty * 100) / 100 }))
+      .sort((a, b) => b.qty - a.qty);
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {

@@ -16,6 +16,9 @@ import {
 
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +76,9 @@ export default function Kitchen() {
   const { data: modifiers = [] } = useModifiers();
   const updatePlanMutation = useUpdateDailyPlan();
   const prepareAndConsume = usePrepareAndConsume();
+  const sessionTok = useStore((s) => s.sessionToken) || undefined;
+  const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
+  const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
 
   const plans = useMemo(() => {
     return dailyPlans
@@ -690,6 +696,30 @@ export default function Kitchen() {
                     );
                   })()}
 
+                  {/* ✅ مكوّنات اليوم المجمّعة (mise-en-place) — كم كيلو/بيضة يحتاج المطبخ */}
+                  {todayIngredients && todayIngredients.length > 0 && (
+                    <div className="mb-6 rounded-2xl border border-[#e8eef4] overflow-hidden">
+                      <div className="px-4 py-3 bg-[#0E2A4A] text-white flex items-center gap-2">
+                        <span className="text-base">🧺</span>
+                        <span className="font-black text-sm">{isRtl ? "مكوّنات اليوم (تجهيز مسبق)" : "Today's ingredients (prep list)"}</span>
+                        <span className="text-[11px] opacity-75 ms-auto">{todayIngredients.length} {isRtl ? "صنف" : "items"}</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-px bg-[#e8eef4]">
+                        {todayIngredients.map((ing: any, i: number) => (
+                          <div key={i} className={cn("p-3 bg-white flex items-center justify-between", ing.low && "bg-red-50")}>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-gray-800 truncate">{ing.name}</p>
+                              {ing.low && <p className="text-[10px] font-bold text-red-500">{isRtl ? "⚠ المخزون لا يكفي" : "⚠ Not enough stock"}</p>}
+                            </div>
+                            <span className={cn("text-sm font-black tabular-nums shrink-0", ing.low ? "text-red-600" : "text-[#0E76AC]")}>
+                              {ing.qty} {ing.unit}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {mealSummary.map((meal, index) => {
                     const colors = [
                       "bg-[#3cc4f0]",
@@ -977,12 +1007,28 @@ export default function Kitchen() {
                           // الحساسية على مستوى العميل
                           const custAllergy = String(customer?.allergies || "").trim();
 
+                          // ✅ الفهرس الأصلي في plan.items (الترتيب هنا مفروز)
+                          const origIdx = (plan.items || []).indexOf(item);
+                          const itemDone = Boolean(item.prepared);
+
                           return (
                             <div
                               key={idx}
-                              className="bg-[#f7fbfe] rounded-xl p-4"
-                              style={{ border: "1px solid #e8eef4" }}
+                              className={cn("rounded-xl p-4 transition-all", itemDone ? "bg-emerald-50/60" : "bg-[#f7fbfe]")}
+                              style={{ border: itemDone ? "1px solid #a7f3d0" : "1px solid #e8eef4" }}
                             >
+                              {/* ✅ زر تعليم الوجبة كجاهزة (تقدّم الشيف) */}
+                              {!isPrepared && (
+                                <button
+                                  onClick={() => toggleItemPrepared({ id: plan._id, itemIndex: origIdx, prepared: !itemDone, sessionToken: sessionTok })}
+                                  className={cn(
+                                    "float-left ms-2 h-8 px-3 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all",
+                                    itemDone ? "bg-emerald-500 text-white" : "bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                  )}
+                                >
+                                  {itemDone ? "✓ " + (isRtl ? "جاهزة" : "Done") : (isRtl ? "علّم جاهزة" : "Mark done")}
+                                </button>
+                              )}
                               {/* Meal Category Badge */}
                               <div className="flex items-start justify-between mb-2">
                                 <Badge
@@ -1011,7 +1057,7 @@ export default function Kitchen() {
                               </div>
 
                               {/* Meal Name */}
-                              <h3 className="text-xl font-bold text-gray-900 mb-3">
+                              <h3 className={cn("text-xl font-bold mb-3", itemDone ? "text-emerald-600 line-through" : "text-gray-900")}>
                                 {mealName}
                               </h3>
 
