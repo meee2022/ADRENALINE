@@ -294,7 +294,7 @@ export default function Stickers() {
           align-items: center;
           justify-content: center;
           gap: 2mm;
-          margin-top: 0;
+          margin-top: 0.2mm;
           line-height: 1;
         }
         .goal-badge {
@@ -427,7 +427,7 @@ export default function Stickers() {
           align-items: center;
           justify-content: center;
           padding: 0.2mm 0 0.3mm;
-          gap: 0.25mm;
+          gap: 0.6mm;
           min-height: 0;
           overflow: hidden;
           text-align: center;
@@ -547,7 +547,7 @@ export default function Stickers() {
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
           line-height: 1.05;
-          margin: 0.15mm auto 0;
+          margin: 0.35mm auto 0;
           padding: 0.25mm 1mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
