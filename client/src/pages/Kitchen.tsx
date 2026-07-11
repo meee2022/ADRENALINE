@@ -1335,7 +1335,7 @@ export default function Kitchen() {
                       </div>
 
                       {/* ✅ Chef Portion & Program Breakdown Grid */}
-                      <div className="grid grid-cols-5 gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-center">
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-center">
                         <div className="px-2 py-1.5 rounded bg-sky-50/70 border border-sky-200">
                           <span className="text-[9px] font-black text-sky-600 block">DIET (تنشيف)</span>
                           <span className="text-sm font-black text-sky-800">{m.dietCount || 0}</span>

@@ -155,10 +155,47 @@ export default function InventoryReportsPage() {
   }, [items, movements]);
 
   const handleExportPDF = () => {
-    toast({
-      title: isRtl ? "قريباً" : "Coming Soon",
-      description: isRtl ? "ميزة التصدير قيد التطوير" : "Export feature is under development",
-    });
+    // طباعة أصلية (عربي سليم) — كشف المخزون كاملاً؛ المستخدم يحفظ كـ PDF.
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
+    const dir = isRtl ? "rtl" : "ltr";
+    const tr = (a: string, e: string) => (isRtl ? a : e);
+    const rows = [...items]
+      .sort((a, b) => Number(a.currentStock <= a.minStock ? 0 : 1) - Number(b.currentStock <= b.minStock ? 0 : 1))
+      .map((i: any) => {
+        const low = i.currentStock <= i.minStock;
+        return `<tr>
+          <td>${esc(i.nameAr || i.nameEn || "—")}</td>
+          <td class="c">${esc(i.category || "—")}</td>
+          <td class="c">${esc(i.currentStock)} ${esc(i.unit || "")}</td>
+          <td class="c">${esc(i.minStock)}</td>
+          <td class="c ${low ? "low" : "ok"}">${low ? tr("منخفض", "Low") : tr("طبيعي", "Normal")}</td>
+        </tr>`;
+      }).join("");
+    const html = `<!doctype html><html dir="${dir}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8">
+      <title>ADRENALINE-inventory</title>
+      <style>
+        *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+        body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;color:#0E2A4A}
+        .hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:flex-end}
+        .brand{font-size:19px;font-weight:900;letter-spacing:.12em}.brand small{display:block;font-size:8px;letter-spacing:.35em;opacity:.85}
+        .wrap{padding:12px 16px}
+        table{width:100%;border-collapse:collapse;font-size:12px}
+        th{background:#0E76AC;color:#fff;padding:7px 6px;font-weight:800;border:1px solid #0b5f8a}
+        td{padding:6px;border:1px solid #cfd9e4}tr:nth-child(even) td{background:#f7fbfe}
+        .c{text-align:center}.low{color:#b91c1c;font-weight:800}.ok{color:#15803d;font-weight:700}
+        @page{size:A4;margin:8mm}
+      </style></head><body>
+      <div class="hero"><div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div>
+        <div style="text-align:${isRtl ? "end" : "start"}"><div style="font-size:16px;font-weight:900">${tr("تقرير المخزون", "Inventory Report")}</div>
+        <div style="font-size:11px;opacity:.9">${new Date().toLocaleDateString(isRtl ? "ar-EG" : "en-GB")} · ${items.length} ${tr("مادة", "items")}</div></div></div>
+      <div class="wrap"><table><thead><tr>
+        <th>${tr("المنتج", "Product")}</th><th>${tr("الفئة", "Category")}</th><th>${tr("المخزون", "Stock")}</th><th>${tr("الحد الأدنى", "Min")}</th><th>${tr("الحالة", "Status")}</th>
+      </tr></thead><tbody>${rows}</tbody></table></div>
+      <script>(function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);})();<\/script>
+      </body></html>`;
+    const w = window.open("", "_blank", "width=900,height=800");
+    if (!w) { toast({ title: isRtl ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups" }); return; }
+    w.document.write(html); w.document.close();
   };
 
   const handleShowDetails = () => {

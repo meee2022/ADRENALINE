@@ -5,7 +5,7 @@
  *
  *   صيغتان (المطبخ يختار):
  *     - Excel (.xlsx) عبر xlsx-js-style — بحدود وتنسيق (SheetJS المجاني بلا حدود).
- *     - PDF مصمّم يتحمّل مباشرةً (لا نافذة طباعة) عبر html2pdf (تحميل ديناميكي).
+ *     - PDF عبر طباعة المتصفح الأصلية (نافذة طباعة) — عربي سليم بلا html2canvas.
  *
  *   يدعم لغتين: عند الإنجليزية تخرج كل اللافتات إنجليزية (أسماء الوجبات تُبنى
  *   بلغة العرض في Kitchen.tsx قبل تمريرها هنا).
@@ -156,14 +156,14 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
   const tr = T(lang);
   const dir = lang === "ar" ? "rtl" : "ltr";
 
-  // ⚠️ عنصر مفصول (لا يُلحَق بالصفحة) — html2pdf يُلحقه داخلياً في موضع محايد
-  //    فيصوّره html2canvas صحيحاً. إلحاقه على left:-10000px كان ينتج PDF فارغاً.
-  const el = document.createElement("div");
-  el.style.width = "1120px";
-  el.style.background = "#ffffff";
-  el.innerHTML = `
+  // ✅ نطبع عبر محرك المتصفح (لا html2canvas): يشكّل العربي صحيحاً بلا تقطيع
+  //    ولا فقدان نص — نفس التصميم تماماً، والمستخدم يحفظ كـ PDF (أفقي A4).
+  const html = `<!doctype html><html dir="${dir}" lang="${lang}"><head><meta charset="utf-8">
+    <title>ADRENALINE-kitchen-${esc(dateStr)}</title>
     <style>
-      .kp-doc *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+      *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+      html,body{margin:0;padding:0}
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff}
       .kp-doc{color:#0E2A4A;background:#fff}
       .kp-hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:16px 20px;
                display:flex;justify-content:space-between;align-items:flex-end}
@@ -183,7 +183,9 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .c{text-align:center} .nm{font-weight:800} .sm{font-size:8px;color:#47759c}
       .al{color:#b45309;font-size:8px;font-weight:700}
       .foot{margin:6px 16px 12px;font-size:9px;color:#94a3b8;text-align:center}
-    </style>
+      @page{size:A4 landscape;margin:6mm}
+      @media print{.sec{break-inside:avoid}thead{display:table-header-group}}
+    </style></head><body>
     <div class="kp-doc" dir="${dir}">
       <div class="kp-hero">
         <div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div>
@@ -197,18 +199,12 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
         ${tableHtml(tr.customizedSec, cust, lang)}
       </div>
       <div class="foot">ADRENALINE Healthy Food — ${esc(tr.title)} ${esc(dateStr)}</div>
-    </div>`;
+    </div>
+    <script>(function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);})();<\/script>
+    </body></html>`;
 
-  const html2pdf = (await import("html2pdf.js")).default as any;
-  await html2pdf()
-    .set({
-      margin: 5,
-      filename: `ADRENALINE-kitchen-${dateStr}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "landscape" },
-      pagebreak: { mode: ["css", "legacy"] },
-    })
-    .from(el)
-    .save();
+  const w = window.open("", "_blank", "width=1100,height=800");
+  if (!w) { alert(lang === "ar" ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); return; }
+  w.document.write(html);
+  w.document.close();
 }

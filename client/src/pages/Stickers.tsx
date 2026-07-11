@@ -169,7 +169,7 @@ export default function Stickers() {
                 {isRtl ? "إعادة ضبط" : "Reset"}
               </button>
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 { label: isRtl ? "العرض" : "Width",    value: labelW, onChange: setLabelW },
                 { label: isRtl ? "الطول" : "Length",   value: labelH, onChange: setLabelH },

@@ -1,11 +1,12 @@
 /**
  * @file client/src/pages/Reports.tsx
- * @description مركز التقارير - تقارير قابلة للتصدير والطباعة
+ * @description مركز التقارير - تقارير قابلة للتصدير والطباعة (ثنائي اللغة)
  */
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,12 +27,19 @@ import {
 
 type ReportType = "sales" | "kitchen" | "delivery" | "customers" | "inventory";
 
-const REPORTS: Array<{ key: ReportType; titleAr: string; icon: any; color: string }> = [
-  { key: "sales", titleAr: "تقرير المبيعات", icon: DollarSign, color: "#10b981" },
-  { key: "kitchen", titleAr: "تقرير المطبخ", icon: ChefHat, color: "#f59e0b" },
-  { key: "delivery", titleAr: "تقرير التوصيل", icon: Truck, color: "#8b5cf6" },
-  { key: "customers", titleAr: "تقرير العملاء", icon: UsersIcon, color: "#3CC4F0" },
-  { key: "inventory", titleAr: "تقرير المخزون", icon: Package, color: "#ef4444" },
+/** helper موحّد للترجمة داخل كل مكوّن (t غير متاح عبر النطاق فنبنيه محلياً). */
+function useT() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  return { isRtl, t: (a: string, e: string) => (isRtl ? a : e) };
+}
+
+const REPORTS: Array<{ key: ReportType; titleAr: string; titleEn: string; icon: any; color: string }> = [
+  { key: "sales", titleAr: "تقرير المبيعات", titleEn: "Sales Report", icon: DollarSign, color: "#10b981" },
+  { key: "kitchen", titleAr: "تقرير المطبخ", titleEn: "Kitchen Report", icon: ChefHat, color: "#f59e0b" },
+  { key: "delivery", titleAr: "تقرير التوصيل", titleEn: "Delivery Report", icon: Truck, color: "#8b5cf6" },
+  { key: "customers", titleAr: "تقرير العملاء", titleEn: "Customers Report", icon: UsersIcon, color: "#3CC4F0" },
+  { key: "inventory", titleAr: "تقرير المخزون", titleEn: "Inventory Report", icon: Package, color: "#ef4444" },
 ];
 
 function toCsv(rows: any[][]): string {
@@ -60,6 +68,7 @@ function downloadCsv(filename: string, content: string) {
 }
 
 export default function Reports() {
+  const { isRtl, t } = useT();
   const [activeReport, setActiveReport] = useState<ReportType>("sales");
   const today = new Date().toISOString().split("T")[0];
   const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -79,11 +88,11 @@ export default function Reports() {
         <CardContent className="pt-6">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <Label className="text-xs">من تاريخ</Label>
+              <Label className="text-xs">{t("من تاريخ", "From date")}</Label>
               <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">إلى تاريخ</Label>
+              <Label className="text-xs">{t("إلى تاريخ", "To date")}</Label>
               <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
             </div>
           </div>
@@ -104,7 +113,7 @@ export default function Reports() {
               }`}
             >
               <Icon className="h-6 w-6" style={{ color: r.color }} />
-              <span className="text-xs font-bold">{r.titleAr}</span>
+              <span className="text-xs font-bold">{isRtl ? r.titleAr : r.titleEn}</span>
             </button>
           );
         })}
@@ -121,21 +130,23 @@ export default function Reports() {
 }
 
 function ReportToolbar({ onExport, onPrint }: { onExport: () => void; onPrint: () => void }) {
+  const { t } = useT();
   return (
     <div className="flex items-center gap-2 print:hidden">
       <Button onClick={onExport} variant="outline" size="sm" className="gap-2">
         <Download className="h-4 w-4" />
-        تصدير CSV
+        {t("تصدير CSV", "Export CSV")}
       </Button>
       <Button onClick={onPrint} variant="outline" size="sm" className="gap-2">
         <Printer className="h-4 w-4" />
-        طباعة
+        {t("طباعة", "Print")}
       </Button>
     </div>
   );
 }
 
 function SalesReport({ from, to }: { from: string; to: string }) {
+  const { t } = useT();
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const orders = useQuery(api.customerOrders.list, { limit: 1000, sessionToken }) || [];
   const filtered = orders.filter((o: any) => {
@@ -147,7 +158,9 @@ function SalesReport({ from, to }: { from: string; to: string }) {
   const totalMeals = filtered.reduce((s: number, o: any) => s + (o.totalMeals || 0), 0);
 
   const handleExport = () => {
-    const rows: any[][] = [["رقم الطلب", "العميل", "الجوال", "الحالة", "الوجبات", "السعرات", "السعر", "التاريخ"]];
+    const rows: any[][] = [
+      t("رقم الطلب,العميل,الجوال,الحالة,الوجبات,السعرات,السعر,التاريخ", "Order No,Customer,Phone,Status,Meals,Calories,Price,Date").split(","),
+    ];
     for (const o of filtered) {
       rows.push([
         o.orderNumber,
@@ -166,25 +179,25 @@ function SalesReport({ from, to }: { from: string; to: string }) {
   return (
     <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>تقرير المبيعات</CardTitle>
+        <CardTitle>{t("تقرير المبيعات", "Sales Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <StatBox label="عدد الطلبات" value={filtered.length} />
-          <StatBox label="إجمالي الوجبات" value={totalMeals} />
-          <StatBox label="إجمالي الإيرادات" value={`${total.toLocaleString()} ر.ق`} highlight />
+          <StatBox label={t("عدد الطلبات", "Orders")} value={filtered.length} />
+          <StatBox label={t("إجمالي الوجبات", "Total meals")} value={totalMeals} />
+          <StatBox label={t("إجمالي الإيرادات", "Total revenue")} value={`${total.toLocaleString()} ${t("ر.ق", "QAR")}`} highlight />
         </div>
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>الطلب</TableHead>
-              <TableHead>العميل</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead>الوجبات</TableHead>
-              <TableHead>السعر</TableHead>
-              <TableHead>التاريخ</TableHead>
+              <TableHead>{t("الطلب", "Order")}</TableHead>
+              <TableHead>{t("العميل", "Customer")}</TableHead>
+              <TableHead>{t("الحالة", "Status")}</TableHead>
+              <TableHead>{t("الوجبات", "Meals")}</TableHead>
+              <TableHead>{t("السعر", "Price")}</TableHead>
+              <TableHead>{t("التاريخ", "Date")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -196,7 +209,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
                   <Badge variant="outline">{o.status}</Badge>
                 </TableCell>
                 <TableCell>{o.totalMeals}</TableCell>
-                <TableCell className="font-bold">{o.totalPrice} ر.ق</TableCell>
+                <TableCell className="font-bold">{o.totalPrice} {t("ر.ق", "QAR")}</TableCell>
                 <TableCell className="text-xs" dir="ltr">
                   {new Date(o.createdAt).toLocaleDateString("en-GB")}
                 </TableCell>
@@ -211,6 +224,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
 }
 
 function KitchenReport({ from, to }: { from: string; to: string }) {
+  const { t } = useT();
   const plans = useQuery(api.dailyPlans.list, {}) || [];
   const filtered = plans.filter((p: any) => p.date >= from && p.date <= to);
 
@@ -225,7 +239,9 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
   );
 
   const handleExport = () => {
-    const rows: any[][] = [["التاريخ", "العميل", "الحالة", "عدد الوجبات", "نوع التوصيل"]];
+    const rows: any[][] = [
+      t("التاريخ,العميل,الحالة,عدد الوجبات,نوع التوصيل", "Date,Customer,Status,Meals,Delivery").split(","),
+    ];
     for (const p of filtered) {
       rows.push([
         p.date,
@@ -241,25 +257,25 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
   return (
     <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>تقرير المطبخ</CardTitle>
+        <CardTitle>{t("تقرير المطبخ", "Kitchen Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-          <StatBox label="الخطط" value={filtered.length} />
-          <StatBox label="الوجبات" value={totalMeals} />
-          <StatBox label="جاهز" value={byStatus.PREPARED || 0} highlight />
-          <StatBox label="تم التوصيل" value={byStatus.DELIVERED || 0} highlight />
+          <StatBox label={t("الخطط", "Plans")} value={filtered.length} />
+          <StatBox label={t("الوجبات", "Meals")} value={totalMeals} />
+          <StatBox label={t("جاهز", "Prepared")} value={byStatus.PREPARED || 0} highlight />
+          <StatBox label={t("تم التوصيل", "Delivered")} value={byStatus.DELIVERED || 0} highlight />
         </div>
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>العميل</TableHead>
-              <TableHead>الحالة</TableHead>
-              <TableHead>الوجبات</TableHead>
-              <TableHead>التوصيل</TableHead>
+              <TableHead>{t("التاريخ", "Date")}</TableHead>
+              <TableHead>{t("العميل", "Customer")}</TableHead>
+              <TableHead>{t("الحالة", "Status")}</TableHead>
+              <TableHead>{t("الوجبات", "Meals")}</TableHead>
+              <TableHead>{t("التوصيل", "Delivery")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -283,6 +299,7 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
 }
 
 function DeliveryReport({ from, to }: { from: string; to: string }) {
+  const { t } = useT();
   const plans = useQuery(api.dailyPlans.list, {}) || [];
   const filtered = plans.filter(
     (p: any) => p.date >= from && p.date <= to && p.status === "DELIVERED",
@@ -291,13 +308,13 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
   return (
     <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader>
-        <CardTitle>تقرير التوصيل</CardTitle>
+        <CardTitle>{t("تقرير التوصيل", "Delivery Report")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <StatBox label="عدد التوصيلات" value={filtered.length} highlight />
+          <StatBox label={t("عدد التوصيلات", "Deliveries")} value={filtered.length} highlight />
           <StatBox
-            label="إجمالي الوجبات"
+            label={t("إجمالي الوجبات", "Total meals")}
             value={filtered.reduce(
               (s: number, p: any) => s + (Array.isArray(p.items) ? p.items.filter((i: any) => !i?.isOff).length : 0),
               0,
@@ -308,10 +325,10 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>التاريخ</TableHead>
-              <TableHead>العميل</TableHead>
-              <TableHead>التوصيل</TableHead>
-              <TableHead>الوجبات</TableHead>
+              <TableHead>{t("التاريخ", "Date")}</TableHead>
+              <TableHead>{t("العميل", "Customer")}</TableHead>
+              <TableHead>{t("التوصيل", "Delivery")}</TableHead>
+              <TableHead>{t("الوجبات", "Meals")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -334,12 +351,15 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
 }
 
 function CustomersReport() {
+  const { t } = useT();
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const customers = useQuery(api.customers.list, { sessionToken }) || [];
   const active = customers.filter((c: any) => c.isActive).length;
 
   const handleExport = () => {
-    const rows: any[][] = [["الاسم", "الجوال", "الباقة", "البداية", "النهاية", "الحالة"]];
+    const rows: any[][] = [
+      t("الاسم,الجوال,الباقة,البداية,النهاية,الحالة", "Name,Phone,Package,Start,End,Status").split(","),
+    ];
     for (const c of customers) {
       rows.push([
         c.fullName,
@@ -347,7 +367,7 @@ function CustomersReport() {
         c.packageLabel || c.program || "—",
         c.startDate,
         c.endDate,
-        c.isActive ? "نشط" : "متوقف",
+        c.isActive ? t("نشط", "Active") : t("متوقف", "Inactive"),
       ]);
     }
     downloadCsv(`customers-${new Date().toISOString().split("T")[0]}.csv`, toCsv(rows));
@@ -356,23 +376,23 @@ function CustomersReport() {
   return (
     <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>تقرير العملاء</CardTitle>
+        <CardTitle>{t("تقرير العملاء", "Customers Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <StatBox label="إجمالي العملاء" value={customers.length} />
-          <StatBox label="العملاء النشطون" value={active} highlight />
+          <StatBox label={t("إجمالي العملاء", "Total customers")} value={customers.length} />
+          <StatBox label={t("العملاء النشطون", "Active customers")} value={active} highlight />
         </div>
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>الاسم</TableHead>
-              <TableHead>الجوال</TableHead>
-              <TableHead>الباقة</TableHead>
-              <TableHead>البداية</TableHead>
-              <TableHead>الحالة</TableHead>
+              <TableHead>{t("الاسم", "Name")}</TableHead>
+              <TableHead>{t("الجوال", "Phone")}</TableHead>
+              <TableHead>{t("الباقة", "Package")}</TableHead>
+              <TableHead>{t("البداية", "Start")}</TableHead>
+              <TableHead>{t("الحالة", "Status")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -384,7 +404,7 @@ function CustomersReport() {
                 <TableCell className="text-xs" dir="ltr">{c.startDate}</TableCell>
                 <TableCell>
                   <Badge variant={c.isActive ? "default" : "secondary"}>
-                    {c.isActive ? "نشط" : "متوقف"}
+                    {c.isActive ? t("نشط", "Active") : t("متوقف", "Inactive")}
                   </Badge>
                 </TableCell>
               </TableRow>
@@ -398,11 +418,14 @@ function CustomersReport() {
 }
 
 function InventoryReport() {
+  const { t } = useT();
   const items = useQuery(api.inventory.listItems, {}) || [];
   const lowStock = items.filter((i: any) => i.currentStock <= i.minStock).length;
 
   const handleExport = () => {
-    const rows: any[][] = [["المنتج", "الفئة", "الوحدة", "المخزون", "الحد الأدنى", "حالة"]];
+    const rows: any[][] = [
+      t("المنتج,الفئة,الوحدة,المخزون,الحد الأدنى,حالة", "Product,Category,Unit,Stock,Min,Status").split(","),
+    ];
     for (const i of items) {
       rows.push([
         i.nameAr,
@@ -410,7 +433,7 @@ function InventoryReport() {
         i.unit,
         i.currentStock,
         i.minStock,
-        i.currentStock <= i.minStock ? "منخفض" : "طبيعي",
+        i.currentStock <= i.minStock ? t("منخفض", "Low") : t("طبيعي", "Normal"),
       ]);
     }
     downloadCsv(`inventory-${new Date().toISOString().split("T")[0]}.csv`, toCsv(rows));
@@ -419,23 +442,23 @@ function InventoryReport() {
   return (
     <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>تقرير المخزون</CardTitle>
+        <CardTitle>{t("تقرير المخزون", "Inventory Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-          <StatBox label="إجمالي المنتجات" value={items.length} />
-          <StatBox label="مخزون منخفض" value={lowStock} highlight={lowStock > 0} />
+          <StatBox label={t("إجمالي المنتجات", "Total products")} value={items.length} />
+          <StatBox label={t("مخزون منخفض", "Low stock")} value={lowStock} highlight={lowStock > 0} />
         </div>
         <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>المنتج</TableHead>
-              <TableHead>الفئة</TableHead>
-              <TableHead>المخزون</TableHead>
-              <TableHead>الحد الأدنى</TableHead>
-              <TableHead>الحالة</TableHead>
+              <TableHead>{t("المنتج", "Product")}</TableHead>
+              <TableHead>{t("الفئة", "Category")}</TableHead>
+              <TableHead>{t("المخزون", "Stock")}</TableHead>
+              <TableHead>{t("الحد الأدنى", "Min")}</TableHead>
+              <TableHead>{t("الحالة", "Status")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -453,7 +476,7 @@ function InventoryReport() {
                         : "bg-green-100 text-green-700"
                     }
                   >
-                    {i.currentStock <= i.minStock ? "منخفض" : "طبيعي"}
+                    {i.currentStock <= i.minStock ? t("منخفض", "Low") : t("طبيعي", "Normal")}
                   </Badge>
                 </TableCell>
               </TableRow>
