@@ -83,6 +83,7 @@ export default function OrderReviewDetail() {
   const rejectMutation = useMutation(api.customerOrders.reject);
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
   const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
+  const noteItemMutation = useMutation(api.customerOrders.updateOrderItemNote);
   const deleteOrderMutation = useMutation(api.customerOrders.deleteOrder);
 
   // ✅ حذف الطلب نهائياً (أدمن فقط) — لتنظيف التجارب، غير الرفض.
@@ -343,7 +344,8 @@ export default function OrderReviewDetail() {
   };
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+    // overflow-x-clip: يمنع تمدّد أي عنصر داخلي عرضياً فلا تهتزّ الصفحة يميناً/يساراً على الجوال
+    <div className="space-y-6 p-3 sm:p-6 max-w-7xl mx-auto overflow-x-clip">
       {/* Back + Print */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <Button variant="outline" onClick={() => navigate("/orders/pending")}>
@@ -559,7 +561,30 @@ export default function OrderReviewDetail() {
                                 <span>{meal.calories} سعرة</span>
                                 {meal.protein ? <span>🥩 {meal.protein}g</span> : null}
                               </div>
+                              {meal.specialNotes && (
+                                <p className="text-[10.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-1 mb-1.5 leading-snug break-words">
+                                  📝 {meal.specialNotes}
+                                </p>
+                              )}
                               <div className="flex items-center justify-end gap-3 mt-auto pt-1.5 border-t border-gray-100">
+                                <button
+                                  onClick={async () => {
+                                    const txt = prompt(
+                                      t("ملاحظة للمطبخ على هذه الوجبة (إضافة/تعديل):", "Kitchen note for this meal (addition/tweak):"),
+                                      meal.specialNotes || "",
+                                    );
+                                    if (txt === null) return;
+                                    try {
+                                      await noteItemMutation({ itemId: meal._id, note: txt, sessionToken });
+                                    } catch (e: any) {
+                                      alert(e?.message || t("تعذّر الحفظ", "Save failed"));
+                                    }
+                                  }}
+                                  className="text-gray-400 hover:text-amber-600 transition-colors text-sm"
+                                  title={t("ملاحظة للمطبخ", "Kitchen note")}
+                                >
+                                  📝
+                                </button>
                                 <button
                                   onClick={() => setSwapTarget(meal)}
                                   className="text-gray-400 hover:text-primary transition-colors text-sm"

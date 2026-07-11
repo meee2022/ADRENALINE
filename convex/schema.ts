@@ -584,7 +584,9 @@ export default defineSchema({
     // Schedule
     week: v.number(),
     day: v.string(), // "saturday", "sunday", etc.
-    
+
+    // ✅ ملاحظة الأخصائية على الوجبة (إضافة/تعديل) — تمرّ للمطبخ والاستيكر
+    specialNotes: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()), // لتعديل الوجبة من الأدمن
   })

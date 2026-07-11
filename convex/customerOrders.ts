@@ -352,6 +352,8 @@ export const approve = mutation({
         imageUrl: meal.imageUrl,
         week: meal.week,
         day: meal.day,
+        // ✅ ملاحظة الأخصائية على الوجبة — يقرؤها المطبخ والاستيكر
+        specialNotes: (meal as any).specialNotes || undefined,
         // إضافة التفضيلات/الممنوعات/الكميات/الحساسية من المشترك (snapshot —
         // يبقى ظاهراً للمطبخ حتى لو لم يكن العميل مربوطاً بحساب)
         avoid: linkedCustomer?.avoid || undefined,
@@ -485,6 +487,23 @@ export const reject = mutation({
 });
 
 // ===== UPDATE ORDER ITEM MEAL (Admin - Replace meal) =====
+/** ✅ ملاحظة الأخصائية على وجبة داخل الطلب — تظهر للمطبخ وعلى الاستيكر بعد الاعتماد. */
+export const updateOrderItemNote = mutation({
+  args: {
+    itemId: v.id("customerOrderItems"),
+    note: v.string(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    await ctx.db.patch(args.itemId, {
+      specialNotes: args.note.trim() || undefined,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
 export const updateOrderItemMeal = mutation({
   args: {
     itemId: v.id("customerOrderItems"),
