@@ -426,8 +426,8 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 0.2mm 0;
-          gap: 0.3mm;
+          padding: 0.2mm 0 0.3mm;
+          gap: 0.25mm;
           min-height: 0;
           overflow: hidden;
           text-align: center;
@@ -485,15 +485,18 @@ export default function Stickers() {
           padding: 0.15mm 1mm;
         }
 
-        /* Macros + Calories row */
+        /* Macros + Calories row — سطر واحد (nowrap) حتى لا يلتفّ فيزقّ الممنوعات
+           خارج منطقة العرض. المحتوى قصير (فئة + سعرات + P/C/F) فيتّسع. */
         .macros-row {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 2mm;
+          gap: 1.4mm;
           margin-top: 0;
-          flex-wrap: wrap;
+          flex-wrap: nowrap;
+          white-space: nowrap;
           line-height: 1;
+          max-width: 100%;
         }
         /* Calories — solid black pill with white knockout text (crisp on thermal) */
         .macros-cal {
@@ -538,14 +541,14 @@ export default function Stickers() {
           display: -webkit-box;
           -webkit-line-clamp: 2;
           -webkit-box-orient: vertical;
-          font-size: 7px;
+          font-size: 6.5px;
           font-weight: 900;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
-          line-height: 1.08;
-          margin: 0.2mm auto 0.4mm;
-          padding: 0.3mm 1.2mm;
+          line-height: 1.05;
+          margin: 0.15mm auto 0;
+          padding: 0.25mm 1mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
           border: 0.5px solid rgba(220,38,38,0.5);
@@ -664,8 +667,18 @@ function parseMealData(s: any) {
     mealName = raw.replace(/^\[.*?\]\s*/, "").trim();
   }
 
-  // Combine with explicit warnings field
-  const warnings = [s.warnings, ...extraWarnings].filter(Boolean).join(" • ");
+  // Combine with explicit warnings field ثم **إزالة التكرار**: مصادر الممنوعات
+  // (حساسية العميل + ممنوعاته + المُعدِّلات) كثيراً ما تتداخل فيتكرر نفس العنصر
+  // ("No onion, No onion"). نفصل على • و، ونوحّد بلا حساسية لحالة الأحرف.
+  const combined = [s.warnings, ...extraWarnings].filter(Boolean).join(" • ");
+  const seen = new Set<string>();
+  const uniq: string[] = [];
+  combined.split(/[•,،]/).forEach((tok) => {
+    const t = tok.replace(/\s+/g, " ").trim();
+    const k = t.toLowerCase();
+    if (t && !seen.has(k)) { seen.add(k); uniq.push(t); }
+  });
+  const warnings = uniq.join(", ");
   return { mealName: mealName || raw, warnings };
 }
 
