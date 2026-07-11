@@ -16,9 +16,13 @@ import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Coupons() {
   const { toast } = useToast();
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const coupons = useQuery(api.coupons.list, { sessionToken }) || [];
   const createMutation = useMutation(api.coupons.create);
@@ -36,7 +40,7 @@ export default function Coupons() {
 
   const handleCreate = async () => {
     if (!form.code || !form.discountValue) {
-      toast({ title: "خطأ", description: "املأ الحقول المطلوبة", variant: "destructive" });
+      toast({ title: t("خطأ","Error"), description: t("املأ الحقول المطلوبة","Fill the required fields"), variant: "destructive" });
       return;
     }
     try {
@@ -48,17 +52,17 @@ export default function Coupons() {
         expiresAt: form.expiresAt || undefined,
         sessionToken,
       });
-      toast({ title: "تم الإنشاء", description: `كود ${form.code} جاهز للاستخدام` });
+      toast({ title: t("تم الإنشاء","Created"), description: `${t("كود","Code")} ${form.code} ${t("جاهز للاستخدام","is ready to use")}` });
       setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "" });
       setDialogOpen(false);
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: t("خطأ","Error"), description: e.message, variant: "destructive" });
     }
   };
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
-    toast({ title: "تم النسخ", description: code });
+    toast({ title: t("تم النسخ","Copied"), description: code });
   };
 
   return (
@@ -70,34 +74,34 @@ export default function Coupons() {
         actions={
           <Button onClick={() => setDialogOpen(true)} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
             <Plus className="h-5 w-5" />
-            كوبون جديد
+            {t("كوبون جديد","New coupon")}
           </Button>
         }
       />
 
       <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
-          <CardTitle>الكوبونات</CardTitle>
+          <CardTitle>{t("الكوبونات","Coupons")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
             <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
-                <TableHead>الكود</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>القيمة</TableHead>
-                <TableHead>الاستخدام</TableHead>
-                <TableHead>الصلاحية</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>إجراءات</TableHead>
+                <TableHead>{t("الكود","Code")}</TableHead>
+                <TableHead>{t("النوع","Type")}</TableHead>
+                <TableHead>{t("القيمة","Value")}</TableHead>
+                <TableHead>{t("الاستخدام","Usage")}</TableHead>
+                <TableHead>{t("الصلاحية","Expiry")}</TableHead>
+                <TableHead>{t("الحالة","Status")}</TableHead>
+                <TableHead>{t("إجراءات","Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {coupons.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    لا توجد كوبونات
+                    {t("لا توجد كوبونات","No coupons")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -118,12 +122,12 @@ export default function Coupons() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {c.discountType === "PERCENT" ? "نسبة %" : "مبلغ ثابت"}
+                        {c.discountType === "PERCENT" ? t("نسبة %","Percent %") : t("مبلغ ثابت","Fixed")}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-bold text-cyan-700">
                       {c.discountValue}
-                      {c.discountType === "PERCENT" ? "%" : " ر.ق"}
+                      {c.discountType === "PERCENT" ? "%" : t(" ر.ق"," QAR")}
                     </TableCell>
                     <TableCell>
                       {c.usedCount}
@@ -132,7 +136,7 @@ export default function Coupons() {
                     <TableCell className="text-xs" dir="ltr">{c.expiresAt || "—"}</TableCell>
                     <TableCell>
                       <Badge className={`rounded-full ${c.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
-                        {c.isActive ? "مفعّل" : "متوقف"}
+                        {c.isActive ? t("مفعّل","Active") : t("متوقف","Off")}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -141,7 +145,7 @@ export default function Coupons() {
                           variant="ghost"
                           size="icon"
                           onClick={() => toggleMutation({ id: c._id, sessionToken })}
-                          title="تفعيل/إيقاف"
+                          title={t("تفعيل/إيقاف","Enable/Disable")}
                         >
                           <Power className="h-4 w-4" />
                         </Button>
@@ -149,7 +153,7 @@ export default function Coupons() {
                           variant="ghost"
                           size="icon"
                           onClick={() => {
-                            if (confirm(`حذف الكود ${c.code}؟`)) removeMutation({ id: c._id, sessionToken });
+                            if (confirm(`${t("حذف الكود","Delete code")} ${c.code}؟`)) removeMutation({ id: c._id, sessionToken });
                           }}
                           className="text-red-500"
                         >
@@ -167,13 +171,13 @@ export default function Coupons() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>كوبون خصم جديد</DialogTitle>
+            <DialogTitle>{t("كوبون خصم جديد","New discount coupon")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>كود الخصم</Label>
+              <Label>{t("كود الخصم","Discount code")}</Label>
               <Input
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
@@ -183,7 +187,7 @@ export default function Coupons() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>النوع</Label>
+                <Label>{t("النوع","Type")}</Label>
                 <select
                   value={form.discountType}
                   onChange={(e) =>
@@ -191,12 +195,12 @@ export default function Coupons() {
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  <option value="PERCENT">نسبة مئوية %</option>
-                  <option value="FIXED">مبلغ ثابت</option>
+                  <option value="PERCENT">{t("نسبة مئوية %","Percentage %")}</option>
+                  <option value="FIXED">{t("مبلغ ثابت","Fixed amount")}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>{form.discountType === "PERCENT" ? "النسبة (%)" : "المبلغ (ر.ق)"}</Label>
+                <Label>{form.discountType === "PERCENT" ? t("النسبة (%)","Percentage (%)") : t("المبلغ (ر.ق)","Amount (QAR)")}</Label>
                 <Input
                   type="number"
                   value={form.discountValue}
@@ -207,7 +211,7 @@ export default function Coupons() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>أقصى عدد استخدامات (اختياري)</Label>
+                <Label>{t("أقصى عدد استخدامات (اختياري)","Max uses (optional)")}</Label>
                 <Input
                   type="number"
                   value={form.maxUses}
@@ -216,7 +220,7 @@ export default function Coupons() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>تاريخ الانتهاء (اختياري)</Label>
+                <Label>{t("تاريخ الانتهاء (اختياري)","Expiry date (optional)")}</Label>
                 <Input
                   type="date"
                   value={form.expiresAt}
@@ -227,9 +231,9 @@ export default function Coupons() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              إلغاء
+              {t("إلغاء","Cancel")}
             </Button>
-            <Button onClick={handleCreate}>إنشاء الكوبون</Button>
+            <Button onClick={handleCreate}>{t("إنشاء الكوبون","Create coupon")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
