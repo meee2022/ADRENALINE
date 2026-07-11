@@ -60,6 +60,7 @@ import type * as seedUsers from "../seedUsers.js";
 import type * as sessions from "../sessions.js";
 import type * as stickers from "../stickers.js";
 import type * as subscriptionPause from "../subscriptionPause.js";
+import type * as tmpDemoKitchen from "../tmpDemoKitchen.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
 import type * as users from "../users.js";
@@ -123,6 +124,7 @@ declare const fullApi: ApiFromModules<{
   sessions: typeof sessions;
   stickers: typeof stickers;
   subscriptionPause: typeof subscriptionPause;
+  tmpDemoKitchen: typeof tmpDemoKitchen;
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;

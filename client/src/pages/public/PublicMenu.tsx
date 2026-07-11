@@ -188,9 +188,15 @@ export default function PublicMenuPage() {
   // ✅ سعرات حسب هدف العميل: مُعامل البرنامج (دايت/لياقة/تضخيم) من إعدادات المطعم.
   //    العرض فقط — بيانات الطلب تُحفظ بالسعرات الأساسية.
   const calFactor = useMemo(() => {
-    const prog = String((verifiedCustomer as any)?.program || "").toUpperCase();
-    const pp = (settings as any)?.programPortions;
-    if (!pp || !prog) return 1;
+    // البرنامج قد يكون في program أو goalType أو goals (بيانات قديمة)
+    const prog = String((verifiedCustomer as any)?.program || (verifiedCustomer as any)?.goalType || (verifiedCustomer as any)?.goals || "").toUpperCase();
+    // fallback = قيم كشف المطبخ — تعمل حتى قبل أول حفظ من إعدادات المطعم
+    const pp = (settings as any)?.programPortions || {
+      DIET: { calFactor: 1 },
+      FITNESS: { calFactor: 1.25 },
+      BULK: { calFactor: 1.5 },
+    };
+    if (!prog) return 1;
     if (prog.includes("DIET")) return Number(pp.DIET?.calFactor) || 1;
     if (prog.includes("FITNESS")) return Number(pp.FITNESS?.calFactor) || 1;
     if (prog.includes("BULK")) return Number(pp.BULK?.calFactor) || 1;

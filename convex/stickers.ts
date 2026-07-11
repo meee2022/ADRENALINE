@@ -177,6 +177,29 @@ export const get = query({
 
     const dateText = isoToDDMMYYYY(args.date);
 
+    // ✅ مُعامل السعرات حسب برنامج العميل (دايت/لياقة/تضخيم) — من إعدادات المطعم.
+    //    يسري على الأطباق الرئيسية فقط (غداء/عشاء): هي التي تتغيّر حصتها بالهدف.
+    //    نفس منطق عرض المنيو للعميل، فالاستيكر يطابق ما رآه.
+    const restSettings: any = await ctx.db.query("restaurantSettings").first();
+    // fallback = قيم كشف المطبخ 7-7-2026 — تعمل حتى قبل أول حفظ من الإعدادات
+    const pp = restSettings?.programPortions || {
+      DIET: { calFactor: 1 },
+      FITNESS: { calFactor: 1.25 },
+      BULK: { calFactor: 1.5 },
+    };
+    const factorFor = (program: string): number => {
+      if (!pp) return 1;
+      const prog = String(program || "").toUpperCase();
+      if (prog.includes("DIET")) return Number(pp.DIET?.calFactor) || 1;
+      if (prog.includes("FITNESS")) return Number(pp.FITNESS?.calFactor) || 1;
+      if (prog.includes("BULK")) return Number(pp.BULK?.calFactor) || 1;
+      return 1;
+    };
+    const isMainCourse = (category: string) => {
+      const c = String(category || "").toUpperCase();
+      return c.includes("LUNCH") || c.includes("DINNER");
+    };
+
     // ✅ تواريخ الإنتاج والصلاحية (يوم الإنتاج + يومين)
     const prodDate = dateText;
     const expDateObj = (() => {
@@ -290,10 +313,20 @@ export const get = query({
         const itemFats    = Number((it as any).fats    ?? 0) || 0;
         const itemCalories = Number((it as any).calories ?? 0) || 0;
 
-        const protein = itemProtein || Number(pmLookup?.protein ?? 0) || 0;
-        const carbs   = itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
-        const fats    = itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
-        const calories = itemCalories || Number(pmLookup?.calories ?? 0) || Number(menu?.calories ?? 0) || 0;
+        const baseProtein = itemProtein || Number(pmLookup?.protein ?? 0) || 0;
+        const baseCarbs   = itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
+        const baseFats    = itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
+        const baseCalories = itemCalories || Number(pmLookup?.calories ?? 0) || Number(menu?.calories ?? 0) || 0;
+
+        // ✅ غداء/عشاء: القيم تُضرب في مُعامل برنامج العميل (الحصة أكبر/أصغر
+        //    حسب الهدف). الماكروز تُضرب بنفس النسبة حتى يبقى الاستيكر متسقاً
+        //    (السعرات = مجموع الماكروز). باقي التصنيفات حصتها ثابتة.
+        // برنامج العميل قد يكون في program أو goalType أو goals (بيانات قديمة)
+        const f = isMainCourse(category) ? factorFor(String(c.program || (c as any).goalType || (c as any).goals || "")) : 1;
+        const protein  = Math.round(baseProtein * f);
+        const carbs    = Math.round(baseCarbs * f);
+        const fats     = Math.round(baseFats * f);
+        const calories = Math.round(baseCalories * f);
 
         const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 
