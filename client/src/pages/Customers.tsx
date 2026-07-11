@@ -159,6 +159,15 @@ const PLAN_DURATION_LABEL: Record<string, { ar: string; en: string }> = {
   month: { ar: "شهر", en: "1 month" },
 };
 
+/** يشتق الهدف/البرنامج من الباقة (slug/الاسم): diet→DIET، fitness→FITNESS، bulk→BULK */
+function planGoal(plan: any): string | undefined {
+  const s = `${plan?.slug ?? ""} ${plan?.nameEn ?? ""} ${plan?.nameAr ?? ""}`.toLowerCase();
+  if (s.includes("diet") || s.includes("تنحيف")) return "DIET";
+  if (s.includes("fitness") || s.includes("لياقة")) return "FITNESS";
+  if (s.includes("bulk") || s.includes("تضخيم")) return "BULK";
+  return undefined;
+}
+
 /** عدد أسابيع الاشتراك من تاريخَي البداية والنهاية (يُقرّب لأقرب أسبوع، وأدناه 1) */
 function weeksBetween(startISO?: string, endISO?: string): number | undefined {
   if (!startISO || !endISO) return undefined;
@@ -1309,6 +1318,9 @@ export default function Customers() {
                             const start = form.getValues("startDate");
                             if (start) form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
                             form.setValue("durationWeeks", weeks, { shouldDirty: true });
+                            // ✅ الهدف/البرنامج يُشتق من نوع الباقة (تنحيف/لياقة/تضخيم)
+                            const goal = planGoal(p);
+                            if (goal) form.setValue("goals", goal, { shouldDirty: true });
                           }
                           // لو الباقة لها خيار واحد، طبّقه فوراً (يملأ الوجبات والسعر أيضاً)
                           if (p?.options?.length === 1) {
