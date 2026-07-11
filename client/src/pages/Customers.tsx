@@ -1301,7 +1301,16 @@ export default function Customers() {
                           setPlanId(v);
                           setOptionIdx("");
                           const p = sitePlans.find((x: any) => String(x._id) === v);
-                          // لو الباقة لها خيار واحد، طبّقه فوراً
+                          // ✅ تاريخ النهاية يعتمد على مدة الباقة وحدها — نضبطه فور
+                          //    اختيار الباقة (لا ننتظر اختيار عدد الوجبات). السعر
+                          //    يُملأ مع اختيار عدد الوجبات لأنه يختلف حسب الخيار.
+                          if (p) {
+                            const weeks = PLAN_DURATION_WEEKS[p.duration] ?? 4;
+                            const start = form.getValues("startDate");
+                            if (start) form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
+                            form.setValue("durationWeeks", weeks, { shouldDirty: true });
+                          }
+                          // لو الباقة لها خيار واحد، طبّقه فوراً (يملأ الوجبات والسعر أيضاً)
                           if (p?.options?.length === 1) {
                             setOptionIdx("0");
                             applyPlanOption(p, 0);
