@@ -346,6 +346,39 @@ export const toggleItemPrepared = mutation({
 });
 
 /**
+ * ✅ تعليم كل حصص طبق معيّن كجاهزة دفعة واحدة (batch من شاشة التجميع).
+ *    الكلاينت يمرّر مواقع (planId + itemIndex) الناتجة عن تطبيع اسم الطبق.
+ */
+export const bulkToggleItemsPrepared = mutation({
+  args: {
+    locations: v.array(v.object({ planId: v.id("dailyPlans"), itemIndex: v.number() })),
+    prepared: v.boolean(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { locations, prepared, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    // اجمع المواقع حسب الخطة لتقليل الكتابات
+    const byPlan = new Map<string, number[]>();
+    for (const loc of locations) {
+      const k = String(loc.planId);
+      if (!byPlan.has(k)) byPlan.set(k, []);
+      byPlan.get(k)!.push(loc.itemIndex);
+    }
+    let updated = 0;
+    for (const [planId, idxs] of byPlan) {
+      const plan: any = await ctx.db.get(planId as any);
+      if (!plan || !Array.isArray(plan.items)) continue;
+      const items = [...plan.items];
+      for (const i of idxs) {
+        if (i >= 0 && i < items.length) { items[i] = { ...items[i], prepared }; updated++; }
+      }
+      await ctx.db.patch(planId as any, { items, updatedAt: Date.now() });
+    }
+    return { success: true, updated };
+  },
+});
+
+/**
  * ✅ قائمة مكوّنات اليوم المجمّعة (mise-en-place) — تجمع كل مكوّنات وجبات اليوم
  *    (CONFIRMED + PREPARED، الفترتين) وتحوّلها لوحدة المخزون، فيعرف الشيف
  *    "محتاج كام كيلو دجاج، كام بيضة" بدل عدّ الأطباق فقط.

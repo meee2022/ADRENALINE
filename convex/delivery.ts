@@ -250,7 +250,35 @@ export const updateMyLocation = mutation({
     } else {
       await ctx.db.insert("driverLocations", { driverId, lat, lng, updatedAt: Date.now() });
     }
-    return { success: true };
+
+    // ✅ إشعار "السائق قرّب" (مرة واحدة لكل محطة) — عند دخول نطاق NEAR_KM
+    let notifiedNear = 0;
+    const stops = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_driver_date", (q) => q.eq("driverId", driverId))
+      .collect();
+    for (const p of stops) {
+      if (p.status !== "OUT_FOR_DELIVERY") continue;
+      if ((p as any).nearNotifiedAt) continue;
+      if (!p.customerId) continue;
+      const c: any = await ctx.db.get(p.customerId);
+      if (!c || c.lat == null || c.lng == null) continue;
+      if (haversineKm(lat, lng, c.lat, c.lng) <= NEAR_KM) {
+        await ctx.db.patch(p._id, { nearNotifiedAt: Date.now() });
+        await ctx.db.insert("notifications", {
+          targetCustomerId: p.customerId,
+          type: "SYSTEM",
+          title: "السائق اقترب منك! 🚚",
+          message: `سائقنا على وشك الوصول بوجبات ${String(p.date).slice(0, 10)}`,
+          link: (p as any).trackToken ? `/track/${(p as any).trackToken}` : "/customer/profile",
+          relatedId: p._id,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+        notifiedNear++;
+      }
+    }
+    return { success: true, notifiedNear };
   },
 });
 
@@ -433,6 +461,9 @@ export const tracking = query({
       etaMin,
       isNear,
       podNote: plan.status === "DELIVERED" ? ((plan as any).podNote || null) : null,
+      podPhotoUrl: plan.status === "DELIVERED" && (plan as any).podStorageId
+        ? await ctx.storage.getUrl((plan as any).podStorageId)
+        : null,
     };
   },
 });

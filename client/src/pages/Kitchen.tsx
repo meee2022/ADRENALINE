@@ -78,6 +78,7 @@ export default function Kitchen() {
   const prepareAndConsume = usePrepareAndConsume();
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
+  const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
   const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
 
   const plans = useMemo(() => {
@@ -130,6 +131,8 @@ export default function Kitchen() {
       customizedCount: number;
       standardCount: number;
       category: string;
+      locations: Array<{ planId: string; itemIndex: number }>;  // مواقع الحصص لتعليمها دفعة
+      preparedCount: number;                                     // كم حصة معلّمة جاهزة
       details: Array<{
         customerName: string;
         deliveryTime: string;
@@ -228,9 +231,16 @@ export default function Kitchen() {
               customizedCount: 0,
               standardCount: 0,
               category: categoryName,
+              locations: [],
+              preparedCount: 0,
               details: []
             };
           }
+
+          // ✅ موقع هذه الحصة لتعليمها ضمن دفعة الطبق
+          const origIdx = (plan.items || []).indexOf(item);
+          if (origIdx >= 0) summary[mealName].locations.push({ planId: plan._id, itemIndex: origIdx });
+          if (item.prepared) summary[mealName].preparedCount += 1;
 
           const plain = isPlainMeal(item, customer) && nameMods.length === 0 && !sideNote && !qtyNote;
           summary[mealName].count += 1;
@@ -741,17 +751,35 @@ export default function Kitchen() {
                         style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                       >
                         <div className="flex items-center justify-between gap-4">
-                          <div className="flex items-center gap-4 flex-1">
-                            <div className={cn("w-3 h-3 rounded-full", color)} />
-                            <span className="text-xl font-bold text-gray-900">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className={cn("w-3 h-3 rounded-full shrink-0", color)} />
+                            <span className={cn("text-xl font-bold truncate", (meal as any).preparedCount >= meal.count ? "text-emerald-600 line-through" : "text-gray-900")}>
                               {meal.name}
                             </span>
+                            {/* ✅ عدّاد التقدّم + تعليم كل الحصص جاهزة دفعة واحدة */}
+                            {(meal as any).locations?.length > 0 && (() => {
+                              const done = (meal as any).preparedCount;
+                              const total = meal.count;
+                              const allDone = done >= total;
+                              return (
+                                <button
+                                  onClick={() => bulkTogglePrepared({ locations: (meal as any).locations, prepared: !allDone, sessionToken: sessionTok })}
+                                  className={cn(
+                                    "shrink-0 h-8 px-3 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all",
+                                    allDone ? "bg-emerald-500 text-white" : done > 0 ? "bg-emerald-100 text-emerald-700 border border-emerald-300" : "bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50",
+                                  )}
+                                  title={isRtl ? "علّم كل حصص هذا الطبق جاهزة" : "Mark all servings of this dish done"}
+                                >
+                                  {allDone ? (isRtl ? "✓ كله جاهز" : "✓ All done") : `${done}/${total} ${isRtl ? "علّم" : "done"}`}
+                                </button>
+                              );
+                            })()}
                           </div>
 
                           <button
                             onClick={() => openMealDetailsDialog(meal.name, meal.details)}
                             className={cn(
-                              "text-3xl font-bold text-white px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all active:scale-95",
+                              "text-3xl font-bold text-white px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all active:scale-95 shrink-0",
                               color
                             )}
                           >

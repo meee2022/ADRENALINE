@@ -136,7 +136,10 @@ export default function TrackOrder() {
           <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
             <p className="font-black text-emerald-700">{t("تم توصيل وجباتك بنجاح 💚", "Your meals were delivered 💚")}</p>
-            {info.podNote && <p className="text-xs text-emerald-600 mt-1">📝 {info.podNote}</p>}
+            {info.podPhotoUrl && (
+              <img src={info.podPhotoUrl} alt={t("إثبات التسليم", "Delivery proof")} className="mt-3 mx-auto rounded-xl max-h-56 object-cover border border-emerald-200" />
+            )}
+            {info.podNote && <p className="text-xs text-emerald-600 mt-2">📝 {info.podNote}</p>}
             <p className="text-xs text-slate-400 mt-2">{t("شكراً لاختيارك Adrenaline Healthy Food", "Thank you for choosing Adrenaline Healthy Food")}</p>
           </div>
         )}

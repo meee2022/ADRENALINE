@@ -37,6 +37,9 @@ export default function DriverApp() {
   const markDelivered = useMutation(api.delivery.markDelivered);
   const markFailed = useMutation(api.delivery.markFailed);
   const updateMyLocation = useMutation(api.delivery.updateMyLocation);
+  const genPodUpload = useMutation(api.delivery.generatePodUploadUrl);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pendingPhoto = useRef<any>(null);
 
   const trackBase = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -114,6 +117,31 @@ export default function DriverApp() {
     } finally { setBusy(null); }
   };
 
+  // ✅ تسليم مع صورة إثبات — يفتح الكاميرا؛ الرفع والتسليم في onChange
+  const handlePhotoDeliver = (stop: any) => {
+    pendingPhoto.current = stop;
+    fileRef.current?.click();
+  };
+  const onPhotoPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // اسمح بإعادة الاختيار لاحقاً
+    const stop = pendingPhoto.current;
+    pendingPhoto.current = null;
+    if (!file || !stop) return;
+    setBusy(stop.planId);
+    try {
+      const url: string = await genPodUpload({ sessionToken });
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": file.type }, body: file });
+      const { storageId } = await res.json();
+      const r: any = await markDelivered({ planId: stop.planId, podStorageId: storageId, sessionToken });
+      if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
+      toast({ title: t("تم التسليم مع صورة ✅", "Delivered with photo ✅"), description: stop.customerName });
+      if (stop.phone) setTimeout(() => { if (confirm(t("إرسال رسالة شكر للعميل؟", "Send a thank-you message?"))) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0])); }, 300);
+    } catch (e: any) {
+      toast({ title: t("فشل رفع الصورة", "Photo upload failed"), description: String(e?.message || e), variant: "destructive" });
+    } finally { setBusy(null); }
+  };
+
   const handleFail = async (stop: any) => {
     const reason = prompt(t("سبب تعذّر التوصيل — مثال: العميل غير موجود / لا يرد / عنوان خاطئ:", "Reason delivery failed — e.g. customer not home / no answer / wrong address:"), "") ?? undefined;
     if (reason === undefined) return;
@@ -133,6 +161,8 @@ export default function DriverApp() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-50" style={{ fontFamily: "Cairo, sans-serif" }}>
+      {/* مدخل الكاميرا لصورة إثبات التسليم */}
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPhotoPicked} />
       {/* Sticky header */}
       <div className="sticky top-0 z-20 text-white px-4 pt-5 pb-4"
         style={{ background: `linear-gradient(135deg, ${B.deep}, ${B.ink})`, paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
@@ -230,6 +260,11 @@ export default function DriverApp() {
                           <button disabled={busy === s.planId} onClick={() => handleDeliver(s)}
                             className="flex-1 h-11 rounded-xl bg-emerald-500 text-white font-black text-sm disabled:opacity-60">
                             {busy === s.planId ? "…" : t("✓ تم التسليم", "✓ Delivered")}
+                          </button>
+                          <button disabled={busy === s.planId} onClick={() => handlePhotoDeliver(s)}
+                            title={t("تسليم مع صورة إثبات", "Deliver with proof photo")}
+                            className="h-11 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 font-black text-sm disabled:opacity-60">
+                            📷
                           </button>
                           <button disabled={busy === s.planId} onClick={() => handleFail(s)}
                             title={t("تعذّر التوصيل", "Couldn't deliver")}
