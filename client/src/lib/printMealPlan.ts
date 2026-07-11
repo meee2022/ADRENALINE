@@ -354,11 +354,25 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
         .join("")}</div>`
     : "";
 
-  const content = `
+  const safeName = String(input.title).replace(/[\\/:*?"<>|]+/g, " ").trim() || "meal-plan";
+
+  // 🅐 الاسم اللاتيني (اسم العميل) نعزله باتجاه LTR داخل العنوان العربي حتى لا
+  //    يختلّ ترتيب الحروف عند مزج العربي باللاتيني (bidi). نلفّ أي مقطع
+  //    لاتيني/أرقام بـ <bdi dir="ltr"> فيبقى العربي متّصلاً سليماً.
+  const isolateLatin = (s: string) =>
+    esc(s).replace(/([A-Za-z0-9@._+\-]+(?:\s+[A-Za-z0-9@._+\-]+)*)/g, '<bdi dir="ltr">$1</bdi>');
+
+  // ✅ نرسم عبر طباعة المتصفح الأصلية (لا html2canvas): محرك المتصفح يشكّل
+  //    العربي والاتجاهين ويحاذي الشارات صحيحاً 100%، ويعرض الصور بلا قيود CORS.
+  //    ننتظر تحميل كل الصور ثم نطبع تلقائياً (المستخدم يحفظ كـ PDF).
+  const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <title>${esc(safeName)}</title>
     <style>
-      .mp-doc *{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}
-      /* عرض ثابت = عرض محتوى A4، فالكروت تظهر بنفس نسب الطباعة (لا تكبر) */
-      .mp-doc{color:#0E2A4A;background:#fff;width:760px;margin:0 auto}
+      *{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}
+      html,body{margin:0;padding:0}
+      body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff}
+      /* عرض المحتوى يملأ عرض الصفحة القابل للطباعة، بحدّ أقصى قريب من عرض A4 */
+      .mp-doc{color:#0E2A4A;background:#fff;width:100%;max-width:780px;margin:0 auto}
       .mp-doc .hero{background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:16px 20px;
             display:flex;justify-content:space-between;align-items:center;gap:12px}
       .mp-doc .brand{font-size:17px;font-weight:900;letter-spacing:.12em;white-space:nowrap}
@@ -381,22 +395,25 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       .mp-doc .day-n{font-size:10px;background:rgba(255,255,255,.16);border-radius:50px;padding:2px 8px}
       /* كروت مُصغّرة — ~5-6 كروت في الصف، مضغوطة وأنضف */
       .mp-doc .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:7px;padding:9px}
-      .mp-doc .card{border:1px solid #eef1f4;border-radius:9px;overflow:hidden;background:#f7fbfe}
+      .mp-doc .card{border:1px solid #eef1f4;border-radius:9px;overflow:hidden;background:#f7fbfe;break-inside:avoid}
       .mp-doc .ph{position:relative;height:66px;background:#eaf3fb}
       .mp-doc .ph img{width:100%;height:100%;object-fit:cover;display:block}
       .mp-doc .ph .noimg{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px}
       .mp-doc .ph .cat{position:absolute;top:4px;inset-inline-start:4px;background:rgba(255,255,255,.92);
-               color:#0E76AC;font-size:8.5px;font-weight:800;padding:1px 6px;border-radius:6px}
+               color:#0E76AC;font-size:8.5px;font-weight:800;padding:2px 6px;border-radius:6px;
+               line-height:1.2;display:inline-block}
       .mp-doc .body{padding:6px 7px}
       .mp-doc .name{font-weight:800;font-size:10.5px;line-height:1.28;color:#0E2A4A}
       .mp-doc .macros{display:flex;gap:6px;flex-wrap:wrap;font-size:9px;color:#47759c;font-weight:700;margin-top:3px}
       .mp-doc .note{margin-top:4px;font-size:8.5px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;
             border-radius:6px;padding:3px 5px;font-weight:700}
       .mp-doc .foot{margin:6px 18px 16px;font-size:9.5px;color:#94a3b8;text-align:center}
-    </style>
+      @page{size:A4;margin:8mm}
+      @media print{.mp-doc{max-width:none}.day,.card{break-inside:avoid}}
+    </style></head><body>
     <div class="mp-doc" dir="rtl">
       <div class="hero">
-        <div style="text-align:start"><h1>${esc(input.title)}</h1>${input.subtitle ? `<div class="sub">${esc(input.subtitle)}</div>` : ""}</div>
+        <div style="text-align:start"><h1>${isolateLatin(input.title)}</h1>${input.subtitle ? `<div class="sub">${isolateLatin(input.subtitle)}</div>` : ""}</div>
         <div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div>
       </div>
       <div class="wrap">
@@ -404,32 +421,22 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
         ${groupsHtml}
       </div>
       <div class="foot">ADRENALINE Healthy Food</div>
-    </div>`;
+    </div>
+    <script>
+      (function(){
+        var imgs = Array.prototype.slice.call(document.images);
+        var pending = imgs.filter(function(i){ return !i.complete; });
+        var printed = false;
+        function go(){ if(printed) return; printed = true; setTimeout(function(){ try{ window.focus(); window.print(); }catch(e){} }, 200); }
+        if (pending.length === 0){ go(); return; }
+        var left = pending.length;
+        function dec(){ left--; if(left <= 0) go(); }
+        pending.forEach(function(i){ i.addEventListener('load', dec); i.addEventListener('error', dec); });
+        setTimeout(go, 3500); // احتياطي لو تأخّرت صورة
+      })();
+    <\/script>
+    </body></html>`;
 
-  const safeName = String(input.title).replace(/[\\/:*?"<>|]+/g, " ").trim() || "meal-plan";
-
-  // ✅ صفحة واحدة متصلة بطول المحتوى (لا تقسيم على أوراق A4) — أنسب للاطلاع والإرسال.
-  //    نقيس ارتفاع المحتوى عند العرض الثابت (760px) ونضبط ورقة PDF بنفس النسبة.
-  // ⚠️ الإعداد المثبت الذي يرسم الصور فعلاً: عنصر **مفصول** (html2pdf يُلحقه
-  //    داخلياً)، صفحة A4، وخيارات html2canvas بسيطة. تمرير عنصر مُلحق على
-  //    left:-10000px أو صيغة صفحة مخصّصة كان ينتج PDF فارغاً.
-  const el = document.createElement("div");
-  el.style.width = "760px"; // نفس عرض .mp-doc — يمنع تضخّم الكروت
-  el.style.background = "#ffffff";
-  el.innerHTML = content;
-
-  const html2pdf = (await import("html2pdf.js")).default as any;
-  await html2pdf()
-    .set({
-      margin: 6,
-      filename: `${safeName}.pdf`,
-      image: { type: "jpeg", quality: 0.95 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      // avoid اليوم كاملاً (~2سم فلا يولّد صفحات زائدة كما فعل .grp الأسبوعي)،
-      //   فلا يُقطع يوم في منتصف صفحة — نفس ترتيب عرض الخطة الذكية.
-      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card"] },
-    })
-    .from(el)
-    .save();
+  // autoPrint=false: صفحة الطباعة تطبع نفسها بعد اكتمال الصور.
+  openPrintWindow(html, false);
 }
