@@ -138,15 +138,17 @@ export function Sidebar() {
       {/* Nav — Sectioned */}
       <nav className="flex-1 px-3 sm:px-4 overflow-y-auto overflow-x-hidden min-w-0 pb-3">
         {visibleSections.map((section, sIdx) => (
-          <div key={sIdx} className="mb-4">
-            {/* Section title */}
-            <p className="text-[10px] font-bold uppercase tracking-wider px-3 mb-1.5"
-              style={{ color: "#94a3b8" }}>
-              {isRtl ? section.titleAr : section.titleEn}
-            </p>
+          <div key={sIdx} className={cn("mb-1.5", sIdx > 0 && "mt-3 pt-3 border-t border-slate-100")}>
+            {/* عنوان القسم — شرطة سماوية + لون باهت مميّز عن الروابط */}
+            <div className="flex items-center gap-2 px-3 mb-1.5">
+              <span className="h-3 w-1 rounded-full bg-[#3CC4F0]/70 shrink-0" />
+              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#9db4c9]">
+                {isRtl ? section.titleAr : section.titleEn}
+              </p>
+            </div>
 
             {/* Section items */}
-            <div className="space-y-1">
+            <div className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = location === item.href;
                 const Icon = ICON_MAP[item.iconKey];
@@ -156,21 +158,28 @@ export function Sidebar() {
                   <Link key={item.href} href={item.href}>
                     <div
                       className={cn(
-                        "px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 cursor-pointer",
-                        "flex items-center gap-3 min-w-0",
+                        "group px-3 py-2 rounded-lg text-[13px] transition-all duration-200 cursor-pointer",
+                        "flex items-center gap-2.5 min-w-0 relative",
                         isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                          : "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-muted-foreground",
+                          ? "bg-gradient-to-l from-[#3CC4F0] to-[#0E9ED6] text-white font-bold shadow-sm"
+                          : "text-slate-600 font-semibold hover:bg-[#3CC4F0]/10 hover:text-[#0E76AC]",
                       )}
                     >
-                      <Icon
+                      <span
                         className={cn(
-                          "h-4 w-4 shrink-0",
+                          "h-7 w-7 rounded-md grid place-items-center shrink-0 transition-colors",
                           isActive
-                            ? "text-sidebar-primary-foreground"
-                            : "text-muted-foreground",
+                            ? "bg-white/20"
+                            : "bg-slate-100/80 group-hover:bg-[#3CC4F0]/15",
                         )}
-                      />
+                      >
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            isActive ? "text-white" : "text-[#0E76AC]/70 group-hover:text-[#0E76AC]",
+                          )}
+                        />
+                      </span>
                       <span className="truncate min-w-0">{label}</span>
                     </div>
                   </Link>
