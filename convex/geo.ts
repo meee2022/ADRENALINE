@@ -44,6 +44,71 @@ export const geocodeAddress = action({
   },
 });
 
+/** يستخرج إحداثيات من نص رابط خرائط (Google/OSM) أو من إحداثيات خام. */
+function coordsFromText(text: string): GeoResult {
+  const s = String(text || "");
+  const pats: RegExp[] = [
+    /@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)/,          // .../@25.28,51.53,15z
+    /[?&](?:q|ll|sll|daddr|destination)=(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/i, // ?q=lat,lng
+    /!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)/,      // !3dLAT!4dLNG (الترتيب الشائع)
+    /^\s*(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)\s*$/, // "25.28, 51.53" خام
+  ];
+  for (const re of pats) {
+    const m = s.match(re);
+    if (m) {
+      const lat = parseFloat(m[1]), lng = parseFloat(m[2]);
+      if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+        return { lat, lng };
+      }
+    }
+  }
+  // احتياطي: !3d (خط العرض) و!4d (خط الطول) موجودان لكن بترتيب/مسافة مختلفة
+  const d3 = s.match(/!3d(-?\d{1,2}\.\d+)/);
+  const d4 = s.match(/!4d(-?\d{1,3}\.\d+)/);
+  if (d3 && d4) {
+    const lat = parseFloat(d3[1]), lng = parseFloat(d4[1]);
+    if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  return null;
+}
+
+/**
+ * ✅ إجراء: حوّل **رابط موقع** (Google Maps / OSM) أو إحداثيات خام إلى lat/lng.
+ *    يدعم الروابط المختصرة (goo.gl / maps.app.goo.gl) بمتابعة التحويل من الخادم.
+ *    الأدق للتوصيل: العميل يشارك موقع بيته كرابط، فنستخرج نقطته بالضبط.
+ */
+export const resolveLocationLink = action({
+  args: { link: v.string() },
+  handler: async (_ctx, args): Promise<GeoResult> => {
+    const raw = String(args.link || "").trim();
+    if (!raw) return null;
+
+    // 1) إحداثيات خام أو رابط كامل فيه إحداثيات مباشرة
+    const direct = coordsFromText(raw);
+    if (direct) return direct;
+
+    // 2) رابط — نتبع التحويل (المختصر يفتح على رابط كامل فيه الإحداثيات)
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const r = await fetch(raw, {
+          redirect: "follow",
+          headers: { "User-Agent": "AdrenalineMealsManager/1.0 (delivery)", "Accept-Language": "ar,en" },
+        });
+        // الرابط النهائي بعد التحويل غالباً يحمل @lat,lng أو !3d!4d
+        const fromFinalUrl = coordsFromText(r.url || "");
+        if (fromFinalUrl) return fromFinalUrl;
+        // احتياطي: نفتّش نص الصفحة
+        const body = await r.text();
+        const fromBody = coordsFromText(body);
+        if (fromBody) return fromBody;
+      } catch (e) {
+        console.error("resolveLocationLink error:", e);
+      }
+    }
+    return null;
+  },
+});
+
 /** إجراء: حوّل كل العملاء اللي عندهم عنوان وبدون إحداثيات (دفعة، مع مهلة بين الطلبات). */
 export const geocodeAllCustomers = action({
   args: { sessionToken: v.optional(v.string()), limit: v.optional(v.number()) },

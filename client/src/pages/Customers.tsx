@@ -313,7 +313,10 @@ export default function Customers() {
   );
 
   const geocode = useAction(api.geo.geocodeAddress);
+  const resolveLink = useAction(api.geo.resolveLocationLink);
   const [geocoding, setGeocoding] = useState(false);
+  const [locLink, setLocLink] = useState("");
+  const [resolvingLink, setResolvingLink] = useState(false);
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: {
@@ -1483,6 +1486,38 @@ export default function Customers() {
                   <p className="text-[11px] text-gray-400">
                     {isRtl ? "اضغط على الخريطة أو اسحب الدبوس لضبط الموقع بدقة." : "Click the map or drag the pin to set the exact location."}
                   </p>
+
+                  {/* ✅ لصق رابط موقع (Google Maps) أو إحداثيات — الأدق للتوصيل */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={locLink}
+                      onChange={(e) => setLocLink(e.target.value)}
+                      placeholder={isRtl ? "الصق رابط الموقع من خرائط جوجل أو الإحداثيات" : "Paste Google Maps link or coordinates"}
+                      dir="ltr"
+                      className="h-9 text-xs"
+                    />
+                    <button
+                      type="button"
+                      disabled={resolvingLink || !locLink.trim()}
+                      onClick={async () => {
+                        setResolvingLink(true);
+                        try {
+                          const res: any = await resolveLink({ link: locLink.trim() });
+                          if (res?.lat != null) {
+                            form.setValue("lat", res.lat, { shouldDirty: true });
+                            form.setValue("lng", res.lng, { shouldDirty: true });
+                            setLocLink("");
+                          } else {
+                            alert(isRtl ? "تعذّر قراءة الموقع من الرابط — افتحه وانسخ الرابط الكامل، أو حدّده على الخريطة" : "Couldn't read the link — open it and copy the full URL, or pin it on the map");
+                          }
+                        } finally { setResolvingLink(false); }
+                      }}
+                      className="shrink-0 text-xs font-bold px-3 h-9 rounded-lg flex items-center gap-1.5 bg-[#0E76AC] text-white hover:bg-[#0b5f8a] disabled:opacity-60"
+                    >
+                      {resolvingLink ? (isRtl ? "جارٍ…" : "…") : (isRtl ? "🔗 من الرابط" : "🔗 From link")}
+                    </button>
+                  </div>
+
                   <LocationPicker
                     lat={form.watch("lat")}
                     lng={form.watch("lng")}
