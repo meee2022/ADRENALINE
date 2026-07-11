@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,9 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 
 export default function RestaurantSettings() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const settings = useQuery(api.restaurantSettings.get);
   const updateSettings = useMutation(api.restaurantSettings.update);
   const updateHeroLogo = useMutation(api.restaurantSettings.updateHeroLogo);
@@ -153,7 +157,7 @@ export default function RestaurantSettings() {
       // 3. Update settings with new logo
       await updateHeroLogo({ storageId, sessionToken });
 
-      alert("✅ تم رفع الشعار بنجاح!");
+      alert(t("✅ تم رفع الشعار بنجاح!","✅ Logo uploaded successfully!"));
     } catch (error: any) {
       console.error("Logo upload error:", error);
       alert(`❌ خطأ في رفع الشعار: ${error?.message || "حاول مرة أخرى"}`);
@@ -166,14 +170,14 @@ export default function RestaurantSettings() {
   };
 
   const handleLogoDelete = async () => {
-    if (!confirm("هل أنت متأكد من حذف الشعار؟")) {
+    if (!confirm(t("هل أنت متأكد من حذف الشعار؟","Delete the logo?"))) {
       return;
     }
 
     setIsDeletingLogo(true);
     try {
       await deleteHeroLogo({ sessionToken });
-      alert("✅ تم حذف الشعار بنجاح!");
+      alert(t("✅ تم حذف الشعار بنجاح!","✅ Logo deleted successfully!"));
     } catch (error: any) {
       console.error("Logo delete error:", error);
       alert(`❌ خطأ في حذف الشعار: ${error?.message || "حاول مرة أخرى"}`);
@@ -196,7 +200,7 @@ export default function RestaurantSettings() {
         <Card className="max-w-2xl mx-auto">
           <CardContent className="p-12 text-center">
             <Settings className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <h2 className="text-2xl font-bold mb-2">لا توجد إعدادات</h2>
+            <h2 className="text-2xl font-bold mb-2">{t("لا توجد إعدادات","No settings")}</h2>
             <p className="text-gray-600 mb-6">
               يبدو أن هذه هي المرة الأولى. انقر لإنشاء الإعدادات الافتراضية.
             </p>
@@ -223,7 +227,7 @@ export default function RestaurantSettings() {
             className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
           >
             <Save className="h-5 w-5 ml-2" />
-            {isSaving ? "جاري الحفظ..." : "حفظ التغييرات"}
+            {isSaving ? t("جاري الحفظ...","Saving...") : t("حفظ التغييرات","Save changes")}
           </Button>
         }
       />
@@ -240,7 +244,7 @@ export default function RestaurantSettings() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="phone">رقم الهاتف</Label>
+                <Label htmlFor="phone">{t("رقم الهاتف","Phone number")}</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
@@ -249,7 +253,7 @@ export default function RestaurantSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">البريد الإلكتروني</Label>
+                <Label htmlFor="email">{t("البريد الإلكتروني","Email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -262,16 +266,16 @@ export default function RestaurantSettings() {
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="addressAr">العنوان (عربي)</Label>
+                <Label htmlFor="addressAr">{t("العنوان (عربي)","Heading (Arabic)")}</Label>
                 <Input
                   id="addressAr"
                   value={formData.addressAr}
                   onChange={(e) => handleChange("addressAr", e.target.value)}
-                  placeholder="الدوحة، قطر"
+                  placeholder={t("الدوحة، قطر","Doha, Qatar")}
                 />
               </div>
               <div>
-                <Label htmlFor="addressEn">العنوان (English)</Label>
+                <Label htmlFor="addressEn">{t("العنوان (English)","Heading (English)")}</Label>
                 <Input
                   id="addressEn"
                   value={formData.addressEn}
@@ -283,7 +287,7 @@ export default function RestaurantSettings() {
             </div>
 
             <div>
-              <Label htmlFor="whatsappNumber">رقم الواتساب (اختياري)</Label>
+              <Label htmlFor="whatsappNumber">{t("رقم الواتساب (اختياري)","WhatsApp number (optional)")}</Label>
               <Input
                 id="whatsappNumber"
                 value={formData.whatsappNumber}
@@ -371,17 +375,17 @@ export default function RestaurantSettings() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="descriptionAr">الوصف (عربي)</Label>
+              <Label htmlFor="descriptionAr">{t("الوصف (عربي)","Description (Arabic)")}</Label>
               <Textarea
                 id="descriptionAr"
                 value={formData.descriptionAr}
                 onChange={(e) => handleChange("descriptionAr", e.target.value)}
                 rows={4}
-                placeholder="أدرينالين - نقدم لكم وجبات صحية..."
+                placeholder={t("أدرينالين - نقدم لكم وجبات صحية...","Adrenaline - we serve healthy meals...")}
               />
             </div>
             <div>
-              <Label htmlFor="descriptionEn">الوصف (English)</Label>
+              <Label htmlFor="descriptionEn">{t("الوصف (English)","Description (English)")}</Label>
               <Textarea
                 id="descriptionEn"
                 value={formData.descriptionEn}
@@ -405,16 +409,16 @@ export default function RestaurantSettings() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="workingHoursAr">ساعات العمل (عربي)</Label>
+                <Label htmlFor="workingHoursAr">{t("ساعات العمل (عربي)","Working hours (Arabic)")}</Label>
                 <Input
                   id="workingHoursAr"
                   value={formData.workingHoursAr}
                   onChange={(e) => handleChange("workingHoursAr", e.target.value)}
-                  placeholder="السبت - الخميس: 8 صباحاً - 10 مساءً"
+                  placeholder={t("السبت - الخميس: 8 صباحاً - 10 مساءً","Sat - Thu: 8 AM - 10 PM")}
                 />
               </div>
               <div>
-                <Label htmlFor="workingHoursEn">ساعات العمل (English)</Label>
+                <Label htmlFor="workingHoursEn">{t("ساعات العمل (English)","Working hours (English)")}</Label>
                 <Input
                   id="workingHoursEn"
                   value={formData.workingHoursEn}
@@ -438,7 +442,7 @@ export default function RestaurantSettings() {
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="privacyPolicyUrl">رابط سياسة الخصوصية</Label>
+                <Label htmlFor="privacyPolicyUrl">{t("رابط سياسة الخصوصية","Privacy policy link")}</Label>
                 <Input
                   id="privacyPolicyUrl"
                   value={formData.privacyPolicyUrl}
@@ -448,7 +452,7 @@ export default function RestaurantSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="termsUrl">رابط الشروط والأحكام</Label>
+                <Label htmlFor="termsUrl">{t("رابط الشروط والأحكام","Terms & conditions link")}</Label>
                 <Input
                   id="termsUrl"
                   value={formData.termsUrl}
@@ -507,7 +511,7 @@ export default function RestaurantSettings() {
                     className="bg-[#3CC4F0] hover:bg-[#3CC4F0]/90 text-white"
                   >
                     <Upload className="h-4 w-4 ml-2" />
-                    {isUploadingLogo ? "جاري الرفع..." : "رفع شعار جديد"}
+                    {isUploadingLogo ? t("جاري الرفع...","Uploading...") : t("رفع شعار جديد","Upload new logo")}
                   </Button>
 
                   {/* Delete Button - Only show if logo exists */}
@@ -533,7 +537,7 @@ export default function RestaurantSettings() {
                           d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                         />
                       </svg>
-                      {isDeletingLogo ? "جاري الحذف..." : "حذف الشعار"}
+                      {isDeletingLogo ? t("جاري الحذف...","Deleting...") : t("حذف الشعار","Delete logo")}
                     </Button>
                   )}
 
@@ -543,7 +547,7 @@ export default function RestaurantSettings() {
                 </div>
 
                 <p className="text-xs text-gray-500 bg-white/50 p-3 rounded border border-gray-200">
-                  💡 <strong>نصيحة:</strong> استخدم صورة بخلفية شفافة (PNG) بعرض 300-500 بكسل للحصول على أفضل نتيجة
+                  💡 <strong>{t("نصيحة:","Tip:")}</strong> {t("استخدم صورة بخلفية شفافة (PNG) بعرض 300-500 بكسل للحصول على أفضل نتيجة","Use a transparent PNG, 300-500px wide, for best results")}
                 </p>
               </div>
             </div>
@@ -556,16 +560,16 @@ export default function RestaurantSettings() {
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="heroTitleAr">العنوان (عربي)</Label>
+                  <Label htmlFor="heroTitleAr">{t("العنوان (عربي)","Heading (Arabic)")}</Label>
                   <Input
                     id="heroTitleAr"
                     value={formData.heroTitleAr}
                     onChange={(e) => handleChange("heroTitleAr", e.target.value)}
-                    placeholder="أدرينالين - وجبات صحية لحياة نشيطة"
+                    placeholder={t("أدرينالين - وجبات صحية لحياة نشيطة","Adrenaline - healthy meals for an active life")}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="heroTitleEn">العنوان (English)</Label>
+                  <Label htmlFor="heroTitleEn">{t("العنوان (English)","Heading (English)")}</Label>
                   <Input
                     id="heroTitleEn"
                     value={formData.heroTitleEn}
@@ -585,17 +589,17 @@ export default function RestaurantSettings() {
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="heroSubtitleAr">العنوان الفرعي (عربي)</Label>
+                  <Label htmlFor="heroSubtitleAr">{t("العنوان الفرعي (عربي)","Subtitle (Arabic)")}</Label>
                   <Textarea
                     id="heroSubtitleAr"
                     value={formData.heroSubtitleAr}
                     onChange={(e) => handleChange("heroSubtitleAr", e.target.value)}
                     rows={2}
-                    placeholder="نقدم لك وجبات مُصممة خصيصاً لأهدافك الصحية والرياضية"
+                    placeholder={t("نقدم لك وجبات مُصممة خصيصاً لأهدافك الصحية والرياضية","Meals designed for your health and fitness goals")}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="heroSubtitleEn">العنوان الفرعي (English)</Label>
+                  <Label htmlFor="heroSubtitleEn">{t("العنوان الفرعي (English)","Subtitle (English)")}</Label>
                   <Textarea
                     id="heroSubtitleEn"
                     value={formData.heroSubtitleEn}
@@ -617,16 +621,16 @@ export default function RestaurantSettings() {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="heroCta1TextAr">نص الزر (عربي)</Label>
+                    <Label htmlFor="heroCta1TextAr">{t("نص الزر (عربي)","Button text (Arabic)")}</Label>
                     <Input
                       id="heroCta1TextAr"
                       value={formData.heroCta1TextAr}
                       onChange={(e) => handleChange("heroCta1TextAr", e.target.value)}
-                      placeholder="اشترك الآن"
+                      placeholder={t("اشترك الآن","Subscribe now")}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="heroCta1TextEn">نص الزر (English)</Label>
+                    <Label htmlFor="heroCta1TextEn">{t("نص الزر (English)","Button text (English)")}</Label>
                     <Input
                       id="heroCta1TextEn"
                       value={formData.heroCta1TextEn}
@@ -661,16 +665,16 @@ export default function RestaurantSettings() {
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="heroCta2TextAr">نص الزر (عربي)</Label>
+                    <Label htmlFor="heroCta2TextAr">{t("نص الزر (عربي)","Button text (Arabic)")}</Label>
                     <Input
                       id="heroCta2TextAr"
                       value={formData.heroCta2TextAr}
                       onChange={(e) => handleChange("heroCta2TextAr", e.target.value)}
-                      placeholder="المنيو"
+                      placeholder={t("المنيو","Menu")}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="heroCta2TextEn">نص الزر (English)</Label>
+                    <Label htmlFor="heroCta2TextEn">{t("نص الزر (English)","Button text (English)")}</Label>
                     <Input
                       id="heroCta2TextEn"
                       value={formData.heroCta2TextEn}
@@ -705,7 +709,7 @@ export default function RestaurantSettings() {
             style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
           >
             <Save className="h-5 w-5 ml-2" />
-            {isSaving ? "جاري الحفظ..." : "حفظ جميع التغييرات"}
+            {isSaving ? t("جاري الحفظ...","Saving...") : t("حفظ جميع التغييرات","Save all changes")}
           </Button>
         </div>
       </div>
