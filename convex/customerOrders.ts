@@ -14,6 +14,24 @@ function generateOrderNumber(): string {
   return `ORD-${year}${month}${day}-${random}`;
 }
 
+/**
+ * 🔔 يعلّم إشعارات "طلب جديد" (NEW_ORDER) الخاصة بطلب معيّن كمقروءة — يُستدعى
+ *    عند اعتماد أو رفض الطلب، فيقلّ عدّاد الجرس بدل أن يتراكم بلا نهاية.
+ */
+async function markOrderNotificationsRead(ctx: any, orderId: string): Promise<void> {
+  const oid = String(orderId);
+  const notifs = await ctx.db
+    .query("notifications")
+    .filter((q: any) => q.eq(q.field("relatedId"), oid))
+    .collect();
+  const now = Date.now();
+  for (const n of notifs) {
+    if (n.type === "NEW_ORDER" && !n.isRead) {
+      await ctx.db.patch(n._id, { isRead: true, readAt: now });
+    }
+  }
+}
+
 // ===== CREATE ORDER =====
 export const create = mutation({
   args: {
@@ -282,6 +300,9 @@ export const approve = mutation({
       updatedAt: Date.now(),
     });
 
+    // 🔔 الطلب اتعامل معاه → علّم إشعاراته "طلب جديد" كمقروءة (لا يتراكم العدّاد)
+    await markOrderNotificationsRead(ctx, orderId);
+
     // 2. جلب عناصر الطلب
     const items = await ctx.db
       .query("customerOrderItems")
@@ -467,6 +488,9 @@ export const reject = mutation({
       rejectedAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // 🔔 الطلب اتعامل معاه (رفض) → علّم إشعارات "طلب جديد" كمقروءة
+    await markOrderNotificationsRead(ctx, orderId);
 
     // 🔔 إشعار للعميل بسبب الرفض (لو الطلب مربوط بمشترك)
     if (order?.customerId) {
