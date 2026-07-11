@@ -196,7 +196,15 @@ export default function PublicMenuPage() {
     if (prog.includes("BULK")) return Number(pp.BULK?.calFactor) || 1;
     return 1;
   }, [verifiedCustomer, settings]);
-  const calFor = (c: any) => (c == null || c === "" ? c : Math.round(Number(c) * calFactor));
+  // ✅ المُعامل يسري على الأطباق الرئيسية فقط (غداء/عشاء — الرز والبروتين هما
+  //    ما يتغيّر حجمهما بالبرنامج). الفطور/السناك/السلطة حصتها ثابتة لكل الأهداف.
+  const SCALED_CATS = new Set(["lunch", "dinner"]);
+  const calFor = (c: any, category?: any) => {
+    if (c == null || c === "") return c;
+    const cat = String(category || "").toLowerCase();
+    if (!SCALED_CATS.has(cat)) return Math.round(Number(c));
+    return Math.round(Number(c) * calFactor);
+  };
 
   const mealsPerDay = Number(verifiedCustomer?.mealsPerDay) || Infinity;
   const snacksPerDay = Number(verifiedCustomer?.snacksPerDay) || Infinity;
@@ -1227,7 +1235,7 @@ export default function PublicMenuPage() {
                       <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md">
                         <Flame className="h-4 w-4 text-orange-500" />
                         <span className="text-sm font-black text-[#0F1516] tabular-nums">
-                          {calFor(meal.calories)}
+                          {calFor(meal.calories, meal.category)}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400">{isRtl ? "سعرة" : "kcal"}</span>
                       </div>
@@ -1390,7 +1398,7 @@ export default function PublicMenuPage() {
                 />
                 <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1">
                   <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-bold">{calFor(selectedMeal.calories)}</span>
+                  <span className="text-sm font-bold">{calFor(selectedMeal.calories, selectedMeal.category)}</span>
                 </div>
               </div>
 
@@ -1449,7 +1457,7 @@ export default function PublicMenuPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-orange-50 rounded-lg p-4 text-center">
                     <Flame className="h-6 w-6 text-orange-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{calFor(selectedMeal.calories)}</p>
+                    <p className="text-2xl font-bold text-[#0F1516]">{calFor(selectedMeal.calories, selectedMeal.category)}</p>
                     <p className="text-xs text-[#47759C]">{isRtl ? "سعرة" : "Calories"}</p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4 text-center">
@@ -1492,7 +1500,7 @@ export default function PublicMenuPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold px-3 py-1.5 rounded-full"
                     style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
-                    {calFor(selectedMeal.calories)} {isRtl ? "كالوري" : "kcal"}
+                    {calFor(selectedMeal.calories, selectedMeal.category)} {isRtl ? "كالوري" : "kcal"}
                   </span>
                   <span className="text-xs font-semibold text-[#47759C]">
                     {isRtl ? "ضمن اشتراكك" : "Included in your plan"}
