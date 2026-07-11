@@ -26,6 +26,18 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    // ✅ نسخة جديدة منشورة: أسماء chunks القديمة (بالـ hash) لم تعد موجودة،
+    //    فيفشل الاستيراد الديناميكي. الحل: تحديث تلقائي مرة واحدة (يجلب
+    //    index.html الجديد). حارس sessionStorage يمنع حلقة تحديث لانهائية.
+    if (/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(error.message || "")) {
+      const KEY = "chunk-reload-at";
+      const last = Number(sessionStorage.getItem(KEY) || 0);
+      if (Date.now() - last > 30_000) {
+        sessionStorage.setItem(KEY, String(Date.now()));
+        window.location.reload();
+        return;
+      }
+    }
     // جلسة منتهية أو مُبطَلة (تغيير كلمة المرور يُبطل الجلسات): لا تُظهر
     // شاشة انهيار — نظّف الجلسة وأعد الموظف لصفحة الدخول.
     if (isAuthError(error)) {
