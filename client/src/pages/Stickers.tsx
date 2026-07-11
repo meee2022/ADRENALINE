@@ -360,6 +360,9 @@ export default function Stickers() {
             border: 0.5px solid #000 !important;
             font-weight: 900 !important;
           }
+          /* إطار الباقة: خلفية بيضاء + حدود ونص أسود للطباعة الحرارية */
+          .label .plan-box { background: #fff !important; border: 0.6px solid #000 !important; }
+          .label .plan-txt { color: #000 !important; -webkit-text-fill-color: #000 !important; }
           /* كل الحدود الرفيعة تبقى أسود صلب */
           .label, .label .date-divider, .label .date-row {
             border-color: #000 !important;
@@ -533,6 +536,27 @@ export default function Stickers() {
           border-radius: 1mm;
           padding: 0.4mm 1.8mm;
           white-space: nowrap;
+        }
+
+        /* Box sticker — إطار أنيق حول الباقة (بديل النص العاري) */
+        .plan-box {
+          margin: 0.7mm auto 0;
+          border: 0.6px solid #0E2A4A;
+          border-radius: 1.6mm;
+          padding: 1mm 2.2mm;
+          background: #f2fbff;
+          max-width: 95%;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .plan-txt {
+          font-size: 8.5px;
+          font-weight: 900;
+          color: #0E2A4A !important;
+          -webkit-text-fill-color: #0E2A4A !important;
+          line-height: 1.18;
+          text-align: center;
+          direction: ltr;
         }
 
         /* Warnings — red pill, centered. يلتفّ لسطرين مضغوطين (بدل سطر عريض
@@ -778,7 +802,7 @@ function BoxSticker({ s }: any) {
             <span className="cust-phone">{s.customerNumber}</span>
           </div>
         )}
-        <div className="meal-line">{s.planLabel}</div>
+        <div className="plan-box"><div className="plan-txt">{s.planLabel}</div></div>
       </div>
 
       <div className="date-row">
