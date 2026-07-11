@@ -23,6 +23,9 @@ const WEEKDAYS_EN: Record<string,string> = {
   saturday:"Saturday", sunday:"Sunday", monday:"Monday", tuesday:"Tuesday",
   wednesday:"Wednesday", thursday:"Thursday", friday:"Friday",
 };
+const CAT_AR: Record<string,string> = {
+  breakfast:"فطور", lunch:"غداء", dinner:"عشاء", snack:"سناك", salad:"سلطة",
+};
 
 const B = {
   brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A",
@@ -530,7 +533,7 @@ export default function SmartPlan() {
                 </span>
                 {result.meta.started === false && (
                   <span style={{ fontSize: 12, color: "#FFD9A6" }}>
-                    {t("(اشتراكك لم يبدأ بعد — هذه خطة الأسبوع الأول)", "(Your subscription hasn't started yet — this is the first week's plan)")}
+                    {t("(اشتراكك لم يبدأ بعد — هذه خطة أول يوم في اشتراكك)", "(Your subscription hasn't started yet — this is your first subscription day's plan)")}
                   </span>
                 )}
               </div>
@@ -671,12 +674,19 @@ export default function SmartPlan() {
                 <button onClick={() => setSwap(null)} style={{ border: "none", background: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer", lineHeight: 1 }}>×</button>
               </div>
               <p style={{ fontSize: 12.5, color: B.ink2, margin: "0 0 14px" }}>
-                📅 {t(`بدائل ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`, `${WEEKDAYS_EN[swap.day] || swap.day} alternatives — rotation week ${swap.week}`)}
+                📅 {t(
+                  `بدائل ${CAT_AR[swap.meal?.category] || ""} ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
+                  `${WEEKDAYS_EN[swap.day] || swap.day} ${swap.meal?.category || ""} alternatives — rotation week ${swap.week}`,
+                )}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,240px),1fr))", gap: 10 }}>
+                {/* ✅ نفس اليوم + نفس التصنيف فقط: فطور يُستبدل بفطور اليوم نفسه —
+                    المطبخ لا يطبخ خارج منيو اليوم، ولا يصح وضع غداء مكان فطور */}
                 {allMeals
-                  .filter((m: any) => mealAvailable(m, Number(swap.week), swap.day) && String(m._id) !== String(swap.meal?.id))
-                  .sort((a: any, b: any) => (a.category === swap.meal?.category ? -1 : 0) - (b.category === swap.meal?.category ? -1 : 0))
+                  .filter((m: any) =>
+                    mealAvailable(m, Number(swap.week), swap.day) &&
+                    String(m._id) !== String(swap.meal?.id) &&
+                    String(m.category) === String(swap.meal?.category))
                   .map((m: any) => (
                     <button
                       key={m._id}
@@ -698,9 +708,12 @@ export default function SmartPlan() {
                     </button>
                   ))}
               </div>
-              {allMeals.filter((m: any) => mealAvailable(m, Number(swap.week), swap.day) && String(m._id) !== String(swap.meal?.id)).length === 0 && (
+              {allMeals.filter((m: any) =>
+                mealAvailable(m, Number(swap.week), swap.day) &&
+                String(m._id) !== String(swap.meal?.id) &&
+                String(m.category) === String(swap.meal?.category)).length === 0 && (
                 <p style={{ textAlign: "center", color: "#94a3b8", padding: "24px 0", fontSize: 13.5 }}>
-                  {t("لا توجد بدائل مجدولة لهذا اليوم.", "No alternatives scheduled for this day.")}
+                  {t("لا توجد بدائل من نفس التصنيف مجدولة لهذا اليوم.", "No same-category alternatives scheduled for this day.")}
                 </p>
               )}
             </div>

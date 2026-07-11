@@ -105,13 +105,26 @@ export const getSmartPlanData = query({
       started = true;
     }
 
+    // ✅ اشتراك لم يبدأ بعد: «خطة اليوم» = أول يوم في الاشتراك (يومه ومنيوه)،
+    //    لا منيو تاريخ اليوم — فما يراه العميل هو فعلاً ما سيصله أول يوم.
+    let effDay = (args.todayDay || "").toLowerCase();
+    let effDate = args.todayDate || "";
+    if (!started && !args.overrideRotationWeek && customer?.startDate) {
+      const s = new Date(customer.startDate + "T00:00:00");
+      if (s.getDay() === 5) s.setDate(s.getDate() + 1); // الجمعة بلا توصيل → السبت
+      const names = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      effDay = names[s.getDay()];
+      const yyyy = s.getFullYear(), mm = String(s.getMonth() + 1).padStart(2, "0"), dd = String(s.getDate()).padStart(2, "0");
+      effDate = `${yyyy}-${mm}-${dd}`;
+    }
+
     // 3) الوجبات المجدولة فعلاً لـ(أسبوع الدورة + يوم اليوم) — فلترة صارمة
     const all = await ctx.db
       .query("publicMeals")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
 
-    const day = (args.todayDay || "").toLowerCase();
+    const day = effDay;
     const matchesToday = (m: any): boolean => {
       const sched = m.schedule;
       if (sched && sched.length > 0) {
@@ -157,7 +170,7 @@ export const getSmartPlanData = query({
         rotationWeek,
         started,
         day,
-        date: args.todayDate || "",
+        date: effDate,
         // مدة اشتراك العميل — تقترحها الواجهة كعدد أسابيع افتراضي
         durationWeeks: (customer as any)?.durationWeeks ?? null,
         // ✅ تواريخ الاشتراك — تعرضها الواجهة وتشتق منها دورة البداية (كالمنيو اليدوي)
