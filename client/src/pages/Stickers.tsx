@@ -532,26 +532,30 @@ export default function Stickers() {
           white-space: nowrap;
         }
 
-        /* Warnings — red pill, centered */
+        /* Warnings — red pill, centered. يلتفّ لسطرين مضغوطين (بدل سطر عريض
+           ينزل تحت ويلامس الفوتر)، وباتجاه LTR حتى لا يختلّ الاقتصاص. */
         .warn-line {
-          display: inline-block;
-          font-size: 7.5px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          font-size: 7px;
           font-weight: 900;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
           text-align: center !important;
-          line-height: 1.15;
-          margin: 0 auto;
+          line-height: 1.08;
+          margin: 0.2mm auto 0.4mm;
           padding: 0.3mm 1.2mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
           border: 0.5px solid rgba(220,38,38,0.5);
-          max-width: 95%;
+          max-width: 96%;
           overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: normal;
+          overflow-wrap: anywhere;
+          direction: ltr;
           align-self: center;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.2px;
         }
 
         /* Footer — لا يُسمح للمحتوى بالطغيان عليه */
