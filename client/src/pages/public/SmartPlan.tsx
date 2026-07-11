@@ -105,6 +105,47 @@ export default function SmartPlan() {
   const [ordering, setOrdering] = useState(false);
   const [orderNo, setOrderNo] = useState("");
 
+  // 🔁 تبديل وجبة داخل الخطة قبل إرسالها للمراجعة.
+  //    البدائل = وجبات نفس اليوم/دورة المطبخ فقط (لا كل وجبات المطعم).
+  const allMeals: any[] = (useQuery(api.publicMeals.listMeals, {}) as any[]) || [];
+  const [swap, setSwap] = useState<any>(null); // {src:"weekly"|"day", di?, i, week, day, meal}
+  const mealAvailable = (m: any, wk: number, dy: string) => {
+    if (!wk || !dy) return true;
+    const d = String(dy).toLowerCase();
+    if (Array.isArray(m.schedule) && m.schedule.length)
+      return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === d);
+    const wOk = !Array.isArray(m.weeks) || !m.weeks.length || m.weeks.map(Number).includes(wk);
+    const dOk = !Array.isArray(m.days) || !m.days.length || m.days.map((x: any) => String(x).toLowerCase()).includes(d);
+    return wOk && dOk;
+  };
+  const toPick = (m: any) => ({
+    id: m._id, nameAr: m.nameAr, nameEn: m.nameEn, calories: m.calories,
+    protein: m.protein, carbs: m.carbs, fats: m.fats, category: m.category,
+    imageUrl: m.imageUrl, priceQAR: m.priceQAR || 0,
+  });
+  const applySwap = (m: any) => {
+    if (!swap) return;
+    const pick = toPick(m);
+    if (swap.src === "weekly") {
+      setWeekly((w: any) => {
+        const days = w.days.slice();
+        const d = { ...days[swap.di] };
+        const picks = d.picks.slice();
+        picks[swap.i] = pick;
+        d.picks = picks;
+        days[swap.di] = d;
+        return { ...w, days };
+      });
+    } else {
+      setResult((r: any) => {
+        const picks = r.picks.slice();
+        picks[swap.i] = pick;
+        return { ...r, picks };
+      });
+    }
+    setSwap(null);
+  };
+
   // إرسال خطة الأسبوع كاملة للمراجعة (كل الأيام في طلب واحد)
   const placeWeeklyOrder = async () => {
     if (!weekly?.days?.length || ordering) return;
@@ -419,6 +460,18 @@ export default function SmartPlan() {
                           <div style={{ padding: "7px 9px" }}>
                             <div style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{isRtl ? m.nameAr : (m.nameEn || m.nameAr)}</div>
                             <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{m.calories} {t("سعرة", "kcal")}</div>
+                            {!orderNo && (
+                              <button
+                                onClick={() => setSwap({ src: "weekly", di, i, week: d.rotationWeek || 1, day: d.day, meal: m })}
+                                style={{
+                                  marginTop: 6, width: "100%", padding: "4px 8px", borderRadius: 8, cursor: "pointer",
+                                  border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
+                                  fontFamily: "'Cairo',sans-serif", fontSize: 11, fontWeight: 800,
+                                }}
+                              >
+                                🔁 {t("تبديل", "Swap")}
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -525,6 +578,18 @@ export default function SmartPlan() {
                         💡 {m.reason}
                       </p>
                     )}
+                    {!orderNo && (
+                      <button
+                        onClick={() => setSwap({ src: "day", i, week: result.meta?.rotationWeek || 1, day: result.meta?.day || WEEKDAYS[new Date().getDay()], meal: m })}
+                        style={{
+                          marginTop: 10, width: "100%", padding: "6px 10px", borderRadius: 10, cursor: "pointer",
+                          border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
+                          fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800,
+                        }}
+                      >
+                        🔁 {t("تبديل الوجبة", "Swap meal")}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -586,6 +651,59 @@ export default function SmartPlan() {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* 🔁 نافذة تبديل الوجبة — بدائل نفس اليوم/الدورة فقط */}
+        {swap && (
+          <div
+            onClick={() => setSwap(null)}
+            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "82vh", overflowY: "auto", padding: 20 }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, margin: 0 }}>
+                  🔁 {t("تبديل:", "Swap:")} <span style={{ color: "#0E76AC" }}>{isRtl ? swap.meal?.nameAr : (swap.meal?.nameEn || swap.meal?.nameAr)}</span>
+                </h3>
+                <button onClick={() => setSwap(null)} style={{ border: "none", background: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer", lineHeight: 1 }}>×</button>
+              </div>
+              <p style={{ fontSize: 12.5, color: B.ink2, margin: "0 0 14px" }}>
+                📅 {t(`بدائل ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`, `${WEEKDAYS_EN[swap.day] || swap.day} alternatives — rotation week ${swap.week}`)}
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,240px),1fr))", gap: 10 }}>
+                {allMeals
+                  .filter((m: any) => mealAvailable(m, Number(swap.week), swap.day) && String(m._id) !== String(swap.meal?.id))
+                  .sort((a: any, b: any) => (a.category === swap.meal?.category ? -1 : 0) - (b.category === swap.meal?.category ? -1 : 0))
+                  .map((m: any) => (
+                    <button
+                      key={m._id}
+                      onClick={() => applySwap(m)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 10, padding: 10, cursor: "pointer",
+                        background: B.surf, border: `1px solid ${B.line}`, borderRadius: 12, textAlign: "start",
+                      }}
+                    >
+                      {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />}
+                      <span style={{ minWidth: 0 }}>
+                        <span style={{ display: "block", fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, color: B.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {isRtl ? m.nameAr : (m.nameEn || m.nameAr)}
+                        </span>
+                        <span style={{ display: "block", fontSize: 11, color: B.ink2, marginTop: 2 }}>
+                          {m.calories} {t("سعرة", "kcal")}{m.priceQAR ? ` · ${m.priceQAR} ${t("ر.ق", "QAR")}` : ""}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+              </div>
+              {allMeals.filter((m: any) => mealAvailable(m, Number(swap.week), swap.day) && String(m._id) !== String(swap.meal?.id)).length === 0 && (
+                <p style={{ textAlign: "center", color: "#94a3b8", padding: "24px 0", fontSize: 13.5 }}>
+                  {t("لا توجد بدائل مجدولة لهذا اليوم.", "No alternatives scheduled for this day.")}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

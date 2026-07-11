@@ -886,10 +886,28 @@ export default function OrderReviewDetail() {
               <h3 className="text-xl font-bold text-gray-900">🔁 تبديل: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
               <button onClick={() => setSwapTarget(null)} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">×</button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">{t("اختر وجبة بديلة — ستُحدَّث السعرات والسعر تلقائياً.","Pick a replacement meal — calories and price update automatically.")}</p>
+            <p className="text-sm text-gray-500 mb-4">
+              {t("اختر وجبة بديلة — ستُحدَّث السعرات والسعر تلقائياً.","Pick a replacement meal — calories and price update automatically.")}
+              {swapTarget.day ? (
+                <span className="block mt-1 text-xs font-bold text-[#0E76AC]">
+                  📅 {t("وجبات","Meals of")} {dayName(swapTarget.day)} — {t("الأسبوع (دورة","week (cycle")} {swapTarget.week})
+                </span>
+              ) : null}
+            </p>
             <div className="grid sm:grid-cols-2 gap-3">
+              {/* ✅ نعرض فقط وجبات نفس اليوم/الدورة التي تخص هذا العنصر —
+                  المطبخ يطبخ منيو ذلك اليوم، لا كل وجبات المطعم */}
               {allMeals
-                .slice()
+                .filter((m: any) => {
+                  const wk = Number(swapTarget.week);
+                  const dy = String(swapTarget.day || "").toLowerCase();
+                  if (!wk || !dy) return true; // عنصر بلا يوم/أسبوع: لا نفلتر
+                  if (Array.isArray(m.schedule) && m.schedule.length)
+                    return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === dy);
+                  const wOk = !Array.isArray(m.weeks) || !m.weeks.length || m.weeks.map(Number).includes(wk);
+                  const dOk = !Array.isArray(m.days) || !m.days.length || m.days.map((x: any) => String(x).toLowerCase()).includes(dy);
+                  return wOk && dOk;
+                })
                 .sort((a: any, b: any) => (a.category === swapTarget.category ? -1 : 0) - (b.category === swapTarget.category ? -1 : 0))
                 .map((m: any) => (
                   <button key={m._id} onClick={() => doSwap(m)} disabled={swapping}
