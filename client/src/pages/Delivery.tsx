@@ -40,17 +40,28 @@ export default function Delivery() {
   const drivers = useQuery(api.delivery.listDrivers, { sessionToken: sessionTok }) as any[] | undefined;
   const board = useQuery(api.delivery.supervisorBoard, { date: formattedDate, deliveryTime: activeTab, sessionToken: sessionTok }) as any;
   const assignShift = useMutation(api.delivery.assignShift);
+  const markDeliveredMut = useMutation(api.delivery.markDelivered);
+  const rescheduleMut = useMutation(api.delivery.reschedule);
   const [selectedDriver, setSelectedDriver] = useState("");
   const [assigning, setAssigning] = useState(false);
   const trackBase = typeof window !== "undefined" ? window.location.origin : "";
 
-  // ✅ الطلبات النشطة: جاهزة للتوصيل أو في الطريق (لا تختفي بعد بدء التوصيل)
+  // ✅ الطلبات النشطة: جاهزة/في الطريق/فشلت (لا تختفي، والفاشلة تظهر لإعادة الجدولة)
   const plans = dailyPlans.filter(
     (p: any) =>
       p.date === formattedDate &&
       p.deliveryTime === activeTab &&
-      (p.status === "PREPARED" || p.status === "OUT_FOR_DELIVERY")
+      (p.status === "PREPARED" || p.status === "OUT_FOR_DELIVERY" || p.status === "FAILED")
   );
+
+  const handleReschedule = async (planId: string) => {
+    try {
+      await rescheduleMut({ planId: planId as any, sessionToken: sessionTok });
+      toast({ title: isRtl ? "أُعيدت الجدولة — جاهزة للتوصيل" : "Rescheduled — ready to deliver" });
+    } catch (e: any) {
+      toast({ title: String(e?.message || e), variant: "destructive" });
+    }
+  };
 
   const boardByPlan: Record<string, any> = {};
   for (const s of (board?.stops || [])) boardByPlan[String(s.planId)] = s;
@@ -106,10 +117,8 @@ export default function Delivery() {
       const plan = plans.find((p: any) => p._id === planId);
       const customer = plan?.customerId ? getCustomer(plan.customerId) : null;
 
-      await updatePlanMutation.mutateAsync({
-        id: planId,
-        data: { status: "DELIVERED" },
-      });
+      // ✅ عبر النظام الموحّد (يضبط deliveredAt + التحليلات + الصلاحية)
+      await markDeliveredMut({ planId: planId as any, sessionToken: sessionTok });
       toast({
         title: isRtl ? "تم التسليم" : "Delivered",
         description: isRtl ? "تم تسليم الطلب بنجاح" : "Order delivered successfully",
@@ -303,11 +312,12 @@ export default function Delivery() {
 
           {/* تحليلات مباشرة */}
           {board?.analytics && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
               {[
                 { l: isRtl ? "قيد الانتظار" : "Pending", v: board.analytics.pending, c: "#64748b" },
                 { l: isRtl ? "في الطريق" : "On the way", v: board.analytics.outForDelivery, c: "#0E76AC" },
                 { l: isRtl ? "تم التسليم" : "Delivered", v: board.analytics.delivered, c: "#10b981" },
+                { l: isRtl ? "تعذّر" : "Failed", v: board.analytics.failed ?? 0, c: "#ef4444" },
                 { l: isRtl ? "متوسط التوصيل" : "Avg time", v: board.analytics.avgDeliveryMinutes != null ? `${board.analytics.avgDeliveryMinutes}د` : "—", c: "#47759c" },
               ].map((x, i) => (
                 <div key={i} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 text-center">
@@ -422,12 +432,14 @@ export default function Delivery() {
                         {(() => {
                           const bs = boardByPlan[String(plan._id)];
                           const onWay = plan.status === "OUT_FOR_DELIVERY";
+                          const failed = plan.status === "FAILED";
                           return (
                             <div className="flex flex-col items-end gap-1">
                               <Badge className={cn("border-0 text-xs px-3 py-1 rounded-full font-semibold",
-                                onWay ? "bg-[#0E76AC] text-white" : "bg-[#e8f8fd] text-[#0E76AC]")}>
-                                {onWay ? (isRtl ? "🚚 في الطريق" : "🚚 On the way") : (isRtl ? "جاهز" : "Ready")}
+                                failed ? "bg-red-500 text-white" : onWay ? "bg-[#0E76AC] text-white" : "bg-[#e8f8fd] text-[#0E76AC]")}>
+                                {failed ? (isRtl ? "✕ تعذّر" : "✕ Failed") : onWay ? (isRtl ? "🚚 في الطريق" : "🚚 On the way") : (isRtl ? "جاهز" : "Ready")}
                               </Badge>
+                              {failed && bs?.failReason && <span className="text-[10px] text-red-500 font-bold max-w-[140px] text-left">{bs.failReason}</span>}
                               {bs?.driverName && (
                                 <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                   <Truck className="h-3 w-3" />{bs.driverName}
@@ -499,13 +511,22 @@ export default function Delivery() {
                             </Button>
                           ) : null;
                         })()}
-                        <Button
-                          className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
-                          onClick={() => handleDeliver(plan._id)}
-                        >
-                          <Check className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                          {isRtl ? "إتمام التسليم" : "Complete"}
-                        </Button>
+                        {plan.status === "FAILED" ? (
+                          <Button
+                            className="flex-1 h-12 rounded-xl text-white font-bold shadow-md bg-amber-500 hover:bg-amber-600"
+                            onClick={() => handleReschedule(plan._id)}
+                          >
+                            {isRtl ? "♻ إعادة جدولة" : "♻ Reschedule"}
+                          </Button>
+                        ) : (
+                          <Button
+                            className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
+                            onClick={() => handleDeliver(plan._id)}
+                          >
+                            <Check className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
+                            {isRtl ? "إتمام التسليم" : "Complete"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>

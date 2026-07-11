@@ -332,6 +332,8 @@ export default defineSchema({
     podStorageId: v.optional(v.id("_storage")), // صورة إثبات التسليم (اختياري)
     routeSeq: v.optional(v.number()),           // ترتيب المحطة في مسار السائق
     nearNotifiedAt: v.optional(v.number()),     // ختم إشعار "السائق قرّب"
+    failedAt: v.optional(v.number()),           // ختم فشل التوصيل
+    failReason: v.optional(v.string()),         // سبب الفشل (العميل غير موجود…)
   })
     .index("by_date", ["date"])
     .index("by_customerId", ["customerId"])

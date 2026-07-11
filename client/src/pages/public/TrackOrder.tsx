@@ -56,7 +56,7 @@ export default function TrackOrder() {
         <div className="text-[11px] font-black tracking-widest opacity-80">ADRENALINE · {t("تتبّع طلبك", "Track your order")}</div>
         <h1 className="text-2xl font-black mt-1">{t("أهلاً", "Hi")} {info.firstName} 👋</h1>
         <p className="text-sm text-cyan-100/90 font-bold mt-1">
-          {info.status === "DELIVERED" ? t("تم توصيل وجباتك 🎉", "Your meals were delivered 🎉") : info.status === "OUT_FOR_DELIVERY" ? t("سائقنا في الطريق إليك 🚚", "Our driver is on the way 🚚") : t("نجهّز وجباتك الآن 👨‍🍳", "We're preparing your meals 👨‍🍳")}
+          {info.status === "DELIVERED" ? t("تم توصيل وجباتك 🎉", "Your meals were delivered 🎉") : info.status === "FAILED" ? t("تعذّر توصيل طلبك — سنتواصل معك", "We couldn't deliver — we'll contact you") : info.status === "OUT_FOR_DELIVERY" ? t("سائقنا في الطريق إليك 🚚", "Our driver is on the way 🚚") : t("نجهّز وجباتك الآن 👨‍🍳", "We're preparing your meals 👨‍🍳")}
         </p>
       </div>
 
@@ -79,7 +79,19 @@ export default function TrackOrder() {
           </div>
         )}
 
+        {/* Failed banner */}
+        {info.status === "FAILED" && (
+          <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-red-100 grid place-items-center shrink-0"><MapPin className="h-6 w-6 text-red-500" /></div>
+            <div>
+              <p className="font-black text-red-700">{t("تعذّر توصيل طلبك", "Delivery couldn't be completed")}</p>
+              <p className="text-xs text-red-500">{t("سيتواصل معك فريقنا لإعادة الجدولة", "Our team will contact you to reschedule")}</p>
+            </div>
+          </div>
+        )}
+
         {/* Timeline */}
+        {info.status !== "FAILED" && (
         <div className="rounded-2xl bg-white border border-slate-100 p-5">
           <div className="relative">
             {STEPS.map((step, i) => {
@@ -104,6 +116,7 @@ export default function TrackOrder() {
             })}
           </div>
         </div>
+        )}
 
         {/* Live map */}
         {(stops.length > 0 || driver) && info.status !== "PREPARED" && (

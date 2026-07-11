@@ -182,6 +182,48 @@ export const markDelivered = mutation({
   },
 });
 
+/** تعذّر التوصيل — حالة FAILED بسبب، فلا تبقى "في الطريق" للأبد. */
+export const markFailed = mutation({
+  args: {
+    planId: v.id("dailyPlans"),
+    reason: v.string(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { planId, reason, sessionToken }) => {
+    const staff = await requireStaff(ctx, sessionToken);
+    const plan = await ctx.db.get(planId);
+    if (!plan) return { success: false, error: "المحطة غير موجودة" };
+    if (String(staff.role) === "DELIVERY" && plan.driverId && String(plan.driverId) !== String(staff.userId)) {
+      return { success: false, error: "هذه المحطة مسندة لسائق آخر" };
+    }
+    await ctx.db.patch(planId, {
+      status: "FAILED",
+      failedAt: Date.now(),
+      failReason: reason,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+/** إعادة جدولة محطة فاشلة/في الطريق → ترجع PREPARED لإعادة الإسناد والمحاولة. */
+export const reschedule = mutation({
+  args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { planId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plan = await ctx.db.get(planId);
+    if (!plan) return { success: false, error: "المحطة غير موجودة" };
+    await ctx.db.patch(planId, {
+      status: "PREPARED",
+      outForDeliveryAt: undefined,
+      failedAt: undefined,
+      failReason: undefined,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
 /** رابط رفع صورة إثبات التسليم (Convex storage). */
 export const generatePodUploadUrl = mutation({
   args: { sessionToken: v.optional(v.string()) },
@@ -246,6 +288,7 @@ export const myStops = query({
         notes: p.notes || null,
         trackToken: (p as any).trackToken || null,
         deliveredAt: (p as any).deliveredAt ?? null,
+        failReason: (p as any).failReason ?? null,
       });
     }
     stops.sort((a, b) => a.seq - b.seq);
@@ -304,19 +347,22 @@ export const supervisorBoard = query({
         trackToken: (p as any).trackToken || null,
         outForDeliveryAt: (p as any).outForDeliveryAt ?? null,
         deliveredAt: (p as any).deliveredAt ?? null,
+        failReason: (p as any).failReason ?? null,
       });
     }
     stops.sort((a, b) => a.seq - b.seq);
 
     const delivered = stops.filter((s) => s.status === "DELIVERED").length;
     const outForDelivery = stops.filter((s) => s.status === "OUT_FOR_DELIVERY").length;
+    const failed = stops.filter((s) => s.status === "FAILED").length;
     return {
       stops,
       analytics: {
         total: stops.length,
         delivered,
         outForDelivery,
-        pending: stops.length - delivered - outForDelivery,
+        failed,
+        pending: stops.length - delivered - outForDelivery - failed,
         avgDeliveryMinutes: deliveredWithTime > 0 ? Math.round(totalDeliveredMs / deliveredWithTime / 60000) : null,
         perDriver: Object.values(perDriver),
       },

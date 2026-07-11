@@ -35,6 +35,7 @@ export default function DriverApp() {
   const stops = useQuery(api.delivery.myStops, { date: today, deliveryTime: shift, sessionToken }) as any[] | undefined;
   const startDelivery = useMutation(api.delivery.startDelivery);
   const markDelivered = useMutation(api.delivery.markDelivered);
+  const markFailed = useMutation(api.delivery.markFailed);
   const updateMyLocation = useMutation(api.delivery.updateMyLocation);
 
   const trackBase = typeof window !== "undefined" ? window.location.origin : "";
@@ -113,6 +114,19 @@ export default function DriverApp() {
     } finally { setBusy(null); }
   };
 
+  const handleFail = async (stop: any) => {
+    const reason = prompt(t("سبب تعذّر التوصيل — مثال: العميل غير موجود / لا يرد / عنوان خاطئ:", "Reason delivery failed — e.g. customer not home / no answer / wrong address:"), "") ?? undefined;
+    if (reason === undefined) return;
+    setBusy(stop.planId);
+    try {
+      const r: any = await markFailed({ planId: stop.planId, reason: reason || t("تعذّر التوصيل", "Delivery failed"), sessionToken });
+      if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
+      toast({ title: t("سُجّل تعذّر التوصيل", "Marked as failed"), description: stop.customerName });
+    } catch (e: any) {
+      toast({ title: String(e?.message || e), variant: "destructive" });
+    } finally { setBusy(null); }
+  };
+
   const navUrl = (s: any) => s.lat != null && s.lng != null
     ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}&travelmode=driving`
     : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address || "Doha")}&travelmode=driving`;
@@ -177,12 +191,13 @@ export default function DriverApp() {
           stops.map((s: any, i: number) => {
             const done = s.status === "DELIVERED";
             const onWay = s.status === "OUT_FOR_DELIVERY";
+            const failed = s.status === "FAILED";
             return (
-              <div key={s.planId} className={`rounded-2xl border bg-white overflow-hidden transition-all ${done ? "opacity-60 border-slate-100" : onWay ? "border-[#3cc4f0] shadow-[0_8px_25px_rgba(60,196,240,.15)]" : "border-slate-100 shadow-sm"}`}>
+              <div key={s.planId} className={`rounded-2xl border bg-white overflow-hidden transition-all ${done ? "opacity-60 border-slate-100" : failed ? "border-red-200 bg-red-50/40" : onWay ? "border-[#3cc4f0] shadow-[0_8px_25px_rgba(60,196,240,.15)]" : "border-slate-100 shadow-sm"}`}>
                 <div className="p-4">
                   <div className="flex items-start gap-3">
-                    <div className={`h-10 w-10 rounded-xl grid place-items-center font-black shrink-0 text-white ${done ? "bg-emerald-500" : "bg-gradient-to-br from-[#3cc4f0] to-[#0E76AC]"}`}>
-                      {done ? <CheckCircle2 className="h-5 w-5" /> : (s.seq === 999 ? i + 1 : s.seq)}
+                    <div className={`h-10 w-10 rounded-xl grid place-items-center font-black shrink-0 text-white ${done ? "bg-emerald-500" : failed ? "bg-red-500" : "bg-gradient-to-br from-[#3cc4f0] to-[#0E76AC]"}`}>
+                      {done ? <CheckCircle2 className="h-5 w-5" /> : failed ? "!" : (s.seq === 999 ? i + 1 : s.seq)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -211,15 +226,29 @@ export default function DriverApp() {
                           {busy === s.planId ? "…" : t("🚚 خرجت للتوصيل", "🚚 Out for delivery")}
                         </button>
                       ) : (
-                        <button disabled={busy === s.planId} onClick={() => handleDeliver(s)}
-                          className="flex-1 h-11 rounded-xl bg-emerald-500 text-white font-black text-sm disabled:opacity-60">
-                          {busy === s.planId ? "…" : t("✓ تم التسليم", "✓ Delivered")}
-                        </button>
+                        <>
+                          <button disabled={busy === s.planId} onClick={() => handleDeliver(s)}
+                            className="flex-1 h-11 rounded-xl bg-emerald-500 text-white font-black text-sm disabled:opacity-60">
+                            {busy === s.planId ? "…" : t("✓ تم التسليم", "✓ Delivered")}
+                          </button>
+                          <button disabled={busy === s.planId} onClick={() => handleFail(s)}
+                            title={t("تعذّر التوصيل", "Couldn't deliver")}
+                            className="h-11 px-3 rounded-xl border border-red-200 bg-red-50 text-red-600 font-black text-sm disabled:opacity-60">
+                            ✕
+                          </button>
+                        </>
                       )}
                     </div>
                   )}
                   {done && s.deliveredAt && (
                     <p className="text-[11px] text-emerald-600 font-bold mt-2">✅ {t("سُلّم", "Delivered")} {format(new Date(s.deliveredAt), "hh:mm a")}</p>
+                  )}
+                  {failed && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <p className="text-[11px] text-red-600 font-bold flex-1">✕ {t("تعذّر التوصيل", "Delivery failed")}{s.failReason ? ` — ${s.failReason}` : ""}</p>
+                      <button disabled={busy === s.planId} onClick={() => handleStart(s)}
+                        className="text-[11px] font-black text-[#0E76AC] underline">{t("إعادة المحاولة", "Retry")}</button>
+                    </div>
                   )}
                 </div>
               </div>
