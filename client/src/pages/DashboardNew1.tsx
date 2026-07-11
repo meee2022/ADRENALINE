@@ -14,6 +14,7 @@ import {
   Users, CalendarCheck, Sun, Moon, TrendingUp,
   Package, AlertCircle, ArrowUpRight, ChevronLeft,
   Clock, Utensils, AlertTriangle,
+  ClipboardCheck, PauseCircle, ChefHat,
 } from "lucide-react";
 
 type ModalType = "customers"|"meals"|"morning"|"evening"|"expiring"|"expired"|"inventory"|"monthly"|null;
@@ -34,6 +35,10 @@ export default function DashboardNew() {
   const dashDate = format(selectedDate, "yyyy-MM-dd");
   const attToday = useQuery(api.attendance.todayCounts, { date: dashDate, sessionToken }) as any;
   const leaveToday = useQuery(api.leaves.onLeaveToday, { date: dashDate, sessionToken }) as any;
+  // ✅ الشريط التشغيلي: طلبات معلّقة + أسبوع دورة المطبخ
+  const pendingOrders = useQuery(api.customerOrders.countPending) as number | undefined;
+  const restSettings = useQuery(api.restaurantSettings.get) as any;
+  const cookingWeek = Number(restSettings?.currentCookingWeek) >= 1 ? Number(restSettings.currentCookingWeek) : null;
 
   const stats = useMemo(() => {
     const today = format(selectedDate, "yyyy-MM-dd");
@@ -61,7 +66,12 @@ export default function DashboardNew() {
 
     const morningRate = todayPlans.length > 0 ? Math.round((morningPlans.length / todayPlans.length) * 100) : 0;
 
+    // ✅ مشتركون مجمّدون (سفر) + تقدّم مطبخ اليوم (جاهز/إجمالي)
+    const pausedCount = customers.filter((c: any) => Boolean(c.pausedFrom)).length;
+    const preparedToday = todayPlans.filter((p: any) => p.status === "PREPARED" || p.status === "DELIVERED").length;
+
     return {
+      pausedCount, preparedToday,
       activeCustomers, activeCustomersCount: activeCustomers.length,
       todayPlans, todayMeals: todayPlans.length,
       morningPlans, morningDelivery: morningPlans.length,
@@ -77,7 +87,7 @@ export default function DashboardNew() {
   }, [customers, dailyPlans, selectedDate, inventorySummary, inventoryItems]);
 
   const weeklyData = useMemo(() => {
-    const days = ["سبت","أحد","اثن","ثلا","أرب","خمس","جمع"];
+    const days = ["السبت","الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
     return days.map((day, idx) => {
       const d = new Date(); d.setDate(d.getDate() - (6 - idx));
       return { name: day, value: dailyPlans.filter(p => p.date === format(d,"yyyy-MM-dd")).length };
@@ -107,6 +117,13 @@ export default function DashboardNew() {
     CUSTOMIZED: "#5a8aad",  // أزرق فاتح
     STANDARD:   "#bcbebf",  // رصاصي
   };
+
+  // ✅ أسماء البرامج بالعربي — الصفحة عربية بالكامل، لا نخلط لغات
+  const PROG_AR: Record<string,string> = {
+    FITNESS: "فيتنس", DIET: "دايت", BULK: "تضخيم",
+    CUSTOMIZED: "مخصّص", STANDARD: "قياسي",
+  };
+  const progLabel = (name: string) => PROG_AR[name] || name;
 
   /* ─── Sub-components ─── */
   const CustomerRow = ({ customer, badge }: { customer:any; badge:React.ReactNode }) => (
@@ -178,7 +195,7 @@ export default function DashboardNew() {
           </div>
           <div>
             <p className="text-[10px] text-cyan-200 font-black uppercase tracking-wider">البرنامج الأكثر طلباً</p>
-            <p className="text-sm sm:text-base font-black text-white mt-0.5">{topProgram}</p>
+            <p className="text-sm sm:text-base font-black text-white mt-0.5">{progLabel(topProgram)}</p>
           </div>
         </div>
       </div>
@@ -225,9 +242,71 @@ export default function DashboardNew() {
               <span className="text-[11px] sm:text-xs font-bold text-gray-500">{x.l}</span>
             </div>
           ))}
-          <span className="text-[10px] text-gray-300 mr-auto hidden sm:inline">اضغط لإدارة الحضور ←</span>
+          <span className="text-[11px] font-bold text-[#0E76AC] mr-auto hidden sm:inline">إدارة الحضور ←</span>
         </button>
       )}
+
+      {/* ── ⚡ الشريط التشغيلي: ما يحتاج تصرفاً الآن (طلبات معلّقة/دورة/مجمّدون/مطبخ) ── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* طلبات بانتظار المراجعة — الأهم؛ يتوهّج لو فيه معلّق */}
+        <button onClick={()=>setLocation("/orders/pending")}
+          className={`rounded-2xl p-4 text-right border transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3 ${
+            (pendingOrders ?? 0) > 0
+              ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-[0_8px_25px_rgba(245,158,11,0.15)]"
+              : "bg-white border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)]"
+          }`}>
+          <div className={`h-11 w-11 rounded-xl grid place-items-center shrink-0 ${(pendingOrders ?? 0) > 0 ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-400"}`}>
+            <ClipboardCheck className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className={`text-2xl font-black tabular-nums leading-none ${(pendingOrders ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>{pendingOrders ?? "…"}</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">طلبات بانتظار المراجعة</p>
+          </div>
+          {(pendingOrders ?? 0) > 0 && <span className="mr-auto h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />}
+        </button>
+
+        {/* أسبوع دورة المطبخ — القلب التشغيلي للدورات */}
+        <button onClick={()=>setLocation("/orders/pending")}
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-[#3cc4f0]/10 text-[#0E76AC]">
+            <ChefHat className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-2xl font-black tabular-nums leading-none text-[#0E76AC]">{cookingWeek ?? "…"}</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">أسبوع دورة المطبخ (1-4)</p>
+          </div>
+        </button>
+
+        {/* مشتركون مجمّدون */}
+        <button onClick={()=>setLocation("/customers")}
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-indigo-50 text-indigo-500">
+            <PauseCircle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-2xl font-black tabular-nums leading-none text-indigo-600">{stats.pausedCount}</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">اشتراكات مجمّدة (سفر)</p>
+          </div>
+        </button>
+
+        {/* تقدّم المطبخ اليوم */}
+        <button onClick={()=>setLocation("/kitchen")}
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-emerald-50 text-emerald-600">
+            <Utensils className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-2xl font-black tabular-nums leading-none text-emerald-600">
+              {stats.preparedToday}<span className="text-sm text-gray-400 font-bold">/{stats.todayMeals}</span>
+            </p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">جاهز من مطبخ اليوم</p>
+            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
+              <div className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                style={{ width: `${stats.todayMeals > 0 ? Math.round((stats.preparedToday / stats.todayMeals) * 100) : 0}%` }} />
+            </div>
+          </div>
+        </button>
+      </div>
 
       {/* ── Row 1: 4 Gorgeous top-accented KPI cards with real operational micro-metrics ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -268,7 +347,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#3cc4f0] transition-colors">
-            <span className="font-extrabold">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -309,7 +388,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#47759c] transition-colors">
-            <span className="font-extrabold">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -349,7 +428,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-amber-500 transition-colors">
-            <span className="font-extrabold">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -389,7 +468,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#0f1516] transition-colors">
-            <span className="font-extrabold">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -512,7 +591,7 @@ export default function DashboardNew() {
               return (
                 <div key={name} className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500">{name}</span>
+                    <span className="text-xs font-bold text-slate-500">{progLabel(name)}</span>
                     <span className="text-xs font-black tabular-nums" style={{color}}>{value} ({pct}%)</span>
                   </div>
                   <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
@@ -543,16 +622,32 @@ export default function DashboardNew() {
           </div>
           
           <div className="p-6 grid grid-cols-1 gap-4">
-            <button onClick={()=>setOpenModal("inventory")}
-              className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-red-50 to-rose-50/30 border border-red-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
-              <p className="text-5xl font-black text-red-500 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{stats.lowStockCount}</p>
-              <p className="text-xs font-black text-red-400 mt-2">⚠ أصناف مخزون منخفض</p>
-            </button>
-            <button onClick={()=>setLocation("/inventory")}
-              className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-emerald-50 to-green-50/30 border border-emerald-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
-              <p className="text-5xl font-black text-emerald-600 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{(inventorySummary as any)?.totalItems||0}</p>
-              <p className="text-xs font-black text-emerald-500 mt-2">✓ إجمالي الأصناف</p>
-            </button>
+            {/* ✅ حالة الصفر مصمّمة: لا نقص = بطاقة خضراء مطمئنة، لا حمراء بصفر */}
+            {stats.lowStockCount > 0 ? (
+              <button onClick={()=>setOpenModal("inventory")}
+                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-red-50 to-rose-50/30 border border-red-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
+                <p className="text-5xl font-black text-red-500 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{stats.lowStockCount}</p>
+                <p className="text-xs font-black text-red-400 mt-2">⚠ أصناف مخزون منخفض</p>
+              </button>
+            ) : (
+              <div className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-emerald-50 to-green-50/30 border border-emerald-100">
+                <p className="text-3xl leading-none">✅</p>
+                <p className="text-sm font-black text-emerald-600 mt-2">لا يوجد نقص في المخزون</p>
+              </div>
+            )}
+            {((inventorySummary as any)?.totalItems || 0) > 0 ? (
+              <button onClick={()=>setLocation("/inventory")}
+                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-slate-50 to-slate-100/30 border border-slate-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
+                <p className="text-5xl font-black text-[#47759c] tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{(inventorySummary as any)?.totalItems||0}</p>
+                <p className="text-xs font-black text-slate-500 mt-2">📦 إجمالي الأصناف</p>
+              </button>
+            ) : (
+              <button onClick={()=>setLocation("/inventory")}
+                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98]">
+                <p className="text-3xl leading-none">📦</p>
+                <p className="text-sm font-black text-amber-600 mt-2">لا توجد أصناف بعد — أضف مخزونك ←</p>
+              </button>
+            )}
           </div>
         </div>
 
