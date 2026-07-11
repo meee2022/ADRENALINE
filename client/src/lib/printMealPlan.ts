@@ -125,6 +125,7 @@ export function printMealPlan(input: PrintMealPlanInput): void {
     : "";
 
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=800">
     <title>${esc(input.title)}</title>
     <style>
       *{box-sizing:border-box}
@@ -255,6 +256,7 @@ export function printWeeklyReport(input: WeeklyReportInput): void {
     .join("");
 
   const html = `<!doctype html><html dir="ltr" lang="en"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=800">
     <title>${esc(input.customerName)} — Weekly Report</title>
     <style>
       *{box-sizing:border-box}
@@ -366,6 +368,9 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
   //    العربي والاتجاهين ويحاذي الشارات صحيحاً 100%، ويعرض الصور بلا قيود CORS.
   //    ننتظر تحميل كل الصور ثم نطبع تلقائياً (المستخدم يحفظ كـ PDF).
   const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <!-- ✅ عرض تخطيط ثابت (لا device-width): يمنع الجوال من إعادة تخطيط الكروت
+         بعرض الشاشة الصغير فتتضخّم وتتفجّر لمئات الصفحات. الآن الجوال = الديسكتوب. -->
+    <meta name="viewport" content="width=800">
     <title>${esc(safeName)}</title>
     <style>
       *{box-sizing:border-box;font-family:Cairo,Tahoma,Arial,sans-serif}

@@ -294,7 +294,7 @@ export default function Attendance() {
       <td class="c b">${e.workedDays ?? 0}</td><td class="c">${e.absent || 0}</td>
       <td class="c">${e.late || 0}</td><td class="c ot">${Math.round((e.otHours || 0) * 10) / 10}</td>
     </tr>`).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الحضور ${esc(month)}</title>
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>تقرير الحضور ${esc(month)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
         body{margin:0;padding:18px;color:#0f1516}

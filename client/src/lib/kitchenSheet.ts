@@ -159,6 +159,7 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
   // ✅ نطبع عبر محرك المتصفح (لا html2canvas): يشكّل العربي صحيحاً بلا تقطيع
   //    ولا فقدان نص — نفس التصميم تماماً، والمستخدم يحفظ كـ PDF (أفقي A4).
   const html = `<!doctype html><html dir="${dir}" lang="${lang}"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=1120">
     <title>ADRENALINE-kitchen-${esc(dateStr)}</title>
     <style>
       *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}

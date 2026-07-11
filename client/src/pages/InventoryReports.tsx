@@ -172,6 +172,7 @@ export default function InventoryReportsPage() {
         </tr>`;
       }).join("");
     const html = `<!doctype html><html dir="${dir}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8">
+      <meta name="viewport" content="width=800">
       <title>ADRENALINE-inventory</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}

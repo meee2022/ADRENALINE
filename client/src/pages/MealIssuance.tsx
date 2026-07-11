@@ -113,7 +113,7 @@ export default function MealIssuance() {
     const catRows = CATS.map((c) => `<tr><td class="r">${c.ar}</td><td class="c b">${mc[c.key] || 0}</td></tr>`).join("");
     const mealRows = (summary?.month?.byMeal || []).map((m: any, i: number) => `<tr><td class="c">${i + 1}</td><td class="r">${esc(m.name)}</td><td class="c b">${m.qty}</td></tr>`).join("");
     const recRows = (summary?.month?.byRecipient || []).map((m: any) => `<tr><td class="r">${esc(m.name)}</td><td class="c b">${m.qty}</td></tr>`).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>حصر الصادر ${esc(month)}</title>
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>حصر الصادر ${esc(month)}</title>
       <style>*{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}body{margin:0;padding:16px;color:#0f1516}
       h1{font-size:20px;margin:0} .sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
       h2{font-size:15px;margin:16px 0 6px;border-top:2px solid #0E76AC;padding-top:8px}

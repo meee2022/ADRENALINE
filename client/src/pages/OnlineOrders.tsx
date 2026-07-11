@@ -78,7 +78,7 @@ export default function OnlineOrders() {
       if (!d.orders) return "";
       return `<tr><td class="r">${p.ar}</td><td class="c b">${d.orders}</td><td class="c b">${d.meals}</td><td class="c b" style="color:#0E76AC">${Math.round(d.revenue)} ر.ق</td></tr>`;
     }).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>طلبات أونلاين ${esc(month)}</title>
+    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>طلبات أونلاين ${esc(month)}</title>
       <style>*{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}body{margin:0;padding:16px;color:#0f1516}
       h1{font-size:20px;margin:0}.sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
       table{width:100%;border-collapse:collapse;font-size:14px}th{background:#0E76AC;color:#fff;padding:8px 6px;font-weight:800}td{padding:8px 6px;border:1px solid #e3ebf2}
