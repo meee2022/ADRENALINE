@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { useRoute, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
+import { useLanguage } from "@/lib/i18n";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Printer } from "lucide-react";
@@ -31,8 +32,21 @@ const categoryNameAr: Record<string, string> = {
   snack: "سناك",
   salad: "سلطة",
 };
+const dayNameEn: Record<string, string> = {
+  saturday: "Saturday", sunday: "Sunday", monday: "Monday", tuesday: "Tuesday",
+  wednesday: "Wednesday", thursday: "Thursday", friday: "Friday",
+};
+const categoryNameEn: Record<string, string> = {
+  breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack", salad: "Salad",
+};
 
 export default function OrderReviewDetail() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
+  const locale = isRtl ? ar : enUS;
+  const dayName = (d: string) => (isRtl ? dayNameAr[d] : dayNameEn[d]) || d;
+  const catName = (c: string) => (isRtl ? categoryNameAr[c] : categoryNameEn[c]) || c;
   const [, params] = useRoute("/orders/review/:orderId");
   const [, navigate] = useLocation();
   const orderId = params?.orderId as Id<"customerOrders"> | undefined;
@@ -75,7 +89,8 @@ export default function OrderReviewDetail() {
   const handleDeleteOrder = async () => {
     if (!orderId) return;
     const ok = confirm(
-      "⚠️ حذف نهائي للخطة كلها (وأصنافها وأي خطط مطبخ منها). لا يمكن التراجع.\nمتأكد؟"
+      t("⚠️ حذف نهائي للخطة كلها (وأصنافها وأي خطط مطبخ منها). لا يمكن التراجع.\nمتأكد؟",
+        "⚠️ Permanently delete the whole plan (its items and any kitchen plans). This can't be undone.\nSure?")
     );
     if (!ok) return;
     try {
@@ -83,7 +98,7 @@ export default function OrderReviewDetail() {
       if (r?.success) {
         navigate("/orders/pending");
       } else {
-        alert(r?.error || "❌ تعذّر الحذف");
+        alert(r?.error || t("❌ تعذّر الحذف","❌ Delete failed"));
       }
     } catch (e: any) {
       alert(String(e?.message || e));
@@ -192,7 +207,7 @@ export default function OrderReviewDetail() {
 
     if (!effectiveStartDate) {
       alert(
-        `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.`
+        (isRtl ? `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.` : `⚠️ Set a date for at least the first day (${firstKey}) or set the delivery start date above.`)
       );
       return;
     }
@@ -231,7 +246,7 @@ export default function OrderReviewDetail() {
 
   const handleReject = async () => {
     if (!orderId || !rejectReason.trim()) {
-      alert("⚠️ يرجى كتابة سبب الرفض");
+      alert(t("⚠️ يرجى كتابة سبب الرفض","⚠️ Please write a rejection reason"));
       return;
     }
     try {
@@ -248,7 +263,7 @@ export default function OrderReviewDetail() {
             order.customerName || "عميلنا الكريم",
             rejectReason,
           );
-          if (confirm("هل تريد إرسال رسالة الاعتذار للعميل عبر واتساب؟")) {
+          if (confirm(t("هل تريد إرسال رسالة الاعتذار للعميل عبر واتساب؟","Send the apology message to the customer via WhatsApp?"))) {
             openWhatsApp(order.customerPhone, msg);
           }
         }
@@ -265,7 +280,7 @@ export default function OrderReviewDetail() {
   const createdDate = (() => {
     const d = order.createdAt ? new Date(order.createdAt) : null;
     return d && !isNaN(d.getTime())
-      ? format(d, "dd MMMM yyyy - hh:mm a", { locale: ar })
+      ? format(d, "dd MMMM yyyy - hh:mm a", { locale })
       : "غير محدد";
   })();
 
@@ -287,12 +302,12 @@ export default function OrderReviewDetail() {
         (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
       );
       return {
-        title: `الأسبوع (دورة ${w})`,
+        title: `${t("الأسبوع (دورة", "Week (cycle")} ${w})`,
         sections: days.map((d) => ({
-          title: dayNameAr[d] || d,
+          title: dayName(d),
           rows: groupedByWeek[w][d].map((it: any, i: number) => ({
             label: String(i + 1),
-            category: categoryNameAr[it.category] || it.category || "",
+            category: catName(it.category),
             meal: it.mealNameAr || it.mealNameEn || "-",
             notes: [it.avoid, it.preferences, it.portions, it.specialNotes]
               .map((x) => String(x || "").trim()).filter(Boolean).join(" • "),
@@ -321,7 +336,7 @@ export default function OrderReviewDetail() {
         groups,
       });
     } catch (e: any) {
-      alert("تعذّر التحميل: " + String(e?.message || e));
+      alert(t("تعذّر التحميل: ","Download failed: ") + String(e?.message || e));
     } finally {
       setDownloadingPlan(false);
     }
@@ -332,7 +347,7 @@ export default function OrderReviewDetail() {
       {/* Back + Print */}
       <div className="flex items-center justify-between gap-2 mb-4">
         <Button variant="outline" onClick={() => navigate("/orders/pending")}>
-          ← العودة للقائمة
+          {t("← العودة للقائمة","← Back to list")}
         </Button>
         <Button
           variant="outline"
@@ -341,7 +356,7 @@ export default function OrderReviewDetail() {
           className="font-bold border-[#3cc4f0] text-[#0E76AC]"
         >
           <Printer className="h-4 w-4 ml-2" />
-          {downloadingPlan ? "جاري تجهيز الملف…" : "تنزيل جدول الوجبات PDF"}
+          {downloadingPlan ? t("جاري تجهيز الملف…","Preparing file…") : t("تنزيل جدول الوجبات PDF","Download meal plan PDF")}
         </Button>
       </div>
 
@@ -370,21 +385,21 @@ export default function OrderReviewDetail() {
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-white p-4 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">رقم الطلب</p>
+            <p className="text-xs text-gray-500 mb-1">{t("رقم الطلب","Order No.")}</p>
             <p className="font-bold text-gray-900">{order.orderNumber}</p>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">إجمالي الوجبات</p>
-            <p className="font-bold text-gray-900">{order.totalMeals} وجبة</p>
+            <p className="text-xs text-gray-500 mb-1">{t("إجمالي الوجبات","Total meals")}</p>
+            <p className="font-bold text-gray-900">{order.totalMeals} {t("وجبة","meals")}</p>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">السعرات الكلية</p>
+            <p className="text-xs text-gray-500 mb-1">{t("السعرات الكلية","Total calories")}</p>
             <p className="font-bold text-gray-900">
-              {order.totalCalories.toLocaleString()} سعرة
+              {order.totalCalories.toLocaleString()} {t("سعرة","kcal")}
             </p>
           </div>
           <div className="bg-white p-4 rounded-lg">
-            <p className="text-xs text-gray-500 mb-1">تاريخ الإرسال</p>
+            <p className="text-xs text-gray-500 mb-1">{t("تاريخ الإرسال","Submitted")}</p>
             <p className="font-bold text-gray-900 text-sm">{createdDate}</p>
           </div>
         </div>
@@ -410,7 +425,7 @@ export default function OrderReviewDetail() {
           return (
             <Card key={weekNum} className="p-6">
               <div className="mb-4 px-4 py-2.5 rounded-xl bg-[#EAF3FB] border border-[#CFE4F3] text-[#0E2A4A] font-black text-lg">
-                🗓️ الأسبوع (دورة {weekNum})
+                🗓️ {t("الأسبوع (دورة","Week (cycle")} {weekNum})
               </div>
 
               <div className="grid gap-5">
@@ -439,11 +454,11 @@ export default function OrderReviewDetail() {
                       <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2 bg-[#0E2A4A] text-white">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h5 className="text-base font-bold">
-                            {dayNameAr[day] || day}
+                            {dayName(day)}
                           </h5>
                           {effectiveDate && (
                             <span className="text-sm font-semibold opacity-80">
-                              · {format(effectiveDate, "d MMM yyyy", { locale: ar })}
+                              · {format(effectiveDate, "d MMM yyyy", { locale })}
                             </span>
                           )}
                           <span className="text-xs bg-white/15 rounded-full px-2.5 py-0.5">
@@ -467,20 +482,20 @@ export default function OrderReviewDetail() {
                               >
                                 <CalendarIcon className="h-3 w-3" />
                                 {effectiveDate
-                                  ? format(effectiveDate, "d MMM", { locale: ar })
-                                  : "تحديد تاريخ"}
+                                  ? format(effectiveDate, "d MMM", { locale })
+                                  : t("تحديد تاريخ","Set date")}
                                 {overrideDate && (
-                                  <span className="text-[9px] bg-white/25 px-1 rounded">يدوي</span>
+                                  <span className="text-[9px] bg-white/25 px-1 rounded">{t("يدوي","manual")}</span>
                                 )}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="end">
                               <div className="p-3 border-b border-gray-100">
                                 <p className="text-xs font-bold text-gray-700">
-                                  تاريخ هذا اليوم
+                                  {t("تاريخ هذا اليوم","Date for this day")}
                                 </p>
                                 <p className="text-[11px] text-gray-500 mt-0.5">
-                                  {autoDate ? `الافتراضي: ${format(autoDate, "d MMM yyyy", { locale: ar })}` : "حدّد تاريخ البداية أولاً"}
+                                  {autoDate ? `${t("الافتراضي","Default")}: ${format(autoDate, "d MMM yyyy", { locale })}` : t("حدّد تاريخ البداية أولاً","Set the start date first")}
                                 </p>
                               </div>
                               <Calendar
@@ -506,7 +521,7 @@ export default function OrderReviewDetail() {
                                     }
                                     className="w-full h-7 text-[11px] text-gray-500 hover:text-red-600"
                                   >
-                                    مسح التاريخ اليدوي (استخدم التلقائي)
+                                    {t("مسح التاريخ اليدوي (استخدم التلقائي)","Clear manual date (use auto)")}
                                   </Button>
                                 </div>
                               )}
@@ -533,7 +548,7 @@ export default function OrderReviewDetail() {
                                 />
                               )}
                               <span className="absolute top-1.5 start-1.5 text-[10px] font-bold text-primary bg-white/90 px-1.5 py-0.5 rounded-md">
-                                {categoryNameAr[meal.category] || meal.category}
+                                {catName(meal.category)}
                               </span>
                             </div>
                             <div className="p-2.5 flex flex-col flex-1">
@@ -592,7 +607,7 @@ export default function OrderReviewDetail() {
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
               📅 ملء سريع: تاريخ بداية التوصيل
               <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                اختياري
+                {t("اختياري","Optional")}
               </span>
             </label>
             <div className="flex items-center gap-2">
@@ -607,9 +622,9 @@ export default function OrderReviewDetail() {
                   >
                     <CalendarIcon className="ml-2 h-4 w-4" />
                     {startDate ? (
-                      format(startDate, "EEEE، d MMMM yyyy", { locale: ar })
+                      format(startDate, "EEEE، d MMMM yyyy", { locale })
                     ) : (
-                      <span>اختر تاريخ ابتدائي (يملأ الأيام الفارغة فقط)...</span>
+                      <span>{t("اختر تاريخ ابتدائي (يملأ الأيام الفارغة فقط)...","Pick a start date (fills empty days only)...")}</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -631,7 +646,7 @@ export default function OrderReviewDetail() {
                   onClick={() => setStartDate(undefined)}
                   className="text-xs text-gray-500 hover:text-red-600"
                 >
-                  مسح
+                  {t("مسح","Clear")}
                 </Button>
               )}
             </div>
@@ -641,7 +656,7 @@ export default function OrderReviewDetail() {
               <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 flex items-center gap-2">
                 <span className="text-lg">🗓️</span>
                 <span>
-                  هذا التاريخ يصادف <b>الأسبوع {rotationInfo.rotationWeek}</b> من دورة المطبخ
+                  {t("هذا التاريخ يصادف","This date falls on")} <b>{t("الأسبوع","week")} {rotationInfo.rotationWeek}</b> {t("من دورة المطبخ","of the kitchen cycle")}
                   {rotationInfo.fridaysAhead > 0 && (
                     <span className="text-amber-600">
                       {" "}(المطبخ الآن على الأسبوع {rotationInfo.currentCookingWeek})
@@ -652,11 +667,11 @@ export default function OrderReviewDetail() {
               </div>
             )}
             <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-              💡 <b>طريقة سهلة:</b> سيب الحقل ده فاضي وحدد بس تاريخ أول يوم تحت — هيمشي بالترتيب تلقائياً.
+              💡 <b>{t("طريقة سهلة:","Easy way:")}</b> {t("سيب الحقل ده فاضي وحدد بس تاريخ أول يوم تحت — هيمشي بالترتيب تلقائياً.","Leave this empty and just set the first day's date below — it flows in order automatically.")}
               <br />
-              💡 <b>أو:</b> حدد التاريخ هنا ليكون نقطة بداية للأيام بدون تاريخ يدوي.
+              💡 <b>{t("أو:","Or:")}</b> {t("حدد التاريخ هنا ليكون نقطة بداية للأيام بدون تاريخ يدوي.","Set the date here as the starting point for days without a manual date.")}
               <br />
-              💡 الأيام اللي حددت ليها تاريخ يدوي تحت بتبقى <b>مستقلة تماماً</b>.
+              💡 {t("الأيام اللي حددت ليها تاريخ يدوي تحت بتبقى","Days you set a manual date for below stay")} <b>{t("مستقلة تماماً","fully independent")}</b>.
             </p>
           </div>
 
@@ -718,7 +733,7 @@ export default function OrderReviewDetail() {
                     <button
                       onClick={() => setSelectedCustomerId(null)}
                       className="text-xs text-gray-500 hover:text-red-600 hover:underline whitespace-nowrap"
-                      title="إلغاء الربط واختيار يدوي"
+                      title={t("إلغاء الربط واختيار يدوي","Unlink and pick manually")}
                     >
                       تغيير
                     </button>
@@ -731,14 +746,14 @@ export default function OrderReviewDetail() {
             return (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  🔗 ربط بمشترك (اختياري)
+                  🔗 {t("ربط بمشترك (اختياري)","Link to subscriber (optional)")}
                 </label>
                 <select
                   value={selectedCustomerId || ""}
                   onChange={(e) => setSelectedCustomerId(e.target.value as Id<"customers"> | "" || null)}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white"
                 >
-                  <option value="">-- عميل جديد (بدون ربط) --</option>
+                  <option value="">{t("-- عميل جديد (بدون ربط) --","-- New customer (no link) --")}</option>
                   {customers.map((customer) => (
                     <option key={customer._id} value={customer._id}>
                       {customer.fullName} ({customer.phone})
@@ -747,7 +762,7 @@ export default function OrderReviewDetail() {
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-gray-500">
-                  💡 لم يتم العثور على مشترك مطابق برقم الهاتف. يمكنك اختياره يدوياً.
+                  💡 {t("لم يتم العثور على مشترك مطابق برقم الهاتف. يمكنك اختياره يدوياً.","No subscriber matched this phone. You can pick one manually.")}
                 </p>
               </div>
             );
@@ -756,12 +771,12 @@ export default function OrderReviewDetail() {
           {/* Approval Notes */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              ملاحظات الاعتماد (اختياري)
+              {t("ملاحظات الاعتماد (اختياري)","Approval notes (optional)")}
             </label>
             <textarea
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               rows={3}
-              placeholder="مثال: تم اعتماد الخطة بعد مراجعة دقيقة من أخصائي التغذية..."
+              placeholder={t("مثال: تم اعتماد الخطة بعد مراجعة دقيقة من أخصائي التغذية...","e.g. Plan approved after careful nutritionist review...")}
               value={approveNotes}
               onChange={(e) => setApproveNotes(e.target.value)}
             />
@@ -773,7 +788,7 @@ export default function OrderReviewDetail() {
               onClick={handleApprove}
               className="flex-1 bg-primary hover:bg-primary/90 text-white py-4 text-lg font-bold"
             >
-              ✅ اعتماد الخطة
+              {t("✅ اعتماد الخطة","✅ Approve plan")}
             </Button>
 
             <Button
@@ -781,7 +796,7 @@ export default function OrderReviewDetail() {
               variant="outline"
               className="flex-1 border-red-500 text-red-600 hover:bg-red-50 py-4 text-lg font-bold"
             >
-              ❌ رفض الخطة
+              {t("❌ رفض الخطة","❌ Reject plan")}
             </Button>
 
             {isAdmin && (
@@ -818,7 +833,7 @@ export default function OrderReviewDetail() {
               className="px-8 py-4 text-lg font-bold gap-2"
             >
               <span style={{ color: "#25D366" }}>●</span>
-              💬 تواصل مع العميل
+              {t("💬 تواصل مع العميل","💬 Contact customer")}
             </Button>
           </div>
         </div>
@@ -829,15 +844,15 @@ export default function OrderReviewDetail() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="p-6 max-w-md w-full">
             <h3 className="text-xl font-bold text-gray-900 mb-4">
-              ⚠️ رفض الخطة
+              {t("⚠️ رفض الخطة","⚠️ Reject plan")}
             </h3>
             <p className="text-gray-600 mb-4">
-              يرجى كتابة سبب الرفض ليتم إرساله للعميل
+              {t("يرجى كتابة سبب الرفض ليتم إرساله للعميل","Write a rejection reason to send to the customer")}
             </p>
             <textarea
               className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
               rows={4}
-              placeholder="مثال: الوجبات المختارة تتجاوز السعرات المسموحة..."
+              placeholder={t("مثال: الوجبات المختارة تتجاوز السعرات المسموحة...","e.g. Selected meals exceed the allowed calories...")}
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
@@ -846,7 +861,7 @@ export default function OrderReviewDetail() {
                 onClick={handleReject}
                 className="flex-1 bg-red-600 hover:bg-red-700 text-white"
               >
-                تأكيد الرفض
+                {t("تأكيد الرفض","Confirm rejection")}
               </Button>
               <Button
                 onClick={() => {
@@ -856,7 +871,7 @@ export default function OrderReviewDetail() {
                 variant="outline"
                 className="flex-1"
               >
-                إلغاء
+                {t("إلغاء","Cancel")}
               </Button>
             </div>
           </Card>
@@ -871,7 +886,7 @@ export default function OrderReviewDetail() {
               <h3 className="text-xl font-bold text-gray-900">🔁 تبديل: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
               <button onClick={() => setSwapTarget(null)} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">×</button>
             </div>
-            <p className="text-sm text-gray-500 mb-4">اختر وجبة بديلة — ستُحدَّث السعرات والسعر تلقائياً.</p>
+            <p className="text-sm text-gray-500 mb-4">{t("اختر وجبة بديلة — ستُحدَّث السعرات والسعر تلقائياً.","Pick a replacement meal — calories and price update automatically.")}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               {allMeals
                 .slice()
@@ -881,13 +896,13 @@ export default function OrderReviewDetail() {
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors text-right disabled:opacity-50">
                     {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} className="w-14 h-14 rounded-lg object-cover shrink-0" />}
                     <div className="min-w-0 flex-1">
-                      <p className="font-bold text-gray-900 text-sm truncate">{m.nameAr}</p>
-                      <p className="text-xs text-gray-500">{categoryNameAr[m.category] || m.category} · {m.calories || 0} سعرة{m.priceQAR ? ` · ${m.priceQAR} ر.ق` : ""}</p>
+                      <p className="font-bold text-gray-900 text-sm truncate">{isRtl ? m.nameAr : (m.nameEn || m.nameAr)}</p>
+                      <p className="text-xs text-gray-500">{catName(m.category)} · {m.calories || 0} {t("سعرة","kcal")}{m.priceQAR ? ` · ${m.priceQAR} ${t("ر.ق","QAR")}` : ""}</p>
                     </div>
                   </button>
                 ))}
             </div>
-            {allMeals.length === 0 && <p className="text-center text-gray-400 py-8">لا توجد وجبات متاحة للتبديل</p>}
+            {allMeals.length === 0 && <p className="text-center text-gray-400 py-8">{t("لا توجد وجبات متاحة للتبديل","No meals available to swap")}</p>}
           </Card>
         </div>
       )}
