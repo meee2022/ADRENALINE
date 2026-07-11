@@ -697,6 +697,13 @@ export default defineSchema({
     currentCookingWeek: v.optional(v.number()),
     /** yyyy-MM-dd لآخر سبت تقدّم فيه الأسبوع تلقائياً — يمنع التقدّم مرتين. */
     cookingWeekAdvancedOn: v.optional(v.string()),
+    /**
+     * ✅ حصص البرامج (من كشف حسابات المطبخ): لكل برنامج جرامات الكارب،
+     *    مدى البروتين (نص مثل "80-90")، ومُعامل السعرات لعرض سعرات المنيو
+     *    حسب هدف العميل. شكلها:
+     *    { DIET:{carb:100,protein:"80-90",calFactor:1}, FITNESS:{...}, BULK:{...} }
+     */
+    programPortions: v.optional(v.any()),
     // Contact Information
     phone: v.string(),
     email: v.string(),

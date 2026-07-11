@@ -59,6 +59,28 @@ export default function RestaurantSettings() {
 
   const [isSaving, setIsSaving] = useState(false);
 
+  // ✅ حصص البرامج — القيم الافتراضية من كشف حسابات المطبخ 7-7-2026
+  const setProgramPortions = useMutation(api.restaurantSettings.setProgramPortions);
+  const [portions, setPortions] = useState<any>({
+    DIET: { carb: 100, protein: "80-90", calFactor: 1 },
+    FITNESS: { carb: 150, protein: "100-110", calFactor: 1.25 },
+    BULK: { carb: 170, protein: "150-160", calFactor: 1.5 },
+  });
+  const [isSavingPortions, setIsSavingPortions] = useState(false);
+  useEffect(() => {
+    if ((settings as any)?.programPortions) setPortions((settings as any).programPortions);
+  }, [settings]);
+  const handleSavePortions = async () => {
+    setIsSavingPortions(true);
+    try {
+      await setProgramPortions({ portions, sessionToken });
+    } catch (e: any) {
+      alert(t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e));
+    } finally {
+      setIsSavingPortions(false);
+    }
+  };
+
   // Load settings into form when data arrives
   useEffect(() => {
     if (settings) {
@@ -695,6 +717,66 @@ export default function RestaurantSettings() {
                   />
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ===== حصص البرامج (كارب/بروتين/مُعامل السعرات) ===== */}
+        <Card className="rounded-2xl border-[#3cc4f0]/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-[#0E2A4A]">
+              <Settings className="h-5 w-5 text-[#0E76AC]" />
+              {t("حصص البرامج (المطبخ والسعرات)", "Program portions (kitchen & calories)")}
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "تُستخدم في ملخّص المطبخ لحساب كميات الكارب والبروتين، ومُعامل السعرات يضبط سعرات المنيو حسب هدف العميل.",
+                "Used by the kitchen summary to compute carb/protein quantities; the calorie factor adjusts menu calories per customer goal."
+              )}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(["DIET", "FITNESS", "BULK"] as const).map((prog) => (
+              <div key={prog} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                <div className="font-black text-[#0E76AC]">{prog}</div>
+                <div>
+                  <Label>{t("كارب (جم/حصة)", "Carb (g/serving)")}</Label>
+                  <Input
+                    type="number"
+                    value={portions[prog]?.carb ?? ""}
+                    onChange={(e) => setPortions((p: any) => ({ ...p, [prog]: { ...p[prog], carb: Number(e.target.value) || 0 } }))}
+                  />
+                </div>
+                <div>
+                  <Label>{t("بروتين (جم — مدى)", "Protein (g — range)")}</Label>
+                  <Input
+                    value={portions[prog]?.protein ?? ""}
+                    placeholder="80-90"
+                    dir="ltr"
+                    onChange={(e) => setPortions((p: any) => ({ ...p, [prog]: { ...p[prog], protein: e.target.value } }))}
+                  />
+                </div>
+                <div>
+                  <Label>{t("مُعامل السعرات", "Calorie factor")}</Label>
+                  <Input
+                    type="number"
+                    step="0.05"
+                    value={portions[prog]?.calFactor ?? ""}
+                    onChange={(e) => setPortions((p: any) => ({ ...p, [prog]: { ...p[prog], calFactor: Number(e.target.value) || 1 } }))}
+                  />
+                </div>
+              </div>
+            ))}
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSavePortions}
+                disabled={isSavingPortions}
+                className="rounded-xl font-bold text-white"
+                style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
+              >
+                <Save className="h-4 w-4 ml-2" />
+                {isSavingPortions ? t("جاري الحفظ...", "Saving...") : t("حفظ الحصص", "Save portions")}
+              </Button>
             </div>
           </CardContent>
         </Card>

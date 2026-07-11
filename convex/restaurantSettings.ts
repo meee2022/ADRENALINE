@@ -36,6 +36,25 @@ export const setCookingWeek = mutation({
 });
 
 /**
+ * ✅ حفظ حصص البرامج (كارب/بروتين/مُعامل سعرات لكل برنامج).
+ *    mutation مستقلة صغيرة — نفس فلسفة setCookingWeek.
+ */
+export const setProgramPortions = mutation({
+  args: {
+    portions: v.any(), // { DIET:{carb,protein,calFactor}, FITNESS:{...}, BULK:{...} }
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const existing = await ctx.db.query("restaurantSettings").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, { programPortions: args.portions });
+    }
+    return { ok: true };
+  },
+});
+
+/**
  * ✅ أسبوع دورة المطبخ في تاريخ مستقبلي.
  *    الدورة تتقدّم +1 كل جمعة، فنعدّ الجُمَع بين اليوم والتاريخ ونلفّها 1..4.
  *    هكذا يختار العميل *تاريخ بداية* والنظام يعرف لوحده أي دورة سيطبخها المطبخ

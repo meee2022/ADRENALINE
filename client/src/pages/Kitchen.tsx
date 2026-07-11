@@ -80,6 +80,13 @@ export default function Kitchen() {
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
   const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
+  // ✅ حصص البرامج من إعدادات المطعم (كارب جم + مدى البروتين لكل برنامج)
+  const restSettings = useQuery(api.restaurantSettings.get) as any;
+  const programPortions = restSettings?.programPortions || {
+    DIET: { carb: 100, protein: "80-90" },
+    FITNESS: { carb: 150, protein: "100-110" },
+    BULK: { carb: 170, protein: "150-160" },
+  };
 
   const plans = useMemo(() => {
     return dailyPlans
@@ -827,18 +834,36 @@ export default function Kitchen() {
                                 <div className="px-2.5 py-1.5 rounded-lg bg-sky-50/50 border border-sky-100 text-center">
                                   <span className="text-[9px] font-bold text-sky-600 block">DIET</span>
                                   <span className="text-lg font-black text-sky-700">{meal.dietCount}</span>
+                                  <span className="text-[8.5px] font-bold text-sky-600/80 block leading-tight" dir="ltr">
+                                    C {programPortions.DIET?.carb}g · P {programPortions.DIET?.protein}g
+                                  </span>
+                                  <span className="text-[8.5px] text-sky-500 block" dir="ltr">
+                                    Σ {((meal.dietCount * (programPortions.DIET?.carb || 0)) / 1000).toFixed(1)}kg carb
+                                  </span>
                                 </div>
                               )}
                               {meal.fitnessCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-cyan-50/50 border border-cyan-100 text-center">
                                   <span className="text-[9px] font-bold text-cyan-600 block">FITNESS</span>
                                   <span className="text-lg font-black text-cyan-700">{meal.fitnessCount}</span>
+                                  <span className="text-[8.5px] font-bold text-cyan-600/80 block leading-tight" dir="ltr">
+                                    C {programPortions.FITNESS?.carb}g · P {programPortions.FITNESS?.protein}g
+                                  </span>
+                                  <span className="text-[8.5px] text-cyan-500 block" dir="ltr">
+                                    Σ {((meal.fitnessCount * (programPortions.FITNESS?.carb || 0)) / 1000).toFixed(1)}kg carb
+                                  </span>
                                 </div>
                               )}
                               {meal.bulkCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/50 border border-amber-100 text-center">
                                   <span className="text-[9px] font-bold text-amber-600 block">BULK</span>
                                   <span className="text-lg font-black text-amber-700">{meal.bulkCount}</span>
+                                  <span className="text-[8.5px] font-bold text-amber-600/80 block leading-tight" dir="ltr">
+                                    C {programPortions.BULK?.carb}g · P {programPortions.BULK?.protein}g
+                                  </span>
+                                  <span className="text-[8.5px] text-amber-500 block" dir="ltr">
+                                    Σ {((meal.bulkCount * (programPortions.BULK?.carb || 0)) / 1000).toFixed(1)}kg carb
+                                  </span>
                                 </div>
                               )}
                               {meal.customizedCount > 0 && (
