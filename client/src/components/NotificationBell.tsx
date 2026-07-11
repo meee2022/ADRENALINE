@@ -68,8 +68,9 @@ export function NotificationBell() {
     const updatePosition = () => {
       if (!btnRef.current) return;
       const rect = btnRef.current.getBoundingClientRect();
-      const dropW = 320; // عرض مناسب ومتناسق
-      
+      // ✅ العرض يتقلّص على الشاشات الصغيرة فلا يخرج عن الشاشة (بحدّ أقصى 320)
+      const dropW = Math.min(320, window.innerWidth - 16);
+
       // حساب الإزاحة لليمين أو اليسار بناءً على اتجاه اللغة
       let left = isRtl ? rect.right - dropW : rect.left;
       
@@ -97,6 +98,16 @@ export function NotificationBell() {
       window.removeEventListener("scroll", updatePosition, true);
     };
   }, [open, isRtl]);
+
+  // ✅ العدّاد يتصفّر بعد ما تشوف الإشعارات: عند إغلاق الجرس نعلّم الكل كمقروء
+  //    (تبقى الإشعارات في القائمة، بس العدّاد الأحمر يرجع صفر — لا يتراكم بلا نهاية).
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (wasOpenRef.current && !open && canQuery && unreadCount > 0) {
+      markAllAsRead({ role, sessionToken }).catch(() => {});
+    }
+    wasOpenRef.current = open;
+  }, [open, canQuery, unreadCount, role, sessionToken]);
 
   if (!role) return null;
 
