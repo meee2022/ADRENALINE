@@ -7,7 +7,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from "recharts";
 import { format, parseISO, differenceInDays } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import {
@@ -20,7 +20,10 @@ import {
 type ModalType = "customers"|"meals"|"morning"|"evening"|"expiring"|"expired"|"inventory"|"monthly"|null;
 
 export default function DashboardNew() {
-  const { t } = useLanguage();
+  const { t, language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const tr = (a: string, e: string) => (isRtl ? a : e);
+  const locale = isRtl ? ar : enUS;
   const [, setLocation] = useLocation();
   const { currentUser } = useStore();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -92,7 +95,7 @@ export default function DashboardNew() {
     return Array.from({ length: 7 }, (_, idx) => {
       const d = new Date(); d.setDate(d.getDate() - (6 - idx));
       return {
-        name: format(d, "EEEE", { locale: ar }),
+        name: format(d, "EEEE", { locale }),
         value: dailyPlans.filter(p => p.date === format(d, "yyyy-MM-dd")).length,
       };
     });
@@ -127,7 +130,11 @@ export default function DashboardNew() {
     FITNESS: "فيتنس", DIET: "دايت", BULK: "تضخيم",
     CUSTOMIZED: "مخصّص", STANDARD: "قياسي",
   };
-  const progLabel = (name: string) => PROG_AR[name] || name;
+  const PROG_EN: Record<string,string> = {
+    FITNESS: "Fitness", DIET: "Diet", BULK: "Bulking",
+    CUSTOMIZED: "Customized", STANDARD: "Standard",
+  };
+  const progLabel = (name: string) => (isRtl ? PROG_AR[name] : PROG_EN[name]) || name;
 
   /* ─── Sub-components ─── */
   const CustomerRow = ({ customer, badge }: { customer:any; badge:React.ReactNode }) => (
@@ -136,7 +143,7 @@ export default function DashboardNew() {
         {(customer.fullName||"?").substring(0,1).toUpperCase()}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">{customer.fullName||"بدون اسم"}</p>
+        <p className="text-sm font-semibold text-gray-800 truncate">{customer.fullName||tr("بدون اسم","No name")}</p>
         <p className="text-xs text-gray-400 mt-0.5" dir="ltr">{customer.phone||"-"}</p>
       </div>
       <p className="text-xs text-gray-400 shrink-0">{customer.program||"-"}</p>
@@ -149,18 +156,18 @@ export default function DashboardNew() {
     return (
       <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{cust?.fullName||plan.customerName||"عميل"}</p>
+          <p className="text-sm font-semibold text-gray-800 truncate">{cust?.fullName||plan.customerName||tr("عميل","Customer")}</p>
           <p className="text-xs text-gray-400 mt-0.5" dir="ltr">{cust?.phone||"-"}</p>
         </div>
         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${plan.deliveryTime==="MORNING" ? "bg-sky-100 text-sky-700" : "bg-indigo-100 text-indigo-700"}`}>
-          {plan.deliveryTime==="MORNING" ? "☀ صباحي" : "🌙 مسائي"}
+          {plan.deliveryTime==="MORNING" ? tr("☀ صباحي","☀ Morning") : tr("🌙 مسائي","🌙 Evening")}
         </span>
       </div>
     );
   };
 
   return (
-    <div dir="rtl" className="space-y-8 pb-10 bg-[#fafafa]/50 p-2 sm:p-4 rounded-[2.5rem]">
+    <div dir={isRtl ? "rtl" : "ltr"} className="space-y-8 pb-10 bg-[#fafafa]/50 p-2 sm:p-4 rounded-[2.5rem]">
 
       {/* ── 🌟 Premium Welcome Brand Banner (Adrenaline Cyan-Blue Gradient) ── */}
       <div className="relative rounded-[2rem] p-6 sm:p-8 text-white overflow-hidden shadow-[0_15px_35px_rgba(60,196,240,0.15)] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
@@ -181,14 +188,14 @@ export default function DashboardNew() {
         <div className="relative z-10 space-y-3">
           <div className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-1.5 rounded-full border border-white/20 shadow-inner">
             <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse" />
-            <span className="text-[11px] font-black tracking-wider uppercase">نظام أدرينالين لإدارة الوجبات الصحية 🥗</span>
+            <span className="text-[11px] font-black tracking-wider uppercase">{tr("نظام أدرينالين لإدارة الوجبات الصحية 🥗", "Adrenaline Healthy Meals Management 🥗")}</span>
           </div>
-          
+
           <h1 className="text-3xl sm:text-4.5xl font-black tracking-tight leading-tight" style={{ fontFamily: "Outfit, Inter, system-ui" }}>
-            صباح الخير والنشاط المميز ☀️ ، {currentUser?.name?.split(" ")[0] || "مسؤول أدرينالين"}
+            {tr("صباح الخير والنشاط المميز ☀️ ،", "Good day ☀️,")} {currentUser?.name?.split(" ")[0] || tr("مسؤول أدرينالين", "Admin")}
           </h1>
           <p className="text-xs sm:text-sm text-cyan-100/90 font-bold max-w-xl leading-relaxed">
-            نظرة عامة وشاملة على أداء الاشتراكات، وجبات اليوم، وعمليات المطبخ والمخزون
+            {tr("نظرة عامة وشاملة على أداء الاشتراكات، وجبات اليوم، وعمليات المطبخ والمخزون", "A complete overview of subscriptions, today's meals, and kitchen & inventory operations")}
           </p>
         </div>
 
@@ -198,7 +205,7 @@ export default function DashboardNew() {
             🥗
           </div>
           <div>
-            <p className="text-[10px] text-cyan-200 font-black uppercase tracking-wider">البرنامج الأكثر طلباً</p>
+            <p className="text-[10px] text-cyan-200 font-black uppercase tracking-wider">{tr("البرنامج الأكثر طلباً", "Top program")}</p>
             <p className="text-sm sm:text-base font-black text-white mt-0.5">{progLabel(topProgram)}</p>
           </div>
         </div>
@@ -207,15 +214,15 @@ export default function DashboardNew() {
       {/* ── Controls Row ── */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-gray-100">
         <div className="space-y-1">
-          <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block">التاريخ المعروض</span>
+          <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block">{tr("التاريخ المعروض", "Showing date")}</span>
           <span className="text-base sm:text-lg font-black text-[#47759c] block">
-            {format(selectedDate, "EEEE، d MMMM yyyy", { locale: ar })}
+            {format(selectedDate, "EEEE، d MMMM yyyy", { locale })}
           </span>
         </div>
-        
+
         {/* Date switcher */}
         <div className="flex gap-1.5 bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
-          {[{label:"أمس",offset:-1},{label:"اليوم",offset:0},{label:"غداً",offset:1}].map(({label,offset})=>{
+          {[{label:tr("أمس","Yesterday"),offset:-1},{label:tr("اليوم","Today"),offset:0},{label:tr("غداً","Tomorrow"),offset:1}].map(({label,offset})=>{
             const d = new Date(); d.setDate(d.getDate()+offset);
             const active = format(selectedDate,"yyyy-MM-dd")===format(d,"yyyy-MM-dd");
             return (
@@ -232,13 +239,13 @@ export default function DashboardNew() {
       {/* ── الموظفين اليوم (حضور/إجازات) ── */}
       {(attToday || leaveToday) && (
         <button onClick={() => setLocation("/attendance")}
-          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-right hover:border-[#3cc4f0]/40 transition-colors shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
-          <span className="text-[11px] sm:text-xs font-black text-gray-400 uppercase tracking-wider ml-auto sm:ml-0">الموظفون اليوم</span>
+          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-start hover:border-[#3cc4f0]/40 transition-colors shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
+          <span className="text-[11px] sm:text-xs font-black text-gray-400 uppercase tracking-wider me-auto sm:me-0">{tr("الموظفون اليوم", "Staff today")}</span>
           {[
-            { l: "حاضر", v: attToday?.present ?? 0, c: "#10b981" },
-            { l: "غائب", v: attToday?.absent ?? 0, c: "#ef4444" },
-            { l: "إجازة", v: leaveToday?.count ?? 0, c: "#3cc4f0" },
-            { l: "متأخر", v: attToday?.late ?? 0, c: "#f59e0b" },
+            { l: tr("حاضر","Present"), v: attToday?.present ?? 0, c: "#10b981" },
+            { l: tr("غائب","Absent"), v: attToday?.absent ?? 0, c: "#ef4444" },
+            { l: tr("إجازة","On leave"), v: leaveToday?.count ?? 0, c: "#3cc4f0" },
+            { l: tr("متأخر","Late"), v: attToday?.late ?? 0, c: "#f59e0b" },
           ].map((x, i) => (
             <div key={i} className="flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full" style={{ background: x.c }} />
@@ -246,7 +253,7 @@ export default function DashboardNew() {
               <span className="text-[11px] sm:text-xs font-bold text-gray-500">{x.l}</span>
             </div>
           ))}
-          <span className="text-[11px] font-bold text-[#0E76AC] mr-auto hidden sm:inline">إدارة الحضور ←</span>
+          <span className="text-[11px] font-bold text-[#0E76AC] ms-auto hidden sm:inline">{tr("إدارة الحضور ←", "Manage attendance →")}</span>
         </button>
       )}
 
@@ -264,9 +271,9 @@ export default function DashboardNew() {
           </div>
           <div className="min-w-0">
             <p className={`text-2xl font-black tabular-nums leading-none ${(pendingOrders ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>{pendingOrders ?? "…"}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">طلبات بانتظار المراجعة</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("طلبات بانتظار المراجعة", "Orders awaiting review")}</p>
           </div>
-          {(pendingOrders ?? 0) > 0 && <span className="mr-auto h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />}
+          {(pendingOrders ?? 0) > 0 && <span className="ms-auto h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />}
         </button>
 
         {/* أسبوع دورة المطبخ — القلب التشغيلي للدورات */}
@@ -277,7 +284,7 @@ export default function DashboardNew() {
           </div>
           <div className="min-w-0">
             <p className="text-2xl font-black tabular-nums leading-none text-[#0E76AC]">{cookingWeek ?? "…"}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">أسبوع دورة المطبخ (1-4)</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("أسبوع دورة المطبخ (1-4)", "Kitchen cycle week (1-4)")}</p>
           </div>
         </button>
 
@@ -289,7 +296,7 @@ export default function DashboardNew() {
           </div>
           <div className="min-w-0">
             <p className="text-2xl font-black tabular-nums leading-none text-indigo-600">{stats.pausedCount}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">اشتراكات مجمّدة (سفر)</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("اشتراكات مجمّدة (سفر)","Paused subscriptions (travel)")}</p>
           </div>
         </button>
 
@@ -303,7 +310,7 @@ export default function DashboardNew() {
             <p className="text-2xl font-black tabular-nums leading-none text-emerald-600">
               {stats.preparedToday}<span className="text-sm text-gray-400 font-bold">/{stats.todayMeals}</span>
             </p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">جاهز من مطبخ اليوم</p>
+            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("جاهز من مطبخ اليوم","Ready from today's kitchen")}</p>
             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
               <div className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                 style={{ width: `${stats.todayMeals > 0 ? Math.round((stats.preparedToday / stats.todayMeals) * 100) : 0}%` }} />
@@ -322,7 +329,7 @@ export default function DashboardNew() {
           
           <div className="w-full">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">المشتركين النشطين</span>
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("المشتركين النشطين","Active subscribers")}</span>
               <div className="h-12 w-12 rounded-2xl bg-[#3cc4f0]/10 flex items-center justify-center shrink-0 border border-[#3cc4f0]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <Users className="h-6 w-6 text-[#3cc4f0]" />
               </div>
@@ -333,7 +340,7 @@ export default function DashboardNew() {
                 {stats.activeCustomersCount}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
-                إجمالي المشتركين: {stats.totalCustomers}
+                {tr("إجمالي المشتركين","Total subscribers")}: {stats.totalCustomers}
               </p>
             </div>
           </div>
@@ -341,8 +348,8 @@ export default function DashboardNew() {
           {/* Operational Micro-Metric */}
           <div className="w-full mt-2 space-y-2 text-right">
             <div className="flex justify-between items-center text-[10px] font-bold text-[#3cc4f0]">
-              <span>{stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}% من الإجمالي</span>
-              <span>نشط حالياً</span>
+              <span>{stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}% {tr("من الإجمالي","of total")}</span>
+              <span>{tr("نشط حالياً","Active now")}</span>
             </div>
             <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
               <div className="h-full rounded-full bg-[#3cc4f0] transition-all duration-500" 
@@ -351,7 +358,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#3cc4f0] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -363,7 +370,7 @@ export default function DashboardNew() {
           
           <div className="w-full">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">خطط وجبات اليوم</span>
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("خطط وجبات اليوم","Today's meal plans")}</span>
               <div className="h-12 w-12 rounded-2xl bg-[#47759c]/10 flex items-center justify-center shrink-0 border border-[#47759c]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <CalendarCheck className="h-6 w-6 text-[#47759c]" />
               </div>
@@ -374,7 +381,7 @@ export default function DashboardNew() {
                 {stats.todayMeals}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
-                إجمالي خطط اليوم
+                {tr("إجمالي خطط اليوم","Total plans today")}
               </p>
             </div>
           </div>
@@ -382,17 +389,17 @@ export default function DashboardNew() {
           {/* Operational Micro-Metric Split Columns */}
           <div className="w-full mt-2 grid grid-cols-2 gap-2 border-t border-slate-50 pt-2 text-right">
             <div>
-              <span className="text-[10px] text-gray-400 font-bold block">☀ صباحي</span>
-              <span className="text-sm font-black text-amber-500">{stats.morningDelivery} وجبة</span>
+              <span className="text-[10px] text-gray-400 font-bold block">{tr("☀ صباحي","☀ Morning")}</span>
+              <span className="text-sm font-black text-amber-500">{stats.morningDelivery} {tr("وجبة","meals")}</span>
             </div>
             <div className="border-r border-slate-100 pr-2">
-              <span className="text-[10px] text-gray-400 font-bold block">🌙 مسائي</span>
-              <span className="text-sm font-black text-indigo-500">{stats.eveningDelivery} وجبة</span>
+              <span className="text-[10px] text-gray-400 font-bold block">{tr("🌙 مسائي","🌙 Evening")}</span>
+              <span className="text-sm font-black text-indigo-500">{stats.eveningDelivery} {tr("وجبة","meals")}</span>
             </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#47759c] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -404,7 +411,7 @@ export default function DashboardNew() {
           
           <div className="w-full">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">توصيل صباحي</span>
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("توصيل صباحي","Morning delivery")}</span>
               <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <Sun className="h-6 w-6 text-amber-500" />
               </div>
@@ -415,7 +422,7 @@ export default function DashboardNew() {
                 {stats.morningDelivery}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
-                وجبات الفوج الصباحي
+                {tr("وجبات الفوج الصباحي","Morning shift meals")}
               </p>
             </div>
           </div>
@@ -423,8 +430,8 @@ export default function DashboardNew() {
           {/* Operational Micro-Metric Progress Bar */}
           <div className="w-full mt-2 space-y-2 text-right">
             <div className="flex justify-between items-center text-[10px] font-bold text-amber-500">
-              <span>{stats.morningRate}% من التوصيل</span>
-              <span>طلب صباحي</span>
+              <span>{stats.morningRate}% {tr("من التوصيل","of delivery")}</span>
+              <span>{tr("طلب صباحي","Morning orders")}</span>
             </div>
             <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
               <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${stats.morningRate}%` }} />
@@ -432,7 +439,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-amber-500 transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -444,7 +451,7 @@ export default function DashboardNew() {
           
           <div className="w-full">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">توصيل مسائي</span>
+              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("توصيل مسائي","Evening delivery")}</span>
               <div className="h-12 w-12 rounded-2xl bg-[#0f1516]/10 flex items-center justify-center shrink-0 border border-[#0f1516]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
                 <Moon className="h-6 w-6 text-[#0f1516]" />
               </div>
@@ -455,7 +462,7 @@ export default function DashboardNew() {
                 {stats.eveningDelivery}
               </p>
               <p className="text-xs text-gray-400 font-bold mt-2">
-                وجبات الفوج المسائي
+                {tr("وجبات الفوج المسائي","Evening shift meals")}
               </p>
             </div>
           </div>
@@ -463,8 +470,8 @@ export default function DashboardNew() {
           {/* Operational Micro-Metric Progress Bar */}
           <div className="w-full mt-2 space-y-2 text-right">
             <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
-              <span>{100 - stats.morningRate}% من التوصيل</span>
-              <span>طلب مسائي</span>
+              <span>{100 - stats.morningRate}% {tr("من التوصيل","of delivery")}</span>
+              <span>{tr("طلب مسائي","Evening orders")}</span>
             </div>
             <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
               <div className="h-full rounded-full bg-[#0f1516] transition-all duration-500" style={{ width: `${100 - stats.morningRate}%` }} />
@@ -472,7 +479,7 @@ export default function DashboardNew() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#0f1516] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">عرض التفاصيل</span>
+            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
             <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
         </button>
@@ -486,7 +493,7 @@ export default function DashboardNew() {
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <AlertCircle className="h-5 w-5 text-amber-500" />
-              <span className="text-base font-black text-slate-800 tracking-tight">حالة الاشتراكات</span>
+              <span className="text-base font-black text-slate-800 tracking-tight">{tr("حالة الاشتراكات","Subscription status")}</span>
             </div>
             <button onClick={()=>setLocation("/customers")}
               className="text-xs font-black px-4 py-2.5 rounded-xl flex items-center gap-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
@@ -498,10 +505,10 @@ export default function DashboardNew() {
             {/* Right side: Detailed Progress Lines (3 cols) */}
             <div className="md:col-span-3 space-y-3.5">
               {[
-                { label: "نشطة ومستمرة", count: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0", modal: "customers" as ModalType },
-                { label: "تنتهي خلال 3 أيام", count: stats.expiringCustomersCount, color: "#ca8a04", modal: "expiring" as ModalType },
-                { label: "تنتهي اليوم", count: stats.expiringTodayCount, color: "#f97316", modal: "expiring" as ModalType },
-                { label: "اشتراكات منتهية", count: stats.expiredCustomersCount, color: "#ef4444", modal: "expired" as ModalType },
+                { label: tr("نشطة ومستمرة","Active"), count: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0", modal: "customers" as ModalType },
+                { label: tr("تنتهي خلال 3 أيام","Ending in 3 days"), count: stats.expiringCustomersCount, color: "#ca8a04", modal: "expiring" as ModalType },
+                { label: tr("تنتهي اليوم","Ending today"), count: stats.expiringTodayCount, color: "#f97316", modal: "expiring" as ModalType },
+                { label: tr("اشتراكات منتهية","Expired"), count: stats.expiredCustomersCount, color: "#ef4444", modal: "expired" as ModalType },
               ].map(({ label, count, color, modal }) => {
                 const pct = stats.totalCustomers > 0 ? Math.round((count / stats.totalCustomers) * 100) : 0;
                 return (
@@ -539,12 +546,12 @@ export default function DashboardNew() {
                     <Pie
                       data={(() => {
                         const chartData = [
-                          { name: "نشطة ومستمرة", value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
-                          { name: "تنتهي خلال 3 أيام", value: stats.expiringCustomersCount, color: "#ca8a04" },
-                          { name: "تنتهي اليوم", value: stats.expiringTodayCount, color: "#f97316" },
-                          { name: "اشتراكات منتهية", value: stats.expiredCustomersCount, color: "#ef4444" },
+                          { name: tr("نشطة ومستمرة","Active"), value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
+                          { name: tr("تنتهي خلال 3 أيام","Ending in 3 days"), value: stats.expiringCustomersCount, color: "#ca8a04" },
+                          { name: tr("تنتهي اليوم","Ending today"), value: stats.expiringTodayCount, color: "#f97316" },
+                          { name: tr("اشتراكات منتهية","Expired"), value: stats.expiredCustomersCount, color: "#ef4444" },
                         ].filter(d => d.value > 0);
-                        return chartData.length > 0 ? chartData : [{ name: "لا يوجد", value: 1, color: "#e2e8f0" }];
+                        return chartData.length > 0 ? chartData : [{ name: tr("لا يوجد","None"), value: 1, color: "#e2e8f0" }];
                       })()}
                       cx="50%"
                       cy="50%"
@@ -558,12 +565,12 @@ export default function DashboardNew() {
                     >
                       {(() => {
                         const chartData = [
-                          { name: "نشطة ومستمرة", value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
-                          { name: "تنتهي خلال 3 أيام", value: stats.expiringCustomersCount, color: "#ca8a04" },
-                          { name: "تنتهي اليوم", value: stats.expiringTodayCount, color: "#f97316" },
-                          { name: "اشتراكات منتهية", value: stats.expiredCustomersCount, color: "#ef4444" },
+                          { name: tr("نشطة ومستمرة","Active"), value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
+                          { name: tr("تنتهي خلال 3 أيام","Ending in 3 days"), value: stats.expiringCustomersCount, color: "#ca8a04" },
+                          { name: tr("تنتهي اليوم","Ending today"), value: stats.expiringTodayCount, color: "#f97316" },
+                          { name: tr("اشتراكات منتهية","Expired"), value: stats.expiredCustomersCount, color: "#ef4444" },
                         ].filter(d => d.value > 0);
-                        const finalData = chartData.length > 0 ? chartData : [{ name: "لا يوجد", value: 1, color: "#e2e8f0" }];
+                        const finalData = chartData.length > 0 ? chartData : [{ name: tr("لا يوجد","None"), value: 1, color: "#e2e8f0" }];
                         return finalData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ));
@@ -574,7 +581,7 @@ export default function DashboardNew() {
                 {/* Center text indicating total subscribers */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="text-2xl font-black text-slate-800 tracking-tight leading-none">{stats.totalCustomers}</span>
-                  <span className="text-[10px] font-bold text-slate-400 mt-1">إجمالي المشتركين</span>
+                  <span className="text-[10px] font-bold text-slate-400 mt-1">{tr("إجمالي المشتركين","Total subscribers")}</span>
                 </div>
               </div>
             </div>
@@ -586,7 +593,7 @@ export default function DashboardNew() {
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <TrendingUp className="h-5 w-5 text-slate-400" />
-              <span className="text-base font-black text-slate-800">توزيع البرامج</span>
+              <span className="text-base font-black text-slate-800">{tr("توزيع البرامج","Program distribution")}</span>
             </div>
             <div className="w-5 h-5" />
           </div>
@@ -620,7 +627,7 @@ export default function DashboardNew() {
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <Package className="h-5 w-5 text-slate-400" />
-              <span className="text-base font-black text-slate-800">ملخص المخزون</span>
+              <span className="text-base font-black text-slate-800">{tr("ملخص المخزون","Inventory summary")}</span>
             </div>
             <button onClick={()=>setLocation("/inventory")}
               className="text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
@@ -634,25 +641,25 @@ export default function DashboardNew() {
               <button onClick={()=>setOpenModal("inventory")}
                 className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-red-50 to-rose-50/30 border border-red-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
                 <p className="text-5xl font-black text-red-500 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{stats.lowStockCount}</p>
-                <p className="text-xs font-black text-red-400 mt-2">⚠ أصناف مخزون منخفض</p>
+                <p className="text-xs font-black text-red-400 mt-2">⚠ {tr("أصناف مخزون منخفض","Low-stock items")}</p>
               </button>
             ) : (
               <div className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-emerald-50 to-green-50/30 border border-emerald-100">
                 <p className="text-3xl leading-none">✅</p>
-                <p className="text-sm font-black text-emerald-600 mt-2">لا يوجد نقص في المخزون</p>
+                <p className="text-sm font-black text-emerald-600 mt-2">{tr("لا يوجد نقص في المخزون","No stock shortage")}</p>
               </div>
             )}
             {((inventorySummary as any)?.totalItems || 0) > 0 ? (
               <button onClick={()=>setLocation("/inventory")}
                 className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-slate-50 to-slate-100/30 border border-slate-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
                 <p className="text-5xl font-black text-[#47759c] tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{(inventorySummary as any)?.totalItems||0}</p>
-                <p className="text-xs font-black text-slate-500 mt-2">📦 إجمالي الأصناف</p>
+                <p className="text-xs font-black text-slate-500 mt-2">📦 {tr("إجمالي الأصناف","Total items")}</p>
               </button>
             ) : (
               <button onClick={()=>setLocation("/inventory")}
                 className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98]">
                 <p className="text-3xl leading-none">📦</p>
-                <p className="text-sm font-black text-amber-600 mt-2">لا توجد أصناف بعد — أضف مخزونك ←</p>
+                <p className="text-sm font-black text-amber-600 mt-2">{tr("لا توجد أصناف بعد — أضف مخزونك ←","No items yet — add your stock →")}</p>
               </button>
             )}
           </div>
@@ -661,10 +668,10 @@ export default function DashboardNew() {
         {/* نظرة أسبوعية */}
         <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
-            <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">آخر 7 أيام</span>
+            <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{tr("آخر 7 أيام","Last 7 days")}</span>
             <div className="flex items-center gap-2.5">
               <Utensils className="h-5 w-5 text-cyan-500" />
-              <span className="text-base font-black text-slate-800">الخطط الأسبوعية</span>
+              <span className="text-base font-black text-slate-800">{tr("الخطط الأسبوعية","Weekly plans")}</span>
             </div>
           </div>
           
@@ -674,7 +681,7 @@ export default function DashboardNew() {
                 <div className="w-14 h-14 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
                   <CalendarCheck className="h-7 w-7 text-cyan-300" />
                 </div>
-                <p className="text-sm font-semibold text-gray-300">لا توجد خطط هذا الأسبوع</p>
+                <p className="text-sm font-semibold text-gray-300">{tr("لا توجد خطط هذا الأسبوع","No plans this week")}</p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={190}>
@@ -696,50 +703,50 @@ export default function DashboardNew() {
 
       {/* ── Modals ── */}
       {([
-        { key:"customers", title:"المشتركين النشطين", count:stats.activeCustomersCount, badge:"#3cc4f0",
+        { key:"customers", title:tr("المشتركين النشطين","Active subscribers"), count:stats.activeCustomersCount, badge:"#3cc4f0",
           rows: stats.activeCustomers.map((c:any,i:number) => {
             const d = differenceInDays(parseISO(c.endDate), new Date());
             return <CustomerRow key={c._id??i} customer={c} badge={
               <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                 style={d<=1?{background:"#fee2e2",color:"#dc2626"}:d<=7?{background:"#fef3c7",color:"#d97706"}:{background:"#d1fae5",color:"#059669"}}>
-                {d<=0?"منتهي":`${d} يوم`}
+                {d<=0?tr("منتهي","Expired"):`${d} ${tr("يوم","d")}`}
               </span>
             } />;
           }),
         },
-        { key:"meals", title:`خطط اليوم — ${format(selectedDate,"d MMMM",{locale:ar})}`, count:stats.todayMeals, badge:"#10b981",
+        { key:"meals", title:`${tr("خطط اليوم","Today's plans")} — ${format(selectedDate,"d MMMM",{locale})}`, count:stats.todayMeals, badge:"#10b981",
           rows: stats.todayPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
         },
-        { key:"morning", title:"توصيل صباحي", count:stats.morningDelivery, badge:"#f59e0b",
+        { key:"morning", title:tr("توصيل صباحي","Morning delivery"), count:stats.morningDelivery, badge:"#f59e0b",
           rows: stats.morningPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
         },
-        { key:"evening", title:"توصيل مسائي", count:stats.eveningDelivery, badge:"#8b5cf6",
+        { key:"evening", title:tr("توصيل مسائي","Evening delivery"), count:stats.eveningDelivery, badge:"#8b5cf6",
           rows: stats.eveningPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
         },
-        { key:"expiring", title:"تنتهي قريباً", count:stats.expiringCustomersCount, badge:"#f59e0b",
+        { key:"expiring", title:tr("تنتهي قريباً","Ending soon"), count:stats.expiringCustomersCount, badge:"#f59e0b",
           rows: stats.expiringCustomers.map((c:any,i:number) => {
             const d = differenceInDays(parseISO(c.endDate), new Date());
             return <CustomerRow key={c._id??i} customer={c} badge={
               <span className="text-xs font-bold px-2.5 py-1 rounded-full"
                 style={d===0?{background:"#fff7ed",color:"#ea580c"}:d===1?{background:"#fef3c7",color:"#d97706"}:{background:"#dbeafe",color:"#2563eb"}}>
-                {d===0?"اليوم":d===1?"غدًا":`${d} أيام`}
+                {d===0?tr("اليوم","Today"):d===1?tr("غدًا","Tomorrow"):`${d} ${tr("أيام","days")}`}
               </span>
             } />;
           }),
         },
-        { key:"expired", title:"اشتراكات منتهية", count:stats.expiredCustomersCount, badge:"#ef4444",
+        { key:"expired", title:tr("اشتراكات منتهية","Expired"), count:stats.expiredCustomersCount, badge:"#ef4444",
           rows: stats.expiredCustomers.map((c:any,i:number) => {
             const d = Math.abs(differenceInDays(parseISO(c.endDate), new Date()));
             return <CustomerRow key={c._id??i} customer={c} badge={
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-600">منذ {d} يوم</span>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-600">{tr("منذ","Since")} {d} {tr("يوم","d")}</span>
             } />;
           }),
         },
-        { key:"monthly", title:"العملاء الجدد هذا الشهر", count:stats.newThisMonth, badge:"#3cc4f0",
+        { key:"monthly", title:tr("العملاء الجدد هذا الشهر","New customers this month"), count:stats.newThisMonth, badge:"#3cc4f0",
           rows: stats.newThisMonthList.map((c:any,i:number) => (
             <CustomerRow key={c._id??i} customer={c} badge={
               <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700">
-                {format(parseISO(c.startDate),"d MMM",{locale:ar})}
+                {format(parseISO(c.startDate),"d MMM",{locale})}
               </span>
             } />
           )),
@@ -754,7 +761,7 @@ export default function DashboardNew() {
               </DialogTitle>
             </DialogHeader>
             <div id={`${key}-desc`} className="max-h-[60vh] overflow-auto space-y-2 pt-1">
-              {rows.length===0 ? <p className="text-center py-10 text-gray-400">لا يوجد بيانات</p> : rows}
+              {rows.length===0 ? <p className="text-center py-10 text-gray-400">{tr("لا يوجد بيانات","No data")}</p> : rows}
             </div>
           </DialogContent>
         </Dialog>
@@ -764,15 +771,15 @@ export default function DashboardNew() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="inv-desc">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-gray-900">
-              مخزون منخفض
+              {tr("مخزون منخفض", "Low stock")}
               <span className="text-sm font-normal px-2.5 py-1 rounded-full bg-red-100 text-red-600">{stats.lowStockCount}</span>
             </DialogTitle>
           </DialogHeader>
           <div id="inv-desc" className="space-y-2">
             {stats.lowStockItems.map((item:any)=>(
               <div key={item._id} className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
-                <div><p className="text-sm font-semibold text-gray-800">{item.name_ar}</p><p className="text-xs text-gray-400">{item.category}</p></div>
-                <div className="text-right"><p className="text-lg font-black text-red-500">{item.current_stock} {item.unit}</p><p className="text-xs text-gray-400">الحد الأدنى: {item.min_stock}</p></div>
+                <div><p className="text-sm font-semibold text-gray-800">{isRtl ? item.name_ar : (item.name_en || item.name_ar)}</p><p className="text-xs text-gray-400">{item.category}</p></div>
+                <div className="text-end"><p className="text-lg font-black text-red-500">{item.current_stock} {item.unit}</p><p className="text-xs text-gray-400">{tr("الحد الأدنى","Min")}: {item.min_stock}</p></div>
               </div>
             ))}
           </div>

@@ -14,11 +14,15 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { openWhatsApp, WhatsAppTemplates } from "@/lib/whatsapp";
+import { useLanguage } from "@/lib/i18n";
 
 const B = { brand: "#3cc4f0", deep: "#0E76AC", ink: "#0E2A4A" };
 
 export default function DriverApp() {
   const { toast } = useToast();
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const currentUser = useStore((s) => s.currentUser);
   const today = format(new Date(), "yyyy-MM-dd");
@@ -47,7 +51,7 @@ export default function DriverApp() {
   /* ── بثّ الموقع الحي أثناء الجولة (watchPosition) ── */
   const startBroadcast = () => {
     if (!("geolocation" in navigator)) {
-      toast({ title: "المتصفح لا يدعم تحديد الموقع", variant: "destructive" });
+      toast({ title: t("المتصفح لا يدعم تحديد الموقع", "Browser doesn't support location"), variant: "destructive" });
       return;
     }
     if (watchRef.current != null) return;
@@ -59,7 +63,7 @@ export default function DriverApp() {
         updateMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, sessionToken }).catch(() => {});
       },
       (err) => {
-        toast({ title: "تعذّر الوصول للموقع", description: String(err.message || ""), variant: "destructive" });
+        toast({ title: t("تعذّر الوصول للموقع", "Couldn't access location"), description: String(err.message || ""), variant: "destructive" });
         stopBroadcast();
       },
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 },
@@ -80,7 +84,7 @@ export default function DriverApp() {
     setBusy(stop.planId);
     try {
       const r: any = await startDelivery({ planId: stop.planId, sessionToken });
-      if (!r?.success) { toast({ title: r?.error || "فشل", variant: "destructive" }); return; }
+      if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
       if (!broadcasting) startBroadcast(); // ابدأ البثّ تلقائياً مع أول توصيل
       // أرسل رابط التتبع للعميل عبر واتساب
       if (stop.phone && r.trackToken) {
@@ -93,15 +97,15 @@ export default function DriverApp() {
   };
 
   const handleDeliver = async (stop: any) => {
-    const note = prompt("إثبات تسليم (اختياري) — مثال: سُلّم للحارس / تُرك عند الباب:", "") ?? undefined;
+    const note = prompt(t("إثبات تسليم (اختياري) — مثال: سُلّم للحارس / تُرك عند الباب:", "Proof of delivery (optional) — e.g. left with guard / at the door:"), "") ?? undefined;
     setBusy(stop.planId);
     try {
       const r: any = await markDelivered({ planId: stop.planId, podNote: note || undefined, sessionToken });
-      if (!r?.success) { toast({ title: r?.error || "فشل", variant: "destructive" }); return; }
-      toast({ title: "تم التسليم ✅", description: stop.customerName });
+      if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
+      toast({ title: t("تم التسليم ✅", "Delivered ✅"), description: stop.customerName });
       if (stop.phone) {
         setTimeout(() => {
-          if (confirm("إرسال رسالة شكر للعميل؟")) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0]));
+          if (confirm(t("إرسال رسالة شكر للعميل؟", "Send a thank-you message to the customer?"))) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0]));
         }, 300);
       }
     } catch (e: any) {
@@ -114,27 +118,27 @@ export default function DriverApp() {
     : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(s.address || "Doha")}&travelmode=driving`;
 
   return (
-    <div dir="rtl" className="min-h-screen bg-slate-50" style={{ fontFamily: "Cairo, sans-serif" }}>
+    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-50" style={{ fontFamily: "Cairo, sans-serif" }}>
       {/* Sticky header */}
       <div className="sticky top-0 z-20 text-white px-4 pt-5 pb-4"
         style={{ background: `linear-gradient(135deg, ${B.deep}, ${B.ink})`, paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}>
         <div className="flex items-center gap-3">
           <div className="h-11 w-11 rounded-2xl bg-white/15 grid place-items-center"><Truck className="h-6 w-6" /></div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-black leading-tight">جولة التوصيل</h1>
-            <p className="text-[11px] text-cyan-100/90 font-bold">{currentUser?.name || "السائق"} · {format(new Date(), "EEEE d MMMM")}</p>
+            <h1 className="text-lg font-black leading-tight">{t("جولة التوصيل", "Delivery Route")}</h1>
+            <p className="text-[11px] text-cyan-100/90 font-bold">{currentUser?.name || t("السائق", "Driver")} · {format(new Date(), "EEEE d MMMM")}</p>
           </div>
           {/* زر البث الحي */}
           <button onClick={() => (broadcasting ? stopBroadcast() : startBroadcast())}
             className={`h-11 px-3 rounded-2xl text-xs font-black flex items-center gap-1.5 border ${broadcasting ? "bg-emerald-500/90 border-emerald-300" : "bg-white/10 border-white/25"}`}>
             {broadcasting ? <RadioTower className="h-4 w-4 animate-pulse" /> : <Radio className="h-4 w-4" />}
-            {broadcasting ? "البث يعمل" : "بدء البث"}
+            {broadcasting ? t("البث يعمل", "Broadcasting") : t("بدء البث", "Start GPS")}
           </button>
         </div>
 
         {/* Shift toggle */}
         <div className="flex gap-2 mt-4 bg-white/10 rounded-2xl p-1.5">
-          {([["MORNING", "صباحي", Sun], ["EVENING", "مسائي", Moon]] as const).map(([k, lbl, Icon]) => (
+          {([["MORNING", t("صباحي", "Morning"), Sun], ["EVENING", t("مسائي", "Evening"), Moon]] as const).map(([k, lbl, Icon]) => (
             <button key={k} onClick={() => setShift(k as any)}
               className={`flex-1 h-10 rounded-xl text-sm font-black flex items-center justify-center gap-2 transition-all ${shift === k ? "bg-white text-[#0E2A4A]" : "text-white/80"}`}>
               <Icon className="h-4 w-4" /> {lbl}
@@ -148,14 +152,14 @@ export default function DriverApp() {
             <div className="h-full bg-emerald-400 rounded-full transition-all"
               style={{ width: `${counts.total ? (counts.delivered / counts.total) * 100 : 0}%` }} />
           </div>
-          <span className="text-xs font-black tabular-nums">{counts.delivered}/{counts.total} تم</span>
+          <span className="text-xs font-black tabular-nums">{counts.delivered}/{counts.total} {t("تم", "done")}</span>
         </div>
       </div>
 
       {/* Broadcast hint */}
       {!broadcasting && counts.onWay > 0 && (
         <div className="mx-4 mt-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold p-3 flex items-center gap-2">
-          <Radio className="h-4 w-4 shrink-0" /> فعّل "بدء البث" ليتتبعك العملاء على الخريطة أثناء الطريق.
+          <Radio className="h-4 w-4 shrink-0" /> {t('فعّل "بدء البث" ليتتبعك العملاء على الخريطة أثناء الطريق.', 'Turn on "Start GPS" so customers can track you on the map while en route.')}
         </div>
       )}
 
@@ -166,8 +170,8 @@ export default function DriverApp() {
         ) : stops.length === 0 ? (
           <div className="py-20 text-center">
             <div className="h-16 w-16 rounded-2xl bg-cyan-50 grid place-items-center mx-auto mb-3"><Package className="h-8 w-8 text-cyan-300" /></div>
-            <p className="text-slate-500 font-bold">لا توجد محطات مسندة لك في هذه الجولة</p>
-            <p className="text-slate-400 text-xs mt-1">المشرف يسند لك المحطات من صفحة التوصيل</p>
+            <p className="text-slate-500 font-bold">{t("لا توجد محطات مسندة لك في هذه الجولة", "No stops assigned to you this shift")}</p>
+            <p className="text-slate-400 text-xs mt-1">{t("المشرف يسند لك المحطات من صفحة التوصيل", "The supervisor assigns stops from the Delivery page")}</p>
           </div>
         ) : (
           stops.map((s: any, i: number) => {
@@ -183,9 +187,9 @@ export default function DriverApp() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`font-black text-slate-900 ${done ? "line-through text-slate-500" : ""}`}>{s.customerName}</h3>
-                        {onWay && <span className="text-[10px] font-black text-white bg-[#0E76AC] rounded-full px-2 py-0.5">في الطريق</span>}
+                        {onWay && <span className="text-[10px] font-black text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{t("في الطريق", "On the way")}</span>}
                       </div>
-                      <p className="text-xs text-slate-500 mt-0.5">{s.mealsCount} وجبة{s.address ? ` · ${s.address}` : ""}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{s.mealsCount} {t("وجبة", "meals")}{s.address ? ` · ${s.address}` : ""}</p>
                       {s.notes && <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 mt-1.5">📝 {s.notes}</p>}
                     </div>
                   </div>
@@ -194,28 +198,28 @@ export default function DriverApp() {
                     <div className="flex gap-2 mt-3">
                       {s.phone && (
                         <a href={`tel:${s.phone}`} className="h-11 px-3 rounded-xl bg-slate-50 border border-slate-200 text-[#0E76AC] font-bold text-sm flex items-center gap-1.5">
-                          <Phone className="h-4 w-4" /> اتصال
+                          <Phone className="h-4 w-4" /> {t("اتصال", "Call")}
                         </a>
                       )}
                       <a href={navUrl(s)} target="_blank" rel="noreferrer" className="h-11 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold text-sm flex items-center gap-1.5">
-                        <Navigation className="h-4 w-4" /> توجيه
+                        <Navigation className="h-4 w-4" /> {t("توجيه", "Navigate")}
                       </a>
                       {!onWay ? (
                         <button disabled={busy === s.planId} onClick={() => handleStart(s)}
                           className="flex-1 h-11 rounded-xl text-white font-black text-sm disabled:opacity-60"
                           style={{ background: `linear-gradient(135deg, ${B.brand}, ${B.deep})` }}>
-                          {busy === s.planId ? "…" : "🚚 خرجت للتوصيل"}
+                          {busy === s.planId ? "…" : t("🚚 خرجت للتوصيل", "🚚 Out for delivery")}
                         </button>
                       ) : (
                         <button disabled={busy === s.planId} onClick={() => handleDeliver(s)}
                           className="flex-1 h-11 rounded-xl bg-emerald-500 text-white font-black text-sm disabled:opacity-60">
-                          {busy === s.planId ? "…" : "✓ تم التسليم"}
+                          {busy === s.planId ? "…" : t("✓ تم التسليم", "✓ Delivered")}
                         </button>
                       )}
                     </div>
                   )}
                   {done && s.deliveredAt && (
-                    <p className="text-[11px] text-emerald-600 font-bold mt-2">✅ سُلّم {format(new Date(s.deliveredAt), "hh:mm a")}</p>
+                    <p className="text-[11px] text-emerald-600 font-bold mt-2">✅ {t("سُلّم", "Delivered")} {format(new Date(s.deliveredAt), "hh:mm a")}</p>
                   )}
                 </div>
               </div>
