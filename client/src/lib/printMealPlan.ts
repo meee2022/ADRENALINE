@@ -365,15 +365,17 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       .mp-doc .brand small{display:block;font-size:7.5px;letter-spacing:.35em;opacity:.8;font-weight:700}
       .mp-doc h1{font-size:16px;margin:0;font-weight:900;line-height:1.3}
       .mp-doc .sub{font-size:11px;opacity:.9;font-weight:700;margin-top:2px}
-      .mp-doc .wrap{padding:14px 18px}
-      .mp-doc .kpis{display:flex;gap:8px;margin-bottom:12px}
-      .mp-doc .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:7px;text-align:center;background:#f7fbfe}
-      .mp-doc .kpi .v{font-size:18px;font-weight:900;color:#0E76AC}
+      .mp-doc .wrap{padding:12px 16px}
+      .mp-doc .kpis{display:flex;gap:8px;margin-bottom:10px}
+      .mp-doc .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:6px;text-align:center;background:#f7fbfe}
+      .mp-doc .kpi .v{font-size:17px;font-weight:900;color:#0E76AC}
       .mp-doc .kpi .l{font-size:10px;color:#47759c;font-weight:700}
-      .mp-doc .grp{margin-bottom:12px}
-      .mp-doc .wk-banner{background:#eaf3fb;border:1px solid #cfe4f3;border-radius:10px;padding:7px 12px;
-                 font-weight:900;font-size:13px;color:#0E2A4A;margin-bottom:10px}
-      .mp-doc .day{border:1px solid #e5e9ef;border-radius:12px;overflow:hidden;margin-bottom:10px}
+      .mp-doc .grp{margin-bottom:8px}
+      .mp-doc .wk-banner{background:#eaf3fb;border:1px solid #cfe4f3;border-radius:10px;padding:6px 12px;
+                 font-weight:900;font-size:12.5px;color:#0E2A4A;margin-bottom:8px}
+      /* اليوم كتلة واحدة لا تُقسَّم بين صفحتين — فيظهر مرتباً كما في الخطة الذكية */
+      .mp-doc .day{border:1px solid #e5e9ef;border-radius:12px;overflow:hidden;margin-bottom:8px;
+                   page-break-inside:avoid;break-inside:avoid}
       .mp-doc .day-h{background:#0E2A4A;color:#fff;padding:6px 12px;display:flex;justify-content:space-between;align-items:center}
       .mp-doc .day-t{font-weight:800;font-size:13px}
       .mp-doc .day-n{font-size:10px;background:rgba(255,255,255,.16);border-radius:50px;padding:2px 8px}
@@ -424,9 +426,9 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
       image: { type: "jpeg", quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      // avoid الوجبة فقط (لا تُقسَّم بطاقة عبر صفحتين) — تجنّب .grp/.day كان
-      //   يولّد صفحات كثيرة فارغة بمحاولة إبقاء أسبوع كامل بلا تقسيم.
-      pagebreak: { mode: ["css", "legacy"], avoid: ".card" },
+      // avoid اليوم كاملاً (~2سم فلا يولّد صفحات زائدة كما فعل .grp الأسبوعي)،
+      //   فلا يُقطع يوم في منتصف صفحة — نفس ترتيب عرض الخطة الذكية.
+      pagebreak: { mode: ["css", "legacy"], avoid: [".day", ".card"] },
     })
     .from(el)
     .save();

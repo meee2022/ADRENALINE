@@ -5,7 +5,7 @@ import { useCustomers, useDailyPlans, useInventorySummary } from "@/lib/api";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from "recharts";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ar } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
@@ -87,10 +87,14 @@ export default function DashboardNew() {
   }, [customers, dailyPlans, selectedDate, inventorySummary, inventoryItems]);
 
   const weeklyData = useMemo(() => {
-    const days = ["السبت","الأحد","الإثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
-    return days.map((day, idx) => {
+    // ✅ اسم اليوم يُشتق من تاريخه الفعلي (آخر 7 أيام متحركة) — كانت الأسماء
+    //    ثابتة تبدأ بالسبت فتُسمّي الأعمدة بأيام خاطئة.
+    return Array.from({ length: 7 }, (_, idx) => {
       const d = new Date(); d.setDate(d.getDate() - (6 - idx));
-      return { name: day, value: dailyPlans.filter(p => p.date === format(d,"yyyy-MM-dd")).length };
+      return {
+        name: format(d, "EEEE", { locale: ar }),
+        value: dailyPlans.filter(p => p.date === format(d, "yyyy-MM-dd")).length,
+      };
     });
   }, [dailyPlans]);
 
@@ -546,7 +550,10 @@ export default function DashboardNew() {
                       cy="50%"
                       innerRadius={52}
                       outerRadius={70}
-                      paddingAngle={3}
+                      paddingAngle={4}
+                      cornerRadius={7}
+                      stroke="#fff"
+                      strokeWidth={2}
                       dataKey="value"
                     >
                       {(() => {
@@ -596,7 +603,7 @@ export default function DashboardNew() {
                   </div>
                   <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
                     <div className="h-full rounded-full transition-all duration-700"
-                       style={{width:`${pct}%`, background:color}} />
+                       style={{width:`${pct}%`, background:`linear-gradient(90deg, ${color}, ${color}bb)`}} />
                   </div>
                 </div>
               );
@@ -670,12 +677,14 @@ export default function DashboardNew() {
                 <p className="text-sm font-semibold text-gray-300">لا توجد خطط هذا الأسبوع</p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={weeklyData} barCategoryGap="40%">
-                  <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:11}} axisLine={false} tickLine={false} />
-                  <YAxis tick={{fill:"#94a3b8",fontSize:11}} axisLine={false} tickLine={false} allowDecimals={false} width={24} />
+              <ResponsiveContainer width="100%" height={190}>
+                <BarChart data={weeklyData} barCategoryGap="35%" margin={{ top: 18 }}>
+                  <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:10,fontWeight:700}} axisLine={false} tickLine={false} interval={0} />
+                  <YAxis hide />
                   <Tooltip contentStyle={{borderRadius:"16px",border:"1px solid #f1f5f9",fontSize:12,boxShadow:"0 12px 35px rgba(0,0,0,0.06)"}} cursor={{fill:"#f8fafc",radius:8}} />
-                  <Bar dataKey="value" radius={[8,8,0,0]}>
+                  <Bar dataKey="value" radius={[10,10,4,4]} maxBarSize={42}>
+                    <LabelList dataKey="value" position="top" style={{ fill: "#47759c", fontSize: 11, fontWeight: 900 }}
+                      formatter={(v: any) => (Number(v) > 0 ? v : "")} />
                     {weeklyData.map((_,i) => <Cell key={i} fill={i===6?"#3cc4f0":"#47759c"} />)}
                   </Bar>
                 </BarChart>
