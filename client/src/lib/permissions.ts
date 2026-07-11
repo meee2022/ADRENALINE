@@ -69,6 +69,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
   DELIVERY: [
     "/",
     "/delivery",
+    "/driver",           // تطبيق السائق (جولة اليوم + التتبع الحي)
     "/plans",            // قراءة الخطط لمعرفة العملاء
     "/plans-review/*",
   ],
@@ -166,6 +167,7 @@ export interface MenuItemDef {
     | "settings"
     | "kitchen"
     | "delivery"
+    | "driver"
     | "audit"
     | "reports"
     | "analytics"
@@ -235,7 +237,9 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/online-orders", iconKey: "onlineOrders", labelAr: "طلبات أونلاين", labelEn: "Online Orders",
         roles: ["ADMIN", "KITCHEN"] },
-      { href: "/delivery", iconKey: "delivery", labelAr: "التوصيل", labelEn: "Delivery",
+      { href: "/delivery", iconKey: "delivery", labelAr: "التوصيل والتتبع", labelEn: "Delivery & Tracking",
+        roles: ["ADMIN", "DELIVERY"] },
+      { href: "/driver", iconKey: "driver", labelAr: "تطبيق السائق", labelEn: "Driver App",
         roles: ["ADMIN", "DELIVERY"] },
     ],
   },

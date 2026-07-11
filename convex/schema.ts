@@ -325,10 +325,27 @@ export default defineSchema({
     // ✅ أختام التوصيل الحقيقية (بدل وقت العرض المتغيّر)
     outForDeliveryAt: v.optional(v.number()),
     deliveredAt: v.optional(v.number()),
+    // ✅ نظام التوصيل والتتبع الحي
+    driverId: v.optional(v.id("users")),        // السائق المسند لهذه المحطة
+    trackToken: v.optional(v.string()),         // توكن عشوائي لصفحة تتبع العميل العامة
+    podNote: v.optional(v.string()),            // إثبات التسليم (مثال: "تُسلّم للحارس")
+    podStorageId: v.optional(v.id("_storage")), // صورة إثبات التسليم (اختياري)
+    routeSeq: v.optional(v.number()),           // ترتيب المحطة في مسار السائق
+    nearNotifiedAt: v.optional(v.number()),     // ختم إشعار "السائق قرّب"
   })
     .index("by_date", ["date"])
     .index("by_customerId", ["customerId"])
-    .index("by_source_order", ["sourceOrderId"]),
+    .index("by_source_order", ["sourceOrderId"])
+    .index("by_track_token", ["trackToken"])
+    .index("by_driver_date", ["driverId", "date"]),
+
+  // ===== مواقع السائقين الحيّة (تتبع لحظي أثناء الجولة) =====
+  driverLocations: defineTable({
+    driverId: v.id("users"),
+    lat: v.number(),
+    lng: v.number(),
+    updatedAt: v.number(),
+  }).index("by_driver", ["driverId"]),
 
   // ===== Inventory Management Tables =====
   suppliers: defineTable({

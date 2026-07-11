@@ -10,14 +10,14 @@ import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2 } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2, UserCog, Link2, Clock, Radio } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { DeliveryMap } from "@/components/DeliveryMap";
 import { useStore } from "@/lib/store";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 
 export default function Delivery() {
@@ -35,13 +35,45 @@ export default function Delivery() {
   const { data: customers = [] } = useCustomers();
   const updatePlanMutation = useUpdateDailyPlan();
 
-  // ✅ Delivery يعرض بس الطلبات اللي خلصها المطبخ (PREPARED)
+  const sessionTok = useStore((s) => s.sessionToken) || undefined;
+  // ✅ لوحة التوصيل الحيّة: سائقون + إسناد + تحليلات + روابط تتبع
+  const drivers = useQuery(api.delivery.listDrivers, { sessionToken: sessionTok }) as any[] | undefined;
+  const board = useQuery(api.delivery.supervisorBoard, { date: formattedDate, deliveryTime: activeTab, sessionToken: sessionTok }) as any;
+  const assignShift = useMutation(api.delivery.assignShift);
+  const [selectedDriver, setSelectedDriver] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const trackBase = typeof window !== "undefined" ? window.location.origin : "";
+
+  // ✅ الطلبات النشطة: جاهزة للتوصيل أو في الطريق (لا تختفي بعد بدء التوصيل)
   const plans = dailyPlans.filter(
     (p: any) =>
       p.date === formattedDate &&
       p.deliveryTime === activeTab &&
-      p.status === "PREPARED"
+      (p.status === "PREPARED" || p.status === "OUT_FOR_DELIVERY")
   );
+
+  const boardByPlan: Record<string, any> = {};
+  for (const s of (board?.stops || [])) boardByPlan[String(s.planId)] = s;
+
+  const handleAssign = async () => {
+    if (!selectedDriver) { toast({ title: isRtl ? "اختر سائقاً أولاً" : "Pick a driver", variant: "destructive" }); return; }
+    setAssigning(true);
+    try {
+      const r: any = await assignShift({ date: formattedDate, deliveryTime: activeTab, driverId: selectedDriver as any, sessionToken: sessionTok });
+      toast({ title: isRtl ? "تم الإسناد وترتيب المسار" : "Assigned & routed", description: isRtl ? `${r.assigned} محطة` : `${r.assigned} stops` });
+    } catch (e: any) {
+      toast({ title: String(e?.message || e), variant: "destructive" });
+    } finally { setAssigning(false); }
+  };
+
+  const copyTrack = (token?: string) => {
+    if (!token) return;
+    const url = `${trackBase}/track/${token}`;
+    navigator.clipboard?.writeText(url).then(
+      () => toast({ title: isRtl ? "تم نسخ رابط التتبع" : "Tracking link copied" }),
+      () => window.prompt(isRtl ? "انسخ الرابط:" : "Copy link:", url),
+    );
+  };
 
   const deliveredPlans = dailyPlans.filter(
     (p: any) =>
@@ -245,6 +277,64 @@ export default function Delivery() {
         </div>
       </div>
 
+      {/* ── إسناد السائق + تحليلات الجولة ── */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <UserCog className="h-5 w-5 text-[#0E76AC]" />
+            <span className="text-sm font-black text-gray-800">{isRtl ? "إسناد الجولة لسائق" : "Assign shift to driver"}</span>
+            <select
+              value={selectedDriver}
+              onChange={(e) => setSelectedDriver(e.target.value)}
+              className="h-10 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 bg-white"
+            >
+              <option value="">{isRtl ? "اختر السائق…" : "Pick driver…"}</option>
+              {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+            </select>
+            <button onClick={handleAssign} disabled={assigning || !selectedDriver}
+              className="h-10 px-4 rounded-xl text-white text-sm font-black disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              {assigning ? "…" : (isRtl ? "أسند ورتّب المسار" : "Assign & route")}
+            </button>
+            {(!drivers || drivers.length === 0) && (
+              <span className="text-[11px] text-amber-600 font-bold">{isRtl ? "لا يوجد سائقون — أضف مستخدماً بدور DELIVERY" : "No drivers — add a DELIVERY user"}</span>
+            )}
+          </div>
+
+          {/* تحليلات مباشرة */}
+          {board?.analytics && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+              {[
+                { l: isRtl ? "قيد الانتظار" : "Pending", v: board.analytics.pending, c: "#64748b" },
+                { l: isRtl ? "في الطريق" : "On the way", v: board.analytics.outForDelivery, c: "#0E76AC" },
+                { l: isRtl ? "تم التسليم" : "Delivered", v: board.analytics.delivered, c: "#10b981" },
+                { l: isRtl ? "متوسط التوصيل" : "Avg time", v: board.analytics.avgDeliveryMinutes != null ? `${board.analytics.avgDeliveryMinutes}د` : "—", c: "#47759c" },
+              ].map((x, i) => (
+                <div key={i} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5 text-center">
+                  <div className="text-xl font-black tabular-nums" style={{ color: x.c }}>{x.v}</div>
+                  <div className="text-[10px] font-bold text-slate-400">{x.l}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* تقدّم كل سائق */}
+          {board?.analytics?.perDriver?.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {board.analytics.perDriver.map((d: any, i: number) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-600 w-24 truncate">{d.name}</span>
+                  <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${d.total ? (d.delivered / d.total) * 100 : 0}%` }} />
+                  </div>
+                  <span className="text-[11px] font-black text-slate-500 tabular-nums">{d.delivered}/{d.total}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Map panel */}
       {showMap && (
         <div className="max-w-4xl mx-auto px-4 pt-4">
@@ -329,9 +419,23 @@ export default function Delivery() {
                             )}
                           </div>
                         </div>
-                        <Badge className="bg-[#e8f8fd] text-[#0E76AC] border-0 text-xs px-3 py-1 rounded-full font-semibold">
-                          {isRtl ? "جاهز للتوصيل" : "Ready"}
-                        </Badge>
+                        {(() => {
+                          const bs = boardByPlan[String(plan._id)];
+                          const onWay = plan.status === "OUT_FOR_DELIVERY";
+                          return (
+                            <div className="flex flex-col items-end gap-1">
+                              <Badge className={cn("border-0 text-xs px-3 py-1 rounded-full font-semibold",
+                                onWay ? "bg-[#0E76AC] text-white" : "bg-[#e8f8fd] text-[#0E76AC]")}>
+                                {onWay ? (isRtl ? "🚚 في الطريق" : "🚚 On the way") : (isRtl ? "جاهز" : "Ready")}
+                              </Badge>
+                              {bs?.driverName && (
+                                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                                  <Truck className="h-3 w-3" />{bs.driverName}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -377,18 +481,30 @@ export default function Delivery() {
                       <div className="flex gap-2 pt-2">
                         <Button
                           variant="outline"
-                          className="flex-1 h-12 rounded-xl border border-gray-200 text-[#0E76AC] hover:bg-[#f7fbfe] font-bold"
+                          className="h-12 px-4 rounded-xl border border-gray-200 text-[#0E76AC] hover:bg-[#f7fbfe] font-bold"
                           onClick={() => window.open(`tel:${customer.phone}`)}
                         >
-                          <Phone className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                          {isRtl ? "اتصال" : "Call"}
+                          <Phone className="h-5 w-5" />
                         </Button>
+                        {(() => {
+                          const bs = boardByPlan[String(plan._id)];
+                          return bs?.trackToken ? (
+                            <Button
+                              variant="outline"
+                              className="h-12 px-4 rounded-xl border border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 font-bold"
+                              title={isRtl ? "نسخ رابط تتبع العميل" : "Copy customer tracking link"}
+                              onClick={() => copyTrack(bs.trackToken)}
+                            >
+                              <Link2 className="h-5 w-5" />
+                            </Button>
+                          ) : null;
+                        })()}
                         <Button
                           className="flex-1 h-12 rounded-xl text-white font-bold shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
                           onClick={() => handleDeliver(plan._id)}
                         >
                           <Check className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
-                          {isRtl ? "إتمام" : "Complete"}
+                          {isRtl ? "إتمام التسليم" : "Complete"}
                         </Button>
                       </div>
                     </div>

@@ -22,10 +22,13 @@ const DOHA: [number, number] = [25.2854, 51.531];
 export function DeliveryMap({
   stops,
   origin,
+  driver,
   height = 360,
 }: {
   stops: MapStop[];
   origin?: { lat: number; lng: number } | null;
+  /** موقع السائق الحي (يتحرّك) — يظهر كأيقونة شاحنة نابضة */
+  driver?: { lat: number; lng: number } | null;
   height?: number;
 }) {
   const elRef = useRef<HTMLDivElement>(null);
@@ -81,6 +84,22 @@ export function DeliveryMap({
       pts.push([s.lat, s.lng]);
     });
 
+    // 🚚 موقع السائق الحي — أيقونة نابضة
+    if (driver && Number.isFinite(driver.lat) && Number.isFinite(driver.lng)) {
+      const dIcon = L.divIcon({
+        className: "",
+        html: `<div style="position:relative;width:38px;height:38px">
+          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(16,118,172,.25);animation:adpulse 1.6s ease-out infinite"></div>
+          <div style="position:absolute;inset:5px;border-radius:50%;background:#0E76AC;border:2px solid #fff;box-shadow:0 3px 10px rgba(14,42,74,.5);display:flex;align-items:center;justify-content:center;font-size:16px">🚚</div>
+        </div>
+        <style>@keyframes adpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.6);opacity:0}}</style>`,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19],
+      });
+      L.marker([driver.lat, driver.lng], { icon: dIcon, zIndexOffset: 1000 }).addTo(layer).bindPopup("موقع السائق الآن");
+      pts.push([driver.lat, driver.lng]);
+    }
+
     if (pts.length === 1) {
       map.setView(pts[0], 14);
     } else if (pts.length > 1) {
@@ -88,7 +107,7 @@ export function DeliveryMap({
     }
     // إصلاح حجم الخريطة داخل الحاويات المخفية/المتغيّرة
     setTimeout(() => map.invalidateSize(), 100);
-  }, [stops, origin]);
+  }, [stops, origin, driver]);
 
   useEffect(() => {
     return () => {

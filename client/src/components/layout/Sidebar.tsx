@@ -56,6 +56,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   suppliers: Building2,
   settings: Settings,
   kitchen: ChefHat,
+  driver: Truck,
   mealIssuance: ClipboardList,
   onlineOrders: ShoppingBag,
   delivery: Truck,

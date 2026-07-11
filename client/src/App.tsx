@@ -31,6 +31,8 @@ const StockTake = lazy(() => import("@/pages/StockTake"));
 const Suppliers = lazy(() => import("@/pages/Suppliers"));
 const Kitchen = lazy(() => import("@/pages/Kitchen"));
 const Delivery = lazy(() => import("@/pages/Delivery"));
+const DriverApp = lazy(() => import("@/pages/DriverApp"));
+const TrackOrder = lazy(() => import("@/pages/public/TrackOrder"));
 const Stickers = lazy(() => import("@/pages/Stickers"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Leaves = lazy(() => import("@/pages/Leaves"));
@@ -141,6 +143,8 @@ function Router() {
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/smart-plan" component={SmartPlan} />
       <Route path="/public/how-to-subscribe" component={HowToSubscribe} />
+      {/* تتبّع الطلب — عام برابط سرّي */}
+      <Route path="/track/:token" component={TrackOrder} />
 
       {/* ===== Admin Routes (Protected) ===== */}
       <Route path="/login" component={Login} />
@@ -213,6 +217,9 @@ function Router() {
       </Route>
       <Route path="/delivery">
         <ProtectedRoute component={Delivery} />
+      </Route>
+      <Route path="/driver">
+        <ProtectedRoute component={DriverApp} />
       </Route>
       <Route path="/stickers">
         <ProtectedRoute component={Stickers} />

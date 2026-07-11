@@ -51,6 +51,13 @@ export const WhatsAppTemplates = {
     `استمتع بوجبتك! 🥗\n` +
     `Adrenaline Healthy Food`,
 
+  /** السائق في الطريق — مع رابط تتبع حي */
+  outForDelivery: (name: string, trackUrl: string) =>
+    `${name} 🚚\n\n` +
+    `سائقنا في الطريق إليك بوجباتك الآن!\n\n` +
+    `📍 تتبّع الطلب مباشرةً وشوف السائق فين على الخريطة:\n${trackUrl}\n\n` +
+    `Adrenaline Healthy Food 💚`,
+
   /** تم التوصيل */
   delivered: (name: string) =>
     `${name} 🚚\n\n` +
