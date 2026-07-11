@@ -23,6 +23,7 @@ import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
 import type * as customers from "../customers.js";
 import type * as dailyPlans from "../dailyPlans.js";
+import type * as delivery from "../delivery.js";
 import type * as files from "../files.js";
 import type * as fixPlanWording from "../fixPlanWording.js";
 import type * as fixSchedule from "../fixSchedule.js";
@@ -85,6 +86,7 @@ declare const fullApi: ApiFromModules<{
   customerOrders: typeof customerOrders;
   customers: typeof customers;
   dailyPlans: typeof dailyPlans;
+  delivery: typeof delivery;
   files: typeof files;
   fixPlanWording: typeof fixPlanWording;
   fixSchedule: typeof fixSchedule;
