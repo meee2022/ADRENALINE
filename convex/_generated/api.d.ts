@@ -29,6 +29,7 @@ import type * as fixPlanWording from "../fixPlanWording.js";
 import type * as fixSchedule from "../fixSchedule.js";
 import type * as fixScheduleExtra from "../fixScheduleExtra.js";
 import type * as geo from "../geo.js";
+import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as leaves from "../leaves.js";
 import type * as lib_dates from "../lib/dates.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   fixSchedule: typeof fixSchedule;
   fixScheduleExtra: typeof fixScheduleExtra;
   geo: typeof geo;
+  http: typeof http;
   inventory: typeof inventory;
   leaves: typeof leaves;
   "lib/dates": typeof lib_dates;

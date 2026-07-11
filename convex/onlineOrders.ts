@@ -5,10 +5,59 @@
  * @frontend client/src/pages/OnlineOrders.tsx
  */
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
 
 const monthOf = (d: string) => (d || "").slice(0, 7);
+
+/** yyyy-MM-dd بتوقيت قطر (+03) من الآن. */
+function todayQatarISO(): string {
+  return new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/** تخمين المنصّة من المُرسِل/العنوان. */
+function detectPlatform(text: string): typeof PLATFORMS[number] {
+  const s = String(text || "").toLowerCase();
+  if (s.includes("talabat") || s.includes("طلبات")) return "TALABAT";
+  if (s.includes("snoonu") || s.includes("سنونو")) return "SNOONU";
+  if (s.includes("rafeeq") || s.includes("رفيق")) return "RAFEEQ";
+  if (s.includes("deliveroo") || s.includes("ديليفرو")) return "DELIVEROO";
+  if (s.includes("keeta") || s.includes("كيتا")) return "KEETA";
+  return "OTHER";
+}
+
+/** استخراج قيمة الطلب (ريال قطري) من نص الإيميل — أكبر مبلغ مقترن بـ QAR/ر.ق. */
+function parseAmount(text: string): number {
+  const s = String(text || "");
+  const nums: number[] = [];
+  const re = /(?:QAR|ر\.?\s?ق|QR)\s*([0-9]+(?:[.,][0-9]{1,2})?)|([0-9]+(?:[.,][0-9]{1,2})?)\s*(?:QAR|ر\.?\s?ق|QR)/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s))) {
+    const raw = (m[1] || m[2] || "").replace(",", ".");
+    const n = parseFloat(raw);
+    if (Number.isFinite(n)) nums.push(n);
+  }
+  return nums.length ? Math.max(...nums) : 0;
+}
+
+/** استخراج رقم الطلب المرجعي (Order #12345 / رقم الطلب). */
+function parseOrderRef(text: string): string | undefined {
+  const s = String(text || "");
+  const m =
+    s.match(/(?:order\s*(?:no\.?|number|#|id)?|رقم\s*الطلب|طلب\s*رقم)\s*[:#]?\s*([A-Za-z0-9\-]{3,})/i) ||
+    s.match(/#\s*([A-Za-z0-9\-]{4,})/);
+  return m ? m[1] : undefined;
+}
+
+/** تخمين عدد الوجبات — مجموع كميات البنود (2x, ×3) أو عدد الأسطر. */
+function parseMealsCount(text: string): number {
+  const s = String(text || "");
+  let total = 0;
+  const re = /(?:^|\n|\s)(?:x\s*)?(\d{1,2})\s*(?:x|×|✕)\s/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(s))) total += parseInt(m[1], 10) || 0;
+  return total > 0 ? total : 1; // على الأقل وجبة واحدة
+}
 const PLATFORMS = ["TALABAT", "SNOONU", "RAFEEQ", "DELIVEROO", "KEETA", "OTHER"] as const;
 const platformU = v.union(
   v.literal("TALABAT"), v.literal("SNOONU"), v.literal("RAFEEQ"),
@@ -40,6 +89,51 @@ export const log = mutation({
       loggedBy: (id as any).user?.name || (id as any).user?.username || undefined,
       createdAt: Date.now(),
     });
+  },
+});
+
+/**
+ * ✅ الاستقبال التلقائي (من webhook البريد/المنصّة). داخلي — يُستدعى من http.ts.
+ *    يقبل حقولاً جاهزة أو إيميلاً خاماً فيحلّله. يمنع التكرار بـ (platform+orderRef).
+ */
+export const ingestInternal = internalMutation({
+  args: {
+    platform: v.optional(v.string()),
+    mealsCount: v.optional(v.number()),
+    amount: v.optional(v.number()),
+    orderRef: v.optional(v.string()),
+    subject: v.optional(v.string()),
+    text: v.optional(v.string()),
+    from: v.optional(v.string()),
+    dateISO: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const blob = `${args.from || ""}\n${args.subject || ""}\n${args.text || ""}`;
+    const platformRaw = (args.platform || detectPlatform(blob)).toUpperCase();
+    const platform = (PLATFORMS as readonly string[]).includes(platformRaw)
+      ? (platformRaw as typeof PLATFORMS[number]) : "OTHER";
+
+    const amount = args.amount != null ? Math.max(0, args.amount) : parseAmount(blob);
+    const mealsCount = args.mealsCount != null ? Math.max(0, Math.round(args.mealsCount)) : parseMealsCount(blob);
+    const orderRef = args.orderRef?.trim() || parseOrderRef(blob);
+    const date = args.dateISO && /^\d{4}-\d{2}-\d{2}$/.test(args.dateISO) ? args.dateISO : todayQatarISO();
+
+    // منع التكرار: نفس المنصّة + نفس رقم الطلب في نفس اليوم
+    if (orderRef) {
+      const sameDay = await ctx.db.query("onlineOrders").withIndex("by_date", (q) => q.eq("date", date)).collect();
+      if (sameDay.some((r) => r.platform === platform && r.orderRef === orderRef)) {
+        return { ok: true, duplicate: true, platform, orderRef };
+      }
+    }
+
+    const id = await ctx.db.insert("onlineOrders", {
+      date, month: monthOf(date), platform, mealsCount, amount,
+      orderRef: orderRef || undefined,
+      note: undefined,
+      loggedBy: `AUTO · ${platform}`,
+      createdAt: Date.now(),
+    });
+    return { ok: true, id, platform, mealsCount, amount, orderRef: orderRef || null };
   },
 });
 
