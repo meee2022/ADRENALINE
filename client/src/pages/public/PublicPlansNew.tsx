@@ -41,7 +41,8 @@ export default function PublicPlansNew() {
     const snacksCount = option?.snacksCount || 0;
     const msg = `مرحباً 👋\nأرغب في الاشتراك في خطة *${planName}*\n\nالباقة: ${mealsCount} وجبات + ${snacksCount} سناك\n\nمن فضلك أرسلوا لي تفاصيل الاشتراك.`;
     const url = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
+    // نحوّل في نفس التبويب حتى لا يبقى تبويب فارغ خلف واتساب على الجوال
+    window.location.href = url;
   };
 
   const getBadgeLabel = (badge: string) => badgeConfig[badge as keyof typeof badgeConfig];

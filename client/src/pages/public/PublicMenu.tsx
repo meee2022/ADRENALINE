@@ -160,7 +160,7 @@ export default function PublicMenuPage() {
     const msg = isRtl
       ? `مرحباً 👋\nأرغب في الاشتراك في خطط أدرينالين الصحية.\nرقمي: ${phoneInput || verifiedPhone}`
       : `Hello 👋\nI'd like to subscribe to Adrenaline plans.\nMy phone: ${phoneInput || verifiedPhone}`;
-    window.open(whatsappLink(msg), "_blank");
+    window.location.href = whatsappLink(msg);
   };
 
   // ✅ تاريخ بداية التوصيل الذي يختاره العميل. منه يعرف النظام أسبوع الدورة —
@@ -1304,7 +1304,7 @@ export default function PublicMenuPage() {
                             const msg = isRtl
                               ? `مرحباً 👋\nأرغب في الاشتراك في أدرينالين.\nأعجبتني وجبة: ${meal.nameAr}`
                               : `Hello 👋\nI'd like to subscribe to Adrenaline.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
-                            window.open(whatsappLink(msg), "_blank");
+                            window.location.href = whatsappLink(msg);
                           }}
                           className="h-9 px-4 rounded-full font-bold text-white flex items-center gap-1.5"
                           style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
