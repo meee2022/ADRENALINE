@@ -329,7 +329,10 @@ export const approve = mutation({
     // ✅ نمنع التكرار: لو فيه plan موجودة لنفس (customer + date + deliveryTime) من نفس الطلب،
     // نستبدلها بدلاً من إنشاء واحدة جديدة
     const effectiveCustomerId = customerId || order.customerId;
-    const deliveryTime = "MORNING" as const;
+    // ✅ وقت التوصيل من اشتراك العميل نفسه (صباحي/مسائي) بدل MORNING الثابت —
+    //    وإلا كل طلب معتمد يذهب للجولة الصباحية فقط، فالخدمة المسائية تُكسر.
+    const deliveryTime: "MORNING" | "EVENING" =
+      (linkedCustomer as any)?.deliveryTime === "EVENING" ? "EVENING" : "MORNING";
 
     for (const [date, dayMeals] of Object.entries(mealsByDate)) {
       // ⛔ لا تُنشأ خطط داخل فترة تجميد المشترك — هذا المسار يكتب في dailyPlans
@@ -349,10 +352,12 @@ export const approve = mutation({
         imageUrl: meal.imageUrl,
         week: meal.week,
         day: meal.day,
-        // إضافة التفضيلات/الممنوعات/الكميات من المشترك
+        // إضافة التفضيلات/الممنوعات/الكميات/الحساسية من المشترك (snapshot —
+        // يبقى ظاهراً للمطبخ حتى لو لم يكن العميل مربوطاً بحساب)
         avoid: linkedCustomer?.avoid || undefined,
         preferences: linkedCustomer?.preferences || undefined,
         portions: linkedCustomer?.portions || undefined,
+        allergies: (linkedCustomer as any)?.allergies || undefined,
       }));
 
       // فحص: في dailyPlan موجودة لنفس العميل في نفس التاريخ من نفس الطلب؟
