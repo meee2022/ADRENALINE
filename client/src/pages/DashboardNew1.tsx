@@ -212,7 +212,7 @@ export default function DashboardNew() {
       </div>
 
       {/* ── Controls Row ── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.015)] border border-gray-100">
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-white rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100">
         <div className="space-y-1">
           <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block">{tr("التاريخ المعروض", "Showing date")}</span>
           <span className="text-base sm:text-lg font-black text-[#47759c] block">
@@ -239,7 +239,7 @@ export default function DashboardNew() {
       {/* ── الموظفين اليوم (حضور/إجازات) ── */}
       {(attToday || leaveToday) && (
         <button onClick={() => setLocation("/attendance")}
-          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-start hover:border-[#3cc4f0]/40 transition-colors shadow-[0_8px_30px_rgba(0,0,0,0.015)]">
+          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-start hover:border-[#3cc4f0]/40 transition-colors shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)]">
           <span className="text-[11px] sm:text-xs font-black text-gray-400 uppercase tracking-wider me-auto sm:me-0">{tr("الموظفون اليوم", "Staff today")}</span>
           {[
             { l: tr("حاضر","Present"), v: attToday?.present ?? 0, c: "#10b981" },
@@ -264,7 +264,7 @@ export default function DashboardNew() {
           className={`rounded-2xl p-4 text-right border transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3 ${
             (pendingOrders ?? 0) > 0
               ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-[0_8px_25px_rgba(245,158,11,0.15)]"
-              : "bg-white border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)]"
+              : "bg-white border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)]"
           }`}>
           <div className={`h-11 w-11 rounded-xl grid place-items-center shrink-0 ${(pendingOrders ?? 0) > 0 ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-400"}`}>
             <ClipboardCheck className="h-5 w-5" />
@@ -278,7 +278,7 @@ export default function DashboardNew() {
 
         {/* أسبوع دورة المطبخ — القلب التشغيلي للدورات */}
         <button onClick={()=>setLocation("/orders/pending")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-[#3cc4f0]/10 text-[#0E76AC]">
             <ChefHat className="h-5 w-5" />
           </div>
@@ -290,7 +290,7 @@ export default function DashboardNew() {
 
         {/* مشتركون مجمّدون */}
         <button onClick={()=>setLocation("/customers")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-indigo-50 text-indigo-500">
             <PauseCircle className="h-5 w-5" />
           </div>
@@ -302,7 +302,7 @@ export default function DashboardNew() {
 
         {/* تقدّم المطبخ اليوم */}
         <button onClick={()=>setLocation("/kitchen")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_8px_30px_rgba(0,0,0,0.015)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
+          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
           <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-emerald-50 text-emerald-600">
             <Utensils className="h-5 w-5" />
           </div>
@@ -324,7 +324,7 @@ export default function DashboardNew() {
 
         {/* المشتركين النشطين */}
         <button onClick={()=>setOpenModal("customers")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-[#3cc4f0] rounded-t-3xl" />
           
           <div className="w-full">
@@ -365,7 +365,7 @@ export default function DashboardNew() {
 
         {/* خطط اليوم */}
         <button onClick={()=>setOpenModal("meals")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-[#47759c] rounded-t-3xl" />
           
           <div className="w-full">
@@ -406,7 +406,7 @@ export default function DashboardNew() {
 
         {/* توصيل صباحي */}
         <button onClick={()=>setOpenModal("morning")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-500 rounded-t-3xl" />
           
           <div className="w-full">
@@ -446,7 +446,7 @@ export default function DashboardNew() {
 
         {/* توصيل مسائي */}
         <button onClick={()=>setOpenModal("evening")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.03)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.015)] min-h-[240px]">
+          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-[#0f1516] rounded-t-3xl" />
           
           <div className="w-full">
@@ -489,7 +489,7 @@ export default function DashboardNew() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* حالة الاشتراكات */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col h-full">
+        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col h-full">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <AlertCircle className="h-5 w-5 text-amber-500" />
@@ -515,7 +515,7 @@ export default function DashboardNew() {
                   <button
                     key={label}
                     onClick={() => setOpenModal(modal)}
-                    className="w-full text-right group p-3.5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:border-slate-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.015)] transition-all duration-300 flex flex-col gap-2 relative overflow-hidden active:scale-[0.99]"
+                    className="w-full text-right group p-3.5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:border-slate-200 hover:shadow-[0_4px_20px_-6px_rgba(14,118,172,0.18)] transition-all duration-300 flex flex-col gap-2 relative overflow-hidden active:scale-[0.99]"
                   >
                     <div className="flex items-center justify-between w-full relative z-10">
                       <div className="flex items-center gap-2">
@@ -589,7 +589,7 @@ export default function DashboardNew() {
         </div>
 
         {/* توزيع البرامج */}
-        <div className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+        <div className="bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <TrendingUp className="h-5 w-5 text-slate-400" />
@@ -623,7 +623,7 @@ export default function DashboardNew() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ملخص المخزون */}
-        <div className="bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+        <div className="bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <div className="flex items-center gap-2.5">
               <Package className="h-5 w-5 text-slate-400" />
@@ -666,7 +666,7 @@ export default function DashboardNew() {
         </div>
 
         {/* نظرة أسبوعية */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_10px_35px_rgba(0,0,0,0.015)] border border-gray-100 overflow-hidden flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
           <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
             <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{tr("آخر 7 أيام","Last 7 days")}</span>
             <div className="flex items-center gap-2.5">

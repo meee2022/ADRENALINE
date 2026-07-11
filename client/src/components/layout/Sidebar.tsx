@@ -162,8 +162,8 @@ export function Sidebar() {
                         "group px-3 py-2 rounded-lg text-[13px] transition-all duration-200 cursor-pointer",
                         "flex items-center gap-2.5 min-w-0 relative",
                         isActive
-                          ? "bg-gradient-to-l from-[#3CC4F0] to-[#0E9ED6] text-white font-bold shadow-sm"
-                          : "text-slate-600 font-semibold hover:bg-[#3CC4F0]/10 hover:text-[#0E76AC]",
+                          ? "bg-gradient-to-l from-[#3CC4F0] to-[#0E9ED6] text-white font-bold shadow-[0_6px_16px_-6px_rgba(60,196,240,0.55)]"
+                          : "text-slate-600 font-semibold hover:bg-[#3CC4F0]/10 hover:text-[#0E76AC] hover:shadow-[0_4px_14px_-8px_rgba(14,118,172,0.25)]",
                       )}
                     >
                       <span
@@ -194,7 +194,10 @@ export function Sidebar() {
       {/* Footer */}
       <div className="p-4 border-t border-sidebar-border mt-auto">
         <div className="flex items-center gap-3 mb-3 px-1 min-w-0">
-          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold shrink-0">
+          <div
+            className="h-9 w-9 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0 shadow-[0_4px_12px_-4px_rgba(60,196,240,0.5)]"
+            style={{ background: "linear-gradient(135deg,#3CC4F0,#0E76AC)" }}
+          >
             {currentUser?.name?.charAt(0) ?? "?"}
           </div>
           <div className="flex flex-col overflow-hidden min-w-0">
