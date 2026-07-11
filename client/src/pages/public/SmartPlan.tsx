@@ -112,14 +112,17 @@ export default function SmartPlan() {
   //    البدائل = وجبات نفس اليوم/دورة المطبخ فقط (لا كل وجبات المطعم).
   const allMeals: any[] = (useQuery(api.publicMeals.listMeals, {}) as any[]) || [];
   const [swap, setSwap] = useState<any>(null); // {src:"weekly"|"day", di?, i, week, day, meal}
+  // يطابق الباك اند (ai.matchesToday): الوجبة تظهر فقط لو **مجدولة صراحةً**
+  //    لهذا (الأسبوع + اليوم). وجبة بلا جدولة لا تُدرج — فلا يتسرّب منيو الأسبوع كله.
   const mealAvailable = (m: any, wk: number, dy: string) => {
-    if (!wk || !dy) return true;
+    if (!wk || !dy) return false;
     const d = String(dy).toLowerCase();
     if (Array.isArray(m.schedule) && m.schedule.length)
       return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === d);
-    const wOk = !Array.isArray(m.weeks) || !m.weeks.length || m.weeks.map(Number).includes(wk);
-    const dOk = !Array.isArray(m.days) || !m.days.length || m.days.map((x: any) => String(x).toLowerCase()).includes(d);
-    return wOk && dOk;
+    const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
+    const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
+    if (weeks.length || days.length) return weeks.includes(wk) && days.includes(d);
+    return false; // بلا جدولة → لا تظهر (نلتزم بمنيو اليوم)
   };
   const toPick = (m: any) => ({
     id: m._id, nameAr: m.nameAr, nameEn: m.nameEn, calories: m.calories,

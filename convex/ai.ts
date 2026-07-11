@@ -76,46 +76,48 @@ export const getSmartPlanData = query({
         }
       : { found: false, goal: "", allergies: "", avoid: "", preferences: "", mealsPerDay: 3, snacksPerDay: 1 };
 
-    // 2.5) حساب أسبوع الدورة (1..4) من تاريخ بداية اشتراك العميل.
-    // أسبوع التوصيل = 6 أيام (السبت→الخميس، الجمعة وحدها بلا توصيل)، فالدورة
-    // تتقدّم كل 6 أيام توصيل. (كان يعدّ 5 ويقسم على 6 — تقدُّم غير منتظم؛ صار متّسقاً.)
-    let rotationWeek = 1;
+    // 2.5) هل بدأ الاشتراك؟ وتحديد «يوم/تاريخ» الخطة الفعلي.
+    //    اشتراك لم يبدأ بعد: «خطة اليوم» = أول يوم توصيل في الاشتراك (لا تاريخ
+    //    اليوم) — فما يراه العميل هو فعلاً ما سيصله أول يوم.
     let started = true;
+    let effDay = (args.todayDay || "").toLowerCase();
+    let effDate = args.todayDate || "";
     if (customer?.startDate && args.todayDate) {
       const start = new Date(customer.startDate + "T00:00:00");
       const today = new Date(args.todayDate + "T00:00:00");
-      if (today.getTime() < start.getTime()) {
-        started = false; rotationWeek = 1;
-      } else {
-        // عُدّ أيام التوصيل من البداية حتى اليوم (شامل)، مع حدّ أقصى احترازي
-        let workingDays = 0;
-        const cur = new Date(start);
-        for (let i = 0; i < 400 && cur.getTime() <= today.getTime(); i++) {
-          if (cur.getDay() !== 5) workingDays++; // الجمعة وحدها بلا توصيل
-          cur.setDate(cur.getDate() + 1);
-        }
-        const idx = Math.max(0, workingDays - 1); // 0-based لليوم الحالي ضمن أيام التوصيل
-        rotationWeek = (Math.floor(idx / 6) % 4) + 1;
+      if (today.getTime() < start.getTime()) started = false;
+    }
+    const names = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    if (!started && !args.overrideRotationWeek && customer?.startDate) {
+      const s = new Date(customer.startDate + "T00:00:00");
+      if (s.getDay() === 5) s.setDate(s.getDate() + 1); // الجمعة بلا توصيل → السبت
+      effDay = names[s.getDay()];
+      const yyyy = s.getFullYear(), mm = String(s.getMonth() + 1).padStart(2, "0"), dd = String(s.getDate()).padStart(2, "0");
+      effDate = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // ✅ أسبوع الدورة = دورة **المطعم** في تاريخ التوصيل (لا دورة نسبية للعميل).
+    //    المطبخ يطبخ منيو دورة ذلك الأسبوع لكل العملاء، فلا بد أن يطابقها العميل.
+    //    نفس منطق restaurantSettings.rotationWeekAt: currentCookingWeek + عدد
+    //    الجُمَع بين اليوم وتاريخ التوصيل (كل جمعة = تقدّم دورة، تلفّ 1..4).
+    const rsettings: any = await ctx.db.query("restaurantSettings").first();
+    const curCook = Number(rsettings?.currentCookingWeek) || 1;
+    let rotationWeek = curCook;
+    if (args.todayDate && effDate) {
+      let fridays = 0;
+      const c = new Date(args.todayDate + "T00:00:00");
+      const end = new Date(effDate + "T00:00:00");
+      for (let i = 0; i < 400 && c.getTime() < end.getTime(); i++) {
+        c.setDate(c.getDate() + 1);
+        if (c.getDay() === 5) fridays++;
       }
+      rotationWeek = ((curCook - 1 + fridays) % 4) + 1;
     }
 
     // فرض أسبوع دورة محدّد (توليد عدة أسابيع) — يتجاوز الحساب أعلاه.
     if (args.overrideRotationWeek && args.overrideRotationWeek >= 1 && args.overrideRotationWeek <= 4) {
       rotationWeek = Math.floor(args.overrideRotationWeek);
       started = true;
-    }
-
-    // ✅ اشتراك لم يبدأ بعد: «خطة اليوم» = أول يوم في الاشتراك (يومه ومنيوه)،
-    //    لا منيو تاريخ اليوم — فما يراه العميل هو فعلاً ما سيصله أول يوم.
-    let effDay = (args.todayDay || "").toLowerCase();
-    let effDate = args.todayDate || "";
-    if (!started && !args.overrideRotationWeek && customer?.startDate) {
-      const s = new Date(customer.startDate + "T00:00:00");
-      if (s.getDay() === 5) s.setDate(s.getDate() + 1); // الجمعة بلا توصيل → السبت
-      const names = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      effDay = names[s.getDay()];
-      const yyyy = s.getFullYear(), mm = String(s.getMonth() + 1).padStart(2, "0"), dd = String(s.getDate()).padStart(2, "0");
-      effDate = `${yyyy}-${mm}-${dd}`;
     }
 
     // 3) الوجبات المجدولة فعلاً لـ(أسبوع الدورة + يوم اليوم) — فلترة صارمة

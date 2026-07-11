@@ -929,9 +929,11 @@ export default function OrderReviewDetail() {
                   if (!wk || !dy) return true; // عنصر بلا يوم/أسبوع: لا نفلتر
                   if (Array.isArray(m.schedule) && m.schedule.length)
                     return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === dy);
-                  const wOk = !Array.isArray(m.weeks) || !m.weeks.length || m.weeks.map(Number).includes(wk);
-                  const dOk = !Array.isArray(m.days) || !m.days.length || m.days.map((x: any) => String(x).toLowerCase()).includes(dy);
-                  return wOk && dOk;
+                  // بيانات قديمة: لازم تطابق صريح للأسبوع واليوم (لا فراغ = مقبول)
+                  const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
+                  const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
+                  if (weeks.length || days.length) return weeks.includes(wk) && days.includes(dy);
+                  return false; // بلا جدولة → لا تظهر
                 })
                 .sort((a: any, b: any) => (a.category === swapTarget.category ? -1 : 0) - (b.category === swapTarget.category ? -1 : 0))
                 .map((m: any) => (
