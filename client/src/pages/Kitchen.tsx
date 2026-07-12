@@ -134,6 +134,36 @@ export default function Kitchen() {
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);
   const getCategory = (id: string) => categories.find((c: any) => c._id === id);
 
+  // ✅ حل اسم أي وجبة (منيو عام + داخلي) باللغة الحالية
+  const mealById = useMemo(() => {
+    const m = new Map<string, any>();
+    [...(publicMealsList || []), ...(menuItems || [])].forEach((x: any) => { if (x?._id) m.set(String(x._id), x); });
+    return m;
+  }, [publicMealsList, menuItems]);
+  const mealNameInLang = (mealId: any, item?: any): string => {
+    const meal: any = (mealId && (getMenuItem(mealId) || mealById.get(String(mealId)))) || null;
+    if (meal) return String(isRtl ? (meal.nameAr || meal.nameEn || meal.name) : (meal.nameEn || meal.name || meal.nameAr)).trim();
+    return String(isRtl
+      ? (item?.mealNameAr || item?.mealNameEn || "وجبة غير محددة")
+      : (item?.mealNameEn || item?.mealNameAr || "Unspecified meal")).trim();
+  };
+  // ✅ تركيب سطر الوجبة المخصّصة بلغة الواجهة (أساس من المنيو + بروتين/كارب مترجمان + جرامات)
+  const composeCustItem = (it: any): string => {
+    const gUnit = isRtl ? "جم" : "g";
+    const m: any = it.baseMealId ? mealById.get(String(it.baseMealId)) : null;
+    const base = m ? String(isRtl ? (m.nameAr || m.nameEn || m.name) : (m.nameEn || m.nameAr || m.name)).trim() : String(it.baseName || "").trim();
+    const bits: string[] = [];
+    if (base) bits.push(base);
+    if (it.type === "MAIN") {
+      const inner: string[] = [];
+      if (it.proteinG) inner.push(`${trName(it.proteinName || "", PROTEIN_TR, isRtl) || (isRtl ? "بروتين" : "Protein")} ${it.proteinG}${gUnit}`);
+      const carbTr = trName(it.carbName || "", CARB_TR, isRtl);
+      if (it.carbName && carbTr !== (isRtl ? "بدون" : "None") && it.carbG) inner.push(`${carbTr} ${it.carbG}${gUnit}`);
+      if (inner.length) bits.push(bits.length ? `— ${inner.join(" + ")}` : inner.join(" + "));
+    }
+    return bits.join(" ").trim() || String(it.text || it.baseName || "—").trim();
+  };
+
   const getCategoryLabel = (categoryName: string) => {
     const n = categoryName.toUpperCase();
     if (n.includes("BREAKFAST") || n.includes("فطور")) return isRtl ? "فطور" : "BREAKFAST";
@@ -364,8 +394,7 @@ export default function Kitchen() {
       if (!program.includes("CUSTOM")) return;
       const name = customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer");
       (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
-        const meal: any = getMenuItem(item.menuItemId || item.mealId);
-        const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) : (item.mealNameAr || item.mealNameEn || "—");
+        const mealName = mealNameInLang(item.menuItemId || item.mealId, item);
         const note = [item.avoid, item.preferences, item.portions, item.specialNotes, customer?.avoid, customer?.allergies]
           .map((x) => String(x || "").trim()).filter(Boolean).join(isRtl ? "، " : ", ");
         const key = name + "|" + plan.deliveryTime;
@@ -374,7 +403,7 @@ export default function Kitchen() {
       });
     });
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
-  }, [dailyPlans, formattedDate, customers, menuItems, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl]);
 
   /**
    * ✅ صفوف كشف المطبخ (مصفوفة زي الإكسيل): صف لكل عميل، وجباته في أعمدة
@@ -738,7 +767,7 @@ export default function Kitchen() {
                         {c.items.map((it: any, i: number) => (
                           <li key={i} className="text-[12.5px] font-bold text-slate-700 flex items-start gap-1.5">
                             <span className="text-[#0E76AC] shrink-0">•</span>
-                            <span>{it.text}</span>
+                            <span>{composeCustItem(it)}</span>
                           </li>
                         ))}
                       </ul>
@@ -1138,12 +1167,10 @@ export default function Kitchen() {
                         .map((item: any, idx: number) => {
                           // ✅ دعم كلا النوعين: menuItemId (خطط يدوية) و mealId (طلبات عملاء)
                           const mealId = item.menuItemId || item.mealId;
-                          const meal: any = getMenuItem(mealId);
                           const category = getCategory(item.categoryId);
-                          
-                          // ✅ إذا لم يوجد meal في menuItems، استخدم البيانات من item نفسه
-                          const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) 
-                                                : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unspecified meal"));
+
+                          // ✅ اسم الوجبة بلغة الواجهة (منيو عام + داخلي، إنجليزي في الوضع الإنجليزي)
+                          const mealName = mealNameInLang(mealId, item);
                           
                           const { avoid, pref, portion } = getModifiersByGroup(item.modifierIds);
 
