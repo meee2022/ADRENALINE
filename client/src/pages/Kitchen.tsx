@@ -1116,13 +1116,14 @@ export default function Kitchen() {
                     boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)",
                   }}
                 >
-                  {/* Allergy Warning Banner */}
-                  {hasAllergy && !isPrepared && (
-                    <div className="bg-red-600 text-white px-4 py-2 flex items-center justify-center gap-2 font-bold">
-                      <AlertTriangle className="h-5 w-5" />
-                      <span className="uppercase tracking-wide">
-                        {isRtl ? "⚠️ تنبيه: حساسية مفرطة (ALLERGY)" : "⚠️ ALLERGY WARNING"}
+                  {/* شريط الحساسية — مرّة واحدة أعلى الكرت، مع نص الحساسية الفعلي */}
+                  {hasAllergy && (
+                    <div className="bg-red-600 text-white px-4 py-2 flex items-center gap-2.5 font-bold">
+                      <AlertTriangle className="h-5 w-5 shrink-0" />
+                      <span className="text-[11px] uppercase tracking-wider bg-white/20 rounded px-1.5 py-0.5 shrink-0">
+                        {isRtl ? "حساسية" : "Allergy"}
                       </span>
+                      <span className="text-sm font-extrabold truncate">{customer?.allergies}</span>
                     </div>
                   )}
 
@@ -1193,8 +1194,6 @@ export default function Kitchen() {
 
                           // ملاحظة خاصة بالوجبة (من Plans.tsx)
                           const itemNote = String(item.specialNotes || "").trim();
-                          // الحساسية على مستوى العميل
-                          const custAllergy = String(customer?.allergies || "").trim();
 
                           // ✅ الفهرس الأصلي في plan.items (الترتيب هنا مفروز)
                           const origIdx = (plan.items || []).indexOf(item);
@@ -1206,64 +1205,44 @@ export default function Kitchen() {
                               className={cn("rounded-xl p-4 transition-all", itemDone ? "bg-emerald-50/60" : "bg-[#f7fbfe]")}
                               style={{ border: itemDone ? "1px solid #a7f3d0" : "1px solid #e8eef4" }}
                             >
-                              {/* ✅ زر تعليم الوجبة كجاهزة (تقدّم الشيف) */}
-                              {!isPrepared && (
-                                <button
-                                  onClick={() => toggleItemPrepared({ id: plan._id, itemIndex: origIdx, prepared: !itemDone, sessionToken: sessionTok })}
-                                  className={cn(
-                                    "float-left ms-2 h-8 px-3 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all",
-                                    itemDone ? "bg-emerald-500 text-white" : "bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                              {/* رأس الوجبة: التصنيف يسارًا + زر التعليم كجاهزة يمينًا */}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "text-[11px] font-bold px-2.5 py-0.5 border-0 tracking-wide",
+                                      getCategoryLabel(category?.name || item.category || "").includes("BREAKFAST") && "bg-[#e8f8fd] text-[#0E76AC]",
+                                      getCategoryLabel(category?.name || item.category || "").includes("LUNCH") && "bg-cyan-100 text-cyan-700",
+                                      getCategoryLabel(category?.name || item.category || "").includes("DINNER") && "bg-[#eaf1f7] text-[#47759c]",
+                                      getCategoryLabel(category?.name || item.category || "").includes("SNACK") && "bg-[#e8f8fd] text-[#0E76AC]"
+                                    )}
+                                  >
+                                    {getCategoryLabel(category?.name || item.category || "")}
+                                  </Badge>
+                                  {item.specialInstructions && (
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
+                                      {item.specialInstructions}
+                                    </span>
                                   )}
-                                >
-                                  {itemDone ? "✓ " + (isRtl ? "جاهزة" : "Done") : (isRtl ? "علّم جاهزة" : "Mark done")}
-                                </button>
-                              )}
-                              {/* Meal Category Badge */}
-                              <div className="flex items-start justify-between mb-2">
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-xs font-bold px-3 py-1 border-0",
-                                    // ✅ استخدام category من item أو من lookup
-                                    getCategoryLabel(category?.name || item.category || "").includes("BREAKFAST") &&
-                                      "bg-[#e8f8fd] text-[#3cc4f0]",
-                                    getCategoryLabel(category?.name || item.category || "").includes("LUNCH") &&
-                                      "bg-cyan-100 text-cyan-700",
-                                    getCategoryLabel(category?.name || item.category || "").includes("DINNER") &&
-                                      "bg-[#eaf1f7] text-[#47759c]",
-                                    getCategoryLabel(category?.name || item.category || "").includes("SNACK") &&
-                                      "bg-[#e8f8fd] text-[#3cc4f0]"
-                                  )}
-                                >
-                                  {getCategoryLabel(category?.name || item.category || "")}
-                                </Badge>
-
-                                {item.specialInstructions && (
-                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
-                                    {item.specialInstructions}
-                                  </span>
+                                </div>
+                                {!isPrepared && (
+                                  <button
+                                    onClick={() => toggleItemPrepared({ id: plan._id, itemIndex: origIdx, prepared: !itemDone, sessionToken: sessionTok })}
+                                    className={cn(
+                                      "shrink-0 h-8 px-3 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all",
+                                      itemDone ? "bg-emerald-500 text-white" : "bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50"
+                                    )}
+                                  >
+                                    {itemDone ? "✓ " + (isRtl ? "جاهزة" : "Done") : (isRtl ? "علّم جاهزة" : "Mark done")}
+                                  </button>
                                 )}
                               </div>
 
-                              {/* Meal Name */}
-                              <h3 className={cn("text-xl font-bold mb-3", itemDone ? "text-emerald-600 line-through" : "text-gray-900")}>
+                              {/* اسم الوجبة */}
+                              <h3 className={cn("text-lg font-black mb-2 leading-snug", itemDone ? "text-emerald-600 line-through" : "text-[#0f1516]")}>
                                 {mealName}
                               </h3>
-
-                              {/* Allergy banner — per meal (chef sees it inline) */}
-                              {custAllergy && (
-                                <div className="mb-2 rounded-lg overflow-hidden flex items-stretch"
-                                  style={{ background: "#fef2f2", border: "1.5px solid #ef4444" }}>
-                                  <div className="px-3 flex items-center justify-center text-white font-black text-base"
-                                    style={{ background: "#ef4444", minWidth: "40px" }}>⚠</div>
-                                  <div className="flex-1 px-3 py-2 min-w-0">
-                                    <p className="text-[10px] font-black text-red-600 uppercase tracking-wider leading-none">
-                                      {isRtl ? "حساسية" : "ALLERGY"}
-                                    </p>
-                                    <p className="text-sm font-bold text-red-800 mt-0.5 leading-tight">{custAllergy}</p>
-                                  </div>
-                                </div>
-                              )}
 
                               {/* Modifiers + customer dietary data */}
                               {(allAvoid.length > 0 || allPref.length > 0 || allPortions.length > 0) && (
@@ -1334,21 +1313,6 @@ export default function Kitchen() {
                             <p className="text-sm text-[#47759c] font-medium italic">
                               {plan.notes}
                             </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Customer Allergies */}
-                    {hasAllergy && customer && (
-                      <div className="bg-red-50 rounded-xl p-4 border-2 border-red-300 mb-4">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <p className="text-xs font-bold text-red-900 mb-1 uppercase">
-                              {isRtl ? "⚠️ حساسية مفرطة" : "⚠️ Allergy Warning"}
-                            </p>
-                            <p className="text-sm font-bold text-red-900">{customer.allergies}</p>
                           </div>
                         </div>
                       </div>
