@@ -99,6 +99,7 @@ export default function AuditLog() {
           <CardTitle>{t("الأحداث الأخيرة", "Recent events")}</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -142,6 +143,7 @@ export default function AuditLog() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

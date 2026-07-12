@@ -563,7 +563,7 @@ export default function Attendance() {
             </div>
             <div className="space-y-1.5">
               <Label>{t("الحالة", "Status")}</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {STATUSES.map((s) => (
                   <button key={s.key} type="button" onClick={() => set("status", s.key)}
                     className={cn("h-9 rounded-lg text-xs font-bold border transition-all", form.status === s.key ? "text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-500")}

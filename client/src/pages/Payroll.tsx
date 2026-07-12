@@ -355,7 +355,7 @@ export default function Payroll() {
           </div>
 
           {/* Live derived preview */}
-          <div className="grid grid-cols-4 gap-2 rounded-xl p-3" style={{ background: "#f4f8fb" }}>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-xl p-3" style={{ background: "#f4f8fb" }}>
             {[
               { l: t("الباقة", "Package"), v: dPkg },
               { l: t("الراتب", "Salary"), v: dSalary },

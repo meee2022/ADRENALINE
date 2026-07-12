@@ -387,7 +387,7 @@ export default function PublicMealsManagement() {
             </div>
 
             {/* Nutrition */}
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label>{t("السعرات", "Calories")}</Label>
                 <Input
@@ -490,7 +490,7 @@ export default function PublicMealsManagement() {
                 {/* Weeks */}
                 <div>
                   <Label className="text-sm font-bold mb-2 block">{t("اختر الأسابيع", "Select weeks")}</Label>
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     {[1, 2, 3, 4].map((week) => (
                       <label key={week} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
                         <input
