@@ -81,20 +81,38 @@ function composeText(s: Slot, isRtl: boolean): string {
   return text;
 }
 
-/** اختيار طبق بالبحث بالاسم — يفتح قائمة نتائج مفلترة بدل dropdown طويل. */
-function MealPicker({ meals, value, valueName, isRtl, onPick }: {
+/** هل الطبق مجدول لهذا (الأسبوع + اليوم)؟ — نفس منطق الخطة الذكية. */
+function mealScheduledFor(m: any, week: number, day: string): boolean {
+  if (!week || !day) return true;
+  const d = String(day).toLowerCase();
+  if (Array.isArray(m.schedule) && m.schedule.length)
+    return m.schedule.some((s: any) => Number(s.week) === week && String(s.day).toLowerCase() === d);
+  const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
+  const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
+  if (weeks.length || days.length) return weeks.includes(week) && days.includes(d);
+  return false; // بلا جدولة → لا يظهر في وضع "وجبات اليوم"
+}
+
+/** اختيار طبق بالبحث — افتراضياً وجبات يوم التبويب في دورة المطبخ، مع زر «كل المنيو» وطبق مخصّص. */
+function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filterDay }: {
   meals: any[]; value?: string; valueName?: string; isRtl: boolean; onPick: (m: any | null) => void;
+  filterWeek?: number; filterDay?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [showAll, setShowAll] = useState(false);
   const nameOf = (m: any) => (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) || "";
+  const dayMeals = useMemo(
+    () => (showAll || !filterWeek || !filterDay) ? meals : meals.filter((m) => mealScheduledFor(m, filterWeek, filterDay)),
+    [meals, showAll, filterWeek, filterDay],
+  );
   const results = useMemo(() => {
     const s = q.trim().toLowerCase();
     const list = s
-      ? meals.filter((m) => `${m.nameAr || ""} ${m.nameEn || ""}`.toLowerCase().includes(s))
-      : meals;
+      ? dayMeals.filter((m) => `${m.nameAr || ""} ${m.nameEn || ""}`.toLowerCase().includes(s))
+      : dayMeals;
     return list.slice(0, 40);
-  }, [q, meals]);
+  }, [q, dayMeals]);
 
   return (
     <div className="relative">
@@ -110,9 +128,20 @@ function MealPicker({ meals, value, valueName, isRtl, onPick }: {
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
           <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden">
-            <div className="p-2 border-b border-slate-100">
+            <div className="p-2 border-b border-slate-100 space-y-1.5">
               <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                 placeholder={isRtl ? "ابحث باسم الطبق…" : "Search dish name…"} className="h-9 text-sm" />
+              {filterWeek && filterDay && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10.5px] font-bold text-[#47759c]">
+                    {showAll ? (isRtl ? "كل المنيو" : "Full menu") : (isRtl ? `وجبات اليوم · دورة ${filterWeek}` : `Today's meals · cycle ${filterWeek}`)}
+                  </span>
+                  <button type="button" onClick={() => setShowAll((v) => !v)}
+                    className="text-[10.5px] font-black text-[#0E76AC] underline">
+                    {showAll ? (isRtl ? "اعرض وجبات اليوم فقط" : "Show today only") : (isRtl ? "اعرض كل المنيو" : "Show full menu")}
+                  </button>
+                </div>
+              )}
             </div>
             {/* ➕ طبق مخصّص (مش في المنيو) — تكتب اسمه بنفسك مثل "رز وفراخ مشوية" */}
             {q.trim() && !results.some((m) => nameOf(m).trim() === q.trim()) && (
@@ -156,6 +185,9 @@ export default function Customized() {
   const customers = (useQuery(api.customizedPlans.listCustomized, { sessionToken }) as any[] | undefined) || [];
   const meals = (useQuery(api.publicMeals.listMeals, {}) as any[] | undefined) || [];
   const saveTemplate = useMutation(api.customizedPlans.saveTemplate);
+  // ✅ دورة المطبخ الحالية — البحث يعرض وجبات يوم التبويب في هذه الدورة
+  const restSettings = useQuery(api.restaurantSettings.get) as any;
+  const currentWeek = Math.min(4, Math.max(1, Number(restSettings?.currentCookingWeek) || 1));
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
@@ -311,8 +343,11 @@ export default function Customized() {
                 </Button>
               </div>
 
-              {/* تبويبات الأيام + نسخ لكل الأيام */}
+              {/* تبويبات الأيام + دورة المطبخ + نسخ لكل الأيام */}
               <div className="rounded-2xl border border-slate-100 bg-white p-2.5 flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-black text-white bg-[#0E2A4A] rounded-lg px-2.5 py-1.5 shrink-0">
+                  🍳 {t("دورة المطبخ", "Cycle")} {currentWeek}
+                </span>
                 <div className="flex gap-1 flex-wrap flex-1">
                   {DAYS.map((d) => (
                     <button key={d.key} onClick={() => setActiveDay(d.key)}
@@ -353,6 +388,8 @@ export default function Customized() {
                         value={s.baseMealId}
                         valueName={s.baseName}
                         isRtl={isRtl}
+                        filterWeek={currentWeek}
+                        filterDay={activeDay}
                         onPick={(m) => patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined })}
                       />
 
