@@ -127,6 +127,63 @@ export const assignOne = mutation({
   },
 });
 
+/**
+ * ✅ إسناد جماعي: كل محطة لسائقها (تقسيم بالمنطقة). الواجهة تحسب أي منطقة
+ *    لأي سائق وترسل قائمة {planId, driverId}. هنا نُسند ونرتّب مسار كل سائق
+ *    على حدة (أقرب-جار من المطعم) فيبقى لكل سائق جولته مرتّبة.
+ */
+export const assignMany = mutation({
+  args: {
+    assignments: v.array(v.object({ planId: v.id("dailyPlans"), driverId: v.id("users") })),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { assignments, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    if (!assignments.length) return { assigned: 0, drivers: 0 };
+
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const storeLat = (settings as any)?.storeLat ?? 25.2854;
+    const storeLng = (settings as any)?.storeLng ?? 51.531;
+
+    // جمّع المحطات حسب السائق
+    const byDriver = new Map<string, { plan: any; lat: number | null; lng: number | null }[]>();
+    for (const a of assignments) {
+      const plan = await ctx.db.get(a.planId);
+      if (!plan) continue;
+      const c = (plan as any).customerId ? await ctx.db.get((plan as any).customerId) : null;
+      const lat = (c as any)?.lat ?? null, lng = (c as any)?.lng ?? null;
+      const key = String(a.driverId);
+      if (!byDriver.has(key)) byDriver.set(key, []);
+      byDriver.get(key)!.push({ plan, lat, lng });
+    }
+
+    let assigned = 0;
+    for (const [driverId, stops] of byDriver) {
+      // ترتيب أقرب-جار من المطعم لكل سائق
+      const withC = stops.filter((s) => s.lat != null && s.lng != null);
+      const noC = stops.filter((s) => s.lat == null || s.lng == null);
+      let curLat = storeLat, curLng = storeLng;
+      const ordered: any[] = [];
+      const pool = [...withC];
+      while (pool.length) {
+        let best = 0, bestKm = Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          const km = haversineKm(curLat, curLng, pool[i].lat as number, pool[i].lng as number);
+          if (km < bestKm) { bestKm = km; best = i; }
+        }
+        const next = pool.splice(best, 1)[0];
+        ordered.push(next); curLat = next.lat as number; curLng = next.lng as number;
+      }
+      let seq = 1;
+      for (const s of [...ordered, ...noC]) {
+        await ctx.db.patch(s.plan._id, { driverId: driverId as any, routeSeq: seq++, updatedAt: Date.now() });
+        assigned++;
+      }
+    }
+    return { assigned, drivers: byDriver.size };
+  },
+});
+
 /* ───────────────────────── دورة حياة التوصيل ───────────────────────── */
 
 /**

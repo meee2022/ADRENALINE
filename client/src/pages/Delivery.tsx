@@ -3,7 +3,7 @@
  * @description شاشة التوصيل - تتبع وتسليم الطلبات
  * @convex convex/dailyPlans.ts, convex/customers.ts
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useDailyPlans, useUpdateDailyPlan, useCustomers } from "@/lib/api";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
@@ -40,6 +40,9 @@ export default function Delivery() {
   const drivers = useQuery(api.delivery.listDrivers, { sessionToken: sessionTok }) as any[] | undefined;
   const board = useQuery(api.delivery.supervisorBoard, { date: formattedDate, deliveryTime: activeTab, sessionToken: sessionTok }) as any;
   const assignShift = useMutation(api.delivery.assignShift);
+  const assignMany = useMutation(api.delivery.assignMany);
+  const [areaDriver, setAreaDriver] = useState<Record<string, string>>({});
+  const [assigningArea, setAssigningArea] = useState(false);
   const markDeliveredMut = useMutation(api.delivery.markDelivered);
   const rescheduleMut = useMutation(api.delivery.reschedule);
   const [selectedDriver, setSelectedDriver] = useState("");
@@ -151,6 +154,36 @@ export default function Delivery() {
   const sortedPlans = [...plans].sort((a: any, b: any) =>
     getArea(getCustomer(a.customerId)?.address).localeCompare(getArea(getCustomer(b.customerId)?.address), "ar"));
   const routeUrl = buildRouteUrl(sortedPlans.map((p: any) => getCustomer(p.customerId)?.address).filter(Boolean) as string[]);
+
+  // ✅ مناطق شيفت اليوم (من العناوين) + عدد المحطات لكل منطقة — للإسناد بالمنطقة
+  const areaGroups = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const p of sortedPlans) {
+      const a = getArea(getCustomer(p.customerId)?.address);
+      counts[a] = (counts[a] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .map(([area, count]) => ({ area, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [sortedPlans]);
+
+  const handleAssignByArea = async () => {
+    const assignments = sortedPlans
+      .map((p: any) => {
+        const area = getArea(getCustomer(p.customerId)?.address);
+        const driverId = areaDriver[area];
+        return driverId ? { planId: p._id, driverId } : null;
+      })
+      .filter(Boolean) as { planId: string; driverId: string }[];
+    if (!assignments.length) { toast({ title: isRtl ? "اختر سائقاً لمنطقة واحدة على الأقل" : "Pick a driver for at least one area", variant: "destructive" }); return; }
+    setAssigningArea(true);
+    try {
+      const r: any = await assignMany({ assignments: assignments as any, sessionToken: sessionTok });
+      toast({ title: isRtl ? "تم الإسناد بالمنطقة" : "Assigned by area", description: isRtl ? `${r.assigned} محطة على ${r.drivers} سائق` : `${r.assigned} stops across ${r.drivers} drivers` });
+    } catch (e: any) {
+      toast({ title: isRtl ? "تعذّر الإسناد" : "Assign failed", description: String(e?.message || e), variant: "destructive" });
+    } finally { setAssigningArea(false); }
+  };
 
   // ─── الخريطة ───
   const [showMap, setShowMap] = useState(false);
@@ -309,6 +342,40 @@ export default function Delivery() {
               <span className="text-[11px] text-amber-600 font-bold">{isRtl ? "لا يوجد سائقون — أضف مستخدماً بدور DELIVERY" : "No drivers — add a DELIVERY user"}</span>
             )}
           </div>
+
+          {/* ── إسناد بالمنطقة: كل منطقة لسائق (تقسيم على أكتر من سائق) ── */}
+          {drivers && drivers.length > 0 && areaGroups.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <UserCog className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-black text-gray-800">{isRtl ? "أو: قسّم بالمنطقة على السواقين" : "Or: split by area across drivers"}</span>
+                <span className="text-[11px] text-slate-400 font-bold">{areaGroups.length} {isRtl ? "منطقة" : "areas"}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {areaGroups.map(({ area, count }) => (
+                  <div key={area} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/60 p-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-slate-800 truncate">{area}</p>
+                      <p className="text-[10px] font-bold text-slate-400">{count} {isRtl ? "محطة" : "stops"}</p>
+                    </div>
+                    <select
+                      value={areaDriver[area] || ""}
+                      onChange={(e) => setAreaDriver((prev) => ({ ...prev, [area]: e.target.value }))}
+                      className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold text-gray-700 bg-white shrink-0 max-w-[45%]"
+                    >
+                      <option value="">{isRtl ? "سائق…" : "Driver…"}</option>
+                      {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <button onClick={handleAssignByArea} disabled={assigningArea}
+                className="mt-2 h-10 px-4 rounded-xl text-white text-sm font-black disabled:opacity-50"
+                style={{ background: "linear-gradient(135deg,#10b981,#0E766E)" }}>
+                {assigningArea ? "…" : (isRtl ? "أسند المناطق ورتّب مسار كل سائق" : "Assign areas & route each driver")}
+              </button>
+            </div>
+          )}
 
           {/* تحليلات مباشرة */}
           {board?.analytics && (
