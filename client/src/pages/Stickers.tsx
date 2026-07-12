@@ -1,5 +1,5 @@
 // client/src/pages/Stickers.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -51,6 +51,36 @@ export default function Stickers() {
   const mealStickers = data?.mealStickers ?? [];
   const activeStickers = activeTab === "MEALS" ? mealStickers : boxStickers;
 
+  // ✅ تحديد استيكرات لطباعتها لوحدها (لو الطابعة وقفت في نص الطباعة، تعيد المتبقّي فقط)
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  // طباعة مؤجّلة: نضبط النطاق قبل ما نفتح مربّع الطباعة
+  const [pendingPrint, setPendingPrint] = useState<null | "all" | "selected">(null);
+
+  // امسح التحديد لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
+  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); }, [activeTab, date, deliveryTime]);
+
+  useEffect(() => {
+    if (!pendingPrint) return;
+    // الـclass اتطبّق في هذا الرندر، نطبع ثم نصفّر
+    window.print();
+    const id = setTimeout(() => setPendingPrint(null), 300);
+    return () => clearTimeout(id);
+  }, [pendingPrint]);
+
+  const toggleOne = (idx: number) =>
+    setSelected((s) => { const n = new Set(s); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
+  const selectAll = () => setSelected(new Set(activeStickers.map((_: any, i: number) => i)));
+  const clearSel = () => setSelected(new Set());
+  const applyRange = () => {
+    const a = Math.max(1, parseInt(rangeFrom, 10) || 1);
+    const b = Math.min(activeStickers.length, parseInt(rangeTo, 10) || activeStickers.length);
+    const n = new Set(selected);
+    for (let i = a; i <= b; i++) n.add(i - 1); // 1-based → 0-based
+    setSelected(n);
+  };
+
   function resetSizes() {
     setLabelW(DEFAULTS.w);
     setLabelH(DEFAULTS.h);
@@ -95,7 +125,7 @@ export default function Stickers() {
               ))}
             </div>
             <button
-              onClick={() => window.print()}
+              onClick={() => setPendingPrint("all")}
               className="h-10 px-5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
               style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
             >
@@ -226,6 +256,49 @@ export default function Stickers() {
             {activeStickers.length} {isRtl ? "ستيكر" : "stickers"}
           </span>
         </div>
+
+        {/* ✅ تحديد استيكرات معيّنة لطباعتها لوحدها (لو الطابعة وقفت في النص) */}
+        {activeStickers.length > 0 && (
+          <div className="rounded-xl border border-[#3cc4f0]/30 bg-[#f2fbff] p-3 flex flex-wrap items-end gap-2">
+            <div className="flex items-end gap-1.5">
+              <div>
+                <label className="text-[11px] font-bold text-[#47759c] block mb-0.5">{isRtl ? "من رقم" : "From #"}</label>
+                <Input value={rangeFrom} onChange={(e) => setRangeFrom(e.target.value)} type="number" min={1} max={activeStickers.length}
+                  className="h-9 w-20 text-center font-bold" placeholder="1" />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-[#47759c] block mb-0.5">{isRtl ? "إلى رقم" : "To #"}</label>
+                <Input value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} type="number" min={1} max={activeStickers.length}
+                  className="h-9 w-20 text-center font-bold" placeholder={String(activeStickers.length)} />
+              </div>
+              <button onClick={applyRange} className="h-9 px-3 rounded-lg text-xs font-bold text-white bg-[#0E76AC] hover:opacity-90">
+                {isRtl ? "حدّد النطاق" : "Select range"}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button onClick={selectAll} className="h-9 px-3 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:border-[#0E76AC]">
+                {isRtl ? "تحديد الكل" : "Select all"}
+              </button>
+              <button onClick={clearSel} className="h-9 px-3 rounded-lg text-xs font-bold border border-slate-200 bg-white hover:border-red-400 text-red-500">
+                {isRtl ? "مسح التحديد" : "Clear"}
+              </button>
+            </div>
+            <button
+              onClick={() => setPendingPrint("selected")}
+              disabled={selected.size === 0}
+              className="h-9 px-4 rounded-lg text-xs font-black text-white flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              {isRtl ? `طباعة المحدَّد (${selected.size})` : `Print selected (${selected.size})`}
+            </button>
+            <p className="text-[11px] text-[#47759c] w-full">
+              {isRtl
+                ? "💡 لو الطابعة وقفت، اكتب من رقم الاستيكر اللي وقف لآخر رقم، «حدّد النطاق»، ثم «طباعة المحدَّد» — يطبع المتبقّي بس."
+                : "💡 If the printer stopped, enter the range from where it stopped, Select range, then Print selected — reprints only those."}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* ── Sticker grid (visible on screen + print) ── */}
@@ -243,12 +316,23 @@ export default function Stickers() {
           </p>
         </div>
       ) : (
-        <div className="print-grid mt-4">
-          {activeStickers.map((s: any, idx: number) =>
-            activeTab === "MEALS"
-              ? <MealSticker key={idx} s={s} />
-              : <BoxSticker key={idx} s={s} />
-          )}
+        <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
+          {activeStickers.map((s: any, idx: number) => {
+            const isSel = selected.has(idx);
+            return (
+              <div key={idx} className={cn("st-item", !isSel && "st-not-selected")}>
+                {/* رأس التحديد — على الشاشة فقط، يختفي في الطباعة */}
+                <label className={cn(
+                  "print:hidden flex items-center gap-1.5 mb-1 cursor-pointer select-none text-[11px] font-black rounded-md px-1.5 py-0.5 w-fit",
+                  isSel ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-500",
+                )}>
+                  <input type="checkbox" checked={isSel} onChange={() => toggleOne(idx)} className="h-3 w-3" />
+                  #{idx + 1}
+                </label>
+                {activeTab === "MEALS" ? <MealSticker s={s} /> : <BoxSticker s={s} />}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -635,6 +719,8 @@ export default function Stickers() {
           .print\\:hidden { display: none !important; }
           body { margin: 0; }
           .print-grid { margin: 0 !important; }
+          /* ✅ عند «طباعة المحدَّد»: نخفي غير المحدد فلا يُطبع */
+          .print-grid.scope-selected .st-not-selected { display: none !important; }
           ${printerMode === "label" ? `
           /* ── وضع طابعة الاستيكرات: كل استيكر = صفحة مستقلة بمقاس الليبل بالظبط ── */
           @page {
@@ -643,22 +729,30 @@ export default function Stickers() {
           }
           html, body { width: ${clamp(labelW, 20, 120)}mm; }
           .print-grid { display: block !important; gap: 0 !important; }
+          /* فاصل الصفحة على الغلاف (st-item) لا على .label — لأن كل .label صار
+             آخر عنصر داخل غلافه؛ ونستخدم break-before حتى لا تخرج صفحة فاضية
+             في نهاية «طباعة المحدَّد». */
+          .st-item {
+            page-break-before: always;
+            break-before: page;
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin: 0 !important;
+          }
+          .st-item:first-child { page-break-before: auto; break-before: auto; }
           .label {
             width: ${clamp(labelW, 20, 120)}mm !important;
             height: ${clamp(labelH, 15, 120)}mm !important;
             margin: 0 !important;
             border: none !important;        /* حافة الورقة هي حدود الاستيكر */
             border-radius: 0 !important;
-            page-break-after: always;
-            break-after: page;
             page-break-inside: avoid;
             break-inside: avoid;
           }
-          .label:last-child { page-break-after: auto; break-after: auto; }
           ` : `
           /* ── وضع ورقة A4: شبكة مع منع قصّ الاستيكر بين صفحتين ── */
           @page { size: A4 portrait; margin: 6mm; }
-          .label { page-break-inside: avoid; break-inside: avoid; }
+          .st-item, .label { page-break-inside: avoid; break-inside: avoid; }
           `}
         }
       `}</style>
