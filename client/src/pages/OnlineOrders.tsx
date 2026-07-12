@@ -96,6 +96,26 @@ export default function OnlineOrders() {
     setTimeout(() => w.print(), 300);
   };
 
+  // 🖥️ شاشة المتابعة الموحّدة: يفتح لوحات المنصّات الثلاث كنوافذ مرتّبة تلقائياً
+  //    جنب بعض (طلبات يمنع التضمين iframe، فالنوافذ المرتّبة أقرب حل ممكن).
+  //    الجلسات محفوظة في المتصفح — تسجّل دخولك أول مرة فقط.
+  const PORTALS = [
+    { key: "SNOONU", url: "https://merchant.snoonu.com/dashboard/order" },
+    { key: "TALABAT", url: "https://partner-app.talabat.com/live-orders" },
+    { key: "RAFEEQ", url: "https://partner.gorafeeq.com/#/dashboard" },
+  ];
+  const openWallboard = () => {
+    const W = window.screen.availWidth, H = window.screen.availHeight;
+    const colW = Math.floor(W / PORTALS.length);
+    PORTALS.forEach((p, i) => {
+      window.open(
+        p.url,
+        `wb_${p.key}`,
+        `left=${i * colW},top=0,width=${colW},height=${H - 40},noopener`,
+      );
+    });
+  };
+
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6">
       <DashboardHeader
@@ -109,9 +129,16 @@ export default function OnlineOrders() {
           { value: Math.round(monthT.revenue), labelAr: "إيراد الشهر (ر.ق)", labelEn: "Month revenue" },
         ] : undefined}
         actions={
-          <Button onClick={handlePrint} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm">
-            <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقرير شهري", "Monthly Report")}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={openWallboard} className="h-11 rounded-xl font-black text-white shadow-lg text-sm"
+              style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
+              <ShoppingBag className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
+              {t("🖥️ شاشة المتابعة (المنصّات الثلاث)", "🖥️ Wallboard (3 platforms)")}
+            </Button>
+            <Button onClick={handlePrint} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm">
+              <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقرير شهري", "Monthly Report")}
+            </Button>
+          </div>
         }
       />
 
