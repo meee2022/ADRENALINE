@@ -46,7 +46,8 @@ export default function Stickers() {
     [labelW, labelH, gap, pad],
   );
 
-  const data = useStickers({ date, deliveryTime, lang: isRtl ? "ar" : "en" });
+  // ✅ أسماء الوجبات على الاستيكر إنجليزي دائماً (المطبخ/التغليف يقرأ إنجليزي)
+  const data = useStickers({ date, deliveryTime, lang: "en" });
   const boxStickers = data?.boxStickers ?? [];
   const mealStickers = data?.mealStickers ?? [];
   const activeStickers = activeTab === "MEALS" ? mealStickers : boxStickers;

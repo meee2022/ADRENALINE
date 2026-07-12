@@ -146,7 +146,7 @@ export default function Kitchen() {
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);
   const getCategory = (id: string) => categories.find((c: any) => c._id === id);
 
-  // ✅ حل اسم أي وجبة (منيو عام + داخلي) باللغة الحالية
+  // ✅ محتوى وجبات المطبخ إنجليزي دائماً (المطبخ يقرأ إنجليزي) — بغضّ النظر عن لغة الجهاز.
   const mealById = useMemo(() => {
     const m = new Map<string, any>();
     [...(publicMealsList || []), ...(menuItems || [])].forEach((x: any) => { if (x?._id) m.set(String(x._id), x); });
@@ -154,23 +154,21 @@ export default function Kitchen() {
   }, [publicMealsList, menuItems]);
   const mealNameInLang = (mealId: any, item?: any): string => {
     const meal: any = (mealId && (getMenuItem(mealId) || mealById.get(String(mealId)))) || null;
-    if (meal) return String(isRtl ? (meal.nameAr || meal.nameEn || meal.name) : (meal.nameEn || meal.name || meal.nameAr)).trim();
-    return String(isRtl
-      ? (item?.mealNameAr || item?.mealNameEn || "وجبة غير محددة")
-      : (item?.mealNameEn || item?.mealNameAr || "Unspecified meal")).trim();
+    if (meal) return String(meal.nameEn || meal.name || meal.nameAr).trim();
+    return String(item?.mealNameEn || item?.mealNameAr || "Unspecified meal").trim();
   };
-  // ✅ تركيب سطر الوجبة المخصّصة بلغة الواجهة (أساس من المنيو + بروتين/كارب مترجمان + جرامات)
+  // ✅ تركيب سطر الوجبة المخصّصة — إنجليزي دائماً للمطبخ (أساس nameEn + بروتين/كارب مترجَمان + جرامات g)
   const composeCustItem = (it: any): string => {
-    const gUnit = isRtl ? "جم" : "g";
+    const gUnit = "g";
     const m: any = it.baseMealId ? mealById.get(String(it.baseMealId)) : null;
-    const base = m ? String(isRtl ? (m.nameAr || m.nameEn || m.name) : (m.nameEn || m.nameAr || m.name)).trim() : String(it.baseName || "").trim();
+    const base = m ? String(m.nameEn || m.nameAr || m.name).trim() : String(it.baseName || "").trim();
     const bits: string[] = [];
     if (base) bits.push(base);
     if (it.type === "MAIN") {
       const inner: string[] = [];
-      if (it.proteinG) inner.push(`${trName(it.proteinName || "", PROTEIN_TR, isRtl) || (isRtl ? "بروتين" : "Protein")} ${it.proteinG}${gUnit}`);
-      const carbTr = trName(it.carbName || "", CARB_TR, isRtl);
-      if (it.carbName && carbTr !== (isRtl ? "بدون" : "None") && it.carbG) inner.push(`${carbTr} ${it.carbG}${gUnit}`);
+      if (it.proteinG) inner.push(`${trName(it.proteinName || "", PROTEIN_TR, false) || "Protein"} ${it.proteinG}${gUnit}`);
+      const carbTr = trName(it.carbName || "", CARB_TR, false);
+      if (it.carbName && carbTr !== "None" && it.carbG) inner.push(`${carbTr} ${it.carbG}${gUnit}`);
       if (inner.length) bits.push(bits.length ? `— ${inner.join(" + ")}` : inner.join(" + "));
     }
     return bits.join(" ").trim() || String(it.text || it.baseName || "—").trim();
@@ -261,12 +259,11 @@ export default function Kitchen() {
         .forEach((item: any) => {
           const mealId = item.menuItemId || item.mealId;
           const meal: any = getMenuItem(mealId) || (mealId ? pubById.get(String(mealId)) : null);
+          // ✅ إنجليزي دائماً — كشف/إجمالي المطبخ للطاقم الإنجليزي
           const rawMealName = String(
             meal
-              ? (isRtl ? (meal.nameAr || meal.nameEn || meal.name) : (meal.nameEn || meal.name || meal.nameAr))
-              : (isRtl
-                  ? (item.mealNameAr || item.mealNameEn || "وجبة غير محددة")
-                  : (item.mealNameEn || item.mealNameAr || "Unknown Meal")),
+              ? (meal.nameEn || meal.name || meal.nameAr)
+              : (item.mealNameEn || item.mealNameAr || "Unknown Meal"),
           ).trim();
 
           // ✅ توحيد الاسم الأساسي (زي كشف الإكسيل): "LEMON CHICKEN + RICE /NO TOMATO"
@@ -509,6 +506,8 @@ export default function Kitchen() {
 
   // ✅ طباعة كشف الشيف — نافذة نظيفة A4 (إجمالي + أطباق مرتّبة + تعديلات مجمّعة + مخصّصين)
   const handlePrintChefSheet = () => {
+    // ✅ كشف الشيف + الـPDF إنجليزي دائماً (الطاقم يقرأ إنجليزي) — نُظلّل isRtl داخل الدالة.
+    const isRtl = false;
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
     const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
     const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
