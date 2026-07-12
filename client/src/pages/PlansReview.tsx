@@ -145,7 +145,7 @@ export default function PlansReviewPage() {
 
       return {
         title: c?.fullName || plan.customerName || "مشترك",
-        subtitle: [c?.phone, c?.program, c?.deliveryTime === "MORNING" ? "صباحي" : "مسائي"]
+        subtitle: [c?.phone, c?.program, c?.deliveryTime === "MORNING" ? (isRtl ? "صباحي" : "Morning") : (isRtl ? "مسائي" : "Evening")]
           .filter(Boolean)
           .join(" · "),
         rows,
@@ -153,12 +153,14 @@ export default function PlansReviewPage() {
     });
 
     printMealPlan({
-      title: `جدول وجبات اليوم — ${format(date, "dd MMMM yyyy", { locale: dateLocale })}`,
-      subtitle: `${plansList.length} مشترك معتمد · ${stats.totalMeals} وجبة`,
+      title: `${isRtl ? "جدول وجبات اليوم" : "Today's meal plan"} — ${format(date, "dd MMMM yyyy", { locale: dateLocale })}`,
+      subtitle: isRtl
+        ? `${plansList.length} مشترك معتمد · ${stats.totalMeals} وجبة`
+        : `${plansList.length} approved subscribers · ${stats.totalMeals} meals`,
       kpis: [
-        { label: "مشتركون معتمدون", value: plansList.length },
-        { label: "إجمالي الوجبات", value: stats.totalMeals },
-        { label: "طلبات خاصة", value: stats.specialRequests },
+        { label: isRtl ? "مشتركون معتمدون" : "Approved subscribers", value: plansList.length },
+        { label: isRtl ? "إجمالي الوجبات" : "Total meals", value: stats.totalMeals },
+        { label: isRtl ? "طلبات خاصة" : "Special requests", value: stats.specialRequests },
       ],
       groups,
     });

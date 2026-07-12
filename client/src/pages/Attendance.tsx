@@ -294,7 +294,7 @@ export default function Attendance() {
       <td class="c b">${e.workedDays ?? 0}</td><td class="c">${e.absent || 0}</td>
       <td class="c">${e.late || 0}</td><td class="c ot">${Math.round((e.otHours || 0) * 10) / 10}</td>
     </tr>`).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>تقرير الحضور ${esc(month)}</title>
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${t("تقرير الحضور", "Attendance Report")} ${esc(month)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
         body{margin:0;padding:18px;color:#0f1516}
@@ -308,15 +308,15 @@ export default function Attendance() {
         .b{font-weight:900} .ot{color:#0E76AC;font-weight:800}
         @page{size:A4;margin:12mm}
       </style></head><body>
-      <h1>تقرير الحضور الشهري — ADRENALINE</h1>
-      <div class="sub">الشهر: ${esc(month)} · عدد الموظفين: ${sorted.length}</div>
+      <h1>${t("تقرير الحضور الشهري", "Monthly Attendance Report")} — ADRENALINE</h1>
+      <div class="sub">${t("الشهر", "Month")}: ${esc(month)} · ${t("عدد الموظفين", "Employees")}: ${sorted.length}</div>
       <div class="kpis">
-        <div class="kpi"><div class="v" style="color:#10b981">${tot.present}</div><div class="l">إجمالي أيام الحضور</div></div>
-        <div class="kpi"><div class="v" style="color:#ef4444">${tot.absent}</div><div class="l">إجمالي الغياب</div></div>
-        <div class="kpi"><div class="v" style="color:#f59e0b">${tot.late}</div><div class="l">مرات التأخير</div></div>
-        <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(tot.ot)}</div><div class="l">إجمالي الأوفرتايم (ساعة)</div></div>
+        <div class="kpi"><div class="v" style="color:#10b981">${tot.present}</div><div class="l">${t("إجمالي أيام الحضور", "Total present days")}</div></div>
+        <div class="kpi"><div class="v" style="color:#ef4444">${tot.absent}</div><div class="l">${t("إجمالي الغياب", "Total absences")}</div></div>
+        <div class="kpi"><div class="v" style="color:#f59e0b">${tot.late}</div><div class="l">${t("مرات التأخير", "Late count")}</div></div>
+        <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(tot.ot)}</div><div class="l">${t("إجمالي الأوفرتايم (ساعة)", "Total overtime (hrs)")}</div></div>
       </div>
-      <table><thead><tr><th>#</th><th>الموظف</th><th>أيام الحضور</th><th>الغياب</th><th>التأخير</th><th>الأوفرتايم (س)</th></tr></thead>
+      <table><thead><tr><th>#</th><th>${t("الموظف", "Employee")}</th><th>${t("أيام الحضور", "Present days")}</th><th>${t("الغياب", "Absence")}</th><th>${t("التأخير", "Late")}</th><th>${t("الأوفرتايم (س)", "Overtime (h)")}</th></tr></thead>
       <tbody>${rows}</tbody></table>
       </body></html>`;
     const w = window.open("", "_blank", "width=900,height=1000");

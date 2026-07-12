@@ -76,19 +76,19 @@ export default function OnlineOrders() {
     const rowsHtml = PLATFORMS.map((p) => {
       const d = bp[p.key] || { orders: 0, meals: 0, revenue: 0 };
       if (!d.orders) return "";
-      return `<tr><td class="r">${p.ar}</td><td class="c b">${d.orders}</td><td class="c b">${d.meals}</td><td class="c b" style="color:#0E76AC">${Math.round(d.revenue)} ر.ق</td></tr>`;
+      return `<tr><td class="r">${isRtl ? p.ar : p.en}</td><td class="c b">${d.orders}</td><td class="c b">${d.meals}</td><td class="c b" style="color:#0E76AC">${Math.round(d.revenue)} ${t("ر.ق", "QAR")}</td></tr>`;
     }).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>طلبات أونلاين ${esc(month)}</title>
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${t("طلبات أونلاين", "Online Orders")} ${esc(month)}</title>
       <style>*{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}body{margin:0;padding:16px;color:#0f1516}
       h1{font-size:20px;margin:0}.sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
       table{width:100%;border-collapse:collapse;font-size:14px}th{background:#0E76AC;color:#fff;padding:8px 6px;font-weight:800}td{padding:8px 6px;border:1px solid #e3ebf2}
       .c{text-align:center}.r{text-align:right;font-weight:700}.b{font-weight:900}
       tfoot td{background:#eaf3fb;font-weight:900}
       @page{size:A4;margin:12mm}</style></head><body>
-      <h1>حصر طلبات المنصّات الأونلاين — ADRENALINE</h1><div class="sub">الشهر: ${esc(month)}</div>
-      <table><thead><tr><th>المنصّة</th><th>عدد الطلبات</th><th>عدد الوجبات</th><th>الإيراد</th></tr></thead>
+      <h1>${t("حصر طلبات المنصّات الأونلاين", "Online Platforms Orders Report")} — ADRENALINE</h1><div class="sub">${t("الشهر", "Month")}: ${esc(month)}</div>
+      <table><thead><tr><th>${t("المنصّة", "Platform")}</th><th>${t("عدد الطلبات", "Orders")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإيراد", "Revenue")}</th></tr></thead>
       <tbody>${rowsHtml || '<tr><td colspan=4 class=c>—</td></tr>'}</tbody>
-      <tfoot><tr><td class="r">الإجمالي</td><td class="c">${monthT.orders}</td><td class="c">${monthT.meals}</td><td class="c" style="color:#0E76AC">${Math.round(monthT.revenue)} ر.ق</td></tr></tfoot>
+      <tfoot><tr><td class="r">${t("الإجمالي", "Total")}</td><td class="c">${monthT.orders}</td><td class="c">${monthT.meals}</td><td class="c" style="color:#0E76AC">${Math.round(monthT.revenue)} ${t("ر.ق", "QAR")}</td></tr></tfoot>
       </table></body></html>`;
     const w = window.open("", "_blank", "width=900,height=1000");
     if (!w) { alert(t("اسمح بالنوافذ المنبثقة", "Allow pop-ups")); return; }
