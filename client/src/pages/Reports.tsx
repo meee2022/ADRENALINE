@@ -27,6 +27,36 @@ import {
 
 type ReportType = "sales" | "kitchen" | "delivery" | "customers" | "inventory";
 
+/** بطاقة موحّدة بظل فاخر — DNA نظام الهوية بألوان المشروع. */
+const CARD_STYLE: React.CSSProperties = {
+  border: "1px solid #e6edf3",
+  boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 10px 24px -12px rgba(71,117,156,.18), 0 24px 48px -24px rgba(60,196,240,.12)",
+};
+
+/** ستايل مركزي للتقارير (رؤوس جداول متدرّجة، صفوف متبادلة، حركة دخول). */
+function ReportsStyle() {
+  return (
+    <style>{`
+      .rpt-scope table { border-collapse: separate; border-spacing: 0; }
+      .rpt-scope table thead th {
+        background: linear-gradient(135deg, #4a7aa3, #345a7d);
+        color: #dbeafe !important;
+        font-weight: 700; font-size: 12px; letter-spacing: .01em;
+        border-bottom: 2px solid #3cc4f0; white-space: nowrap; height: 44px;
+      }
+      .rpt-scope table thead th:first-child { border-start-start-radius: 12px; }
+      .rpt-scope table thead th:last-child  { border-start-end-radius: 12px; }
+      .rpt-scope table tbody tr { transition: background .15s ease; }
+      .rpt-scope table tbody tr:nth-child(even) { background: rgba(71,117,156,.045); }
+      .rpt-scope table tbody tr:hover { background: rgba(60,196,240,.10); }
+      .rpt-scope table tbody td { border-bottom: 1px solid #eef2f6; }
+      @keyframes rptIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+      .rpt-anim { animation: rptIn .35s cubic-bezier(.16,1,.3,1) both; }
+      @media (prefers-reduced-motion: reduce) { .rpt-anim { animation: none; } }
+    `}</style>
+  );
+}
+
 /** helper موحّد للترجمة داخل كل مكوّن (t غير متاح عبر النطاق فنبنيه محلياً). */
 function useT() {
   const { language, dir } = useLanguage();
@@ -75,32 +105,19 @@ export default function Reports() {
   const [fromDate, setFromDate] = useState(lastMonth);
   const [toDate, setToDate] = useState(today);
 
+  const activeMeta = REPORTS.find((r) => r.key === activeReport)!;
+
   return (
-    <div className="space-y-6">
+    <div className="rpt-scope space-y-6">
+      <ReportsStyle />
       <DashboardHeader
         icon={<FileText className="h-6 w-6 sm:h-7 sm:w-7" />}
         titleAr="مركز التقارير" titleEn="Reports Center"
         subtitleAr="تقارير شاملة قابلة للتصدير والطباعة" subtitleEn="Comprehensive exportable & printable reports"
       />
 
-      {/* Filter bar */}
-      <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs">{t("من تاريخ", "From date")}</Label>
-              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">{t("إلى تاريخ", "To date")}</Label>
-              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Report tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+      {/* Report tabs — بطاقات بأيقونة-أورب */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
         {REPORTS.map((r) => {
           const Icon = r.icon;
           const isActive = activeReport === r.key;
@@ -108,16 +125,48 @@ export default function Reports() {
             <button
               key={r.key}
               onClick={() => setActiveReport(r.key)}
-              className={`p-3 rounded-2xl border transition-all flex flex-col items-center gap-2 ${
-                isActive ? "border-cyan-400 bg-cyan-50 shadow-sm" : "border-gray-200 bg-white hover:bg-[#f7fbfe]"
-              }`}
+              className="group relative flex items-center gap-3 rounded-2xl border p-3 text-start transition-all duration-200"
+              style={
+                isActive
+                  ? { borderColor: "transparent", background: "linear-gradient(135deg, #4a7aa3, #345a7d)", boxShadow: "0 8px 20px -8px rgba(52,90,125,.55)", transform: "translateY(-2px)" }
+                  : { borderColor: "#e6edf3", background: "#fff" }
+              }
             >
-              <Icon className="h-6 w-6" style={{ color: r.color }} />
-              <span className="text-xs font-bold">{isRtl ? r.titleAr : r.titleEn}</span>
+              <span
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl transition-transform group-hover:scale-105"
+                style={isActive ? { background: "rgba(255,255,255,.16)" } : { background: `${r.color}1a` }}
+              >
+                <Icon className="h-5 w-5" style={{ color: isActive ? "#fff" : r.color }} />
+              </span>
+              <span className={`text-sm font-bold leading-tight ${isActive ? "text-white" : "text-slate-700"}`}>
+                {isRtl ? r.titleAr : r.titleEn}
+              </span>
             </button>
           );
         })}
       </div>
+
+      {/* Filter bar */}
+      <Card className="rounded-2xl border-0" style={CARD_STYLE}>
+        <CardContent className="py-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl" style={{ background: `${activeMeta.color}1a` }}>
+              <activeMeta.icon className="h-5 w-5" style={{ color: activeMeta.color }} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-500">{t("من تاريخ", "From date")}</Label>
+              <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-10" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] font-semibold text-slate-500">{t("إلى تاريخ", "To date")}</Label>
+              <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10" />
+            </div>
+            <p className="ms-auto text-xs text-slate-400 self-center hidden sm:block">
+              {t("اختر تقريرًا من الأعلى", "Pick a report above")}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Selected report */}
       {activeReport === "sales" && <SalesReport from={fromDate} to={toDate} />}
@@ -133,11 +182,11 @@ function ReportToolbar({ onExport, onPrint }: { onExport: () => void; onPrint: (
   const { t } = useT();
   return (
     <div className="flex items-center gap-2 print:hidden">
-      <Button onClick={onExport} variant="outline" size="sm" className="gap-2">
+      <Button onClick={onExport} size="sm" className="gap-2 bg-[#3cc4f0] text-[#0f1516] font-bold hover:bg-[#2bb0dc] shadow-sm">
         <Download className="h-4 w-4" />
         {t("تصدير CSV", "Export CSV")}
       </Button>
-      <Button onClick={onPrint} variant="outline" size="sm" className="gap-2">
+      <Button onClick={onPrint} variant="outline" size="sm" className="gap-2 border-[#cfe0ec] text-[#47759c] hover:bg-[#eef4f9]">
         <Printer className="h-4 w-4" />
         {t("طباعة", "Print")}
       </Button>
@@ -177,7 +226,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
   };
 
   return (
-    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+    <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المبيعات", "Sales Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -255,7 +304,7 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
   };
 
   return (
-    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+    <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المطبخ", "Kitchen Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -306,7 +355,7 @@ function DeliveryReport({ from, to }: { from: string; to: string }) {
   );
 
   return (
-    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+    <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader>
         <CardTitle>{t("تقرير التوصيل", "Delivery Report")}</CardTitle>
       </CardHeader>
@@ -374,7 +423,7 @@ function CustomersReport() {
   };
 
   return (
-    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+    <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير العملاء", "Customers Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -440,7 +489,7 @@ function InventoryReport() {
   };
 
   return (
-    <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
+    <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المخزون", "Inventory Report")}</CardTitle>
         <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
@@ -492,12 +541,23 @@ function InventoryReport() {
 function StatBox({ label, value, highlight }: { label: string; value: any; highlight?: boolean }) {
   return (
     <div
-      className={`p-3 rounded-2xl border bg-white ${
-        highlight ? "border-cyan-200" : "border-gray-200"
-      }`}
+      className="relative overflow-hidden rounded-2xl border p-4"
+      style={
+        highlight
+          ? { borderColor: "transparent", background: "linear-gradient(135deg, #eaf7fd, #ffffff)", boxShadow: "0 8px 20px -12px rgba(60,196,240,.4)" }
+          : { borderColor: "#e6edf3", background: "#fff" }
+      }
     >
-      <p className="text-xs text-gray-400 font-semibold">{label}</p>
-      <p className={`text-xl font-black tabular-nums ${highlight ? "text-[#0E76AC]" : "text-slate-800"}`}>
+      {/* شريط لوني جانبي */}
+      <span
+        className="absolute inset-y-0 w-1"
+        style={{ insetInlineStart: 0, background: highlight ? "linear-gradient(#3cc4f0,#0E76AC)" : "#dbe4ec" }}
+      />
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
+      <p
+        className="mt-1 text-2xl font-black tabular-nums leading-none"
+        style={{ color: highlight ? "#0E76AC" : "#1e293b" }}
+      >
         {value}
       </p>
     </div>
