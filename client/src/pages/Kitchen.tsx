@@ -149,6 +149,10 @@ export default function Kitchen() {
       (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
 
+    // خريطة وجبات المنيو العام بالمعرّف — لحل اسم الطبق (وبالإنجليزي في وضع الإنجليزي)
+    const pubById = new Map<string, any>();
+    (publicMealsList || []).forEach((m: any) => { if (m?._id) pubById.set(String(m._id), m); });
+
     const summary: Record<string, {
       count: number;
       plainCount: number;     // ✅ عادي بدون تعديلات
@@ -214,11 +218,13 @@ export default function Kitchen() {
         .filter((item: any) => !item.isOff)
         .forEach((item: any) => {
           const mealId = item.menuItemId || item.mealId;
-          const meal: any = getMenuItem(mealId);
+          const meal: any = getMenuItem(mealId) || (mealId ? pubById.get(String(mealId)) : null);
           const rawMealName = String(
             meal
-              ? (isRtl ? meal.nameAr || meal.name : meal.name)
-              : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unknown Meal")),
+              ? (isRtl ? (meal.nameAr || meal.nameEn || meal.name) : (meal.nameEn || meal.name || meal.nameAr))
+              : (isRtl
+                  ? (item.mealNameAr || item.mealNameEn || "وجبة غير محددة")
+                  : (item.mealNameEn || item.mealNameAr || "Unknown Meal")),
           ).trim();
 
           // ✅ توحيد الاسم الأساسي (زي كشف الإكسيل): "LEMON CHICKEN + RICE /NO TOMATO"
@@ -344,7 +350,7 @@ export default function Kitchen() {
     return Object.entries(summary)
       .map(([name, data]) => ({ name, ...data, catRank: catRank(data.category), modGroups: buildModGroups(data.details) }))
       .sort((a, b) => (a.catRank - b.catRank) || (b.count - a.count));
-  }, [dailyPlans, formattedDate, customers, menuItems, categories, modifiers, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, categories, modifiers, isRtl]);
 
   // ✅ المشتركون المخصّصون مجمّعون باسم كل عميل (بوكس كامل للشخص) — زي كشف الأخصائية
   const customizedByPerson = useMemo(() => {
