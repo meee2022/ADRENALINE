@@ -175,3 +175,60 @@ export const kitchenPerformance = query({
       .map(([date, data]) => ({ date: date.slice(5), ...data }));
   },
 });
+
+// ✅ إيراد منصّات الأونلاين لهذا الشهر (طلبات/سنونو/رفيق…) — لكل منصّة عدد+وجبات+إيراد
+export const onlinePlatforms = query({
+  args: { month: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const month = args.month || new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 7);
+    const rows = await ctx.db
+      .query("onlineOrders")
+      .withIndex("by_month", (q) => q.eq("month", month))
+      .collect();
+    const map: Record<string, { platform: string; orders: number; meals: number; revenue: number }> = {};
+    for (const r of rows) {
+      const k = r.platform;
+      (map[k] ||= { platform: k, orders: 0, meals: 0, revenue: 0 });
+      map[k].orders++; map[k].meals += r.mealsCount || 0; map[k].revenue += r.amount || 0;
+    }
+    const platforms = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+    return {
+      month,
+      platforms,
+      totals: {
+        orders: platforms.reduce((s, p) => s + p.orders, 0),
+        meals: platforms.reduce((s, p) => s + p.meals, 0),
+        revenue: platforms.reduce((s, p) => s + p.revenue, 0),
+      },
+    };
+  },
+});
+
+// ✅ أداء السائقين آخر N يوم — عدد التوصيلات ومتوسط زمن التوصيل
+export const driverStats = query({
+  args: { days: v.optional(v.number()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const days = args.days || 7;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const plans = await ctx.db.query("dailyPlans").collect();
+    const drivers = await ctx.db.query("users").collect();
+    const nameOf = new Map(drivers.map((u: any) => [String(u._id), u.name || u.username || "?"]));
+
+    const map: Record<string, { driver: string; delivered: number; totalMin: number; timed: number }> = {};
+    for (const p of plans as any[]) {
+      if (!p.driverId || !p.deliveredAt || p.deliveredAt < cutoff) continue;
+      const k = String(p.driverId);
+      (map[k] ||= { driver: nameOf.get(k) || "?", delivered: 0, totalMin: 0, timed: 0 });
+      map[k].delivered++;
+      if (p.outForDeliveryAt && p.deliveredAt > p.outForDeliveryAt) {
+        map[k].totalMin += (p.deliveredAt - p.outForDeliveryAt) / 60000;
+        map[k].timed++;
+      }
+    }
+    return Object.values(map)
+      .map((d) => ({ driver: d.driver, delivered: d.delivered, avgMinutes: d.timed ? Math.round(d.totalMin / d.timed) : null }))
+      .sort((a, b) => b.delivered - a.delivered);
+  },
+});
