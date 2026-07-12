@@ -182,7 +182,7 @@ export default function OrderReview() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 pb-28 md:pb-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-6 pb-10">
         {/* ملخص الاختيارات */}
         <div className="bg-white rounded-2xl shadow-sm border p-6">
           <div className="flex items-start gap-4">
@@ -365,8 +365,8 @@ export default function OrderReview() {
           </div>
         </div>
 
-        {/* ملخص الطلب وزر التأكيد */}
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-cyan-100 p-6 sticky bottom-20 md:bottom-4">
+        {/* ملخص الطلب وزر التأكيد — في نهاية الصفحة (بدون sticky حتى لا يطفو فوق ما قبله على الموبايل) */}
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-cyan-100 p-6">
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className={`${isRtl ? "text-right" : "text-left"} p-3 rounded-xl bg-cyan-50 border border-cyan-100`}>
               <div className="text-xs text-slate-500 font-semibold mb-1">{t("إجمالي الوجبات", "Total meals")}</div>
