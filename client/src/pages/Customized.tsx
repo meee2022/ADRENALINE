@@ -460,6 +460,10 @@ export default function Customized() {
                 </button>
               </div>
 
+              {/* قوائم اقتراحات قابلة للكتابة (تقدر تختار أو تكتب نوع جديد مثل «دجاج مشوي») */}
+              <datalist id="cz-proteins">{PROTEIN_OPTIONS.map((p) => <option key={p.en} value={isRtl ? p.ar : p.en} />)}</datalist>
+              <datalist id="cz-carbs">{CARB_OPTIONS.map((c) => <option key={c.en} value={isRtl ? c.ar : c.en} />)}</datalist>
+
               {/* الخانات (لليوم المختار) */}
               {slots.map((s, i) => (
                 <div key={s.key} className="rounded-2xl border border-slate-100 bg-white p-3.5">
@@ -504,11 +508,9 @@ export default function Customized() {
                           <div className="rounded-xl bg-slate-50 p-2.5">
                             <label className="text-[11px] font-black text-slate-500 block mb-1">🥩 {t("البروتين (النوع + جم)", "Protein (type + g)")}</label>
                             <div className="flex items-center gap-1.5">
-                              <select value={s.proteinName || ""} onChange={(e) => patchSlot(i, { proteinName: e.target.value })}
-                                className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold bg-white flex-1 min-w-0">
-                                <option value="">{t("النوع…", "Type…")}</option>
-                                {PROTEIN_OPTIONS.map((p) => <option key={p.en} value={isRtl ? p.ar : p.en}>{isRtl ? p.ar : p.en}</option>)}
-                              </select>
+                              <input list="cz-proteins" value={s.proteinName || ""} onChange={(e) => patchSlot(i, { proteinName: e.target.value })}
+                                placeholder={t("النوع (اكتب أو اختر)", "Type or pick")}
+                                className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold bg-white flex-1 min-w-0" />
                               <Input type="number" value={s.proteinG ?? ""} onChange={(e) => patchSlot(i, { proteinG: Number(e.target.value) || 0 })}
                                 className="h-9 w-16 text-center font-black" placeholder={t("جم", "g")} />
                             </div>
@@ -523,10 +525,9 @@ export default function Customized() {
                           <div className="rounded-xl bg-slate-50 p-2.5">
                             <label className="text-[11px] font-black text-slate-500 block mb-1">🍚 {t("كارب", "Carb")}</label>
                             <div className="flex items-center gap-1.5">
-                              <select value={s.carbName || ""} onChange={(e) => patchSlot(i, { carbName: e.target.value })}
-                                className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold bg-white flex-1 min-w-0">
-                                {CARB_OPTIONS.map((c) => <option key={c.en} value={isRtl ? c.ar : c.en}>{isRtl ? c.ar : c.en}</option>)}
-                              </select>
+                              <input list="cz-carbs" value={s.carbName || ""} onChange={(e) => patchSlot(i, { carbName: e.target.value })}
+                                placeholder={t("اكتب أو اختر", "Type or pick")}
+                                className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold bg-white flex-1 min-w-0" />
                               <Input type="number" value={s.carbG ?? ""} onChange={(e) => patchSlot(i, { carbG: Number(e.target.value) || 0 })}
                                 className="h-9 w-16 text-center font-black" placeholder={t("جم", "g")} />
                             </div>
