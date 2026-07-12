@@ -130,6 +130,7 @@ export const getProfile = query({
           isActive: customer.isActive,
           skippedDates: Array.isArray((customer as any).skippedDates) ? (customer as any).skippedDates : [],
           loyaltyPoints: Number((customer as any).loyaltyPoints || 0),
+          loyaltyCredit: Number((customer as any).loyaltyCredit || 0),
           referralCode: "ADR-" + String(customer._id).replace(/[^a-zA-Z0-9]/g, "").slice(-6).toUpperCase(),
           program: customer.program,
           packageLabel: customer.packageLabel,

@@ -63,6 +63,8 @@ export default function CustomerProfile() {
   const setActive = useMutation(api.customers.setSubscriptionActive);
   const toggleSkipMut = useMutation(api.customers.toggleSkipDay);
   const markAllReadMut = useMutation(api.notifications.markAllAsReadForCustomer);
+  const redeemMut = useMutation(api.loyalty.redeem);
+  const loyaltyCfg = useQuery(api.loyalty.config, {}) as any;
 
   const loadProfile = async () => {
     if (!currentCustomer) return;
@@ -102,6 +104,19 @@ export default function CustomerProfile() {
       await toggleSkipMut({ id: profile.subscription.id, date, sessionToken });
       await loadProfile();
     } catch (e) { console.error(e); } finally { setBusy(false); }
+  };
+  const redeemPoints = async () => {
+    if (!profile?.subscription?.id || busy) return;
+    setBusy(true);
+    try {
+      const r = await redeemMut({ customerId: profile.subscription.id, sessionToken });
+      await loadProfile();
+      alert(isRtl
+        ? `تم استبدال ${r.redeemed} نقطة برصيد خصم ${r.credit} ر.ق ✅`
+        : `Redeemed ${r.redeemed} points for ${r.credit} QAR credit ✅`);
+    } catch (e: any) {
+      alert(e?.message || (isRtl ? "تعذّر الاستبدال" : "Redeem failed"));
+    } finally { setBusy(false); }
   };
   const markAllRead = async () => {
     if (!profile?.subscription?.id) return;
@@ -466,8 +481,43 @@ export default function CustomerProfile() {
                       <p className="text-2xl font-black text-slate-900">{subscription.loyaltyPoints || 0} <span className="text-sm font-bold text-slate-400">{isRtl ? "نقطة" : "pts"}</span></p>
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-400 max-w-[40%] text-left">{isRtl ? "تكسب 10 نقاط مع كل طلب معتمد" : "Earn 10 points per approved order"}</p>
+                  <p className="text-[11px] text-slate-400 max-w-[40%] text-left">
+                    {isRtl
+                      ? `تكسب ${loyaltyCfg?.pointsPerOrder ?? 10} نقاط مع كل طلب معتمد`
+                      : `Earn ${loyaltyCfg?.pointsPerOrder ?? 10} points per approved order`}
+                  </p>
                 </div>
+
+                {/* ✅ الاستبدال — نقاط → رصيد خصم */}
+                {(() => {
+                  const cfg = loyaltyCfg || { riyalPerPoint: 0.1, minRedeem: 100 };
+                  const pts = Number(subscription.loyaltyPoints || 0);
+                  const redeemable = Math.floor(pts / cfg.minRedeem) * cfg.minRedeem;
+                  const wouldGet = Math.round(redeemable * cfg.riyalPerPoint * 100) / 100;
+                  const credit = Number(subscription.loyaltyCredit || 0);
+                  return (
+                    <div className="p-4 bg-gradient-to-br from-emerald-50 to-white rounded-xl border border-emerald-100 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-slate-600">{isRtl ? "رصيد الخصم المتاح" : "Available discount credit"}</span>
+                        <span className="text-lg font-black text-emerald-600">{credit.toFixed(2)} <span className="text-xs font-bold text-slate-400">{isRtl ? "ر.ق" : "QAR"}</span></span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        {isRtl
+                          ? `كل ${cfg.minRedeem} نقطة = ${Math.round(cfg.minRedeem * cfg.riyalPerPoint * 100) / 100} ر.ق خصم على تجديد اشتراكك.`
+                          : `Every ${cfg.minRedeem} points = ${Math.round(cfg.minRedeem * cfg.riyalPerPoint * 100) / 100} QAR off your renewal.`}
+                      </p>
+                      <Button
+                        className="w-full h-11 bg-emerald-600 hover:bg-emerald-700"
+                        disabled={busy || redeemable < cfg.minRedeem}
+                        onClick={redeemPoints}
+                      >
+                        {redeemable >= cfg.minRedeem
+                          ? (isRtl ? `استبدل ${redeemable} نقطة بـ ${wouldGet} ر.ق` : `Redeem ${redeemable} pts for ${wouldGet} QAR`)
+                          : (isRtl ? `تحتاج ${cfg.minRedeem} نقطة للاستبدال` : `Need ${cfg.minRedeem} points to redeem`)}
+                      </Button>
+                    </div>
+                  );
+                })()}
                 <div>
                   <p className="text-sm font-medium text-slate-900 mb-2">{isRtl ? "كود الإحالة الخاص بك:" : "Your referral code:"}</p>
                   <div className="flex items-center gap-2">

@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin, newToken } from "./sessions";
 import { getDayOffset } from "./lib/dates";
+import { loyaltyConfig } from "./loyalty";
 
 // Helper: Generate unique order number
 function generateOrderNumber(): string {
@@ -529,7 +530,17 @@ export const approve = mutation({
         createdAt: Date.now(),
       });
       const cust: any = await ctx.db.get(effectiveCustomerId);
-      await ctx.db.patch(effectiveCustomerId, { loyaltyPoints: Number(cust?.loyaltyPoints || 0) + 10, updatedAt: Date.now() });
+      const lcfg = await loyaltyConfig(ctx);
+      const earned = lcfg.pointsPerOrder;
+      const hist = Array.isArray(cust?.loyaltyHistory) ? cust.loyaltyHistory : [];
+      await ctx.db.patch(effectiveCustomerId, {
+        loyaltyPoints: Number(cust?.loyaltyPoints || 0) + earned,
+        loyaltyHistory: [
+          ...hist,
+          { type: "EARN", points: earned, note: `طلب معتمد ${order.orderNumber || ""}`.trim(), at: Date.now() },
+        ].slice(-50),
+        updatedAt: Date.now(),
+      });
     }
 
     return { success: true, message: "تم اعتماد الطلب وإضافته للمطبخ" };

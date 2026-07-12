@@ -35,6 +35,7 @@ import type * as inventory from "../inventory.js";
 import type * as leaves from "../leaves.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_phone from "../lib/phone.js";
+import type * as loyalty from "../loyalty.js";
 import type * as mealCategories from "../mealCategories.js";
 import type * as mealImages from "../mealImages.js";
 import type * as mealIngredients from "../mealIngredients.js";
@@ -100,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   leaves: typeof leaves;
   "lib/dates": typeof lib_dates;
   "lib/phone": typeof lib_phone;
+  loyalty: typeof loyalty;
   mealCategories: typeof mealCategories;
   mealImages: typeof mealImages;
   mealIngredients: typeof mealIngredients;

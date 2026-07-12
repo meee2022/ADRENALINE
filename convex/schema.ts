@@ -251,6 +251,18 @@ export default defineSchema({
     // الخدمة الذاتية + الولاء
     skippedDates: v.optional(v.array(v.string())), // أيام التوصيل المتخطّاة yyyy-MM-dd
     loyaltyPoints: v.optional(v.number()),         // نقاط الولاء
+    loyaltyCredit: v.optional(v.number()),         // رصيد الخصم المستبدَل بالنقاط (ر.ق)
+    loyaltyHistory: v.optional(
+      v.array(
+        v.object({
+          type: v.string(),        // EARN | REDEEM
+          points: v.number(),      // + للكسب، - للاستبدال
+          credit: v.optional(v.number()), // ر.ق ناتجة عند الاستبدال
+          note: v.optional(v.string()),
+          at: v.number(),
+        }),
+      ),
+    ),
     referredBy: v.optional(v.string()),            // كود من أحاله
 
     durationWeeks: v.optional(v.number()),
@@ -721,6 +733,19 @@ export default defineSchema({
      *    { DIET:{carb:100,protein:"80-90",calFactor:1}, FITNESS:{...}, BULK:{...} }
      */
     programPortions: v.optional(v.any()),
+    /**
+     * ✅ إعدادات برنامج الولاء (النظام القياسي للمطاعم):
+     *    pointsPerOrder: نقاط تُمنح مع كل طلب معتمد (افتراضي 10)
+     *    riyalPerPoint: قيمة النقطة بالريال عند الاستبدال (افتراضي 0.10)
+     *    minRedeem: أقل عدد نقاط للاستبدال (افتراضي 100 = 10 ر.ق)
+     */
+    loyalty: v.optional(
+      v.object({
+        pointsPerOrder: v.number(),
+        riyalPerPoint: v.number(),
+        minRedeem: v.number(),
+      }),
+    ),
     // Contact Information
     phone: v.string(),
     email: v.string(),
