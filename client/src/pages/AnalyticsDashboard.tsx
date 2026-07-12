@@ -80,7 +80,7 @@ export default function AnalyticsDashboard() {
         kpis={overview ? [
           { value: overview.totalCustomers, labelAr: "إجمالي العملاء", labelEn: "Total Customers" },
           { value: overview.totalOrders, labelAr: "الطلبات", labelEn: "Orders" },
-          { value: `${overview.totalRevenue.toLocaleString()} ر.ق`, labelAr: "الإيرادات الكلية", labelEn: "Total Revenue" },
+          { value: `${overview.totalRevenue.toLocaleString()} ${t("ر.ق", "QAR")}`, labelAr: "الإيرادات الكلية", labelEn: "Total Revenue" },
           { value: overview.todayMeals, labelAr: "وجبات اليوم", labelEn: "Today's Meals" },
         ] : undefined}
       />
