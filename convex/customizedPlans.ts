@@ -50,6 +50,51 @@ export const listCustomized = query({
   },
 });
 
+/**
+ * ✅ وجبات العملاء المخصّصين ليوم معيّن (من قوالبهم) — للمطبخ والاستيكر.
+ *    يختار خانات يوم الأسبوع من قالب كل عميل، ويرجّع النص المركّب + الكميات.
+ */
+export const forDate = query({
+  args: { date: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
+
+    const templates = await ctx.db.query("customizedTemplates").collect();
+    const out: any[] = [];
+    for (const tpl of templates) {
+      const days = (tpl.slots as any)?.days;
+      const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(tpl.slots) ? (tpl.slots as any) : [];
+      const items = slots
+        .filter((s) => s && s.type !== "OFF" && (s.baseName || s.text))
+        .map((s) => ({
+          text: s.text || s.baseName || "",
+          baseName: s.baseName || "",
+          type: s.type,
+          proteinName: s.proteinName || "",
+          proteinG: s.proteinG || null,
+          carbName: s.carbName || "",
+          carbG: s.carbG || null,
+          notes: s.notes || "",
+        }));
+      if (!items.length) continue;
+      const c: any = await ctx.db.get(tpl.customerId);
+      if (!c || !c.isActive) continue;
+      out.push({
+        customerId: String(tpl.customerId),
+        customerName: c.fullName || "",
+        phone: c.phone || "",
+        deliveryTime: c.deliveryTime || "MORNING",
+        allergies: c.allergies || "",
+        avoid: c.avoid || "",
+        items,
+      });
+    }
+    return out.sort((a, b) => String(a.customerName).localeCompare(String(b.customerName), "ar"));
+  },
+});
+
 /** قالب عميل واحد. للموظفين. */
 export const getTemplate = query({
   args: { customerId: v.id("customers"), sessionToken: v.optional(v.string()) },

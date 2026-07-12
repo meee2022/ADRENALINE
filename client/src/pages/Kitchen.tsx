@@ -80,6 +80,8 @@ export default function Kitchen() {
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
   const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
+  // ✅ وجبات العملاء المخصّصين لهذا اليوم (من قوالبهم) — منفصلة لأنها لكل شخص بكمياته
+  const customized = useQuery(api.customizedPlans.forDate, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
   // ✅ حصص البرامج من إعدادات المطعم (كارب جم + مدى البروتين لكل برنامج)
   const restSettings = useQuery(api.restaurantSettings.get) as any;
   const programPortions = restSettings?.programPortions || {
@@ -640,6 +642,42 @@ export default function Kitchen() {
 
         {/* Content */}
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+          {/* ✅ قسم الوجبات المخصّصة — لكل عميل مخصّص وجباته وكمياته (يظهر في كل التبويبات) */}
+          {customized && customized.length > 0 && (
+            <Card className="rounded-2xl border-2 border-[#0E76AC]/20 bg-[#f7fbfe]">
+              <CardContent className="p-4">
+                <h3 className="font-black text-[#0E2A4A] flex items-center gap-2 mb-3">
+                  <ChefHat className="h-5 w-5 text-[#0E76AC]" />
+                  {isRtl ? "الوجبات المخصّصة" : "Customized meals"}
+                  <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{customized.length}</span>
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-2.5">
+                  {customized
+                    .filter((c: any) => activeTab === "SUMMARY" || c.deliveryTime === activeTab)
+                    .map((c: any) => (
+                    <div key={c.customerId} className="rounded-xl bg-white border border-slate-100 p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="font-black text-sm text-[#0E2A4A]">{c.customerName}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{c.deliveryTime === "EVENING" ? (isRtl ? "مسائي" : "Eve") : (isRtl ? "صباحي" : "Morn")}</span>
+                      </div>
+                      {(c.allergies || c.avoid) && (
+                        <p className="text-[10.5px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mb-1.5">⚠ {[c.allergies, c.avoid].filter(Boolean).join(" · ")}</p>
+                      )}
+                      <ul className="space-y-1">
+                        {c.items.map((it: any, i: number) => (
+                          <li key={i} className="text-[12.5px] font-bold text-slate-700 flex items-start gap-1.5">
+                            <span className="text-[#0E76AC] shrink-0">•</span>
+                            <span>{it.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
