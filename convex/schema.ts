@@ -559,11 +559,14 @@ export default defineSchema({
     notes: v.optional(v.string()),
     // ✅ تاريخ بداية التوصيل الذي اختاره العميل — تُملأ به الأخصائية عند الاعتماد
     preferredStartDate: v.optional(v.string()),
+    // ✅ توكن سرّي لصفحة جدول الوجبات العامة (رابط يُرسَل للعميل)
+    planToken: v.optional(v.string()),
   })
     .index("by_status", ["status"])
     .index("by_phone", ["customerPhone"])
     .index("by_orderNumber", ["orderNumber"])
-    .index("by_createdAt", ["createdAt"]),
+    .index("by_createdAt", ["createdAt"])
+    .index("by_plan_token", ["planToken"]),
 
   // ===== Customer Order Items =====
   customerOrderItems: defineTable({
@@ -686,6 +689,18 @@ export default defineSchema({
   })
     .index("by_code", ["code"])
     .index("by_active", ["isActive"]),
+
+  // ===== قوالب الوجبات المخصّصة (لكل عميل مخصّص) =====
+  //  العميل المخصّص يأكل نفس الوجبات يومياً، فنخزّن قالباً واحداً لكل عميل.
+  //  slots: مصفوفة خانات (MEAL 1 / SNACK 1 / MEAL 2 …) كل خانة إمّا رئيسية
+  //  ببنّاء الجرامات أو سناك/سلطة (اختيار طبق) أو OFF. text = النص المركّب
+  //  الجاهز للمطبخ/الاستيكر ("150 G LEMON CHICKEN + 200 G RICE").
+  customizedTemplates: defineTable({
+    customerId: v.id("customers"),
+    slots: v.any(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.string()),
+  }).index("by_customer", ["customerId"]),
 
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({

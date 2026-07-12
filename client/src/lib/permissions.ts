@@ -160,6 +160,7 @@ export interface MenuItemDef {
     | "onlineOrders"
     | "plansManagement"
     | "plans"
+    | "customized"
     | "ordersPending"
     | "inventory"
     | "inventoryReports"
@@ -207,6 +208,8 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "NUTRITIONIST"] },
       { href: "/plans", iconKey: "plans", labelAr: "الخطط اليومية", labelEn: "Daily Plans",
         roles: ["ADMIN", "NUTRITIONIST", "KITCHEN", "DELIVERY"] },
+      { href: "/customized", iconKey: "customized", labelAr: "الوجبات المخصّصة", labelEn: "Customized Meals",
+        roles: ["ADMIN", "NUTRITIONIST", "KITCHEN"] },
       { href: "/plans-management", iconKey: "plansManagement", labelAr: "إدارة الخطط", labelEn: "Plans Management",
         roles: ["ADMIN", "NUTRITIONIST"] },
       { href: "/orders/pending", iconKey: "ordersPending", labelAr: "مراجعة الطلبات", labelEn: "Review Orders",

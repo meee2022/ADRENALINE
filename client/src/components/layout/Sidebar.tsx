@@ -50,6 +50,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   leaves: CalendarDays,
   plansManagement: CalendarDays,
   plans: Dumbbell,
+  customized: ChefHat,
   ordersPending: ClipboardCheck,
   inventory: Package,
   inventoryReports: Package,

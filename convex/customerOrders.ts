@@ -1,7 +1,7 @@
 // convex/customerOrders.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireStaff, requireAdmin } from "./sessions";
+import { requireStaff, requireAdmin, newToken } from "./sessions";
 import { getDayOffset } from "./lib/dates";
 
 // Helper: Generate unique order number
@@ -133,6 +133,74 @@ export const create = mutation({
 });
 
 // ===== GET ORDER BY ID =====
+/** ✅ يولّد (أو يرجّع) توكن مشاركة جدول الوجبات للطلب. للموظفين. */
+export const getPlanShareToken = mutation({
+  args: { orderId: v.id("customerOrders"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { orderId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const order = await ctx.db.get(orderId);
+    if (!order) throw new Error("Order not found");
+    let token = (order as any).planToken as string | undefined;
+    if (!token) {
+      token = newToken();
+      await ctx.db.patch(orderId, { planToken: token });
+    }
+    return { token };
+  },
+});
+
+/**
+ * ✅ استعلام عام (بلا جلسة): جدول وجبات العميل عبر رابط سرّي (planToken).
+ *    يعيد الوجبات مجمّعة بالأسبوع واليوم لعرضها كصفحة مشاركة جميلة.
+ */
+export const publicMealPlan = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const order = await ctx.db
+      .query("customerOrders")
+      .withIndex("by_plan_token", (q) => q.eq("planToken", token))
+      .first();
+    if (!order) return null;
+
+    const items = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", order._id))
+      .collect();
+
+    // تجميع: أسبوع → يوم → وجبات
+    const byWeek: Record<number, Record<string, any[]>> = {};
+    for (const it of items) {
+      const w = Number((it as any).week) || 1;
+      const d = String((it as any).day || "").toLowerCase();
+      (byWeek[w] ||= {});
+      (byWeek[w][d] ||= []);
+      byWeek[w][d].push({
+        mealNameAr: (it as any).mealNameAr,
+        mealNameEn: (it as any).mealNameEn,
+        category: (it as any).category,
+        calories: (it as any).calories ?? null,
+        protein: (it as any).protein ?? null,
+        imageUrl: (it as any).imageUrl ?? null,
+        notes: (it as any).specialNotes || "",
+      });
+    }
+    const dayOrder: Record<string, number> = { saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5 };
+    const weeks = Object.keys(byWeek).map(Number).sort((a, b) => a - b).map((w) => ({
+      week: w,
+      days: Object.keys(byWeek[w])
+        .sort((a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99))
+        .map((d) => ({ day: d, meals: byWeek[w][d] })),
+    }));
+
+    return {
+      customerName: order.customerName,
+      totalMeals: items.length,
+      weeksCount: weeks.length,
+      weeks,
+    };
+  },
+});
+
 export const getById = query({
   args: { orderId: v.id("customerOrders"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { orderId, sessionToken }) => {

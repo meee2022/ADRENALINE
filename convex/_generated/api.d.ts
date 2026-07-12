@@ -22,6 +22,7 @@ import type * as crons from "../crons.js";
 import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
 import type * as customers from "../customers.js";
+import type * as customizedPlans from "../customizedPlans.js";
 import type * as dailyPlans from "../dailyPlans.js";
 import type * as delivery from "../delivery.js";
 import type * as files from "../files.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   customerAuth: typeof customerAuth;
   customerOrders: typeof customerOrders;
   customers: typeof customers;
+  customizedPlans: typeof customizedPlans;
   dailyPlans: typeof dailyPlans;
   delivery: typeof delivery;
   files: typeof files;

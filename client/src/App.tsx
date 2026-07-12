@@ -19,6 +19,7 @@ const PublicMealsManagement = lazy(() => import("@/pages/PublicMealsManagement")
 const BannersManagement = lazy(() => import("@/pages/BannersManagement"));
 const PlansManagement = lazy(() => import("@/pages/PlansManagement"));
 const Plans = lazy(() => import("@/pages/Plans"));
+const Customized = lazy(() => import("@/pages/Customized"));
 const PlansReview = lazy(() => import("@/pages/PlansReview"));
 const Inventory = lazy(() => import("@/pages/Inventory"));
 const InventoryItemDetails = lazy(() => import("@/pages/InventoryItemDetails"));
@@ -175,6 +176,9 @@ function Router() {
       </Route>
       <Route path="/plans">
         <ProtectedRoute component={Plans} />
+      </Route>
+      <Route path="/customized">
+        <ProtectedRoute component={Customized} />
       </Route>
       <Route path="/plans-review/:date">
         <ProtectedRoute component={PlansReview} />
