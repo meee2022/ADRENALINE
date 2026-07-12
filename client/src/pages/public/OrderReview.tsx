@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, ChevronDown, Package, Calendar } from "lucide-react";
+import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { useMutation, useQuery } from "convex/react";
@@ -45,6 +45,7 @@ export default function OrderReview() {
     getTotalCalories,
     getWeeks,
     clearCart,
+    removeItem,
     preferredStartDate,
   } = useCartStore();
   
@@ -278,8 +279,24 @@ export default function OrderReview() {
                                     <span>{meal.calories} {t("سعرة", "kcal")}</span>
                                   </div>
                                 </div>
+                                {/* حذف/تغيير الوجبة */}
+                                <button
+                                  onClick={() => removeItem(meal._id, meal.week, meal.day)}
+                                  title={t("حذف الوجبة", "Remove meal")}
+                                  className="shrink-0 h-8 w-8 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
                               </div>
                             ))}
+                            {/* تغيير وجبات اليوم — يرجّع للمنيو على نفس اليوم */}
+                            <button
+                              onClick={() => setLocation("/public/menu")}
+                              className="w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] rounded-lg py-2 flex items-center justify-center gap-1.5 border border-dashed border-[#cfe4f3]"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              {t("تعديل / إضافة وجبات لهذا اليوم", "Edit / add meals for this day")}
+                            </button>
                           </div>
                         </div>
                       ))}
