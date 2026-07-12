@@ -456,10 +456,27 @@ export default function Kitchen() {
         <tr><td class="lb">${esc(g.label || "تعديل — راجع الطلب")}<div class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
       </table>`).join("");
-    const custHtml = customizedByPerson.length ? `
-      <h2 class="sec">الوجبات المخصّصة — بوكس لكل عميل (${customizedByPerson.length})</h2>
-      <div class="pwrap">${customizedByPerson.map((p: any) => `
+    // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
+    //    نرجع لبيانات الخطة لو القالب فاضي حتى لا يختفي أحد.
+    const custFromTemplate = (customized || [])
+      .map((p: any) => ({
+        name: p.customerName,
+        deliveryTime: p.deliveryTime,
+        allergies: [p.allergies, p.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
+        items: (p.items || []).map((it: any) => ({
+          meal: it.text || it.baseName || "—",
+          note: String(it.notes || "").trim(),
+        })),
+      }))
+      .filter((p: any) => p.items.length);
+    const custList = custFromTemplate.length
+      ? custFromTemplate
+      : customizedByPerson.map((p: any) => ({ name: p.name, deliveryTime: p.deliveryTime, allergies: "", items: p.items }));
+    const custHtml = custList.length ? `
+      <h2 class="sec">الوجبات المخصّصة — بوكس لكل عميل (${custList.length})</h2>
+      <div class="pwrap">${custList.map((p: any) => `
         <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "صباحي ☀" : "مسائي 🌙"}</span></div>
+        ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
         <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b class="nt">${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
     const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>كشف المطبخ ${esc(formattedDate)}</title>
       <style>
@@ -486,6 +503,7 @@ export default function Kitchen() {
         .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin-bottom:6px;break-inside:avoid}
         .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
         .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
+        .alg{color:#b91c1c;font-size:8.5px;font-weight:700;margin:1px 0 2px}
         .nt{color:#c2410c}
         @page{size:A4;margin:8mm}
       </style></head><body>
