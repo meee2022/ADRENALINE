@@ -948,6 +948,16 @@ export default function PublicMenuPage() {
                 </div>
               ))}
             </div>
+
+            {/* 💡 تلميح بسيط: كيف تُبدّل أو تشيل وجبة */}
+            <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-white/70 border border-[#3CC4F0]/20 px-3 py-2">
+              <span className="text-sm leading-none mt-0.5">💡</span>
+              <p className="text-[11.5px] font-bold text-[#47759C] leading-snug">
+                {isRtl
+                  ? "لتبديل وجبة: اضغط على الوجبة الخضراء (مضافة) لإزالتها، ثم اختر غيرها. تقدر تراجع كل اختياراتك من زر «مراجعة الطلب» بالأسفل."
+                  : "To swap a meal: tap the green (added) meal to remove it, then pick another. Review everything from the “Review Order” button below."}
+              </p>
+            </div>
           </div>
 
           {/* ✅ بطاقة اشتراكك — تظهر لو رقمك مرتبط باشتراك مسجَّل عند الأخصائية */}
