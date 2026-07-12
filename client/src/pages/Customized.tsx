@@ -41,6 +41,18 @@ const CARB_OPTIONS = [
   { ar: "كينوا", en: "Quinoa" },
 ];
 const GRAM_PRESETS = [80, 100, 120, 150, 170, 200, 250];
+const PROTEIN_OPTIONS = [
+  { ar: "دجاج", en: "Chicken" },
+  { ar: "سمك", en: "Fish" },
+  { ar: "سلمون", en: "Salmon" },
+  { ar: "ستيك", en: "Steak" },
+  { ar: "لحم بقري", en: "Beef" },
+  { ar: "لحم مفروم", en: "Minced beef" },
+  { ar: "جمبري", en: "Shrimp" },
+  { ar: "ديك رومي", en: "Turkey" },
+  { ar: "تونة", en: "Tuna" },
+  { ar: "بيض", en: "Eggs" },
+];
 
 /** النص المركّب الذي يراه المطبخ/الاستيكر. */
 function composeText(s: Slot, isRtl: boolean): string {
@@ -50,7 +62,7 @@ function composeText(s: Slot, isRtl: boolean): string {
   if (s.type === "MAIN") {
     const g = (n?: number) => (n && n > 0 ? `${n}${isRtl ? "جم" : "g"}` : "");
     const bits: string[] = [];
-    if (s.proteinG) bits.push(`${isRtl ? "بروتين" : "Protein"} ${g(s.proteinG)}`);
+    if (s.proteinG) bits.push(`${s.proteinName || (isRtl ? "بروتين" : "Protein")} ${g(s.proteinG)}`);
     if (s.carbName && s.carbName !== (isRtl ? "بدون" : "None") && s.carbG)
       bits.push(`${s.carbName} ${g(s.carbG)}`);
     if (bits.length) parts.push(bits.join(" + "));
@@ -276,18 +288,23 @@ export default function Customized() {
 
                       {s.type === "MAIN" && (
                         <div className="grid sm:grid-cols-2 gap-2.5">
-                          {/* بروتين */}
+                          {/* بروتين — النوع + الجرامات */}
                           <div className="rounded-xl bg-slate-50 p-2.5">
-                            <label className="text-[11px] font-black text-slate-500 block mb-1">🥩 {t("بروتين (جم)", "Protein (g)")}</label>
+                            <label className="text-[11px] font-black text-slate-500 block mb-1">🥩 {t("البروتين (النوع + جم)", "Protein (type + g)")}</label>
                             <div className="flex items-center gap-1.5">
+                              <select value={s.proteinName || ""} onChange={(e) => patchSlot(i, { proteinName: e.target.value })}
+                                className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold bg-white flex-1 min-w-0">
+                                <option value="">{t("النوع…", "Type…")}</option>
+                                {PROTEIN_OPTIONS.map((p) => <option key={p.en} value={isRtl ? p.ar : p.en}>{isRtl ? p.ar : p.en}</option>)}
+                              </select>
                               <Input type="number" value={s.proteinG ?? ""} onChange={(e) => patchSlot(i, { proteinG: Number(e.target.value) || 0 })}
-                                className="h-9 w-20 text-center font-black" />
-                              <div className="flex gap-1 flex-wrap">
-                                {GRAM_PRESETS.map((g) => (
-                                  <button key={g} onClick={() => patchSlot(i, { proteinG: g })}
-                                    className="text-[10px] font-bold px-1.5 py-1 rounded bg-white border border-slate-200 hover:border-[#0E76AC]">{g}</button>
-                                ))}
-                              </div>
+                                className="h-9 w-16 text-center font-black" placeholder={t("جم", "g")} />
+                            </div>
+                            <div className="flex gap-1 flex-wrap mt-1.5">
+                              {GRAM_PRESETS.map((g) => (
+                                <button key={g} onClick={() => patchSlot(i, { proteinG: g })}
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white border border-slate-200 hover:border-[#0E76AC]">{g}</button>
+                              ))}
                             </div>
                           </div>
                           {/* كارب */}
