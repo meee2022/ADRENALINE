@@ -22,6 +22,17 @@ export const listCustomized = query({
     );
     const templates = await ctx.db.query("customizedTemplates").collect();
     const byCust = new Map(templates.map((t) => [String(t.customerId), t]));
+    // عدّاد الأيام المكتملة (بنية جديدة {days}) أو الخانات (قالب قديم مصفوفة)
+    const filledCount = (tpl: any): number => {
+      const slots = tpl?.slots;
+      if (slots && slots.days && typeof slots.days === "object") {
+        return Object.values(slots.days).filter(
+          (arr: any) => Array.isArray(arr) && arr.some((s: any) => s && s.type !== "OFF" && s.baseName),
+        ).length;
+      }
+      if (Array.isArray(slots)) return slots.filter((s: any) => s && s.type !== "OFF").length;
+      return 0;
+    };
     return custom
       .map((c: any) => ({
         _id: c._id,
@@ -33,7 +44,7 @@ export const listCustomized = query({
         mealsPerDay: c.mealsPerDay,
         snacksPerDay: c.snacksPerDay,
         hasTemplate: byCust.has(String(c._id)),
-        slotCount: (byCust.get(String(c._id))?.slots as any[] | undefined)?.filter((s) => s && s.type !== "OFF")?.length || 0,
+        slotCount: filledCount(byCust.get(String(c._id))),
       }))
       .sort((a, b) => String(a.fullName).localeCompare(String(b.fullName), "ar"));
   },

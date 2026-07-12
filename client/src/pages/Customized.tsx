@@ -41,6 +41,15 @@ const CARB_OPTIONS = [
   { ar: "كينوا", en: "Quinoa" },
 ];
 const GRAM_PRESETS = [80, 100, 120, 150, 170, 200, 250];
+// أيام التوصيل (السبت → الخميس، الجمعة إجازة)
+const DAYS: { key: string; ar: string; en: string }[] = [
+  { key: "saturday", ar: "السبت", en: "Sat" },
+  { key: "sunday", ar: "الأحد", en: "Sun" },
+  { key: "monday", ar: "الإثنين", en: "Mon" },
+  { key: "tuesday", ar: "الثلاثاء", en: "Tue" },
+  { key: "wednesday", ar: "الأربعاء", en: "Wed" },
+  { key: "thursday", ar: "الخميس", en: "Thu" },
+];
 const PROTEIN_OPTIONS = [
   { ar: "دجاج", en: "Chicken" },
   { ar: "سمك", en: "Fish" },
@@ -105,6 +114,13 @@ function MealPicker({ meals, value, valueName, isRtl, onPick }: {
               <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
                 placeholder={isRtl ? "ابحث باسم الطبق…" : "Search dish name…"} className="h-9 text-sm" />
             </div>
+            {/* ➕ طبق مخصّص (مش في المنيو) — تكتب اسمه بنفسك مثل "رز وفراخ مشوية" */}
+            {q.trim() && !results.some((m) => nameOf(m).trim() === q.trim()) && (
+              <button type="button" onClick={() => { onPick({ _id: `custom:${q.trim()}`, nameAr: q.trim(), nameEn: q.trim(), custom: true }); setOpen(false); }}
+                className="w-full text-start px-3 py-2.5 text-sm font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-2 border-b border-slate-100">
+                ➕ {isRtl ? `طبق مخصّص: «${q.trim()}»` : `Custom dish: “${q.trim()}”`}
+              </button>
+            )}
             <div className="max-h-64 overflow-y-auto">
               {value && (
                 <button type="button" onClick={() => { onPick(null); setOpen(false); }}
@@ -152,30 +168,65 @@ export default function Customized() {
   const mainMeals = useMemo(() => meals.filter((m) => ["lunch", "dinner"].includes(String(m.category))), [meals]);
   const snackMeals = useMemo(() => meals.filter((m) => ["snack", "salad"].includes(String(m.category))), [meals]);
 
-  const [slots, setSlots] = useState<Slot[]>([]);
+  // ✅ قالب بالأيام: لكل يوم مصفوفة خانات (الأخصائية تحدد وجبات كل يوم بكمياته)
+  const [daySlots, setDaySlots] = useState<Record<string, Slot[]>>({});
+  const [activeDay, setActiveDay] = useState<string>("saturday");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // بناء الخانات الافتراضية من عدد وجبات/سناكات العميل، أو تحميل القالب المحفوظ
-  useEffect(() => {
-    if (!selected) { setSlots([]); return; }
-    if (template?.slots && Array.isArray(template.slots) && template.slots.length) {
-      setSlots(template.slots);
-      return;
-    }
-    // ✅ عدد الخانات = بالظبط ما هو مكتوب في سجل المشترك (لا أرقام افتراضية).
-    const nMeals = Math.max(0, Math.floor(Number(selected.mealsPerDay) || 0));
-    const nSnacks = Math.max(0, Math.floor(Number(selected.snacksPerDay) || 0));
+  // خانات افتراضية فارغة من عدد وجبات/سناكات المشترك
+  const blankSlots = (): Slot[] => {
+    const nMeals = Math.max(0, Math.floor(Number(selected?.mealsPerDay) || 0));
+    const nSnacks = Math.max(0, Math.floor(Number(selected?.snacksPerDay) || 0));
     const s: Slot[] = [];
     for (let i = 1; i <= nMeals; i++)
       s.push({ key: `MEAL ${i}`, label: `${t("وجبة", "Meal")} ${i}`, type: "MAIN", proteinG: 150, carbName: t("رز أبيض", "White rice"), carbG: 150 });
     for (let i = 1; i <= nSnacks; i++)
       s.push({ key: `SNACK ${i}`, label: `${t("سناك", "Snack")} ${i}`, type: "SNACK" });
-    setSlots(s);
+    return s;
+  };
+
+  // تحميل القالب المحفوظ (بالأيام) أو بناء افتراضي. يدعم القوالب القديمة (مصفوفة واحدة).
+  useEffect(() => {
+    if (!selected) { setDaySlots({}); return; }
+    const saved = template?.slots;
+    const build = (base?: Slot[]) => {
+      const d: Record<string, Slot[]> = {};
+      DAYS.forEach((dy) => { d[dy.key] = (base && base.length ? base : blankSlots()).map((s) => ({ ...s })); });
+      return d;
+    };
+    if (saved && saved.days && typeof saved.days === "object") {
+      const d: Record<string, Slot[]> = {};
+      DAYS.forEach((dy) => { d[dy.key] = Array.isArray(saved.days[dy.key]) && saved.days[dy.key].length ? saved.days[dy.key] : blankSlots(); });
+      setDaySlots(d);
+    } else if (Array.isArray(saved) && saved.length) {
+      setDaySlots(build(saved)); // قالب قديم (نفس الوجبات لكل الأيام)
+    } else {
+      setDaySlots(build());
+    }
+    setActiveDay("saturday");
   }, [selectedId, template]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const slots = daySlots[activeDay] || [];
   const patchSlot = (i: number, p: Partial<Slot>) =>
-    setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...p } : s)));
+    setDaySlots((prev) => ({ ...prev, [activeDay]: (prev[activeDay] || []).map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
+
+  // نسخ وجبات اليوم الحالي لكل الأيام (للعميل الذي يأكل نفس الوجبات يومياً)
+  const applyToAllDays = () => {
+    if (!window.confirm(t("نسخ وجبات هذا اليوم لكل الأيام؟", "Copy this day's meals to all days?"))) return;
+    setDaySlots((prev) => {
+      const src = (prev[activeDay] || []).map((s) => ({ ...s }));
+      const d: Record<string, Slot[]> = {};
+      DAYS.forEach((dy) => { d[dy.key] = src.map((s) => ({ ...s })); });
+      return d;
+    });
+  };
+
+  // عدّاد الأيام المكتملة (كل خاناتها غير OFF فيها طبق)
+  const dayFilled = (key: string) => {
+    const s = daySlots[key] || [];
+    return s.length > 0 && s.every((x) => x.type === "OFF" || x.baseName);
+  };
 
   const filtered = customers.filter((c) =>
     !search.trim() || String(c.fullName).includes(search) || String(c.phone || "").includes(search),
@@ -185,8 +236,9 @@ export default function Customized() {
     if (!selectedId) return;
     setSaving(true); setSaved(false);
     try {
-      const withText = slots.map((s) => ({ ...s, text: composeText(s, isRtl) }));
-      await saveTemplate({ customerId: selectedId as any, slots: withText, sessionToken });
+      const days: Record<string, Slot[]> = {};
+      DAYS.forEach((dy) => { days[dy.key] = (daySlots[dy.key] || []).map((s) => ({ ...s, text: composeText(s, isRtl) })); });
+      await saveTemplate({ customerId: selectedId as any, slots: { days }, sessionToken });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e: any) {
       alert(t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e));
@@ -198,8 +250,8 @@ export default function Customized() {
       <DashboardHeader
         icon={<UtensilsCrossed />}
         titleAr="الوجبات المخصّصة" titleEn="Customized Meals"
-        subtitleAr="قالب وجبات ثابت لكل عميل مخصّص — يُبنى بالضغط بدل الكتابة"
-        subtitleEn="A fixed daily meal template per customized customer — built by tapping, not typing"
+        subtitleAr="قالب وجبات لكل عميل مخصّص — لكل يوم وجباته وكمياته (أطباق المنيو أو مخصّصة)"
+        subtitleEn="Per-customer customized plan — each day's meals and quantities (menu or custom dishes)"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-4 mt-4">
@@ -259,7 +311,25 @@ export default function Customized() {
                 </Button>
               </div>
 
-              {/* الخانات */}
+              {/* تبويبات الأيام + نسخ لكل الأيام */}
+              <div className="rounded-2xl border border-slate-100 bg-white p-2.5 flex items-center gap-2 flex-wrap">
+                <div className="flex gap-1 flex-wrap flex-1">
+                  {DAYS.map((d) => (
+                    <button key={d.key} onClick={() => setActiveDay(d.key)}
+                      className={cn("px-3 py-1.5 rounded-lg text-xs font-black border transition-colors relative",
+                        activeDay === d.key ? "bg-[#0E76AC] text-white border-[#0E76AC]" : "bg-white text-slate-600 border-slate-200 hover:border-[#0E76AC]")}>
+                      {isRtl ? d.ar : d.en}
+                      {dayFilled(d.key) && <span className={cn("absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full", activeDay === d.key ? "bg-emerald-300" : "bg-emerald-500")} />}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={applyToAllDays}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black text-[#0E76AC] border border-dashed border-[#0E76AC]/40 hover:bg-[#f2fbff] flex items-center gap-1">
+                  <Copy className="h-3.5 w-3.5" /> {t("طبّق هذا اليوم على الكل", "Apply this day to all")}
+                </button>
+              </div>
+
+              {/* الخانات (لليوم المختار) */}
               {slots.map((s, i) => (
                 <div key={s.key} className="rounded-2xl border border-slate-100 bg-white p-3.5">
                   <div className="flex items-center justify-between mb-2.5">
