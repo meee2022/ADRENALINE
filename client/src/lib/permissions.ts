@@ -157,6 +157,7 @@ export interface MenuItemDef {
     | "banners"
     | "stickers"
     | "mealIssuance"
+    | "gymSales"
     | "onlineOrders"
     | "plansManagement"
     | "plans"
@@ -237,6 +238,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/stickers", iconKey: "stickers", labelAr: "طباعة الستيكرات", labelEn: "Stickers Print",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/meal-issuance", iconKey: "mealIssuance", labelAr: "حصر الصادر", labelEn: "Meal Issuance",
+        roles: ["ADMIN", "KITCHEN"] },
+      { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات الجم", labelEn: "Gym Sales",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/online-orders", iconKey: "onlineOrders", labelAr: "طلبات أونلاين", labelEn: "Online Orders",
         roles: ["ADMIN", "KITCHEN"] },

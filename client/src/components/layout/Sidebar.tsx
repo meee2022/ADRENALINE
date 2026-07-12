@@ -30,6 +30,7 @@ import {
   CalendarCheck,
   ClipboardList,
   ShoppingBag,
+  Store,
   ChevronDown,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
@@ -61,6 +62,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   kitchen: ChefHat,
   driver: Truck,
   mealIssuance: ClipboardList,
+  gymSales: Store,
   onlineOrders: ShoppingBag,
   delivery: Truck,
   audit: ScrollText,

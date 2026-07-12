@@ -714,6 +714,22 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
   }).index("by_customer", ["customerId"]),
 
+  /**
+   * ✅ مبيعات الجم بالجملة — وجبات تُورَّد يوميًا لصالة الجم (زي نقطة بيع).
+   *    كل سجل: التاريخ، اسم الجم، عدد الوجبات، سعر بيع الوجبة، والإجمالي.
+   *    يُجمَّع أسبوعيًا/شهريًا لحصر كم وجبة راحت وكم إيراد.
+   */
+  gymSales: defineTable({
+    date: v.string(),                 // yyyy-MM-dd
+    gymName: v.optional(v.string()),  // اسم الجم/الصالة
+    meals: v.number(),                // عدد الوجبات
+    unitPrice: v.number(),            // سعر بيع الوجبة (ر.ق)
+    total: v.number(),                // الإجمالي = meals * unitPrice
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_date", ["date"]),
+
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({
     /**
