@@ -92,8 +92,9 @@ export default function Customized() {
       setSlots(template.slots);
       return;
     }
-    const nMeals = Number(selected.mealsPerDay) || 3;
-    const nSnacks = Number(selected.snacksPerDay) || 2;
+    // ✅ عدد الخانات = بالظبط ما هو مكتوب في سجل المشترك (لا أرقام افتراضية).
+    const nMeals = Math.max(0, Math.floor(Number(selected.mealsPerDay) || 0));
+    const nSnacks = Math.max(0, Math.floor(Number(selected.snacksPerDay) || 0));
     const s: Slot[] = [];
     for (let i = 1; i <= nMeals; i++)
       s.push({ key: `MEAL ${i}`, label: `${t("وجبة", "Meal")} ${i}`, type: "MAIN", proteinG: 150, carbName: t("رز أبيض", "White rice"), carbG: 150 });
@@ -174,6 +175,9 @@ export default function Customized() {
                 <div>
                   <h2 className="text-lg font-black">{selected.fullName}</h2>
                   <p className="text-xs text-cyan-100/90" dir="ltr">{selected.phone} · {selected.deliveryTime === "EVENING" ? t("مسائي", "Evening") : t("صباحي", "Morning")}</p>
+                  <p className="text-[11px] text-cyan-100/80 font-bold mt-0.5">
+                    {t("من الاشتراك:", "From subscription:")} {Math.max(0, Math.floor(Number(selected.mealsPerDay) || 0))} {t("وجبة", "meals")} + {Math.max(0, Math.floor(Number(selected.snacksPerDay) || 0))} {t("سناك", "snacks")}
+                  </p>
                   {(selected.allergies || selected.avoid) && (
                     <p className="text-[11px] text-amber-200 mt-1">⚠ {[selected.allergies, selected.avoid].filter(Boolean).join(" · ")}</p>
                   )}

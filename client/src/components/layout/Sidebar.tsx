@@ -1,3 +1,4 @@
+import { useState, useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -29,6 +30,7 @@ import {
   CalendarCheck,
   ClipboardList,
   ShoppingBag,
+  ChevronDown,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -88,6 +90,36 @@ export function Sidebar() {
     }))
     .filter((section) => section.items.length > 0);
 
+  // ✅ أقسام قابلة للطي — القايمة تقصر ولا يتوه المستخدم. المفتاح titleEn (ثابت مع اللغة).
+  //    الافتراضي: يُفتح القسم الذي يحوي الصفحة الحالية فقط (وإلا الأول).
+  const activeSectionKey = useMemo(() => {
+    const s = visibleSections.find((sec) => sec.items.some((i) => i.href === location));
+    return (s || visibleSections[0])?.titleEn || null;
+  }, [location, visibleSections]);
+
+  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("sidebarSections") || "null");
+      if (saved && typeof saved === "object") return saved;
+    } catch { /* ignore */ }
+    return {};
+  });
+
+  // اضمن أن القسم النشط مفتوح (عند التنقّل لصفحة في قسم مطويّ)
+  useEffect(() => {
+    if (activeSectionKey) {
+      setOpenMap((m) => (m[activeSectionKey] ? m : { ...m, [activeSectionKey]: true }));
+    }
+  }, [activeSectionKey]);
+
+  const isOpen = (key: string) => (key in openMap ? openMap[key] : key === activeSectionKey);
+  const toggleSection = (key: string) =>
+    setOpenMap((m) => {
+      const next = { ...m, [key]: !isOpen(key) };
+      try { localStorage.setItem("sidebarSections", JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
@@ -139,18 +171,34 @@ export function Sidebar() {
 
       {/* Nav — Sectioned */}
       <nav className="flex-1 px-3 sm:px-4 overflow-y-auto overflow-x-hidden min-w-0 pb-3">
-        {visibleSections.map((section, sIdx) => (
-          <div key={sIdx} className={cn("mb-1.5", sIdx > 0 && "mt-3 pt-3 border-t border-slate-100")}>
-            {/* عنوان القسم — شرطة سماوية + لون باهت مميّز عن الروابط */}
-            <div className="flex items-center gap-2 px-3 mb-1.5">
-              <span className="h-3 w-1 rounded-full bg-[#3CC4F0]/70 shrink-0" />
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#9db4c9]">
+        {visibleSections.map((section, sIdx) => {
+          const key = section.titleEn;
+          const open = isOpen(key);
+          return (
+          <div key={sIdx} className={cn("mb-1", sIdx > 0 && "mt-1.5 pt-1.5 border-t border-slate-100")}>
+            {/* عنوان القسم — زر قابل للطي (أكبر شوية + سهم يدور) */}
+            <button
+              onClick={() => toggleSection(key)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors",
+                "hover:bg-[#3CC4F0]/10 group",
+              )}
+            >
+              <span className="h-3.5 w-1 rounded-full bg-[#3CC4F0]/70 shrink-0" />
+              <p className="text-[12px] font-extrabold tracking-wide text-[#4a6b86] flex-1 text-start truncate">
                 {isRtl ? section.titleAr : section.titleEn}
               </p>
-            </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-[#9db4c9] shrink-0 transition-transform duration-200",
+                  open ? "rotate-180" : "",
+                )}
+              />
+            </button>
 
-            {/* Section items */}
-            <div className="space-y-0.5">
+            {/* Section items — تظهر فقط عند فتح القسم */}
+            {open && (
+            <div className="space-y-0.5 mt-1">
               {section.items.map((item) => {
                 const isActive = location === item.href;
                 const Icon = ICON_MAP[item.iconKey];
@@ -188,8 +236,10 @@ export function Sidebar() {
                 );
               })}
             </div>
+            )}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}
