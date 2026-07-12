@@ -72,7 +72,7 @@ export default function PublicMenuPage() {
   const [, setLocation] = useLocation();
   
   // Cart State
-  const { items, addItem, getTotalMeals, setPreferredStartDate } = useCartStore();
+  const { items, addItem, removeItem, getTotalMeals, setPreferredStartDate } = useCartStore();
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -334,6 +334,20 @@ export default function PublicMenuPage() {
     });
   };
   
+  // ✅ زر الوجبة toggle: لو مضافة يشيلها (عشان يختار غيرها)، لو لأ يضيفها
+  const handleToggleCart = (meal: any, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (selectedDay && isInCart(meal._id)) {
+      removeItem(meal._id, selectedWeek, selectedDay);
+      toast({
+        title: isRtl ? "أُزيلت من الخطة" : "Removed from plan",
+        description: isRtl ? `${meal.nameAr} — تقدر تختار غيرها` : `${meal.nameEn || meal.nameAr} — pick another`,
+      });
+      return;
+    }
+    handleAddToCart(meal, e);
+  };
+
   // Check if meal is already in cart
   const isInCart = (mealId: string) => {
     if (!selectedDay) return false;
@@ -1342,8 +1356,9 @@ export default function PublicMenuPage() {
                       ) : (
                         <Button
                           size="sm"
-                          onClick={(e) => handleAddToCart(meal, e)}
-                          disabled={isInCart(meal._id) || !selectedDay || (atLimit && !isInCart(meal._id))}
+                          onClick={(e) => handleToggleCart(meal, e)}
+                          disabled={!selectedDay || (atLimit && !isInCart(meal._id))}
+                          title={isInCart(meal._id) ? (isRtl ? "اضغط للإزالة واختيار غيرها" : "Tap to remove") : undefined}
                           className={cn(
                             "h-9 px-5 rounded-full font-bold transition-all",
                             isInCart(meal._id)
