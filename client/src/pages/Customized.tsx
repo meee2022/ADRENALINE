@@ -33,12 +33,17 @@ const CARB_OPTIONS = [
   { ar: "بدون", en: "None" },
   { ar: "رز أبيض", en: "White rice" },
   { ar: "رز بني", en: "Brown rice" },
+  { ar: "رز بسمتي", en: "Basmati rice" },
+  { ar: "رز مصري", en: "Egyptian rice" },
   { ar: "باستا", en: "Pasta" },
   { ar: "بطاطس", en: "Potato" },
+  { ar: "بطاطس مهروسة", en: "Mashed potato" },
   { ar: "بطاطا حلوة", en: "Sweet potato" },
   { ar: "خبز", en: "Bread" },
+  { ar: "خبز أسمر", en: "Brown bread" },
   { ar: "برغل", en: "Bulgur" },
   { ar: "كينوا", en: "Quinoa" },
+  { ar: "شوفان", en: "Oats" },
 ];
 const GRAM_PRESETS = [80, 100, 120, 150, 170, 200, 250];
 // أيام التوصيل (السبت → الخميس، الجمعة إجازة)
@@ -52,15 +57,21 @@ const DAYS: { key: string; ar: string; en: string }[] = [
 ];
 const PROTEIN_OPTIONS = [
   { ar: "دجاج", en: "Chicken" },
+  { ar: "دجاج مشوي", en: "Grilled chicken" },
+  { ar: "دجاج بانيه", en: "Crispy chicken" },
+  { ar: "شيش طاووق", en: "Shish tawook" },
   { ar: "سمك", en: "Fish" },
+  { ar: "سمك مشوي", en: "Grilled fish" },
   { ar: "سلمون", en: "Salmon" },
   { ar: "ستيك", en: "Steak" },
   { ar: "لحم بقري", en: "Beef" },
   { ar: "لحم مفروم", en: "Minced beef" },
+  { ar: "كفتة", en: "Kofta" },
   { ar: "جمبري", en: "Shrimp" },
   { ar: "ديك رومي", en: "Turkey" },
   { ar: "تونة", en: "Tuna" },
   { ar: "بيض", en: "Eggs" },
+  { ar: "بياض بيض", en: "Egg whites" },
 ];
 
 /** النص المركّب الذي يراه المطبخ/الاستيكر. */

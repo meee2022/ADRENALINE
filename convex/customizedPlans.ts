@@ -163,7 +163,48 @@ export const presets = query({
         }
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 100);
+    // ✅ ادمج مكتبة الأطباق المبذورة (أطباق حرة بالاسم) مع المشتقّة من القوالب
+    const library = await ctx.db.query("customizedDishLibrary").collect();
+    for (const lib of library) {
+      const sig = ["", lib.name, "", "", "", ""].join("|");
+      const existing = map.get(sig);
+      if (existing) { existing.count += Number(lib.count || 0); continue; }
+      map.set(sig, {
+        baseMealId: null,
+        baseName: lib.name,
+        proteinName: "",
+        proteinG: null,
+        carbName: "",
+        carbG: null,
+        type: lib.type || "MAIN",
+        text: lib.name,
+        count: Number(lib.count || 1),
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 400);
+  },
+});
+
+/** بذر/تحديث مكتبة الأطباق الجاهزة (upsert بالاسم). للموظفين. */
+export const seedLibrary = mutation({
+  args: {
+    items: v.array(v.object({ name: v.string(), type: v.string(), count: v.optional(v.number()) })),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    let inserted = 0, updated = 0;
+    for (const it of args.items) {
+      const name = it.name.trim();
+      if (!name) continue;
+      const existing = await ctx.db
+        .query("customizedDishLibrary")
+        .withIndex("by_name", (q) => q.eq("name", name))
+        .first();
+      if (existing) { await ctx.db.patch(existing._id, { type: it.type, count: it.count ?? existing.count }); updated++; }
+      else { await ctx.db.insert("customizedDishLibrary", { name, type: it.type, count: it.count ?? 1 }); inserted++; }
+    }
+    return { inserted, updated };
   },
 });
 

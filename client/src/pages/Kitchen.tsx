@@ -59,11 +59,23 @@ const PROTEIN_TR: Array<{ ar: string; en: string }> = [
   { ar: "دجاج", en: "Chicken" }, { ar: "سمك", en: "Fish" }, { ar: "سلمون", en: "Salmon" },
   { ar: "ستيك", en: "Steak" }, { ar: "لحم بقري", en: "Beef" }, { ar: "لحم مفروم", en: "Minced beef" },
   { ar: "جمبري", en: "Shrimp" }, { ar: "ديك رومي", en: "Turkey" }, { ar: "تونة", en: "Tuna" }, { ar: "بيض", en: "Eggs" },
+  // أنواع شائعة (طهي) — تُترجم للمطبخ الإنجليزي تلقائياً
+  { ar: "دجاج مشوي", en: "Grilled chicken" }, { ar: "دجاج مقلي", en: "Fried chicken" },
+  { ar: "دجاج بانيه", en: "Crispy chicken" }, { ar: "صدر دجاج", en: "Chicken breast" },
+  { ar: "شيش طاووق", en: "Shish tawook" }, { ar: "سمك مشوي", en: "Grilled fish" },
+  { ar: "سمك أبيض", en: "White fish" }, { ar: "سلمون مشوي", en: "Grilled salmon" },
+  { ar: "ستيك مشوي", en: "Grilled steak" }, { ar: "لحم مشوي", en: "Grilled beef" },
+  { ar: "كفتة", en: "Kofta" }, { ar: "كباب", en: "Kebab" }, { ar: "جمبري مشوي", en: "Grilled shrimp" },
+  { ar: "بيض مسلوق", en: "Boiled eggs" }, { ar: "بياض بيض", en: "Egg whites" },
 ];
 const CARB_TR: Array<{ ar: string; en: string }> = [
   { ar: "بدون", en: "None" }, { ar: "رز أبيض", en: "White rice" }, { ar: "رز بني", en: "Brown rice" },
   { ar: "باستا", en: "Pasta" }, { ar: "بطاطس", en: "Potato" }, { ar: "بطاطا حلوة", en: "Sweet potato" },
   { ar: "خبز", en: "Bread" }, { ar: "برغل", en: "Bulgur" }, { ar: "كينوا", en: "Quinoa" },
+  // أنواع شائعة
+  { ar: "رز بسمتي", en: "Basmati rice" }, { ar: "رز مصري", en: "Egyptian rice" },
+  { ar: "بطاطس مهروسة", en: "Mashed potato" }, { ar: "بطاطس مشوية", en: "Roasted potato" },
+  { ar: "مكرونة", en: "Pasta" }, { ar: "شوفان", en: "Oats" }, { ar: "خبز أسمر", en: "Brown bread" },
 ];
 const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: boolean): string => {
   const o = table.find((x) => x.ar === name || x.en === name);

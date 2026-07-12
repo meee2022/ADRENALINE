@@ -714,6 +714,14 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
   }).index("by_customer", ["customerId"]),
 
+  // ✅ مكتبة الأطباق المخصّصة الجاهزة (مبذورة من كشوف المطبخ) — تظهر كتركيبات
+  //    قابلة للنقر في منتقي الوجبات المخصّصة، بالإنجليزي للمطبخ.
+  customizedDishLibrary: defineTable({
+    name: v.string(),                 // نص الطبق كما يقرؤه المطبخ (إنجليزي)
+    type: v.string(),                 // MAIN | SNACK
+    count: v.optional(v.number()),    // عدد مرات الاستخدام (للترتيب)
+  }).index("by_name", ["name"]),
+
   /**
    * ✅ مبيعات الجم بالجملة — وجبات تُورَّد يوميًا لصالة الجم (زي نقطة بيع).
    *    كل سجل: التاريخ، اسم الجم، عدد الوجبات، سعر بيع الوجبة، والإجمالي.
