@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Adrenaline Orders Alert",
+  "version": "1.0",
+  "description": "ينبّهك بصوت وإشعار موحّد لأي طلب جديد من طلبات/سنونو/رفيق — بدون كلمات مرور ولا إرسال بيانات.",
+  "permissions": ["notifications"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://partner-app.talabat.com/*",
+        "https://merchant.snoonu.com/*",
+        "https://partner.gorafeeq.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": { "service_worker": "background.js" }
+}
