@@ -117,6 +117,56 @@ export const forDate = query({
   },
 });
 
+/**
+ * ✅ مكتبة إعادة الاستخدام — كل الأطباق/التركيبات المميّزة المستخدمة سابقاً في أي
+ *    قالب (طبق حر بالاسم، أو تركيبة بروتين+كارب+جرامات)، مرتّبة بالأكثر استخداماً.
+ *    تُعرض في منتقي الأطباق فتُملأ الخانة بضغطة واحدة.
+ */
+export const presets = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const templates = await ctx.db.query("customizedTemplates").collect();
+    const map = new Map<string, any>();
+    for (const tpl of templates) {
+      const sl = tpl.slots as any;
+      const dayMaps: any[] = [];
+      if (sl?.weeks && typeof sl.weeks === "object") {
+        for (const wk of Object.values(sl.weeks)) if ((wk as any)?.days) dayMaps.push((wk as any).days);
+      } else if (sl?.days && typeof sl.days === "object") {
+        dayMaps.push(sl.days);
+      } else if (Array.isArray(sl)) {
+        dayMaps.push({ _: sl });
+      }
+      for (const days of dayMaps) {
+        for (const arr of Object.values(days || {})) {
+          if (!Array.isArray(arr)) continue;
+          for (const s of arr as any[]) {
+            if (!s || s.type === "OFF") continue;
+            const hasContent = s.baseName || s.proteinG || (s.carbName && s.carbG);
+            if (!hasContent) continue;
+            const sig = [s.baseMealId || "", s.baseName || "", s.proteinName || "", s.proteinG || "", s.carbName || "", s.carbG || ""].join("|");
+            const existing = map.get(sig);
+            if (existing) { existing.count++; continue; }
+            map.set(sig, {
+              baseMealId: s.baseMealId || null,
+              baseName: s.baseName || "",
+              proteinName: s.proteinName || "",
+              proteinG: s.proteinG || null,
+              carbName: s.carbName || "",
+              carbG: s.carbG || null,
+              type: s.type || "MAIN",
+              text: s.text || "",
+              count: 1,
+            });
+          }
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => b.count - a.count).slice(0, 100);
+  },
+});
+
 /** قالب عميل واحد. للموظفين. */
 export const getTemplate = query({
   args: { customerId: v.id("customers"), sessionToken: v.optional(v.string()) },

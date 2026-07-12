@@ -94,14 +94,23 @@ function mealScheduledFor(m: any, week: number, day: string): boolean {
 }
 
 /** اختيار طبق بالبحث — افتراضياً وجبات يوم التبويب في دورة المطبخ، مع زر «كل المنيو» وطبق مخصّص. */
-function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filterDay }: {
+function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filterDay, presets = [], onPickPreset }: {
   meals: any[]; value?: string; valueName?: string; isRtl: boolean; onPick: (m: any | null) => void;
   filterWeek?: number; filterDay?: string;
+  presets?: any[]; onPickPreset?: (p: any) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [showAll, setShowAll] = useState(false);
   const nameOf = (m: any) => (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) || "";
+  // اسم عرض التركيبة السابقة = نصّها المركّب بلغة الواجهة
+  const presetName = (p: any) => composeText({ type: p.type, baseName: p.baseName, proteinName: p.proteinName, proteinG: p.proteinG, carbName: p.carbName, carbG: p.carbG } as any, isRtl) || p.baseName || "";
+  const presetResults = useMemo(() => {
+    if (!onPickPreset || !presets.length) return [];
+    const s = q.trim().toLowerCase();
+    const list = s ? presets.filter((p) => presetName(p).toLowerCase().includes(s)) : presets;
+    return list.slice(0, 12);
+  }, [q, presets, onPickPreset, isRtl]);
   const dayMeals = useMemo(
     () => (showAll || !filterWeek || !filterDay) ? meals : meals.filter((m) => mealScheduledFor(m, filterWeek, filterDay)),
     [meals, showAll, filterWeek, filterDay],
@@ -157,6 +166,23 @@ function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filter
                   ✕ {isRtl ? "إلغاء الاختيار" : "Clear selection"}
                 </button>
               )}
+              {/* ♻️ تركيبات/أطباق سابقة — تملأ الخانة كاملة بضغطة */}
+              {presetResults.length > 0 && (
+                <>
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-black text-emerald-700 uppercase tracking-wide bg-emerald-50/60">
+                    ♻️ {isRtl ? "تركيبات سابقة (تملأ الكمية والبروتين تلقائياً)" : "Reusable presets (fills grams & protein)"}
+                  </p>
+                  {presetResults.map((p, i) => (
+                    <button key={"pr" + i} type="button" onClick={() => { onPickPreset?.(p); setOpen(false); }}
+                      className="w-full text-start px-3 py-2 text-sm hover:bg-emerald-50 flex items-center gap-2 font-bold text-emerald-800 border-b border-emerald-50">
+                      <span className="text-emerald-500 shrink-0">♻️</span>
+                      <span className="truncate">{presetName(p)}</span>
+                      {p.count > 1 && <span className="ms-auto text-[10px] text-emerald-500 shrink-0">×{p.count}</span>}
+                    </button>
+                  ))}
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wide">{isRtl ? "المنيو" : "Menu"}</p>
+                </>
+              )}
               {results.map((m) => (
                 <button key={m._id} type="button" onClick={() => { onPick(m); setOpen(false); }}
                   className={cn("w-full text-start px-3 py-2 text-sm hover:bg-[#f2fbff] flex items-center gap-2",
@@ -199,6 +225,11 @@ export default function Customized() {
   const selected = customers.find((c) => c._id === selectedId);
   const mainMeals = useMemo(() => meals.filter((m) => ["lunch", "dinner"].includes(String(m.category))), [meals]);
   const snackMeals = useMemo(() => meals.filter((m) => ["snack", "salad"].includes(String(m.category))), [meals]);
+
+  // ✅ مكتبة الأطباق/التركيبات السابقة (لإعادة الاستخدام بضغطة)
+  const presets = (useQuery(api.customizedPlans.presets, { sessionToken }) as any[] | undefined) || [];
+  const mainPresets = useMemo(() => presets.filter((p) => p.type === "MAIN"), [presets]);
+  const snackPresets = useMemo(() => presets.filter((p) => p.type !== "MAIN"), [presets]);
 
   // ✅ قالب بالأسابيع×الأيام: 4 أسابيع دورة، كل أسبوع له أيامه، كل يوم خاناته
   const [weekSlots, setWeekSlots] = useState<Record<number, Record<string, Slot[]>>>({});
@@ -455,6 +486,15 @@ export default function Customized() {
                         isRtl={isRtl}
                         filterWeek={activeWeek}
                         filterDay={activeDay}
+                        presets={s.type === "MAIN" ? mainPresets : snackPresets}
+                        onPickPreset={(p) => patchSlot(i, {
+                          baseMealId: p.baseMealId || undefined,
+                          baseName: p.baseName || undefined,
+                          proteinName: p.proteinName || undefined,
+                          proteinG: p.proteinG || undefined,
+                          carbName: p.carbName || undefined,
+                          carbG: p.carbG || undefined,
+                        })}
                         onPick={(m) => patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined })}
                       />
 
