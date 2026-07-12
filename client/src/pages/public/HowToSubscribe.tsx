@@ -19,8 +19,8 @@ const B = { brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A", ink2: "#2D4A67"
 
 export default function HowToSubscribe() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "طريقة الاشتراك | أدرينالين للوجبات الصحية", description: "اعرف إزاي تشترك في وجبات أدرينالين الصحية خطوة بخطوة — اختيار الباقة، الدفع، والتوصيل اليومي في قطر.", path: "/public/how-to-subscribe" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  useSeo({ title: isRtl ? "طريقة الاشتراك | أدرينالين للوجبات الصحية" : "How to Subscribe | Adrenaline Healthy Meals", description: isRtl ? "اعرف إزاي تشترك في وجبات أدرينالين الصحية خطوة بخطوة — اختيار الباقة، الدفع، والتوصيل اليومي في قطر." : "Learn how to subscribe to Adrenaline healthy meals step by step — choosing a plan, payment, and daily delivery in Qatar.", path: "/public/how-to-subscribe" });
   const [, setLocation] = useLocation();
   const settings = useQuery(api.restaurantSettings.get);
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");

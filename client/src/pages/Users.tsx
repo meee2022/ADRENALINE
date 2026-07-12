@@ -371,7 +371,7 @@ export default function Users() {
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          الموظفين ({users.length})
+          {isRtl ? "الموظفين" : "Staff"} ({users.length})
         </button>
         <button
           onClick={() => setActiveTab("customers")}
@@ -381,7 +381,7 @@ export default function Users() {
               : "text-gray-600 hover:text-gray-900"
           }`}
         >
-          العملاء ({customers.length})
+          {isRtl ? "العملاء" : "Customers"} ({customers.length})
         </button>
       </div>
 
@@ -472,29 +472,29 @@ export default function Users() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UsersIcon className="h-5 w-5 text-primary" />
-              حسابات العملاء
+              {isRtl ? "حسابات العملاء" : "Customer Accounts"}
             </CardTitle>
-            <CardDescription>{customers.length} عميل</CardDescription>
+            <CardDescription>{customers.length} {isRtl ? "عميل" : "customers"}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
             <Table>
               <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
                 <TableRow>
-                  <TableHead>الاسم الكامل</TableHead>
-                  <TableHead>البريد الإلكتروني</TableHead>
-                  <TableHead>الهاتف</TableHead>
-                  <TableHead>الحالة</TableHead>
-                  <TableHead>تاريخ التسجيل</TableHead>
-                  <TableHead>مرتبط باشتراك</TableHead>
-                  <TableHead className="text-center">الإجراءات</TableHead>
+                  <TableHead>{isRtl ? "الاسم الكامل" : "Full Name"}</TableHead>
+                  <TableHead>{isRtl ? "البريد الإلكتروني" : "Email"}</TableHead>
+                  <TableHead>{isRtl ? "الهاتف" : "Phone"}</TableHead>
+                  <TableHead>{isRtl ? "الحالة" : "Status"}</TableHead>
+                  <TableHead>{isRtl ? "تاريخ التسجيل" : "Registered"}</TableHead>
+                  <TableHead>{isRtl ? "مرتبط باشتراك" : "Linked to Subscription"}</TableHead>
+                  <TableHead className="text-center">{isRtl ? "الإجراءات" : "Actions"}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {customers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground">
-                      لا يوجد عملاء مسجلين
+                      {isRtl ? "لا يوجد عملاء مسجلين" : "No registered customers"}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -513,7 +513,7 @@ export default function Users() {
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
-                            {customer.isActive ? "نشط" : "غير نشط"}
+                            {customer.isActive ? (isRtl ? "نشط" : "Active") : (isRtl ? "غير نشط" : "Inactive")}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -523,16 +523,16 @@ export default function Users() {
                         </TableCell>
                         <TableCell>
                           {customer.customerId ? (
-                            <span className="text-green-600 font-medium">✓ مرتبط</span>
+                            <span className="text-green-600 font-medium">✓ {isRtl ? "مرتبط" : "Linked"}</span>
                           ) : (
-                            <span className="text-gray-400">غير مرتبط</span>
+                            <span className="text-gray-400">{isRtl ? "غير مرتبط" : "Not linked"}</span>
                           )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-center gap-2">
                             {alreadyStaff ? (
                               <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                                موظف بالفعل
+                                {isRtl ? "موظف بالفعل" : "Already staff"}
                               </Badge>
                             ) : (
                               <Button
@@ -542,7 +542,7 @@ export default function Users() {
                                 className="h-8 gap-1.5 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0] hover:text-white"
                               >
                                 <ArrowUpCircle className="h-3.5 w-3.5" />
-                                <span className="text-xs">رفع لموظف</span>
+                                <span className="text-xs">{isRtl ? "رفع لموظف" : "Promote to staff"}</span>
                               </Button>
                             )}
                           </div>
@@ -675,10 +675,10 @@ export default function Users() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowUpCircle className="h-5 w-5 text-[#3CC4F0]" />
-              رفع عميل إلى موظف
+              {isRtl ? "رفع عميل إلى موظف" : "Promote Customer to Staff"}
             </DialogTitle>
             <DialogDescription>
-              تحويل العميل إلى حساب موظف بدور محدد
+              {isRtl ? "تحويل العميل إلى حساب موظف بدور محدد" : "Convert the customer into a staff account with a specific role"}
             </DialogDescription>
           </DialogHeader>
 
@@ -699,7 +699,7 @@ export default function Users() {
 
               {/* Role selection */}
               <div className="space-y-2">
-                <Label>اختر الدور</Label>
+                <Label>{isRtl ? "اختر الدور" : "Select role"}</Label>
                 <Select value={promoteRole} onValueChange={(v) => setPromoteRole(v as Role)} dir={isRtl ? "rtl" : "ltr"}>
                   <SelectTrigger>
                     <SelectValue />
@@ -726,27 +726,27 @@ export default function Users() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label>كلمة المرور الجديدة (للدخول كموظف)</Label>
+                <Label>{isRtl ? "كلمة المرور الجديدة (للدخول كموظف)" : "New password (for staff login)"}</Label>
                 <Input
                   type="password"
                   value={promotePassword}
                   onChange={(e) => setPromotePassword(e.target.value)}
-                  placeholder="4 أحرف على الأقل"
+                  placeholder={isRtl ? "4 أحرف على الأقل" : "At least 4 characters"}
                   dir="ltr"
                   className="text-left"
                 />
                 <p className="text-xs text-muted-foreground">
-                  العميل سيستخدم نفس البريد الإلكتروني مع كلمة المرور دي لتسجيل الدخول كموظف.
+                  {isRtl ? "العميل سيستخدم نفس البريد الإلكتروني مع كلمة المرور دي لتسجيل الدخول كموظف." : "The customer will use the same email with this password to log in as staff."}
                 </p>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>{isRtl ? "إلغاء" : "Cancel"}</Button>
             <Button onClick={handlePromote} className="bg-[#3CC4F0] hover:bg-[#2bb0dc] gap-2">
               <ArrowUpCircle className="h-4 w-4" />
-              تأكيد الرفع
+              {isRtl ? "تأكيد الرفع" : "Confirm promotion"}
             </Button>
           </DialogFooter>
         </DialogContent>

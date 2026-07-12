@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { useLocation } from "wouter";
 import { useState } from "react";
 import { format } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 import { ClipboardList, CheckCircle2, ChefHat } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
@@ -15,12 +15,12 @@ import { useLanguage } from "@/lib/i18n";
 /** التبويبات: قيد المراجعة / المعتمدة / الكل */
 type Tab = "pending" | "confirmed" | "all";
 
-const STATUS_LABEL: Record<string, { ar: string; cls: string }> = {
-  pending:   { ar: "قيد المراجعة", cls: "bg-amber-50 text-amber-700" },
-  confirmed: { ar: "معتمد",        cls: "bg-emerald-50 text-emerald-700" },
-  active:    { ar: "نشط",          cls: "bg-emerald-50 text-emerald-700" },
-  completed: { ar: "مكتمل",        cls: "bg-slate-100 text-slate-700" },
-  cancelled: { ar: "ملغي",         cls: "bg-red-50 text-red-700" },
+const STATUS_LABEL: Record<string, { ar: string; en: string; cls: string }> = {
+  pending:   { ar: "قيد المراجعة", en: "Pending",   cls: "bg-amber-50 text-amber-700" },
+  confirmed: { ar: "معتمد",        en: "Approved",  cls: "bg-emerald-50 text-emerald-700" },
+  active:    { ar: "نشط",          en: "Active",    cls: "bg-emerald-50 text-emerald-700" },
+  completed: { ar: "مكتمل",        en: "Completed", cls: "bg-slate-100 text-slate-700" },
+  cancelled: { ar: "ملغي",         en: "Cancelled", cls: "bg-red-50 text-red-700" },
 };
 
 export default function OrdersPending() {
@@ -40,8 +40,9 @@ export default function OrdersPending() {
   const settings = useQuery(api.restaurantSettings.get);
   const setCookingWeek = useMutation(api.restaurantSettings.setCookingWeek);
   const { toast } = useToast();
-  const { dir } = useLanguage();
-  const isRtl = dir === "rtl";
+  const { dir, language } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const cookingWeek = Number((settings as any)?.currentCookingWeek) || 0;
 
   if (!orders) {
@@ -53,9 +54,9 @@ export default function OrdersPending() {
   }
 
   const TABS: { key: Tab; label: string }[] = [
-    { key: "pending", label: "قيد المراجعة" },
-    { key: "confirmed", label: "المعتمدة" },
-    { key: "all", label: "الكل" },
+    { key: "pending", label: t("قيد المراجعة", "Pending") },
+    { key: "confirmed", label: t("المعتمدة", "Approved") },
+    { key: "all", label: t("الكل", "All") },
   ];
 
   return (
@@ -146,10 +147,10 @@ export default function OrdersPending() {
             <CheckCircle2 className="h-8 w-8 text-[#3cc4f0]" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">
-            رائع! لا توجد طلبات معلقة
+            {t("رائع! لا توجد طلبات معلقة", "Great! No pending orders")}
           </h3>
           <p className="text-gray-500">
-            {tab === "pending" ? "تم مراجعة جميع الطلبات" : "لا توجد طلبات في هذا التصنيف"}
+            {tab === "pending" ? t("تم مراجعة جميع الطلبات", "All orders have been reviewed") : t("لا توجد طلبات في هذا التصنيف", "No orders in this category")}
           </p>
         </Card>
       ) : (
@@ -158,8 +159,8 @@ export default function OrdersPending() {
             const createdDate = (() => {
               const d = order.createdAt ? new Date(order.createdAt) : null;
               return d && !isNaN(d.getTime())
-                ? format(d, "dd MMMM yyyy - hh:mm a", { locale: ar })
-                : "غير محدد";
+                ? format(d, "dd MMMM yyyy - hh:mm a", { locale: isRtl ? ar : enUS })
+                : t("غير محدد", "Not specified");
             })();
 
             return (
@@ -182,7 +183,7 @@ export default function OrdersPending() {
                           {order.notes?.includes("مولّد الوجبات الذكي") && (
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
                               style={{ background: "linear-gradient(135deg,#3AC7F4,#0E76AC)" }}>
-                              ✨ خطة ذكية — راجِع
+                              {t("✨ خطة ذكية — راجِع", "✨ Smart plan — review")}
                             </span>
                           )}
                         </h3>
@@ -194,25 +195,25 @@ export default function OrdersPending() {
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">رقم الطلب</p>
+                        <p className="text-xs text-gray-500 mb-1">{t("رقم الطلب", "Order No.")}</p>
                         <p className="font-semibold text-gray-900 text-sm">
                           {order.orderNumber}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">عدد الوجبات</p>
+                        <p className="text-xs text-gray-500 mb-1">{t("عدد الوجبات", "Meals count")}</p>
                         <p className="font-semibold text-gray-900 text-sm">
-                          {order.totalMeals} وجبة
+                          {order.totalMeals} {t("وجبة", "meals")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">السعرات الكلية</p>
+                        <p className="text-xs text-gray-500 mb-1">{t("السعرات الكلية", "Total calories")}</p>
                         <p className="font-semibold text-gray-900 text-sm">
-                          {order.totalCalories.toLocaleString()} سعرة
+                          {order.totalCalories.toLocaleString()} {t("سعرة", "kcal")}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500 mb-1">تاريخ الإرسال</p>
+                        <p className="text-xs text-gray-500 mb-1">{t("تاريخ الإرسال", "Submitted on")}</p>
                         <p className="font-semibold text-gray-900 text-sm">
                           {createdDate}
                         </p>
@@ -226,7 +227,7 @@ export default function OrdersPending() {
                       "px-4 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap",
                       STATUS_LABEL[order.status]?.cls || "bg-slate-100 text-slate-700",
                     )}>
-                      {STATUS_LABEL[order.status]?.ar || order.status}
+                      {(isRtl ? STATUS_LABEL[order.status]?.ar : STATUS_LABEL[order.status]?.en) || order.status}
                     </div>
                   </div>
                 </div>
@@ -234,7 +235,7 @@ export default function OrdersPending() {
                 {/* Notes */}
                 {order.notes && (
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">ملاحظات العميل:</p>
+                    <p className="text-xs text-gray-500 mb-1">{t("ملاحظات العميل:", "Customer notes:")}</p>
                     <p className="text-sm text-gray-700">{order.notes}</p>
                   </div>
                 )}
@@ -242,7 +243,7 @@ export default function OrdersPending() {
                 {/* Action Hint */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-sm text-[#47759c] font-semibold text-center">
-                    {order.status === "pending" ? "اضغط للمراجعة التفصيلية" : "اضغط لعرض التفاصيل"}
+                    {order.status === "pending" ? t("اضغط للمراجعة التفصيلية", "Tap for detailed review") : t("اضغط لعرض التفاصيل", "Tap to view details")}
                   </p>
                 </div>
               </Card>

@@ -138,7 +138,7 @@ export default function InventoryAlerts() {
                 <tbody>
                   {a.lowStock.map((it: any) => (
                     <tr key={it.itemId} className="border-t border-gray-100 hover:bg-[#f7fbfe] cursor-pointer" onClick={() => setLocation(`/inventory/${it.itemId}`)}>
-                      <td className="px-5 py-3 font-medium text-slate-900">{it.nameAr}</td>
+                      <td className="px-5 py-3 font-medium text-slate-900">{isRtl ? it.nameAr : (it.nameEn || it.nameAr)}</td>
                       <td className="text-center px-3 py-3 text-slate-500 tabular-nums">{fmt(it.currentStock)} {it.unit}</td>
                       <td className="text-center px-3 py-3 text-slate-400 tabular-nums">{fmt(it.minStock)} {it.unit}</td>
                       <td className="text-center px-3 py-3 font-bold text-slate-900 tabular-nums">+{fmt(it.reorderQty)} {it.unit}</td>
@@ -193,7 +193,7 @@ function BatchTable({ rows, isRtl, expired }: { rows: any[]; isRtl: boolean; exp
         <tbody>
           {rows.map((b: any) => (
             <tr key={b.batchId} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-              <td className="px-5 py-3 font-medium text-slate-900">{b.nameAr}</td>
+              <td className="px-5 py-3 font-medium text-slate-900">{isRtl ? b.nameAr : (b.nameEn || b.nameAr)}</td>
               <td className="text-center px-3 py-3 text-slate-500 tabular-nums">{fmt(b.quantity)} {b.unit}</td>
               <td className="text-center px-3 py-3 text-slate-500 tabular-nums" dir="ltr">{b.expiryDate}</td>
               <td className="text-center px-3 py-3 font-bold tabular-nums">

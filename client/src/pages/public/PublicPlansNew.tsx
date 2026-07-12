@@ -21,8 +21,14 @@ const badgeConfig = {
 
 export default function PublicPlansNew() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "الباقات والأسعار | أدرينالين للوجبات الصحية", description: "اختر باقتك: تنحيف، لياقة، أو تضخيم — وجبات صحية محسوبة السعرات بأسعار مناسبة وتوصيل يومي في قطر.", path: "/public/plans" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  useSeo({
+    title: isRtl ? "الباقات والأسعار | أدرينالين للوجبات الصحية" : "Plans & Pricing | Adrenaline Healthy Meals",
+    description: isRtl
+      ? "اختر باقتك: تنحيف، لياقة، أو تضخيم — وجبات صحية محسوبة السعرات بأسعار مناسبة وتوصيل يومي في قطر."
+      : "Choose your plan: weight loss, fitness, or bulking — calorie-counted healthy meals at great prices with daily delivery in Qatar.",
+    path: "/public/plans",
+  });
   // اسم الباقة: إنجليزي في الوضع الإنجليزي، وعربي مع استبدال "حزمة" بـ"باقة"
   const planName = (p: any) => isRtl ? String(p.nameAr || "").replace(/حزمة/g, "باقة") : (p.nameEn || p.nameAr);
   // في الإنجليزي: لا نرجع للعربي حتى لا يظهر وصف عربي في وضع اللغة الإنجليزية

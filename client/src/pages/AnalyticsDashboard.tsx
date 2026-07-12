@@ -5,6 +5,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -47,7 +48,18 @@ const STATUS_AR: Record<string, string> = {
   cancelled: "ملغي",
 };
 
+const STATUS_EN: Record<string, string> = {
+  pending: "Pending",
+  confirmed: "Confirmed",
+  active: "Active",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
 export default function AnalyticsDashboard() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const overview = useQuery(api.analytics.overview, { sessionToken });
   const sales30 = useQuery(api.analytics.salesLast30Days, { sessionToken }) || [];
@@ -77,30 +89,30 @@ export default function AnalyticsDashboard() {
       {overview && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <KpiCard
-            label="إجمالي العملاء"
+            label={t("إجمالي العملاء", "Total Customers")}
             value={overview.totalCustomers}
-            sub={`${overview.activeCustomers} نشط`}
+            sub={isRtl ? `${overview.activeCustomers} نشط` : `${overview.activeCustomers} active`}
             icon={Users}
             color="#3CC4F0"
           />
           <KpiCard
-            label="الطلبات"
+            label={t("الطلبات", "Orders")}
             value={overview.totalOrders}
-            sub={`${overview.pendingOrders} قيد المراجعة`}
+            sub={isRtl ? `${overview.pendingOrders} قيد المراجعة` : `${overview.pendingOrders} pending`}
             icon={ShoppingCart}
             color="#10b981"
           />
           <KpiCard
-            label="الإيرادات الكلية"
-            value={`${overview.totalRevenue.toLocaleString()} ر.ق`}
-            sub={`${overview.completedOrders} طلب مكتمل`}
+            label={t("الإيرادات الكلية", "Total Revenue")}
+            value={`${overview.totalRevenue.toLocaleString()} ${t("ر.ق", "QAR")}`}
+            sub={isRtl ? `${overview.completedOrders} طلب مكتمل` : `${overview.completedOrders} completed orders`}
             icon={DollarSign}
             color="#f59e0b"
           />
           <KpiCard
-            label="وجبات اليوم"
+            label={t("وجبات اليوم", "Today's Meals")}
             value={overview.todayMeals}
-            sub={`${overview.todayPlans} خطة`}
+            sub={isRtl ? `${overview.todayPlans} خطة` : `${overview.todayPlans} plans`}
             icon={UtensilsCrossed}
             color="#8b5cf6"
           />
@@ -112,7 +124,7 @@ export default function AnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-cyan-600" />
-            المبيعات - آخر 30 يوم
+            {t("المبيعات - آخر 30 يوم", "Sales - Last 30 Days")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -132,7 +144,7 @@ export default function AnalyticsDashboard() {
               <Area
                 type="monotone"
                 dataKey="revenue"
-                name="الإيرادات (ر.ق)"
+                name={t("الإيرادات (ر.ق)", "Revenue (QAR)")}
                 stroke="#3CC4F0"
                 fill="url(#revenueGrad)"
                 strokeWidth={2}
@@ -140,7 +152,7 @@ export default function AnalyticsDashboard() {
               <Line
                 type="monotone"
                 dataKey="count"
-                name="عدد الطلبات"
+                name={t("عدد الطلبات", "Order Count")}
                 stroke="#47759C"
                 strokeWidth={2}
               />
@@ -155,14 +167,14 @@ export default function AnalyticsDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-cyan-600" />
-              توزيع حالات الطلبات
+              {t("توزيع حالات الطلبات", "Order Status Distribution")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
-                  data={statusDist.map((s: any) => ({ ...s, name: STATUS_AR[s.status] || s.status }))}
+                  data={statusDist.map((s: any) => ({ ...s, name: (isRtl ? STATUS_AR[s.status] : STATUS_EN[s.status]) || s.status }))}
                   dataKey="count"
                   nameKey="name"
                   cx="50%"
@@ -185,7 +197,7 @@ export default function AnalyticsDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-cyan-600" />
-              نمو العملاء
+              {t("نمو العملاء", "Customer Growth")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -196,8 +208,8 @@ export default function AnalyticsDashboard() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" name="جديد" fill="#3CC4F0" />
-                <Bar dataKey="cumulative" name="الإجمالي" fill="#47759C" />
+                <Bar dataKey="count" name={t("جديد", "New")} fill="#3CC4F0" />
+                <Bar dataKey="cumulative" name={t("الإجمالي", "Total")} fill="#47759C" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -209,12 +221,12 @@ export default function AnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UtensilsCrossed className="h-5 w-5 text-cyan-600" />
-            أكثر الوجبات طلباً
+            {t("أكثر الوجبات طلباً", "Most Ordered Meals")}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {topMeals.length === 0 ? (
-            <p className="text-sm text-slate-400 py-8 text-center">لا توجد بيانات</p>
+            <p className="text-sm text-slate-400 py-8 text-center">{t("لا توجد بيانات", "No data available")}</p>
           ) : (
             <div className="space-y-2">
               {topMeals.map((meal: any, idx: number) => (
@@ -239,7 +251,7 @@ export default function AnalyticsDashboard() {
                   </div>
                   <div className="text-left">
                     <p className="font-bold text-sm">{meal.count}</p>
-                    <p className="text-[10px] text-slate-500">{meal.revenue} ر.ق</p>
+                    <p className="text-[10px] text-slate-500">{meal.revenue} {t("ر.ق", "QAR")}</p>
                   </div>
                 </div>
               ))}
@@ -253,7 +265,7 @@ export default function AnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-cyan-600" />
-            أداء المطبخ - آخر 7 أيام
+            {t("أداء المطبخ - آخر 7 أيام", "Kitchen Performance - Last 7 Days")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -264,10 +276,10 @@ export default function AnalyticsDashboard() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend />
-              <Bar dataKey="confirmed" name="مؤكد" stackId="a" fill="#3CC4F0" />
-              <Bar dataKey="prepared" name="جاهز" stackId="a" fill="#f59e0b" />
-              <Bar dataKey="delivered" name="تم التوصيل" stackId="a" fill="#10b981" />
-              <Bar dataKey="cancelled" name="ملغي" stackId="a" fill="#ef4444" />
+              <Bar dataKey="confirmed" name={t("مؤكد", "Confirmed")} stackId="a" fill="#3CC4F0" />
+              <Bar dataKey="prepared" name={t("جاهز", "Prepared")} stackId="a" fill="#f59e0b" />
+              <Bar dataKey="delivered" name={t("تم التوصيل", "Delivered")} stackId="a" fill="#10b981" />
+              <Bar dataKey="cancelled" name={t("ملغي", "Cancelled")} stackId="a" fill="#ef4444" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -275,16 +287,16 @@ export default function AnalyticsDashboard() {
 
       {/* ✅ إيراد منصّات الأونلاين هذا الشهر */}
       <Card>
-        <CardHeader><CardTitle>💳 إيراد منصّات الأونلاين — {online?.month || "الشهر"}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>💳 {t("إيراد منصّات الأونلاين", "Online Platforms Revenue")} — {online?.month || t("الشهر", "This Month")}</CardTitle></CardHeader>
         <CardContent>
           {!online || online.platforms.length === 0 ? (
-            <p className="text-center text-slate-400 py-8">لا توجد طلبات أونلاين مسجّلة هذا الشهر</p>
+            <p className="text-center text-slate-400 py-8">{t("لا توجد طلبات أونلاين مسجّلة هذا الشهر", "No online orders recorded this month")}</p>
           ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3 mb-2">
-                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.orders}</div><div className="text-xs text-slate-500">طلبات</div></div>
-                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.meals}</div><div className="text-xs text-slate-500">وجبات</div></div>
-                <div className="rounded-xl bg-emerald-50 p-3 text-center"><div className="text-2xl font-black text-emerald-600">{Math.round(online.totals.revenue).toLocaleString()}</div><div className="text-xs text-slate-500">إيراد (ر.ق)</div></div>
+                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.orders}</div><div className="text-xs text-slate-500">{t("طلبات", "Orders")}</div></div>
+                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.meals}</div><div className="text-xs text-slate-500">{t("وجبات", "Meals")}</div></div>
+                <div className="rounded-xl bg-emerald-50 p-3 text-center"><div className="text-2xl font-black text-emerald-600">{Math.round(online.totals.revenue).toLocaleString()}</div><div className="text-xs text-slate-500">{t("إيراد (ر.ق)", "Revenue (QAR)")}</div></div>
               </div>
               {online.platforms.map((p: any) => {
                 const pct = online.totals.revenue ? (p.revenue / online.totals.revenue) * 100 : 0;
@@ -292,7 +304,7 @@ export default function AnalyticsDashboard() {
                   <div key={p.platform}>
                     <div className="flex items-center justify-between text-sm font-bold mb-1">
                       <span style={{ color: PCOLOR[p.platform] || "#64748b" }}>{p.platform}</span>
-                      <span className="text-slate-600">{Math.round(p.revenue).toLocaleString()} ر.ق · {p.orders} طلب</span>
+                      <span className="text-slate-600">{Math.round(p.revenue).toLocaleString()} {t("ر.ق", "QAR")} · {p.orders} {t("طلب", "orders")}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${pct}%`, background: PCOLOR[p.platform] || "#64748b" }} />
@@ -307,10 +319,10 @@ export default function AnalyticsDashboard() {
 
       {/* ✅ أداء السائقين آخر 7 أيام */}
       <Card>
-        <CardHeader><CardTitle>🚚 أداء السائقين (آخر 7 أيام)</CardTitle></CardHeader>
+        <CardHeader><CardTitle>🚚 {t("أداء السائقين (آخر 7 أيام)", "Driver Performance (Last 7 Days)")}</CardTitle></CardHeader>
         <CardContent>
           {!drivers || drivers.length === 0 ? (
-            <p className="text-center text-slate-400 py-8">لا توجد توصيلات مسجّلة</p>
+            <p className="text-center text-slate-400 py-8">{t("لا توجد توصيلات مسجّلة", "No deliveries recorded")}</p>
           ) : (
             <div className="space-y-2">
               {drivers.map((d: any, i: number) => (
@@ -320,8 +332,8 @@ export default function AnalyticsDashboard() {
                     <span className="font-bold text-slate-800">{d.driver}</span>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="font-black text-emerald-600">{d.delivered} <span className="text-xs font-normal text-slate-400">توصيلة</span></span>
-                    {d.avgMinutes != null && <span className="font-bold text-[#0E76AC]">~{d.avgMinutes} <span className="text-xs font-normal text-slate-400">دقيقة</span></span>}
+                    <span className="font-black text-emerald-600">{d.delivered} <span className="text-xs font-normal text-slate-400">{t("توصيلة", "deliveries")}</span></span>
+                    {d.avgMinutes != null && <span className="font-bold text-[#0E76AC]">~{d.avgMinutes} <span className="text-xs font-normal text-slate-400">{t("دقيقة", "min")}</span></span>}
                   </div>
                 </div>
               ))}

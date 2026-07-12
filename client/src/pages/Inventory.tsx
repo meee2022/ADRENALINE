@@ -547,7 +547,7 @@ export default function InventoryPage() {
           {wasteItem && (
             <div className="space-y-4">
               <div className="rounded-lg bg-gray-50 border border-gray-200 p-3">
-                <p className="font-bold text-gray-900">{wasteItem.nameAr}</p>
+                <p className="font-bold text-gray-900">{isRtl ? wasteItem.nameAr : (wasteItem.nameEn || wasteItem.nameAr)}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {isRtl ? "المخزون الحالي:" : "Current stock:"} {wasteItem.currentStock} {wasteItem.unit}
                 </p>

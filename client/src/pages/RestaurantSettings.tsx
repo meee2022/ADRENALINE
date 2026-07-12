@@ -124,10 +124,10 @@ export default function RestaurantSettings() {
     setIsSaving(true);
     try {
       await updateSettings({ ...formData, sessionToken });
-      alert("✅ تم حفظ الإعدادات بنجاح!");
+      alert(t("✅ تم حفظ الإعدادات بنجاح!", "✅ Settings saved successfully!"));
     } catch (error) {
       console.error(error);
-      alert("❌ حدث خطأ أثناء الحفظ");
+      alert(t("❌ حدث خطأ أثناء الحفظ", "❌ An error occurred while saving"));
     } finally {
       setIsSaving(false);
     }
@@ -136,7 +136,7 @@ export default function RestaurantSettings() {
   const handleInitialize = async () => {
     try {
       await initializeDefault({ sessionToken });
-      alert("✅ تم إنشاء الإعدادات الافتراضية!");
+      alert(t("✅ تم إنشاء الإعدادات الافتراضية!", "✅ Default settings created!"));
     } catch (error) {
       console.error(error);
     }
@@ -148,13 +148,13 @@ export default function RestaurantSettings() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("❌ يرجى اختيار صورة فقط");
+      alert(t("❌ يرجى اختيار صورة فقط", "❌ Please select an image file only"));
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("❌ حجم الصورة يجب أن يكون أقل من 5 ميجابايت");
+      alert(t("❌ حجم الصورة يجب أن يكون أقل من 5 ميجابايت", "❌ Image size must be less than 5 MB"));
       return;
     }
 
@@ -182,7 +182,7 @@ export default function RestaurantSettings() {
       alert(t("✅ تم رفع الشعار بنجاح!","✅ Logo uploaded successfully!"));
     } catch (error: any) {
       console.error("Logo upload error:", error);
-      alert(`❌ خطأ في رفع الشعار: ${error?.message || "حاول مرة أخرى"}`);
+      alert(`${t("❌ خطأ في رفع الشعار:", "❌ Logo upload error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}`);
     } finally {
       setIsUploadingLogo(false);
       if (logoInputRef.current) {
@@ -202,7 +202,7 @@ export default function RestaurantSettings() {
       alert(t("✅ تم حذف الشعار بنجاح!","✅ Logo deleted successfully!"));
     } catch (error: any) {
       console.error("Logo delete error:", error);
-      alert(`❌ خطأ في حذف الشعار: ${error?.message || "حاول مرة أخرى"}`);
+      alert(`${t("❌ خطأ في حذف الشعار:", "❌ Logo delete error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}`);
     } finally {
       setIsDeletingLogo(false);
     }
@@ -224,10 +224,10 @@ export default function RestaurantSettings() {
             <Settings className="h-16 w-16 mx-auto mb-4 text-gray-400" />
             <h2 className="text-2xl font-bold mb-2">{t("لا توجد إعدادات","No settings")}</h2>
             <p className="text-gray-600 mb-6">
-              يبدو أن هذه هي المرة الأولى. انقر لإنشاء الإعدادات الافتراضية.
+              {t("يبدو أن هذه هي المرة الأولى. انقر لإنشاء الإعدادات الافتراضية.", "It looks like this is the first time. Click to create the default settings.")}
             </p>
             <Button onClick={handleInitialize} className="bg-primary">
-              إنشاء الإعدادات الافتراضية
+              {t("إنشاء الإعدادات الافتراضية", "Create default settings")}
             </Button>
           </CardContent>
         </Card>
@@ -260,7 +260,7 @@ export default function RestaurantSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Phone className="h-5 w-5 text-primary" />
-              معلومات الاتصال
+              {t("معلومات الاتصال", "Contact Information")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -325,7 +325,7 @@ export default function RestaurantSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Instagram className="h-5 w-5 text-primary" />
-              روابط السوشيال ميديا
+              {t("روابط السوشيال ميديا", "Social Media Links")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -364,7 +364,7 @@ export default function RestaurantSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="tiktokUrl">TikTok (اختياري)</Label>
+                <Label htmlFor="tiktokUrl">{t("TikTok (اختياري)", "TikTok (optional)")}</Label>
                 <Input
                   id="tiktokUrl"
                   value={formData.tiktokUrl}
@@ -374,7 +374,7 @@ export default function RestaurantSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="snapchatUrl">Snapchat (اختياري)</Label>
+                <Label htmlFor="snapchatUrl">{t("Snapchat (اختياري)", "Snapchat (optional)")}</Label>
                 <Input
                   id="snapchatUrl"
                   value={formData.snapchatUrl}
@@ -392,7 +392,7 @@ export default function RestaurantSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5 text-primary" />
-              وصف المطعم
+              {t("وصف المطعم", "Restaurant Description")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -425,7 +425,7 @@ export default function RestaurantSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              ساعات العمل
+              {t("ساعات العمل", "Working Hours")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -458,7 +458,7 @@ export default function RestaurantSettings() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
-              روابط إضافية
+              {t("روابط إضافية", "Additional Links")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -492,10 +492,10 @@ export default function RestaurantSettings() {
           <CardHeader className="bg-gradient-to-r from-[#0F4A5E] to-[#3CC4F0] text-white">
             <CardTitle className="flex items-center gap-2">
               <Settings className="h-5 w-5" />
-              إعدادات Hero Section (الصفحة الرئيسية)
+              {t("إعدادات Hero Section (الصفحة الرئيسية)", "Hero Section Settings (Homepage)")}
             </CardTitle>
             <p className="text-sm text-white/80 mt-2">
-              تحكم في النصوص والأزرار التي تظهر فوق السلايدر في الصفحة الرئيسية
+              {t("تحكم في النصوص والأزرار التي تظهر فوق السلايدر في الصفحة الرئيسية", "Control the text and buttons that appear over the homepage slider")}
             </p>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
@@ -503,7 +503,7 @@ export default function RestaurantSettings() {
             <div className="p-5 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl border-2 border-[#3CC4F0]/30">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <ImageIcon className="h-5 w-5 text-[#3CC4F0]" />
-                شعار Hero Section
+                {t("شعار Hero Section", "Hero Section Logo")}
               </h3>
               <div className="space-y-4">
                 {/* Current Logo Preview */}
@@ -564,7 +564,7 @@ export default function RestaurantSettings() {
                   )}
 
                   <span className="text-sm text-gray-600">
-                    صورة PNG أو JPG (أقل من 5 ميجابايت)
+                    {t("صورة PNG أو JPG (أقل من 5 ميجابايت)", "PNG or JPG image (less than 5 MB)")}
                   </span>
                 </div>
 
@@ -578,7 +578,7 @@ export default function RestaurantSettings() {
             <div>
               <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#3CC4F0]"></span>
-                العنوان الرئيسي (Hero Title)
+                {t("العنوان الرئيسي (Hero Title)", "Main Title (Hero Title)")}
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -607,7 +607,7 @@ export default function RestaurantSettings() {
             <div>
               <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#3CC4F0]"></span>
-                العنوان الفرعي (Hero Subtitle)
+                {t("العنوان الفرعي (Hero Subtitle)", "Subtitle (Hero Subtitle)")}
               </h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
@@ -638,7 +638,7 @@ export default function RestaurantSettings() {
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-[#3CC4F0] text-white text-xs font-bold">1</span>
-                الزر الأول (Primary Button)
+                {t("الزر الأول (Primary Button)", "First Button (Primary Button)")}
               </h3>
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -663,16 +663,16 @@ export default function RestaurantSettings() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="heroCta1Link">الرابط (Link)</Label>
+                  <Label htmlFor="heroCta1Link">{t("الرابط (Link)", "Link")}</Label>
                   <Input
                     id="heroCta1Link"
                     value={formData.heroCta1Link}
                     onChange={(e) => handleChange("heroCta1Link", e.target.value)}
-                    placeholder="#plans-section أو /public/plans"
+                    placeholder={t("#plans-section أو /public/plans", "#plans-section or /public/plans")}
                     dir="ltr"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    استخدم <code className="bg-gray-100 px-1 rounded">#plans-section</code> للانتقال السلس داخل الصفحة
+                    {t("استخدم", "Use")} <code className="bg-gray-100 px-1 rounded">#plans-section</code> {t("للانتقال السلس داخل الصفحة", "for smooth in-page scrolling")}
                   </p>
                 </div>
               </div>
@@ -682,7 +682,7 @@ export default function RestaurantSettings() {
             <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
               <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
                 <span className="flex items-center justify-center h-6 w-6 rounded-full bg-gray-400 text-white text-xs font-bold">2</span>
-                الزر الثاني (Secondary Button)
+                {t("الزر الثاني (Secondary Button)", "Second Button (Secondary Button)")}
               </h3>
               <div className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -707,7 +707,7 @@ export default function RestaurantSettings() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="heroCta2Link">الرابط (Link)</Label>
+                  <Label htmlFor="heroCta2Link">{t("الرابط (Link)", "Link")}</Label>
                   <Input
                     id="heroCta2Link"
                     value={formData.heroCta2Link}

@@ -116,7 +116,7 @@ export default function PurchaseOrders() {
                       <tbody>
                         {(po.items || []).map((it: any, i: number) => (
                           <tr key={i} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                            <td className="px-4 py-2 text-slate-700">{it.nameAr}</td>
+                            <td className="px-4 py-2 text-slate-700">{isRtl ? it.nameAr : (it.nameEn || it.nameAr)}</td>
                             <td className="text-center px-3 py-2 text-slate-900 font-bold tabular-nums">{fmt(it.quantity)} {it.unit}</td>
                             <td className="text-center px-3 py-2 text-slate-500 tabular-nums">{it.estUnitCost ? fmt(it.estUnitCost) : "—"}</td>
                             <td className="text-center px-4 py-2 text-slate-700 tabular-nums">{it.estLineCost ? fmt(it.estLineCost) : "—"}</td>

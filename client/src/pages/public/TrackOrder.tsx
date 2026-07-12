@@ -46,7 +46,7 @@ export default function TrackOrder() {
   }
 
   const stepIdx = ORDER[info.status] ?? 0;
-  const stops = info.dest ? [{ id: "home", name: "منزلك", lat: info.dest.lat, lng: info.dest.lng }] : [];
+  const stops = info.dest ? [{ id: "home", name: t("منزلك", "Your home"), lat: info.dest.lat, lng: info.dest.lng }] : [];
   const driver = info.driver && info.driver.lat != null ? { lat: info.driver.lat, lng: info.driver.lng } : null;
 
   return (

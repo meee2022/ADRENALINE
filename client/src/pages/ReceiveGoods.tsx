@@ -16,12 +16,12 @@ import { ArrowRight, Plus, Trash2, PackagePlus, Truck, ClipboardPaste } from "lu
 import { DashboardHeader } from "@/components/DashboardHeader";
 
 const CATEGORIES = [
-  { v: "vegetables", ar: "خضروات" }, { v: "proteins", ar: "بروتينات" },
-  { v: "dairy", ar: "ألبان" }, { v: "dry_goods", ar: "مواد جافة" }, { v: "other", ar: "أخرى" },
+  { v: "vegetables", ar: "خضروات", en: "Vegetables" }, { v: "proteins", ar: "بروتينات", en: "Proteins" },
+  { v: "dairy", ar: "ألبان", en: "Dairy" }, { v: "dry_goods", ar: "مواد جافة", en: "Dry Goods" }, { v: "other", ar: "أخرى", en: "Other" },
 ];
 const UNITS = [
-  { v: "kg", ar: "كجم" }, { v: "piece", ar: "قطعة" }, { v: "liter", ar: "لتر" },
-  { v: "pack", ar: "عبوة" }, { v: "box", ar: "صندوق" },
+  { v: "kg", ar: "كجم", en: "kg" }, { v: "piece", ar: "قطعة", en: "Piece" }, { v: "liter", ar: "لتر", en: "Liter" },
+  { v: "pack", ar: "عبوة", en: "Pack" }, { v: "box", ar: "صندوق", en: "Box" },
 ];
 
 type Line = { mode: "existing" | "new"; itemId: string; nameAr: string; category: string; unit: string; quantity: string; unitCost: string; expiryDate: string; };
@@ -203,10 +203,10 @@ export default function ReceiveGoods() {
                 </div>
                 {l.mode === "new" && (<>
                   <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الاسم" : "Name"}</Label><Input value={l.nameAr} onChange={(e) => setLine(i, { nameAr: e.target.value })} className="h-9 text-sm" /></div>
-                  <div className="col-span-3 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "النوع" : "Cat"}</Label><select value={l.category} onChange={(e) => setLine(i, { category: e.target.value })} className={selCls}>{CATEGORIES.map((c) => <option key={c.v} value={c.v}>{c.ar}</option>)}</select></div>
+                  <div className="col-span-3 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "النوع" : "Cat"}</Label><select value={l.category} onChange={(e) => setLine(i, { category: e.target.value })} className={selCls}>{CATEGORIES.map((c) => <option key={c.v} value={c.v}>{isRtl ? c.ar : c.en}</option>)}</select></div>
                 </>)}
                 <div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الكمية" : "Qty"}</Label><Input type="number" step="0.01" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-sm" /></div>
-                {l.mode === "new" && (<div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الوحدة" : "Unit"}</Label><select value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} className={selCls}>{UNITS.map((u) => <option key={u.v} value={u.v}>{u.ar}</option>)}</select></div>)}
+                {l.mode === "new" && (<div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الوحدة" : "Unit"}</Label><select value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} className={selCls}>{UNITS.map((u) => <option key={u.v} value={u.v}>{isRtl ? u.ar : u.en}</option>)}</select></div>)}
                 <div className="col-span-4 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "سعر الوحدة" : "Unit cost"}</Label><Input type="number" step="0.01" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} className="h-9 text-sm" /></div>
                 <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الصلاحية" : "Expiry"}</Label><Input type="date" value={l.expiryDate} onChange={(e) => setLine(i, { expiryDate: e.target.value })} className="h-9 text-sm" /></div>
                 <div className="col-span-6 sm:col-span-1 flex items-center justify-between gap-2">

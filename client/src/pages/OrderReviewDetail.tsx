@@ -264,7 +264,7 @@ export default function OrderReviewDetail() {
             order.orderNumber || "",
             effectiveStartDate,
           );
-          if (confirm("✅ تم الاعتماد! هل تريد إرسال رسالة واتساب للعميل بالتأكيد؟")) {
+          if (confirm(t("✅ تم الاعتماد! هل تريد إرسال رسالة واتساب للعميل بالتأكيد؟", "✅ Approved! Do you want to send a WhatsApp confirmation to the customer?"))) {
             openWhatsApp(order.customerPhone, msg);
           }
         }
@@ -274,7 +274,7 @@ export default function OrderReviewDetail() {
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
-      alert("❌ حدث خطأ أثناء الاعتماد");
+      alert(t("❌ حدث خطأ أثناء الاعتماد", "❌ An error occurred while approving"));
     }
   };
 
@@ -307,7 +307,7 @@ export default function OrderReviewDetail() {
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
-      alert("❌ حدث خطأ أثناء الرفض");
+      alert(t("❌ حدث خطأ أثناء الرفض", "❌ An error occurred while rejecting"));
     }
   };
 
@@ -315,7 +315,7 @@ export default function OrderReviewDetail() {
     const d = order.createdAt ? new Date(order.createdAt) : null;
     return d && !isNaN(d.getTime())
       ? format(d, "dd MMMM yyyy - hh:mm a", { locale })
-      : "غير محدد";
+      : t("غير محدد", "Not set");
   })();
 
   /** التقرير المرسل للعميل — التصميم الفخم بالصور (نفس شكل المنيو/الخطة الذكية). */
@@ -323,10 +323,10 @@ export default function OrderReviewDetail() {
     if (downloadingPlan) return;
     const linked = customers.find((c: any) => String(c._id) === String(selectedCustomerId));
     const note = [
-      linked?.allergies ? `الحساسية: ${linked.allergies}` : "",
-      linked?.avoid ? `ممنوعات: ${linked.avoid}` : "",
-      linked?.preferences ? `تفضيلات: ${linked.preferences}` : "",
-      linked?.portions ? `كميات: ${linked.portions}` : "",
+      linked?.allergies ? `${t("الحساسية", "Allergies")}: ${linked.allergies}` : "",
+      linked?.avoid ? `${t("ممنوعات", "Avoid")}: ${linked.avoid}` : "",
+      linked?.preferences ? `${t("تفضيلات", "Preferences")}: ${linked.preferences}` : "",
+      linked?.portions ? `${t("كميات", "Portions")}: ${linked.portions}` : "",
     ]
       .filter(Boolean)
       .join("  •  ");
@@ -361,11 +361,11 @@ export default function OrderReviewDetail() {
     setDownloadingPlan(true);
     try {
       await printMealPlanCards({
-        title: `جدول وجبات — ${order.customerName || "—"}`,
+        title: `${t("جدول وجبات", "Meal plan")} — ${order.customerName || "—"}`,
         subtitle: [order.customerPhone, note].filter(Boolean).join("  ·  ") || undefined,
         kpis: [
-          { label: "عدد الأسابيع", value: weeks.length },
-          { label: "إجمالي الوجبات", value: totalMeals },
+          { label: t("عدد الأسابيع", "Weeks"), value: weeks.length },
+          { label: t("إجمالي الوجبات", "Total meals"), value: totalMeals },
         ],
         groups,
       });
@@ -425,7 +425,7 @@ export default function OrderReviewDetail() {
           </div>
 
           <div className="bg-orange-100 text-orange-700 px-6 py-3 rounded-lg font-semibold">
-            ⏳ قيد المراجعة
+            ⏳ {t("قيد المراجعة", "Under review")}
           </div>
         </div>
 
@@ -452,7 +452,7 @@ export default function OrderReviewDetail() {
 
         {order.notes && (
           <div className="mt-4 p-4 bg-white rounded-lg">
-            <p className="text-xs text-gray-500 mb-2">📝 ملاحظات العميل:</p>
+            <p className="text-xs text-gray-500 mb-2">📝 {t("ملاحظات العميل:", "Customer notes:")}</p>
             <p className="text-gray-700">{order.notes}</p>
           </div>
         )}
@@ -461,7 +461,7 @@ export default function OrderReviewDetail() {
       {/* Weekly Meals Grid */}
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-gray-900">
-          📅 جدول الوجبات المختارة
+          📅 {t("جدول الوجبات المختارة", "Selected meals plan")}
         </h3>
 
         {weeks.map((weekNum) => {
@@ -508,7 +508,7 @@ export default function OrderReviewDetail() {
                             </span>
                           )}
                           <span className="text-xs bg-white/15 rounded-full px-2.5 py-0.5">
-                            {dayMeals.length} وجبة · {dayCalories} سعرة
+                            {dayMeals.length} {t("وجبة", "meals")} · {dayCalories} {t("سعرة", "kcal")}
                           </span>
                         </div>
 
@@ -602,7 +602,7 @@ export default function OrderReviewDetail() {
                                 {meal.mealNameAr}
                               </h6>
                               <div className="flex items-center justify-between text-[11px] text-gray-600 mb-2">
-                                <span>{meal.calories} سعرة</span>
+                                <span>{meal.calories} {t("سعرة", "kcal")}</span>
                                 {meal.protein ? <span>🥩 {meal.protein}g</span> : null}
                               </div>
                               {meal.specialNotes && (
@@ -632,21 +632,21 @@ export default function OrderReviewDetail() {
                                 <button
                                   onClick={() => setSwapTarget(meal)}
                                   className="text-gray-400 hover:text-primary transition-colors text-sm"
-                                  title="تبديل الوجبة"
+                                  title={t("تبديل الوجبة", "Swap meal")}
                                 >
                                   ✏️
                                 </button>
                                 <button
                                   onClick={async () => {
-                                    if (!confirm(`حذف "${meal.mealNameAr}" من الطلب؟`)) return;
+                                    if (!confirm(t(`حذف "${meal.mealNameAr}" من الطلب؟`, `Remove "${meal.mealNameAr}" from the order?`))) return;
                                     try {
                                       await removeItemMutation({ itemId: meal._id, sessionToken });
                                     } catch (e: any) {
-                                      alert(e?.message || "تعذّر الحذف");
+                                      alert(e?.message || t("تعذّر الحذف", "Delete failed"));
                                     }
                                   }}
                                   className="text-gray-400 hover:text-red-600 transition-colors text-sm"
-                                  title="حذف الوجبة من الطلب"
+                                  title={t("حذف الوجبة من الطلب", "Remove meal from order")}
                                 >
                                   🗑️
                                 </button>
@@ -667,14 +667,14 @@ export default function OrderReviewDetail() {
       {/* Admin Actions */}
       <Card className="p-6 bg-gray-50">
         <h3 className="text-xl font-bold text-gray-900 mb-4">
-          🔧 إجراءات المراجعة
+          🔧 {t("إجراءات المراجعة", "Review actions")}
         </h3>
 
         <div className="space-y-4">
           {/* ✅ ملء سريع — اختياري */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              📅 ملء سريع: تاريخ بداية التوصيل
+              📅 {t("ملء سريع: تاريخ بداية التوصيل", "Quick fill: delivery start date")}
               <span className="text-[10px] font-normal px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
                 {t("اختياري","Optional")}
               </span>
@@ -728,10 +728,10 @@ export default function OrderReviewDetail() {
                   {t("هذا التاريخ يصادف","This date falls on")} <b>{t("الأسبوع","week")} {rotationInfo.rotationWeek}</b> {t("من دورة المطبخ","of the kitchen cycle")}
                   {rotationInfo.fridaysAhead > 0 && (
                     <span className="text-amber-600">
-                      {" "}(المطبخ الآن على الأسبوع {rotationInfo.currentCookingWeek})
+                      {" "}({t("المطبخ الآن على الأسبوع", "kitchen is currently on week")} {rotationInfo.currentCookingWeek})
                     </span>
                   )}
-                  . سيتلقّى العميل وجبات هذا الأسبوع عند بدء توصيله.
+                  {t(". سيتلقّى العميل وجبات هذا الأسبوع عند بدء توصيله.", ". The customer will receive this week's meals once delivery starts.")}
                 </span>
               </div>
             )}
@@ -757,7 +757,7 @@ export default function OrderReviewDetail() {
               return (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    🔗 المشترك المربوط
+                    🔗 {t("المشترك المربوط", "Linked subscriber")}
                   </label>
                   <div className="rounded-xl p-4 flex items-start gap-3"
                     style={{
@@ -772,7 +772,7 @@ export default function OrderReviewDetail() {
                       <div className="flex items-center gap-2 mb-1">
                         <p className="text-sm font-black text-emerald-900 truncate">{linkedCustomer.fullName}</p>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
-                          ✓ مربوط تلقائياً
+                          ✓ {t("مربوط تلقائياً", "Auto-linked")}
                         </span>
                       </div>
                       <p className="text-xs text-emerald-800" dir="ltr">📞 {linkedCustomer.phone}</p>
@@ -784,17 +784,17 @@ export default function OrderReviewDetail() {
                         )}
                         {linkedCustomer.mealsPerDay != null && (
                           <span className="px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-700">
-                            {linkedCustomer.mealsPerDay} وجبات/يوم
+                            {linkedCustomer.mealsPerDay} {t("وجبات/يوم", "meals/day")}
                           </span>
                         )}
                         {linkedCustomer.allergies && (
                           <span className="px-2 py-0.5 rounded-md bg-red-50 border border-red-200 text-red-700 font-bold">
-                            ⚠ حساسية: {linkedCustomer.allergies}
+                            ⚠ {t("حساسية", "Allergy")}: {linkedCustomer.allergies}
                           </span>
                         )}
                         {linkedCustomer.avoid && (
                           <span className="px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-orange-700 font-bold">
-                            ✕ ممنوع: {linkedCustomer.avoid}
+                            ✕ {t("ممنوع", "Avoid")}: {linkedCustomer.avoid}
                           </span>
                         )}
                       </div>
@@ -804,7 +804,7 @@ export default function OrderReviewDetail() {
                       className="text-xs text-gray-500 hover:text-red-600 hover:underline whitespace-nowrap"
                       title={t("إلغاء الربط واختيار يدوي","Unlink and pick manually")}
                     >
-                      تغيير
+                      {t("تغيير", "Change")}
                     </button>
                   </div>
                 </div>
@@ -872,10 +872,10 @@ export default function OrderReviewDetail() {
               <Button
                 onClick={handleDeleteOrder}
                 variant="outline"
-                title="حذف نهائي للخطة (للتجربة) — غير الرفض"
+                title={t("حذف نهائي للخطة (للتجربة) — غير الرفض", "Permanently delete the plan (for testing) — not a rejection")}
                 className="px-6 py-4 text-lg font-bold gap-2 border-red-700 text-red-700 bg-red-50 hover:bg-red-100"
               >
-                🗑️ حذف نهائي
+                🗑️ {t("حذف نهائي", "Delete permanently")}
               </Button>
             )}
 
@@ -889,7 +889,7 @@ export default function OrderReviewDetail() {
                 const rawPhone = linkedCust?.phone || (order as any).customerPhone || "";
                 const phone = String(rawPhone).replace(/\D/g, "");
                 if (!phone) {
-                  alert("⚠️ رقم الهاتف غير متوفر لهذا العميل");
+                  alert(t("⚠️ رقم الهاتف غير متوفر لهذا العميل", "⚠️ Phone number not available for this customer"));
                   return;
                 }
                 // تأكد إن الرقم بصيغة دولية (لو رقم قطر بدون code، ضيف 974)
@@ -952,7 +952,7 @@ export default function OrderReviewDetail() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSwapTarget(null)}>
           <Card className="p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-white" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">🔁 تبديل: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
+              <h3 className="text-xl font-bold text-gray-900">🔁 {t("تبديل", "Swap")}: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
               <button onClick={() => setSwapTarget(null)} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">×</button>
             </div>
             <p className="text-sm text-gray-500 mb-4">

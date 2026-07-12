@@ -64,9 +64,10 @@ export function CustomerMealPlanDialog({
 
     // اسم اليوم بالعربي من التاريخ — أوضح للعميل من رقم التاريخ وحده.
     const dayAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+    const dayEn = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const dayLabel = (isoDate: string) => {
       const d = new Date(isoDate + "T00:00:00");
-      const nm = isNaN(d.getTime()) ? "" : dayAr[d.getDay()];
+      const nm = isNaN(d.getTime()) ? "" : (isRtl ? dayAr : dayEn)[d.getDay()];
       return nm ? `${nm} · ${isoDate}` : isoDate;
     };
 
@@ -79,7 +80,7 @@ export function CustomerMealPlanDialog({
           return {
             label: String(i + 1),
             category: menu ? catMap.get(String(menu.categoryId)) || "" : (it.category || ""),
-            meal: menu?.name || it.mealNameAr || it.mealNameEn || "غير محدد",
+            meal: menu?.name || it.mealNameAr || it.mealNameEn || (isRtl ? "غير محدد" : "Unspecified"),
             notes: [...mods, it.avoid, it.preferences, it.portions].filter(Boolean).join(" • "),
             imageUrl: it.imageUrl || menu?.imageUrl || undefined,
             calories: it.calories ?? menu?.calories ?? "",
@@ -88,7 +89,7 @@ export function CustomerMealPlanDialog({
         });
       return {
         title: dayLabel(String(plan.date).slice(0, 10)),
-        subtitle: plan.deliveryTime === "MORNING" ? "صباحي" : "مسائي",
+        subtitle: plan.deliveryTime === "MORNING" ? (isRtl ? "صباحي" : "Morning") : (isRtl ? "مسائي" : "Evening"),
         rows,
       };
     });
@@ -96,19 +97,19 @@ export function CustomerMealPlanDialog({
     setDownloading(true);
     try {
       await printMealPlanCards({
-        title: `جدول وجبات — ${customer.fullName}`,
+        title: `${isRtl ? "جدول وجبات" : "Meal Plan"} — ${customer.fullName}`,
         subtitle: [
           customer.phone,
           customer.program,
-          `من ${effFrom} إلى ${effTo}`,
-          customer.avoid ? `ممنوعات: ${customer.avoid}` : "",
-          customer.allergies ? `حساسية: ${customer.allergies}` : "",
+          isRtl ? `من ${effFrom} إلى ${effTo}` : `From ${effFrom} to ${effTo}`,
+          customer.avoid ? (isRtl ? `ممنوعات: ${customer.avoid}` : `Avoid: ${customer.avoid}`) : "",
+          customer.allergies ? (isRtl ? `حساسية: ${customer.allergies}` : `Allergies: ${customer.allergies}`) : "",
         ]
           .filter(Boolean)
           .join(" · "),
         kpis: [
-          { label: "عدد الأيام", value: plans.length },
-          { label: "إجمالي الوجبات", value: mealCount },
+          { label: isRtl ? "عدد الأيام" : "Days", value: plans.length },
+          { label: isRtl ? "إجمالي الوجبات" : "Total Meals", value: mealCount },
         ],
         groups,
       });

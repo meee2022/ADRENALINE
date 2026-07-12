@@ -6,6 +6,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useLanguage } from "@/lib/i18n";
 
 export type MapStop = {
   id: string;
@@ -31,6 +32,8 @@ export function DeliveryMap({
   driver?: { lat: number; lng: number } | null;
   height?: number;
 }) {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -59,7 +62,7 @@ export function DeliveryMap({
         iconSize: [30, 30],
         iconAnchor: [15, 15],
       });
-      L.marker([origin.lat, origin.lng], { icon: originIcon }).addTo(layer).bindPopup("المطعم (نقطة الانطلاق)");
+      L.marker([origin.lat, origin.lng], { icon: originIcon }).addTo(layer).bindPopup(isRtl ? "المطعم (نقطة الانطلاق)" : "Restaurant (start point)");
       pts.push([origin.lat, origin.lng]);
     }
 
@@ -78,7 +81,7 @@ export function DeliveryMap({
         <div style="font-weight:800;color:#0f1516">${num}. ${s.name || ""}</div>
         ${s.address ? `<div style="font-size:12px;color:#47759c;margin-top:2px">${s.address}</div>` : ""}
         ${s.phone ? `<a href="tel:${s.phone}" style="font-size:12px;color:#0E76AC;font-weight:700">${s.phone}</a><br/>` : ""}
-        <a href="${nav}" target="_blank" style="display:inline-block;margin-top:6px;font-size:12px;font-weight:800;color:#fff;background:#0E76AC;padding:4px 10px;border-radius:8px;text-decoration:none">التوجّه ←</a>
+        <a href="${nav}" target="_blank" style="display:inline-block;margin-top:6px;font-size:12px;font-weight:800;color:#fff;background:#0E76AC;padding:4px 10px;border-radius:8px;text-decoration:none">${isRtl ? "التوجّه ←" : "Navigate →"}</a>
       </div>`;
       L.marker([s.lat, s.lng], { icon }).addTo(layer).bindPopup(popup);
       pts.push([s.lat, s.lng]);
@@ -96,7 +99,7 @@ export function DeliveryMap({
         iconSize: [38, 38],
         iconAnchor: [19, 19],
       });
-      L.marker([driver.lat, driver.lng], { icon: dIcon, zIndexOffset: 1000 }).addTo(layer).bindPopup("موقع السائق الآن");
+      L.marker([driver.lat, driver.lng], { icon: dIcon, zIndexOffset: 1000 }).addTo(layer).bindPopup(isRtl ? "موقع السائق الآن" : "Driver's current location");
       pts.push([driver.lat, driver.lng]);
     }
 
@@ -107,7 +110,7 @@ export function DeliveryMap({
     }
     // إصلاح حجم الخريطة داخل الحاويات المخفية/المتغيّرة
     setTimeout(() => map.invalidateSize(), 100);
-  }, [stops, origin, driver]);
+  }, [stops, origin, driver, isRtl]);
 
   useEffect(() => {
     return () => {

@@ -29,7 +29,8 @@ interface PlanOption {
 
 export default function PlansManagement() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const { t } = useLanguage();
+  const { t, language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,8 +43,8 @@ export default function PlansManagement() {
 
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "خطأ",
-        description: "يرجى اختيار صورة فقط",
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "يرجى اختيار صورة فقط" : "Please select an image file only",
         variant: "destructive",
       });
       return;
@@ -66,15 +67,15 @@ export default function PlansManagement() {
       if (imageUrl) {
         setFormData((prev) => ({ ...prev, imageUrl }));
         toast({
-          title: "نجاح",
-          description: "تم رفع الصورة وتحديث الرابط بنجاح",
+          title: isRtl ? "نجاح" : "Success",
+          description: isRtl ? "تم رفع الصورة وتحديث الرابط بنجاح" : "Image uploaded and link updated successfully",
         });
       }
     } catch (error) {
       console.error("Upload error:", error);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء رفع الصورة",
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "حدث خطأ أثناء رفع الصورة" : "An error occurred while uploading the image",
         variant: "destructive",
       });
     } finally {
@@ -151,12 +152,12 @@ export default function PlansManagement() {
     try {
       await convex.mutation(api.publicPlans.remove, { id: id as Id<"publicPlans">, sessionToken });
       toast({
-        title: "تم الحذف",
-        description: "تم حذف الخطة بنجاح",
+        title: isRtl ? "تم الحذف" : "Deleted",
+        description: isRtl ? "تم حذف الخطة بنجاح" : "Plan deleted successfully",
       });
     } catch (error: any) {
       toast({
-        title: "خطأ",
+        title: isRtl ? "خطأ" : "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -166,8 +167,8 @@ export default function PlansManagement() {
   const handleSave = async () => {
     if (!formData.nameAr || !formData.slug || formData.options.length === 0) {
       toast({
-        title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "يرجى ملء الحقول المطلوبة" : "Please fill in the required fields",
         variant: "destructive",
       });
       return;
@@ -196,16 +197,16 @@ export default function PlansManagement() {
 
       if (selectedPlan) {
         await convex.mutation(api.publicPlans.update, { id: selectedPlan._id, ...data, sessionToken });
-        toast({ title: "تم التحديث", description: "تم تحديث الخطة بنجاح" });
+        toast({ title: isRtl ? "تم التحديث" : "Updated", description: isRtl ? "تم تحديث الخطة بنجاح" : "Plan updated successfully" });
       } else {
         await convex.mutation(api.publicPlans.create, { ...data, sessionToken });
-        toast({ title: "تم الإضافة", description: "تم إضافة الخطة بنجاح" });
+        toast({ title: isRtl ? "تم الإضافة" : "Added", description: isRtl ? "تم إضافة الخطة بنجاح" : "Plan added successfully" });
       }
 
       setIsDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: "خطأ",
+        title: isRtl ? "خطأ" : "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -233,7 +234,7 @@ export default function PlansManagement() {
   };
 
   const addFeature = () => {
-    const feature = prompt("أدخل الميزة:");
+    const feature = prompt(isRtl ? "أدخل الميزة:" : "Enter the feature:");
     if (feature) {
       setFormData({ ...formData, features: [...formData.features, feature] });
     }
@@ -273,23 +274,23 @@ export default function PlansManagement() {
           <Table>
             <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
-                <TableHead>اسم الخطة</TableHead>
+                <TableHead>{isRtl ? "اسم الخطة" : "Plan Name"}</TableHead>
                 <TableHead>{t("plans_management.duration")}</TableHead>
-                <TableHead>عدد الخيارات</TableHead>
+                <TableHead>{isRtl ? "عدد الخيارات" : "Options"}</TableHead>
                 <TableHead>{t("menu_management.status")}</TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
+                <TableHead className="text-center">{isRtl ? "الإجراءات" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {plans.map((plan: any) => (
                 <TableRow key={plan._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                  <TableCell className="font-medium">{plan.nameAr}</TableCell>
+                  <TableCell className="font-medium">{isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)}</TableCell>
                   <TableCell>
                     {plan.duration === "week"
-                      ? "أسبوعي"
+                      ? (isRtl ? "أسبوعي" : "Weekly")
                       : plan.duration === "two_weeks"
-                      ? "أسبوعين"
-                      : "شهري"}
+                      ? (isRtl ? "أسبوعين" : "Two Weeks")
+                      : (isRtl ? "شهري" : "Monthly")}
                   </TableCell>
                   <TableCell>{plan.options?.length || 0}</TableCell>
                   <TableCell>
@@ -335,7 +336,7 @@ export default function PlansManagement() {
                 <Input
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                  placeholder="باقة التخسيس"
+                  placeholder={isRtl ? "باقة التخسيس" : "Diet Pack"}
                 />
               </div>
 
@@ -369,9 +370,9 @@ export default function PlansManagement() {
                   }
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  <option value="week">أسبوعي</option>
-                  <option value="two_weeks">أسبوعين</option>
-                  <option value="month">شهري</option>
+                  <option value="week">{isRtl ? "أسبوعي" : "Weekly"}</option>
+                  <option value="two_weeks">{isRtl ? "أسبوعين" : "Two Weeks"}</option>
+                  <option value="month">{isRtl ? "شهري" : "Monthly"}</option>
                 </select>
               </div>
             </div>
@@ -407,7 +408,7 @@ export default function PlansManagement() {
                     ) : (
                       <Upload className="h-4 w-4" />
                     )}
-                    {isUploading ? "جاري الرفع..." : "رفع صورة"}
+                    {isUploading ? (isRtl ? "جاري الرفع..." : "Uploading...") : (isRtl ? "رفع صورة" : "Upload Image")}
                   </Button>
                 </div>
               </div>
@@ -457,30 +458,30 @@ export default function PlansManagement() {
                     onChange={(e) =>
                       updateOption(index, "meals", parseInt(e.target.value) || 0)
                     }
-                    placeholder="وجبات"
+                    placeholder={isRtl ? "وجبات" : "Meals"}
                     className="w-20"
                   />
-                  <span className="text-sm">وجبات</span>
+                  <span className="text-sm">{isRtl ? "وجبات" : "Meals"}</span>
                   <Input
                     type="number"
                     value={option.snacks}
                     onChange={(e) =>
                       updateOption(index, "snacks", parseInt(e.target.value) || 0)
                     }
-                    placeholder="سناكات"
+                    placeholder={isRtl ? "سناكات" : "Snacks"}
                     className="w-20"
                   />
-                  <span className="text-sm">سناكات</span>
+                  <span className="text-sm">{isRtl ? "سناكات" : "Snacks"}</span>
                   <Input
                     type="number"
                     value={option.priceQAR}
                     onChange={(e) =>
                       updateOption(index, "priceQAR", parseInt(e.target.value) || 0)
                     }
-                    placeholder="السعر"
+                    placeholder={isRtl ? "السعر" : "Price"}
                     className="w-24"
                   />
-                  <span className="text-sm">ريال</span>
+                  <span className="text-sm">{isRtl ? "ريال" : "QAR"}</span>
                   <Button
                     type="button"
                     size="icon"
@@ -519,21 +520,21 @@ export default function PlansManagement() {
 
             {/* Marketing Fields */}
             <div className="space-y-4 border-t pt-4 mt-4">
-              <h3 className="font-bold text-sm text-gray-700">خيارات التسويق</h3>
-              
+              <h3 className="font-bold text-sm text-gray-700">{isRtl ? "خيارات التسويق" : "Marketing Options"}</h3>
+
               {/* Badge Selector */}
               <div className="space-y-2">
-                <Label>تمييز الخطة</Label>
+                <Label>{isRtl ? "تمييز الخطة" : "Plan Badge"}</Label>
                 <select
                   value={formData.badge}
                   onChange={(e) => setFormData({ ...formData, badge: e.target.value as any })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  <option value="none">بدون تمييز</option>
-                  <option value="most_requested">الأكثر طلبًا</option>
-                  <option value="best_value">الأفضل قيمة</option>
-                  <option value="most_chosen_business">الأكثر اختيارًا للشركات</option>
-                  <option value="special_offer">عرض خاص</option>
+                  <option value="none">{isRtl ? "بدون تمييز" : "No Badge"}</option>
+                  <option value="most_requested">{isRtl ? "الأكثر طلبًا" : "Most Requested"}</option>
+                  <option value="best_value">{isRtl ? "الأفضل قيمة" : "Best Value"}</option>
+                  <option value="most_chosen_business">{isRtl ? "الأكثر اختيارًا للشركات" : "Most Chosen for Business"}</option>
+                  <option value="special_offer">{isRtl ? "عرض خاص" : "Special Offer"}</option>
                 </select>
               </div>
 
@@ -547,7 +548,7 @@ export default function PlansManagement() {
                   className="h-4 w-4"
                 />
                 <Label htmlFor="isFeatured" className="font-normal">
-                  إبراز هذه الخطة (تكبير الكارت وإبرازه في الواجهة)
+                  {isRtl ? "إبراز هذه الخطة (تكبير الكارت وإبرازه في الواجهة)" : "Feature this plan (enlarge and highlight its card on the storefront)"}
                 </Label>
               </div>
 
@@ -561,7 +562,7 @@ export default function PlansManagement() {
                   className="h-4 w-4"
                 />
                 <Label htmlFor="showInComparison" className="font-normal">
-                  عرض في جدول المقارنة
+                  {isRtl ? "عرض في جدول المقارنة" : "Show in comparison table"}
                 </Label>
               </div>
             </div>
@@ -580,9 +581,9 @@ export default function PlansManagement() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              إلغاء
+              {isRtl ? "إلغاء" : "Cancel"}
             </Button>
-            <Button onClick={handleSave}>حفظ</Button>
+            <Button onClick={handleSave}>{isRtl ? "حفظ" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

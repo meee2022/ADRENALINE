@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, Boxes } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/i18n";
 
 export function IngredientsDialog({
   meal,
@@ -24,6 +25,9 @@ export function IngredientsDialog({
 }) {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const ingredients = useQuery(api.mealIngredients.listByMeal, { menuItemId: meal._id, sessionToken }) || [];
   const inventoryItems = useQuery(api.inventory.listItems, {}) || [];
 
@@ -36,7 +40,7 @@ export function IngredientsDialog({
 
   const handleAdd = async () => {
     if (!selectedItemId || !quantity) {
-      toast({ title: "خطأ", description: "اختر مكوّن وحدد الكمية", variant: "destructive" });
+      toast({ title: t("خطأ", "Error"), description: t("اختر مكوّن وحدد الكمية", "Select an ingredient and set the quantity"), variant: "destructive" });
       return;
     }
     const item = inventoryItems.find((i: any) => i._id === selectedItemId);
@@ -48,39 +52,39 @@ export function IngredientsDialog({
         quantityPerServing: parseFloat(quantity),
         unit: unit || item?.unit || "",
       });
-      toast({ title: "تم الإضافة", description: "تم ربط المكوّن بالوجبة" });
+      toast({ title: t("تم الإضافة", "Added"), description: t("تم ربط المكوّن بالوجبة", "Ingredient linked to the meal") });
       setSelectedItemId("");
       setQuantity("");
       setUnit("");
     } catch (e: any) {
-      toast({ title: "خطأ", description: e.message, variant: "destructive" });
+      toast({ title: t("خطأ", "Error"), description: e.message, variant: "destructive" });
     }
   };
 
   const handleRemove = async (id: string) => {
-    if (!confirm("حذف هذا المكوّن من الوجبة؟")) return;
+    if (!confirm(t("حذف هذا المكوّن من الوجبة؟", "Remove this ingredient from the meal?"))) return;
     await removeMutation({ id: id as any, sessionToken });
-    toast({ title: "تم الحذف" });
+    toast({ title: t("تم الحذف", "Deleted") });
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent dir="rtl" className="max-w-2xl">
+      <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Boxes className="h-5 w-5 text-amber-600" />
-            مكوّنات: {meal.name}
+            {t("مكوّنات:", "Ingredients:")} {meal.name}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
-            هذه المكوّنات تُخصم تلقائياً من المخزون عند تعليم الوجبة كـ "جاهزة للتوصيل"
+            {t('هذه المكوّنات تُخصم تلقائياً من المخزون عند تعليم الوجبة كـ "جاهزة للتوصيل"', 'These ingredients are automatically deducted from inventory when the meal is marked "ready for delivery"')}
           </p>
         </DialogHeader>
 
         {/* Existing ingredients */}
         <div className="space-y-2">
-          <Label className="text-sm font-bold">المكوّنات الحالية</Label>
+          <Label className="text-sm font-bold">{t("المكوّنات الحالية", "Current ingredients")}</Label>
           {ingredients.length === 0 ? (
-            <p className="text-sm text-slate-400 py-4 text-center">لا توجد مكوّنات مرتبطة</p>
+            <p className="text-sm text-slate-400 py-4 text-center">{t("لا توجد مكوّنات مرتبطة", "No linked ingredients")}</p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
               {ingredients.map((ing: any) => (
@@ -89,9 +93,9 @@ export function IngredientsDialog({
                   className="flex items-center justify-between p-3 border-b last:border-b-0 hover:bg-slate-50"
                 >
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{ing.inventoryItem?.nameAr || "—"}</p>
+                    <p className="text-sm font-medium">{(isRtl ? ing.inventoryItem?.nameAr : (ing.inventoryItem?.nameEn || ing.inventoryItem?.nameAr)) || "—"}</p>
                     <p className="text-xs text-slate-500">
-                      المخزون الحالي: {ing.inventoryItem?.currentStock || 0} {ing.inventoryItem?.unit}
+                      {t("المخزون الحالي:", "Current stock:")} {ing.inventoryItem?.currentStock || 0} {ing.inventoryItem?.unit}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
@@ -115,7 +119,7 @@ export function IngredientsDialog({
 
         {/* Add new */}
         <div className="border-t pt-4 space-y-3">
-          <Label className="text-sm font-bold">إضافة مكوّن جديد</Label>
+          <Label className="text-sm font-bold">{t("إضافة مكوّن جديد", "Add new ingredient")}</Label>
           <div className="grid grid-cols-12 gap-2">
             <div className="col-span-6">
               <select
@@ -127,10 +131,10 @@ export function IngredientsDialog({
                 }}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                <option value="">اختر المكوّن</option>
+                <option value="">{t("اختر المكوّن", "Select ingredient")}</option>
                 {inventoryItems.map((item: any) => (
                   <option key={item._id} value={item._id}>
-                    {item.nameAr} ({item.unit})
+                    {isRtl ? item.nameAr : (item.nameEn || item.nameAr)} ({item.unit})
                   </option>
                 ))}
               </select>
@@ -139,14 +143,14 @@ export function IngredientsDialog({
               <Input
                 type="number"
                 step="0.01"
-                placeholder="الكمية"
+                placeholder={t("الكمية", "Quantity")}
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
               />
             </div>
             <div className="col-span-3">
               <Input
-                placeholder="الوحدة"
+                placeholder={t("الوحدة", "Unit")}
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
               />
@@ -154,13 +158,13 @@ export function IngredientsDialog({
           </div>
           <Button onClick={handleAdd} size="sm" className="w-full gap-2">
             <Plus className="h-4 w-4" />
-            إضافة المكوّن
+            {t("إضافة المكوّن", "Add ingredient")}
           </Button>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            إغلاق
+            {t("إغلاق", "Close")}
           </Button>
         </DialogFooter>
       </DialogContent>

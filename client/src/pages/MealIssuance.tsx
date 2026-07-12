@@ -110,10 +110,10 @@ export default function MealIssuance() {
   const handlePrint = () => {
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
     const mc = summary?.month?.byCategory || {};
-    const catRows = CATS.map((c) => `<tr><td class="r">${c.ar}</td><td class="c b">${mc[c.key] || 0}</td></tr>`).join("");
+    const catRows = CATS.map((c) => `<tr><td class="r">${isRtl ? c.ar : c.en}</td><td class="c b">${mc[c.key] || 0}</td></tr>`).join("");
     const mealRows = (summary?.month?.byMeal || []).map((m: any, i: number) => `<tr><td class="c">${i + 1}</td><td class="r">${esc(m.name)}</td><td class="c b">${m.qty}</td></tr>`).join("");
     const recRows = (summary?.month?.byRecipient || []).map((m: any) => `<tr><td class="r">${esc(m.name)}</td><td class="c b">${m.qty}</td></tr>`).join("");
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>حصر الصادر ${esc(month)}</title>
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "حصر الصادر" : "Issuance Report"} ${esc(month)}</title>
       <style>*{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}body{margin:0;padding:16px;color:#0f1516}
       h1{font-size:20px;margin:0} .sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
       h2{font-size:15px;margin:16px 0 6px;border-top:2px solid #0E76AC;padding-top:8px}
@@ -123,11 +123,11 @@ export default function MealIssuance() {
       .kpi{display:inline-block;border:1px solid #cdd9e4;border-radius:10px;padding:8px 16px;margin-inline-end:8px;text-align:center}
       .kpi .v{font-size:22px;font-weight:900;color:#0E76AC}.kpi .l{font-size:11px;color:#47759c}
       @page{size:A4;margin:12mm}</style></head><body>
-      <h1>حصر الوجبات الصادرة — ADRENALINE</h1><div class="sub">الشهر: ${esc(month)}</div>
-      <div class="kpi"><div class="v">${monthTotal}</div><div class="l">إجمالي الصادر بالشهر</div></div>
-      <h2>حسب السبب</h2><table><thead><tr><th>السبب</th><th>العدد</th></tr></thead><tbody>${catRows}</tbody></table>
-      <h2>حسب الوجبة</h2><table><thead><tr><th>#</th><th>الوجبة</th><th>العدد</th></tr></thead><tbody>${mealRows || '<tr><td colspan=3 class=c>—</td></tr>'}</tbody></table>
-      <h2>حسب المستلم</h2><table><thead><tr><th>المستلم</th><th>العدد</th></tr></thead><tbody>${recRows || '<tr><td colspan=2 class=c>—</td></tr>'}</tbody></table>
+      <h1>${isRtl ? "حصر الوجبات الصادرة" : "Meals Issued Report"} — ADRENALINE</h1><div class="sub">${isRtl ? "الشهر" : "Month"}: ${esc(month)}</div>
+      <div class="kpi"><div class="v">${monthTotal}</div><div class="l">${isRtl ? "إجمالي الصادر بالشهر" : "Total issued this month"}</div></div>
+      <h2>${isRtl ? "حسب السبب" : "By reason"}</h2><table><thead><tr><th>${isRtl ? "السبب" : "Reason"}</th><th>${isRtl ? "العدد" : "Count"}</th></tr></thead><tbody>${catRows}</tbody></table>
+      <h2>${isRtl ? "حسب الوجبة" : "By meal"}</h2><table><thead><tr><th>#</th><th>${isRtl ? "الوجبة" : "Meal"}</th><th>${isRtl ? "العدد" : "Count"}</th></tr></thead><tbody>${mealRows || '<tr><td colspan=3 class=c>—</td></tr>'}</tbody></table>
+      <h2>${isRtl ? "حسب المستلم" : "By recipient"}</h2><table><thead><tr><th>${isRtl ? "المستلم" : "Recipient"}</th><th>${isRtl ? "العدد" : "Count"}</th></tr></thead><tbody>${recRows || '<tr><td colspan=2 class=c>—</td></tr>'}</tbody></table>
       </body></html>`;
     const w = window.open("", "_blank", "width=900,height=1000");
     if (!w) { alert(t("اسمح بالنوافذ المنبثقة", "Allow pop-ups")); return; }

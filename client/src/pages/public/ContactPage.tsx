@@ -18,8 +18,14 @@ import {
 
 export default function ContactPage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "تواصل معنا | أدرينالين للوجبات الصحية", description: "تواصل مع أدرينالين للوجبات الصحية — استفسارات الاشتراك والتوصيل في قطر.", path: "/public/contact" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  useSeo({
+    title: isRtl ? "تواصل معنا | أدرينالين للوجبات الصحية" : "Contact Us | Adrenaline Healthy Meals",
+    description: isRtl
+      ? "تواصل مع أدرينالين للوجبات الصحية — استفسارات الاشتراك والتوصيل في قطر."
+      : "Contact Adrenaline Healthy Meals — subscription and delivery inquiries in Qatar.",
+    path: "/public/contact",
+  });
   const settings = useQuery(api.restaurantSettings.get);
   const phoneClean = String(settings?.phone || "+97412345678").replace(/\D/g, "");
 

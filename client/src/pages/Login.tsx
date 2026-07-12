@@ -22,7 +22,8 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login, customerLogin } = useStore();
   const [, setLocation] = useLocation();
-  const { t, dir } = useLanguage();
+  const { t, dir, language } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,10 +40,10 @@ export default function Login() {
           setLocation("/");
         }
       } else {
-        setError(result.error || "فشل تسجيل الدخول");
+        setError(result.error || (isRtl ? "فشل تسجيل الدخول" : "Login failed"));
       }
     } catch {
-      setError("حدث خطأ أثناء تسجيل الدخول");
+      setError(isRtl ? "حدث خطأ أثناء تسجيل الدخول" : "An error occurred during login");
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +75,7 @@ export default function Login() {
           <img src="/adrenaline-logo-full.png" alt="Adrenaline Healthy Food"
             className="h-24 w-auto mx-auto mb-3 drop-shadow-2xl" />
           <p className="text-sm font-medium" style={{ color: "#bcbebf" }}>
-            {t("login.subtitle") || "نظام إدارة الوجبات الصحية"}
+            {t("login.subtitle") || (isRtl ? "نظام إدارة الوجبات الصحية" : "Healthy Meals Management System")}
           </p>
         </div>
 
@@ -83,14 +84,14 @@ export default function Login() {
           style={{ background: "rgba(255, 255, 255, 0.96)", border: "1px solid rgba(60, 196, 240, 0.25)" }}>
 
           <h2 className="text-2xl font-black text-center mb-6" style={{ color: "#0f1516" }}>
-            {t("login.welcome") || "مرحباً بك"}
+            {t("login.welcome") || (isRtl ? "مرحباً بك" : "Welcome")}
           </h2>
 
           <form onSubmit={handleLogin} className="space-y-5">
             {/* Email */}
             <div className="space-y-1.5">
               <Label htmlFor="email" className="text-sm font-bold" style={{ color: "#47759c" }}>
-                {t("login.email") || "البريد الإلكتروني"}
+                {t("login.email") || (isRtl ? "البريد الإلكتروني" : "Email")}
               </Label>
               <div className="relative">
                 <Mail className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
@@ -116,7 +117,7 @@ export default function Login() {
             {/* Password */}
             <div className="space-y-1.5">
               <Label htmlFor="password" className="text-sm font-bold" style={{ color: "#47759c" }}>
-                {t("login.password") || "كلمة المرور"}
+                {t("login.password") || (isRtl ? "كلمة المرور" : "Password")}
               </Label>
               <div className="relative">
                 <Lock className="absolute top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
@@ -175,10 +176,10 @@ export default function Login() {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  {t("login.loading") || "جاري التحقق..."}
+                  {t("login.loading") || (isRtl ? "جاري التحقق..." : "Verifying...")}
                 </span>
               ) : (
-                t("login.submit") || "تسجيل الدخول"
+                t("login.submit") || (isRtl ? "تسجيل الدخول" : "Sign In")
               )}
             </Button>
           </form>
@@ -197,13 +198,13 @@ export default function Login() {
           {/* Register link */}
           <div className="mt-3 text-center">
             <p className="text-sm" style={{ color: "#bcbebf" }}>
-              {t("customer.no_account") || "ليس لديك حساب؟"}{" "}
+              {t("customer.no_account") || (isRtl ? "ليس لديك حساب؟" : "Don't have an account?")}{" "}
               <button
                 onClick={() => setLocation("/customer/auth")}
                 className="font-bold hover:underline transition-colors"
                 style={{ color: "#3cc4f0" }}
               >
-                {t("customer.register") || "سجّل الآن"}
+                {t("customer.register") || (isRtl ? "سجّل الآن" : "Register Now")}
               </button>
             </p>
           </div>

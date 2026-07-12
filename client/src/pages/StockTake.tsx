@@ -13,8 +13,12 @@ import { cn } from "@/lib/utils";
 import { ClipboardCheck, ArrowRight, Search, Check, AlertTriangle } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 
-const CATS: Record<string, string> = {
-  vegetables: "خضروات", proteins: "بروتينات", dairy: "ألبان", dry_goods: "مواد جافة", other: "أخرى",
+const CATS: Record<string, { ar: string; en: string }> = {
+  vegetables: { ar: "خضروات", en: "Vegetables" },
+  proteins: { ar: "بروتينات", en: "Proteins" },
+  dairy: { ar: "ألبان", en: "Dairy" },
+  dry_goods: { ar: "مواد جافة", en: "Dry Goods" },
+  other: { ar: "أخرى", en: "Other" },
 };
 const fmt = (n: number) => (Math.round((n || 0) * 100) / 100).toLocaleString();
 
@@ -98,7 +102,7 @@ export default function StockTake() {
 
         {byCat.map(([cat, list]) => (
           <div key={cat} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
-            <h2 className="text-sm font-bold text-slate-700 px-4 py-2.5 bg-[#f4f8fb] border-b border-slate-100">{CATS[cat] || cat}</h2>
+            <h2 className="text-sm font-bold text-slate-700 px-4 py-2.5 bg-[#f4f8fb] border-b border-slate-100">{CATS[cat] ? (isRtl ? CATS[cat].ar : CATS[cat].en) : cat}</h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -116,7 +120,7 @@ export default function StockTake() {
                     const variance = has ? Number(v) - Number(it.currentStock) : 0;
                     return (
                       <tr key={it._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                        <td className="px-4 py-2.5 text-slate-900 font-medium">{it.nameAr}</td>
+                        <td className="px-4 py-2.5 text-slate-900 font-medium">{isRtl ? it.nameAr : (it.nameEn || it.nameAr)}</td>
                         <td className="text-center px-3 py-2.5 text-slate-500 tabular-nums">{fmt(it.currentStock)} {it.unit}</td>
                         <td className="text-center px-3 py-2.5">
                           <input type="number" step="0.01" inputMode="decimal" value={v ?? ""}

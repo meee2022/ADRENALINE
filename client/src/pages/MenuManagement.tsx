@@ -23,7 +23,8 @@ import { useQuery, useMutation } from "convex/react";
 
 export default function MenuManagement() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const { t } = useLanguage();
+  const { t, dir, language } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const { toast } = useToast();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -43,20 +44,20 @@ export default function MenuManagement() {
   const syncFromPublicMutation = useMutation(api.menuItems.syncFromPublicMeals);
 
   const handleSyncFromPublic = async () => {
-    if (!window.confirm("هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم.")) {
+    if (!window.confirm(isRtl ? "هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم." : "Copy all meals from the public website menu?\nMeals already existing with the same name will be skipped.")) {
       return;
     }
     setIsSyncing(true);
     try {
       const result: any = await syncFromPublicMutation({});
       toast({
-        title: "✅ تم النسخ",
-        description: result.message || `تم إضافة ${result.created} وجبة`,
+        title: isRtl ? "✅ تم النسخ" : "✅ Copied",
+        description: result.message || (isRtl ? `تم إضافة ${result.created} وجبة` : `${result.created} meals added`),
       });
     } catch (error: any) {
       toast({
-        title: "❌ فشل النسخ",
-        description: error?.message || "حدث خطأ",
+        title: isRtl ? "❌ فشل النسخ" : "❌ Copy failed",
+        description: error?.message || (isRtl ? "حدث خطأ" : "An error occurred"),
         variant: "destructive",
       });
     } finally {
@@ -93,11 +94,11 @@ export default function MenuManagement() {
       await convex.mutation(api.menuItems.remove, { id: id as Id<"menuItems">, sessionToken });
       toast({
         title: t("menu_management.delete_meal"),
-        description: "تم حذف الوجبة بنجاح",
+        description: isRtl ? "تم حذف الوجبة بنجاح" : "Meal deleted successfully",
       });
     } catch (error: any) {
       toast({
-        title: "خطأ",
+        title: isRtl ? "خطأ" : "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -107,8 +108,8 @@ export default function MenuManagement() {
   const handleSave = async () => {
     if (!formData.name || !formData.categoryId) {
       toast({
-        title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة",
+        title: isRtl ? "خطأ" : "Error",
+        description: isRtl ? "يرجى ملء الحقول المطلوبة" : "Please fill in the required fields",
         variant: "destructive",
       });
       return;
@@ -126,16 +127,16 @@ export default function MenuManagement() {
 
       if (selectedMeal) {
         await convex.mutation(api.menuItems.update, { id: selectedMeal._id, ...data, sessionToken });
-        toast({ title: "تم التحديث", description: "تم تحديث الوجبة بنجاح" });
+        toast({ title: isRtl ? "تم التحديث" : "Updated", description: isRtl ? "تم تحديث الوجبة بنجاح" : "Meal updated successfully" });
       } else {
         await convex.mutation(api.menuItems.create, { ...data, sessionToken });
-        toast({ title: "تم الإضافة", description: "تم إضافة الوجبة بنجاح" });
+        toast({ title: isRtl ? "تم الإضافة" : "Added", description: isRtl ? "تم إضافة الوجبة بنجاح" : "Meal added successfully" });
       }
 
       setIsDialogOpen(false);
     } catch (error: any) {
       toast({
-        title: "خطأ",
+        title: isRtl ? "خطأ" : "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -162,7 +163,7 @@ export default function MenuManagement() {
               className="h-11 rounded-xl font-bold gap-2 bg-white/10 border-white/40 text-white hover:bg-white/20 text-sm"
             >
               {isSyncing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-              استيراد من منيو الموقع
+              {isRtl ? "استيراد من منيو الموقع" : "Import from website menu"}
             </Button>
             <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
               <Plus className="h-5 w-5" />
@@ -189,7 +190,7 @@ export default function MenuManagement() {
                 <TableHead>{t("menu_management.category")}</TableHead>
                 <TableHead>{t("menu_management.calories")}</TableHead>
                 <TableHead>{t("menu_management.status")}</TableHead>
-                <TableHead className="text-center">الإجراءات</TableHead>
+                <TableHead className="text-center">{isRtl ? "الإجراءات" : "Actions"}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,7 +210,7 @@ export default function MenuManagement() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setIngredientsMeal(meal)}
-                        title="مكوّنات المخزون"
+                        title={isRtl ? "مكوّنات المخزون" : "Inventory ingredients"}
                         className="text-[#47759c] hover:bg-[#eaf1f7]"
                       >
                         <Boxes className="h-4 w-4" />
@@ -249,7 +250,7 @@ export default function MenuManagement() {
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="مثال: سلمون مشوي"
+                placeholder={isRtl ? "مثال: سلمون مشوي" : "e.g. Grilled salmon"}
               />
             </div>
 
@@ -260,7 +261,7 @@ export default function MenuManagement() {
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                 className="w-full rounded-md border border-input bg-background px-3 py-2"
               >
-                <option value="">اختر الفئة</option>
+                <option value="">{isRtl ? "اختر الفئة" : "Select category"}</option>
                 {categories.map((cat: any) => (
                   <option key={cat._id} value={cat._id}>
                     {cat.name}
@@ -293,9 +294,9 @@ export default function MenuManagement() {
               <Input
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="عالي البروتين, قليل الدهون"
+                placeholder={isRtl ? "عالي البروتين, قليل الدهون" : "High protein, low fat"}
               />
-              <p className="text-xs text-muted-foreground">افصل بين الوسوم بفاصلة</p>
+              <p className="text-xs text-muted-foreground">{isRtl ? "افصل بين الوسوم بفاصلة" : "Separate tags with a comma"}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -312,9 +313,9 @@ export default function MenuManagement() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              إلغاء
+              {isRtl ? "إلغاء" : "Cancel"}
             </Button>
-            <Button onClick={handleSave}>حفظ</Button>
+            <Button onClick={handleSave}>{isRtl ? "حفظ" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

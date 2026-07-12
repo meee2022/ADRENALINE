@@ -10,7 +10,7 @@ import { useStore } from "@/lib/store";
 import { Link } from "wouter";
 import { Bell, CheckCheck, ChefHat, Truck, ClipboardList, Sparkles, AlertTriangle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { ar } from "date-fns/locale";
+import { ar, enUS } from "date-fns/locale";
 
 import { useLanguage } from "@/lib/i18n";
 
@@ -115,19 +115,19 @@ export function NotificationBell() {
     <>
       <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
       <div
-        dir="rtl"
+        dir={isRtl ? "rtl" : "ltr"}
         style={dropdownStyle}
         className="fixed z-[9999] w-[320px] max-h-[480px] bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
       >
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-gradient-to-l from-cyan-50 to-blue-50">
-          <h3 className="font-bold text-slate-800 text-sm">الإشعارات</h3>
+          <h3 className="font-bold text-slate-800 text-sm">{isRtl ? "الإشعارات" : "Notifications"}</h3>
           {unreadCount > 0 && (
             <button
               onClick={() => markAllAsRead({ role, sessionToken })}
               className="text-[11px] text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="h-3 w-3" />
-              تعليم الكل كمقروء
+              {isRtl ? "تعليم الكل كمقروء" : "Mark all as read"}
             </button>
           )}
         </div>
@@ -136,7 +136,7 @@ export function NotificationBell() {
           {notifications.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-sm">
               <Bell className="h-10 w-10 mx-auto mb-2 opacity-30" />
-              لا توجد إشعارات
+              {isRtl ? "لا توجد إشعارات" : "No notifications"}
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -149,6 +149,7 @@ export function NotificationBell() {
                     n={n}
                     Icon={Icon}
                     color={color}
+                    isRtl={isRtl}
                     onClick={() => {
                       if (!n.isRead) markAsRead({ id: n._id, sessionToken });
                       setOpen(false);
@@ -169,7 +170,7 @@ export function NotificationBell() {
         ref={btnRef}
         onClick={() => setOpen((v) => !v)}
         className="relative p-2 rounded-md hover:bg-sidebar-accent transition-colors"
-        aria-label="الإشعارات"
+        aria-label={isRtl ? "الإشعارات" : "Notifications"}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -189,15 +190,17 @@ function NotificationItem({
   Icon,
   color,
   onClick,
+  isRtl,
 }: {
   n: any;
   Icon: any;
   color: string;
   onClick: () => void;
+  isRtl: boolean;
 }) {
   const timeAgo = (() => {
     try {
-      return formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: ar });
+      return formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: isRtl ? ar : enUS });
     } catch {
       return "";
     }

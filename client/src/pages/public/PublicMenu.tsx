@@ -490,7 +490,7 @@ export default function PublicMenuPage() {
               {verifiedPhone && (
                 <button
                   onClick={handleResetPhone}
-                  aria-label="رجوع"
+                  aria-label={isRtl ? "رجوع" : "Back"}
                   className="absolute top-4 left-4 z-20 h-9 w-9 rounded-full flex items-center justify-center transition-all hover:scale-110"
                   style={{ background: "#f1f5f9", border: "1px solid #e2e8f0" }}
                 >

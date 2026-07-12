@@ -427,7 +427,7 @@ export default function Kitchen() {
       rows.push({
         no,
         phone: customer?.phone || plan.customerPhone || "",
-        name: customer?.fullName || plan.customerName || "عميل",
+        name: customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer"),
         dates:
           customer?.startDate || customer?.endDate
             ? `${shortDate(customer?.startDate)} END ${shortDate(customer?.endDate)}`
@@ -586,7 +586,7 @@ export default function Kitchen() {
       try {
         await updatePlanMutation.mutateAsync({ id: planId, data: { status: "PREPARED" } });
       } catch {
-        alert("❌ فشل تحديث الحالة. حاول مرة أخرى.");
+        alert(isRtl ? "❌ فشل تحديث الحالة. حاول مرة أخرى." : "❌ Failed to update status. Please try again.");
       }
     }
   };
@@ -1072,7 +1072,7 @@ export default function Kitchen() {
               const isPrepared = plan.status === "PREPARED";
               
               // ✅ استخدام اسم احتياطي إذا لم يوجد customer
-              const customerName = customer?.fullName || plan.customerName || "عميل جديد";
+              const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
               const customerProgram = customer?.program || (isRtl ? "طلب من الموقع" : "Website Order");
 
               return (
@@ -1143,7 +1143,7 @@ export default function Kitchen() {
                           
                           // ✅ إذا لم يوجد meal في menuItems، استخدم البيانات من item نفسه
                           const mealName = meal ? (isRtl ? meal.nameAr || meal.name : meal.name) 
-                                                : (item.mealNameAr || item.mealNameEn || "وجبة غير محددة");
+                                                : (item.mealNameAr || item.mealNameEn || (isRtl ? "وجبة غير محددة" : "Unspecified meal"));
                           
                           const { avoid, pref, portion } = getModifiersByGroup(item.modifierIds);
 
@@ -1446,23 +1446,23 @@ export default function Kitchen() {
                       {/* ✅ Chef Portion & Program Breakdown Grid */}
                       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-center">
                         <div className="px-2 py-1.5 rounded bg-sky-50/70 border border-sky-200">
-                          <span className="text-[9px] font-black text-sky-600 block">DIET (تنشيف)</span>
+                          <span className="text-[9px] font-black text-sky-600 block">DIET ({isRtl ? "تنشيف" : "Cut"})</span>
                           <span className="text-sm font-black text-sky-800">{m.dietCount || 0}</span>
                         </div>
                         <div className="px-2 py-1.5 rounded bg-cyan-50/70 border border-cyan-200">
-                          <span className="text-[9px] font-black text-cyan-600 block">FITNESS (لياقة)</span>
+                          <span className="text-[9px] font-black text-cyan-600 block">FITNESS ({isRtl ? "لياقة" : "Fitness"})</span>
                           <span className="text-sm font-black text-cyan-800">{m.fitnessCount || 0}</span>
                         </div>
                         <div className="px-2 py-1.5 rounded bg-amber-50/70 border border-amber-200">
-                          <span className="text-[9px] font-black text-amber-600 block">BULK (تضخيم)</span>
+                          <span className="text-[9px] font-black text-amber-600 block">BULK ({isRtl ? "تضخيم" : "Bulk"})</span>
                           <span className="text-sm font-black text-amber-800">{m.bulkCount || 0}</span>
                         </div>
                         <div className="px-2 py-1.5 rounded bg-purple-50/70 border border-purple-200">
-                          <span className="text-[9px] font-black text-purple-600 block">CUSTOMIZED (مخصص)</span>
+                          <span className="text-[9px] font-black text-purple-600 block">CUSTOMIZED ({isRtl ? "مخصص" : "Custom"})</span>
                           <span className="text-sm font-black text-purple-800">{m.customizedCount || 0}</span>
                         </div>
                         <div className="px-2 py-1.5 rounded bg-slate-100 border border-slate-300">
-                          <span className="text-[9px] font-black text-slate-600 block">STANDARD (قياسي)</span>
+                          <span className="text-[9px] font-black text-slate-600 block">STANDARD ({isRtl ? "قياسي" : "Standard"})</span>
                           <span className="text-sm font-black text-slate-800">{m.standardCount || 0}</span>
                         </div>
                       </div>

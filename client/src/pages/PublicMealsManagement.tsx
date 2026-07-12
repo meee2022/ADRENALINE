@@ -19,10 +19,14 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, UtensilsCrossed, Image } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PublicMealsManagement() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<any>(null);
@@ -110,21 +114,21 @@ export default function PublicMealsManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الوجبة؟")) return;
+    if (!confirm(t("هل أنت متأكد من حذف هذه الوجبة؟", "Are you sure you want to delete this meal?"))) return;
 
     try {
       await convex.mutation(api.publicMeals.remove, { id: id as Id<"publicMeals">, sessionToken });
-      toast({ title: "تم الحذف", description: "تم حذف الوجبة بنجاح" });
+      toast({ title: t("تم الحذف", "Deleted"), description: t("تم حذف الوجبة بنجاح", "Meal deleted successfully") });
     } catch (error: any) {
-      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+      toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
     }
   };
 
   const handleSave = async () => {
     if (!formData.nameAr || !formData.slug || !formData.imageUrl) {
       toast({
-        title: "خطأ",
-        description: "يرجى ملء الحقول المطلوبة (الاسم بالعربي، Slug، رابط الصورة)",
+        title: t("خطأ", "Error"),
+        description: t("يرجى ملء الحقول المطلوبة (الاسم بالعربي، Slug، رابط الصورة)", "Please fill in the required fields (Arabic name, Slug, image URL)"),
         variant: "destructive",
       });
       return;
@@ -157,25 +161,25 @@ export default function PublicMealsManagement() {
 
       if (selectedMeal) {
         await convex.mutation(api.publicMeals.update, { id: selectedMeal._id, ...data, sessionToken });
-        toast({ title: "تم التحديث", description: "تم تحديث الوجبة بنجاح" });
+        toast({ title: t("تم التحديث", "Updated"), description: t("تم تحديث الوجبة بنجاح", "Meal updated successfully") });
       } else {
         await convex.mutation(api.publicMeals.create, { ...data, sessionToken });
-        toast({ title: "تم الإضافة", description: "تم إضافة الوجبة بنجاح" });
+        toast({ title: t("تم الإضافة", "Added"), description: t("تم إضافة الوجبة بنجاح", "Meal added successfully") });
       }
 
       setIsDialogOpen(false);
     } catch (error: any) {
-      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+      toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
     }
   };
 
   const getCategoryLabel = (cat: string) => {
     const labels: Record<string, string> = {
-      breakfast: "إفطار",
-      lunch: "غداء",
-      dinner: "عشاء",
-      salad: "سلطة",
-      snack: "سناك",
+      breakfast: t("إفطار", "Breakfast"),
+      lunch: t("غداء", "Lunch"),
+      dinner: t("عشاء", "Dinner"),
+      salad: t("سلطة", "Salad"),
+      snack: t("سناك", "Snack"),
     };
     return labels[cat] || cat;
   };
@@ -190,7 +194,7 @@ export default function PublicMealsManagement() {
         actions={
           <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
             <Plus className="h-5 w-5" />
-            إضافة وجبة جديدة
+            {t("إضافة وجبة جديدة", "Add New Meal")}
           </Button>
         }
         kpis={[
@@ -202,27 +206,27 @@ export default function PublicMealsManagement() {
       {/* Meals Table */}
       <Card className="rounded-2xl" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
-          <CardTitle>الوجبات ({meals.length})</CardTitle>
+          <CardTitle>{t("الوجبات", "Meals")} ({meals.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
             <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
-                <TableHead>الصورة</TableHead>
-                <TableHead>الاسم</TableHead>
-                <TableHead>الفئة</TableHead>
-                <TableHead>السعرات</TableHead>
-                <TableHead>السعر (QAR)</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead>الإجراءات</TableHead>
+                <TableHead>{t("الصورة", "Image")}</TableHead>
+                <TableHead>{t("الاسم", "Name")}</TableHead>
+                <TableHead>{t("الفئة", "Category")}</TableHead>
+                <TableHead>{t("السعرات", "Calories")}</TableHead>
+                <TableHead>{t("السعر (QAR)", "Price (QAR)")}</TableHead>
+                <TableHead>{t("الحالة", "Status")}</TableHead>
+                <TableHead>{t("الإجراءات", "Actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {meals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-gray-500">
-                    لا توجد وجبات. اضغط "إضافة وجبة جديدة" للبدء.
+                    {t('لا توجد وجبات. اضغط "إضافة وجبة جديدة" للبدء.', 'No meals yet. Click "Add New Meal" to get started.')}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -235,7 +239,7 @@ export default function PublicMealsManagement() {
                         className="h-12 w-12 rounded-lg object-cover"
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{meal.nameAr}</TableCell>
+                    <TableCell className="font-medium">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{getCategoryLabel(meal.category)}</Badge>
                     </TableCell>
@@ -243,7 +247,7 @@ export default function PublicMealsManagement() {
                     <TableCell>{meal.priceQAR} QAR</TableCell>
                     <TableCell>
                       <Badge className={`rounded-full ${meal.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
-                        {meal.isActive ? "نشط" : "غير نشط"}
+                        {meal.isActive ? t("نشط", "Active") : t("غير نشط", "Inactive")}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -279,7 +283,7 @@ export default function PublicMealsManagement() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {selectedMeal ? "تعديل الوجبة" : "إضافة وجبة جديدة"}
+              {selectedMeal ? t("تعديل الوجبة", "Edit Meal") : t("إضافة وجبة جديدة", "Add New Meal")}
             </DialogTitle>
           </DialogHeader>
 
@@ -287,15 +291,15 @@ export default function PublicMealsManagement() {
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>الاسم بالعربي *</Label>
+                <Label>{t("الاسم بالعربي *", "Arabic Name *")}</Label>
                 <Input
                   value={formData.nameAr}
                   onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                  placeholder="سلطة السلمون المشوي"
+                  placeholder={t("سلطة السلمون المشوي", "Grilled Salmon Salad")}
                 />
               </div>
               <div className="space-y-2">
-                <Label>الاسم بالإنجليزي</Label>
+                <Label>{t("الاسم بالإنجليزي", "English Name")}</Label>
                 <Input
                   value={formData.nameEn}
                   onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
@@ -305,7 +309,7 @@ export default function PublicMealsManagement() {
             </div>
 
             <div className="space-y-2">
-              <Label>Slug (للرابط) *</Label>
+              <Label>{t("Slug (للرابط) *", "Slug (for URL) *")}</Label>
               <Input
                 value={formData.slug}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
@@ -314,14 +318,14 @@ export default function PublicMealsManagement() {
                 dir="ltr"
               />
               <p className="text-xs text-gray-500">
-                سيظهر في الرابط: /meal/grilled-salmon-salad
+                {t("سيظهر في الرابط: /meal/grilled-salmon-salad", "Appears in the URL: /meal/grilled-salmon-salad")}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Image className="h-4 w-4" />
-                رابط الصورة *
+                {t("رابط الصورة *", "Image URL *")}
               </Label>
               <Input
                 value={formData.imageUrl}
@@ -342,16 +346,16 @@ export default function PublicMealsManagement() {
             {/* Descriptions */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>وصف مختصر (عربي)</Label>
+                <Label>{t("وصف مختصر (عربي)", "Short description (Arabic)")}</Label>
                 <Textarea
                   value={formData.descriptionAr}
                   onChange={(e) => setFormData({ ...formData, descriptionAr: e.target.value })}
-                  placeholder="وصف قصير يظهر في البطاقة"
+                  placeholder={t("وصف قصير يظهر في البطاقة", "Short description shown on the card")}
                   rows={2}
                 />
               </div>
               <div className="space-y-2">
-                <Label>وصف مختصر (إنجليزي)</Label>
+                <Label>{t("وصف مختصر (إنجليزي)", "Short description (English)")}</Label>
                 <Textarea
                   value={formData.descriptionEn}
                   onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
@@ -363,16 +367,16 @@ export default function PublicMealsManagement() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>وصف تفصيلي (عربي)</Label>
+                <Label>{t("وصف تفصيلي (عربي)", "Detailed description (Arabic)")}</Label>
                 <Textarea
                   value={formData.aboutAr}
                   onChange={(e) => setFormData({ ...formData, aboutAr: e.target.value })}
-                  placeholder="وصف طويل يظهر في صفحة التفاصيل"
+                  placeholder={t("وصف طويل يظهر في صفحة التفاصيل", "Long description shown on the details page")}
                   rows={3}
                 />
               </div>
               <div className="space-y-2">
-                <Label>وصف تفصيلي (إنجليزي)</Label>
+                <Label>{t("وصف تفصيلي (إنجليزي)", "Detailed description (English)")}</Label>
                 <Textarea
                   value={formData.aboutEn}
                   onChange={(e) => setFormData({ ...formData, aboutEn: e.target.value })}
@@ -385,7 +389,7 @@ export default function PublicMealsManagement() {
             {/* Nutrition */}
             <div className="grid grid-cols-4 gap-4">
               <div className="space-y-2">
-                <Label>السعرات</Label>
+                <Label>{t("السعرات", "Calories")}</Label>
                 <Input
                   type="number"
                   value={formData.calories}
@@ -394,7 +398,7 @@ export default function PublicMealsManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>البروتين (g)</Label>
+                <Label>{t("البروتين (g)", "Protein (g)")}</Label>
                 <Input
                   type="number"
                   value={formData.protein}
@@ -403,7 +407,7 @@ export default function PublicMealsManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>الكربوهيدرات (g)</Label>
+                <Label>{t("الكربوهيدرات (g)", "Carbs (g)")}</Label>
                 <Input
                   type="number"
                   value={formData.carbs}
@@ -412,7 +416,7 @@ export default function PublicMealsManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>الدهون (g)</Label>
+                <Label>{t("الدهون (g)", "Fats (g)")}</Label>
                 <Input
                   type="number"
                   value={formData.fats}
@@ -425,21 +429,21 @@ export default function PublicMealsManagement() {
             {/* Category & Price */}
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>الفئة</Label>
+                <Label>{t("الفئة", "Category")}</Label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value as any })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2"
                 >
-                  <option value="breakfast">إفطار</option>
-                  <option value="lunch">غداء</option>
-                  <option value="dinner">عشاء</option>
-                  <option value="salad">سلطة</option>
-                  <option value="snack">سناك</option>
+                  <option value="breakfast">{t("إفطار", "Breakfast")}</option>
+                  <option value="lunch">{t("غداء", "Lunch")}</option>
+                  <option value="dinner">{t("عشاء", "Dinner")}</option>
+                  <option value="salad">{t("سلطة", "Salad")}</option>
+                  <option value="snack">{t("سناك", "Snack")}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>السعر (QAR)</Label>
+                <Label>{t("السعر (QAR)", "Price (QAR)")}</Label>
                 <Input
                   type="number"
                   value={formData.priceQAR}
@@ -448,7 +452,7 @@ export default function PublicMealsManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>ترتيب العرض</Label>
+                <Label>{t("ترتيب العرض", "Display order")}</Label>
                 <Input
                   type="number"
                   value={formData.sortOrder}
@@ -460,32 +464,32 @@ export default function PublicMealsManagement() {
 
             {/* Tags & Ingredients */}
             <div className="space-y-2">
-              <Label>الوسوم (مفصولة بفاصلة)</Label>
+              <Label>{t("الوسوم (مفصولة بفاصلة)", "Tags (comma-separated)")}</Label>
               <Input
                 value={formData.tags}
                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="غني بالبروتين, قليل الكربوهيدرات, خالي من الغلوتين"
+                placeholder={t("غني بالبروتين, قليل الكربوهيدرات, خالي من الغلوتين", "High protein, low carb, gluten-free")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>المكونات (مفصولة بفاصلة)</Label>
+              <Label>{t("المكونات (مفصولة بفاصلة)", "Ingredients (comma-separated)")}</Label>
               <Textarea
                 value={formData.ingredients}
                 onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                placeholder="سلمون مشوي, خس, طماطم, ليمون"
+                placeholder={t("سلمون مشوي, خس, طماطم, ليمون", "Grilled salmon, lettuce, tomato, lemon")}
                 rows={2}
               />
             </div>
 
             {/* NEW: Scheduling Section */}
             <div className="border-t border-gray-200 pt-6 mt-6">
-              <h3 className="text-lg font-bold text-[#0F1516] mb-4">🔷 جدولة الوجبة</h3>
+              <h3 className="text-lg font-bold text-[#0F1516] mb-4">🔷 {t("جدولة الوجبة", "Meal Scheduling")}</h3>
               
               <div className="space-y-4">
                 {/* Weeks */}
                 <div>
-                  <Label className="text-sm font-bold mb-2 block">اختر الأسابيع</Label>
+                  <Label className="text-sm font-bold mb-2 block">{t("اختر الأسابيع", "Select weeks")}</Label>
                   <div className="grid grid-cols-4 gap-2">
                     {[1, 2, 3, 4].map((week) => (
                       <label key={week} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
@@ -501,7 +505,7 @@ export default function PublicMealsManagement() {
                           }}
                           className="h-4 w-4"
                         />
-                        <span className="text-sm">الأسبوع {week}</span>
+                        <span className="text-sm">{t("الأسبوع", "Week")} {week}</span>
                       </label>
                     ))}
                   </div>
@@ -509,16 +513,16 @@ export default function PublicMealsManagement() {
 
                 {/* Days */}
                 <div>
-                  <Label className="text-sm font-bold mb-2 block">اختر الأيام</Label>
+                  <Label className="text-sm font-bold mb-2 block">{t("اختر الأيام", "Select days")}</Label>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { value: "saturday", label: "السبت" },
-                      { value: "sunday", label: "الأحد" },
-                      { value: "monday", label: "الإثنين" },
-                      { value: "tuesday", label: "الثلاثاء" },
-                      { value: "wednesday", label: "الأربعاء" },
-                      { value: "thursday", label: "الخميس" },
-                      { value: "friday", label: "الجمعة" },
+                      { value: "saturday", label: t("السبت", "Saturday") },
+                      { value: "sunday", label: t("الأحد", "Sunday") },
+                      { value: "monday", label: t("الإثنين", "Monday") },
+                      { value: "tuesday", label: t("الثلاثاء", "Tuesday") },
+                      { value: "wednesday", label: t("الأربعاء", "Wednesday") },
+                      { value: "thursday", label: t("الخميس", "Thursday") },
+                      { value: "friday", label: t("الجمعة", "Friday") },
                     ].map((day) => (
                       <label key={day.value} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
                         <input
@@ -541,7 +545,7 @@ export default function PublicMealsManagement() {
 
                 {/* Cutoff Time */}
                 <div>
-                  <Label htmlFor="cutoffTime">وقت القفل</Label>
+                  <Label htmlFor="cutoffTime">{t("وقت القفل", "Cutoff time")}</Label>
                   <Input
                     id="cutoffTime"
                     type="time"
@@ -549,7 +553,7 @@ export default function PublicMealsManagement() {
                     onChange={(e) => setFormData({ ...formData, cutoffTime: e.target.value })}
                     className="max-w-xs"
                   />
-                  <p className="text-xs text-gray-500 mt-1">الوقت الذي يتم فيه قفل الاختيار</p>
+                  <p className="text-xs text-gray-500 mt-1">{t("الوقت الذي يتم فيه قفل الاختيار", "The time at which selection is locked")}</p>
                 </div>
               </div>
             </div>
@@ -563,16 +567,16 @@ export default function PublicMealsManagement() {
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="h-4 w-4"
               />
-              <Label htmlFor="isActive">نشط (يظهر في الموقع)</Label>
+              <Label htmlFor="isActive">{t("نشط (يظهر في الموقع)", "Active (shown on the site)")}</Label>
             </div>
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-              إلغاء
+              {t("إلغاء", "Cancel")}
             </Button>
             <Button onClick={handleSave} className="rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
-              {selectedMeal ? "تحديث" : "إضافة"}
+              {selectedMeal ? t("تحديث", "Update") : t("إضافة", "Add")}
             </Button>
           </DialogFooter>
         </DialogContent>

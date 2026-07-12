@@ -9,8 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Image as ImageIcon, Upload, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { useLanguage } from "@/lib/i18n";
 
 export default function BannersManagement() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
   const banners = useQuery(api.banners.list, { sessionToken }) || [];
@@ -32,8 +36,8 @@ export default function BannersManagement() {
     if (file) {
       if (!file.type.startsWith("image/")) {
         toast({
-          title: "خطأ",
-          description: "يرجى اختيار صورة فقط",
+          title: t("خطأ", "Error"),
+          description: t("يرجى اختيار صورة فقط", "Please select an image only"),
           variant: "destructive",
         });
         return;
@@ -46,8 +50,8 @@ export default function BannersManagement() {
   const handleUpload = async () => {
     if (!selectedFile || !titleAr) {
       toast({
-        title: "خطأ",
-        description: "يرجى إدخال العنوان واختيار صورة",
+        title: t("خطأ", "Error"),
+        description: t("يرجى إدخال العنوان واختيار صورة", "Please enter a title and select an image"),
         variant: "destructive",
       });
       return;
@@ -83,8 +87,8 @@ export default function BannersManagement() {
       });
 
       toast({
-        title: "نجاح",
-        description: "تم إضافة البانر بنجاح",
+        title: t("نجاح", "Success"),
+        description: t("تم إضافة البانر بنجاح", "Banner added successfully"),
       });
 
       // Reset form
@@ -97,8 +101,8 @@ export default function BannersManagement() {
     } catch (error) {
       console.error("Upload error:", error);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء رفع البانر",
+        title: t("خطأ", "Error"),
+        description: t("حدث خطأ أثناء رفع البانر", "An error occurred while uploading the banner"),
         variant: "destructive",
       });
     } finally {
@@ -107,18 +111,18 @@ export default function BannersManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("هل أنت متأكد من حذف هذا البانر؟")) return;
+    if (!confirm(t("هل أنت متأكد من حذف هذا البانر؟", "Are you sure you want to delete this banner?"))) return;
 
     try {
       await deleteBanner({ id: id as any, sessionToken });
       toast({
-        title: "نجاح",
-        description: "تم حذف البانر بنجاح",
+        title: t("نجاح", "Success"),
+        description: t("تم حذف البانر بنجاح", "Banner deleted successfully"),
       });
     } catch (error) {
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء حذف البانر",
+        title: t("خطأ", "Error"),
+        description: t("حدث خطأ أثناء حذف البانر", "An error occurred while deleting the banner"),
         variant: "destructive",
       });
     }
@@ -128,13 +132,13 @@ export default function BannersManagement() {
     try {
       await toggleActive({ id: id as any, sessionToken });
       toast({
-        title: "نجاح",
-        description: currentStatus ? "تم إخفاء البانر" : "تم إظهار البانر",
+        title: t("نجاح", "Success"),
+        description: currentStatus ? t("تم إخفاء البانر", "Banner hidden") : t("تم إظهار البانر", "Banner shown"),
       });
     } catch (error) {
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تحديث حالة البانر",
+        title: t("خطأ", "Error"),
+        description: t("حدث خطأ أثناء تحديث حالة البانر", "An error occurred while updating the banner status"),
         variant: "destructive",
       });
     }
@@ -159,21 +163,21 @@ export default function BannersManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              إضافة بانر جديد
+              {t("إضافة بانر جديد", "Add New Banner")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label>العنوان (عربي) *</Label>
+                <Label>{t("العنوان (عربي) *", "Title (Arabic) *")}</Label>
                 <Input
                   value={titleAr}
                   onChange={(e) => setTitleAr(e.target.value)}
-                  placeholder="مثال: عروض خاصة"
+                  placeholder={t("مثال: عروض خاصة", "Example: Special Offers")}
                 />
               </div>
               <div>
-                <Label>العنوان (إنجليزي)</Label>
+                <Label>{t("العنوان (إنجليزي)", "Title (English)")}</Label>
                 <Input
                   value={titleEn}
                   onChange={(e) => setTitleEn(e.target.value)}
@@ -181,15 +185,15 @@ export default function BannersManagement() {
                 />
               </div>
               <div>
-                <Label>العنوان الفرعي (عربي)</Label>
+                <Label>{t("العنوان الفرعي (عربي)", "Subtitle (Arabic)")}</Label>
                 <Input
                   value={subtitleAr}
                   onChange={(e) => setSubtitleAr(e.target.value)}
-                  placeholder="خصم 20% على جميع الباقات"
+                  placeholder={t("خصم 20% على جميع الباقات", "20% off on all plans")}
                 />
               </div>
               <div>
-                <Label>العنوان الفرعي (إنجليزي)</Label>
+                <Label>{t("العنوان الفرعي (إنجليزي)", "Subtitle (English)")}</Label>
                 <Input
                   value={subtitleEn}
                   onChange={(e) => setSubtitleEn(e.target.value)}
@@ -199,15 +203,15 @@ export default function BannersManagement() {
             </div>
 
             <div>
-              <Label>الصورة *</Label>
+              <Label>{t("الصورة *", "Image *")}</Label>
               <div className="mt-2">
                 <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-cyan-500 transition-colors">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
                     <Upload className="h-8 w-8 text-slate-400 mb-2" />
                     <p className="text-sm text-slate-600">
-                      {selectedFile ? selectedFile.name : "اضغط لرفع صورة"}
+                      {selectedFile ? selectedFile.name : t("اضغط لرفع صورة", "Click to upload an image")}
                     </p>
-                    <p className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP (حجم موصى به: 1920x600)</p>
+                    <p className="text-xs text-slate-400 mt-1">PNG, JPG, WEBP ({t("حجم موصى به: 1920x600", "recommended size: 1920x600")})</p>
                   </div>
                   <input
                     type="file"
@@ -221,7 +225,7 @@ export default function BannersManagement() {
 
             {previewUrl && (
               <div>
-                <Label>معاينة</Label>
+                <Label>{t("معاينة", "Preview")}</Label>
                 <div className="relative mt-2 rounded-lg overflow-hidden border">
                   <img
                     src={previewUrl}
@@ -238,7 +242,7 @@ export default function BannersManagement() {
               className="w-full rounded-xl font-bold text-white"
               style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
             >
-              {isUploading ? "جاري الرفع..." : "رفع البانر"}
+              {isUploading ? t("جاري الرفع...", "Uploading...") : t("رفع البانر", "Upload Banner")}
             </Button>
           </CardContent>
         </Card>
@@ -248,14 +252,14 @@ export default function BannersManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5" />
-              البانرات الحالية ({banners.length})
+              {t("البانرات الحالية", "Current Banners")} ({banners.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             {banners.length === 0 ? (
               <div className="text-center py-12 text-slate-400">
                 <ImageIcon className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p>لا توجد بانرات حالياً</p>
+                <p>{t("لا توجد بانرات حالياً", "No banners yet")}</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -301,9 +305,9 @@ export default function BannersManagement() {
                               : "bg-slate-200 text-slate-600"
                           }`}
                         >
-                          {banner.isActive ? "نشط" : "مخفي"}
+                          {banner.isActive ? t("نشط", "Active") : t("مخفي", "Hidden")}
                         </span>
-                        <span className="text-xs text-slate-400">ترتيب: {banner.sortOrder}</span>
+                        <span className="text-xs text-slate-400">{t("ترتيب:", "Order:")} {banner.sortOrder}</span>
                       </div>
                     </div>
 

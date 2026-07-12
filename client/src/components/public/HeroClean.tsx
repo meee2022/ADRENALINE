@@ -146,7 +146,7 @@ export function HeroClean({ image, images, videoUrl, titleAr, titleEn, subtitleA
           {!videoUrl && hasMultiple && (
             <div className="flex items-center gap-2.5 mt-5 md:mt-8 justify-center md:justify-start">
               {slides.map((_, i) => (
-                <button key={i} onClick={() => setIdx(i)} aria-label={`صورة ${i + 1}`}
+                <button key={i} onClick={() => setIdx(i)} aria-label={isRtl ? `صورة ${i + 1}` : `Image ${i + 1}`}
                   className="rounded-full transition-all duration-500"
                   style={{
                     width: idx === i ? 28 : 8, height: 8,

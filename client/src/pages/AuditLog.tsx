@@ -5,6 +5,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { useLanguage } from "@/lib/i18n";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -30,6 +31,9 @@ function getActionColor(action: string) {
 }
 
 export default function AuditLog() {
+  const { language, dir } = useLanguage();
+  const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const logs = useQuery(api.auditLog.list, { limit: 200, sessionToken }) || [];
   const stats = useQuery(api.auditLog.stats, { sessionToken });
@@ -52,7 +56,7 @@ export default function AuditLog() {
           <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-gray-400 flex items-center gap-2">
-                <Activity className="h-4 w-4" /> الإجمالي
+                <Activity className="h-4 w-4" /> {t("الإجمالي", "Total")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -62,7 +66,7 @@ export default function AuditLog() {
           <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-semibold text-gray-400 flex items-center gap-2">
-                <Clock className="h-4 w-4" /> آخر 24 ساعة
+                <Clock className="h-4 w-4" /> {t("آخر 24 ساعة", "Last 24h")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -71,7 +75,7 @@ export default function AuditLog() {
           </Card>
           <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold text-gray-400">أكثر الأحداث</CardTitle>
+              <CardTitle className="text-sm font-semibold text-gray-400">{t("أكثر الأحداث", "Top events")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-xs space-y-1">
@@ -92,25 +96,25 @@ export default function AuditLog() {
 
       <Card className="rounded-2xl border-0" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
         <CardHeader>
-          <CardTitle>الأحداث الأخيرة</CardTitle>
+          <CardTitle>{t("الأحداث الأخيرة", "Recent events")}</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>الوقت</TableHead>
-                <TableHead>المستخدم</TableHead>
-                <TableHead>الدور</TableHead>
-                <TableHead>الإجراء</TableHead>
-                <TableHead>النوع</TableHead>
-                <TableHead>التفاصيل</TableHead>
+                <TableHead>{t("الوقت", "Time")}</TableHead>
+                <TableHead>{t("المستخدم", "User")}</TableHead>
+                <TableHead>{t("الدور", "Role")}</TableHead>
+                <TableHead>{t("الإجراء", "Action")}</TableHead>
+                <TableHead>{t("النوع", "Type")}</TableHead>
+                <TableHead>{t("التفاصيل", "Details")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {logs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    لا توجد سجلات
+                    {t("لا توجد سجلات", "No records")}
                   </TableCell>
                 </TableRow>
               ) : (

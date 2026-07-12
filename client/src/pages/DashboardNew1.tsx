@@ -497,7 +497,7 @@ export default function DashboardNew() {
             </div>
             <button onClick={()=>setLocation("/customers")}
               className="text-xs font-black px-4 py-2.5 rounded-xl flex items-center gap-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
-              عرض الكل <ArrowUpRight className="h-4 w-4" />
+              {tr("عرض الكل", "View all")} <ArrowUpRight className="h-4 w-4" />
             </button>
           </div>
           
@@ -631,7 +631,7 @@ export default function DashboardNew() {
             </div>
             <button onClick={()=>setLocation("/inventory")}
               className="text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
-              إدارة <ArrowUpRight className="h-3.5 w-3.5" />
+              {tr("إدارة", "Manage")} <ArrowUpRight className="h-3.5 w-3.5" />
             </button>
           </div>
           
