@@ -467,7 +467,7 @@ function CustomersReport() {
 }
 
 function InventoryReport() {
-  const { t } = useT();
+  const { t, isRtl } = useT();
   const items = useQuery(api.inventory.listItems, {}) || [];
   const lowStock = items.filter((i: any) => i.currentStock <= i.minStock).length;
 
@@ -513,7 +513,7 @@ function InventoryReport() {
           <TableBody>
             {items.map((i: any) => (
               <TableRow key={i._id}>
-                <TableCell>{i.nameAr}</TableCell>
+                <TableCell>{isRtl ? i.nameAr : (i.nameEn || i.nameAr)}</TableCell>
                 <TableCell>{i.category}</TableCell>
                 <TableCell>{i.currentStock} {i.unit}</TableCell>
                 <TableCell>{i.minStock}</TableCell>

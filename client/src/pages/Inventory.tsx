@@ -436,7 +436,7 @@ export default function InventoryPage() {
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
                           <h3 className="font-bold text-gray-900 text-base mb-1">
-                            {item.nameAr}
+                            {isRtl ? item.nameAr : (item.nameEn || item.nameAr)}
                           </h3>
                           {item.nameEn && (
                             <p className="text-xs text-gray-500">{item.nameEn}</p>

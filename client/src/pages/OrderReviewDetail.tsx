@@ -342,7 +342,7 @@ export default function OrderReviewDetail() {
           rows: groupedByWeek[w][d].map((it: any, i: number) => ({
             label: String(i + 1),
             category: catName(it.category),
-            meal: it.mealNameAr || it.mealNameEn || "-",
+            meal: (isRtl ? (it.mealNameAr || it.mealNameEn) : (it.mealNameEn || it.mealNameAr)) || "-",
             notes: [it.avoid, it.preferences, it.portions, it.specialNotes]
               .map((x) => String(x || "").trim()).filter(Boolean).join(" • "),
             calories: it.calories ?? "",
@@ -599,7 +599,7 @@ export default function OrderReviewDetail() {
                             </div>
                             <div className="p-2.5 flex flex-col flex-1">
                               <h6 className="font-bold text-gray-900 text-[12.5px] leading-snug mb-1 line-clamp-2">
-                                {meal.mealNameAr}
+                                {isRtl ? meal.mealNameAr : (meal.mealNameEn || meal.mealNameAr)}
                               </h6>
                               <div className="flex items-center justify-between text-[11px] text-gray-600 mb-2">
                                 <span>{meal.calories} {t("سعرة", "kcal")}</span>
@@ -952,7 +952,7 @@ export default function OrderReviewDetail() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSwapTarget(null)}>
           <Card className="p-6 max-w-2xl w-full max-h-[85vh] overflow-y-auto bg-white" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">🔁 {t("تبديل", "Swap")}: <span className="text-primary">{swapTarget.mealNameAr}</span></h3>
+              <h3 className="text-xl font-bold text-gray-900">🔁 {t("تبديل", "Swap")}: <span className="text-primary">{isRtl ? swapTarget.mealNameAr : (swapTarget.mealNameEn || swapTarget.mealNameAr)}</span></h3>
               <button onClick={() => setSwapTarget(null)} className="text-gray-400 hover:text-gray-900 text-2xl leading-none">×</button>
             </div>
             <p className="text-sm text-gray-500 mb-4">

@@ -119,7 +119,7 @@ export default function WasteReport() {
                 ) : (
                   r.perItem.map((it: any) => (
                     <tr key={it.itemId} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                      <td className="px-5 py-3 font-medium text-slate-900">{it.nameAr}</td>
+                      <td className="px-5 py-3 font-medium text-slate-900">{isRtl ? it.nameAr : (it.nameEn || it.nameAr)}</td>
                       <td className="text-center px-3 py-3 text-slate-500">{fmt(it.consumed)} {it.unit}</td>
                       <td className="text-center px-3 py-3 font-bold text-red-600">{fmt(it.wasted)} {it.unit}</td>
                       <td className="text-center px-3 py-3 text-slate-500">{fmt(it.unitCost)} {isRtl ? "ر.ق" : ""}</td>

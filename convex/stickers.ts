@@ -66,6 +66,7 @@ export const get = query({
   args: {
     date: v.string(), // yyyy-MM-dd
     deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
+    lang: v.optional(v.string()), // "en" | "ar" — لغة أسماء الوجبات على الاستيكر
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -295,17 +296,24 @@ export const get = query({
 
       for (const it of items) {
         const menu = it.menuItemId ? menuMap.get(String(it.menuItemId)) : null;
-        // ✅ fallback للاسم النصّي من الخطط المستوردة
-        const mealName = menu?.name || it.mealNameAr || it.mealNameEn || "UNKNOWN";
+        // ✅ الاسم العربي (للبحث في publicMeals) — menuItems الداخلي فيه name واحد
+        const arName = (menu as any)?.nameAr || menu?.name || it.mealNameAr || it.mealNameEn || "UNKNOWN";
+        // ✅ اسم البحث ثابت (عربي) للمطابقة مع publicMeals مهما كانت لغة العرض
+        const lookupName = arName;
         // ✅ تصنيف الوجبة (Lunch / Breakfast / Snack / Dinner)
         const category = catLabel(
           categoryById.get(String((menu as any)?.categoryId || (it as any).categoryId || "")) || String((it as any).category || ""),
         );
 
         // ✅ مطابقة بـ publicMeals بالاسم للحصول على ماكروز كاملة
-        const pmLookup = publicMealsByName.get(String(mealName).trim().toLowerCase())
+        const pmLookup = publicMealsByName.get(String(lookupName).trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameAr || "").trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameEn || "").trim().toLowerCase());
+
+        // ✅ اسم العرض بلغة الواجهة: إنجليزي من (لقطة الطلب / publicMeals) وإلا العربي
+        const mealName = args.lang === "en"
+          ? (it.mealNameEn || (pmLookup as any)?.nameEn || (menu as any)?.nameEn || lookupName)
+          : lookupName;
 
         // ترتيب الأولوية: 1) item نفسه، 2) publicMeals، 3) menuItem
         const itemProtein = Number((it as any).protein ?? 0) || 0;

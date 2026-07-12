@@ -138,7 +138,7 @@ export default function PlansReviewPage() {
           return {
             label: String(i + 1),
             category: menu ? catMap.get(String(menu.categoryId)) || "" : "",
-            meal: menu?.name || it.mealNameAr || it.mealNameEn || "غير محدد",
+            meal: (isRtl ? (menu?.name || it.mealNameAr || it.mealNameEn) : (it.mealNameEn || it.mealNameAr || menu?.name)) || (isRtl ? "غير محدد" : "Unspecified"),
             notes,
           };
         });

@@ -197,7 +197,7 @@ export default function ReceiveGoods() {
                     onChange={(e) => { if (e.target.value === "__new__") setLine(i, { mode: "new", itemId: "" }); else { const it = items.find((x) => x._id === e.target.value); setLine(i, { mode: "existing", itemId: e.target.value, unit: it?.unit || l.unit }); } }}
                     className={selCls}>
                     <option value="">{isRtl ? "اختر صنف" : "Select item"}</option>
-                    {items.map((it) => <option key={it._id} value={it._id}>{it.nameAr} ({it.currentStock} {it.unit})</option>)}
+                    {items.map((it) => <option key={it._id} value={it._id}>{isRtl ? it.nameAr : (it.nameEn || it.nameAr)} ({it.currentStock} {it.unit})</option>)}
                     <option value="__new__">➕ {isRtl ? "صنف جديد" : "New item"}</option>
                   </select>
                 </div>
