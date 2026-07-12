@@ -9,7 +9,7 @@ import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Printer } from "lucide-react";
+import { CalendarIcon, Printer, Share2 } from "lucide-react";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -84,6 +84,39 @@ export default function OrderReviewDetail() {
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
   const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
   const noteItemMutation = useMutation(api.customerOrders.updateOrderItemNote);
+  const getShareTokenMut = useMutation(api.customerOrders.getPlanShareToken);
+  const [sharing, setSharing] = useState(false);
+
+  // 🔗 مشاركة رابط جدول الوجبات — قائمة مشاركة الجهاز (واتساب…) أو واتساب مباشرة.
+  const handleShare = async () => {
+    if (sharing || !orderData) return;
+    setSharing(true);
+    try {
+      const { token } = await getShareTokenMut({ orderId: orderData._id, sessionToken });
+      const url = `${window.location.origin}/plan/${token}`;
+      const name = orderData.customerName || "";
+      const msg = t(`جدول وجباتك من Adrenaline 🥗\n${name}\n${url}`, `Your Adrenaline meal plan 🥗\n${name}\n${url}`);
+      // قائمة المشاركة الأصلية (الأفضل على الجوال) — تختار واتساب فيتّرفق الرابط
+      if ((navigator as any).share) {
+        try {
+          await (navigator as any).share({ title: t("جدول وجباتك", "Your meal plan"), text: msg, url });
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return; // المستخدم ألغى
+        }
+      }
+      // fallback: افتح واتساب مباشرةً بالرقم + الرابط
+      const phone = String(orderData.customerPhone || "").replace(/\D/g, "");
+      const wa = phone
+        ? `https://wa.me/${phone.length === 8 ? "974" + phone : phone}?text=${encodeURIComponent(msg)}`
+        : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+      window.location.href = wa;
+    } catch (e: any) {
+      alert(t("تعذّر إنشاء الرابط: ", "Couldn't create link: ") + String(e?.message || e));
+    } finally {
+      setSharing(false);
+    }
+  };
   const deleteOrderMutation = useMutation(api.customerOrders.deleteOrder);
 
   // ✅ حذف الطلب نهائياً (أدمن فقط) — لتنظيف التجارب، غير الرفض.
@@ -351,15 +384,26 @@ export default function OrderReviewDetail() {
         <Button variant="outline" onClick={() => navigate("/orders/pending")}>
           {t("← العودة للقائمة","← Back to list")}
         </Button>
-        <Button
-          variant="outline"
-          onClick={handlePrintPlan}
-          disabled={downloadingPlan}
-          className="font-bold border-[#3cc4f0] text-[#0E76AC]"
-        >
-          <Printer className="h-4 w-4 ml-2" />
-          {downloadingPlan ? t("جاري تجهيز الملف…","Preparing file…") : t("تنزيل جدول الوجبات PDF","Download meal plan PDF")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={handleShare}
+            disabled={sharing}
+            className="font-bold text-white"
+            style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
+          >
+            <Share2 className="h-4 w-4 ml-2" />
+            {sharing ? t("جارٍ التجهيز…","Preparing…") : t("مشاركة الجدول","Share plan")}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrintPlan}
+            disabled={downloadingPlan}
+            className="font-bold border-[#3cc4f0] text-[#0E76AC]"
+          >
+            <Printer className="h-4 w-4 ml-2" />
+            {downloadingPlan ? t("جاري تجهيز الملف…","Preparing file…") : t("تنزيل PDF","Download PDF")}
+          </Button>
+        </div>
       </div>
 
       {/* Subscriber Header Card */}

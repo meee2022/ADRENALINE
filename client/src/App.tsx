@@ -34,6 +34,7 @@ const Kitchen = lazy(() => import("@/pages/Kitchen"));
 const Delivery = lazy(() => import("@/pages/Delivery"));
 const DriverApp = lazy(() => import("@/pages/DriverApp"));
 const TrackOrder = lazy(() => import("@/pages/public/TrackOrder"));
+const PublicMealPlan = lazy(() => import("@/pages/public/PublicMealPlan"));
 const Stickers = lazy(() => import("@/pages/Stickers"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Leaves = lazy(() => import("@/pages/Leaves"));
@@ -146,6 +147,7 @@ function Router() {
       <Route path="/public/how-to-subscribe" component={HowToSubscribe} />
       {/* تتبّع الطلب — عام برابط سرّي */}
       <Route path="/track/:token" component={TrackOrder} />
+      <Route path="/plan/:token" component={PublicMealPlan} />
 
       {/* ===== Admin Routes (Protected) ===== */}
       <Route path="/login" component={Login} />
