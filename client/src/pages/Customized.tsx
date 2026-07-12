@@ -60,6 +60,65 @@ function composeText(s: Slot, isRtl: boolean): string {
   return text;
 }
 
+/** اختيار طبق بالبحث بالاسم — يفتح قائمة نتائج مفلترة بدل dropdown طويل. */
+function MealPicker({ meals, value, valueName, isRtl, onPick }: {
+  meals: any[]; value?: string; valueName?: string; isRtl: boolean; onPick: (m: any | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const nameOf = (m: any) => (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) || "";
+  const results = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    const list = s
+      ? meals.filter((m) => `${m.nameAr || ""} ${m.nameEn || ""}`.toLowerCase().includes(s))
+      : meals;
+    return list.slice(0, 40);
+  }, [q, meals]);
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => { setOpen((o) => !o); setQ(""); }}
+        className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-white flex items-center justify-between gap-2">
+        <span className={cn("truncate", value ? "text-slate-900" : "text-slate-400")}>
+          {value && valueName ? valueName : (isRtl ? "اختر الطبق…" : "Pick a dish…")}
+        </span>
+        <Search className="h-4 w-4 text-slate-400 shrink-0" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+            <div className="p-2 border-b border-slate-100">
+              <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+                placeholder={isRtl ? "ابحث باسم الطبق…" : "Search dish name…"} className="h-9 text-sm" />
+            </div>
+            <div className="max-h-64 overflow-y-auto">
+              {value && (
+                <button type="button" onClick={() => { onPick(null); setOpen(false); }}
+                  className="w-full text-start px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50">
+                  ✕ {isRtl ? "إلغاء الاختيار" : "Clear selection"}
+                </button>
+              )}
+              {results.map((m) => (
+                <button key={m._id} type="button" onClick={() => { onPick(m); setOpen(false); }}
+                  className={cn("w-full text-start px-3 py-2 text-sm hover:bg-[#f2fbff] flex items-center gap-2",
+                    value === m._id ? "bg-[#f2fbff] font-black text-[#0E76AC]" : "font-semibold text-slate-700")}>
+                  {m.imageUrl && <img src={m.imageUrl} alt="" className="h-7 w-7 rounded object-cover shrink-0" />}
+                  <span className="truncate">{nameOf(m)}</span>
+                </button>
+              ))}
+              {results.length === 0 && (
+                <p className="text-center text-slate-400 text-sm py-6">{isRtl ? "لا نتائج" : "No results"}</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Customized() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { language, dir } = useLanguage();
@@ -206,18 +265,14 @@ export default function Customized() {
 
                   {s.type !== "OFF" && (
                     <div className="space-y-2.5">
-                      {/* اختيار الطبق */}
-                      <select value={s.baseMealId || ""}
-                        onChange={(e) => {
-                          const m = (s.type === "MAIN" ? mainMeals : snackMeals).find((x) => x._id === e.target.value);
-                          patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined });
-                        }}
-                        className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm font-bold bg-white">
-                        <option value="">{t("اختر الطبق…", "Pick a dish…")}</option>
-                        {(s.type === "MAIN" ? mainMeals : snackMeals).map((m) => (
-                          <option key={m._id} value={m._id}>{isRtl ? m.nameAr : (m.nameEn || m.nameAr)}</option>
-                        ))}
-                      </select>
+                      {/* اختيار الطبق — بحث بالاسم بدل قائمة بـ 200 طبق */}
+                      <MealPicker
+                        meals={s.type === "MAIN" ? mainMeals : snackMeals}
+                        value={s.baseMealId}
+                        valueName={s.baseName}
+                        isRtl={isRtl}
+                        onPick={(m) => patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined })}
+                      />
 
                       {s.type === "MAIN" && (
                         <div className="grid sm:grid-cols-2 gap-2.5">
