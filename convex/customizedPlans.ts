@@ -23,13 +23,16 @@ export const listCustomized = query({
     const templates = await ctx.db.query("customizedTemplates").collect();
     const byCust = new Map(templates.map((t) => [String(t.customerId), t]));
     // عدّاد الأيام المكتملة (بنية جديدة {days}) أو الخانات (قالب قديم مصفوفة)
+    const countDays = (daysObj: any): number =>
+      Object.values(daysObj || {}).filter(
+        (arr: any) => Array.isArray(arr) && arr.some((s: any) => s && s.type !== "OFF" && s.baseName),
+      ).length;
     const filledCount = (tpl: any): number => {
       const slots = tpl?.slots;
-      if (slots && slots.days && typeof slots.days === "object") {
-        return Object.values(slots.days).filter(
-          (arr: any) => Array.isArray(arr) && arr.some((s: any) => s && s.type !== "OFF" && s.baseName),
-        ).length;
+      if (slots && slots.weeks && typeof slots.weeks === "object") {
+        return Object.values(slots.weeks).reduce((sum: number, wk: any) => sum + countDays(wk?.days), 0);
       }
+      if (slots && slots.days && typeof slots.days === "object") return countDays(slots.days);
       if (Array.isArray(slots)) return slots.filter((s: any) => s && s.type !== "OFF").length;
       return 0;
     };
@@ -61,11 +64,29 @@ export const forDate = query({
     const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
 
+    // ✅ أسبوع دورة المطبخ لهذا التاريخ (نفس منطق restaurantSettings.rotationWeekAt):
+    //    الدورة تتقدّم +1 كل جمعة وتلفّ 1..4، فكل أسبوع يطلع وجبات أسبوع الدورة الصحيح.
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const cur = Number((settings as any)?.currentCookingWeek) || 1;
+    const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // توقيت قطر
+    const target = String(args.date).slice(0, 10);
+    let fridays = 0;
+    const c = new Date(todayISO + "T00:00:00Z");
+    const end = new Date(target + "T00:00:00Z");
+    for (let i = 0; i < 400 && c < end; i++) {
+      c.setUTCDate(c.getUTCDate() + 1);
+      if (c.getUTCDay() === 5) fridays++;
+    }
+    const rotWeek = ((cur - 1 + fridays) % 4) + 1;
+
     const templates = await ctx.db.query("customizedTemplates").collect();
     const out: any[] = [];
     for (const tpl of templates) {
-      const days = (tpl.slots as any)?.days;
-      const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(tpl.slots) ? (tpl.slots as any) : [];
+      const sl = tpl.slots as any;
+      // بنية جديدة: weeks[1..4].days[dayKey]. توافق خلفي: days[dayKey] (أسبوع واحد) أو مصفوفة.
+      const weekDays = sl?.weeks ? (sl.weeks[rotWeek] || sl.weeks[String(rotWeek)])?.days : null;
+      const days = weekDays || sl?.days;
+      const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
       const items = slots
         .filter((s) => s && s.type !== "OFF" && (s.baseName || s.text))
         .map((s) => ({

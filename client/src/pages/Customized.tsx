@@ -200,8 +200,9 @@ export default function Customized() {
   const mainMeals = useMemo(() => meals.filter((m) => ["lunch", "dinner"].includes(String(m.category))), [meals]);
   const snackMeals = useMemo(() => meals.filter((m) => ["snack", "salad"].includes(String(m.category))), [meals]);
 
-  // ✅ قالب بالأيام: لكل يوم مصفوفة خانات (الأخصائية تحدد وجبات كل يوم بكمياته)
-  const [daySlots, setDaySlots] = useState<Record<string, Slot[]>>({});
+  // ✅ قالب بالأسابيع×الأيام: 4 أسابيع دورة، كل أسبوع له أيامه، كل يوم خاناته
+  const [weekSlots, setWeekSlots] = useState<Record<number, Record<string, Slot[]>>>({});
+  const [activeWeek, setActiveWeek] = useState<number>(1);
   const [activeDay, setActiveDay] = useState<string>("saturday");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -218,45 +219,79 @@ export default function Customized() {
     return s;
   };
 
-  // تحميل القالب المحفوظ (بالأيام) أو بناء افتراضي. يدعم القوالب القديمة (مصفوفة واحدة).
+  // تحميل القالب المحفوظ (أسابيع×أيام) أو بناء افتراضي.
+  //   يدعم القديم: days (أسبوع واحد يُطبّق على الأربعة) أو مصفوفة واحدة.
   useEffect(() => {
-    if (!selected) { setDaySlots({}); return; }
+    if (!selected) { setWeekSlots({}); return; }
     const saved = template?.slots;
-    const build = (base?: Slot[]) => {
+    // يبني خريطة أيام من مصدر اختياري (base list أو daysObj) — نسخة مستقلة في كل استدعاء
+    const daysFrom = (daysObj?: Record<string, Slot[]>, base?: Slot[]): Record<string, Slot[]> => {
       const d: Record<string, Slot[]> = {};
-      DAYS.forEach((dy) => { d[dy.key] = (base && base.length ? base : blankSlots()).map((s) => ({ ...s })); });
+      DAYS.forEach((dy) => {
+        const src = daysObj && Array.isArray(daysObj[dy.key]) && daysObj[dy.key].length
+          ? daysObj[dy.key]
+          : (base && base.length ? base : blankSlots());
+        d[dy.key] = src.map((s) => ({ ...s }));
+      });
       return d;
     };
-    if (saved && saved.days && typeof saved.days === "object") {
-      const d: Record<string, Slot[]> = {};
-      DAYS.forEach((dy) => { d[dy.key] = Array.isArray(saved.days[dy.key]) && saved.days[dy.key].length ? saved.days[dy.key] : blankSlots(); });
-      setDaySlots(d);
+    const ws: Record<number, Record<string, Slot[]>> = {};
+    if (saved && saved.weeks && typeof saved.weeks === "object") {
+      for (let w = 1; w <= 4; w++) {
+        const wkDays = (saved.weeks[w] || saved.weeks[String(w)])?.days;
+        ws[w] = daysFrom(wkDays);
+      }
+    } else if (saved && saved.days && typeof saved.days === "object") {
+      for (let w = 1; w <= 4; w++) ws[w] = daysFrom(saved.days); // أسبوع واحد قديم → لكل الأسابيع
     } else if (Array.isArray(saved) && saved.length) {
-      setDaySlots(build(saved)); // قالب قديم (نفس الوجبات لكل الأيام)
+      for (let w = 1; w <= 4; w++) ws[w] = daysFrom(undefined, saved);
     } else {
-      setDaySlots(build());
+      for (let w = 1; w <= 4; w++) ws[w] = daysFrom();
     }
+    setWeekSlots(ws);
+    setActiveWeek(currentWeek);
     setActiveDay("saturday");
   }, [selectedId, template]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const slots = daySlots[activeDay] || [];
+  const slots = weekSlots[activeWeek]?.[activeDay] || [];
   const patchSlot = (i: number, p: Partial<Slot>) =>
-    setDaySlots((prev) => ({ ...prev, [activeDay]: (prev[activeDay] || []).map((s, idx) => (idx === i ? { ...s, ...p } : s)) }));
+    setWeekSlots((prev) => ({
+      ...prev,
+      [activeWeek]: {
+        ...(prev[activeWeek] || {}),
+        [activeDay]: (prev[activeWeek]?.[activeDay] || []).map((s, idx) => (idx === i ? { ...s, ...p } : s)),
+      },
+    }));
 
-  // نسخ وجبات اليوم الحالي لكل الأيام (للعميل الذي يأكل نفس الوجبات يومياً)
+  // نسخ وجبات اليوم الحالي لكل أيام هذا الأسبوع (لعميل يأكل نفس الشيء كل يوم في الأسبوع)
   const applyToAllDays = () => {
-    if (!window.confirm(t("نسخ وجبات هذا اليوم لكل الأيام؟", "Copy this day's meals to all days?"))) return;
-    setDaySlots((prev) => {
-      const src = (prev[activeDay] || []).map((s) => ({ ...s }));
+    if (!window.confirm(t("نسخ وجبات هذا اليوم لكل أيام هذا الأسبوع؟", "Copy this day's meals to all days of this week?"))) return;
+    setWeekSlots((prev) => {
+      const src = (prev[activeWeek]?.[activeDay] || []).map((s) => ({ ...s }));
       const d: Record<string, Slot[]> = {};
       DAYS.forEach((dy) => { d[dy.key] = src.map((s) => ({ ...s })); });
-      return d;
+      return { ...prev, [activeWeek]: d };
     });
   };
 
-  // عدّاد الأيام المكتملة (كل خاناتها غير OFF فيها طبق)
+  // نسخ هذا الأسبوع بالكامل لباقي أسابيع الدورة (لعميل يأكل نفس الشيء كل أسبوع)
+  const applyWeekToAll = () => {
+    if (!window.confirm(t("نسخ هذا الأسبوع لكل أسابيع الدورة (1–4)؟", "Copy this week to all cycle weeks (1–4)?"))) return;
+    setWeekSlots((prev) => {
+      const srcDays = prev[activeWeek] || {};
+      const next: Record<number, Record<string, Slot[]>> = {};
+      for (let w = 1; w <= 4; w++) {
+        const d: Record<string, Slot[]> = {};
+        DAYS.forEach((dy) => { d[dy.key] = (srcDays[dy.key] || []).map((s) => ({ ...s })); });
+        next[w] = d;
+      }
+      return next;
+    });
+  };
+
+  // عدّاد الأيام المكتملة في الأسبوع النشط (كل خاناتها غير OFF فيها طبق)
   const dayFilled = (key: string) => {
-    const s = daySlots[key] || [];
+    const s = weekSlots[activeWeek]?.[key] || [];
     return s.length > 0 && s.every((x) => x.type === "OFF" || x.baseName);
   };
 
@@ -268,9 +303,13 @@ export default function Customized() {
     if (!selectedId) return;
     setSaving(true); setSaved(false);
     try {
-      const days: Record<string, Slot[]> = {};
-      DAYS.forEach((dy) => { days[dy.key] = (daySlots[dy.key] || []).map((s) => ({ ...s, text: composeText(s, isRtl) })); });
-      await saveTemplate({ customerId: selectedId as any, slots: { days }, sessionToken });
+      const weeks: Record<number, { days: Record<string, Slot[]> }> = {};
+      for (let w = 1; w <= 4; w++) {
+        const days: Record<string, Slot[]> = {};
+        DAYS.forEach((dy) => { days[dy.key] = (weekSlots[w]?.[dy.key] || []).map((s) => ({ ...s, text: composeText(s, isRtl) })); });
+        weeks[w] = { days };
+      }
+      await saveTemplate({ customerId: selectedId as any, slots: { weeks }, sessionToken });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e: any) {
       alert(t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e));
@@ -343,10 +382,36 @@ export default function Customized() {
                 </Button>
               </div>
 
-              {/* تبويبات الأيام + دورة المطبخ + نسخ لكل الأيام */}
+              {/* منتقي أسبوع الدورة (1–4) — كل أسبوع وجباته المستقلة */}
               <div className="rounded-2xl border border-slate-100 bg-white p-2.5 flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-black text-white bg-[#0E2A4A] rounded-lg px-2.5 py-1.5 shrink-0">
-                  🍳 {t("دورة المطبخ", "Cycle")} {currentWeek}
+                  🍳 {t("أسبوع الدورة", "Cycle week")}
+                </span>
+                <div className="flex gap-1 flex-wrap flex-1">
+                  {[1, 2, 3, 4].map((w) => (
+                    <button key={w} onClick={() => setActiveWeek(w)}
+                      className={cn("px-3.5 py-1.5 rounded-lg text-xs font-black border transition-colors relative",
+                        activeWeek === w ? "bg-[#0E2A4A] text-white border-[#0E2A4A]" : "bg-white text-slate-600 border-slate-200 hover:border-[#0E2A4A]")}>
+                      {t("أسبوع", "Week")} {w}
+                      {w === currentWeek && (
+                        <span className={cn("absolute -top-1.5 -end-1.5 text-[7px] font-black rounded-full px-1 py-0.5 leading-none",
+                          activeWeek === w ? "bg-emerald-300 text-[#0E2A4A]" : "bg-emerald-500 text-white")}>
+                          {t("الآن", "now")}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={applyWeekToAll}
+                  className="px-3 py-1.5 rounded-lg text-xs font-black text-emerald-700 border border-dashed border-emerald-400 hover:bg-emerald-50 flex items-center gap-1">
+                  <Copy className="h-3.5 w-3.5" /> {t("انسخ هذا الأسبوع لكل الأسابيع", "Copy week to all weeks")}
+                </button>
+              </div>
+
+              {/* تبويبات الأيام + نسخ لكل الأيام */}
+              <div className="rounded-2xl border border-slate-100 bg-white p-2.5 flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-black text-[#0E2A4A] bg-[#e8f8fd] rounded-lg px-2.5 py-1.5 shrink-0">
+                  📅 {t("أسبوع", "Week")} {activeWeek}
                 </span>
                 <div className="flex gap-1 flex-wrap flex-1">
                   {DAYS.map((d) => (
@@ -360,7 +425,7 @@ export default function Customized() {
                 </div>
                 <button onClick={applyToAllDays}
                   className="px-3 py-1.5 rounded-lg text-xs font-black text-[#0E76AC] border border-dashed border-[#0E76AC]/40 hover:bg-[#f2fbff] flex items-center gap-1">
-                  <Copy className="h-3.5 w-3.5" /> {t("طبّق هذا اليوم على الكل", "Apply this day to all")}
+                  <Copy className="h-3.5 w-3.5" /> {t("طبّق هذا اليوم على أيام الأسبوع", "Apply day to week")}
                 </button>
               </div>
 
@@ -388,7 +453,7 @@ export default function Customized() {
                         value={s.baseMealId}
                         valueName={s.baseName}
                         isRtl={isRtl}
-                        filterWeek={currentWeek}
+                        filterWeek={activeWeek}
                         filterDay={activeDay}
                         onPick={(m) => patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined })}
                       />
