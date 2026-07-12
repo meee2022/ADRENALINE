@@ -53,6 +53,23 @@ import {
 
 type ModifierGroup = "AVOID" | "PREF" | "PORTION";
 
+// ✅ ترجمة أسماء البروتين/الكارب للمخصّص (القالب قد يكون محفوظاً بالعربي) — لعرض
+//    كشف الشيف بالكامل بلغة الواجهة. القيم مطابقة لقوائم شاشة الوجبات المخصّصة.
+const PROTEIN_TR: Array<{ ar: string; en: string }> = [
+  { ar: "دجاج", en: "Chicken" }, { ar: "سمك", en: "Fish" }, { ar: "سلمون", en: "Salmon" },
+  { ar: "ستيك", en: "Steak" }, { ar: "لحم بقري", en: "Beef" }, { ar: "لحم مفروم", en: "Minced beef" },
+  { ar: "جمبري", en: "Shrimp" }, { ar: "ديك رومي", en: "Turkey" }, { ar: "تونة", en: "Tuna" }, { ar: "بيض", en: "Eggs" },
+];
+const CARB_TR: Array<{ ar: string; en: string }> = [
+  { ar: "بدون", en: "None" }, { ar: "رز أبيض", en: "White rice" }, { ar: "رز بني", en: "Brown rice" },
+  { ar: "باستا", en: "Pasta" }, { ar: "بطاطس", en: "Potato" }, { ar: "بطاطا حلوة", en: "Sweet potato" },
+  { ar: "خبز", en: "Bread" }, { ar: "برغل", en: "Bulgur" }, { ar: "كينوا", en: "Quinoa" },
+];
+const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: boolean): string => {
+  const o = table.find((x) => x.ar === name || x.en === name);
+  return o ? (isRtl ? o.ar : o.en) : name;
+};
+
 export default function Kitchen() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
@@ -82,6 +99,8 @@ export default function Kitchen() {
   const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
   // ✅ وجبات العملاء المخصّصين لهذا اليوم (من قوالبهم) — منفصلة لأنها لكل شخص بكمياته
   const customized = useQuery(api.customizedPlans.forDate, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
+  // ✅ وجبات المنيو العام (مصدر أطباق الأساس للمخصّص) — لترجمة اسم الطبق للإنجليزي في الكشف
+  const publicMealsList = useQuery(api.publicMeals.listMeals, {}) as any[] | undefined;
   // ✅ حصص البرامج من إعدادات المطعم (كارب جم + مدى البروتين لكل برنامج)
   const restSettings = useQuery(api.restaurantSettings.get) as any;
   const programPortions = restSettings?.programPortions || {
@@ -451,20 +470,48 @@ export default function Kitchen() {
     const dishHtml = mealSummary.map((m: any) => `
       <table class="dish">
         <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
-        <tr class="plain"><td class="lb">عادي — بدون تعديلات</td><td class="ct">${m.plainCount}</td></tr>
+        <tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>
         ${m.modGroups.map((g: any) => `
-        <tr><td class="lb">${esc(g.label || "تعديل — راجع الطلب")}<div class="cst">${esc(g.customers.map((c: any) => c.name).join("، "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
+        <tr><td class="lb">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
       </table>`).join("");
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
-    //    نرجع لبيانات الخطة لو القالب فاضي حتى لا يختفي أحد.
+    //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
+    //    عربي في الكشف الإنجليزي. نرجع للنص المحفوظ فقط لو تعذّر التركيب.
+    const gUnit = isRtl ? "جم" : "g";
+    const basePool = [...(publicMealsList || []), ...(menuItems || [])];
+    const baseById = new Map<string, any>();
+    const baseByAr = new Map<string, any>();
+    basePool.forEach((m: any) => {
+      if (m?._id) baseById.set(String(m._id), m);
+      if (m?.nameAr) baseByAr.set(String(m.nameAr).trim(), m);
+    });
+    const baseInLang = (it: any): string => {
+      const m: any = (it.baseMealId && baseById.get(String(it.baseMealId))) || baseByAr.get(String(it.baseName || "").trim());
+      if (m) return String(isRtl ? (m.nameAr || m.nameEn || m.name) : (m.nameEn || m.nameAr || m.name)).trim();
+      return String(it.baseName || "").trim();
+    };
+    const composeCust = (it: any): string => {
+      const base = baseInLang(it);
+      const bits: string[] = [];
+      if (base) bits.push(base);
+      if (it.type === "MAIN") {
+        const inner: string[] = [];
+        if (it.proteinG) inner.push(`${trName(it.proteinName || "", PROTEIN_TR, isRtl) || (isRtl ? "بروتين" : "Protein")} ${it.proteinG}${gUnit}`);
+        const carbTr = trName(it.carbName || "", CARB_TR, isRtl);
+        if (it.carbName && carbTr !== (isRtl ? "بدون" : "None") && it.carbG) inner.push(`${carbTr} ${it.carbG}${gUnit}`);
+        if (inner.length) bits.push(bits.length ? `— ${inner.join(" + ")}` : inner.join(" + "));
+      }
+      const composed = bits.join(" ").trim();
+      return composed || String(it.text || it.baseName || "—").trim();
+    };
     const custFromTemplate = (customized || [])
       .map((p: any) => ({
         name: p.customerName,
         deliveryTime: p.deliveryTime,
         allergies: [p.allergies, p.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
         items: (p.items || []).map((it: any) => ({
-          meal: it.text || it.baseName || "—",
+          meal: composeCust(it),
           note: String(it.notes || "").trim(),
         })),
       }))
@@ -473,12 +520,12 @@ export default function Kitchen() {
       ? custFromTemplate
       : customizedByPerson.map((p: any) => ({ name: p.name, deliveryTime: p.deliveryTime, allergies: "", items: p.items }));
     const custHtml = custList.length ? `
-      <h2 class="sec">الوجبات المخصّصة — بوكس لكل عميل (${custList.length})</h2>
+      <h2 class="sec">${isRtl ? "الوجبات المخصّصة — بوكس لكل عميل" : "Customized meals — one box per customer"} (${custList.length})</h2>
       <div class="pwrap">${custList.map((p: any) => `
-        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "صباحي ☀" : "مسائي 🌙"}</span></div>
+        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? (isRtl ? "صباحي ☀" : "Morning ☀") : (isRtl ? "مسائي 🌙" : "Evening 🌙")}</span></div>
         ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
         <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b class="nt">${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
-    const html = `<!doctype html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>كشف المطبخ ${esc(formattedDate)}</title>
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
         body{margin:0;padding:10px;color:#0f1516;font-size:11px}
@@ -507,12 +554,12 @@ export default function Kitchen() {
         .nt{color:#c2410c}
         @page{size:A4;margin:8mm}
       </style></head><body>
-      <h1>كشف المطبخ — ADRENALINE</h1><div class="date">تاريخ: ${esc(formattedDate)} · الأرقام تشمل المشتركين المخصّصين</div>
+      <h1>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} — ADRENALINE</h1><div class="date">${isRtl ? "تاريخ" : "Date"}: ${esc(formattedDate)} · ${isRtl ? "الأرقام تشمل المشتركين المخصّصين" : "totals include customized subscribers"}</div>
       <div class="kpis">
-        <div class="kpi"><div class="v" style="color:#0E76AC">${tMeals}</div><div class="l">إجمالي الوجبات</div></div>
-        <div class="kpi"><div class="v" style="color:#3cc4f0">${tPlain}</div><div class="l">عادي</div></div>
-        <div class="kpi"><div class="v" style="color:#c2410c">${tMod}</div><div class="l">معدّل</div></div>
-        <div class="kpi"><div class="v" style="color:#47759c">${mealSummary.length}</div><div class="l">أنواع الأطباق</div></div>
+        <div class="kpi"><div class="v" style="color:#0E76AC">${tMeals}</div><div class="l">${isRtl ? "إجمالي الوجبات" : "Total meals"}</div></div>
+        <div class="kpi"><div class="v" style="color:#3cc4f0">${tPlain}</div><div class="l">${isRtl ? "عادي" : "Plain"}</div></div>
+        <div class="kpi"><div class="v" style="color:#c2410c">${tMod}</div><div class="l">${isRtl ? "معدّل" : "Modified"}</div></div>
+        <div class="kpi"><div class="v" style="color:#47759c">${mealSummary.length}</div><div class="l">${isRtl ? "أنواع الأطباق" : "Dish types"}</div></div>
       </div>
       <div class="wrap">${dishHtml}</div>
       ${custHtml}

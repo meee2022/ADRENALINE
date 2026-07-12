@@ -70,6 +70,7 @@ export const forDate = query({
         .filter((s) => s && s.type !== "OFF" && (s.baseName || s.text))
         .map((s) => ({
           text: s.text || s.baseName || "",
+          baseMealId: s.baseMealId || null,
           baseName: s.baseName || "",
           type: s.type,
           proteinName: s.proteinName || "",
