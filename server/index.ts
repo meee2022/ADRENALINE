@@ -37,7 +37,7 @@ export function log(message: string, source = "express") {
     await setupVite(httpServer, app);
   }
 
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = parseInt(process.env.PORT || "5001", 10);
   httpServer.listen(port, () => {
     log(`serving on port ${port}`);
   });
