@@ -563,28 +563,16 @@ export default function Kitchen() {
     };
     const colsTable = <T,>(items: T[], n: number, wt: (x: T) => number, render: (x: T) => string): string =>
       `<table class="cols"><tr>${balance(items, n, wt).map((col) => `<td class="col">${col.map(render).join("")}</td>`).join("")}</tr></table>`;
-    // ✅ كشف زي الإكسيل بالظبط: لكل طبق رئيسي تقسيم DIET/FITNESS/BULK + جرامات الرز والبروتين
-    //    (نفس مقادير الإكسيل)، ثم صفوف التعديلات /NO، ثم Total Portions.
-    const pp: any = programPortions;
-    const gRow = (label: string, count: number, port: any) => count > 0
-      ? `<tr class="pg"><td class="lb"><b>${label}</b> · ${isRtl ? "رز" : "rice"} ${port?.carb ?? "-"}g / ${isRtl ? "بروتين" : "protein"} ${port?.protein ?? "-"}g</td><td class="ct">${count}</td></tr>`
-      : "";
-    const dishTable = (m: any) => {
-      const hasProg = (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
-      const head = hasProg
-        ? gRow("DIET", m.dietCount, pp.DIET) + gRow("FITNESS", m.fitnessCount, pp.FITNESS) + gRow("BULK", m.bulkCount, pp.BULK)
-          + (m.standardCount > 0 ? `<tr class="plain"><td class="lb">STANDARD</td><td class="ct">${m.standardCount}</td></tr>` : "")
-        : `<tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>`;
-      return `
+    // ✅ كشف زي الإكسيل بالظبط: جدول بحدود لكل طبق — صف العنوان، صف "عادي"، صف لكل تعديل، وصف Total Portions
+    const dishTable = (m: any) => `
       <div class="dishbox"><table class="dish">
         <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
-        ${head}
+        <tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>
         ${m.modGroups.map((g: any) => `
         <tr><td class="lb">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
       </table></div>`;
-    };
-    const dishWeight = (m: any) => 1 + ((m.dietCount + m.fitnessCount + m.bulkCount) > 0 ? 3 : 1) + m.modGroups.length + m.modGroups.reduce((s: number, g: any) => s + Math.floor(String(g.customers.map((c: any) => c.name).join(", ")).length / 42), 0);
+    const dishWeight = (m: any) => 2 + m.modGroups.length + m.modGroups.reduce((s: number, g: any) => s + Math.floor(String(g.customers.map((c: any) => c.name).join(", ")).length / 42), 0);
     const dishHtml = colsTable(mealSummary, 2, dishWeight, dishTable);
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
     //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
@@ -646,7 +634,6 @@ export default function Kitchen() {
         .lb{font-weight:700;line-height:1.35}
         .ct{font-weight:900;text-align:center;width:44px;font-size:11.5px}
         tr.plain td{background:#e8f4fb}
-        tr.pg td{background:#eef6fb} tr.pg .lb b{color:#0E76AC;font-weight:900}
         tr:nth-child(even):not(.dh):not(.tp):not(.plain) td{background:#f6fafd}
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
