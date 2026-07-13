@@ -433,6 +433,29 @@ export default function Kitchen() {
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
   }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl]);
 
+  // ✅ مصدر موحّد للمخصّصين (شاشة + كشف): من خطط اليوم الفعلية، + أصحاب القوالب
+  //    اللي مالهمش خطة اليوم. كل عميل: {name, deliveryTime, allergies, meals[]}.
+  const customizedAll = useMemo(() => {
+    const list: { name: string; deliveryTime: string; allergies: string; meals: string[] }[] = [];
+    const seen = new Set<string>();
+    for (const p of customizedByPerson) {
+      seen.add(p.name);
+      list.push({
+        name: p.name, deliveryTime: p.deliveryTime, allergies: p.allergies,
+        meals: p.items.map((it: any) => (it.note ? `${it.meal} — ${it.note}` : it.meal)).filter(Boolean),
+      });
+    }
+    for (const c of (customized || [])) {
+      if (seen.has(c.customerName)) continue;
+      list.push({
+        name: c.customerName, deliveryTime: c.deliveryTime,
+        allergies: [c.allergies, c.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
+        meals: (c.items || []).map((it: any) => composeCustItem(it)).filter(Boolean),
+      });
+    }
+    return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));
+  }, [customizedByPerson, customized]); // eslint-disable-line react-hooks/exhaustive-deps
+
   /**
    * ✅ صفوف كشف المطبخ (مصفوفة زي الإكسيل): صف لكل عميل، وجباته في أعمدة
    *    (فطور/سناك1/غداء/سناك2/عشاء/وجبة4) حسب تصنيف كل صنف.
@@ -570,30 +593,14 @@ export default function Kitchen() {
       const composed = bits.join(" ").trim();
       return composed || String(it.text || it.baseName || "—").trim();
     };
-    const custFromTemplate = (customized || [])
-      .map((p: any) => ({
-        name: p.customerName,
-        deliveryTime: p.deliveryTime,
-        allergies: [p.allergies, p.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
-        items: (p.items || []).map((it: any) => ({
-          meal: composeCust(it),
-          note: String(it.notes || "").trim(),
-        })),
-      }))
-      .filter((p: any) => p.items.length);
-    // ✅ المصدر الأساسي: المخصّصون من خطط اليوم الفعلية (كل واحد بوكس + وجباته + ممنوعاته)،
-    //    ونضيف أصحاب القوالب اللي مالهمش خطة اليوم (احتياطي) — بلا تكرار بالاسم.
-    const seenCust = new Set(customizedByPerson.map((p: any) => p.name));
-    const custList = [
-      ...customizedByPerson,
-      ...custFromTemplate.filter((p: any) => !seenCust.has(p.name)),
-    ];
-    const custHtml = custList.length ? `
-      <h2 class="sec">${isRtl ? "الوجبات المخصّصة — بوكس لكل عميل" : "Customized meals — one box per customer"} (${custList.length})</h2>
-      <div class="pwrap">${custList.map((p: any) => `
-        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? (isRtl ? "صباحي ☀" : "Morning ☀") : (isRtl ? "مسائي 🌙" : "Evening 🌙")}</span></div>
+    // ✅ المخصّصون من المصدر الموحّد (خطط اليوم الفعلية + القوالب) — إنجليزي دائماً
+    void composeCust;
+    const custHtml = customizedAll.length ? `
+      <h2 class="sec">Customized meals — one box per customer (${customizedAll.length})</h2>
+      <div class="pwrap">${customizedAll.map((p) => `
+        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "Morning ☀" : "Evening 🌙"}</span></div>
         ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-        <ul>${p.items.map((it: any) => `<li>${esc(it.meal)}${it.note ? ` — <b class="nt">${esc(it.note)}</b>` : ""}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
+        <ul>${p.meals.map((m) => `<li>${esc(m)}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -792,31 +799,31 @@ export default function Kitchen() {
         {/* Content */}
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
           {/* ✅ قسم الوجبات المخصّصة — لكل عميل مخصّص وجباته وكمياته (يظهر في كل التبويبات) */}
-          {customized && customized.length > 0 && (
+          {(() => {
+            const custShown = customizedAll.filter((c) => activeTab === "SUMMARY" || c.deliveryTime === activeTab);
+            return custShown.length > 0 && (
             <Card className="rounded-2xl border-2 border-[#0E76AC]/20 bg-[#f7fbfe]">
               <CardContent className="p-4">
                 <h3 className="font-black text-[#0E2A4A] flex items-center gap-2 mb-3">
                   <ChefHat className="h-5 w-5 text-[#0E76AC]" />
                   {isRtl ? "الوجبات المخصّصة" : "Customized meals"}
-                  <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{customized.length}</span>
+                  <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{custShown.length}</span>
                 </h3>
-                <div className="grid sm:grid-cols-2 gap-2.5">
-                  {customized
-                    .filter((c: any) => activeTab === "SUMMARY" || c.deliveryTime === activeTab)
-                    .map((c: any) => (
-                    <div key={c.customerId} className="rounded-xl bg-white border border-slate-100 p-3">
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {custShown.map((c, ci) => (
+                    <div key={ci} className="rounded-xl bg-white border border-slate-100 p-3">
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-black text-sm text-[#0E2A4A]">{c.customerName}</span>
+                        <span className="font-black text-sm text-[#0E2A4A]">{c.name}</span>
                         <span className="text-[10px] font-bold text-slate-400">{c.deliveryTime === "EVENING" ? (isRtl ? "مسائي" : "Eve") : (isRtl ? "صباحي" : "Morn")}</span>
                       </div>
-                      {(c.allergies || c.avoid) && (
-                        <p className="text-[10.5px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mb-1.5">⚠ {[c.allergies, c.avoid].filter(Boolean).join(" · ")}</p>
+                      {c.allergies && (
+                        <p className="text-[10.5px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mb-1.5">⚠ {c.allergies}</p>
                       )}
                       <ul className="space-y-1">
-                        {c.items.map((it: any, i: number) => (
+                        {c.meals.map((meal, i) => (
                           <li key={i} className="text-[12.5px] font-bold text-slate-700 flex items-start gap-1.5">
                             <span className="text-[#0E76AC] shrink-0">•</span>
-                            <span>{composeCustItem(it)}</span>
+                            <span>{meal}</span>
                           </li>
                         ))}
                       </ul>
@@ -825,7 +832,8 @@ export default function Kitchen() {
                 </div>
               </CardContent>
             </Card>
-          )}
+            );
+          })()}
 
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
