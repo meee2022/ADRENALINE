@@ -736,8 +736,12 @@ export default function Kitchen() {
         table.cols{width:100%;border-collapse:collapse;table-layout:fixed}
         td.col{vertical-align:top;padding:0 5px}
         td.col:first-child{padding-inline-start:0} td.col:last-child{padding-inline-end:0}
-        .dishbox{break-inside:avoid;page-break-inside:avoid;margin:0 0 8px}
+        /* الجداول الطويلة تُقسَّم على الصفحات بين الصفوف (لا نمنع الكسر داخل الجدول كله وإلا تُدفع
+           لصفحة جديدة وتترك صفحة فاضية). نمنع فقط كسر الصف الواحد، ونُبقي العنوان مع أول صف. */
+        .dishbox{margin:0 0 8px}
         table.dish{width:100%;border-collapse:collapse;font-size:10.5px}
+        table.dish tr{break-inside:avoid;page-break-inside:avoid}
+        table.dish tr.dh{break-after:avoid;page-break-after:avoid}
         table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
         tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
         .dn{font-size:12.5px;font-weight:900}
@@ -773,10 +777,17 @@ export default function Kitchen() {
       ${dishHtml}
       ${custHtml}
       </body></html>`;
-    const w = window.open("", "_blank", "width=900,height=1000");
-    if (!w) { alert(isRtl ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); return; }
-    w.document.write(html); w.document.close(); w.focus();
-    setTimeout(() => { w.print(); }, 300);
+    // ✅ ننزّل ملف HTML مستقل (بدل معاينة الطباعة المنبثقة) — الطاقم يفتحه ويطبعه/يحفظه PDF بنفسه،
+    //    أوضح وأثبت من المعاينة التلقائية.
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `kitchen-sheet-${formattedDate}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
 
   const handleMarkPrepared = async (planId: string) => {
@@ -1012,8 +1023,8 @@ export default function Kitchen() {
                         className="h-11 px-5 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all"
                         style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
                       >
-                        <Printer className="h-4 w-4" />
-                        {isRtl ? "طباعة كشف الشيف" : "Print Chef Sheet"}
+                        <Download className="h-4 w-4" />
+                        {isRtl ? "تنزيل كشف الشيف" : "Download Chef Sheet"}
                       </button>
                     </div>
                   </div>
