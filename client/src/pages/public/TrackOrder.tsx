@@ -79,6 +79,34 @@ export default function TrackOrder() {
           </div>
         )}
 
+        {/* ✅ بطاقة السائق — اسم + اتصال + واتساب (زي تطبيقات التوصيل) */}
+        {info.status === "OUT_FOR_DELIVERY" && info.driver?.name && (
+          <div className="rounded-2xl bg-white border border-slate-100 p-4 flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full grid place-items-center shrink-0 text-white font-black text-lg"
+              style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              {String(info.driver.name)[0]}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-slate-400 font-bold">{t("سائق أدرينالين", "Adrenaline driver")}</p>
+              <p className="font-black text-slate-900 truncate">{info.driver.name}</p>
+            </div>
+            {info.driverPhone && (
+              <div className="flex gap-2 shrink-0">
+                <a href={`tel:${info.driverPhone}`}
+                  className="h-11 px-4 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 text-sm font-black text-slate-800">
+                  📞 {t("اتصل", "Call")}
+                </a>
+                <a href={`https://wa.me/${String(info.driverPhone).replace(/\D/g, "").replace(/^0+/, "").replace(/^(?!974)/, "974")}`}
+                  target="_blank" rel="noreferrer"
+                  className="h-11 px-4 rounded-full flex items-center gap-1.5 text-sm font-black text-white"
+                  style={{ background: "#25D366" }}>
+                  WhatsApp
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Failed banner */}
         {info.status === "FAILED" && (
           <div className="rounded-2xl bg-red-50 border border-red-200 p-4 flex items-center gap-3">

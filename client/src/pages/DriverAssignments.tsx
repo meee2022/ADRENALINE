@@ -38,6 +38,16 @@ export default function DriverAssignments() {
   const assignments = (useQuery(api.delivery.customerAssignments, { sessionToken }) as any[] | undefined) || [];
   const setDriverM = useMutation(api.delivery.setCustomerDriver);
   const applyM = useMutation(api.delivery.applyDefaultDrivers);
+  const setPhoneM = useMutation(api.delivery.setDriverPhone);
+
+  const saveDriverPhone = async (driverId: string, phone: string) => {
+    try {
+      await setPhoneM({ driverId: driverId as any, phone, sessionToken });
+      toast({ title: t("تم حفظ رقم السائق", "Driver phone saved") });
+    } catch (e: any) {
+      toast({ title: t("تعذّر الحفظ", "Save failed"), description: String(e?.message || e), variant: "destructive" });
+    }
+  };
 
   const driverName = (id: string) => drivers.find((d) => String(d._id) === id)?.name || "";
 
@@ -201,6 +211,13 @@ export default function DriverAssignments() {
               <div key={d._id} className="rounded-xl border border-slate-100 bg-white p-3 text-center">
                 <p className="text-2xl font-black text-[#0E76AC]">{counts.m[String(d._id)] || 0}</p>
                 <p className="text-[11px] font-bold text-slate-500 truncate">{d.name}</p>
+                <input
+                  defaultValue={d.phone || ""}
+                  onBlur={(e) => { if (e.target.value.trim() !== String(d.phone || "")) saveDriverPhone(String(d._id), e.target.value); }}
+                  placeholder={t("رقم الهاتف…", "Phone…")}
+                  dir="ltr"
+                  className="mt-1.5 h-8 w-full rounded-lg border border-slate-200 px-2 text-[11px] font-bold text-center"
+                />
               </div>
             ))}
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-center">

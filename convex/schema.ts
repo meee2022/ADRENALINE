@@ -8,6 +8,7 @@ export default defineSchema({
     email: v.string(),
     passwordHash: v.string(),
     name: v.string(),
+    phone: v.optional(v.string()), // ✅ هاتف الموظف — للسائقين يظهر للعميل أثناء التوصيل (اتصال/واتساب)
     role: v.union(
       v.literal("ADMIN"),
       v.literal("KITCHEN"),

@@ -50,7 +50,17 @@ export const listDrivers = query({
     // نضيف الأدمن كخيار (قد يوصّل بنفسه في المطاعم الصغيرة)
     return drivers
       .filter((d) => d.isActive)
-      .map((d) => ({ _id: d._id, name: d.name }));
+      .map((d) => ({ _id: d._id, name: d.name, phone: (d as any).phone || "" }));
+  },
+});
+
+/** تحديث هاتف السائق (يظهر للعميل أثناء التوصيل للاتصال/الواتساب). */
+export const setDriverPhone = mutation({
+  args: { driverId: v.id("users"), phone: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { driverId, phone, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    await ctx.db.patch(driverId, { phone: phone.trim() || undefined, updatedAt: Date.now() } as any);
+    return { success: true };
   },
 });
 
@@ -635,6 +645,7 @@ export const tracking = query({
 
     // موقع السائق يُكشف فقط أثناء "في الطريق"
     let driver: { lat: number; lng: number; name: string | null } | null = null;
+    let driverPhone: string | null = null; // ✅ للتواصل (اتصال/واتساب) أثناء الجولة فقط
     let etaMin: number | null = null;
     let isNear = false;
     if (plan.status === "OUT_FOR_DELIVERY" && plan.driverId) {
@@ -643,6 +654,7 @@ export const tracking = query({
         .withIndex("by_driver", (q) => q.eq("driverId", plan.driverId!))
         .first();
       const d = await ctx.db.get(plan.driverId);
+      driverPhone = String((d as any)?.phone || "").trim() || null;
       // نعرض الموقع لو حديث (آخر 10 دقائق)
       if (loc && Date.now() - loc.updatedAt < 10 * 60 * 1000) {
         driver = { lat: loc.lat, lng: loc.lng, name: (d as any)?.name || null };
@@ -667,6 +679,7 @@ export const tracking = query({
       store,
       dest,
       driver: driver && Number.isFinite(driver.lat) ? driver : (driver ? { lat: null, lng: null, name: driver.name } : null),
+      driverPhone,
       etaMin,
       isNear,
       podNote: plan.status === "DELIVERED" ? ((plan as any).podNote || null) : null,
