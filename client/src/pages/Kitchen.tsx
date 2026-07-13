@@ -300,6 +300,11 @@ export default function Kitchen() {
           qtyNote = qtyNote.replace(/\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
           mealName = mealName.replace(/IRANAIN/gi, "IRANIAN"); // تصحيح إملائي شائع من الشيتات
 
+          // ✅ تجاهل "الوجبات" غير الحقيقية (ملاحظات دخلت في خانة وجبة): "O"، "RESUME 18-7"، رموز
+          if (mealName.length <= 2 || /^(OFF|RESUME)\b/i.test(mealName) || !/[A-Za-z؀-ۿ]{3,}/.test(mealName)) {
+            return;
+          }
+
           const category = getCategory(item.categoryId);
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
 
@@ -597,9 +602,8 @@ export default function Kitchen() {
         .kpis{display:flex;gap:6px;margin-bottom:10px}
         .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
         .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
-        .wrap{font-size:0}
-        table.dish{display:inline-block;width:49.3%;vertical-align:top;border-collapse:collapse;margin:0 0 8px;break-inside:avoid;font-size:10.5px}
-        .wrap table.dish:nth-child(odd){margin-inline-end:1.2%}
+        .wrap{column-count:2;column-gap:10px}
+        table.dish{width:100%;border-collapse:collapse;margin:0 0 8px;break-inside:avoid;font-size:10.5px;display:inline-table}
         table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
         tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
         .dn{font-size:12.5px;font-weight:900}
@@ -611,9 +615,8 @@ export default function Kitchen() {
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
         .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
-        .pwrap{font-size:0}
-        .person{display:inline-block;width:32.3%;vertical-align:top;border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;font-size:10px}
-        .pwrap .person:not(:nth-child(3n)){margin-inline-end:1%}
+        .pwrap{column-count:3;column-gap:8px}
+        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;font-size:10px;display:inline-block;width:100%}
         .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
         .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
         .alg{color:#b91c1c;font-size:8.5px;font-weight:700;margin:1px 0 2px}
