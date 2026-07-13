@@ -86,6 +86,47 @@ const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: b
 const STD_SIDE_KEYS = ["CRAB SALAD", "LAVA CAKE", "COOKIES", "FRUIT SALAD", "VEGETABLES SOUP", "CINNAMON APPLE", "BROWNIES", "LAZY CAKE", "CEASAR SALAD", "TIRAMISU"];
 const isStdSideName = (nm: string) => { const u = String(nm || "").toUpperCase(); return STD_SIDE_KEYS.some((k) => u.includes(k)); };
 
+// ✅ فلترة الممنوعات حسب الطبق: الممنوع القاطع (سمك/لحمة/فراخ/رومي) يُطبَّق فقط على الأطباق التي
+//    يخصّها اسمها؛ الطبق الغامض البروتين لا يُتخطّى أبداً (أماناً). الممنوعات الدقيقة (طماطم/بصل/فطر…)
+//    تبقى مطبّقة دائماً لأننا لا نملك مكوّنات كل طبق. تُطبَّق على "الممنوعات" فقط — الحساسية تظل دائماً.
+const AVOID_CAT_KEYWORDS: Record<string, string[]> = {
+  SEAFOOD: ["fish", "seafood", "sea food", "shellfish", "shrimp", "prawn", "crab", "salmon", "tuna", "سمك", "بحري", "روبيان", "جمبري", "سي فود", "سيفود"],
+  BEEF: ["beef", "steak", "kofta", "بقري", "لحم بقري", "عجل", "ستيك", "كفتة"],
+  CHICKEN: ["chicken", "دجاج", "فراخ", "poultry", "tawook", "طاووق"],
+  TURKEY: ["turkey", "رومي", "ديك رومي", "ديك رومى"],
+};
+const MEAL_CAT_KEYWORDS: Record<string, string[]> = {
+  SEAFOOD: ["fish", "salmon", "slamon", "shrimp", "prawn", "crab", "tuna", "sayadieh", "calamari", "squid", "seafood"],
+  BEEF: ["beef", "steak", "kofta", "koofta", "pastrami", "bolognese", "vindal", "dawoud", "meat ball", "meatball", "meat balls"],
+  CHICKEN: ["chicken", "tawook", "tawok", "twook", "shish", "shishawook", "cordon blue", "peri peri", "periperi"],
+  TURKEY: ["turkey"],
+};
+// أطباق غامضة البروتين — قد تخبّئ لحمة/فراخ/سمك → لا يُتخطّى لها أي ممنوع قاطع
+const PROTEIN_AMBIGUOUS = ["adrenaline healthy majboos", "mangolian noodles", "stuffed pepper", "crispy strips", "oriental breakfast"];
+const avoidPhraseCats = (phrase: string): string[] => {
+  const p = phrase.toLowerCase();
+  return Object.entries(AVOID_CAT_KEYWORDS).filter(([, kws]) => kws.some((k) => p.includes(k))).map(([c]) => c);
+};
+const mealHasCat = (mealName: string, cat: string): boolean => {
+  const m = mealName.toLowerCase();
+  return (MEAL_CAT_KEYWORDS[cat] || []).some((k) => m.includes(k));
+};
+const mealIsProteinAmbiguous = (mealName: string): boolean => {
+  const m = mealName.toLowerCase();
+  return PROTEIN_AMBIGUOUS.some((a) => m.includes(a));
+};
+// تُرجع الممنوعات التي تنطبق فعلاً على هذا الطبق (مثلاً تشيل "سمك" من طبق بيض)
+const filterAvoidForMeal = (avoidText: string | undefined | null, mealName: string): string => {
+  const parts = String(avoidText || "").split(/[,،]/).map((s) => s.trim()).filter(Boolean);
+  const kept = parts.filter((part) => {
+    const cats = avoidPhraseCats(part);
+    if (cats.length === 0) return true;                 // ممنوع دقيق/غير معروف → يظل دائماً
+    if (mealIsProteinAmbiguous(mealName)) return true;  // طبق غامض البروتين → لا نتخطّى (أمان)
+    return cats.some((c) => mealHasCat(mealName, c));    // يُطبَّق فقط لو الطبق فعلاً من نفس الصنف
+  });
+  return kept.join("، ");
+};
+
 export default function Kitchen() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
@@ -248,16 +289,16 @@ export default function Kitchen() {
     };
 
     // helper: يحدد لو الوجبة عادية (مفيش أي تعديلات)
-    const isPlainMeal = (item: any, customer: any): boolean => {
+    const isPlainMeal = (item: any, customer: any, custAvoid: string): boolean => {
       // فحص بيانات الـ item نفسها
       if (String(item.avoid || "").trim()) return false;
       if (String(item.preferences || "").trim()) return false;
       if (String(item.portions || "").trim()) return false;
       if (String(item.specialNotes || "").trim()) return false;
       if ((item.modifierIds || []).length > 0) return false;
-      // فحص بيانات العميل (الحساسية والممنوعات تطبق على كل وجباته)
+      // فحص بيانات العميل: الحساسية تطبق دائماً؛ الممنوعات تطبق فقط لو مناسبة للطبق (custAvoid مُفلتَر)
       if (String(customer?.allergies || "").trim()) return false;
-      if (String(customer?.avoid || "").trim()) return false;
+      if (String(custAvoid || "").trim()) return false;
       if (String(customer?.preferences || "").trim()) return false;
       if (String(customer?.portions || "").trim()) return false;
       return true;
@@ -341,7 +382,9 @@ export default function Kitchen() {
           if (origIdx >= 0) summary[mealName].locations.push({ planId: plan._id, itemIndex: origIdx });
           if (item.prepared) summary[mealName].preparedCount += 1;
 
-          const plain = isPlainMeal(item, customer) && nameMods.length === 0 && !sideNote && !qtyNote;
+          // ✅ ممنوعات العميل مُفلترة حسب الطبق: "no fish" لا يعلّم طبق البيض مثلاً
+          const custAvoidForMeal = filterAvoidForMeal(customer?.avoid, mealName);
+          const plain = isPlainMeal(item, customer, custAvoidForMeal) && nameMods.length === 0 && !sideNote && !qtyNote;
           summary[mealName].count += 1;
           if (plain) summary[mealName].plainCount += 1;
           else summary[mealName].modifiedCount += 1;
@@ -373,7 +416,7 @@ export default function Kitchen() {
             categoryName,
             program: customer?.program || "Standard",
             allergies: joinUniq([customer?.allergies]),
-            avoid: joinUniq([item.avoid, customer?.avoid, ...av, ...nameMods.map((m: string) => m.replace(/^NO\s+/i, ""))]),
+            avoid: joinUniq([item.avoid, custAvoidForMeal, ...av, ...nameMods.map((m: string) => m.replace(/^NO\s+/i, ""))]),
             preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
             portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
