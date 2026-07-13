@@ -87,9 +87,16 @@ export default function Kitchen() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const dateLocale = language === "ar" ? ar : enUS;
 
-  const [date, setDate] = useState(new Date());
+  // ✅ المطبخ يطبخ اليوم لتوصيل الغد — فيفتح افتراضياً على "توصيل بكرة".
+  const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
+  const [date, setDate] = useState(tomorrow());
   const [activeTab, setActiveTab] = useState<"MORNING" | "EVENING" | "SUMMARY">("MORNING");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  // هل التاريخ المختار = بكرة / النهاردة (لعرض العنوان)
+  const iso = (d: Date) => format(d, "yyyy-MM-dd");
+  const isTomorrow = iso(date) === iso(tomorrow());
+  const isTodayDate = iso(date) === iso(new Date());
+  const jumpTo = (which: "TODAY" | "TOMORROW") => setDate(which === "TODAY" ? new Date() : tomorrow());
 
   // ✅ Dialog state for meal details
   const [openMealDialog, setOpenMealDialog] = useState(false);
@@ -667,14 +674,26 @@ export default function Kitchen() {
           <DashboardHeader
             icon={<ChefHat className="h-6 w-6 sm:h-7 sm:w-7" />}
             titleAr="عرض المطبخ" titleEn="Kitchen Display"
-            subtitleAr={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
-            subtitleEn={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+            subtitleAr={`${isTomorrow ? "🍳 تجهيز توصيل الغد (يُطبخ اليوم) — " : isTodayDate ? "توصيل اليوم — " : "توصيل — "}${format(date, "EEEE، d MMMM yyyy", { locale: dateLocale })}`}
+            subtitleEn={`${isTomorrow ? "🍳 Prep for tomorrow's delivery (cook today) — " : isTodayDate ? "Today's delivery — " : "Delivery — "}${format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}`}
             kpis={[
               { value: stats.today, labelAr: "قيد التحضير", labelEn: "To Prepare" },
               { value: stats.prepared, labelAr: "جاهز", labelEn: "Prepared" },
             ]}
             actions={
               <>
+                {/* ✅ تبديل سريع: توصيل بكرة (الافتراضي) / اليوم — بدون ما الشيف يفتح التقويم */}
+                <div className="flex rounded-xl overflow-hidden border border-white/30 shrink-0">
+                  <button onClick={() => jumpTo("TOMORROW")}
+                    className={cn("h-11 px-3 text-xs sm:text-sm font-black transition-colors", isTomorrow ? "bg-white text-[#0E2A4A]" : "bg-white/10 text-white hover:bg-white/20")}>
+                    {isRtl ? "توصيل بكرة" : "Tomorrow"}
+                  </button>
+                  <button onClick={() => jumpTo("TODAY")}
+                    className={cn("h-11 px-3 text-xs sm:text-sm font-black transition-colors border-s border-white/20", isTodayDate ? "bg-white text-[#0E2A4A]" : "bg-white/10 text-white hover:bg-white/20")}>
+                    {isRtl ? "اليوم" : "Today"}
+                  </button>
+                </div>
+
                 <Button
                   onClick={handlePrint}
                   className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"

@@ -22,7 +22,8 @@ export default function Stickers() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
-  const [date, setDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+  // ✅ الاستيكرات تُطبع اليوم لتوصيل الغد — الافتراضي "بكرة" (زي المطبخ)
+  const [date, setDate] = useState<string>(format(new Date(Date.now() + 86400000), "yyyy-MM-dd"));
   const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("MORNING");
   const [activeTab, setActiveTab] = useState<TabKey>("MEALS");
   // وضع الطباعة: "label" = طابعة استيكرات (كل استيكر صفحة بمقاسه) · "sheet" = ورقة A4 شبكة
