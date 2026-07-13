@@ -200,6 +200,10 @@ export default function Kitchen() {
     const pubById = new Map<string, any>();
     (publicMealsList || []).forEach((m: any) => { if (m?._id) pubById.set(String(m._id), m); });
 
+    // ✅ الأصناف القياسية (سلطة/سناك/شوربة/حلو) التي تُطبخ عادي حتى للمخصّصين → تُحسب في الإجمالي
+    const SIDE_KEYS = ["CRAB SALAD", "LAVA CAKE", "COOKIES", "FRUIT SALAD", "VEGETABLES SOUP", "CINNAMON APPLE", "BROWNIES", "LAZY CAKE", "CEASAR SALAD", "GREEK YOGURT", "TIRAMISU"];
+    const isStandardSide = (nm: string) => { const u = nm.toUpperCase(); return SIDE_KEYS.some((k) => u.includes(k)); };
+
     const summary: Record<string, {
       count: number;
       plainCount: number;     // ✅ عادي بدون تعديلات
@@ -262,7 +266,8 @@ export default function Kitchen() {
       const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
 
       // ✅ المخصّصون لا يدخلون الإجمالي — لكل واحد بوكس باسمه (وجباته مختلفة تماماً)
-      if (program.includes("CUSTOM")) return;
+      const isCustomPlan = program.includes("CUSTOM");
+      // ✅ قاعدة الإكسيل: نطوي فقط الأصناف القياسية للمخصّصين في الإجمالي؛ وجباتهم المخصّصة تبقى في بوكس الشخص.
 
       (plan.items || [])
         .filter((item: any) => !item.isOff)
@@ -305,6 +310,9 @@ export default function Kitchen() {
             return;
           }
 
+          // ✅ من خطة مخصّص: نحسب فقط الأصناف القياسية (سلطة/سناك/حلو) في الإجمالي؛ وجباته المخصّصة تبقى في بوكسه
+          if (isCustomPlan && !isStandardSide(mealName)) return;
+
           const category = getCategory(item.categoryId);
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
 
@@ -335,10 +343,11 @@ export default function Kitchen() {
           if (plain) summary[mealName].plainCount += 1;
           else summary[mealName].modifiedCount += 1;
 
-          if (program.includes("DIET")) summary[mealName].dietCount += 1;
-          else if (program.includes("FITNESS")) summary[mealName].fitnessCount += 1;
-          else if (program.includes("BULK")) summary[mealName].bulkCount += 1;
-          else if (program.includes("CUSTOMIZED")) summary[mealName].customizedCount += 1;
+          // ✅ الأصناف المطويّة من المخصّصين تُطبخ عادي → تُعدّ STANDARD (مش حسب برنامج العميل)
+          const cntProg = isCustomPlan ? "STANDARD" : program;
+          if (cntProg.includes("DIET")) summary[mealName].dietCount += 1;
+          else if (cntProg.includes("FITNESS")) summary[mealName].fitnessCount += 1;
+          else if (cntProg.includes("BULK")) summary[mealName].bulkCount += 1;
           else summary[mealName].standardCount += 1;
 
           // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
@@ -563,17 +572,36 @@ export default function Kitchen() {
     };
     const colsTable = <T,>(items: T[], n: number, wt: (x: T) => number, render: (x: T) => string): string =>
       `<table class="cols"><tr>${balance(items, n, wt).map((col) => `<td class="col">${col.map(render).join("")}</td>`).join("")}</tr></table>`;
-    // ✅ كشف زي الإكسيل بالظبط: جدول بحدود لكل طبق — صف العنوان، صف "عادي"، صف لكل تعديل، وصف Total Portions
-    const dishTable = (m: any) => `
+    // ✅ كشف زي الإكسيل: الأطباق الرئيسية (رز+بروتين) تعرض عمودَي Rice/Protein مع تقسيم DIET/FITNESS/BULK.
+    //    باقي الأطباق (سلطات/سناك/حلو) تعرض صف "عادي" فقط. عمود واحد بعرض الصفحة عشان يتقري.
+    const pp: any = programPortions;
+    const MAIN_KEYS = ["CRISPY CHICKEN", "BEEF STROGANOF", "BEEF LASAGNA", "SOUTHWEST", "IRANIAN CHICKEN", "GRILLED CHICKEN", "GRILLED STEAK", "GRILLED SALMON", "GRILLED SHRIMP", "DYNAMITE SHRIMP", "CHICKEN CURRY", "GARLIC BUTTER", "CHICKEN FAJITA", "LEMON CHICKEN", "SHISHTAWOOK", "STEAK SANDWICH", "CHICKEN CUTLETS", "SHAWARMA"];
+    const isMain = (nm: string) => { const u = nm.toUpperCase(); return MAIN_KEYS.some((k) => u.includes(k)); };
+    const pgRow = (label: string, count: number, port: any) => count > 0
+      ? `<tr class="pg"><td class="lb"><b>${label}</b></td><td class="gc">${port?.carb ?? "-"}g</td><td class="gc">${port?.protein ?? "-"}g</td><td class="ct">${count}</td></tr>`
+      : "";
+    const dishTable = (m: any) => {
+      const main = isMain(m.name) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
+      const head = main
+        ? `<tr class="chh"><td class="lb">${isRtl ? "البرنامج" : "Program"}</td><td class="gc">${isRtl ? "رز/كارب" : "Rice/Carb"}</td><td class="gc">${isRtl ? "بروتين" : "Protein"}</td><td class="ct">${isRtl ? "عدد" : "Qty"}</td></tr>`
+          + pgRow("DIET", m.dietCount, pp.DIET) + pgRow("FITNESS", m.fitnessCount, pp.FITNESS) + pgRow("BULK", m.bulkCount, pp.BULK)
+          + (m.standardCount > 0 ? `<tr class="plain"><td class="lb" colspan="3">STANDARD</td><td class="ct">${m.standardCount}</td></tr>` : "")
+        : `<tr class="plain"><td class="lb" colspan="3">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>`;
+      return `
       <div class="dishbox"><table class="dish">
-        <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
-        <tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>
+        <tr class="dh"><td class="dn" colspan="3">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
+        ${head}
         ${m.modGroups.map((g: any) => `
-        <tr><td class="lb">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
-        <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
+        <tr><td class="lb" colspan="3">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
+        <tr class="tp"><td class="lb" colspan="3">Total Portions</td><td class="ct">${m.count}</td></tr>
       </table></div>`;
+    };
+    // ✅ الأطباق الرئيسية (بأعمدة جرامات) بعرض الصفحة كامل عشان تتقري؛ والسلطات/السناكات القياسية في عمودين
+    const isMainDish = (m: any) => isMain(m.name) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
+    const mainDishes = mealSummary.filter(isMainDish);
+    const sideDishes = mealSummary.filter((m: any) => !isMainDish(m));
     const dishWeight = (m: any) => 2 + m.modGroups.length + m.modGroups.reduce((s: number, g: any) => s + Math.floor(String(g.customers.map((c: any) => c.name).join(", ")).length / 42), 0);
-    const dishHtml = colsTable(mealSummary, 2, dishWeight, dishTable);
+    const dishHtml = mainDishes.map(dishTable).join("") + (sideDishes.length ? colsTable(sideDishes, 2, dishWeight, dishTable) : "");
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
     //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
     //    عربي في الكشف الإنجليزي. نرجع للنص المحفوظ فقط لو تعذّر التركيب.
@@ -633,8 +661,12 @@ export default function Kitchen() {
         .dc{font-size:13px;font-weight:900;text-align:center;width:44px}
         .lb{font-weight:700;line-height:1.35}
         .ct{font-weight:900;text-align:center;width:44px;font-size:11.5px}
+        .gc{text-align:center;width:66px;font-weight:700;font-size:9.5px;color:#0E76AC}
+        tr.chh td{background:#dceaf4;font-size:8px;color:#47759c;font-weight:800;text-transform:uppercase}
+        tr.chh .gc{color:#47759c}
+        tr.pg td{background:#f2f8fc} tr.pg .lb b{color:#0E76AC;font-weight:900}
         tr.plain td{background:#e8f4fb}
-        tr:nth-child(even):not(.dh):not(.tp):not(.plain) td{background:#f6fafd}
+        tr:nth-child(even):not(.dh):not(.tp):not(.plain):not(.chh):not(.pg) td{background:#f6fafd}
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
         .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
