@@ -674,8 +674,11 @@ export default function Kitchen() {
           <DashboardHeader
             icon={<ChefHat className="h-6 w-6 sm:h-7 sm:w-7" />}
             titleAr="عرض المطبخ" titleEn="Kitchen Display"
-            subtitleAr={`${isTomorrow ? "🍳 تجهيز توصيل الغد (يُطبخ اليوم) — " : isTodayDate ? "توصيل اليوم — " : "توصيل — "}${format(date, "EEEE، d MMMM yyyy", { locale: dateLocale })}`}
-            subtitleEn={`${isTomorrow ? "🍳 Prep for tomorrow's delivery (cook today) — " : isTodayDate ? "Today's delivery — " : "Delivery — "}${format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}`}
+            {...(() => {
+              // ✅ العنوان إنجليزي دائماً — الطاقم يقرأ إنجليزي (بغضّ النظر عن لغة الجهاز)
+              const label = `${isTomorrow ? "🍳 Prep for TOMORROW's delivery (cook today) — " : isTodayDate ? "Today's delivery — " : "Delivery — "}${format(date, "EEEE, d MMMM yyyy", { locale: enUS })}`;
+              return { subtitleAr: label, subtitleEn: label };
+            })()}
             kpis={[
               { value: stats.today, labelAr: "قيد التحضير", labelEn: "To Prepare" },
               { value: stats.prepared, labelAr: "جاهز", labelEn: "Prepared" },
@@ -686,11 +689,11 @@ export default function Kitchen() {
                 <div className="flex rounded-xl overflow-hidden border border-white/30 shrink-0">
                   <button onClick={() => jumpTo("TOMORROW")}
                     className={cn("h-11 px-3 text-xs sm:text-sm font-black transition-colors", isTomorrow ? "bg-white text-[#0E2A4A]" : "bg-white/10 text-white hover:bg-white/20")}>
-                    {isRtl ? "توصيل بكرة" : "Tomorrow"}
+                    Tomorrow
                   </button>
                   <button onClick={() => jumpTo("TODAY")}
                     className={cn("h-11 px-3 text-xs sm:text-sm font-black transition-colors border-s border-white/20", isTodayDate ? "bg-white text-[#0E2A4A]" : "bg-white/10 text-white hover:bg-white/20")}>
-                    {isRtl ? "اليوم" : "Today"}
+                    Today
                   </button>
                 </div>
 
