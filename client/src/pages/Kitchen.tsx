@@ -556,13 +556,13 @@ export default function Kitchen() {
     const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
     // ✅ كشف زي الإكسيل بالظبط: جدول بحدود لكل طبق — صف العنوان، صف "عادي"، صف لكل تعديل، وصف Total Portions
     const dishHtml = mealSummary.map((m: any) => `
-      <table class="dish">
+      <div class="dishbox"><table class="dish">
         <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
         <tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>
         ${m.modGroups.map((g: any) => `
         <tr><td class="lb">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
-      </table>`).join("");
+      </table></div>`).join("");
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
     //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
     //    عربي في الكشف الإنجليزي. نرجع للنص المحفوظ فقط لو تعذّر التركيب.
@@ -610,7 +610,8 @@ export default function Kitchen() {
         .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
         .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
         .wrap{column-count:2;column-gap:10px}
-        table.dish{width:100%;border-collapse:collapse;margin:0 0 8px;break-inside:avoid;font-size:10.5px;display:inline-table}
+        .dishbox{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;margin:0 0 8px}
+        table.dish{width:100%;border-collapse:collapse;font-size:10.5px}
         table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
         tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
         .dn{font-size:12.5px;font-weight:900}
@@ -621,9 +622,9 @@ export default function Kitchen() {
         tr:nth-child(even):not(.dh):not(.tp):not(.plain) td{background:#f6fafd}
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
-        .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
+        .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid;column-span:all}
         .pwrap{column-count:3;column-gap:8px}
-        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;font-size:10px;display:inline-block;width:100%}
+        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;font-size:10px}
         .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
         .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
         .alg{color:#b91c1c;font-size:8.5px;font-weight:700;margin:1px 0 2px}
