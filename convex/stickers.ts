@@ -85,9 +85,8 @@ export const get = query({
         isPrintableStatus(p.status),
     );
 
-    if (!plans.length) {
-      return { boxStickers: [], mealStickers: [] };
-    }
+    // ملاحظة: لا نرجع مبكراً عند غياب الخطط العادية — العملاء المخصّصون
+    // وجباتهم في القوالب (مش dailyPlans)، وكودهم بالأسفل يحتاج أن يعمل دائماً.
 
     // 2) Load customers for this session's plans
     // ✅ نتجاهل الخطط بدون customerId (طلبات غير مربوطة بمشترك) حتى لا يتعطّل
