@@ -554,15 +554,26 @@ export default function Kitchen() {
     const tMeals = mealSummary.reduce((s, m) => s + m.count, 0);
     const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
     const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
+    // ✅ توزيع العناصر على أعمدة متوازنة داخل جدول واحد — الجداول تُقسَّم على الصفحات بشكل موثوق
+    //    في الطباعة (بعكس column-count الذي يترك صفحة أولى فاضية في Chrome).
+    const balance = <T,>(items: T[], n: number, wt: (x: T) => number): T[][] => {
+      const cols = Array.from({ length: n }, () => ({ h: 0, items: [] as T[] }));
+      items.forEach((it) => { const c = cols.reduce((a, b) => (b.h < a.h ? b : a)); c.items.push(it); c.h += wt(it); });
+      return cols.map((c) => c.items);
+    };
+    const colsTable = <T,>(items: T[], n: number, wt: (x: T) => number, render: (x: T) => string): string =>
+      `<table class="cols"><tr>${balance(items, n, wt).map((col) => `<td class="col">${col.map(render).join("")}</td>`).join("")}</tr></table>`;
     // ✅ كشف زي الإكسيل بالظبط: جدول بحدود لكل طبق — صف العنوان، صف "عادي"، صف لكل تعديل، وصف Total Portions
-    const dishHtml = mealSummary.map((m: any) => `
+    const dishTable = (m: any) => `
       <div class="dishbox"><table class="dish">
         <tr class="dh"><td class="dn">${esc(m.name)}</td><td class="dc">${m.count}</td></tr>
         <tr class="plain"><td class="lb">${isRtl ? "عادي — بدون تعديلات" : "Plain — no changes"}</td><td class="ct">${m.plainCount}</td></tr>
         ${m.modGroups.map((g: any) => `
         <tr><td class="lb">${esc(g.label || (isRtl ? "تعديل — راجع الطلب" : "Modified — check order"))}<div class="cst">${esc(g.customers.map((c: any) => c.name).join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td></tr>`).join("")}
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td></tr>
-      </table></div>`).join("");
+      </table></div>`;
+    const dishWeight = (m: any) => 2 + m.modGroups.length + m.modGroups.reduce((s: number, g: any) => s + Math.floor(String(g.customers.map((c: any) => c.name).join(", ")).length / 42), 0);
+    const dishHtml = colsTable(mealSummary, 2, dishWeight, dishTable);
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
     //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
     //    عربي في الكشف الإنجليزي. نرجع للنص المحفوظ فقط لو تعذّر التركيب.
@@ -595,12 +606,14 @@ export default function Kitchen() {
     };
     // ✅ المخصّصون من المصدر الموحّد (خطط اليوم الفعلية + القوالب) — إنجليزي دائماً
     void composeCust;
+    const personBox = (p: any) => `
+      <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "Morning ☀" : "Evening 🌙"}</span></div>
+      ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
+      <ul>${p.meals.map((m: string) => `<li>${esc(m)}</li>`).join("")}</ul></div>`;
+    const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
     const custHtml = customizedAll.length ? `
       <h2 class="sec">Customized meals — one box per customer (${customizedAll.length})</h2>
-      <div class="pwrap">${customizedAll.map((p) => `
-        <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "Morning ☀" : "Evening 🌙"}</span></div>
-        ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-        <ul>${p.meals.map((m) => `<li>${esc(m)}</li>`).join("")}</ul></div>`).join("")}</div>` : "";
+      ${colsTable(customizedAll, 3, personWeight, personBox)}` : "";
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -609,8 +622,10 @@ export default function Kitchen() {
         .kpis{display:flex;gap:6px;margin-bottom:10px}
         .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
         .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
-        .wrap{column-count:2;column-gap:10px}
-        .dishbox{break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;margin:0 0 8px}
+        table.cols{width:100%;border-collapse:collapse;table-layout:fixed}
+        td.col{vertical-align:top;padding:0 5px}
+        td.col:first-child{padding-inline-start:0} td.col:last-child{padding-inline-end:0}
+        .dishbox{break-inside:avoid;page-break-inside:avoid;margin:0 0 8px}
         table.dish{width:100%;border-collapse:collapse;font-size:10.5px}
         table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
         tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
@@ -622,9 +637,8 @@ export default function Kitchen() {
         tr:nth-child(even):not(.dh):not(.tp):not(.plain) td{background:#f6fafd}
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
-        .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid;column-span:all}
-        .pwrap{column-count:3;column-gap:8px}
-        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;-webkit-column-break-inside:avoid;page-break-inside:avoid;font-size:10px}
+        .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
+        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid;font-size:10px}
         .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
         .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
         .alg{color:#b91c1c;font-size:8.5px;font-weight:700;margin:1px 0 2px}
@@ -638,7 +652,7 @@ export default function Kitchen() {
         <div class="kpi"><div class="v" style="color:#c2410c">${tMod}</div><div class="l">${isRtl ? "معدّل" : "Modified"}</div></div>
         <div class="kpi"><div class="v" style="color:#47759c">${mealSummary.length}</div><div class="l">${isRtl ? "أنواع الأطباق" : "Dish types"}</div></div>
       </div>
-      <div class="wrap">${dishHtml}</div>
+      ${dishHtml}
       ${custHtml}
       </body></html>`;
     const w = window.open("", "_blank", "width=900,height=1000");
