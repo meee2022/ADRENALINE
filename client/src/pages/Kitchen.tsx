@@ -261,6 +261,9 @@ export default function Kitchen() {
       const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
       const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
 
+      // ✅ المخصّصون لا يدخلون الإجمالي — لكل واحد بوكس باسمه (وجباته مختلفة تماماً)
+      if (program.includes("CUSTOM")) return;
+
       (plan.items || [])
         .filter((item: any) => !item.isOff)
         .forEach((item: any) => {
@@ -403,18 +406,22 @@ export default function Kitchen() {
     const allPlansToday = dailyPlans.filter(
       (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
-    const byPerson: Record<string, { name: string; deliveryTime: string; items: Array<{ meal: string; note: string }> }> = {};
+    const byPerson: Record<string, { name: string; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string }> }> = {};
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
       const program = (customer?.program || plan.program || "").toUpperCase();
       if (!program.includes("CUSTOM")) return;
       const name = customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer");
+      const key = name + "|" + plan.deliveryTime;
+      if (!byPerson[key]) byPerson[key] = {
+        name, deliveryTime: plan.deliveryTime,
+        // ✅ الممنوعات/الحساسية مرّة واحدة على مستوى البوكس (مش مكرّرة مع كل وجبة)
+        allergies: [customer?.allergies, customer?.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
+        items: [],
+      };
       (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
         const mealName = mealNameInLang(item.menuItemId || item.mealId, item);
-        const note = [item.avoid, item.preferences, item.portions, item.specialNotes, customer?.avoid, customer?.allergies]
-          .map((x) => String(x || "").trim()).filter(Boolean).join(isRtl ? "، " : ", ");
-        const key = name + "|" + plan.deliveryTime;
-        if (!byPerson[key]) byPerson[key] = { name, deliveryTime: plan.deliveryTime, items: [] };
+        const note = String(item.specialNotes || "").trim(); // ملاحظة خاصة بالوجبة فقط
         byPerson[key].items.push({ meal: mealName, note });
       });
     });
@@ -569,9 +576,13 @@ export default function Kitchen() {
         })),
       }))
       .filter((p: any) => p.items.length);
-    const custList = custFromTemplate.length
-      ? custFromTemplate
-      : customizedByPerson.map((p: any) => ({ name: p.name, deliveryTime: p.deliveryTime, allergies: "", items: p.items }));
+    // ✅ المصدر الأساسي: المخصّصون من خطط اليوم الفعلية (كل واحد بوكس + وجباته + ممنوعاته)،
+    //    ونضيف أصحاب القوالب اللي مالهمش خطة اليوم (احتياطي) — بلا تكرار بالاسم.
+    const seenCust = new Set(customizedByPerson.map((p: any) => p.name));
+    const custList = [
+      ...customizedByPerson,
+      ...custFromTemplate.filter((p: any) => !seenCust.has(p.name)),
+    ];
     const custHtml = custList.length ? `
       <h2 class="sec">${isRtl ? "الوجبات المخصّصة — بوكس لكل عميل" : "Customized meals — one box per customer"} (${custList.length})</h2>
       <div class="pwrap">${custList.map((p: any) => `
