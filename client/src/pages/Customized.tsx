@@ -120,7 +120,7 @@ function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filter
     if (!onPickPreset || !presets.length) return [];
     const s = q.trim().toLowerCase();
     const list = s ? presets.filter((p) => presetName(p).toLowerCase().includes(s)) : presets;
-    return list.slice(0, 12);
+    return list.slice(0, 60);
   }, [q, presets, onPickPreset, isRtl]);
   const dayMeals = useMemo(
     () => (showAll || !filterWeek || !filterDay) ? meals : meals.filter((m) => mealScheduledFor(m, filterWeek, filterDay)),

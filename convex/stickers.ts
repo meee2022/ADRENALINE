@@ -1,6 +1,7 @@
 // convex/stickers.ts
 import { query } from "./_generated/server";
 import { normalizePhone } from "./lib/phone";
+import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
@@ -382,6 +383,90 @@ export const get = query({
         });
 
         mealIndex++;
+      }
+    }
+
+    // ---------- ✅ استيكرات العملاء المخصّصين (من القوالب) ----------
+    //    العملاء المخصّصون وجباتهم في customizedTemplates (مش dailyPlans)، فلازم
+    //    نولّد استيكراتهم هنا بالإنجليزي + سعرات تقريبية من الكميات.
+    {
+      const AR2EN: Record<string, string> = {
+        "دجاج": "Chicken", "دجاج مشوي": "Grilled chicken", "دجاج بانيه": "Crispy chicken",
+        "شيش طاووق": "Shish tawook", "سمك": "Fish", "سمك مشوي": "Grilled fish", "سلمون": "Salmon",
+        "ستيك": "Steak", "لحم بقري": "Beef", "لحم مفروم": "Minced beef", "كفتة": "Kofta",
+        "جمبري": "Shrimp", "ديك رومي": "Turkey", "تونة": "Tuna", "بيض": "Eggs", "بياض بيض": "Egg whites",
+        "رز أبيض": "White rice", "رز بني": "Brown rice", "رز بسمتي": "Basmati rice", "رز مصري": "Egyptian rice",
+        "باستا": "Pasta", "بطاطس": "Potato", "بطاطس مهروسة": "Mashed potato", "بطاطا حلوة": "Sweet potato",
+        "خبز": "Bread", "خبز أسمر": "Brown bread", "برغل": "Bulgur", "كينوا": "Quinoa", "شوفان": "Oats", "بدون": "None",
+      };
+      const en = (n: any) => AR2EN[String(n || "").trim()] || String(n || "").trim();
+      const engText = (s: any): string => {
+        const parts: string[] = [];
+        if (s.baseName) parts.push(en(String(s.baseName).trim()));
+        if (s.type === "MAIN") {
+          const inner: string[] = [];
+          if (s.proteinG) inner.push(`${en(s.proteinName) || "Protein"} ${s.proteinG}g`);
+          if (s.carbG && String(s.carbName || "").trim() && !/^none|بدون/i.test(String(s.carbName))) inner.push(`${en(s.carbName)} ${s.carbG}g`);
+          if (inner.length) parts.push(parts.length ? `+ ${inner.join(" + ")}` : inner.join(" + "));
+        }
+        return (parts.join(" ").trim() || String(s.text || s.baseName || "").trim());
+      };
+
+      // أسبوع الدورة + يوم الأسبوع لهذا التاريخ (نفس منطق forDate)
+      const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
+      const settings = await ctx.db.query("restaurantSettings").first();
+      const curWk = Number((settings as any)?.currentCookingWeek) || 1;
+      const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      let fridays = 0;
+      const cc = new Date(todayISO + "T00:00:00Z");
+      const endD = new Date(String(args.date).slice(0, 10) + "T00:00:00Z");
+      for (let i = 0; i < 400 && cc < endD; i++) { cc.setUTCDate(cc.getUTCDate() + 1); if (cc.getUTCDay() === 5) fridays++; }
+      const rotWeek = ((curWk - 1 + fridays) % 4) + 1;
+
+      const stickered = new Set(mealStickers.map((s) => String(s.customerId)));
+      let custNo = mealStickers.length ? Math.max(...mealStickers.map((s) => Number(s.customerNo) || 0)) : 0;
+      const templates = await ctx.db.query("customizedTemplates").collect();
+      for (const tpl of templates) {
+        const c: any = await ctx.db.get(tpl.customerId);
+        if (!c || !c.isActive) continue;
+        if (stickered.has(String(c._id))) continue; // تجنّب تكرار من عنده dailyPlans
+        const cTime = String(c.deliveryTime || "MORNING");
+        if (args.deliveryTime !== "ALL" && cTime !== args.deliveryTime) continue;
+
+        const sl: any = tpl.slots;
+        const weekDays = sl?.weeks ? (sl.weeks[rotWeek] || sl.weeks[String(rotWeek)])?.days : null;
+        const days = weekDays || sl?.days;
+        const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
+        const active = slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
+        if (!active.length) continue;
+
+        custNo++;
+        const warnings = [String(c.allergies || "").trim(), String(c.avoid || "").trim()].filter(Boolean).join(" • ");
+        let mIdx = 1;
+        for (const s of active) {
+          const mealName = engText(s);
+          if (!mealName) continue;
+          const cal = estimateCalories(mealName) || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
+          mealStickers.push({
+            customerId: String(c._id),
+            customerNo: custNo,
+            customerName: c.fullName || "",
+            customerNumber: normalizePhone(c.phone) || "",
+            goal: "CUSTOMIZED",
+            category: s.type === "SNACK" ? "SNACK" : "LUNCH",
+            mealName,
+            mealTitle: s.notes ? `${mealName} — ${String(s.notes).trim()}` : mealName,
+            warnings,
+            caloriesText: cal ? `${cal} CAL` : "",
+            calories: cal || undefined,
+            macros: undefined,
+            protein: undefined, carbs: undefined, fats: undefined,
+            dateText, prodDate, expDate,
+            mealIndexText: `MEAL ${mIdx}`,
+          });
+          mIdx++;
+        }
       }
     }
 
