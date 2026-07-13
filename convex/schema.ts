@@ -248,6 +248,10 @@ export default defineSchema({
       )
     ),
 
+    // ✅ السائق الافتراضي — ربط دائم: هذا السائق مسؤول عن توصيل هذا العميل،
+    //    والخطط اليومية ترثه تلقائياً (يظل قابلاً للتعديل يوم بيوم).
+    defaultDriverId: v.optional(v.id("users")),
+
     // الخدمة الذاتية + الولاء
     skippedDates: v.optional(v.array(v.string())), // أيام التوصيل المتخطّاة yyyy-MM-dd
     loyaltyPoints: v.optional(v.number()),         // نقاط الولاء

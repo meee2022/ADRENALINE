@@ -184,6 +184,158 @@ export const assignMany = mutation({
   },
 });
 
+/* ───────────── ✅ الربط الدائم: سائق لكل عميل + لوحة السواقين ───────────── */
+
+/** ربط/فك سائق افتراضي بعميل (مسؤول توصيله الدائم). */
+export const setCustomerDriver = mutation({
+  args: {
+    customerId: v.id("customers"),
+    driverId: v.optional(v.id("users")), // بدون قيمة = فك الربط
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { customerId, driverId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    await ctx.db.patch(customerId, { defaultDriverId: driverId ?? undefined, updatedAt: Date.now() });
+    return { success: true };
+  },
+});
+
+/** قائمة العملاء النشطين + سائق كل واحد — لصفحة ربط السواقين. */
+export const customerAssignments = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const customers = await ctx.db.query("customers").collect();
+    return customers
+      .filter((c: any) => c.isActive)
+      .map((c: any) => ({
+        id: String(c._id),
+        name: c.fullName || "",
+        phone: c.phone || "",
+        area: String(c.address || "").split(/[,،\-|]/)[0].trim(),
+        deliveryTime: c.deliveryTime || "MORNING",
+        driverId: c.defaultDriverId ? String(c.defaultDriverId) : "",
+      }))
+      .sort((a: any, b: any) => a.name.localeCompare(b.name, "ar"));
+  },
+});
+
+/**
+ * يطبّق السائق الافتراضي لكل عميل على خطط يوم/شيفت (اللي لسه بلا سائق أو الكل)،
+ * ويرتّب مسار كل سائق أقرب-جار. يُستدعى بزر من لوحة السواقين.
+ */
+export const applyDefaultDrivers = mutation({
+  args: {
+    date: v.string(),
+    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
+    overwrite: v.optional(v.boolean()), // true = حتى المُسند مسبقاً
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, deliveryTime, overwrite, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plans = (
+      await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
+    ).filter((p: any) =>
+      (deliveryTime === "ALL" || p.deliveryTime === deliveryTime) &&
+      p.status !== "DELIVERED" && p.status !== "DRAFT");
+
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const storeLat = (settings as any)?.storeLat ?? 25.2854;
+    const storeLng = (settings as any)?.storeLng ?? 51.531;
+
+    // اجمع لكل سائق محطاته من defaultDriverId
+    const byDriver = new Map<string, { plan: any; lat: number | null; lng: number | null }[]>();
+    let matched = 0, skipped = 0;
+    for (const p of plans) {
+      if (!overwrite && p.driverId) { skipped++; continue; }
+      const c: any = p.customerId ? await ctx.db.get(p.customerId) : null;
+      const dId = c?.defaultDriverId ? String(c.defaultDriverId) : null;
+      if (!dId) continue;
+      if (!byDriver.has(dId)) byDriver.set(dId, []);
+      byDriver.get(dId)!.push({ plan: p, lat: c?.lat ?? null, lng: c?.lng ?? null });
+      matched++;
+    }
+
+    for (const [driverId, stops] of byDriver) {
+      const withC = stops.filter((s) => s.lat != null && s.lng != null);
+      const noC = stops.filter((s) => s.lat == null || s.lng == null);
+      let curLat = storeLat, curLng = storeLng;
+      const ordered: any[] = [];
+      const pool = [...withC];
+      while (pool.length) {
+        let best = 0, bestKm = Infinity;
+        for (let i = 0; i < pool.length; i++) {
+          const km = haversineKm(curLat, curLng, pool[i].lat as number, pool[i].lng as number);
+          if (km < bestKm) { bestKm = km; best = i; }
+        }
+        const next = pool.splice(best, 1)[0];
+        ordered.push(next); curLat = next.lat as number; curLng = next.lng as number;
+      }
+      let seq = 1;
+      for (const s of [...ordered, ...noC]) {
+        await ctx.db.patch(s.plan._id, { driverId: driverId as any, routeSeq: seq++, updatedAt: Date.now() });
+      }
+    }
+    return { assigned: matched, skippedAlreadyAssigned: skipped, drivers: byDriver.size };
+  },
+});
+
+/**
+ * ✅ لوحة السواقين الحيّة ليوم/شيفت: لكل سائق — كم محطة، وصّل كام، فاضل كام،
+ *    في الطريق كام، وأسماء العملاء بحالتهم (للشاشة).
+ */
+export const driverBoard = query({
+  args: {
+    date: v.string(),
+    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const plans = (
+      await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", args.date)).collect()
+    ).filter((p: any) =>
+      (args.deliveryTime === "ALL" || p.deliveryTime === args.deliveryTime) && p.status !== "DRAFT");
+
+    const drivers = (await ctx.db.query("users").collect()).filter((u: any) => u.role === "DELIVERY" && u.isActive !== false);
+    const byId = new Map(drivers.map((d: any) => [String(d._id), d]));
+
+    const board = new Map<string, any>();
+    const ensure = (id: string, name: string) => {
+      if (!board.has(id)) board.set(id, { driverId: id, driver: name, total: 0, delivered: 0, onTheWay: 0, remaining: 0, stops: [] as any[] });
+      return board.get(id);
+    };
+
+    let unassigned = 0;
+    const unassignedStops: any[] = [];
+    for (const p of plans) {
+      const c: any = p.customerId ? await ctx.db.get(p.customerId) : null;
+      const stop = {
+        planId: String(p._id),
+        customer: c?.fullName || (p as any).customerName || "—",
+        phone: c?.phone || "",
+        area: String(c?.address || "").split(/[,،\-|]/)[0].trim(),
+        status: p.status,
+        seq: (p as any).routeSeq || 0,
+      };
+      const dId = (p as any).driverId ? String((p as any).driverId) : (c?.defaultDriverId ? String(c.defaultDriverId) : null);
+      if (!dId || !byId.has(dId)) { unassigned++; unassignedStops.push(stop); continue; }
+      const row = ensure(dId, (byId.get(dId) as any).name || "");
+      row.total++;
+      if (p.status === "DELIVERED") row.delivered++;
+      else if (p.status === "OUT_FOR_DELIVERY") { row.onTheWay++; row.remaining++; }
+      else row.remaining++;
+      row.stops.push(stop);
+    }
+    for (const row of board.values()) row.stops.sort((a: any, b: any) => a.seq - b.seq);
+    return {
+      drivers: Array.from(board.values()).sort((a, b) => b.total - a.total),
+      unassigned,
+      unassignedStops: unassignedStops.slice(0, 50),
+    };
+  },
+});
+
 /* ───────────────────────── دورة حياة التوصيل ───────────────────────── */
 
 /**
