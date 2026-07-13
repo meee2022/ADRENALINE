@@ -799,9 +799,9 @@ export default function Kitchen() {
 
         {/* Content */}
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-          {/* ✅ قسم الوجبات المخصّصة — لكل عميل مخصّص وجباته وكمياته (يظهر في كل التبويبات) */}
+          {/* ✅ قسم الوجبات المخصّصة — يظهر أعلى تبويبات التوصيل فقط؛ في "إجمالي الوجبات" يظهر أسفل القائمة */}
           {(() => {
-            const custShown = customizedAll.filter((c) => activeTab === "SUMMARY" || c.deliveryTime === activeTab);
+            const custShown = activeTab === "SUMMARY" ? [] : customizedAll.filter((c) => c.deliveryTime === activeTab);
             return custShown.length > 0 && (
             <Card className="rounded-2xl border-2 border-[#0E76AC]/20 bg-[#f7fbfe]">
               <CardContent className="p-4">
@@ -1104,17 +1104,17 @@ export default function Kitchen() {
                     );
                   })}
 
-                  {/* ✅ قسم المشتركين المخصّصين — بوكس كامل لكل عميل باسمه (زي كشف الأخصائية) */}
-                  {customizedByPerson.length > 0 && (
+                  {/* ✅ قسم المشتركين المخصّصين — أسفل الإجمالي؛ بوكس كامل لكل عميل باسمه (نفس المصدر الموحّد) */}
+                  {customizedAll.length > 0 && (
                     <div className="mt-8">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-xs font-black px-2.5 py-1 rounded-full bg-purple-100 text-purple-700">CUSTOMIZED</span>
                         <h3 className="text-lg font-bold text-gray-900">
-                          {isRtl ? `الوجبات المخصّصة (${customizedByPerson.length} عميل)` : `Customized Orders (${customizedByPerson.length})`}
+                          {isRtl ? `الوجبات المخصّصة (${customizedAll.length} عميل)` : `Customized Orders (${customizedAll.length})`}
                         </h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {customizedByPerson.map((p, i) => (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {customizedAll.map((p, i) => (
                           <div key={i} className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 10px 24px -14px rgba(14,42,74,.16)" }}>
                             <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
                               <span className="font-black text-gray-900">{p.name}</span>
@@ -1123,11 +1123,13 @@ export default function Kitchen() {
                                 {p.deliveryTime === "MORNING" ? (isRtl ? "☀ صباحي" : "☀ Morning") : (isRtl ? "🌙 مسائي" : "🌙 Evening")}
                               </span>
                             </div>
+                            {p.allergies && (
+                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 mb-2 font-semibold">⚠ {p.allergies}</p>
+                            )}
                             <ul className="space-y-1.5">
-                              {p.items.map((it, j) => (
+                              {p.meals.map((meal, j) => (
                                 <li key={j} className="text-sm">
-                                  <span className="font-bold text-[#0f1516]">• {it.meal}</span>
-                                  {it.note && <span className="text-[12px] text-red-600 font-semibold"> — {it.note}</span>}
+                                  <span className="font-bold text-[#0f1516]">• {meal}</span>
                                 </li>
                               ))}
                             </ul>
