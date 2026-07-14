@@ -32,6 +32,7 @@ import {
   ShoppingBag,
   Store,
   ChevronDown,
+  Receipt,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -63,6 +64,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   driver: Truck,
   mealIssuance: ClipboardList,
   gymSales: Store,
+  posAdmin: Receipt,
   onlineOrders: ShoppingBag,
   delivery: Truck,
   drivers: UsersIcon,

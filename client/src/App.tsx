@@ -41,6 +41,8 @@ const Leaves = lazy(() => import("@/pages/Leaves"));
 const Attendance = lazy(() => import("@/pages/Attendance"));
 const MealIssuance = lazy(() => import("@/pages/MealIssuance"));
 const GymSales = lazy(() => import("@/pages/GymSales"));
+const PosAdmin = lazy(() => import("@/pages/PosAdmin"));
+const PosShell = lazy(() => import("@/pages/pos/PosShell"));
 const DriverAssignments = lazy(() => import("@/pages/DriverAssignments"));
 const OnlineOrders = lazy(() => import("@/pages/OnlineOrders"));
 const OrdersPending = lazy(() => import("@/pages/OrdersPending"));
@@ -157,6 +159,10 @@ function Router() {
       <Route path="/track/:token" component={TrackOrder} />
       <Route path="/plan/:token" component={PublicMealPlan} />
 
+      {/* ===== POS Shell (شل مستقل — بيتحقّق بـPIN داخلياً، مفيش ProtectedRoute) ===== */}
+      <Route path="/pos" component={PosShell} />
+      <Route path="/pos/:sub*" component={PosShell} />
+
       {/* ===== Admin Routes (Protected) ===== */}
       <Route path="/login" component={Login} />
 
@@ -228,6 +234,9 @@ function Router() {
       </Route>
       <Route path="/gym-sales">
         <ProtectedRoute component={GymSales} />
+      </Route>
+      <Route path="/pos-admin">
+        <ProtectedRoute component={PosAdmin} />
       </Route>
       <Route path="/drivers">
         <ProtectedRoute component={DriverAssignments} />

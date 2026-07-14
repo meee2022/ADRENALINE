@@ -10,7 +10,7 @@
  *   - INVENTORY_MANAGER  مدير مخزون (المخزون + الموردين + التقارير)
  */
 
-export type Role = "ADMIN" | "NUTRITIONIST" | "KITCHEN" | "DELIVERY" | "INVENTORY_MANAGER" | "ACCOUNTANT" | "FINANCE_MANAGER";
+export type Role = "ADMIN" | "NUTRITIONIST" | "KITCHEN" | "DELIVERY" | "INVENTORY_MANAGER" | "ACCOUNTANT" | "FINANCE_MANAGER" | "CASHIER";
 
 export const ALL_ROLES: Role[] = [
   "ADMIN",
@@ -20,6 +20,7 @@ export const ALL_ROLES: Role[] = [
   "INVENTORY_MANAGER",
   "ACCOUNTANT",
   "FINANCE_MANAGER",
+  "CASHIER",
 ];
 
 /** الصفحة الافتراضية اللي يتوجّه لها كل دور بعد تسجيل الدخول */
@@ -31,6 +32,7 @@ export const ROLE_HOME: Record<Role, string> = {
   INVENTORY_MANAGER: "/inventory",
   ACCOUNTANT: "/reports",
   FINANCE_MANAGER: "/reports",
+  CASHIER: "/pos",         // الكاشير: يروح لشل POS مباشرةً — لكنه غالباً بيدخل بـPIN مش email
 };
 
 /**
@@ -94,6 +96,11 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/reports",
     "/analytics",
     "/payroll",
+  ],
+
+  CASHIER: [
+    "/pos",
+    "/pos/*",
   ],
 };
 
@@ -159,6 +166,7 @@ export interface MenuItemDef {
     | "stickers"
     | "mealIssuance"
     | "gymSales"
+    | "posAdmin"
     | "onlineOrders"
     | "plansManagement"
     | "plans"
@@ -243,6 +251,8 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات الجم", labelEn: "Gym Sales",
         roles: ["ADMIN", "KITCHEN"] },
+      { href: "/pos-admin", iconKey: "posAdmin", labelAr: "نقطة البيع (POS)", labelEn: "Point of Sale (POS)",
+        roles: ["ADMIN"] },
       { href: "/online-orders", iconKey: "onlineOrders", labelAr: "طلبات أونلاين", labelEn: "Online Orders",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/delivery", iconKey: "delivery", labelAr: "التوصيل والتتبع", labelEn: "Delivery & Tracking",
@@ -314,6 +324,7 @@ export const ROLE_LABEL: Record<Role, { ar: string; en: string }> = {
   INVENTORY_MANAGER: { ar: "مدير مخزون", en: "Inventory Manager" },
   ACCOUNTANT: { ar: "محاسب", en: "Accountant" },
   FINANCE_MANAGER: { ar: "مدير مالي", en: "Finance Manager" },
+  CASHIER: { ar: "كاشير", en: "Cashier" },
 };
 
 /** لون الدور (للـ badge) */
@@ -326,6 +337,7 @@ export const ROLE_COLOR: Record<Role, { bg: string; text: string; border: string
   INVENTORY_MANAGER: { bg: "#f5f6f7", text: "#0f1516",  border: "#bcbebf" },  // رمادي داكن
   ACCOUNTANT:        { bg: "#eef7ee", text: "#166534",  border: "#16a34a" },  // أخضر
   FINANCE_MANAGER:   { bg: "#eef2ff", text: "#3730a3",  border: "#6366f1" },  // بنفسجي
+  CASHIER:           { bg: "#ecfeff", text: "#0e7490",  border: "#06b6d4" },  // سماوي/كاشير
 };
 
 /** كل الصفحات القابلة للتخصيص (مسطّحة من أقسام القائمة) — للـchecklist في إدارة الحسابات */

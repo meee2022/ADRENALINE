@@ -16,17 +16,117 @@ export default defineSchema({
       v.literal("NUTRITIONIST"),
       v.literal("INVENTORY_MANAGER"),
       v.literal("ACCOUNTANT"),
-      v.literal("FINANCE_MANAGER")
+      v.literal("FINANCE_MANAGER"),
+      v.literal("CASHIER")
     ),
     // ✅ صلاحيات صفحات مخصّصة لكل حساب (قايمة مسارات). لو موجودة تتجاوز صلاحيات الدور.
     //    الدور بيفضل قالب افتراضي. ADMIN دايمًا كامل الصلاحيات.
     permissions: v.optional(v.array(v.string())),
+    // ✅ PIN للكاشير (4-6 أرقام مشفّرة). يستخدم للدخول السريع على شل POS بدون كتابة إيميل/باسورد.
+    pinHash: v.optional(v.string()),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
+
+  // ===== POS: sessions (PIN-based, للكاشير على شل POS المنفصل) =====
+  posSessions: defineTable({
+    token: v.string(),
+    cashierId: v.id("users"),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  }).index("by_token", ["token"]).index("by_cashier", ["cashierId"]),
+
+  // ===== POS: فئات مخصّصة (تسمح بترتيب Loyverse-style: Beef/Chicken/Wraps بدل تصنيف المنيو) =====
+  posCategories: defineTable({
+    name: v.string(),
+    color: v.string(),                  // hex
+    icon: v.optional(v.string()),       // lucide icon key
+    sortOrder: v.number(),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_active", ["isActive"]),
+
+  // ===== POS: بيانات عرض الأصناف (لون الزر، اسم مختصر، فئة POS، ترتيب، اخفاء) =====
+  //   Meta لكل publicMeal. لو مفيش صف هنا، تُستخدم القيم الافتراضية (اسم الوجبة، تصنيف المنيو).
+  posItems: defineTable({
+    mealId: v.id("publicMeals"),
+    displayName: v.optional(v.string()),      // اسم مختصر لزر POS
+    color: v.optional(v.string()),            // hex
+    posCategoryId: v.optional(v.id("posCategories")),
+    sortOrder: v.optional(v.number()),
+    isHidden: v.optional(v.boolean()),
+    posPrice: v.optional(v.number()),          // سعر POS مخصص (اختياري)
+    updatedAt: v.optional(v.number()),
+  }).index("by_meal", ["mealId"]).index("by_pos_category", ["posCategoryId"]),
+
+  // ===== POS: الورديات =====
+  posShifts: defineTable({
+    cashierId: v.id("users"),
+    cashierName: v.string(),
+    openedAt: v.number(),
+    closedAt: v.optional(v.number()),
+    openingCash: v.number(),
+    closingCash: v.optional(v.number()),
+    expectedCash: v.optional(v.number()),   // openingCash + مبيعات كاش - refunds
+    cashDiff: v.optional(v.number()),        // closingCash - expectedCash (سالب = عجز)
+    totalSales: v.number(),
+    ticketsCount: v.number(),
+    notes: v.optional(v.string()),
+    status: v.union(v.literal("OPEN"), v.literal("CLOSED")),
+  }).index("by_cashier", ["cashierId"]).index("by_status", ["status"]),
+
+  // ===== POS: الفواتير =====
+  posTickets: defineTable({
+    ticketNumber: v.number(),                 // متسلسل
+    cashierId: v.id("users"),
+    cashierName: v.string(),
+    shiftId: v.optional(v.id("posShifts")),
+    status: v.union(
+      v.literal("OPEN"),                      // معلّقة (parked)
+      v.literal("PAID"),                      // مدفوعة
+      v.literal("REFUNDED"),                  // مرتجعة
+      v.literal("VOID")                       // ملغاة
+    ),
+    orderType: v.optional(v.string()),        // dine-in / takeaway / delivery
+    subtotal: v.number(),
+    discount: v.number(),
+    tax: v.number(),
+    total: v.number(),
+    paymentMethod: v.optional(v.string()),    // cash / card / transfer / other
+    cashReceived: v.optional(v.number()),
+    changeAmount: v.optional(v.number()),
+    customerId: v.optional(v.id("customers")),
+    customerName: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    paidAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_status", ["status"])
+    .index("by_shift", ["shiftId"])
+    .index("by_paidAt", ["paidAt"])
+    .index("by_cashier", ["cashierId"]),
+
+  // ===== POS: أسطر الفواتير =====
+  posTicketLines: defineTable({
+    ticketId: v.id("posTickets"),
+    mealId: v.optional(v.id("publicMeals")),
+    name: v.string(),
+    qty: v.number(),
+    unitPrice: v.number(),
+    lineTotal: v.number(),
+    notes: v.optional(v.string()),
+  }).index("by_ticket", ["ticketId"]),
+
+  // ===== POS: عدّاد رقم الفاتورة (global counter) =====
+  posCounters: defineTable({
+    key: v.string(),                          // "ticket_number"
+    value: v.number(),
+  }).index("by_key", ["key"]),
 
   // ===== OT approvals (أوفرتايم معتمد يدويًا يتجاوز المحسوب من البصمة) =====
   otApprovals: defineTable({
