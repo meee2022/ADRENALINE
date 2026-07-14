@@ -115,9 +115,10 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, 
               )} />
             </div>
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center gap-1">
+        {/* Action Buttons — صف مستقل أسفل الاسم عشان الاسم ياخد عرض السطر كامل */}
+        <div className="flex items-center justify-end gap-1 flex-wrap">
             {onPrintPlan && (
               <Button
                 variant="ghost"
@@ -172,7 +173,6 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, 
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>
-          </div>
         </div>
 
         {/* Delivery Time & Goal */}
