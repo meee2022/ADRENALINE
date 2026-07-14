@@ -13,14 +13,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2 } from "lucide-react";
+import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => todayStr().slice(0, 7);
 
-type Tab = "pos" | "history" | "reports" | "prices" | "gyms";
+type Tab = "pos" | "history" | "reports" | "items" | "prices" | "gyms";
 type CatKey = "breakfast" | "lunch" | "dinner" | "salad" | "snack" | "all";
 
 const CAT_META: Record<CatKey, { ar: string; en: string; icon: any; color: string }> = {
@@ -72,11 +72,12 @@ export default function GymSales() {
 
       <div className="max-w-7xl mx-auto px-4 pb-10">
         {/* Tabs */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-6 gap-2">
           {([
             ["pos",     Receipt,       t("نقطة البيع",  "POS")],
             ["history", ClipboardList, t("السجل",       "History")],
             ["reports", BarChart3,     t("التقارير",    "Reports")],
+            ["items",   ListChecks,    t("أصناف الجم",  "Gym Items")],
             ["prices",  Settings,      t("أسعار الجم",  "Gym Prices")],
             ["gyms",    Building2,     t("الجمات",      "Gyms")],
           ] as [Tab, any, string][]).map(([k, Icon, label]) => (
@@ -109,6 +110,7 @@ export default function GymSales() {
           {tab === "pos"     && <PosTab     isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
           {tab === "history" && <HistoryTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
           {tab === "reports" && <ReportsTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
+          {tab === "items"   && <ItemsTab   isRtl={isRtl} t={t} sessionToken={sessionToken} toast={toast} />}
           {tab === "prices"  && <PricesTab  isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
           {tab === "gyms"    && <GymsTab    isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} toast={toast} />}
         </div>
@@ -772,6 +774,119 @@ function GymsTab({ isRtl, t, sessionToken, gyms, toast }: any) {
               )}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Items Tab (اختيار أصناف الجم) ═══════════════════════════════ */
+
+function ItemsTab({ isRtl, t, sessionToken, toast }: any) {
+  const meals = useQuery(api.gymSales.listAllMealsForGymAdmin, { sessionToken }) as any[] | undefined;
+  const setItem = useMutation(api.gymSales.setMealIsGymItem);
+  const bulkSet = useMutation(api.gymSales.bulkSetGymItems);
+  const [q, setQ] = useState("");
+  const [filter, setFilter] = useState<"all" | "gym" | "menu">("all");
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  const filtered = useMemo(() => {
+    if (!meals) return [];
+    const qq = q.trim().toLowerCase();
+    return meals.filter((m: any) => {
+      if (filter === "gym"  && !m.isGymItem) return false;
+      if (filter === "menu" &&  m.isGymItem) return false;
+      if (!qq) return true;
+      return String(m.nameEn).toLowerCase().includes(qq) || String(m.nameAr).toLowerCase().includes(qq);
+    });
+  }, [meals, q, filter]);
+
+  const gymCount = meals?.filter((m: any) => m.isGymItem).length ?? 0;
+  const total = meals?.length ?? 0;
+
+  const toggle = async (m: any) => {
+    setSavingId(m.id);
+    try {
+      await setItem({ mealId: m.id as any, isGymItem: !m.isGymItem, sessionToken });
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
+    finally { setSavingId(null); }
+  };
+
+  const clearAll = async () => {
+    if (!confirm(t("هذا سيلغي إدراج كل الأصناف من الجم — متأكد؟", "This will unmark ALL gym items — confirm?"))) return;
+    const ids = (meals || []).filter((m: any) => m.isGymItem).map((m: any) => m.id);
+    if (!ids.length) return;
+    await bulkSet({ mealIds: ids as any, isGymItem: false, sessionToken });
+    toast({ title: t("تم إلغاء الكل", "All cleared") });
+  };
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="sm:col-span-2 relative">
+            <Search className="absolute h-4 w-4 top-3 start-3 text-slate-400 pointer-events-none" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10 ps-9" />
+          </div>
+          <div>
+            <select value={filter} onChange={(e) => setFilter(e.target.value as any)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold">
+              <option value="all">{t("كل الوجبات", "All meals")}</option>
+              <option value="gym">{t("أصناف الجم فقط", "Gym items only")}</option>
+              <option value="menu">{t("خارج الجم", "Not in gym")}</option>
+            </select>
+          </div>
+          <div className="flex items-center justify-between gap-2 bg-emerald-50 border border-emerald-200 rounded-lg px-3">
+            <div>
+              <div className="text-[10px] font-bold text-emerald-700 uppercase">{t("مضاف للجم", "In gym")}</div>
+              <div className="text-lg font-black text-emerald-800">{gymCount} / {total}</div>
+            </div>
+            {gymCount > 0 && (
+              <button onClick={clearAll} className="text-[11px] font-bold text-red-600 hover:underline">{t("مسح الكل", "Clear all")}</button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <div className="p-3 bg-sky-50 border-b border-sky-200 text-sky-800 text-xs font-bold">
+            💡 {t("اضغط على الوجبة لإضافتها/إزالتها من قائمة POS الجم. الأصناف المفعّلة فقط تظهر عند إنشاء طلبية للجم.",
+                  "Click a meal to add/remove from Gym POS. Only enabled items appear when creating a gym order.")}
+          </div>
+          <div className="max-h-[65vh] overflow-y-auto divide-y divide-slate-100">
+            {(!meals) && <div className="p-8 text-center text-slate-400 text-sm">{t("جاري التحميل…", "Loading…")}</div>}
+            {meals && filtered.length === 0 && <div className="p-8 text-center text-slate-400 text-sm">{t("لا نتائج", "No results")}</div>}
+            {filtered.map((m: any) => (
+              <button
+                key={m.id}
+                onClick={() => toggle(m)}
+                disabled={savingId === m.id}
+                className={cn(
+                  "w-full flex items-center gap-3 p-3 text-start transition-colors",
+                  m.isGymItem ? "bg-emerald-50/40 hover:bg-emerald-50" : "hover:bg-slate-50",
+                  savingId === m.id && "opacity-50 cursor-wait"
+                )}
+              >
+                <div className={cn(
+                  "shrink-0 h-6 w-6 rounded-md border-2 flex items-center justify-center transition-all",
+                  m.isGymItem ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-slate-300"
+                )}>
+                  {m.isGymItem && <Check className="h-4 w-4" strokeWidth={3} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={cn("font-bold text-sm truncate", m.isGymItem ? "text-emerald-900" : "text-slate-800")}>
+                    {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
+                  </p>
+                  <p className="text-[10.5px] text-slate-400">{m.category} · {t("سعر المنيو", "menu")}: {m.listPrice.toFixed(2)} {m.gymPrice != null && <>· {t("سعر جم", "gym")}: {m.gymPrice.toFixed(2)}</>}</p>
+                </div>
+                <span className={cn("shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
+                  m.isGymItem ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"
+                )}>
+                  {m.isGymItem ? t("مفعّل", "IN GYM") : t("غير مفعّل", "OFF")}
+                </span>
+              </button>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

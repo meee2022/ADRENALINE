@@ -104,7 +104,7 @@ export const setMealGymPrice = mutation({
   },
 });
 
-/** قائمة الوجبات مع السعر النافذ للجم (يحسب gymPrice أو priceQAR×(1-discount)). */
+/** قائمة أصناف الجم فقط (isGymItem = true) — مع السعر النافذ للجم (POS + إدارة الأسعار). */
 export const listMealsForGym = query({
   args: { gymId: v.optional(v.id("gymAccounts")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -116,6 +116,7 @@ export const listMealsForGym = query({
     }
     const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
     return meals
+      .filter((m: any) => !!m.isGymItem)
       .map((m: any) => {
         const listPrice = Number(m.priceQAR) || 0;
         const hasCustom = m.gymPrice != null && m.gymPrice >= 0;
@@ -133,6 +134,48 @@ export const listMealsForGym = query({
         };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
+  },
+});
+
+/** قائمة كاملة بكل الوجبات النشطة — مع علامة "هل الصنف مدرج للجم" — لإدارة قائمة الجم. */
+export const listAllMealsForGymAdmin = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+    return meals
+      .map((m: any) => ({
+        id: String(m._id),
+        nameEn: m.nameEn || m.nameAr || "",
+        nameAr: m.nameAr || m.nameEn || "",
+        category: m.category || "other",
+        listPrice: Number(m.priceQAR) || 0,
+        gymPrice: m.gymPrice != null && m.gymPrice >= 0 ? Number(m.gymPrice) : null,
+        isGymItem: !!m.isGymItem,
+      }))
+      .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  },
+});
+
+/** إدراج/إزالة صنف من قائمة الجم. */
+export const setMealIsGymItem = mutation({
+  args: { mealId: v.id("publicMeals"), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    await ctx.db.patch(args.mealId, { isGymItem: args.isGymItem } as any);
+    return { ok: true };
+  },
+});
+
+/** تحديث دفعة كاملة (لوضع مبدئي أو للتحديث الجماعي). */
+export const bulkSetGymItems = mutation({
+  args: { mealIds: v.array(v.id("publicMeals")), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    for (const id of args.mealIds) {
+      await ctx.db.patch(id, { isGymItem: args.isGymItem } as any);
+    }
+    return { updated: args.mealIds.length };
   },
 });
 
