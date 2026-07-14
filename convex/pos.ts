@@ -6,6 +6,7 @@
 import { v } from "convex/values";
 import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
+import { writeAudit } from "./lib/audit";
 
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
 
@@ -459,10 +460,24 @@ export const quickSale = mutation({
     orderType: v.optional(v.string()),
     customerName: v.optional(v.string()),
     notes: v.optional(v.string()),
+    // ✅ مفتاح idempotency: لو الطلب ده اتبعت مرتين (double-click / retry شبكة)
+    //    نرجّع نفس نتيجة الفاتورة الأصلية بدل ما نعمل واحدة تانية.
+    idempotencyKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
     if (args.lines.length === 0) throw new Error("لازم تضيف صنف واحد على الأقل");
+    // ✅ فحص idempotency: لو مفتاح متكرر → رجّع الفاتورة الأصلية
+    if (args.idempotencyKey) {
+      const existing = await ctx.db
+        .query("posTickets")
+        .withIndex("by_idem", (q) => q.eq("idempotencyKey", args.idempotencyKey))
+        .first();
+      if (existing) {
+        const changeExisting = (existing as any).changeAmount;
+        return { id: String(existing._id), ticketNumber: existing.ticketNumber, total: existing.total, change: changeExisting, duplicate: true };
+      }
+    }
     const shift = await ctx.db
       .query("posShifts")
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
@@ -491,6 +506,7 @@ export const quickSale = mutation({
       customerName: args.customerName?.trim() || undefined,
       notes: args.notes?.trim() || undefined,
       isNonRevenue: isStaff,
+      idempotencyKey: args.idempotencyKey,
       paidAt: Date.now(),
       createdAt: Date.now(),
     });
@@ -516,20 +532,34 @@ export const quickSale = mutation({
   },
 });
 
-/** حذف فاتورة معلّقة. */
+/** حذف فاتورة معلّقة. مع تسجيل في auditLog. */
 export const voidTicket = mutation({
-  args: { token: v.string(), ticketId: v.id("posTickets") },
-  handler: async (ctx, { token, ticketId }) => {
-    await requireCashier(ctx, token);
+  args: { token: v.string(), ticketId: v.id("posTickets"), reason: v.optional(v.string()) },
+  handler: async (ctx, { token, ticketId, reason }) => {
+    const { user } = await requireCashier(ctx, token);
     const t: any = await ctx.db.get(ticketId);
     if (!t) return { ok: true };
+    const wasPaid = t.status === "PAID";
     if (t.status === "OPEN") {
       const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", ticketId)).collect();
       for (const l of lines) await ctx.db.delete(l._id);
       await ctx.db.delete(ticketId);
     } else {
       await ctx.db.patch(ticketId, { status: "VOID", updatedAt: Date.now() });
+      // ✅ لو فاتورة مدفوعة اتلغت — نرجّع الوردية
+      if (wasPaid && t.shiftId && !t.isNonRevenue) {
+        const shift: any = await ctx.db.get(t.shiftId);
+        if (shift && shift.status === "OPEN") {
+          await ctx.db.patch(t.shiftId, {
+            totalSales: Math.round((shift.totalSales - t.total) * 100) / 100,
+            ticketsCount: Math.max(0, shift.ticketsCount - 1),
+          });
+        }
+      }
     }
+    await writeAudit(ctx, { userId: String(user._id), name: user.name, role: user.role },
+      "VOID_TICKET", "posTicket", String(ticketId),
+      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, reason: reason || null });
     return { ok: true };
   },
 });

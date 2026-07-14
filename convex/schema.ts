@@ -105,6 +105,8 @@ export default defineSchema({
     // ✅ فاتورة خارج الإيراد (وجبة موظف/ضيافة/تجربة). تطلع فاتورة عادية بمبلغ،
     //    لكن ما تدخلش إجمالي المبيعات ولا مبيعات الوردية. تظهر منفصلة في التقارير.
     isNonRevenue: v.optional(v.boolean()),
+    // ✅ مفتاح Idempotency لمنع تكرار الدفع (double-click / retry / انقطاع الشبكة)
+    idempotencyKey: v.optional(v.string()),
     paidAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
@@ -112,7 +114,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_shift", ["shiftId"])
     .index("by_paidAt", ["paidAt"])
-    .index("by_cashier", ["cashierId"]),
+    .index("by_cashier", ["cashierId"])
+    .index("by_idem", ["idempotencyKey"]),
 
   // ===== POS: أسطر الفواتير =====
   posTicketLines: defineTable({
@@ -634,6 +637,9 @@ export default defineSchema({
     tags: v.array(v.string()), // ["غني بالبروتين", "قليل الكربوهيدرات"]
     ingredients: v.array(v.string()),
     priceQAR: v.number(),
+    // ✅ التكلفة التقديرية لتحضير الوجبة (ر.ق) — مطلوبة لتقارير الربحية وMenu Engineering.
+    //    اختيارية: لو مش متعبّاة، تظهر الوجبة "بدون تكلفة" في التقارير.
+    costQAR: v.optional(v.number()),
     // ✅ سعر مؤقّت للجم (اختياري). لو موجود يُستخدم كما هو في فواتير الجم؛
     //    لو غير موجود يُحسب من priceQAR بخصم الجم (gymAccounts.discountPct).
     gymPrice: v.optional(v.number()),

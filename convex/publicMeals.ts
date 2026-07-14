@@ -125,6 +125,7 @@ export const create = mutation({
       v.literal("snack")
     ),
     priceQAR: v.optional(v.number()),
+    costQAR: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     // NEW: Scheduling
@@ -191,6 +192,7 @@ export const update = mutation({
       v.literal("snack")
     )),
     priceQAR: v.optional(v.number()),
+    costQAR: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     // NEW: Scheduling

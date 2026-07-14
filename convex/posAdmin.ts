@@ -7,6 +7,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
 import { hashPassword, verifyPassword } from "./passwords";
+import { writeAudit } from "./lib/audit";
 
 /* ═══════════════════════════════ الكاشيرون ═══════════════════════════════ */
 
@@ -365,16 +366,145 @@ export const getTicket = query({
   },
 });
 
-/** إلغاء فاتورة مدفوعة (Refund). */
-export const refundTicket = mutation({
-  args: { ticketId: v.id("posTickets"), sessionToken: v.optional(v.string()) },
+/**
+ * تقرير ربحية الأصناف + Menu Engineering (Star / Puzzle / Plowhorse / Dog).
+ * التصنيف قياسي في صناعة المطاعم:
+ *   - Star:     مبيعات عالية + هامش عالٍ  ✅ (روّج أكتر)
+ *   - Puzzle:   مبيعات منخفضة + هامش عالٍ  🧩 (سوّق ليها)
+ *   - Plowhorse: مبيعات عالية + هامش منخفض  🐴 (ارفع سعر أو خفّض تكلفة)
+ *   - Dog:      مبيعات منخفضة + هامش منخفض  🐕 (اشطبها)
+ * تُحسب مقارنةً بالوسط: عناصر فوق الوسط في المبيعات = "عالي"،
+ *   عناصر فوق الوسط في الـmargin% = "عالي".
+ */
+export const profitabilityReport = query({
+  args: {
+    from: v.optional(v.string()),   // yyyy-MM-dd
+    to: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    const start = args.from ? new Date(args.from + "T00:00:00").getTime() : new Date(Date.now() - 30 * 86400000).getTime();
+    const end = args.to ? new Date(args.to + "T23:59:59.999").getTime() : Date.now();
+
+    // كل تذكرات مدفوعة (ما عدا الموظف/الاسترجاع/الإلغاء) في الفترة
+    const tickets = (await ctx.db.query("posTickets").withIndex("by_paidAt").collect())
+      .filter((t: any) => t.paidAt && t.paidAt >= start && t.paidAt <= end
+        && t.status === "PAID" && !t.isNonRevenue);
+    const ticketIds = new Set(tickets.map((t: any) => String(t._id)));
+
+    // جمّع الأسطر
+    type Agg = { mealId: string; name: string; qty: number; revenue: number; cost: number };
+    const byMeal = new Map<string, Agg>();
+    // خريطة meta الوجبات
+    const meals = await ctx.db.query("publicMeals").collect();
+    const mealMap = new Map(meals.map((m: any) => [String(m._id), m]));
+
+    for (const t of tickets) {
+      const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", t._id)).collect();
+      for (const l of lines as any[]) {
+        const mid = l.mealId ? String(l.mealId) : `x:${l.name}`;
+        const meal: any = l.mealId ? mealMap.get(String(l.mealId)) : null;
+        const unitCost = meal?.costQAR != null ? Number(meal.costQAR) : 0;
+        const row = byMeal.get(mid) || { mealId: mid, name: meal?.nameEn || meal?.nameAr || l.name, qty: 0, revenue: 0, cost: 0 };
+        row.qty += l.qty;
+        row.revenue = Math.round((row.revenue + l.lineTotal) * 100) / 100;
+        row.cost = Math.round((row.cost + unitCost * l.qty) * 100) / 100;
+        byMeal.set(mid, row);
+        void ticketIds; // تجنب تحذير غير مستخدم
+      }
+    }
+    const items = Array.from(byMeal.values()).map((r) => {
+      const profit = Math.round((r.revenue - r.cost) * 100) / 100;
+      const marginPct = r.revenue > 0 ? Math.round((profit / r.revenue) * 1000) / 10 : 0;
+      const hasCost = r.cost > 0;
+      return { ...r, profit, marginPct, hasCost };
+    });
+
+    // Menu Engineering: نقارن مع الوسط للـtqty والـmarginPct
+    const withCost = items.filter((i) => i.hasCost);
+    const avgQty = withCost.length ? withCost.reduce((s, i) => s + i.qty, 0) / withCost.length : 0;
+    const avgMargin = withCost.length ? withCost.reduce((s, i) => s + i.marginPct, 0) / withCost.length : 0;
+
+    const classified = items.map((i) => {
+      let category: "star" | "puzzle" | "plowhorse" | "dog" | "no-cost" = "no-cost";
+      if (i.hasCost) {
+        const highQty = i.qty >= avgQty;
+        const highMargin = i.marginPct >= avgMargin;
+        category = highQty && highMargin ? "star"
+                 : !highQty && highMargin ? "puzzle"
+                 : highQty && !highMargin ? "plowhorse"
+                 : "dog";
+      }
+      return { ...i, category };
+    });
+
+    const totals = {
+      revenue: Math.round(classified.reduce((s, i) => s + i.revenue, 0) * 100) / 100,
+      cost:    Math.round(classified.reduce((s, i) => s + i.cost, 0) * 100) / 100,
+      profit:  Math.round(classified.reduce((s, i) => s + i.profit, 0) * 100) / 100,
+      marginPct: 0,
+      itemsSold: classified.reduce((s, i) => s + i.qty, 0),
+      itemsWithoutCost: classified.filter((i) => !i.hasCost).length,
+      counts: {
+        star:      classified.filter((i) => i.category === "star").length,
+        puzzle:    classified.filter((i) => i.category === "puzzle").length,
+        plowhorse: classified.filter((i) => i.category === "plowhorse").length,
+        dog:       classified.filter((i) => i.category === "dog").length,
+      },
+    };
+    totals.marginPct = totals.revenue > 0 ? Math.round((totals.profit / totals.revenue) * 1000) / 10 : 0;
+
+    classified.sort((a, b) => b.profit - a.profit);
+    return {
+      from: new Date(start).toISOString().slice(0, 10),
+      to: new Date(end).toISOString().slice(0, 10),
+      averages: { qty: Math.round(avgQty * 10) / 10, marginPct: Math.round(avgMargin * 10) / 10 },
+      totals,
+      items: classified,
+    };
+  },
+});
+
+/** سجل تدقيق أحداث POS الحساسة (Void/Refund/Discount/…) للأدمن. */
+export const auditTrail = query({
+  args: {
+    from: v.optional(v.string()),        // yyyy-MM-dd
+    to: v.optional(v.string()),
+    action: v.optional(v.string()),      // فلتر بنوع الحدث
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const start = args.from ? new Date(args.from + "T00:00:00").getTime() : 0;
+    const end = args.to ? new Date(args.to + "T23:59:59.999").getTime() : Date.now();
+    let rows = await ctx.db.query("auditLog").withIndex("by_createdAt").collect();
+    rows = rows.filter((r) => r.createdAt >= start && r.createdAt <= end);
+    if (args.action) rows = rows.filter((r) => r.action === args.action);
+    rows.sort((a, b) => b.createdAt - a.createdAt);
+    return rows.slice(0, 500).map((r: any) => ({
+      id: String(r._id),
+      createdAt: r.createdAt,
+      action: r.action,
+      entityType: r.entityType,
+      entityId: r.entityId || null,
+      actorName: r.actorName || null,
+      actorRole: r.actorRole || null,
+      details: r.details ? (() => { try { return JSON.parse(r.details); } catch { return r.details; } })() : null,
+    }));
+  },
+});
+
+/** إلغاء فاتورة مدفوعة (Refund) — مع تسجيل في auditLog. */
+export const refundTicket = mutation({
+  args: { ticketId: v.id("posTickets"), reason: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await requireStaff(ctx, args.sessionToken);
     const t: any = await ctx.db.get(args.ticketId);
     if (!t) throw new Error("مش موجودة");
     if (t.status === "REFUNDED" || t.status === "VOID") return { ok: true };
     await ctx.db.patch(args.ticketId, { status: "REFUNDED", updatedAt: Date.now() });
-    if (t.shiftId) {
+    if (t.shiftId && !t.isNonRevenue) {
       const shift: any = await ctx.db.get(t.shiftId);
       if (shift && shift.status === "OPEN") {
         await ctx.db.patch(t.shiftId, {
@@ -383,6 +513,11 @@ export const refundTicket = mutation({
         });
       }
     }
+    const actor: any = id.userId ? await ctx.db.get(id.userId as any) : null;
+    await writeAudit(ctx,
+      { userId: id.userId ? String(id.userId) : undefined, name: actor?.name, role: id.role },
+      "REFUND_TICKET", "posTicket", String(args.ticketId),
+      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, paymentMethod: t.paymentMethod, reason: args.reason || null });
     return { ok: true };
   },
 });

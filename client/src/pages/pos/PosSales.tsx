@@ -92,6 +92,9 @@ export default function PosSales() {
   const doQuickCharge = async (paymentMethod: string, cashReceived?: number) => {
     if (!token || cart.length === 0) return;
     setBusy(true);
+    // ✅ Idempotency key: يمنع تكرار الدفع لو الزرار اتضغط مرتين أو الشبكة قطعت وأعادت المحاولة.
+    //    نولّده مرة واحدة لكل محاولة دفع من نفس السلة.
+    const idem = `t_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     try {
       const r: any = await quickSale({
         token,
@@ -103,6 +106,7 @@ export default function PosSales() {
         orderType,
         customerName: customerName.trim() || undefined,
         discount: totals.discount || undefined,
+        idempotencyKey: idem,
       });
       clearCart();
       setShowCharge(false);
