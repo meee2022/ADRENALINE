@@ -152,20 +152,37 @@ export default function PosSales() {
           )}
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {filtered.map((m: any) => {
+              const hasImage = !!m.imageUrl;
               const bg = m.color || "#e2e8f0";
-              const isDark = m.color != null;
+              const useColor = !hasImage && m.color != null;
               return (
                 <button
                   key={m.id}
                   onClick={() => addToCart(m)}
-                  className={`aspect-square rounded-xl p-2 flex flex-col items-center justify-center text-center shadow-md hover:shadow-xl active:scale-95 transition-all border-2 ${isDark ? "border-transparent" : "border-slate-200"}`}
-                  style={{ background: bg }}
+                  className="aspect-square rounded-xl relative overflow-hidden shadow-md hover:shadow-xl active:scale-95 transition-all border-2 border-transparent hover:border-cyan-500 group"
+                  style={hasImage ? undefined : { background: bg }}
                 >
-                  <span className={`text-xs font-black leading-tight line-clamp-3 ${isDark ? "text-white drop-shadow" : "text-slate-800"}`}>
-                    {m.name}
-                  </span>
-                  <span className={`text-xs font-black mt-1 ${isDark ? "text-white/90" : "text-slate-600"}`}>
+                  {hasImage && (
+                    <>
+                      <img
+                        src={m.imageUrl}
+                        alt={m.name}
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                      {/* تدرج داكن أسفل الصورة عشان الاسم يبقى مقروء */}
+                      <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/85 via-black/50 to-transparent" />
+                    </>
+                  )}
+
+                  {/* السعر — badge أعلى يمين */}
+                  <span className={`absolute top-1.5 end-1.5 text-[10px] font-black px-1.5 py-0.5 rounded-md shadow ${hasImage ? "bg-white/95 text-slate-900" : useColor ? "bg-white/25 text-white backdrop-blur" : "bg-slate-900 text-white"}`}>
                     {Number(m.price).toFixed(2)}
+                  </span>
+
+                  {/* الاسم — أسفل الصورة */}
+                  <span className={`absolute inset-x-1.5 bottom-1.5 text-xs font-black leading-tight text-start line-clamp-2 ${hasImage || useColor ? "text-white drop-shadow-lg" : "text-slate-800"}`}>
+                    {m.name}
                   </span>
                 </button>
               );

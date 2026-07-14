@@ -98,7 +98,7 @@ export const listCategories = query({
   },
 });
 
-/** الأصناف مع بيانات POS + فئتها الفعلية (posCategoryId أو fallback). */
+/** الأصناف مع بيانات POS + فئتها الفعلية (posCategoryId أو fallback) + رابط الصورة. */
 export const listItems = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, { token }) => {
@@ -106,23 +106,28 @@ export const listItems = query({
     const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
     const metas = await ctx.db.query("posItems").collect();
     const metaByMeal = new Map(metas.map((m: any) => [String(m.mealId), m]));
-    return meals
-      .map((m: any) => {
-        const meta = metaByMeal.get(String(m._id));
-        const price = meta?.posPrice != null ? meta.posPrice : (Number(m.priceQAR) || 0);
-        return {
-          id: String(m._id),
-          name: meta?.displayName || m.nameEn || m.nameAr || "—",
-          nameAr: m.nameAr || "",
-          nameEn: m.nameEn || "",
-          menuCategory: m.category || "other",
-          posCategoryId: meta?.posCategoryId ? String(meta.posCategoryId) : null,
-          color: meta?.color || null,
-          price,
-          isHidden: !!meta?.isHidden,
-          sortOrder: meta?.sortOrder ?? m.sortOrder ?? 0,
-        };
-      })
+    const out = await Promise.all(meals.map(async (m: any) => {
+      const meta = metaByMeal.get(String(m._id));
+      const price = meta?.posPrice != null ? meta.posPrice : (Number(m.priceQAR) || 0);
+      // ✅ رابط الصورة: نفضّل storageId (المفضّل) ثم imageUrl القديم
+      const imageUrl = m.storageId
+        ? await ctx.storage.getUrl(m.storageId)
+        : (m.imageUrl || null);
+      return {
+        id: String(m._id),
+        name: meta?.displayName || m.nameEn || m.nameAr || "—",
+        nameAr: m.nameAr || "",
+        nameEn: m.nameEn || "",
+        menuCategory: m.category || "other",
+        posCategoryId: meta?.posCategoryId ? String(meta.posCategoryId) : null,
+        color: meta?.color || null,
+        imageUrl,
+        price,
+        isHidden: !!meta?.isHidden,
+        sortOrder: meta?.sortOrder ?? m.sortOrder ?? 0,
+      };
+    }));
+    return out
       .filter((m) => !m.isHidden)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
   },
