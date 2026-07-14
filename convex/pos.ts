@@ -190,7 +190,7 @@ export const closeShift = mutation({
       .withIndex("by_shift", (q) => q.eq("shiftId", shift._id))
       .collect();
     const cashSales = tickets
-      .filter((t) => t.status === "PAID" && t.paymentMethod === "cash")
+      .filter((t) => t.status === "PAID" && t.paymentMethod === "cash" && !t.isNonRevenue)
       .reduce((s, t) => s + t.total, 0);
     const expectedCash = Math.round((shift.openingCash + cashSales) * 100) / 100;
     const diff = Math.round((closingCash - expectedCash) * 100) / 100;
@@ -407,6 +407,7 @@ export const chargeTicket = mutation({
     const change = args.paymentMethod === "cash" && args.cashReceived != null
       ? Math.round((args.cashReceived - totals.total) * 100) / 100
       : undefined;
+    const isStaff = args.paymentMethod === "staff";
     await ctx.db.patch(args.ticketId, {
       status: "PAID",
       paymentMethod: args.paymentMethod,
@@ -418,15 +419,16 @@ export const chargeTicket = mutation({
       orderType: args.orderType || t.orderType,
       customerName: args.customerName?.trim() || t.customerName,
       notes: args.notes?.trim() || t.notes,
+      isNonRevenue: isStaff,
       paidAt: Date.now(),
       updatedAt: Date.now(),
     });
-    // تحديث ملخص الوردية
+    // تحديث ملخص الوردية (Staff = خارج الإيراد لا يُضاف للمبيعات)
     if (t.shiftId) {
       const shift: any = await ctx.db.get(t.shiftId);
       if (shift && shift.status === "OPEN") {
         await ctx.db.patch(t.shiftId, {
-          totalSales: Math.round((shift.totalSales + totals.total) * 100) / 100,
+          totalSales: isStaff ? shift.totalSales : Math.round((shift.totalSales + totals.total) * 100) / 100,
           ticketsCount: shift.ticketsCount + 1,
         });
       }
@@ -462,6 +464,7 @@ export const quickSale = mutation({
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
     const totals = await computeTotals(args.lines as any, args.discount || 0);
+    const isStaff = args.paymentMethod === "staff";
     const change = args.paymentMethod === "cash" && args.cashReceived != null
       ? Math.round((args.cashReceived - totals.total) * 100) / 100
       : undefined;
@@ -482,6 +485,7 @@ export const quickSale = mutation({
       changeAmount: change,
       customerName: args.customerName?.trim() || undefined,
       notes: args.notes?.trim() || undefined,
+      isNonRevenue: isStaff,
       paidAt: Date.now(),
       createdAt: Date.now(),
     });
@@ -496,9 +500,10 @@ export const quickSale = mutation({
         notes: l.notes,
       });
     }
+    // ✅ فاتورة موظف = خارج الإيراد → مش تُضاف لإجمالي الوردية (لكن العدّاد يعدّها)
     if (shift) {
       await ctx.db.patch(shift._id, {
-        totalSales: Math.round((shift.totalSales + totals.total) * 100) / 100,
+        totalSales: isStaff ? shift.totalSales : Math.round((shift.totalSales + totals.total) * 100) / 100,
         ticketsCount: shift.ticketsCount + 1,
       });
     }

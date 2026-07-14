@@ -96,12 +96,15 @@ export default defineSchema({
     discount: v.number(),
     tax: v.number(),
     total: v.number(),
-    paymentMethod: v.optional(v.string()),    // cash / card / transfer / other
+    paymentMethod: v.optional(v.string()),    // cash / card / talabat / snoonu / rafeeq / keeta / transfer / staff
     cashReceived: v.optional(v.number()),
     changeAmount: v.optional(v.number()),
     customerId: v.optional(v.id("customers")),
     customerName: v.optional(v.string()),
     notes: v.optional(v.string()),
+    // ✅ فاتورة خارج الإيراد (وجبة موظف/ضيافة/تجربة). تطلع فاتورة عادية بمبلغ،
+    //    لكن ما تدخلش إجمالي المبيعات ولا مبيعات الوردية. تظهر منفصلة في التقارير.
+    isNonRevenue: v.optional(v.boolean()),
     paidAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),

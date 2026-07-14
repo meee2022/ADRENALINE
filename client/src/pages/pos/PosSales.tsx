@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
-import { Search, X, Minus, Plus, CreditCard, Banknote, ArrowLeftRight, MoreHorizontal, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3 } from "lucide-react";
+import { Search, X, Minus, Plus, CreditCard, Banknote, ArrowLeftRight, MoreHorizontal, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, Truck } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
 
@@ -184,6 +184,28 @@ export default function PosSales() {
             ⚠ افتح وردية من تبويب Shift عشان تبدأ البيع
           </div>
         )}
+
+        {/* Quick actions — Delivery fee + Custom item */}
+        <div className="p-2 grid grid-cols-2 gap-2 border-b border-slate-100">
+          <button
+            onClick={() => setCart([...cart, { mealId: null, name: "Delivery", qty: 1, unitPrice: 10 }])}
+            disabled={!shift}
+            className="h-9 rounded-lg bg-orange-50 hover:bg-orange-100 disabled:opacity-40 disabled:cursor-not-allowed text-orange-700 border border-orange-200 font-bold text-xs flex items-center justify-center gap-1.5"
+          >
+            <Truck className="h-3.5 w-3.5" /> + Delivery 10
+          </button>
+          <button
+            onClick={() => {
+              const nm = prompt("Item name?"); if (!nm) return;
+              const p = Number(prompt("Price?") || "0");
+              setCart([...cart, { mealId: null, name: nm, qty: 1, unitPrice: p }]);
+            }}
+            disabled={!shift}
+            className="h-9 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40 disabled:cursor-not-allowed text-slate-700 border border-slate-200 font-bold text-xs flex items-center justify-center gap-1.5"
+          >
+            <Plus className="h-3.5 w-3.5" /> Custom item
+          </button>
+        </div>
 
         {/* Lines */}
         <div className="flex-1 overflow-y-auto">

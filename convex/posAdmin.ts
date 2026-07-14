@@ -260,8 +260,11 @@ export const dailySummary = query({
     const start = new Date(day + "T00:00:00").getTime();
     const end = new Date(day + "T23:59:59.999").getTime();
     const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
-    const paid = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID");
+    const paidAll = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID");
+    const paid = paidAll.filter((t) => !t.isNonRevenue);
+    const staffTix = paidAll.filter((t) => t.isNonRevenue);
     const totalSales = paid.reduce((s, t) => s + t.total, 0);
+    const staffValue = staffTix.reduce((s, t) => s + t.total, 0);
     const byMethod: Record<string, { count: number; total: number }> = {};
     for (const t of paid) {
       const m = t.paymentMethod || "other";
@@ -283,6 +286,8 @@ export const dailySummary = query({
       avgTicket: paid.length ? Math.round((totalSales / paid.length) * 100) / 100 : 0,
       byMethod: Object.entries(byMethod).map(([k, v]) => ({ method: k, ...v })),
       byCashier: Object.values(byCashier),
+      staffMealsCount: staffTix.length,
+      staffMealsValue: Math.round(staffValue * 100) / 100,
     };
   },
 });

@@ -39,8 +39,12 @@ export default function PosReceipts() {
               >
                 <StatusIcon status={r.status} />
                 <div className="flex-1 min-w-0">
-                  <div className="font-black text-slate-900">#{r.ticketNumber}
-                    {r.customerName && <span className="text-slate-500 font-bold ms-2">· {r.customerName}</span>}
+                  <div className="font-black text-slate-900 flex items-center gap-2">
+                    #{r.ticketNumber}
+                    {r.paymentMethod === "staff" && (
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-slate-200 text-slate-600 uppercase">Staff · non-rev</span>
+                    )}
+                    {r.customerName && <span className="text-slate-500 font-bold">· {r.customerName}</span>}
                   </div>
                   <div className="text-xs text-slate-500 font-bold">
                     {r.paidAt ? new Date(r.paidAt).toLocaleTimeString() : "—"}

@@ -106,10 +106,13 @@ function OverviewTab({ t, sessionToken }: any) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <QuickCard title={t("الكاشيرون", "Cashiers")}  value={cashiers?.length ?? "—"} color="#0E76AC" icon={Users} />
         <QuickCard title={t("فئات POS", "Categories")} value={cats?.filter((c: any) => c.isActive).length ?? "—"} color="#f59e0b" icon={LayoutGrid} />
         <QuickCard title={t("طرق الدفع اليوم", "Methods today")} value={daily?.byMethod?.length ?? "—"} color="#16a34a" icon={BarChart3} />
+        <QuickCard title={t("وجبات موظفين اليوم", "Staff meals today")}
+          value={daily?.staffMealsCount != null ? `${daily.staffMealsCount} · ${daily.staffMealsValue.toFixed(2)}` : "—"}
+          color="#475569" icon={Users} />
       </div>
 
       {daily?.byMethod?.length > 0 && (
