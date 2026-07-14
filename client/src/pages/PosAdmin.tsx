@@ -637,11 +637,27 @@ function ProfitTab({ t, sessionToken, isRtl }: any) {
     return filterCat === "all" ? report.items : report.items.filter((i: any) => i.category === filterCat);
   }, [report, filterCat]);
 
+  // ✅ تصدير CSV — يفتح في Excel مباشرة
+  const exportCsv = () => {
+    if (!items?.length) return;
+    const header = ["Item", "Qty", "Revenue", "Cost", "Profit", "Margin %", "Class"];
+    const rows = items.map((i: any) => [
+      i.name.replace(/"/g, "'"), i.qty, i.revenue.toFixed(2), i.hasCost ? i.cost.toFixed(2) : "",
+      i.hasCost ? i.profit.toFixed(2) : "", i.hasCost ? `${i.marginPct.toFixed(1)}%` : "", i.category,
+    ]);
+    const csv = "﻿" + [header, ...rows].map((r: any[]) => r.map((c: any) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `profit-${from}_${to}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
+
   return (
     <div className="space-y-4">
       {/* Filters */}
       <Card className="rounded-2xl border-slate-200">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
             <Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
@@ -658,6 +674,11 @@ function ProfitTab({ t, sessionToken, isRtl }: any) {
                 <option key={k} value={k}>{m.emoji} {m.label}</option>
               ))}
             </select>
+          </div>
+          <div className="flex items-end">
+            <Button onClick={exportCsv} disabled={!items?.length} className="w-full h-10 text-white font-bold" style={{ background: "#16a34a" }}>
+              {t("تنزيل CSV", "Download CSV")}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -779,10 +800,26 @@ function AuditTab({ t, sessionToken }: any) {
     sessionToken,
   }) as any[] | undefined;
 
+  const exportCsv = () => {
+    if (!rows?.length) return;
+    const header = ["When", "Action", "Actor", "Role", "Ticket", "Amount", "Reason"];
+    const data = rows.map((r: any) => [
+      new Date(r.createdAt).toISOString(), r.action, r.actorName || "", r.actorRole || "",
+      r.details?.ticketNumber || "", r.details?.total != null ? Number(r.details.total).toFixed(2) : "",
+      (r.details?.reason || "").replace(/"/g, "'"),
+    ]);
+    const csv = "﻿" + [header, ...data].map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `audit-${from}_${to}.csv`; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
+
   return (
     <div className="space-y-4">
       <Card className="rounded-2xl border-slate-200">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-5 gap-3">
           <div>
             <Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
@@ -798,6 +835,11 @@ function AuditTab({ t, sessionToken }: any) {
               <option value="VOID_TICKET">{t("إلغاء فاتورة", "Void")}</option>
               <option value="REFUND_TICKET">{t("استرجاع فاتورة", "Refund")}</option>
             </select>
+          </div>
+          <div className="flex items-end">
+            <Button onClick={exportCsv} disabled={!rows?.length} className="w-full h-10 text-white font-bold" style={{ background: "#16a34a" }}>
+              CSV
+            </Button>
           </div>
         </CardContent>
       </Card>

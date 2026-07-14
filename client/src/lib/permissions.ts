@@ -167,6 +167,7 @@ export interface MenuItemDef {
     | "mealIssuance"
     | "gymSales"
     | "posAdmin"
+    | "managerLive"
     | "onlineOrders"
     | "plansManagement"
     | "plans"
@@ -252,6 +253,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات الجم", labelEn: "Gym Sales",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/pos-admin", iconKey: "posAdmin", labelAr: "نقطة البيع (POS)", labelEn: "Point of Sale (POS)",
+        roles: ["ADMIN"] },
+      { href: "/manager", iconKey: "managerLive", labelAr: "لوحة المدير اللحظية", labelEn: "Manager Live",
         roles: ["ADMIN"] },
       { href: "/online-orders", iconKey: "onlineOrders", labelAr: "طلبات أونلاين", labelEn: "Online Orders",
         roles: ["ADMIN", "KITCHEN"] },

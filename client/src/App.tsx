@@ -42,6 +42,7 @@ const Attendance = lazy(() => import("@/pages/Attendance"));
 const MealIssuance = lazy(() => import("@/pages/MealIssuance"));
 const GymSales = lazy(() => import("@/pages/GymSales"));
 const PosAdmin = lazy(() => import("@/pages/PosAdmin"));
+const ManagerLive = lazy(() => import("@/pages/ManagerLive"));
 const PosShell = lazy(() => import("@/pages/pos/PosShell"));
 const DriverAssignments = lazy(() => import("@/pages/DriverAssignments"));
 const OnlineOrders = lazy(() => import("@/pages/OnlineOrders"));
@@ -237,6 +238,9 @@ function Router() {
       </Route>
       <Route path="/pos-admin">
         <ProtectedRoute component={PosAdmin} />
+      </Route>
+      <Route path="/manager">
+        <ProtectedRoute component={ManagerLive} />
       </Route>
       <Route path="/drivers">
         <ProtectedRoute component={DriverAssignments} />
