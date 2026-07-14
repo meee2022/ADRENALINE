@@ -873,6 +873,7 @@ export default defineSchema({
   }).index("by_active", ["isActive"]),
 
   // ✅ الجديد: طلبية جم يومية (رأس الفاتورة).
+  // NOTE: gymOrders — idempotencyKey handled at app-level via unique constraint search.
   gymOrders: defineTable({
     date: v.string(),                 // yyyy-MM-dd
     gymId: v.id("gymAccounts"),
@@ -938,6 +939,14 @@ export default defineSchema({
         minRedeem: v.number(),
       }),
     ),
+    // ✅ إعدادات الضريبة على مبيعات POS (قطر: افتراضي 0% حالياً — عدّلها إذا لزم)
+    //    inclusive=true → السعر شامل الضريبة (نستخرجها منه للعرض)
+    //    inclusive=false → نضيفها فوق السعر
+    posTax: v.optional(v.object({
+      pct: v.number(),
+      inclusive: v.boolean(),
+      label: v.optional(v.string()), // "VAT" أو "ضريبة"
+    })),
     // Contact Information
     phone: v.string(),
     email: v.string(),

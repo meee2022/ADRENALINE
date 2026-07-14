@@ -39,6 +39,27 @@ export const setCookingWeek = mutation({
  * ✅ حفظ حصص البرامج (كارب/بروتين/مُعامل سعرات لكل برنامج).
  *    mutation مستقلة صغيرة — نفس فلسفة setCookingWeek.
  */
+/** ✅ إعدادات ضريبة POS (Owner فقط). */
+export const setPosTax = mutation({
+  args: {
+    pct: v.number(),                // 0..100
+    inclusive: v.boolean(),         // شامل / إضافي
+    label: v.optional(v.string()),  // "VAT" / "ضريبة"
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const existing = await ctx.db.query("restaurantSettings").first();
+    const posTax = {
+      pct: Math.max(0, Math.min(100, args.pct)),
+      inclusive: args.inclusive,
+      label: args.label?.trim() || undefined,
+    };
+    if (existing) await ctx.db.patch(existing._id, { posTax } as any);
+    return { ok: true };
+  },
+});
+
 export const setProgramPortions = mutation({
   args: {
     portions: v.any(), // { DIET:{carb,protein,calFactor}, FITNESS:{...}, BULK:{...} }

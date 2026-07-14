@@ -67,3 +67,28 @@ export const redeem = mutation({
     return { redeemed: redeemable, credit, remainingPoints: available - redeemable };
   },
 });
+
+/**
+ * ✅ منح نقاط ولاء لعميل عن فاتورة POS مربوطة به.
+ *   يستخدمه POS بعد الدفع لو التذكرة عليها customerId.
+ *   يحتفظ بسجل الحركة (EARN_POS) مع رقم الفاتورة.
+ */
+export async function awardPointsForPosTicket(ctx: any, customerId: string, ticketNumber: number, total: number) {
+  const cust: any = await ctx.db.get(customerId);
+  if (!cust) return { awarded: 0 };
+  const cfg = await loyaltyConfig(ctx);
+  // نقاط لكل فاتورة كاملة (نفس منطق الاشتراك؛ يمكن تطويرها لاحقاً بنسبة من المبلغ)
+  const points = Math.max(0, Math.floor(cfg.pointsPerOrder));
+  if (points <= 0) return { awarded: 0 };
+  const history = Array.isArray(cust.loyaltyHistory) ? cust.loyaltyHistory : [];
+  await ctx.db.patch(customerId as any, {
+    loyaltyPoints: Number(cust.loyaltyPoints || 0) + points,
+    loyaltyHistory: [
+      ...history,
+      { type: "EARN_POS", points, credit: 0, note: `فاتورة POS #${ticketNumber} · ${total.toFixed(2)} ر.ق`, at: Date.now() },
+    ].slice(-50),
+    updatedAt: Date.now(),
+  });
+  return { awarded: points };
+}
+

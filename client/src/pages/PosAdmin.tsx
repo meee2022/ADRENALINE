@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-type Tab = "overview" | "cashiers" | "categories" | "items" | "reports" | "shifts";
+type Tab = "overview" | "cashiers" | "categories" | "items" | "reports" | "profit" | "audit" | "shifts";
 
 export default function PosAdmin() {
   const { language, dir } = useLanguage();
@@ -48,14 +48,16 @@ export default function PosAdmin() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pb-10">
-        <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           {([
-            ["overview",   BarChart3,   t("نظرة عامة", "Overview")],
-            ["cashiers",   Users,       t("الكاشيرون",  "Cashiers")],
-            ["categories", LayoutGrid,  t("الفئات",     "Categories")],
-            ["items",      Palette,     t("الأصناف",    "Items")],
-            ["reports",    BarChart3,   t("التقارير",   "Reports")],
-            ["shifts",     Clock,       t("الورديات",   "Shifts")],
+            ["overview",   BarChart3,    t("نظرة عامة", "Overview")],
+            ["cashiers",   Users,        t("الكاشيرون",  "Cashiers")],
+            ["categories", LayoutGrid,   t("الفئات",     "Categories")],
+            ["items",      Palette,      t("الأصناف",    "Items")],
+            ["reports",    BarChart3,    t("التقارير",   "Reports")],
+            ["profit",     TrendingUp,   t("الربحية",    "Profit")],
+            ["audit",      ShieldCheck,  t("سجل التدقيق","Audit")],
+            ["shifts",     Clock,        t("الورديات",   "Shifts")],
           ] as [Tab, any, string][]).map(([k, Icon, label]) => (
             <button
               key={k}
@@ -76,6 +78,8 @@ export default function PosAdmin() {
           {tab === "categories" && <CategoriesTab t={t} sessionToken={sessionToken} toast={toast} />}
           {tab === "items"      && <ItemsTab      t={t} sessionToken={sessionToken} toast={toast} isRtl={isRtl} />}
           {tab === "reports"    && <ReportsTab    t={t} sessionToken={sessionToken} />}
+          {tab === "profit"     && <ProfitTab     t={t} sessionToken={sessionToken} isRtl={isRtl} />}
+          {tab === "audit"      && <AuditTab      t={t} sessionToken={sessionToken} />}
           {tab === "shifts"     && <ShiftsTab     t={t} sessionToken={sessionToken} />}
         </div>
       </div>
@@ -90,6 +94,24 @@ function OverviewTab({ t, sessionToken }: any) {
   const daily = useQuery(api.posAdmin.dailySummary, { date: today, sessionToken }) as any;
   const cashiers = useQuery(api.posAdmin.listCashiers, { sessionToken }) as any[] | undefined;
   const cats = useQuery(api.posAdmin.listCategories, { sessionToken }) as any[] | undefined;
+  const settings = useQuery(api.restaurantSettings.get, {}) as any;
+  const setPosTax = useMutation(api.restaurantSettings.setPosTax);
+  const [taxPct, setTaxPct] = useState<string>("");
+  const [taxIncl, setTaxIncl] = useState(true);
+  const [taxLabel, setTaxLabel] = useState("VAT");
+  useMemo(() => {
+    if (settings?.posTax) {
+      setTaxPct(String(settings.posTax.pct));
+      setTaxIncl(!!settings.posTax.inclusive);
+      setTaxLabel(settings.posTax.label || "VAT");
+    }
+  }, [settings?.posTax]);
+  const saveTax = async () => {
+    try {
+      await setPosTax({ pct: Number(taxPct) || 0, inclusive: taxIncl, label: taxLabel, sessionToken });
+      alert(t("تم حفظ إعدادات الضريبة", "Tax settings saved"));
+    } catch (e: any) { alert(e?.message || "خطأ"); }
+  };
 
   return (
     <div className="space-y-3">
@@ -131,6 +153,42 @@ function OverviewTab({ t, sessionToken }: any) {
           </CardContent>
         </Card>
       )}
+
+      {/* ✅ إعدادات ضريبة POS */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-1">{t("إعدادات الضريبة (POS)", "POS Tax Settings")}</h3>
+          <p className="text-xs text-slate-500 mb-3">{t("تُطبَّق تلقائياً على كل فواتير نقطة البيع الجديدة.", "Applied automatically to every new POS ticket.")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("النسبة %", "Percent %")}</Label>
+              <Input type="number" step="0.1" value={taxPct} onChange={(e) => setTaxPct(e.target.value)} placeholder="0" className="h-10" />
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("مسمّى", "Label")}</Label>
+              <Input value={taxLabel} onChange={(e) => setTaxLabel(e.target.value)} placeholder="VAT" className="h-10" />
+            </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("نظام الحساب", "Mode")}</Label>
+              <select value={taxIncl ? "incl" : "excl"} onChange={(e) => setTaxIncl(e.target.value === "incl")} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                <option value="incl">{t("السعر شامل الضريبة", "Price includes tax")}</option>
+                <option value="excl">{t("الضريبة تُضاف فوق السعر", "Tax added on top")}</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <Button onClick={saveTax} className="w-full h-10 text-white font-bold" style={{ background: "#0E76AC" }}>
+                <Save className="h-4 w-4 me-1" /> {t("حفظ", "Save")}
+              </Button>
+            </div>
+          </div>
+          {settings?.posTax && (
+            <div className="mt-3 text-xs text-slate-500 font-bold">
+              {t("الوضع الحالي:", "Current:")} <b>{settings.posTax.pct}%</b> ({settings.posTax.label || "Tax"}) —
+              {settings.posTax.inclusive ? t(" شامل", " inclusive") : t(" إضافي", " on top")}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -548,6 +606,243 @@ function ShiftsTab({ t, sessionToken }: any) {
                 </tr>
               ))}
               {rows && rows.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-8">{t("مفيش ورديات", "No shifts")}</td></tr>}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Profitability + Menu Engineering ═══════════════════════════════ */
+
+const CAT_META: Record<string, { label: string; color: string; emoji: string; desc: string }> = {
+  star:      { label: "Star",       color: "#16a34a", emoji: "⭐", desc: "بيع عالي + هامش عالي — روّج له"       },
+  puzzle:    { label: "Puzzle",     color: "#7c3aed", emoji: "🧩", desc: "هامش عالي بس بيع ضعيف — سوّق ليه"    },
+  plowhorse: { label: "Plowhorse",  color: "#f59e0b", emoji: "🐴", desc: "بيع عالي بس هامش منخفض — ارفع السعر"  },
+  dog:       { label: "Dog",        color: "#dc2626", emoji: "🐕", desc: "بيع منخفض + هامش منخفض — اشطبه"       },
+  "no-cost": { label: "No cost",    color: "#94a3b8", emoji: "❓", desc: "التكلفة مش مدخّلة — املاها الأول"     },
+};
+
+function ProfitTab({ t, sessionToken, isRtl }: any) {
+  const today = new Date().toISOString().slice(0, 10);
+  const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const [from, setFrom] = useState(monthAgo);
+  const [to, setTo] = useState(today);
+  const [filterCat, setFilterCat] = useState<string>("all");
+  const report = useQuery(api.posAdmin.profitabilityReport, { from, to, sessionToken }) as any;
+
+  const items = useMemo(() => {
+    if (!report?.items) return [];
+    return filterCat === "all" ? report.items : report.items.filter((i: any) => i.category === filterCat);
+  }, [report, filterCat]);
+
+  return (
+    <div className="space-y-4">
+      {/* Filters */}
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("إلى", "To")}</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("التصنيف", "Category")}</Label>
+            <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="all">{t("الكل", "All")}</option>
+              {Object.entries(CAT_META).map(([k, m]) => (
+                <option key={k} value={k}>{m.emoji} {m.label}</option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Totals */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <QuickCard title={t("الإيراد", "Revenue")}   value={report?.totals?.revenue?.toFixed(2) ?? "—"} color="#0E76AC" icon={BarChart3} />
+        <QuickCard title={t("التكلفة", "Cost")}     value={report?.totals?.cost?.toFixed(2) ?? "—"}    color="#f59e0b" icon={BarChart3} />
+        <QuickCard title={t("الربح", "Profit")}     value={report?.totals?.profit?.toFixed(2) ?? "—"}  color="#16a34a" icon={TrendingUp} />
+        <QuickCard title={t("الهامش %", "Margin %")} value={report?.totals ? `${report.totals.marginPct}%` : "—"} color="#7c3aed" icon={TrendingUp} />
+      </div>
+
+      {/* Menu engineering counts */}
+      {report?.totals?.counts && (
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="p-4">
+            <h3 className="font-black text-slate-800 mb-3">{t("هندسة القائمة (Menu Engineering)", "Menu Engineering")}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {(["star", "puzzle", "plowhorse", "dog"] as const).map((k) => {
+                const m = CAT_META[k];
+                const n = report.totals.counts[k];
+                return (
+                  <button
+                    key={k}
+                    onClick={() => setFilterCat(k)}
+                    className={cn(
+                      "rounded-xl p-4 text-start transition-all border-2",
+                      filterCat === k ? "shadow-lg scale-[1.02]" : "hover:shadow-md"
+                    )}
+                    style={{ background: m.color + "15", borderColor: filterCat === k ? m.color : m.color + "40" }}
+                  >
+                    <div className="text-2xl mb-1">{m.emoji}</div>
+                    <div className="text-xs font-black uppercase" style={{ color: m.color }}>{m.label}</div>
+                    <div className="text-2xl font-black text-slate-900 mt-1">{n}</div>
+                    <div className="text-[10px] text-slate-600 mt-1 leading-tight">{m.desc}</div>
+                  </button>
+                );
+              })}
+            </div>
+            {report.totals.itemsWithoutCost > 0 && (
+              <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
+                ⚠ {report.totals.itemsWithoutCost} {t("صنف بدون تكلفة مُدخَلة — التصنيف مش دقيق. أضف التكلفة من", "items without cost — categorization is inaccurate. Add cost via")} <b>{t("إدارة القائمة → تعديل الوجبة", "Menu → edit meal")}</b>.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Items table */}
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <div className="overflow-auto max-h-[600px]">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
+                <tr>
+                  <th className="text-start p-3">{t("الصنف", "Item")}</th>
+                  <th className="text-center p-3">{t("الكمية", "Qty")}</th>
+                  <th className="text-end p-3">{t("الإيراد", "Revenue")}</th>
+                  <th className="text-end p-3">{t("التكلفة", "Cost")}</th>
+                  <th className="text-end p-3">{t("الربح", "Profit")}</th>
+                  <th className="text-center p-3">{t("الهامش %", "Margin %")}</th>
+                  <th className="text-center p-3">{t("التصنيف", "Class")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!report) && <tr><td colSpan={7} className="text-center py-8 text-slate-400">{t("جاري التحميل…", "Loading…")}</td></tr>}
+                {report && items.length === 0 && <tr><td colSpan={7} className="text-center py-8 text-slate-400">{t("لا توجد بيانات", "No data")}</td></tr>}
+                {items.map((i: any) => {
+                  const cat = CAT_META[i.category as keyof typeof CAT_META];
+                  return (
+                    <tr key={i.mealId} className="border-t border-slate-100 hover:bg-slate-50">
+                      <td className="p-3 font-bold">{i.name}</td>
+                      <td className="p-3 text-center font-black">{i.qty}</td>
+                      <td className="p-3 text-end font-black text-[#0E76AC]">{i.revenue.toFixed(2)}</td>
+                      <td className={cn("p-3 text-end font-bold", !i.hasCost && "text-red-500")}>
+                        {i.hasCost ? i.cost.toFixed(2) : "—"}
+                      </td>
+                      <td className={cn("p-3 text-end font-black", i.profit >= 0 ? "text-emerald-700" : "text-red-700")}>
+                        {i.hasCost ? i.profit.toFixed(2) : "—"}
+                      </td>
+                      <td className="p-3 text-center font-bold">
+                        {i.hasCost ? `${i.marginPct.toFixed(1)}%` : "—"}
+                      </td>
+                      <td className="p-3 text-center">
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: cat.color + "20", color: cat.color }}>
+                          {cat.emoji} {cat.label}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      {void isRtl}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Audit Trail ═══════════════════════════════ */
+
+const ACTION_META: Record<string, { color: string; label: string }> = {
+  VOID_TICKET:   { color: "#f59e0b", label: "إلغاء فاتورة" },
+  REFUND_TICKET: { color: "#dc2626", label: "استرجاع فاتورة" },
+};
+
+function AuditTab({ t, sessionToken }: any) {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const [from, setFrom] = useState(weekAgo);
+  const [to, setTo] = useState(today);
+  const [action, setAction] = useState<string>("");
+
+  const rows = useQuery(api.posAdmin.auditTrail, {
+    from, to,
+    action: action || undefined,
+    sessionToken,
+  }) as any[] | undefined;
+
+  return (
+    <div className="space-y-4">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("إلى", "To")}</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs font-bold text-slate-500">{t("نوع الحدث", "Action")}</Label>
+            <select value={action} onChange={(e) => setAction(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="">{t("الكل", "All")}</option>
+              <option value="VOID_TICKET">{t("إلغاء فاتورة", "Void")}</option>
+              <option value="REFUND_TICKET">{t("استرجاع فاتورة", "Refund")}</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600">
+              <tr>
+                <th className="text-start p-3">{t("الوقت", "When")}</th>
+                <th className="text-start p-3">{t("الحدث", "Action")}</th>
+                <th className="text-start p-3">{t("الفاعل", "Actor")}</th>
+                <th className="text-start p-3">{t("الفاتورة", "Ticket")}</th>
+                <th className="text-end p-3">{t("المبلغ", "Amount")}</th>
+                <th className="text-start p-3">{t("السبب/الملاحظة", "Reason")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(!rows) && <tr><td colSpan={6} className="text-center py-8 text-slate-400">{t("جاري التحميل…", "Loading…")}</td></tr>}
+              {rows && rows.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-slate-400">{t("لا توجد أحداث في هذه الفترة", "No events in this period")}</td></tr>}
+              {(rows || []).map((r: any) => {
+                const meta = ACTION_META[r.action] || { color: "#64748b", label: r.action };
+                const d = r.details || {};
+                return (
+                  <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="p-3 text-xs text-slate-600 font-mono whitespace-nowrap">
+                      {new Date(r.createdAt).toLocaleString()}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded-full" style={{ background: meta.color + "20", color: meta.color }}>
+                        {meta.label}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <div className="font-bold">{r.actorName || "—"}</div>
+                      <div className="text-[10px] text-slate-500">{r.actorRole || ""}</div>
+                    </td>
+                    <td className="p-3 font-bold">#{d.ticketNumber || "—"}</td>
+                    <td className="p-3 text-end font-black text-[#0E76AC]">
+                      {d.total != null ? Number(d.total).toFixed(2) : "—"}
+                    </td>
+                    <td className="p-3 text-xs text-slate-600">{d.reason || d.paymentMethod || "—"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </CardContent>

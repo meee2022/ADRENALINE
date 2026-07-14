@@ -47,6 +47,7 @@ export default function PublicMealsManagement() {
     tags: "",
     ingredients: "",
     priceQAR: "",
+    costQAR: "",
     isActive: true,
     sortOrder: "999",
     // NEW: Scheduling
@@ -76,6 +77,7 @@ export default function PublicMealsManagement() {
       tags: "",
       ingredients: "",
       priceQAR: "",
+      costQAR: "",
       isActive: true,
       sortOrder: "999",
       weeks: [],
@@ -104,6 +106,7 @@ export default function PublicMealsManagement() {
       tags: meal.tags?.join(", ") || "",
       ingredients: meal.ingredients?.join(", ") || "",
       priceQAR: meal.priceQAR.toString(),
+      costQAR: meal.costQAR != null ? String(meal.costQAR) : "",
       isActive: meal.isActive,
       sortOrder: meal.sortOrder.toString(),
       weeks: meal.weeks || [],
@@ -152,6 +155,7 @@ export default function PublicMealsManagement() {
         tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean),
         ingredients: formData.ingredients.split(",").map((i) => i.trim()).filter(Boolean),
         priceQAR: parseFloat(formData.priceQAR) || 0,
+        costQAR: formData.costQAR ? parseFloat(formData.costQAR) : undefined,
         sortOrder: parseInt(formData.sortOrder) || 999,
         isActive: formData.isActive,
         weeks: formData.weeks.length > 0 ? formData.weeks : undefined,
@@ -449,6 +453,16 @@ export default function PublicMealsManagement() {
                   value={formData.priceQAR}
                   onChange={(e) => setFormData({ ...formData, priceQAR: e.target.value })}
                   placeholder="45.00"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("التكلفة (QAR) — لتقارير الربحية", "Cost (QAR) — for profit reports")}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={formData.costQAR}
+                  onChange={(e) => setFormData({ ...formData, costQAR: e.target.value })}
+                  placeholder="15.00"
                 />
               </div>
               <div className="space-y-2">

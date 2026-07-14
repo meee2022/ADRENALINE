@@ -38,7 +38,15 @@ export default function PosSales() {
   const [activeCat, setActiveCat] = useState<string>("all");
   const [orderType, setOrderType] = useState<OrderType>("dine_in");
   const [customerName, setCustomerName] = useState("");
+  const [linkedCustomer, setLinkedCustomer] = useState<any | null>(null);
   const [discountPct, setDiscountPct] = useState<number>(0);
+
+  // ✅ لو المستخدم كتب رقم هاتف (6+ أرقام)، نبحث عن مشترك ونربطه تلقائياً
+  const phoneQ = customerName.replace(/\D/g, "");
+  const foundCustomer = useQuery(
+    api.pos.findCustomerByPhone,
+    token && phoneQ.length >= 6 ? { token, phone: phoneQ } : "skip"
+  ) as any;
   const [showCharge, setShowCharge] = useState(false);
   const [showReceiptId, setShowReceiptId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -104,13 +112,15 @@ export default function PosSales() {
         })),
         paymentMethod, cashReceived,
         orderType,
-        customerName: customerName.trim() || undefined,
+        customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined,
+        customerId: linkedCustomer?.id as any,
         discount: totals.discount || undefined,
         idempotencyKey: idem,
       });
       clearCart();
       setShowCharge(false);
       setCustomerName("");
+      setLinkedCustomer(null);
       setDiscountPct(0);
       setShowReceiptId(r.id);
     } catch (e: any) {
@@ -165,16 +175,39 @@ export default function PosSales() {
             })}
           </div>
 
-          {/* Customer name */}
+          {/* Customer name + auto-link by phone */}
           <div className="relative mt-3">
             <User2 className="absolute h-4 w-4 top-3 start-3 text-slate-500 pointer-events-none" />
             <input
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              value={linkedCustomer ? linkedCustomer.fullName : customerName}
+              onChange={(e) => { setCustomerName(e.target.value); if (linkedCustomer) setLinkedCustomer(null); }}
               placeholder="اسم أو رقم العميل (اختياري)"
-              className="w-full h-10 ps-9 pe-3 rounded-lg text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none"
-              style={{ background: "#0B1220", border: "1px solid #1B2A48" }}
+              className="w-full h-10 ps-9 pe-16 rounded-lg text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none"
+              style={{ background: "#0B1220", border: linkedCustomer ? "1px solid #059669" : "1px solid #1B2A48" }}
             />
+            {linkedCustomer && (
+              <button onClick={() => { setLinkedCustomer(null); setCustomerName(""); }} className="absolute top-2 end-2 text-[10px] font-bold text-red-400 hover:bg-white/5 rounded px-1.5 py-1">
+                إلغاء الربط
+              </button>
+            )}
+            {/* لو لقى مشترك بنفس الرقم يعرض bar لربطه */}
+            {foundCustomer && !linkedCustomer && (
+              <button
+                onClick={() => setLinkedCustomer(foundCustomer)}
+                className="mt-2 w-full rounded-lg p-2 flex items-center justify-between text-[11px] font-bold hover:bg-emerald-500/10 transition-colors"
+                style={{ background: "#0d1f30", border: "1px solid #065f46" }}
+              >
+                <span className="text-emerald-300">✓ {foundCustomer.fullName}</span>
+                <span className="text-amber-300">{foundCustomer.loyaltyPoints} نقطة · اضغط للربط</span>
+              </button>
+            )}
+            {linkedCustomer && (
+              <div className="mt-2 rounded-lg p-2 flex items-center justify-between text-[11px] font-bold"
+                   style={{ background: "#0a1d17", border: "1px solid #065f46" }}>
+                <span className="text-emerald-300">🎁 هيكسب نقاط ولاء تلقائياً</span>
+                <span className="text-amber-300">{linkedCustomer.loyaltyPoints} نقطة حالياً</span>
+              </div>
+            )}
           </div>
         </div>
 

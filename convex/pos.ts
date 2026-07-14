@@ -7,6 +7,7 @@ import { v } from "convex/values";
 import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
+import { awardPointsForPosTicket } from "./loyalty";
 
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
 
@@ -134,6 +135,28 @@ export const listItems = query({
   },
 });
 
+/** ✅ بحث عن مشترك برقم الهاتف (لربط الفاتورة بالعميل ومنح نقاط الولاء). */
+export const findCustomerByPhone = query({
+  args: { token: v.string(), phone: v.string() },
+  handler: async (ctx, { token, phone }) => {
+    await requireCashier(ctx, token);
+    const normalized = phone.replace(/\D/g, "");
+    if (normalized.length < 6) return null;
+    const c: any = await ctx.db
+      .query("customers")
+      .withIndex("by_phone", (q) => q.eq("phone", normalized))
+      .first();
+    if (!c) return null;
+    return {
+      id: String(c._id),
+      fullName: c.fullName,
+      phone: c.phone,
+      loyaltyPoints: Number(c.loyaltyPoints || 0),
+      loyaltyCredit: Number(c.loyaltyCredit || 0),
+    };
+  },
+});
+
 /* ═══════════════════════════════ Shift ═══════════════════════════════ */
 
 /** الوردية المفتوحة الحالية للكاشير (لو موجودة). */
@@ -224,12 +247,34 @@ async function nextTicketNumber(ctx: MutationCtx): Promise<number> {
 
 type LineInput = { mealId?: string; name: string; qty: number; unitPrice: number; notes?: string };
 
-async function computeTotals(lines: LineInput[], discount = 0) {
-  let subtotal = 0;
-  for (const l of lines) { subtotal += l.qty * l.unitPrice; }
-  subtotal = Math.round(subtotal * 100) / 100;
-  const total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
-  return { subtotal, discount: Math.round(discount * 100) / 100, tax: 0, total };
+/** يحسب المجاميع بحساب إعدادات الضريبة (posTax) لو مضبوطة. */
+async function computeTotals(ctx: MutationCtx, lines: LineInput[], discount = 0) {
+  let subtotalRaw = 0;
+  for (const l of lines) { subtotalRaw += l.qty * l.unitPrice; }
+  subtotalRaw = Math.round(subtotalRaw * 100) / 100;
+
+  const settings: any = await ctx.db.query("restaurantSettings").first();
+  const taxCfg = settings?.posTax;
+  const taxPct = Number(taxCfg?.pct ?? 0);
+  const inclusive = !!taxCfg?.inclusive;
+
+  let subtotal = subtotalRaw, tax = 0, total = 0;
+  if (taxPct > 0) {
+    if (inclusive) {
+      // السعر شامل الضريبة — نستخرجها منه
+      subtotal = Math.round((subtotalRaw / (1 + taxPct / 100)) * 100) / 100;
+      tax = Math.round((subtotalRaw - subtotal) * 100) / 100;
+      total = Math.max(0, Math.round((subtotalRaw - discount) * 100) / 100);
+    } else {
+      // السعر بدون الضريبة — نضيفها فوق
+      const afterDiscount = Math.max(0, subtotal - discount);
+      tax = Math.round(afterDiscount * (taxPct / 100) * 100) / 100;
+      total = Math.round((afterDiscount + tax) * 100) / 100;
+    }
+  } else {
+    total = Math.max(0, Math.round((subtotal - discount) * 100) / 100);
+  }
+  return { subtotal, discount: Math.round(discount * 100) / 100, tax, total };
 }
 
 /** إنشاء فاتورة جديدة (بحالة OPEN — معلّقة، مش مدفوعة بعد). */
@@ -255,7 +300,7 @@ export const createTicket = mutation({
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
     if (args.lines.length === 0) throw new Error("لازم تضيف صنف واحد على الأقل");
-    const totals = await computeTotals(args.lines as any, 0);
+    const totals = await computeTotals(ctx, args.lines as any, 0);
     const num = await nextTicketNumber(ctx);
     const id = await ctx.db.insert("posTickets", {
       ticketNumber: num,
@@ -365,7 +410,7 @@ export const updateTicketLines = mutation({
     if (!t || t.status !== "OPEN") throw new Error("الفاتورة غير قابلة للتعديل");
     const old = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
     for (const l of old) await ctx.db.delete(l._id);
-    const totals = await computeTotals(args.lines as any, args.discount || 0);
+    const totals = await computeTotals(ctx, args.lines as any, args.discount || 0);
     for (const l of args.lines) {
       await ctx.db.insert("posTicketLines", {
         ticketId: args.ticketId,
@@ -409,7 +454,7 @@ export const chargeTicket = mutation({
     if (t.status !== "OPEN") throw new Error("الفاتورة مدفوعة بالفعل");
     // ✅ إعادة الحساب مع خصم جديد لو اتغيّر
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
-    const totals = await computeTotals(lines.map((l: any) => ({ qty: l.qty, unitPrice: l.unitPrice, name: l.name })) as any, args.discount ?? t.discount ?? 0);
+    const totals = await computeTotals(ctx, lines.map((l: any) => ({ qty: l.qty, unitPrice: l.unitPrice, name: l.name })) as any, args.discount ?? t.discount ?? 0);
     const change = args.paymentMethod === "cash" && args.cashReceived != null
       ? Math.round((args.cashReceived - totals.total) * 100) / 100
       : undefined;
@@ -459,6 +504,7 @@ export const quickSale = mutation({
     discount: v.optional(v.number()),
     orderType: v.optional(v.string()),
     customerName: v.optional(v.string()),
+    customerId: v.optional(v.id("customers")), // ✅ اربط الفاتورة بعميل لمنح نقاط الولاء
     notes: v.optional(v.string()),
     // ✅ مفتاح idempotency: لو الطلب ده اتبعت مرتين (double-click / retry شبكة)
     //    نرجّع نفس نتيجة الفاتورة الأصلية بدل ما نعمل واحدة تانية.
@@ -483,7 +529,7 @@ export const quickSale = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    const totals = await computeTotals(args.lines as any, args.discount || 0);
+    const totals = await computeTotals(ctx, args.lines as any, args.discount || 0);
     const isStaff = args.paymentMethod === "staff";
     const change = args.paymentMethod === "cash" && args.cashReceived != null
       ? Math.round((args.cashReceived - totals.total) * 100) / 100
@@ -504,6 +550,7 @@ export const quickSale = mutation({
       cashReceived: args.cashReceived,
       changeAmount: change,
       customerName: args.customerName?.trim() || undefined,
+      customerId: args.customerId,
       notes: args.notes?.trim() || undefined,
       isNonRevenue: isStaff,
       idempotencyKey: args.idempotencyKey,
@@ -528,7 +575,15 @@ export const quickSale = mutation({
         ticketsCount: shift.ticketsCount + 1,
       });
     }
-    return { id: String(id), ticketNumber: num, total: totals.total, change };
+    // ✅ نقاط الولاء للعميل المربوط (لو موجود ومش فاتورة موظف/غير إيراد)
+    let loyaltyAwarded = 0;
+    if (args.customerId && !isStaff) {
+      try {
+        const r = await awardPointsForPosTicket(ctx, String(args.customerId), num, totals.total);
+        loyaltyAwarded = r.awarded;
+      } catch { /* fail-safe: لا نمنع البيع بسبب الولاء */ }
+    }
+    return { id: String(id), ticketNumber: num, total: totals.total, change, loyaltyAwarded };
   },
 });
 
