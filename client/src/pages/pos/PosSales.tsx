@@ -89,7 +89,13 @@ export default function PosSales() {
     try {
       const r: any = await quickSale({
         token,
-        lines: cart.map((l: any) => ({ mealId: l.mealId as any, name: l.name, qty: l.qty, unitPrice: l.unitPrice })),
+        lines: cart.map((l: any) => ({
+          // ✅ Convex لا يقبل null لـ v.optional(v.id) — يجب إسقاط الحقل نهائياً
+          ...(l.mealId ? { mealId: l.mealId as any } : {}),
+          name: l.name,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+        })),
         paymentMethod,
         cashReceived,
       });
