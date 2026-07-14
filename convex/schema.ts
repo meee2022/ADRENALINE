@@ -531,6 +531,9 @@ export default defineSchema({
     tags: v.array(v.string()), // ["غني بالبروتين", "قليل الكربوهيدرات"]
     ingredients: v.array(v.string()),
     priceQAR: v.number(),
+    // ✅ سعر مؤقّت للجم (اختياري). لو موجود يُستخدم كما هو في فواتير الجم؛
+    //    لو غير موجود يُحسب من priceQAR بخصم الجم (gymAccounts.discountPct).
+    gymPrice: v.optional(v.number()),
     isActive: v.boolean(),
     sortOrder: v.number(),
     // Scheduling fields
@@ -732,6 +735,7 @@ export default defineSchema({
    *    كل سجل: التاريخ، اسم الجم، عدد الوجبات، سعر بيع الوجبة، والإجمالي.
    *    يُجمَّع أسبوعيًا/شهريًا لحصر كم وجبة راحت وكم إيراد.
    */
+  // ⚠️ القديم — يُبقى للتوافق الرجعي مع سجلات مسبقة. نضيف تحته جداول تفصيلية جديدة.
   gymSales: defineTable({
     date: v.string(),                 // yyyy-MM-dd
     gymName: v.optional(v.string()),  // اسم الجم/الصالة
@@ -742,6 +746,53 @@ export default defineSchema({
     createdBy: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_date", ["date"]),
+
+  // ✅ الجديد: قائمة الجمات (يبدأ بواحد، قابل للإضافة).
+  gymAccounts: defineTable({
+    name: v.string(),
+    address: v.optional(v.string()),
+    contactName: v.optional(v.string()),
+    contactPhone: v.optional(v.string()),
+    discountPct: v.number(), // نسبة الخصم على سعر المنيو (0..100). افتراضي 20.
+    notes: v.optional(v.string()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_active", ["isActive"]),
+
+  // ✅ الجديد: طلبية جم يومية (رأس الفاتورة).
+  gymOrders: defineTable({
+    date: v.string(),                 // yyyy-MM-dd
+    gymId: v.id("gymAccounts"),
+    discountPct: v.number(),          // خصم مطبّق (يُنسخ من gymAccounts وقت الحفظ)
+    subtotal: v.number(),              // مجموع أسعار المنيو قبل الخصم
+    discountAmount: v.number(),        // قيمة الخصم بالريال
+    total: v.number(),                 // الصافي المستحق = subtotal - discountAmount
+    mealsCount: v.number(),            // إجمالي الوجبات في الطلبية
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_date", ["date"])
+    .index("by_gym_date", ["gymId", "date"]),
+
+  // ✅ الجديد: أسطر تفصيلية للطلبية.
+  gymOrderLines: defineTable({
+    orderId: v.id("gymOrders"),
+    date: v.string(),                  // مكرّر من الطلبية عشان استعلامات التقارير السريعة
+    gymId: v.id("gymAccounts"),
+    mealId: v.optional(v.id("publicMeals")),
+    mealNameEn: v.optional(v.string()),
+    mealNameAr: v.optional(v.string()),
+    qty: v.number(),
+    listPrice: v.number(),             // السعر الأصلي من المنيو
+    unitPrice: v.number(),             // السعر الفعلي بعد الخصم/gymPrice
+    lineTotal: v.number(),             // qty * unitPrice
+  })
+    .index("by_order", ["orderId"])
+    .index("by_meal_date", ["mealId", "date"])
+    .index("by_date", ["date"]),
 
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({

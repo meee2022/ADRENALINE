@@ -1,10 +1,9 @@
 /**
  * @file client/src/pages/GymSales.tsx
- * @description مبيعات الجم بالجملة — تسجيل الوجبات المورَّدة يوميًا للجم (زي نقطة بيع)
- *   وحصرها أسبوعيًا/شهريًا: كم وجبة راحت وكم الإيراد.
+ * @description مبيعات الجم — POS مقسّم بالتبويبات: نقطة بيع + سجل + تقارير + إدارة الجمات + أسعار الجم.
  * @convex convex/gymSales.ts
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
@@ -14,222 +13,765 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Dumbbell, Trash2, Plus, TrendingUp, Utensils, Wallet } from "lucide-react";
+import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
-/** بداية الأسبوع (السبت) بصيغة yyyy-MM-dd */
-function weekStart(): string {
-  const d = new Date();
-  const back = (d.getDay() + 1) % 7; // السبت=6 → 0
-  d.setDate(d.getDate() - back);
-  return d.toISOString().slice(0, 10);
-}
-function monthStart(): string {
-  return todayStr().slice(0, 7) + "-01";
-}
+const thisMonth = () => todayStr().slice(0, 7);
 
-type Period = "today" | "week" | "month" | "custom";
+type Tab = "pos" | "history" | "reports" | "prices" | "gyms";
+type CatKey = "breakfast" | "lunch" | "dinner" | "salad" | "snack" | "all";
+
+const CAT_META: Record<CatKey, { ar: string; en: string; icon: any; color: string }> = {
+  all:       { ar: "الكل",   en: "All",       icon: Utensils, color: "#0E76AC" },
+  breakfast: { ar: "فطور",  en: "Breakfast", icon: Coffee,   color: "#f59e0b" },
+  lunch:     { ar: "غداء",  en: "Lunch",     icon: ChefHat,  color: "#16a34a" },
+  dinner:    { ar: "عشاء",  en: "Dinner",    icon: Utensils, color: "#7c3aed" },
+  salad:     { ar: "سلطة",  en: "Salad",     icon: Salad,    color: "#0891b2" },
+  snack:     { ar: "سناك",  en: "Snack",     icon: Cookie,   color: "#dc2626" },
+};
+
+type CartLine = {
+  mealId: string | null;
+  nameEn: string;
+  nameAr: string;
+  qty: number;
+  listPrice: number;
+  unitPrice: number;
+};
 
 export default function GymSales() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const { toast } = useToast();
 
-  const [period, setPeriod] = useState<Period>("month");
-  const [customFrom, setCustomFrom] = useState(monthStart());
-  const [customTo, setCustomTo] = useState(todayStr());
+  const [tab, setTab] = useState<Tab>("pos");
+  const gyms = useQuery(api.gymSales.listGyms, { sessionToken }) as any[] | undefined;
+  const [selectedGymId, setSelectedGymId] = useState<string | undefined>(undefined);
 
-  const { from, to } = useMemo(() => {
-    if (period === "today") return { from: todayStr(), to: todayStr() };
-    if (period === "week") return { from: weekStart(), to: todayStr() };
-    if (period === "month") return { from: monthStart(), to: todayStr() };
-    return { from: customFrom, to: customTo };
-  }, [period, customFrom, customTo]);
+  useEffect(() => {
+    if (!selectedGymId && gyms && gyms.length > 0) setSelectedGymId(gyms[0].id);
+  }, [gyms, selectedGymId]);
 
-  const data = useQuery(api.gymSales.list, { from, to, sessionToken }) as any;
-  const addM = useMutation(api.gymSales.add);
-  const removeM = useMutation(api.gymSales.remove);
-
-  // نموذج الإضافة
-  const [date, setDate] = useState(todayStr());
-  const [gymName, setGymName] = useState("");
-  const [meals, setMeals] = useState("");
-  const [unitPrice, setUnitPrice] = useState("");
-  const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const linePreview = (Number(meals) || 0) * (Number(unitPrice) || 0);
-
-  const submit = async () => {
-    const m = Number(meals) || 0;
-    if (m <= 0) { alert(t("اكتب عدد وجبات صحيح", "Enter a valid meal count")); return; }
-    setBusy(true);
-    try {
-      await addM({
-        date,
-        gymName: gymName.trim() || undefined,
-        meals: m,
-        unitPrice: Number(unitPrice) || 0,
-        notes: notes.trim() || undefined,
-        sessionToken,
-      });
-      setMeals(""); setNotes("");
-      // نسيب اسم الجم والسعر عشان التوريد اليومي المتكرر
-    } catch (e: any) {
-      alert(e?.message || t("تعذّر الحفظ", "Save failed"));
-    } finally { setBusy(false); }
-  };
-
-  const del = async (id: string) => {
-    if (!confirm(t("حذف هذا السجل؟", "Delete this record?"))) return;
-    try { await removeM({ id: id as any, sessionToken }); } catch (e) { console.error(e); }
-  };
-
-  const PERIODS: { key: Period; ar: string; en: string }[] = [
-    { key: "today", ar: "اليوم", en: "Today" },
-    { key: "week", ar: "هذا الأسبوع", en: "This week" },
-    { key: "month", ar: "هذا الشهر", en: "This month" },
-    { key: "custom", ar: "مخصّص", en: "Custom" },
-  ];
+  const noGyms = gyms && gyms.length === 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-5" dir={isRtl ? "rtl" : "ltr"}>
-      <DashboardHeader
-        icon={<Dumbbell />}
-        titleAr="مبيعات الجم"
-        titleEn="Gym Sales"
-        subtitleAr="حصر الوجبات المورَّدة للجم أسبوعيًا وشهريًا"
-        subtitleEn="Tally meals delivered to the gym weekly & monthly"
-      />
+    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40">
+      <div className="max-w-7xl mx-auto px-4 pt-4">
+        <DashboardHeader
+          icon={<Dumbbell className="h-6 w-6" />}
+          titleAr="مبيعات الجم"
+          titleEn="Gym Sales"
+          subtitleAr="نقطة بيع + تقارير"
+          subtitleEn="POS + reports"
+        />
+      </div>
 
-      {/* نموذج التوريد */}
-      <Card>
-        <CardContent className="p-4 md:p-5">
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
-            <div className="col-span-1">
-              <Label className="text-xs text-slate-500">{t("التاريخ", "Date")}</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs text-slate-500">{t("اسم الجم", "Gym")}</Label>
-              <Input value={gymName} onChange={(e) => setGymName(e.target.value)} placeholder={t("اختياري", "optional")} />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs text-slate-500">{t("عدد الوجبات", "Meals")}</Label>
-              <Input type="number" inputMode="numeric" value={meals} onChange={(e) => setMeals(e.target.value)} placeholder="0" />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs text-slate-500">{t("سعر الوجبة", "Unit price")}</Label>
-              <Input type="number" inputMode="decimal" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} placeholder={t("ر.ق", "QAR")} />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs text-slate-500">{t("ملاحظات", "Notes")}</Label>
-              <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("اختياري", "optional")} />
-            </div>
-            <div className="col-span-1">
-              <Button onClick={submit} disabled={busy} className="w-full h-10 bg-[#3cc4f0] hover:bg-[#2bb0dc] text-[#0f1516] font-bold">
-                <Plus className="h-4 w-4 mr-1" />{t("إضافة", "Add")}
+      <div className="max-w-7xl mx-auto px-4 pb-10">
+        {/* Tabs */}
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
+          {([
+            ["pos",     Receipt,       t("نقطة البيع",  "POS")],
+            ["history", ClipboardList, t("السجل",       "History")],
+            ["reports", BarChart3,     t("التقارير",    "Reports")],
+            ["prices",  Settings,      t("أسعار الجم",  "Gym Prices")],
+            ["gyms",    Building2,     t("الجمات",      "Gyms")],
+          ] as [Tab, any, string][]).map(([k, Icon, label]) => (
+            <button
+              key={k}
+              onClick={() => setTab(k)}
+              className={cn(
+                "flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold transition-all",
+                tab === k ? "bg-[#0E76AC] text-white shadow-md" : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
+              )}
+            >
+              <Icon className="h-4 w-4" /> {label}
+            </button>
+          ))}
+        </div>
+
+        {/* No gyms yet */}
+        {noGyms && tab !== "gyms" && (
+          <Card className="rounded-2xl mt-4 border-amber-200 bg-amber-50">
+            <CardContent className="p-5 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-amber-800 font-bold">{t("لسه ما ضفتش جم — ابدأ من تبويب «الجمات»", "No gym yet — start from the «Gyms» tab")}</p>
+              <Button onClick={() => setTab("gyms")} style={{ background: "#0E76AC", color: "#fff" }}>
+                <Plus className="h-4 w-4 mr-1" /> {t("أضف جم", "Add gym")}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="mt-4">
+          {tab === "pos"     && <PosTab     isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
+          {tab === "history" && <HistoryTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
+          {tab === "reports" && <ReportsTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
+          {tab === "prices"  && <PricesTab  isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
+          {tab === "gyms"    && <GymsTab    isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} toast={toast} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ POS Tab ═══════════════════════════════ */
+
+function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
+  const [date, setDate] = useState(todayStr());
+  const [notes, setNotes] = useState("");
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState<CatKey>("all");
+  const [saving, setSaving] = useState(false);
+
+  const meals = useQuery(
+    api.gymSales.listMealsForGym,
+    selectedGymId ? { gymId: selectedGymId as any, sessionToken } : "skip"
+  ) as any[] | undefined;
+  const createOrder = useMutation(api.gymSales.createOrder);
+
+  const currentGym = gyms.find((g: any) => g.id === selectedGymId);
+
+  const filtered = useMemo(() => {
+    if (!meals) return [];
+    const qq = q.trim().toLowerCase();
+    return meals.filter((m: any) => {
+      if (cat !== "all" && m.category !== cat) return false;
+      if (!qq) return true;
+      return String(m.nameEn).toLowerCase().includes(qq) || String(m.nameAr).toLowerCase().includes(qq);
+    });
+  }, [meals, cat, q]);
+
+  const addToCart = (m: any) => {
+    setCart((prev) => {
+      const idx = prev.findIndex((l) => l.mealId === m.id);
+      if (idx >= 0) {
+        const cp = [...prev]; cp[idx] = { ...cp[idx], qty: cp[idx].qty + 1 }; return cp;
+      }
+      return [...prev, { mealId: m.id, nameEn: m.nameEn, nameAr: m.nameAr, qty: 1, listPrice: m.listPrice, unitPrice: m.effectivePrice }];
+    });
+  };
+
+  const setLineQty = (i: number, qty: number) => setCart((p) => {
+    const cp = [...p]; cp[i] = { ...cp[i], qty: Math.max(0, qty) }; return cp.filter((l) => l.qty > 0);
+  });
+  const setLinePrice = (i: number, price: number) => setCart((p) => {
+    const cp = [...p]; cp[i] = { ...cp[i], unitPrice: Math.max(0, price) }; return cp;
+  });
+  const removeLine = (i: number) => setCart((p) => p.filter((_, k) => k !== i));
+
+  const totals = useMemo(() => {
+    let subtotal = 0, total = 0, mealsCount = 0;
+    for (const l of cart) {
+      subtotal += l.listPrice * l.qty;
+      total += l.unitPrice * l.qty;
+      mealsCount += l.qty;
+    }
+    return {
+      subtotal: Math.round(subtotal * 100) / 100,
+      total: Math.round(total * 100) / 100,
+      discount: Math.round((subtotal - total) * 100) / 100,
+      mealsCount,
+    };
+  }, [cart]);
+
+  const save = async () => {
+    if (!selectedGymId) return toast({ title: t("اختر الجم", "Select a gym") });
+    if (cart.length === 0) return toast({ title: t("أضف وجبة على الأقل", "Add at least one item") });
+    setSaving(true);
+    try {
+      await createOrder({
+        date,
+        gymId: selectedGymId as any,
+        lines: cart.map((l) => ({
+          mealId: l.mealId as any,
+          mealNameEn: l.nameEn,
+          mealNameAr: l.nameAr,
+          qty: l.qty,
+          listPrice: l.listPrice,
+          unitPrice: l.unitPrice,
+        })),
+        notes: notes || undefined,
+        sessionToken,
+      });
+      toast({ title: t("تم حفظ الطلبية ✓", "Order saved ✓") });
+      setCart([]); setNotes("");
+    } catch (e: any) {
+      toast({ title: t("فشل الحفظ", "Save failed"), description: e?.message });
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Left: meal grid */}
+      <div className="lg:col-span-2 space-y-3">
+        {/* Header controls */}
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs text-slate-500 font-bold">{t("التاريخ", "Date")}</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="h-10" />
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500 font-bold">{t("الجم", "Gym")}</Label>
+              <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs text-slate-500 font-bold">{t("الخصم المطبَّق", "Applied discount")}</Label>
+              <div className="h-10 flex items-center px-3 rounded-lg bg-emerald-50 border border-emerald-200 font-black text-emerald-700 text-sm">
+                {currentGym ? `${currentGym.discountPct}%` : "—"}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Search + categories */}
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="p-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute h-4 w-4 top-3 start-3 text-slate-400 pointer-events-none" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث عن وجبة…", "Search meals…")} className="h-10 ps-9" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(CAT_META) as CatKey[]).map((k) => {
+                const M = CAT_META[k]; const Icon = M.icon; const active = cat === k;
+                return (
+                  <button
+                    key={k}
+                    onClick={() => setCat(k)}
+                    className={cn(
+                      "flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-bold border transition-all",
+                      active ? "text-white shadow-md" : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                    )}
+                    style={active ? { background: M.color, borderColor: M.color } : {}}
+                  >
+                    <Icon className="h-3.5 w-3.5" /> {isRtl ? M.ar : M.en}
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+          {(!meals) && <p className="col-span-full text-center text-sm text-slate-500 py-8">{t("جاري التحميل…", "Loading…")}</p>}
+          {meals && filtered.length === 0 && <p className="col-span-full text-center text-sm text-slate-500 py-8">{t("لا توجد وجبات مطابقة", "No matching meals")}</p>}
+          {filtered.map((m: any) => (
+            <button
+              key={m.id}
+              onClick={() => addToCart(m)}
+              className="rounded-xl bg-white border border-slate-200 hover:border-[#0E76AC] hover:shadow-md active:scale-95 transition-all p-3 text-start"
+            >
+              <p className="font-bold text-sm text-slate-900 line-clamp-2 min-h-[2.5rem]">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</p>
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: (CAT_META[m.category as CatKey] || CAT_META.all).color + "20", color: (CAT_META[m.category as CatKey] || CAT_META.all).color }}>
+                  {isRtl ? (CAT_META[m.category as CatKey]?.ar || m.category) : (CAT_META[m.category as CatKey]?.en || m.category)}
+                </span>
+                <span className="text-sm font-black text-[#0E76AC]">{m.effectivePrice.toFixed(2)}</span>
+              </div>
+              {m.isCustom ? (
+                <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">{t("سعر جم مؤقت", "gym price")}</span>
+              ) : m.listPrice === 0 ? (
+                <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-50 text-red-700">{t("لا يوجد سعر", "no price")}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Right: cart */}
+      <div className="lg:col-span-1">
+        <Card className="rounded-2xl border-slate-200 lg:sticky lg:top-4">
+          <CardContent className="p-4 space-y-3">
+            <h3 className="font-black text-slate-900 flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-[#0E76AC]" /> {t("الفاتورة", "Invoice")}
+              <span className="ms-auto text-xs font-bold text-slate-500">{cart.length} {t("صنف", "items")} · {totals.mealsCount} {t("وجبة", "meals")}</span>
+            </h3>
+
+            <div className="max-h-[420px] overflow-y-auto -mx-2 px-2 divide-y divide-slate-100">
+              {cart.length === 0 && (
+                <p className="text-sm text-slate-400 text-center py-8">{t("اضغط على وجبة لإضافتها", "Click a meal to add it")}</p>
+              )}
+              {cart.map((l, i) => (
+                <div key={i} className="py-2 flex flex-col gap-1">
+                  <div className="flex items-start gap-2">
+                    <p className="flex-1 min-w-0 font-bold text-sm text-slate-900 truncate">{isRtl ? (l.nameAr || l.nameEn) : (l.nameEn || l.nameAr)}</p>
+                    <button onClick={() => removeLine(i)} className="text-red-500 hover:bg-red-50 rounded p-0.5"><X className="h-4 w-4" /></button>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-0.5 border border-slate-200 rounded-lg">
+                      <button onClick={() => setLineQty(i, l.qty - 1)} className="w-7 h-7 text-slate-600 hover:bg-slate-100 rounded-s-lg">−</button>
+                      <input type="number" value={l.qty} onChange={(e) => setLineQty(i, Number(e.target.value) || 0)} className="w-10 h-7 text-center bg-transparent font-black text-sm" />
+                      <button onClick={() => setLineQty(i, l.qty + 1)} className="w-7 h-7 text-slate-600 hover:bg-slate-100 rounded-e-lg">+</button>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500">
+                      × <input type="number" step="0.01" value={l.unitPrice} onChange={(e) => setLinePrice(i, Number(e.target.value) || 0)} className="w-14 h-7 text-center border border-slate-200 rounded font-bold" />
+                    </div>
+                    <span className="ms-auto font-black text-[#0E76AC] text-sm">{(l.qty * l.unitPrice).toFixed(2)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-slate-200 pt-3 space-y-1 text-sm">
+              <div className="flex justify-between text-slate-600"><span>{t("الإجمالي قبل الخصم", "Subtotal")}</span><span className="font-bold">{totals.subtotal.toFixed(2)}</span></div>
+              <div className="flex justify-between text-emerald-700"><span>{t("الخصم", "Discount")}</span><span className="font-bold">− {totals.discount.toFixed(2)}</span></div>
+              <div className="flex justify-between text-lg font-black text-[#0E76AC] pt-1"><span>{t("الصافي المستحق", "Total due")}</span><span>{totals.total.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
+            </div>
+
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("ملاحظات (اختياري)", "Notes (optional)")} className="text-sm" />
+
+            <Button disabled={saving || cart.length === 0} onClick={save} className="w-full h-11 text-white font-black" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+              <Save className="h-4 w-4 me-2" />{saving ? t("جاري الحفظ…", "Saving…") : t("احفظ الطلبية", "Save order")}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ History Tab ═══════════════════════════════ */
+
+function HistoryTab({ isRtl, t, sessionToken, gyms }: any) {
+  const [from, setFrom] = useState(thisMonth() + "-01");
+  const [to, setTo] = useState(todayStr());
+  const [gymId, setGymId] = useState<string>("");
+  const [openId, setOpenId] = useState<string | null>(null);
+  const list = useQuery(api.gymSales.listOrders, { from, to, gymId: (gymId || undefined) as any, sessionToken }) as any;
+  const openOrder = useQuery(api.gymSales.getOrder, openId ? { orderId: openId as any, sessionToken } : "skip") as any;
+  const deleteOrder = useMutation(api.gymSales.deleteOrder);
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("إلى", "To")}</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
+            <select value={gymId} onChange={(e) => setGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="">{t("كل الجمات", "All gyms")}</option>
+              {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <div className="w-full grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-sky-50 border border-sky-200 px-2 py-1.5 text-center">
+                <p className="text-[10px] font-bold text-sky-700">{t("وجبات", "meals")}</p>
+                <p className="font-black text-sky-900">{list?.totalMeals ?? "—"}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-2 py-1.5 text-center">
+                <p className="text-[10px] font-bold text-emerald-700">{t("إيراد", "revenue")}</p>
+                <p className="font-black text-emerald-900">{list?.totalRevenue?.toFixed(2) ?? "—"}</p>
+              </div>
             </div>
           </div>
-          {linePreview > 0 && (
-            <p className="text-xs text-slate-500 mt-2">
-              {t("الإجمالي", "Total")}: <span className="font-black text-[#47759c]">{linePreview.toLocaleString()} {t("ر.ق", "QAR")}</span>
-            </p>
-          )}
         </CardContent>
       </Card>
 
-      {/* اختيار الفترة */}
-      <div className="flex flex-wrap gap-2">
-        {PERIODS.map((p) => (
-          <button
-            key={p.key}
-            onClick={() => setPeriod(p.key)}
-            className={`px-4 py-2 rounded-full text-sm font-bold transition ${
-              period === p.key ? "bg-[#47759c] text-white shadow" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-          >
-            {isRtl ? p.ar : p.en}
-          </button>
-        ))}
-        {period === "custom" && (
-          <div className="flex items-center gap-2">
-            <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-40" />
-            <span className="text-slate-400">→</span>
-            <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-40" />
-          </div>
-        )}
-      </div>
-
-      {/* ملخّص الفترة */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="border-2 border-[#3cc4f0]/30">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-[#e8f8fd] grid place-items-center"><Utensils className="h-6 w-6 text-[#3cc4f0]" /></div>
-            <div>
-              <p className="text-xs text-slate-500">{t("إجمالي الوجبات", "Total meals")}</p>
-              <p className="text-2xl font-black text-slate-900">{data?.totalMeals ?? 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-emerald-200">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-emerald-50 grid place-items-center"><Wallet className="h-6 w-6 text-emerald-600" /></div>
-            <div>
-              <p className="text-xs text-slate-500">{t("إجمالي الإيراد", "Total revenue")}</p>
-              <p className="text-2xl font-black text-emerald-600">{(data?.totalRevenue ?? 0).toLocaleString()} <span className="text-sm text-slate-400">{t("ر.ق", "QAR")}</span></p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-2 border-[#47759c]/30">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-[#eaf1f7] grid place-items-center"><TrendingUp className="h-6 w-6 text-[#47759c]" /></div>
-            <div>
-              <p className="text-xs text-slate-500">{t("متوسط سعر الوجبة", "Avg meal price")}</p>
-              <p className="text-2xl font-black text-[#47759c]">{(data?.avgPrice ?? 0).toLocaleString()} <span className="text-sm text-slate-400">{t("ر.ق", "QAR")}</span></p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* السجلات */}
-      <Card>
+      <Card className="rounded-2xl border-slate-200">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-slate-500 text-xs">
-                  <th className="text-start p-3 font-semibold">{t("التاريخ", "Date")}</th>
-                  <th className="text-start p-3 font-semibold">{t("الجم", "Gym")}</th>
-                  <th className="text-center p-3 font-semibold">{t("وجبات", "Meals")}</th>
-                  <th className="text-center p-3 font-semibold">{t("السعر", "Price")}</th>
-                  <th className="text-center p-3 font-semibold">{t("الإجمالي", "Total")}</th>
-                  <th className="text-start p-3 font-semibold">{t("ملاحظات", "Notes")}</th>
-                  <th className="p-3"></th>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-600 text-xs">
+              <tr>
+                <th className="text-start p-3">{t("التاريخ", "Date")}</th>
+                <th className="text-start p-3">{t("الجم", "Gym")}</th>
+                <th className="text-center p-3">{t("وجبات", "Meals")}</th>
+                <th className="text-end p-3">{t("الإجمالي", "Total")}</th>
+                <th className="p-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {(list?.rows || []).map((r: any) => (
+                <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50">
+                  <td className="p-3 font-bold">{r.date}</td>
+                  <td className="p-3">{r.gymName}</td>
+                  <td className="p-3 text-center font-black">{r.mealsCount}</td>
+                  <td className="p-3 text-end font-black text-[#0E76AC]">{r.total.toFixed(2)}</td>
+                  <td className="p-3 text-end">
+                    <button onClick={() => setOpenId(openId === r.id ? null : r.id)} className="text-xs font-bold text-[#0E76AC] hover:underline">
+                      {openId === r.id ? t("إغلاق", "Close") : t("تفاصيل", "Details")}
+                    </button>
+                    <button onClick={async () => { if (confirm(t("حذف الطلبية؟", "Delete order?"))) { await deleteOrder({ orderId: r.id as any, sessionToken }); } }} className="ms-3 text-xs font-bold text-red-600 hover:underline">
+                      {t("حذف", "Delete")}
+                    </button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {(data?.rows || []).length === 0 && (
-                  <tr><td colSpan={7} className="text-center text-slate-400 py-10">{t("لا توجد سجلات في هذه الفترة", "No records in this period")}</td></tr>
-                )}
-                {(data?.rows || []).map((r: any) => (
-                  <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/60">
-                    <td className="p-3 font-medium text-slate-700 whitespace-nowrap">{r.date}</td>
-                    <td className="p-3 text-slate-600">{r.gymName || "—"}</td>
-                    <td className="p-3 text-center font-bold text-slate-800">{r.meals}</td>
-                    <td className="p-3 text-center text-slate-600">{r.unitPrice.toLocaleString()}</td>
-                    <td className="p-3 text-center font-black text-emerald-600">{r.total.toLocaleString()}</td>
-                    <td className="p-3 text-slate-500 text-xs">{r.notes || ""}</td>
-                    <td className="p-3 text-center">
-                      <button onClick={() => del(r.id)} className="text-slate-300 hover:text-red-500 transition"><Trash2 className="h-4 w-4" /></button>
+              ))}
+              {(!list || list.rows.length === 0) && (
+                <tr><td colSpan={5} className="text-center text-slate-400 py-8">{t("لا توجد طلبيات", "No orders")}</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          {openId && openOrder && (
+            <div className="border-t-2 border-slate-100 bg-slate-50 p-4">
+              <h4 className="font-black mb-2">{t("أسطر الطلبية", "Order lines")} — {openOrder.date} · {openOrder.gymName}</h4>
+              <table className="w-full text-sm bg-white rounded-lg overflow-hidden">
+                <thead className="bg-slate-100 text-xs text-slate-600">
+                  <tr><th className="text-start p-2">{t("الوجبة", "Meal")}</th><th className="text-center p-2">{t("الكمية", "Qty")}</th><th className="text-end p-2">{t("سعر الوحدة", "Unit")}</th><th className="text-end p-2">{t("الإجمالي", "Total")}</th></tr>
+                </thead>
+                <tbody>
+                  {openOrder.lines.map((l: any) => (
+                    <tr key={l.id} className="border-t border-slate-100">
+                      <td className="p-2 font-bold">{isRtl ? (l.mealNameAr || l.mealNameEn) : (l.mealNameEn || l.mealNameAr)}</td>
+                      <td className="p-2 text-center">{l.qty}</td>
+                      <td className="p-2 text-end">{l.unitPrice.toFixed(2)}</td>
+                      <td className="p-2 text-end font-black text-[#0E76AC]">{l.lineTotal.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Reports Tab ═══════════════════════════════ */
+
+function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
+  const [month, setMonth] = useState(thisMonth());
+  const [gymId, setGymId] = useState<string>("");
+  const report = useQuery(api.gymSales.monthlyReport, { month, gymId: (gymId || undefined) as any, sessionToken }) as any;
+
+  const maxDay = useMemo(() => {
+    if (!report?.days?.length) return 0;
+    return Math.max(...report.days.map((d: any) => d.total));
+  }, [report]);
+
+  const printInvoice = () => {
+    if (!report) return;
+    const gym = gyms.find((g: any) => g.id === gymId);
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("فاتورة الشهر", "Monthly invoice")} — ${month}</title>
+      <style>
+        *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+        body{margin:0;padding:20px;color:#0f1516;font-size:12px}
+        h1{font-size:20px;margin:0 0 6px;color:#0E2A4A}
+        .head{border-bottom:2px solid #0E76AC;padding-bottom:10px;margin-bottom:15px}
+        .info{color:#47759c;font-size:11px;line-height:1.6}
+        table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
+        th,td{border:1px solid #cdd9e4;padding:6px 8px}
+        th{background:#0E76AC;color:#fff;text-align:${isRtl ? "right" : "left"}}
+        td.n{text-align:${isRtl ? "left" : "right"};font-family:monospace;font-weight:700}
+        tr.tot td{background:#dcebf5;color:#0E76AC;font-weight:900;font-size:13px}
+        .box{border:1px solid #cdd9e4;border-radius:8px;padding:8px 12px;text-align:center}
+        .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 20px}
+        .box .v{font-size:20px;font-weight:900;color:#0E76AC} .box .l{font-size:10px;color:#47759c}
+        @page{size:A4;margin:12mm}
+      </style></head><body>
+      <div class="head">
+        <h1>${t("فاتورة الشهر - Adrenaline", "Monthly invoice - Adrenaline")}</h1>
+        <div class="info">
+          <div><b>${t("الجم", "Gym")}:</b> ${gym?.name || t("كل الجمات", "All gyms")}</div>
+          <div><b>${t("الشهر", "Month")}:</b> ${month}</div>
+          <div><b>${t("عدد أيام التوريد", "Days")}:</b> ${report.daysCount}</div>
+        </div>
+      </div>
+      <div class="grid">
+        <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("إجمالي الوجبات", "Total meals")}</div></div>
+        <div class="box"><div class="v">${report.totalSubtotal.toFixed(2)}</div><div class="l">${t("قبل الخصم", "Subtotal")}</div></div>
+        <div class="box"><div class="v" style="color:#16a34a">- ${report.totalDiscount.toFixed(2)}</div><div class="l">${t("الخصم", "Discount")}</div></div>
+        <div class="box"><div class="v">${report.totalRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق", "Total due")}</div></div>
+      </div>
+      <h3>${t("التفاصيل اليومية", "Daily breakdown")}</h3>
+      <table><thead><tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th></tr></thead>
+      <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td></tr>`).join("")}
+      <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td></tr></tbody></table>
+      <h3 style="margin-top:20px">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</h3>
+      <table><thead><tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
+      <tbody>${report.meals.map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.qty}</td><td class="n">${m.revenue.toFixed(2)}</td></tr>`).join("")}</tbody></table>
+      </body></html>`;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `gym-invoice-${month}.html`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  };
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("الشهر", "Month")}</Label>
+            <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
+            <select value={gymId} onChange={(e) => setGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="">{t("كل الجمات", "All gyms")}</option>
+              {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <Button onClick={printInvoice} className="w-full h-10 font-black text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+              <Printer className="h-4 w-4 me-2" /> {t("فاتورة الشهر", "Monthly invoice")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label={t("إجمالي الوجبات", "Total meals")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
+        <Stat label={t("الصافي المستحق", "Total due (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#16a34a" />
+        <Stat label={t("متوسط يومي", "Avg/day")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
+        <Stat label={t("أيام التوريد", "Days")} value={report?.daysCount ?? "—"} color="#f59e0b" />
+      </div>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-3">{t("المقارنة اليومية", "Daily comparison")}</h3>
+          <div className="space-y-1.5">
+            {(report?.days || []).map((d: any) => {
+              const pct = maxDay ? (d.total / maxDay) * 100 : 0;
+              const isBest = report?.bestDay?.date === d.date;
+              const isWorst = report?.worstDay?.date === d.date;
+              return (
+                <div key={d.date} className="flex items-center gap-2 text-xs">
+                  <span className="w-20 font-bold text-slate-600">{d.date}</span>
+                  <div className="flex-1 h-6 bg-slate-100 rounded overflow-hidden relative">
+                    <div className="h-full" style={{ width: `${pct}%`, background: isBest ? "linear-gradient(90deg,#16a34a,#22c55e)" : isWorst ? "linear-gradient(90deg,#dc2626,#ef4444)" : "linear-gradient(90deg,#0E76AC,#3cc4f0)" }} />
+                    <span className="absolute inset-y-0 start-2 flex items-center font-black text-white">{d.meals} {t("و", "m")}</span>
+                  </div>
+                  <span className="w-20 text-end font-black text-slate-800">{d.total.toFixed(2)}</span>
+                </div>
+              );
+            })}
+            {(!report || report.days.length === 0) && <p className="text-center text-slate-400 py-6 text-sm">{t("لا توجد بيانات", "No data")}</p>}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-3">{t("تفصيل حسب الوجبة", "Per-meal breakdown")}</h3>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600">
+              <tr><th className="text-start p-2">{t("الوجبة", "Meal")}</th><th className="text-center p-2">{t("الكمية", "Qty")}</th><th className="text-end p-2">{t("الإيراد", "Revenue")}</th></tr>
+            </thead>
+            <tbody>
+              {(report?.meals || []).map((m: any) => (
+                <tr key={m.key} className="border-t border-slate-100">
+                  <td className="p-2 font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td>
+                  <td className="p-2 text-center font-black">{m.qty}</td>
+                  <td className="p-2 text-end font-black text-[#0E76AC]">{m.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+              {(!report || report.meals.length === 0) && <tr><td colSpan={3} className="text-center text-slate-400 py-6">{t("لا توجد بيانات", "No data")}</td></tr>}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Stat({ label, value, color }: any) {
+  return (
+    <div className="rounded-2xl bg-white border border-slate-200 p-3 text-center shadow-sm">
+      <p className="text-xs font-bold text-slate-500">{label}</p>
+      <p className="text-xl font-black mt-1" style={{ color }}>{value}</p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Prices Tab ═══════════════════════════════ */
+
+function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
+  const meals = useQuery(
+    api.gymSales.listMealsForGym,
+    selectedGymId ? { gymId: selectedGymId as any, sessionToken } : "skip"
+  ) as any[] | undefined;
+  const setPrice = useMutation(api.gymSales.setMealGymPrice);
+  const [q, setQ] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+
+  const filtered = useMemo(() => (meals || []).filter((m: any) => {
+    const qq = q.trim().toLowerCase();
+    return !qq || String(m.nameEn).toLowerCase().includes(qq) || String(m.nameAr).toLowerCase().includes(qq);
+  }), [meals, q]);
+
+  const save = async (mealId: string) => {
+    const raw = drafts[mealId];
+    const val = raw === "" || raw == null ? undefined : Number(raw);
+    try {
+      await setPrice({ mealId: mealId as any, gymPrice: val, sessionToken });
+      toast({ title: t("تم الحفظ ✓", "Saved ✓") });
+      setDrafts((d) => { const cp = { ...d }; delete cp[mealId]; return cp; });
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("الجم (لعرض الخصم)", "Gym (for discount preview)")}</Label>
+            <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+          <div className="sm:col-span-2">
+            <Label className="text-xs font-bold text-slate-500">{t("بحث", "Search")}</Label>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-bold">
+            💡 {t("لو الوجبة عندها «سعر جم مؤقت» يُستخدم مباشرة. لو فارغة، النظام يحسب: سعر المنيو × (1 − الخصم).", "If a meal has a custom «gym price», it is used directly. If blank, the system uses menu price × (1 − discount).")}
+          </div>
+          <div className="max-h-[65vh] overflow-y-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
+              <tr>
+                <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
+                <th className="text-end p-2">{t("سعر المنيو", "Menu price")}</th>
+                <th className="text-end p-2">{t("سعر الجم النافذ", "Effective")}</th>
+                <th className="text-end p-2">{t("سعر مؤقت", "Custom price")}</th>
+                <th className="p-2" />
+              </tr>
+            </thead>
+            <tbody>
+              {(!meals) && <tr><td colSpan={5} className="text-center py-6 text-slate-400">{t("جاري التحميل…", "Loading…")}</td></tr>}
+              {filtered.map((m: any) => {
+                const draftVal = drafts[m.id];
+                const displayVal = draftVal !== undefined ? draftVal : (m.gymPrice != null ? String(m.gymPrice) : "");
+                const dirty = draftVal !== undefined;
+                return (
+                  <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50">
+                    <td className="p-2">
+                      <p className="font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</p>
+                      <p className="text-[10px] text-slate-400">{m.category}</p>
+                    </td>
+                    <td className={cn("p-2 text-end font-bold", m.listPrice === 0 && "text-red-600")}>
+                      {m.listPrice.toFixed(2)}
+                      {m.listPrice === 0 && <span className="ms-1 text-[9px] px-1 py-0.5 bg-red-50 text-red-700 rounded font-bold">{t("ضروري", "needed")}</span>}
+                    </td>
+                    <td className="p-2 text-end font-black text-[#0E76AC]">{m.effectivePrice.toFixed(2)}</td>
+                    <td className="p-2 text-end">
+                      <input type="number" step="0.01" value={displayVal} onChange={(e) => setDrafts((d) => ({ ...d, [m.id]: e.target.value }))} placeholder="—" className="w-20 h-8 text-center border border-slate-200 rounded font-bold" />
+                    </td>
+                    <td className="p-2 text-end">
+                      <button onClick={() => save(m.id)} disabled={!dirty} className={cn("text-xs font-bold px-3 h-8 rounded-lg transition-all", dirty ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-400 cursor-not-allowed")}>
+                        {t("حفظ", "Save")}
+                      </button>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                );
+              })}
+            </tbody>
+          </table>
           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════ Gyms Tab ═══════════════════════════════ */
+
+function GymsTab({ isRtl, t, sessionToken, gyms, toast }: any) {
+  const [editing, setEditing] = useState<any | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const addGym = useMutation(api.gymSales.addGym);
+  const updateGym = useMutation(api.gymSales.updateGym);
+  const [form, setForm] = useState<any>({ name: "", address: "", contactName: "", contactPhone: "", discountPct: 20, notes: "" });
+
+  const openNew = () => { setForm({ name: "", address: "", contactName: "", contactPhone: "", discountPct: 20, notes: "" }); setEditing(null); setShowForm(true); };
+  const openEdit = (g: any) => { setForm({ ...g }); setEditing(g); setShowForm(true); };
+  const submit = async () => {
+    try {
+      if (editing) {
+        await updateGym({ id: editing.id as any, name: form.name, address: form.address, contactName: form.contactName, contactPhone: form.contactPhone, discountPct: Number(form.discountPct), notes: form.notes, sessionToken });
+      } else {
+        await addGym({ name: form.name, address: form.address, contactName: form.contactName, contactPhone: form.contactPhone, discountPct: Number(form.discountPct), notes: form.notes, sessionToken });
+      }
+      toast({ title: t("تم ✓", "Saved ✓") });
+      setShowForm(false);
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
+  };
+  const toggleActive = async (g: any) => {
+    await updateGym({ id: g.id as any, isActive: !g.isActive, sessionToken });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button onClick={openNew} className="h-10 text-white font-bold" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+          <Plus className="h-4 w-4 me-1" /> {t("جم جديد", "New gym")}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="rounded-2xl border-2 border-[#0E76AC]/30">
+          <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><Label>{t("الاسم", "Name")}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+            <div><Label>{t("الخصم %", "Discount %")}</Label><Input type="number" value={form.discountPct} onChange={(e) => setForm({ ...form, discountPct: e.target.value })} /></div>
+            <div><Label>{t("العنوان", "Address")}</Label><Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
+            <div><Label>{t("مسؤول التواصل", "Contact name")}</Label><Input value={form.contactName} onChange={(e) => setForm({ ...form, contactName: e.target.value })} /></div>
+            <div><Label>{t("هاتف", "Phone")}</Label><Input value={form.contactPhone} onChange={(e) => setForm({ ...form, contactPhone: e.target.value })} /></div>
+            <div><Label>{t("ملاحظات", "Notes")}</Label><Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
+            <div className="sm:col-span-2 flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowForm(false)}>{t("إلغاء", "Cancel")}</Button>
+              <Button onClick={submit} className="text-white" style={{ background: "#0E76AC" }}>{t("حفظ", "Save")}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-600"><tr>
+              <th className="text-start p-3">{t("الاسم", "Name")}</th>
+              <th className="text-start p-3">{t("العنوان", "Address")}</th>
+              <th className="text-center p-3">{t("الخصم %", "Discount %")}</th>
+              <th className="text-start p-3">{t("مسؤول", "Contact")}</th>
+              <th className="text-center p-3">{t("نشط", "Active")}</th>
+              <th className="p-3" />
+            </tr></thead>
+            <tbody>
+              {gyms.map((g: any) => (
+                <tr key={g.id} className="border-t border-slate-100">
+                  <td className="p-3 font-bold">{g.name}</td>
+                  <td className="p-3 text-slate-600">{g.address || "—"}</td>
+                  <td className="p-3 text-center font-black text-emerald-700">{g.discountPct}%</td>
+                  <td className="p-3 text-slate-600">{g.contactName || "—"}{g.contactPhone && <div className="text-[10px] text-slate-400">{g.contactPhone}</div>}</td>
+                  <td className="p-3 text-center">
+                    <button onClick={() => toggleActive(g)} className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", g.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                      {g.isActive ? t("نشط", "Active") : t("موقوف", "Inactive")}
+                    </button>
+                  </td>
+                  <td className="p-3 text-end">
+                    <button onClick={() => openEdit(g)} className="text-xs font-bold text-[#0E76AC] hover:underline">{t("تعديل", "Edit")}</button>
+                  </td>
+                </tr>
+              ))}
+              {gyms.length === 0 && (
+                <tr><td colSpan={6} className="text-center text-slate-400 py-8">{t("لم يتم إضافة جم بعد", "No gyms yet")}</td></tr>
+              )}
+            </tbody>
+          </table>
         </CardContent>
       </Card>
     </div>
