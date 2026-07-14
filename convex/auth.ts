@@ -4,7 +4,7 @@
  */
 import { v } from "convex/values";
 import { mutation } from "./_generated/server";
-import { verifyPassword } from "./passwords";
+import { verifyPassword, verifyAndMaybeUpgrade } from "./passwords";
 import { createSession, destroySession, requireAdmin } from "./sessions";
 import { findStaffByEmail, findCustomerByEmail } from "./accountLookup";
 
@@ -84,7 +84,11 @@ export const authenticateUnified = mutation({
         return { success: false, error: "الحساب غير نشط" };
       }
 
-      if (!(await verifyPassword(args.password, user.passwordHash))) {
+      // ✅ يتحقق ويرقّي الـhash القديم لـPBKDF2 تلقائياً على أول دخول ناجح
+      const ok = await verifyAndMaybeUpgrade(args.password, user.passwordHash, async (newHash) => {
+        await ctx.db.patch(user._id, { passwordHash: newHash });
+      });
+      if (!ok) {
         await recordFailure(ctx, args.email);
         return INVALID;
       }
@@ -118,7 +122,11 @@ export const authenticateUnified = mutation({
         return { success: false, error: "الحساب غير نشط" };
       }
 
-      if (!(await verifyPassword(args.password, customer.passwordHash))) {
+      // ✅ نفس منطق الترقية التلقائية للعملاء
+      const okCust = await verifyAndMaybeUpgrade(args.password, customer.passwordHash, async (newHash) => {
+        await ctx.db.patch(customer._id, { passwordHash: newHash });
+      });
+      if (!okCust) {
         await recordFailure(ctx, args.email);
         return INVALID;
       }

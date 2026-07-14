@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
-import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
+import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
 import { normalizePhone } from "./lib/phone";
 
 /* =========================
@@ -265,7 +265,7 @@ export const setSubscriptionActive = mutation({
 export const activateAll = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken);
     const all = await ctx.db.query("customers").collect();
     let updated = 0;
 
@@ -286,7 +286,7 @@ export const activateAll = mutation({
 export const migrateDates = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken);
     const all = await ctx.db.query("customers").collect();
     let fixed = 0;
     let skipped = 0;
@@ -326,7 +326,7 @@ export const deleteAll = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken);
     // 🔒 حماية: عملية مدمّرة (مسح كل العملاء) — معطّلة افتراضياً.
     // لتشغيلها مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true (ثم أعدها false).
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {

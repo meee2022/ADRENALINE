@@ -54,6 +54,34 @@ export async function verifyPassword(password: string, stored: string): Promise<
     for (let i = 0; i < actual.length; i++) diff |= actual[i] ^ expected[i];
     return diff === 0;
   }
-  // توافق رجعي: حسابات قديمة بالتجزئة البسيطة
+  // توافق رجعي: حسابات قديمة بالتجزئة البسيطة (weak — قابلة للترقية عبر verifyAndMaybeUpgrade)
   return simpleHash(password) === stored;
+}
+
+/**
+ * ✅ يتحقق من كلمة المرور، ولو الـstored بالتجزئة القديمة الضعيفة يرقّيها
+ *    تلقائياً لـPBKDF2. يُستدعى من auth.ts داخل mutations (login) بحيث كل
+ *    مستخدم يستعمل النظام مرة يترقّى تلقائياً بدون تدخل. Fail-safe: لو
+ *    التحديث فشل ما نمنعش الدخول، بس نلغّي الترقية.
+ */
+export async function verifyAndMaybeUpgrade(
+  password: string,
+  stored: string,
+  upgrade: (newHash: string) => Promise<void>,
+): Promise<boolean> {
+  const ok = await verifyPassword(password, stored);
+  if (!ok) return false;
+  const isLegacy = !stored?.startsWith("pbkdf2$");
+  if (isLegacy) {
+    try {
+      const newHash = await hashPassword(password);
+      await upgrade(newHash);
+    } catch { /* silent — الأمان الأساسي محقّق */ }
+  }
+  return true;
+}
+
+/** يحدد لو الـhash القديم الضعيف (للأدوات/التقارير) */
+export function isLegacyHash(stored: string): boolean {
+  return !!stored && !stored.startsWith("pbkdf2$");
 }

@@ -84,7 +84,8 @@ export const loginWithPin = mutation({
       token,
       cashierId: match._id,
       createdAt: Date.now(),
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      // ✅ TTL أقصر لجلسة POS: 8 ساعات (طول الوردية) بدل 24 — يقلل خطر توكن مسروق
+      expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     });
     return {
       token,

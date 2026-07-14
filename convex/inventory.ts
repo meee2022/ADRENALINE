@@ -53,6 +53,7 @@ export const listItems = query({
     search: v.optional(v.string()),
     category: v.optional(v.string()),
     lowStock: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let items = await ctx.db.query("inventoryItems").collect();
@@ -90,16 +91,18 @@ export const list = listItems;
 
 // Get single item by ID
 export const getItemById = query({
-  args: { id: v.id("inventoryItems") },
+  args: { id: v.id("inventoryItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     return await ctx.db.get(args.id);
   },
 });
 
 // Get item by barcode
 export const getItemByBarcode = query({
-  args: { barcode: v.string() },
+  args: { barcode: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const item = await ctx.db
       .query("inventoryItems")
       .withIndex("by_barcode", (q) => q.eq("barcode", args.barcode))
@@ -115,7 +118,9 @@ export const getItemByBarcode = query({
 
 // Get summary KPIs
 export const getSummary = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const items = await ctx.db.query("inventoryItems").collect();
     const batches = await ctx.db.query("inventoryBatches").collect();
 
@@ -154,8 +159,9 @@ export const getSummary = query({
 
 // Alerts: low-stock (reorder) + expiring-soon + expired batches
 export const getAlerts = query({
-  args: { days: v.optional(v.number()) },
+  args: { days: v.optional(v.number()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const days = args.days ?? 7;
     const today = new Date().toISOString().split("T")[0];
     const horizon = new Date();
@@ -233,8 +239,9 @@ export const getAlerts = query({
 
 // Get batches for an item
 export const getBatchesByItem = query({
-  args: { itemId: v.id("inventoryItems") },
+  args: { itemId: v.id("inventoryItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const batches = await ctx.db
       .query("inventoryBatches")
       .withIndex("by_itemId", (q) => q.eq("itemId", args.itemId))
@@ -270,7 +277,9 @@ export const getMovementsByItem = query({
 
 // Get all suppliers
 export const getSuppliers = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const suppliers = await ctx.db.query("suppliers").collect();
     suppliers.sort((a, b) => a.name.localeCompare(b.name));
     return suppliers;
@@ -648,8 +657,9 @@ export const recordWaste = mutation({
 
 // ===== Consumption & waste report (kitchen vs waste, with cost from latest batch) =====
 export const getConsumptionReport = query({
-  args: { days: v.optional(v.number()) },
+  args: { days: v.optional(v.number()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const days = args.days ?? 30;
     const since = Date.now() - days * 86400000;
     const movements = (await ctx.db.query("inventoryMovements").collect()).filter(

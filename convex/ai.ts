@@ -45,13 +45,28 @@ export const getSmartPlanData = query({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
-    todayDay: v.optional(v.string()),  // اسم اليوم بالإنجليزي؛ يُمرّر من الـaction
-    todayDate: v.optional(v.string()), // yyyy-MM-dd؛ يُمرّر من الـaction
-    // ✅ فرض أسبوع دورة معيّن (1..4) بدل حسابه من التاريخ — يستخدمه توليد
-    //    عدة أسابيع ليختار وجبات كل دورة على حدة.
+    todayDay: v.optional(v.string()),
+    todayDate: v.optional(v.string()),
     overrideRotationWeek: v.optional(v.number()),
+    // ✅ للحماية: sessionToken اختياري. لو موجود ومتحقّق نُرجع البيانات الحساسة
+    //    (allergies/avoid/preferences). لو غير موجود، نُرجع بيانات محدودة فقط
+    //    (found + الأهداف والعدد بدون تفاصيل صحية) — يمنع أي حد من تسريب
+    //    الملف الصحي لرقم هاتف عشوائي.
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // 🔒 نتحقق لو المستدعي معتمد (موظف أو صاحب الاشتراك)
+    let authorized = false;
+    if (args.sessionToken) {
+      const { validateSession } = await import("./sessions");
+      const id = await validateSession(ctx, args.sessionToken);
+      if (id?.accountType === "staff") authorized = true;
+      else if (id?.customerAccountId && args.customerId) {
+        const acct: any = await ctx.db.get(id.customerAccountId as any);
+        if (acct && String(acct.customerId) === String(args.customerId)) authorized = true;
+      }
+    }
+
     // 1) جلب اشتراك العميل
     let customer: any = null;
     if (args.customerId) {
@@ -63,14 +78,15 @@ export const getSmartPlanData = query({
         .first();
     }
 
-    // 2) بناء بروفايل (الحد الأدنى — بدون اسم/عنوان/سعر)
+    // 2) بناء بروفايل — بدون البيانات الحساسة لو المستدعي غير معتمد
     const profile = customer
       ? {
           found: true,
           goal: customer.goalType || customer.goals || "",
-          allergies: customer.allergies || "",
-          avoid: customer.avoid || "",
-          preferences: customer.preferences || "",
+          // 🔒 حساسية/ممنوعات/تفضيلات = بيانات صحية شخصية — تُرجع فقط للمعتمدين
+          allergies: authorized ? (customer.allergies || "") : "",
+          avoid: authorized ? (customer.avoid || "") : "",
+          preferences: authorized ? (customer.preferences || "") : "",
           mealsPerDay: customer.mealsPerDay ?? 3,
           snacksPerDay: customer.snacksPerDay ?? 1,
         }

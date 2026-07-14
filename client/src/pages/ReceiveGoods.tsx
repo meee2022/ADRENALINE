@@ -32,11 +32,11 @@ export default function ReceiveGoods() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const items: any[] = useQuery(api.inventory.listItems, {}) || [];
-  const suppliers: any[] = useQuery(api.inventory.getSuppliers) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const items: any[] = useQuery(api.inventory.listItems, { sessionToken }) || [];
+  const suppliers: any[] = useQuery(api.inventory.getSuppliers, { sessionToken }) || [];
   const receiveMany = useMutation(api.inventory.receiveMany);
   const createSupplier = useMutation(api.inventory.createSupplier);
-  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const today = new Date().toISOString().slice(0, 10);
   const [supplierId, setSupplierId] = useState("");
