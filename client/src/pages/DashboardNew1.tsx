@@ -1,791 +1,617 @@
-// client/src/pages/DashboardNew1.tsx
+/**
+ * @file client/src/pages/DashboardNew1.tsx
+ * @description لوحة تحكم Adrenaline — بهوية سماوي/كحلي فاتحة، شاملة كل المستحدثات:
+ *   الحضور فوق، أولويات، تقدم اليوم، مبيعات POS + الجم + الولاء، أحداث حساسة،
+ *   خرائط المطبخ والتوصيل، ورسم آخر 7 أيام. تعتمد على reactive queries لتحديث لحظي.
+ */
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
-import { useCustomers, useDailyPlans, useInventorySummary } from "@/lib/api";
 import { useQuery } from "convex/react";
-import { api } from "@/../../convex/_generated/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, LabelList } from "recharts";
-import { format, parseISO, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInCalendarDays, addDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
+import {
+  Activity, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, Check, ChefHat,
+  ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, Package, Receipt, Route,
+  ShieldAlert, Sparkles, Store, Sun, Sunset, TrendingUp, Users, UserCheck, Dumbbell, Coins,
+} from "lucide-react";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import { api } from "@/../../convex/_generated/api";
+import { useCustomers, useDailyPlans } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
-import {
-  Users, CalendarCheck, Sun, Moon, TrendingUp,
-  Package, AlertCircle, ArrowUpRight, ChevronLeft,
-  Clock, Utensils, AlertTriangle,
-  ClipboardCheck, PauseCircle, ChefHat,
-} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-type ModalType = "customers"|"meals"|"morning"|"evening"|"expiring"|"expired"|"inventory"|"monthly"|null;
+type DetailView = "active" | "expiring" | "expired" | "meals" | "inventory" | null;
+
+const STATUS_STYLES: Record<string, string> = {
+  DRAFT: "bg-slate-100 text-slate-600",
+  CONFIRMED: "bg-blue-50 text-blue-700",
+  PREPARED: "bg-emerald-50 text-emerald-700",
+  DELIVERED: "bg-teal-50 text-teal-700",
+};
 
 export default function DashboardNew() {
-  const { t, language, dir } = useLanguage();
+  const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const tr = (a: string, e: string) => (isRtl ? a : e);
   const locale = isRtl ? ar : enUS;
-  const [, setLocation] = useLocation();
-  const { currentUser } = useStore();
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [openModal, setOpenModal] = useState<ModalType>(null);
-
-  const { data: customers = [] } = useCustomers();
-  const { data: dailyPlans = [] } = useDailyPlans();
-  const inventorySummary = useInventorySummary();
-  const inventoryItems = useQuery(api.inventory.list, {}) || [];
-  // ✅ حضور وإجازات اليوم للوحة التحكم
+  const [, navigate] = useLocation();
+  const currentUser = useStore((s) => s.currentUser);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const dashDate = format(selectedDate, "yyyy-MM-dd");
-  const attToday = useQuery(api.attendance.todayCounts, { date: dashDate, sessionToken }) as any;
-  const leaveToday = useQuery(api.leaves.onLeaveToday, { date: dashDate, sessionToken }) as any;
-  // ✅ الشريط التشغيلي: طلبات معلّقة + أسبوع دورة المطبخ
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [detailView, setDetailView] = useState<DetailView>(null);
+
+  const { data: customers = [], isLoading: customersLoading } = useCustomers();
+  const { data: dailyPlans = [], isLoading: plansLoading } = useDailyPlans();
+  const inventoryItems = useQuery(api.inventory.list, {}) || [];
   const pendingOrders = useQuery(api.customerOrders.countPending) as number | undefined;
-  const restSettings = useQuery(api.restaurantSettings.get) as any;
-  const cookingWeek = Number(restSettings?.currentCookingWeek) >= 1 ? Number(restSettings.currentCookingWeek) : null;
+  const dateKey = format(selectedDate, "yyyy-MM-dd");
+  const attendance = useQuery(api.attendance.todayCounts, { date: dateKey, sessionToken }) as any;
+  const leave = useQuery(api.leaves.onLeaveToday, { date: dateKey, sessionToken }) as any;
+  const managerSnap = useQuery(api.manager.liveSnapshot, { sessionToken }) as any;
+  const posDaily = useQuery(api.posAdmin.dailySummary, { date: dateKey, sessionToken }) as any;
+  const gymList = useQuery(api.gymSales.listOrders, { from: dateKey, to: dateKey, sessionToken }) as any;
+  const loading = customersLoading || plansLoading;
 
-  const stats = useMemo(() => {
-    const today = format(selectedDate, "yyyy-MM-dd");
-    const todayPlans   = dailyPlans.filter(p => p.date === today);
-    const morningPlans = todayPlans.filter(p => p.deliveryTime === "MORNING");
-    const eveningPlans = todayPlans.filter(p => p.deliveryTime === "EVENING");
-    const now = new Date();
-
-    // ✅ تحويل آمن للتاريخ — يرجّع null لو التاريخ فاضي أو غير صالح (يمنع Invalid time value)
-    const safeDate = (s?: string) => {
-      if (!s) return null;
-      const d = parseISO(s);
-      return isNaN(d.getTime()) ? null : d;
+  /* ═══════ Metrics ═══════ */
+  const metrics = useMemo(() => {
+    const todayPlans = dailyPlans.filter((p) => p.date === dateKey);
+    const daysRemaining = (endDate?: string) => {
+      if (!endDate) return null;
+      const d = parseISO(endDate);
+      return Number.isNaN(d.getTime()) ? null : differenceInCalendarDays(d, new Date());
     };
-    const endDaysLeft = (c: any) => { const d = safeDate(c.endDate); return d ? differenceInDays(d, now) : null; };
-
-    const activeCustomers   = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d >= 0; });
-    const expiredCustomers  = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d < 0; });
-    const expiringCustomers = customers.filter(c => { const d = endDaysLeft(c); return d !== null && d >= 0 && d <= 3; });
-    const todayStr = format(now, "yyyy-MM-dd");
-    const expiringToday     = customers.filter(c => { const d = safeDate(c.endDate); return d ? format(d, "yyyy-MM-dd") === todayStr : false; });
-    const lowStockItems     = inventoryItems.filter((i:any) => i.current_stock <= i.min_stock);
-    const cm = now.getMonth(), cy = now.getFullYear();
-    const newThisMonth = customers.filter(c => { const s = safeDate(c.startDate); return s ? (s.getMonth()===cm && s.getFullYear()===cy) : false; });
-
-    const morningRate = todayPlans.length > 0 ? Math.round((morningPlans.length / todayPlans.length) * 100) : 0;
-
-    // ✅ مشتركون مجمّدون (سفر) + تقدّم مطبخ اليوم (جاهز/إجمالي)
-    const pausedCount = customers.filter((c: any) => Boolean(c.pausedFrom)).length;
-    const preparedToday = todayPlans.filter((p: any) => p.status === "PREPARED" || p.status === "DELIVERED").length;
-
+    const active = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d >= 0; });
+    const expiring = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d >= 0 && d <= 3; });
+    const expired = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d < 0; });
+    const lowStock = inventoryItems.filter((i: any) => Number(i.currentStock ?? 0) <= Number(i.minStock ?? 0));
+    const prepared = todayPlans.filter((p) => ["PREPARED", "DELIVERED"].includes(p.status)).length;
+    const delivered = todayPlans.filter((p) => p.status === "DELIVERED").length;
+    const morning = todayPlans.filter((p) => p.deliveryTime === "MORNING").length;
     return {
-      pausedCount, preparedToday,
-      activeCustomers, activeCustomersCount: activeCustomers.length,
-      todayPlans, todayMeals: todayPlans.length,
-      morningPlans, morningDelivery: morningPlans.length,
-      eveningPlans, eveningDelivery: eveningPlans.length,
-      expiredCustomers, expiredCustomersCount: expiredCustomers.length,
-      expiringCustomers, expiringCustomersCount: expiringCustomers.length,
-      expiringTodayCount: expiringToday.length,
-      lowStockItems, lowStockCount: lowStockItems.length,
-      newThisMonth: newThisMonth.length, newThisMonthList: newThisMonth,
-      totalCustomers: customers.length,
-      morningRate,
+      todayPlans, active, expiring, expired, lowStock, prepared, delivered, morning,
+      evening: todayPlans.length - morning,
+      paused: customers.filter((c: any) => Boolean(c.pausedFrom)).length,
+      prepRate: todayPlans.length ? Math.round((prepared / todayPlans.length) * 100) : 0,
+      deliveryRate: todayPlans.length ? Math.round((delivered / todayPlans.length) * 100) : 0,
     };
-  }, [customers, dailyPlans, selectedDate, inventorySummary, inventoryItems]);
+  }, [customers, dailyPlans, inventoryItems, dateKey]);
 
-  const weeklyData = useMemo(() => {
-    // ✅ اسم اليوم يُشتق من تاريخه الفعلي (آخر 7 أيام متحركة) — كانت الأسماء
-    //    ثابتة تبدأ بالسبت فتُسمّي الأعمدة بأيام خاطئة.
-    return Array.from({ length: 7 }, (_, idx) => {
-      const d = new Date(); d.setDate(d.getDate() - (6 - idx));
-      return {
-        name: format(d, "EEEE", { locale }),
-        value: dailyPlans.filter(p => p.date === format(d, "yyyy-MM-dd")).length,
-      };
-    });
-  }, [dailyPlans]);
+  const weeklyData = useMemo(() => Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(new Date(), i - 6);
+    return {
+      day: format(day, "EEE", { locale }),
+      meals: dailyPlans.filter((p) => p.date === format(day, "yyyy-MM-dd")).length,
+    };
+  }), [dailyPlans, locale]);
 
-  // برامج المشتركين
-  const programData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const c of customers as any[]) {
-      const p = (c.program || "أخرى").toUpperCase();
-      counts[p] = (counts[p] || 0) + 1;
-    }
-    return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [customers]);
+  const statusLabel = (s: string) => ({
+    DRAFT: tr("مسودة", "Draft"), CONFIRMED: tr("مؤكدة", "Confirmed"),
+    PREPARED: tr("جاهزة", "Prepared"), DELIVERED: tr("تم التوصيل", "Delivered"),
+  }[s] || s);
 
-  const topProgram = useMemo(() => {
-    if (programData.length === 0) return "DIET";
-    const sorted = [...programData].sort((a,b) => b.value - a.value);
-    return sorted[0]?.name || "DIET";
-  }, [programData]);
+  const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
+  const PrevIcon = isRtl ? ChevronRight : ChevronLeft;
+  const NextIcon = isRtl ? ChevronLeft : ChevronRight;
+  const firstName = currentUser?.name?.trim().split(" ")[0] || tr("فريق أدرينالين", "Adrenaline team");
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return tr("صباح الخير", "Good morning");
+    if (h < 18) return tr("مساء الخير", "Good afternoon");
+    return tr("مساء النور", "Good evening");
+  })();
 
-  const PROG_COLORS: Record<string,string> = {
-    FITNESS:    "#3cc4f0",  // سيان - اللون الرئيسي
-    DIET:       "#47759c",  // أزرق فولاذي
-    BULK:       "#0f1516",  // داكن
-    CUSTOMIZED: "#5a8aad",  // أزرق فاتح
-    STANDARD:   "#bcbebf",  // رصاصي
+  /* ═══════ Alerts (priorities) ═══════ */
+  const alerts = [
+    { show: (pendingOrders ?? 0) > 0, icon: ClipboardCheck, count: pendingOrders ?? 0,
+      title: tr("طلبات تنتظر المراجعة", "Orders awaiting review"),
+      detail: tr("تحتاج قرار قبل التحضير", "Approve before kitchen prep"),
+      tone: "amber", action: () => navigate("/orders/pending") },
+    { show: metrics.expiring.length > 0, icon: CircleAlert, count: metrics.expiring.length,
+      title: tr("اشتراكات تنتهي خلال 3 أيام", "Subscriptions ending in 3 days"),
+      detail: tr("فرصة تواصل وتجديد", "Renewal opportunity"),
+      tone: "rose", action: () => setDetailView("expiring") },
+    { show: metrics.lowStock.length > 0, icon: Package, count: metrics.lowStock.length,
+      title: tr("تنبيهات المخزون", "Inventory alerts"),
+      detail: tr("أصناف بلغت الحد الأدنى", "Items at min stock"),
+      tone: "blue", action: () => setDetailView("inventory") },
+    { show: (managerSnap?.alerts?.voidsToday ?? 0) + (managerSnap?.alerts?.refundsToday ?? 0) > 0,
+      icon: ShieldAlert, count: (managerSnap?.alerts?.voidsToday ?? 0) + (managerSnap?.alerts?.refundsToday ?? 0),
+      title: tr("أحداث حساسة اليوم", "Sensitive events today"),
+      detail: tr("إلغاءات/استرجاعات في POS", "POS voids / refunds"),
+      tone: "rose", action: () => navigate("/pos-admin") },
+    { show: (managerSnap?.alerts?.bigTickets ?? 0) > 0, icon: TrendingUp,
+      count: managerSnap?.alerts?.bigTickets ?? 0,
+      title: tr("فواتير كبيرة", "Big tickets"),
+      detail: tr("فواتير ≥ 100 ر.ق للمتابعة", "Tickets ≥ 100 QAR to review"),
+      tone: "amber", action: () => navigate("/manager") },
+  ].filter((a) => a.show);
+
+  const detailCustomers = detailView === "active" ? metrics.active
+    : detailView === "expiring" ? metrics.expiring : metrics.expired;
+
+  /* ═══════ POS + Gym rollups ═══════ */
+  const posToday = {
+    revenue: posDaily?.totalSales ?? 0,
+    tickets: posDaily?.ticketsCount ?? 0,
+    avg: posDaily?.avgTicket ?? 0,
+    staff: posDaily?.staffMealsCount ?? 0,
+    staffValue: posDaily?.staffMealsValue ?? 0,
   };
-
-  // ✅ أسماء البرامج بالعربي — الصفحة عربية بالكامل، لا نخلط لغات
-  const PROG_AR: Record<string,string> = {
-    FITNESS: "فيتنس", DIET: "دايت", BULK: "تضخيم",
-    CUSTOMIZED: "مخصّص", STANDARD: "قياسي",
+  const gymToday = {
+    revenue: gymList?.totalRevenue ?? 0,
+    meals: gymList?.totalMeals ?? 0,
+    orders: gymList?.count ?? 0,
   };
-  const PROG_EN: Record<string,string> = {
-    FITNESS: "Fitness", DIET: "Diet", BULK: "Bulking",
-    CUSTOMIZED: "Customized", STANDARD: "Standard",
-  };
-  const progLabel = (name: string) => (isRtl ? PROG_AR[name] : PROG_EN[name]) || name;
-
-  /* ─── Sub-components ─── */
-  const CustomerRow = ({ customer, badge }: { customer:any; badge:React.ReactNode }) => (
-    <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3 hover:bg-gray-100 transition-colors">
-      <div className="h-9 w-9 rounded-full bg-gradient-to-br from-cyan-100 to-blue-100 flex items-center justify-center text-cyan-700 font-bold text-sm flex-shrink-0">
-        {(customer.fullName||"?").substring(0,1).toUpperCase()}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-800 truncate">{customer.fullName||tr("بدون اسم","No name")}</p>
-        <p className="text-xs text-gray-400 mt-0.5" dir="ltr">{customer.phone||"-"}</p>
-      </div>
-      <p className="text-xs text-gray-400 shrink-0">{customer.program||"-"}</p>
-      <div className="shrink-0">{badge}</div>
-    </div>
-  );
-
-  const PlanRow = ({ plan }:{ plan:any }) => {
-    const cust = customers.find((c:any) => c._id === plan.customerId);
-    return (
-      <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-800 truncate">{cust?.fullName||plan.customerName||tr("عميل","Customer")}</p>
-          <p className="text-xs text-gray-400 mt-0.5" dir="ltr">{cust?.phone||"-"}</p>
-        </div>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full shrink-0 ${plan.deliveryTime==="MORNING" ? "bg-sky-100 text-sky-700" : "bg-indigo-100 text-indigo-700"}`}>
-          {plan.deliveryTime==="MORNING" ? tr("☀ صباحي","☀ Morning") : tr("🌙 مسائي","🌙 Evening")}
-        </span>
-      </div>
-    );
-  };
+  const activeCashiers = managerSnap?.openShifts?.length ?? 0;
 
   return (
-    <div dir={isRtl ? "rtl" : "ltr"} className="space-y-8 pb-10 bg-[#fafafa]/50 p-2 sm:p-4 rounded-[2.5rem]">
+    <div dir={isRtl ? "rtl" : "ltr"} className="mx-auto w-full max-w-[1600px] space-y-5 pb-10 text-[#17324d]">
 
-      {/* ── 🌟 Premium Welcome Brand Banner (Adrenaline Cyan-Blue Gradient) ── */}
-      <div className="relative rounded-[2rem] p-6 sm:p-8 text-white overflow-hidden shadow-[0_15px_35px_rgba(60,196,240,0.15)] flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6"
-        style={{ background: "linear-gradient(135deg, #2ebbf0 0%, #22517d 50%, #173757 100%)" }}>
-        
-        {/* Repeating luxury geometric background pattern */}
-        <div className="absolute inset-0 z-0 opacity-10"
-          style={{
-            backgroundImage: `radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0), radial-gradient(rgba(255,255,255,0.15) 1px, transparent 0)`,
-            backgroundSize: "24px 24px",
-            backgroundPosition: "0 0, 12px 12px"
-          }} />
-          
-        {/* Glow ambient spots matching official palette */}
-        <div className="absolute -left-12 -top-12 h-44 w-44 rounded-full opacity-40 bg-[#3cc4f0] blur-3xl" />
-        <div className="absolute right-1/4 bottom-0 h-32 w-32 rounded-full opacity-20 bg-[#47759c] blur-2xl" />
-
-        <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-1.5 rounded-full border border-white/20 shadow-inner">
-            <span className="h-2 w-2 rounded-full bg-cyan-300 animate-pulse" />
-            <span className="text-[11px] font-black tracking-wider uppercase">{tr("نظام أدرينالين لإدارة الوجبات الصحية 🥗", "Adrenaline Healthy Meals Management 🥗")}</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4.5xl font-black tracking-tight leading-tight" style={{ fontFamily: "Outfit, Inter, system-ui" }}>
-            {tr("صباح الخير والنشاط المميز ☀️ ،", "Good day ☀️,")} {currentUser?.name?.split(" ")[0] || tr("مسؤول أدرينالين", "Admin")}
-          </h1>
-          <p className="text-xs sm:text-sm text-cyan-100/90 font-bold max-w-xl leading-relaxed">
-            {tr("نظرة عامة وشاملة على أداء الاشتراكات، وجبات اليوم، وعمليات المطبخ والمخزون", "A complete overview of subscriptions, today's meals, and kitchen & inventory operations")}
-          </p>
-        </div>
-
-        {/* Top-performing badge (Real Data topProgram Card) */}
-        <div className="relative z-10 shrink-0 bg-white/10 backdrop-blur-xl rounded-2xl p-4.5 border border-white/20 flex items-center gap-4 shadow-2xl transition-all duration-300 hover:scale-[1.03]">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-cyan-400 to-[#47759c] flex items-center justify-center text-white font-extrabold shrink-0 shadow-[0_4px_15px_rgba(60,196,240,0.3)] text-lg">
-            🥗
-          </div>
-          <div>
-            <p className="text-[10px] text-cyan-200 font-black uppercase tracking-wider">{tr("البرنامج الأكثر طلباً", "Top program")}</p>
-            <p className="text-sm sm:text-base font-black text-white mt-0.5">{progLabel(topProgram)}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Controls Row ── */}
-      <div className="flex items-center justify-between gap-4 flex-wrap bg-white rounded-3xl p-6 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100">
-        <div className="space-y-1">
-          <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block">{tr("التاريخ المعروض", "Showing date")}</span>
-          <span className="text-base sm:text-lg font-black text-[#47759c] block">
-            {format(selectedDate, "EEEE، d MMMM yyyy", { locale })}
-          </span>
-        </div>
-
-        {/* Date switcher */}
-        <div className="flex gap-1.5 bg-slate-50 rounded-2xl p-1.5 border border-slate-100">
-          {[{label:tr("أمس","Yesterday"),offset:-1},{label:tr("اليوم","Today"),offset:0},{label:tr("غداً","Tomorrow"),offset:1}].map(({label,offset})=>{
-            const d = new Date(); d.setDate(d.getDate()+offset);
-            const active = format(selectedDate,"yyyy-MM-dd")===format(d,"yyyy-MM-dd");
-            return (
-              <button key={label} onClick={()=>setSelectedDate(d)}
-                className="h-9 px-6 rounded-xl text-xs font-black transition-all duration-300"
-                style={active ? {background:"#3cc4f0",color:"#fff",boxShadow:"0 4px 14px rgba(60,196,240,0.4)"} : {color:"#64748b"}}>
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── الموظفين اليوم (حضور/إجازات) ── */}
-      {(attToday || leaveToday) && (
-        <button onClick={() => setLocation("/attendance")}
-          className="w-full bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 flex flex-wrap items-center gap-3 sm:gap-5 text-start hover:border-[#3cc4f0]/40 transition-colors shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)]">
-          <span className="text-[11px] sm:text-xs font-black text-gray-400 uppercase tracking-wider me-auto sm:me-0">{tr("الموظفون اليوم", "Staff today")}</span>
-          {[
-            { l: tr("حاضر","Present"), v: attToday?.present ?? 0, c: "#10b981" },
-            { l: tr("غائب","Absent"), v: attToday?.absent ?? 0, c: "#ef4444" },
-            { l: tr("إجازة","On leave"), v: leaveToday?.count ?? 0, c: "#3cc4f0" },
-            { l: tr("متأخر","Late"), v: attToday?.late ?? 0, c: "#f59e0b" },
-          ].map((x, i) => (
-            <div key={i} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: x.c }} />
-              <span className="text-lg sm:text-2xl font-black tabular-nums" style={{ color: x.c }}>{x.v}</span>
-              <span className="text-[11px] sm:text-xs font-bold text-gray-500">{x.l}</span>
+      {/* ═══════ 1. Header hero ═══════ */}
+      <header className="relative overflow-hidden rounded-3xl bg-[linear-gradient(125deg,#3cc4f0_0%,#2bb0dc_48%,#47759c_100%)] px-6 py-6 text-white shadow-[0_22px_55px_-28px_rgba(14,118,172,.7)]">
+        <div className="pointer-events-none absolute -end-16 -top-24 h-64 w-64 rotate-12 rounded-[44px] border border-white/20 bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-24 end-40 h-48 w-72 -rotate-12 rounded-[44px] border border-white/10 bg-[#315f83]/20" />
+        <div className="relative flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+          <div className="max-w-2xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white">
+              <span className="h-2 w-2 rounded-full bg-emerald-300 animate-pulse" />
+              {tr("أدرينالين يعمل الآن", "Adrenaline live now")}
             </div>
-          ))}
-          <span className="text-[11px] font-bold text-[#0E76AC] ms-auto hidden sm:inline">{tr("إدارة الحضور ←", "Manage attendance →")}</span>
-        </button>
-      )}
-
-      {/* ── ⚡ الشريط التشغيلي: ما يحتاج تصرفاً الآن (طلبات معلّقة/دورة/مجمّدون/مطبخ) ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* طلبات بانتظار المراجعة — الأهم؛ يتوهّج لو فيه معلّق */}
-        <button onClick={()=>setLocation("/orders/pending")}
-          className={`rounded-2xl p-4 text-right border transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3 ${
-            (pendingOrders ?? 0) > 0
-              ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-300 shadow-[0_8px_25px_rgba(245,158,11,0.15)]"
-              : "bg-white border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)]"
-          }`}>
-          <div className={`h-11 w-11 rounded-xl grid place-items-center shrink-0 ${(pendingOrders ?? 0) > 0 ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-400"}`}>
-            <ClipboardCheck className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className={`text-2xl font-black tabular-nums leading-none ${(pendingOrders ?? 0) > 0 ? "text-amber-600" : "text-slate-800"}`}>{pendingOrders ?? "…"}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("طلبات بانتظار المراجعة", "Orders awaiting review")}</p>
-          </div>
-          {(pendingOrders ?? 0) > 0 && <span className="ms-auto h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse shrink-0" />}
-        </button>
-
-        {/* أسبوع دورة المطبخ — القلب التشغيلي للدورات */}
-        <button onClick={()=>setLocation("/orders/pending")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-[#3cc4f0]/10 text-[#0E76AC]">
-            <ChefHat className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-black tabular-nums leading-none text-[#0E76AC]">{cookingWeek ?? "…"}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("أسبوع دورة المطبخ (1-4)", "Kitchen cycle week (1-4)")}</p>
-          </div>
-        </button>
-
-        {/* مشتركون مجمّدون */}
-        <button onClick={()=>setLocation("/customers")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-indigo-50 text-indigo-500">
-            <PauseCircle className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-2xl font-black tabular-nums leading-none text-indigo-600">{stats.pausedCount}</p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("اشتراكات مجمّدة (سفر)","Paused subscriptions (travel)")}</p>
-          </div>
-        </button>
-
-        {/* تقدّم المطبخ اليوم */}
-        <button onClick={()=>setLocation("/kitchen")}
-          className="rounded-2xl p-4 text-right bg-white border border-gray-100 shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] transition-all duration-300 hover:-translate-y-1 active:scale-[0.98] flex items-center gap-3">
-          <div className="h-11 w-11 rounded-xl grid place-items-center shrink-0 bg-emerald-50 text-emerald-600">
-            <Utensils className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-2xl font-black tabular-nums leading-none text-emerald-600">
-              {stats.preparedToday}<span className="text-sm text-gray-400 font-bold">/{stats.todayMeals}</span>
+            <h1 className="text-2xl font-black leading-tight sm:text-3xl">
+              {greeting}، {firstName}
+            </h1>
+            <p className="mt-1.5 text-sm text-white/85">
+              {tr("هذه الصورة التشغيلية اليوم. ابدأ بما يحتاج قرارك.", "Today's operational picture. Start with what needs your decision.")}
             </p>
-            <p className="text-[11px] font-bold text-gray-500 mt-1">{tr("جاهز من مطبخ اليوم","Ready from today's kitchen")}</p>
-            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1.5">
-              <div className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                style={{ width: `${stats.todayMeals > 0 ? Math.round((stats.preparedToday / stats.todayMeals) * 100) : 0}%` }} />
-            </div>
           </div>
-        </button>
-      </div>
-
-      {/* ── Row 1: 4 Gorgeous top-accented KPI cards with real operational micro-metrics ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-
-        {/* المشتركين النشطين */}
-        <button onClick={()=>setOpenModal("customers")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#3cc4f0] rounded-t-3xl" />
-          
-          <div className="w-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("المشتركين النشطين","Active subscribers")}</span>
-              <div className="h-12 w-12 rounded-2xl bg-[#3cc4f0]/10 flex items-center justify-center shrink-0 border border-[#3cc4f0]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
-                <Users className="h-6 w-6 text-[#3cc4f0]" />
-              </div>
-            </div>
-            
-            <div className="mt-1">
-              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
-                {stats.activeCustomersCount}
-              </p>
-              <p className="text-xs text-gray-400 font-bold mt-2">
-                {tr("إجمالي المشتركين","Total subscribers")}: {stats.totalCustomers}
-              </p>
-            </div>
-          </div>
-
-          {/* Operational Micro-Metric */}
-          <div className="w-full mt-2 space-y-2 text-right">
-            <div className="flex justify-between items-center text-[10px] font-bold text-[#3cc4f0]">
-              <span>{stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}% {tr("من الإجمالي","of total")}</span>
-              <span>{tr("نشط حالياً","Active now")}</span>
-            </div>
-            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
-              <div className="h-full rounded-full bg-[#3cc4f0] transition-all duration-500" 
-                style={{ width: `${stats.totalCustomers > 0 ? Math.round((stats.activeCustomersCount / stats.totalCustomers) * 100) : 0}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#3cc4f0] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
-            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-        </button>
-
-        {/* خطط اليوم */}
-        <button onClick={()=>setOpenModal("meals")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#47759c] rounded-t-3xl" />
-          
-          <div className="w-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("خطط وجبات اليوم","Today's meal plans")}</span>
-              <div className="h-12 w-12 rounded-2xl bg-[#47759c]/10 flex items-center justify-center shrink-0 border border-[#47759c]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
-                <CalendarCheck className="h-6 w-6 text-[#47759c]" />
-              </div>
-            </div>
-            
-            <div className="mt-1">
-              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
-                {stats.todayMeals}
-              </p>
-              <p className="text-xs text-gray-400 font-bold mt-2">
-                {tr("إجمالي خطط اليوم","Total plans today")}
-              </p>
-            </div>
-          </div>
-
-          {/* Operational Micro-Metric Split Columns */}
-          <div className="w-full mt-2 grid grid-cols-2 gap-2 border-t border-slate-50 pt-2 text-right">
-            <div>
-              <span className="text-[10px] text-gray-400 font-bold block">{tr("☀ صباحي","☀ Morning")}</span>
-              <span className="text-sm font-black text-amber-500">{stats.morningDelivery} {tr("وجبة","meals")}</span>
-            </div>
-            <div className="border-r border-slate-100 pr-2">
-              <span className="text-[10px] text-gray-400 font-bold block">{tr("🌙 مسائي","🌙 Evening")}</span>
-              <span className="text-sm font-black text-indigo-500">{stats.eveningDelivery} {tr("وجبة","meals")}</span>
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#47759c] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
-            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-        </button>
-
-        {/* توصيل صباحي */}
-        <button onClick={()=>setOpenModal("morning")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-amber-500 rounded-t-3xl" />
-          
-          <div className="w-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("توصيل صباحي","Morning delivery")}</span>
-              <div className="h-12 w-12 rounded-2xl bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/10 shadow-sm transition-all duration-300 group-hover:scale-105">
-                <Sun className="h-6 w-6 text-amber-500" />
-              </div>
-            </div>
-            
-            <div className="mt-1">
-              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
-                {stats.morningDelivery}
-              </p>
-              <p className="text-xs text-gray-400 font-bold mt-2">
-                {tr("وجبات الفوج الصباحي","Morning shift meals")}
-              </p>
-            </div>
-          </div>
-
-          {/* Operational Micro-Metric Progress Bar */}
-          <div className="w-full mt-2 space-y-2 text-right">
-            <div className="flex justify-between items-center text-[10px] font-bold text-amber-500">
-              <span>{stats.morningRate}% {tr("من التوصيل","of delivery")}</span>
-              <span>{tr("طلب صباحي","Morning orders")}</span>
-            </div>
-            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
-              <div className="h-full rounded-full bg-amber-500 transition-all duration-500" style={{ width: `${stats.morningRate}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-amber-500 transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
-            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-        </button>
-
-        {/* توصيل مسائي */}
-        <button onClick={()=>setOpenModal("evening")}
-          className="group relative bg-white rounded-[2rem] p-6 text-right transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_2px_4px_rgba(15,21,22,0.06),0_18px_40px_-16px_rgba(14,118,172,0.25),0_0_0_1px_rgba(60,196,240,0.28)] active:scale-[0.98] border border-gray-100 flex flex-col justify-between overflow-hidden shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] min-h-[240px]">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-[#0f1516] rounded-t-3xl" />
-          
-          <div className="w-full">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <span className="text-[11px] font-black text-gray-400 uppercase tracking-wider">{tr("توصيل مسائي","Evening delivery")}</span>
-              <div className="h-12 w-12 rounded-2xl bg-[#0f1516]/10 flex items-center justify-center shrink-0 border border-[#0f1516]/10 shadow-sm transition-all duration-300 group-hover:scale-105">
-                <Moon className="h-6 w-6 text-[#0f1516]" />
-              </div>
-            </div>
-            
-            <div className="mt-1">
-              <p className="text-3xl sm:text-4xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
-                {stats.eveningDelivery}
-              </p>
-              <p className="text-xs text-gray-400 font-bold mt-2">
-                {tr("وجبات الفوج المسائي","Evening shift meals")}
-              </p>
-            </div>
-          </div>
-
-          {/* Operational Micro-Metric Progress Bar */}
-          <div className="w-full mt-2 space-y-2 text-right">
-            <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
-              <span>{100 - stats.morningRate}% {tr("من التوصيل","of delivery")}</span>
-              <span>{tr("طلب مسائي","Evening orders")}</span>
-            </div>
-            <div className="w-full h-2 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
-              <div className="h-full rounded-full bg-[#0f1516] transition-all duration-500" style={{ width: `${100 - stats.morningRate}%` }} />
-            </div>
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-50 w-full flex items-center justify-between text-xs text-slate-400 group-hover:text-[#0f1516] transition-colors">
-            <span className="font-extrabold opacity-0 group-hover:opacity-100 transition-opacity duration-300">{tr("عرض التفاصيل","View details")}</span>
-            <ArrowUpRight className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-          </div>
-        </button>
-      </div>
-
-      {/* ── Row 2: alerts + programs (Spacious & Clean Layout) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* حالة الاشتراكات */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col h-full">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
-              <span className="text-base font-black text-slate-800 tracking-tight">{tr("حالة الاشتراكات","Subscription status")}</span>
-            </div>
-            <button onClick={()=>setLocation("/customers")}
-              className="text-xs font-black px-4 py-2.5 rounded-xl flex items-center gap-1.5 text-cyan-600 bg-cyan-50 hover:bg-cyan-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
-              {tr("عرض الكل", "View all")} <ArrowUpRight className="h-4 w-4" />
+          <div className="flex items-center gap-1 rounded-xl border border-white/25 bg-white/15 p-1.5 shadow-sm">
+            <button className="grid h-10 w-10 place-items-center rounded-lg transition-colors hover:bg-white/15" onClick={() => setSelectedDate(addDays(selectedDate, -1))} aria-label={tr("السابق", "Prev")}>
+              <PrevIcon className="h-4 w-4" />
+            </button>
+            <button className="min-w-[164px] px-3 text-center" onClick={() => setSelectedDate(new Date())}>
+              <span className="block text-[10px] font-bold uppercase text-white/65">{format(selectedDate, "yyyy")}</span>
+              <span className="block text-sm font-bold">{format(selectedDate, "EEEE، d MMMM", { locale })}</span>
+            </button>
+            <button className="grid h-10 w-10 place-items-center rounded-lg transition-colors hover:bg-white/15" onClick={() => setSelectedDate(addDays(selectedDate, 1))} aria-label={tr("التالي", "Next")}>
+              <NextIcon className="h-4 w-4" />
             </button>
           </div>
-          
-          <div className="p-6 grid grid-cols-1 md:grid-cols-5 gap-6 flex-1 items-center">
-            {/* Right side: Detailed Progress Lines (3 cols) */}
-            <div className="md:col-span-3 space-y-3.5">
+        </div>
+      </header>
+
+      {/* ═══════ 2. Attendance strip (طلب المستخدم: فوق) ═══════ */}
+      <section className="rounded-2xl border border-white bg-gradient-to-br from-white to-cyan-50/40 p-4 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)] sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-100 text-[#0e76ac]">
+              <UserCheck className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-black">{tr("الفريق اليوم", "Team today")}</h2>
+              <p className="text-[11px] text-slate-500">{format(selectedDate, "EEEE، d MMMM", { locale })}</p>
+            </div>
+          </div>
+
+          <div className="grid flex-1 grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { label: tr("حاضر", "Present"),  value: attendance?.present ?? 0, color: "#10b981", bg: "#ecfdf5" },
+              { label: tr("متأخر", "Late"),    value: attendance?.late ?? 0,    color: "#f59e0b", bg: "#fef3c7" },
+              { label: tr("غائب", "Absent"),   value: attendance?.absent ?? 0,  color: "#f43f5e", bg: "#fff1f2" },
+              { label: tr("إجازة", "On leave"),value: leave?.count ?? 0,        color: "#3b82f6", bg: "#eff6ff" },
+            ].map((s) => (
+              <div key={s.label} className="rounded-xl border p-3 text-center" style={{ background: s.bg, borderColor: s.color + "30" }}>
+                <p className="text-2xl font-black tabular-nums" style={{ color: s.color }}>{s.value}</p>
+                <p className="mt-0.5 text-[11px] font-bold text-slate-600">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          <button onClick={() => navigate("/attendance")} className="flex items-center justify-center gap-1.5 rounded-xl border border-cyan-200 bg-white px-4 py-2.5 text-xs font-black text-[#0e76ac] hover:bg-cyan-50 sm:whitespace-nowrap">
+            {tr("إدارة الحضور", "Manage attendance")} <ArrowIcon className="h-4 w-4" />
+          </button>
+        </div>
+      </section>
+
+      {/* ═══════ 3. KPI row (Today at a glance) ═══════ */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          { label: tr("وجبات اليوم", "Today's meals"), value: metrics.todayPlans.length,
+            note: `${metrics.morning} ${tr("صباحي", "morning")} · ${metrics.evening} ${tr("مسائي", "evening")}`,
+            icon: CalendarDays, color: "#3cc4f0", action: () => setDetailView("meals") },
+          { label: tr("تقدم المطبخ", "Kitchen progress"), value: `${metrics.prepRate}%`,
+            note: `${metrics.prepared}/${metrics.todayPlans.length} ${tr("جاهزة", "ready")}`,
+            icon: ChefHat, color: "#10b981", action: () => navigate("/kitchen") },
+          { label: tr("تم التوصيل", "Delivered"), value: `${metrics.deliveryRate}%`,
+            note: `${metrics.delivered}/${metrics.todayPlans.length} ${tr("طلب", "orders")}`,
+            icon: Route, color: "#47759c", action: () => navigate("/delivery") },
+          { label: tr("مشتركون نشطون", "Active subscribers"), value: metrics.active.length,
+            note: `${metrics.paused} ${tr("مجمّد", "paused")} · ${metrics.expiring.length} ${tr("للتجديد", "renewal")}`,
+            icon: Users, color: "#8ddcf5", action: () => setDetailView("active") },
+        ].map((item, i) => (
+          <button key={item.label} onClick={item.action} className="group relative overflow-hidden rounded-2xl border border-white bg-white p-4 text-start shadow-[0_8px_28px_-22px_rgba(71,117,156,.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-22px_rgba(14,118,172,.7)]">
+            <div className="absolute inset-x-0 top-0 h-1" style={{ background: item.color }} />
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-[#47759c]">{item.label}</p>
+                <p className="mt-2 text-3xl font-black tabular-nums text-[#17324d]">{loading ? "—" : item.value}</p>
+                <p className="mt-1 text-[11px] text-[#6d8295]">{item.note}</p>
+              </div>
+              <div className="grid h-11 w-11 place-items-center rounded-xl transition-transform duration-200 group-hover:scale-105" style={{ background: item.color + "22", color: item.color }}>
+                <item.icon className="h-5 w-5" />
+              </div>
+            </div>
+            {i === 0 && metrics.todayPlans.length > 0 && (
+              <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full rounded-full transition-all" style={{ width: `${metrics.deliveryRate}%`, background: "linear-gradient(90deg,#3cc4f0,#10b981)" }} />
+              </div>
+            )}
+          </button>
+        ))}
+      </section>
+
+      {/* ═══════ 4. Today ops flow + Needs attention ═══════ */}
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(330px,.75fr)]">
+        {/* Operation flow */}
+        <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+              <h2 className="text-base font-black">{tr("سير عمليات اليوم", "Today's operation flow")}</h2>
+              <p className="mt-1 text-xs text-slate-500">{tr("من التأكيد حتى التسليم", "From confirmation to handoff")}</p>
+            </div>
+            <button onClick={() => navigate("/plans")} className="flex items-center gap-1.5 rounded-full bg-cyan-50 px-3 py-2 text-xs font-bold text-[#0e76ac] hover:bg-cyan-100">
+              {tr("عرض الخطط", "View plans")} <ArrowIcon className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid gap-5 p-5 lg:grid-cols-[1fr_260px]">
+            <div className="space-y-4">
               {[
-                { label: tr("نشطة ومستمرة","Active"), count: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0", modal: "customers" as ModalType },
-                { label: tr("تنتهي خلال 3 أيام","Ending in 3 days"), count: stats.expiringCustomersCount, color: "#ca8a04", modal: "expiring" as ModalType },
-                { label: tr("تنتهي اليوم","Ending today"), count: stats.expiringTodayCount, color: "#f97316", modal: "expiring" as ModalType },
-                { label: tr("اشتراكات منتهية","Expired"), count: stats.expiredCustomersCount, color: "#ef4444", modal: "expired" as ModalType },
-              ].map(({ label, count, color, modal }) => {
-                const pct = stats.totalCustomers > 0 ? Math.round((count / stats.totalCustomers) * 100) : 0;
+                { label: tr("تم التأكيد", "Confirmed"), value: metrics.todayPlans.filter((p) => p.status !== "DRAFT").length, color: "bg-blue-500" },
+                { label: tr("جاهز من المطبخ", "Kitchen ready"), value: metrics.prepared, color: "bg-emerald-500" },
+                { label: tr("تم التسليم", "Delivered"), value: metrics.delivered, color: "bg-cyan-500" },
+              ].map((row) => {
+                const pct = metrics.todayPlans.length ? Math.round((row.value / metrics.todayPlans.length) * 100) : 0;
                 return (
-                  <button
-                    key={label}
-                    onClick={() => setOpenModal(modal)}
-                    className="w-full text-right group p-3.5 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/80 hover:border-slate-200 hover:shadow-[0_4px_20px_-6px_rgba(14,118,172,0.18)] transition-all duration-300 flex flex-col gap-2 relative overflow-hidden active:scale-[0.99]"
-                  >
-                    <div className="flex items-center justify-between w-full relative z-10">
-                      <div className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
-                        <span className="text-xs font-bold text-slate-500">{label}</span>
-                      </div>
-                      <span className="text-xs font-black tabular-nums" style={{ color }}>
-                        {count} ({pct}%)
-                      </span>
+                  <div key={row.label}>
+                    <div className="mb-1.5 flex items-center justify-between text-xs font-bold">
+                      <span>{row.label}</span>
+                      <span className="tabular-nums text-slate-500">{row.value}/{metrics.todayPlans.length} · {pct}%</span>
                     </div>
-                    
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden relative z-10 border border-slate-200/30">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%`, backgroundColor: color }}
-                      />
+                    <div className="h-2.5 overflow-hidden rounded-full bg-[#e9f4f8]">
+                      <div className={`h-full rounded-full ${row.color} transition-all duration-700`} style={{ width: `${pct}%` }} />
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
-
-            {/* Left side: Premium Donut Chart (2 cols) */}
-            <div className="md:col-span-2 flex flex-col items-center justify-center relative min-h-[200px]">
-              <div className="w-full h-[180px] relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={(() => {
-                        const chartData = [
-                          { name: tr("نشطة ومستمرة","Active"), value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
-                          { name: tr("تنتهي خلال 3 أيام","Ending in 3 days"), value: stats.expiringCustomersCount, color: "#ca8a04" },
-                          { name: tr("تنتهي اليوم","Ending today"), value: stats.expiringTodayCount, color: "#f97316" },
-                          { name: tr("اشتراكات منتهية","Expired"), value: stats.expiredCustomersCount, color: "#ef4444" },
-                        ].filter(d => d.value > 0);
-                        return chartData.length > 0 ? chartData : [{ name: tr("لا يوجد","None"), value: 1, color: "#e2e8f0" }];
-                      })()}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={52}
-                      outerRadius={70}
-                      paddingAngle={4}
-                      cornerRadius={7}
-                      stroke="#fff"
-                      strokeWidth={2}
-                      dataKey="value"
-                    >
-                      {(() => {
-                        const chartData = [
-                          { name: tr("نشطة ومستمرة","Active"), value: Math.max(0, stats.activeCustomersCount - stats.expiringCustomersCount - stats.expiringTodayCount), color: "#2ebbf0" },
-                          { name: tr("تنتهي خلال 3 أيام","Ending in 3 days"), value: stats.expiringCustomersCount, color: "#ca8a04" },
-                          { name: tr("تنتهي اليوم","Ending today"), value: stats.expiringTodayCount, color: "#f97316" },
-                          { name: tr("اشتراكات منتهية","Expired"), value: stats.expiredCustomersCount, color: "#ef4444" },
-                        ].filter(d => d.value > 0);
-                        const finalData = chartData.length > 0 ? chartData : [{ name: tr("لا يوجد","None"), value: 1, color: "#e2e8f0" }];
-                        return finalData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ));
-                      })()}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center text indicating total subscribers */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-2xl font-black text-slate-800 tracking-tight leading-none">{stats.totalCustomers}</span>
-                  <span className="text-[10px] font-bold text-slate-400 mt-1">{tr("إجمالي المشتركين","Total subscribers")}</span>
-                </div>
-              </div>
+            <div className="grid grid-cols-2 gap-2 border-slate-100 lg:border-s lg:ps-5">
+              <button onClick={() => navigate("/kitchen")} className="rounded-xl bg-[linear-gradient(145deg,#47759c,#315f83)] p-3 text-start text-white shadow-[0_10px_24px_-16px_rgba(49,95,131,.8)] hover:brightness-110">
+                <ChefHat className="mb-3 h-5 w-5 text-cyan-200" />
+                <span className="block text-sm font-black">{tr("المطبخ", "Kitchen")}</span>
+                <span className="mt-0.5 block text-[10px] text-blue-100/80">{tr("قائمة التحضير", "Prep queue")}</span>
+              </button>
+              <button onClick={() => navigate("/delivery")} className="rounded-xl bg-[linear-gradient(145deg,#3cc4f0,#24a9d6)] p-3 text-start text-[#17324d] shadow-[0_10px_24px_-16px_rgba(60,196,240,.9)] hover:brightness-105">
+                <Route className="mb-3 h-5 w-5" />
+                <span className="block text-sm font-black">{tr("التوصيل", "Delivery")}</span>
+                <span className="mt-0.5 block text-[10px] text-cyan-950/70">{tr("المسارات والسائقون", "Routes & drivers")}</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* توزيع البرامج */}
-        <div className="bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
-            <div className="flex items-center gap-2.5">
-              <TrendingUp className="h-5 w-5 text-slate-400" />
-              <span className="text-base font-black text-slate-800">{tr("توزيع البرامج","Program distribution")}</span>
+        {/* Needs attention */}
+        <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="border-b border-slate-100 px-5 py-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <h2 className="text-base font-black">{tr("يحتاج انتباهك", "Needs attention")}</h2>
+              {alerts.length > 0 && <span className="ms-auto rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">{alerts.length}</span>}
             </div>
-            <div className="w-5 h-5" />
           </div>
-          
-          <div className="p-6 space-y-4">
-            {programData.map(({name, value}) => {
-              const pct = stats.totalCustomers > 0 ? Math.round((value/stats.totalCustomers)*100) : 0;
-              const color = PROG_COLORS[name] || "#64748b";
+          <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto">
+            {alerts.length === 0 ? (
+              <div className="flex min-h-48 flex-col items-center justify-center p-6 text-center">
+                <div className="grid h-11 w-11 place-items-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-5 w-5" /></div>
+                <p className="mt-3 text-sm font-black">{tr("كل شيء تحت السيطرة", "Everything under control")}</p>
+                <p className="mt-1 text-xs text-slate-500">{tr("لا تنبيهات عاجلة الآن", "No urgent alerts now")}</p>
+              </div>
+            ) : alerts.map((a) => {
+              const tones: Record<string, string> = { amber: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", blue: "bg-blue-50 text-blue-700" };
               return (
-                <div key={name} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-500">{progLabel(name)}</span>
-                    <span className="text-xs font-black tabular-nums" style={{color}}>{value} ({pct}%)</span>
+                <button key={a.title} onClick={a.action} className="flex w-full items-center gap-3 p-4 text-start hover:bg-slate-50 transition-colors">
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${tones[a.tone]}`}><a.icon className="h-5 w-5" /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-black"><span className="me-1 tabular-nums">{a.count}</span>{a.title}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-slate-500">{a.detail}</p>
                   </div>
-                  <div className="h-2.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/50">
-                    <div className="h-full rounded-full transition-all duration-700"
-                       style={{width:`${pct}%`, background:`linear-gradient(90deg, ${color}, ${color}bb)`}} />
+                  <ArrowIcon className="h-4 w-4 shrink-0 text-slate-400" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 5. POS + Gym + Loyalty rollups ═══════ */}
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {/* POS today */}
+        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><Receipt className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#47759c]">{tr("مبيعات POS اليوم", "POS sales today")}</p>
+              <p className="text-2xl font-black text-[#17324d]">{posToday.revenue.toFixed(2)} <span className="text-xs text-slate-400">QAR</span></p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">{posToday.tickets} {tr("فاتورة · متوسط", "tix · avg")} {Number(posToday.avg).toFixed(2)}</p>
+          <button onClick={() => navigate("/pos-admin")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50/50 px-3 py-2 text-[11px] font-black text-emerald-700 hover:bg-emerald-50">
+            {tr("لوحة POS", "POS admin")} <ArrowIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Gym sales today */}
+        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-purple-100 text-purple-700"><Dumbbell className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#47759c]">{tr("مبيعات الجم اليوم", "Gym sales today")}</p>
+              <p className="text-2xl font-black text-[#17324d]">{gymToday.revenue.toFixed(2)} <span className="text-xs text-slate-400">QAR</span></p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">{gymToday.orders} {tr("طلبية", "orders")} · {gymToday.meals} {tr("وجبة", "meals")}</p>
+          <button onClick={() => navigate("/gym-sales")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-purple-200 bg-purple-50/50 px-3 py-2 text-[11px] font-black text-purple-700 hover:bg-purple-50">
+            {tr("لوحة الجم", "Gym POS")} <ArrowIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Active cashiers */}
+        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-100 text-cyan-700"><Store className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#47759c]">{tr("كاشيرون نشطون الآن", "Active cashiers now")}</p>
+              <p className="text-2xl font-black text-[#17324d]">{activeCashiers}</p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            {(posToday.staff ?? 0) > 0
+              ? `${posToday.staff} ${tr("وجبة موظفين", "staff meals")} · ${Number(posToday.staffValue).toFixed(2)}`
+              : tr("لا وجبات موظفين اليوم", "No staff meals today")}
+          </p>
+          <button onClick={() => navigate("/manager")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-cyan-200 bg-cyan-50/50 px-3 py-2 text-[11px] font-black text-cyan-700 hover:bg-cyan-50">
+            {tr("لوحة المدير اللحظية", "Manager Live")} <ArrowIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        {/* Big tickets / audit */}
+        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-100 text-amber-700"><Coins className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-[#47759c]">{tr("أحداث حساسة اليوم", "Sensitive events today")}</p>
+              <p className="text-2xl font-black text-[#17324d]">
+                {(managerSnap?.alerts?.voidsToday ?? 0) + (managerSnap?.alerts?.refundsToday ?? 0)}
+              </p>
+            </div>
+          </div>
+          <p className="mt-2 text-[11px] text-slate-500">
+            {managerSnap?.alerts?.voidsToday ?? 0} {tr("إلغاء", "voids")} · {managerSnap?.alerts?.refundsToday ?? 0} {tr("استرجاع", "refunds")}
+          </p>
+          <button onClick={() => navigate("/pos-admin")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-amber-200 bg-amber-50/50 px-3 py-2 text-[11px] font-black text-amber-700 hover:bg-amber-50">
+            {tr("سجل التدقيق", "Audit trail")} <ArrowIcon className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </section>
+
+      {/* ═══════ 6. Weekly chart + Delivery windows + Subs health ═══════ */}
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,.7fr)_minmax(0,.7fr)]">
+        {/* Weekly chart */}
+        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="mb-4 flex items-start justify-between">
+            <div>
+              <h2 className="text-base font-black">{tr("حجم الوجبات", "Meal volume")}</h2>
+              <p className="mt-1 text-xs text-slate-500">{tr("آخر 7 أيام", "Last 7 days")}</p>
+            </div>
+            <Sparkles className="h-4 w-4 text-cyan-500" />
+          </div>
+          <div className="h-56" dir="ltr">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyData} margin={{ top: 8, right: 0, left: 0, bottom: 0 }}>
+                <CartesianGrid vertical={false} stroke="#dcebf2" strokeDasharray="3 3" />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: "#47759c", fontSize: 11 }} />
+                <Tooltip cursor={{ fill: "#ecfeff" }} contentStyle={{ borderRadius: 12, borderColor: "#bae6fd", fontSize: 12 }} />
+                <Bar dataKey="meals" fill="#3cc4f0" radius={[8, 8, 0, 0]} maxBarSize={38} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Delivery windows */}
+        <div className="rounded-2xl border border-white bg-gradient-to-br from-amber-50/30 to-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="mb-4 flex items-center gap-2">
+            <Route className="h-4 w-4 text-amber-600" />
+            <h2 className="text-base font-black">{tr("توزيع اليوم", "Today distribution")}</h2>
+          </div>
+          <div className="space-y-3">
+            {[
+              { label: tr("الصباحية", "Morning"), value: metrics.morning, icon: Sun, color: "#f59e0b", bg: "#fef3c7" },
+              { label: tr("المسائية", "Evening"), value: metrics.evening, icon: Sunset, color: "#6366f1", bg: "#eef2ff" },
+            ].map((w) => {
+              const pct = metrics.todayPlans.length ? Math.round((w.value / metrics.todayPlans.length) * 100) : 0;
+              return (
+                <div key={w.label} className="rounded-xl border p-3" style={{ background: w.bg, borderColor: w.color + "30" }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <w.icon className="h-4 w-4" style={{ color: w.color }} />
+                      <span className="text-xs font-black" style={{ color: w.color }}>{w.label}</span>
+                    </div>
+                    <span className="text-lg font-black tabular-nums" style={{ color: w.color }}>{w.value}</span>
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-white/60 overflow-hidden">
+                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: w.color }} />
                   </div>
                 </div>
               );
             })}
           </div>
         </div>
-      </div>
 
-      {/* ── Row 3: inventory + charts ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ملخص المخزون */}
-        <div className="bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
-            <div className="flex items-center gap-2.5">
-              <Package className="h-5 w-5 text-slate-400" />
-              <span className="text-base font-black text-slate-800">{tr("ملخص المخزون","Inventory summary")}</span>
+        {/* Subscribers health */}
+        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="mb-4 flex items-center gap-2">
+            <Users className="h-4 w-4 text-[#0e76ac]" />
+            <h2 className="text-base font-black">{tr("صحة الاشتراكات", "Subscribers health")}</h2>
+          </div>
+          <div className="space-y-2.5">
+            <button onClick={() => setDetailView("active")} className="w-full flex items-center justify-between rounded-xl border border-cyan-200/50 bg-cyan-50/40 p-3 hover:bg-cyan-50">
+              <span className="text-xs font-bold text-cyan-800">{tr("نشطون", "Active")}</span>
+              <span className="text-xl font-black text-[#0e76ac] tabular-nums">{metrics.active.length}</span>
+            </button>
+            <button onClick={() => setDetailView("expiring")} className="w-full flex items-center justify-between rounded-xl border border-rose-200/50 bg-rose-50/40 p-3 hover:bg-rose-50">
+              <span className="text-xs font-bold text-rose-800">{tr("ينتهون قريباً", "Ending soon")}</span>
+              <span className="text-xl font-black text-rose-600 tabular-nums">{metrics.expiring.length}</span>
+            </button>
+            <div className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+              <span className="text-xs font-bold text-slate-600">{tr("مجمّدون", "Paused")}</span>
+              <span className="text-xl font-black text-slate-600 tabular-nums">{metrics.paused}</span>
             </div>
-            <button onClick={()=>setLocation("/inventory")}
-              className="text-xs font-black px-4 py-2 rounded-xl flex items-center gap-1 text-slate-600 bg-slate-50 hover:bg-slate-100 hover:scale-[1.02] active:scale-[0.98] transition-all">
-              {tr("إدارة", "Manage")} <ArrowUpRight className="h-3.5 w-3.5" />
+            <button onClick={() => setDetailView("expired")} className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/60 p-3 hover:bg-slate-100">
+              <span className="text-xs font-bold text-slate-600">{tr("منتهون", "Expired")}</span>
+              <span className="text-xl font-black text-slate-500 tabular-nums">{metrics.expired.length}</span>
             </button>
           </div>
-          
-          <div className="p-6 grid grid-cols-1 gap-4">
-            {/* ✅ حالة الصفر مصمّمة: لا نقص = بطاقة خضراء مطمئنة، لا حمراء بصفر */}
-            {stats.lowStockCount > 0 ? (
-              <button onClick={()=>setOpenModal("inventory")}
-                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-red-50 to-rose-50/30 border border-red-100 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
-                <p className="text-5xl font-black text-red-500 tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{stats.lowStockCount}</p>
-                <p className="text-xs font-black text-red-400 mt-2">⚠ {tr("أصناف مخزون منخفض","Low-stock items")}</p>
-              </button>
-            ) : (
-              <div className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-emerald-50 to-green-50/30 border border-emerald-100">
-                <p className="text-3xl leading-none">✅</p>
-                <p className="text-sm font-black text-emerald-600 mt-2">{tr("لا يوجد نقص في المخزون","No stock shortage")}</p>
-              </div>
-            )}
-            {((inventorySummary as any)?.totalItems || 0) > 0 ? (
-              <button onClick={()=>setLocation("/inventory")}
-                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-slate-50 to-slate-100/30 border border-slate-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98] group">
-                <p className="text-5xl font-black text-[#47759c] tabular-nums tracking-tight leading-none group-hover:scale-105 transition-transform">{(inventorySummary as any)?.totalItems||0}</p>
-                <p className="text-xs font-black text-slate-500 mt-2">📦 {tr("إجمالي الأصناف","Total items")}</p>
-              </button>
-            ) : (
-              <button onClick={()=>setLocation("/inventory")}
-                className="w-full rounded-[1.5rem] p-5 text-center bg-gradient-to-br from-amber-50 to-yellow-50/30 border border-amber-200 hover:shadow-lg transition-all duration-300 active:scale-[0.98]">
-                <p className="text-3xl leading-none">📦</p>
-                <p className="text-sm font-black text-amber-600 mt-2">{tr("لا توجد أصناف بعد — أضف مخزونك ←","No items yet — add your stock →")}</p>
-              </button>
-            )}
-          </div>
         </div>
+      </section>
 
-        {/* نظرة أسبوعية */}
-        <div className="lg:col-span-2 bg-white rounded-[2rem] shadow-[0_1px_2px_rgba(15,21,22,0.05),0_10px_28px_-12px_rgba(14,118,172,0.12)] border border-gray-100 overflow-hidden flex flex-col justify-between">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-50 bg-slate-50/20">
-            <span className="text-xs font-extrabold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{tr("آخر 7 أيام","Last 7 days")}</span>
-            <div className="flex items-center gap-2.5">
-              <Utensils className="h-5 w-5 text-cyan-500" />
-              <span className="text-base font-black text-slate-800">{tr("الخطط الأسبوعية","Weekly plans")}</span>
+      {/* ═══════ 7. Recent activity + Kitchen readiness ═══════ */}
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,.7fr)]">
+        {/* Recent POS tickets */}
+        <div className="rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-500" />
+              <h2 className="text-base font-black">{tr("آخر فواتير POS", "Recent POS tickets")}</h2>
             </div>
+            <button onClick={() => navigate("/manager")} className="text-[11px] font-black text-[#0e76ac] hover:underline">
+              {tr("عرض الكل", "See all")} →
+            </button>
           </div>
-          
-          <div className="p-6">
-            {weeklyData.every(d => d.value === 0) ? (
-              <div className="flex flex-col items-center justify-center h-[180px] gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-cyan-50 border border-cyan-100 flex items-center justify-center">
-                  <CalendarCheck className="h-7 w-7 text-cyan-300" />
+          <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+            {(!managerSnap?.recent || managerSnap.recent.length === 0) ? (
+              <p className="p-8 text-center text-sm text-slate-400 font-bold">{tr("لا فواتير حديثة", "No recent tickets")}</p>
+            ) : managerSnap.recent.slice(0, 8).map((r: any) => (
+              <div key={r.id} className="px-5 py-3 flex items-center gap-3">
+                <div className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-xs font-black text-white ${r.isBig ? "bg-amber-500" : "bg-cyan-500"}`}>
+                  #{String(r.ticketNumber).slice(-2)}
                 </div>
-                <p className="text-sm font-semibold text-gray-300">{tr("لا توجد خطط هذا الأسبوع","No plans this week")}</p>
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={190}>
-                <BarChart data={weeklyData} barCategoryGap="35%" margin={{ top: 18 }}>
-                  <XAxis dataKey="name" tick={{fill:"#94a3b8",fontSize:10,fontWeight:700}} axisLine={false} tickLine={false} interval={0} />
-                  <YAxis hide />
-                  <Tooltip contentStyle={{borderRadius:"16px",border:"1px solid #f1f5f9",fontSize:12,boxShadow:"0 12px 35px rgba(0,0,0,0.06)"}} cursor={{fill:"#f8fafc",radius:8}} />
-                  <Bar dataKey="value" radius={[10,10,4,4]} maxBarSize={42}>
-                    <LabelList dataKey="value" position="top" style={{ fill: "#47759c", fontSize: 11, fontWeight: 900 }}
-                      formatter={(v: any) => (Number(v) > 0 ? v : "")} />
-                    {weeklyData.map((_,i) => <Cell key={i} fill={i===6?"#3cc4f0":"#47759c"} />)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Modals ── */}
-      {([
-        { key:"customers", title:tr("المشتركين النشطين","Active subscribers"), count:stats.activeCustomersCount, badge:"#3cc4f0",
-          rows: stats.activeCustomers.map((c:any,i:number) => {
-            const d = differenceInDays(parseISO(c.endDate), new Date());
-            return <CustomerRow key={c._id??i} customer={c} badge={
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={d<=1?{background:"#fee2e2",color:"#dc2626"}:d<=7?{background:"#fef3c7",color:"#d97706"}:{background:"#d1fae5",color:"#059669"}}>
-                {d<=0?tr("منتهي","Expired"):`${d} ${tr("يوم","d")}`}
-              </span>
-            } />;
-          }),
-        },
-        { key:"meals", title:`${tr("خطط اليوم","Today's plans")} — ${format(selectedDate,"d MMMM",{locale})}`, count:stats.todayMeals, badge:"#10b981",
-          rows: stats.todayPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
-        },
-        { key:"morning", title:tr("توصيل صباحي","Morning delivery"), count:stats.morningDelivery, badge:"#f59e0b",
-          rows: stats.morningPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
-        },
-        { key:"evening", title:tr("توصيل مسائي","Evening delivery"), count:stats.eveningDelivery, badge:"#8b5cf6",
-          rows: stats.eveningPlans.map((p:any,i:number) => <PlanRow key={p._id??i} plan={p} />),
-        },
-        { key:"expiring", title:tr("تنتهي قريباً","Ending soon"), count:stats.expiringCustomersCount, badge:"#f59e0b",
-          rows: stats.expiringCustomers.map((c:any,i:number) => {
-            const d = differenceInDays(parseISO(c.endDate), new Date());
-            return <CustomerRow key={c._id??i} customer={c} badge={
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full"
-                style={d===0?{background:"#fff7ed",color:"#ea580c"}:d===1?{background:"#fef3c7",color:"#d97706"}:{background:"#dbeafe",color:"#2563eb"}}>
-                {d===0?tr("اليوم","Today"):d===1?tr("غدًا","Tomorrow"):`${d} ${tr("أيام","days")}`}
-              </span>
-            } />;
-          }),
-        },
-        { key:"expired", title:tr("اشتراكات منتهية","Expired"), count:stats.expiredCustomersCount, badge:"#ef4444",
-          rows: stats.expiredCustomers.map((c:any,i:number) => {
-            const d = Math.abs(differenceInDays(parseISO(c.endDate), new Date()));
-            return <CustomerRow key={c._id??i} customer={c} badge={
-              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-red-100 text-red-600">{tr("منذ","Since")} {d} {tr("يوم","d")}</span>
-            } />;
-          }),
-        },
-        { key:"monthly", title:tr("العملاء الجدد هذا الشهر","New customers this month"), count:stats.newThisMonth, badge:"#3cc4f0",
-          rows: stats.newThisMonthList.map((c:any,i:number) => (
-            <CustomerRow key={c._id??i} customer={c} badge={
-              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700">
-                {format(parseISO(c.startDate),"d MMM",{locale})}
-              </span>
-            } />
-          )),
-        },
-      ] as Array<{key:string,title:string,count:number,badge:string,rows:React.ReactNode[]}>).map(({key,title,count,badge,rows})=>(
-        <Dialog key={key} open={openModal===key as ModalType} onOpenChange={()=>setOpenModal(null)}>
-          <DialogContent className="max-w-2xl" aria-describedby={`${key}-desc`}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <span className="text-gray-900">{title}</span>
-                <span className="text-sm font-normal px-2.5 py-1 rounded-full" style={{background:`${badge}15`,color:badge}}>{count}</span>
-              </DialogTitle>
-            </DialogHeader>
-            <div id={`${key}-desc`} className="max-h-[60vh] overflow-auto space-y-2 pt-1">
-              {rows.length===0 ? <p className="text-center py-10 text-gray-400">{tr("لا يوجد بيانات","No data")}</p> : rows}
-            </div>
-          </DialogContent>
-        </Dialog>
-      ))}
-
-      <Dialog open={openModal==="inventory"} onOpenChange={()=>setOpenModal(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" aria-describedby="inv-desc">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-gray-900">
-              {tr("مخزون منخفض", "Low stock")}
-              <span className="text-sm font-normal px-2.5 py-1 rounded-full bg-red-100 text-red-600">{stats.lowStockCount}</span>
-            </DialogTitle>
-          </DialogHeader>
-          <div id="inv-desc" className="space-y-2">
-            {stats.lowStockItems.map((item:any)=>(
-              <div key={item._id} className="flex justify-between items-center bg-gray-50 rounded-xl px-4 py-3">
-                <div><p className="text-sm font-semibold text-gray-800">{isRtl ? item.name_ar : (item.name_en || item.name_ar)}</p><p className="text-xs text-gray-400">{item.category}</p></div>
-                <div className="text-end"><p className="text-lg font-black text-red-500">{item.current_stock} {item.unit}</p><p className="text-xs text-gray-400">{tr("الحد الأدنى","Min")}: {item.min_stock}</p></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black truncate">
+                    #{r.ticketNumber}
+                    {r.isNonRevenue && <span className="ms-2 text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 uppercase">Staff</span>}
+                  </p>
+                  <p className="text-[11px] text-slate-500 font-bold truncate">
+                    {r.cashierName} · {r.paymentMethod}{r.customerName ? ` · ${r.customerName}` : ""}
+                  </p>
+                </div>
+                <p className="text-sm font-black text-[#0e76ac] tabular-nums">{Number(r.total).toFixed(2)}</p>
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Kitchen readiness / inventory */}
+        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+          <div className="mb-4 flex items-center gap-2">
+            <ChefHat className="h-4 w-4 text-emerald-600" />
+            <h2 className="text-base font-black">{tr("جاهزية المطبخ", "Kitchen readiness")}</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 text-center">
+              <p className="text-3xl font-black text-emerald-600 tabular-nums">{inventoryItems.length}</p>
+              <p className="mt-1 text-[11px] font-bold text-slate-600">{tr("صنف مخزون", "inventory items")}</p>
+            </div>
+            <div className="rounded-xl border border-orange-100 bg-orange-50/40 p-3 text-center">
+              <p className="text-3xl font-black text-orange-600 tabular-nums">{metrics.lowStock.length}</p>
+              <p className="mt-1 text-[11px] font-bold text-orange-700">{tr("تحت الحد الأدنى", "below min stock")}</p>
+            </div>
+          </div>
+          <button onClick={() => navigate("/inventory")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-700 hover:border-cyan-300 hover:bg-cyan-50">
+            {tr("افتح إدارة المخزون", "Open inventory")} <ArrowIcon className="h-4 w-4" />
+          </button>
+          {metrics.lowStock.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {metrics.lowStock.slice(0, 3).map((i: any) => (
+                <div key={i._id} className="flex items-center justify-between text-[11px] font-bold">
+                  <span className="truncate text-slate-700">{isRtl ? i.nameAr : (i.nameEn || i.nameAr)}</span>
+                  <span className="text-orange-700 tabular-nums shrink-0 ms-2">{i.currentStock}/{i.minStock} {i.unit}</span>
+                </div>
+              ))}
+              {metrics.lowStock.length > 3 && (
+                <button onClick={() => setDetailView("inventory")} className="text-[10px] font-black text-orange-700 hover:underline mt-1">
+                  +{metrics.lowStock.length - 3} {tr("أخرى", "more")}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ═══════ Detail dialog ═══════ */}
+      <Dialog open={detailView !== null} onOpenChange={(open) => !open && setDetailView(null)}>
+        <DialogContent dir={isRtl ? "rtl" : "ltr"} className="max-h-[82vh] max-w-2xl overflow-y-auto rounded-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {detailView === "meals" ? tr("وجبات اليوم", "Today's meals")
+               : detailView === "inventory" ? tr("تنبيهات المخزون", "Inventory alerts")
+               : detailView === "active" ? tr("المشتركون النشطون", "Active subscribers")
+               : detailView === "expiring" ? tr("اشتراكات تنتهي قريباً", "Subscriptions ending soon")
+               : tr("اشتراكات منتهية", "Expired subscriptions")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-3 divide-y divide-slate-100 rounded-md border border-slate-200">
+            {detailView === "meals" && metrics.todayPlans.map((plan: any) => {
+              const customer = customers.find((c: any) => c._id === plan.customerId);
+              return (
+                <div key={plan._id} className="flex items-center gap-3 p-4">
+                  <div className={`grid h-9 w-9 place-items-center rounded-md ${plan.deliveryTime === "MORNING" ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"}`}>
+                    {plan.deliveryTime === "MORNING" ? <Sun className="h-4 w-4" /> : <Sunset className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-black">{customer?.fullName || plan.customerName || tr("عميل", "Customer")}</p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">{plan.deliveryTime === "MORNING" ? tr("توصيل صباحي", "Morning") : tr("توصيل مسائي", "Evening")}</p>
+                  </div>
+                  <span className={`rounded px-2 py-1 text-[10px] font-bold ${STATUS_STYLES[plan.status] || STATUS_STYLES.DRAFT}`}>{statusLabel(plan.status)}</span>
+                </div>
+              );
+            })}
+            {detailView === "inventory" && metrics.lowStock.map((i: any) => (
+              <div key={i._id} className="flex items-center gap-3 p-4">
+                <Package className="h-5 w-5 text-rose-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-black">{isRtl ? i.nameAr : i.nameEn || i.nameAr}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{tr("الحد الأدنى", "Minimum")}: {i.minStock} {i.unit}</p>
+                </div>
+                <span className="text-sm font-black tabular-nums text-rose-600">{i.currentStock} {i.unit}</span>
+              </div>
+            ))}
+            {detailView !== "meals" && detailView !== "inventory" && detailCustomers.map((c: any) => (
+              <div key={c._id} className="flex items-center gap-3 p-4">
+                <div className="grid h-9 w-9 place-items-center rounded-md bg-slate-100 text-sm font-black text-slate-600">{(c.fullName || "?").slice(0, 1)}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black">{c.fullName || tr("بدون اسم", "No name")}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500" dir="ltr">{c.phone || "—"}</p>
+                </div>
+                <span className="text-xs font-bold text-slate-500">{c.endDate || "—"}</span>
+              </div>
+            ))}
+            {((detailView === "meals" && !metrics.todayPlans.length)
+              || (detailView === "inventory" && !metrics.lowStock.length)
+              || (!["meals", "inventory"].includes(detailView || "") && !detailCustomers.length)) && (
+              <div className="p-10 text-center text-sm text-slate-500">{tr("لا توجد بيانات للعرض", "No data to display")}</div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
