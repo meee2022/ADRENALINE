@@ -181,7 +181,7 @@ export default function DashboardNew() {
       </header>
 
       {/* ═══════ 2. Attendance strip (طلب المستخدم: فوق) ═══════ */}
-      <section className="rounded-2xl border border-white bg-gradient-to-br from-white to-cyan-50/40 p-4 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)] sm:p-5">
+      <section className="rounded-2xl border border-cyan-200/60 bg-gradient-to-br from-white to-cyan-50/60 p-4 shadow-[0_6px_20px_-8px_rgba(14,118,172,0.15),0_1px_3px_rgba(14,42,74,0.05)] sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-100 text-[#0e76ac]">
@@ -229,7 +229,7 @@ export default function DashboardNew() {
             note: `${metrics.paused} ${tr("مجمّد", "paused")} · ${metrics.expiring.length} ${tr("للتجديد", "renewal")}`,
             icon: Users, color: "#8ddcf5", action: () => setDetailView("active") },
         ].map((item, i) => (
-          <button key={item.label} onClick={item.action} className="group relative overflow-hidden rounded-2xl border border-white bg-white p-4 text-start shadow-[0_8px_28px_-22px_rgba(71,117,156,.8)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_-22px_rgba(14,118,172,.7)]">
+          <button key={item.label} onClick={item.action} className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-4 text-start shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white transition-all duration-200 hover:-translate-y-1 hover:border-cyan-300 hover:shadow-[0_14px_32px_-12px_rgba(14,118,172,0.25)]">
             <div className="absolute inset-x-0 top-0 h-1" style={{ background: item.color }} />
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -253,7 +253,7 @@ export default function DashboardNew() {
       {/* ═══════ 4. Today ops flow + Needs attention ═══════ */}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(330px,.75fr)]">
         {/* Operation flow */}
-        <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <div>
               <h2 className="text-base font-black">{tr("سير عمليات اليوم", "Today's operation flow")}</h2>
@@ -300,7 +300,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Needs attention */}
-        <div className="overflow-hidden rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="border-b border-slate-100 px-5 py-4">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -335,7 +335,7 @@ export default function DashboardNew() {
       {/* ═══════ 5. POS + Gym + Loyalty rollups ═══════ */}
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {/* POS today */}
-        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white transition-all duration-200 hover:border-cyan-200 hover:shadow-[0_10px_24px_-8px_rgba(14,118,172,0.18)]">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><Receipt className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
@@ -350,7 +350,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Gym sales today */}
-        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white transition-all duration-200 hover:border-cyan-200 hover:shadow-[0_10px_24px_-8px_rgba(14,118,172,0.18)]">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-purple-100 text-purple-700"><Dumbbell className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
@@ -365,7 +365,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Active cashiers */}
-        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white transition-all duration-200 hover:border-cyan-200 hover:shadow-[0_10px_24px_-8px_rgba(14,118,172,0.18)]">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-100 text-cyan-700"><Store className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
@@ -384,7 +384,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Big tickets / audit */}
-        <div className="rounded-2xl border border-white bg-white p-4 shadow-[0_10px_28px_-24px_rgba(71,117,156,.8)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white transition-all duration-200 hover:border-cyan-200 hover:shadow-[0_10px_24px_-8px_rgba(14,118,172,0.18)]">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-amber-100 text-amber-700"><Coins className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
@@ -406,7 +406,7 @@ export default function DashboardNew() {
       {/* ═══════ 6. Weekly chart + Delivery windows + Subs health ═══════ */}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,.7fr)_minmax(0,.7fr)]">
         {/* Weekly chart */}
-        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <h2 className="text-base font-black">{tr("حجم الوجبات", "Meal volume")}</h2>
@@ -427,7 +427,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Delivery windows */}
-        <div className="rounded-2xl border border-white bg-gradient-to-br from-amber-50/30 to-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="rounded-2xl border border-amber-200/50 bg-gradient-to-br from-amber-50/40 to-white p-5 shadow-[0_4px_18px_-6px_rgba(245,158,11,0.10),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="mb-4 flex items-center gap-2">
             <Route className="h-4 w-4 text-amber-600" />
             <h2 className="text-base font-black">{tr("توزيع اليوم", "Today distribution")}</h2>
@@ -457,7 +457,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Subscribers health */}
-        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="mb-4 flex items-center gap-2">
             <Users className="h-4 w-4 text-[#0e76ac]" />
             <h2 className="text-base font-black">{tr("صحة الاشتراكات", "Subscribers health")}</h2>
@@ -486,7 +486,7 @@ export default function DashboardNew() {
       {/* ═══════ 7. Recent activity + Kitchen readiness ═══════ */}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.3fr)_minmax(0,.7fr)]">
         {/* Recent POS tickets */}
-        <div className="rounded-2xl border border-white bg-white shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="border-b border-slate-100 px-5 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-500" />
@@ -520,7 +520,7 @@ export default function DashboardNew() {
         </div>
 
         {/* Kitchen readiness / inventory */}
-        <div className="rounded-2xl border border-white bg-white p-5 shadow-[0_12px_36px_-28px_rgba(71,117,156,.9)]">
+        <div className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-[0_4px_18px_-6px_rgba(14,42,74,0.08),0_1px_3px_rgba(14,42,74,0.04)] ring-1 ring-inset ring-white">
           <div className="mb-4 flex items-center gap-2">
             <ChefHat className="h-4 w-4 text-emerald-600" />
             <h2 className="text-base font-black">{tr("جاهزية المطبخ", "Kitchen readiness")}</h2>
