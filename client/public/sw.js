@@ -3,7 +3,7 @@
  * @description Service Worker - دعم الـ offline والـ caching للأصول
  */
 
-const CACHE_VERSION = "adrenaline-v1";
+const CACHE_VERSION = "adrenaline-v2";
 const STATIC_ASSETS = [
   "/",
   "/heart-logo.png",
@@ -40,8 +40,11 @@ self.addEventListener("fetch", (event) => {
   // Skip non-GET requests
   if (event.request.method !== "GET") return;
 
-  // Skip convex API + websocket
-  if (url.hostname.includes("convex.cloud") || url.protocol === "ws:") return;
+  // ✅ نتعامل فقط مع طلبات نفس الموقع عبر http(s):
+  //  - نتجاهل chrome-extension:// (الـ Cache API يرفض تخزينها) وأي بروتوكول آخر
+  //  - نتجاهل الطلبات عبر المصادر (بلاطات الخريطة/الخطوط/كونفكس) فتذهب للشبكة مباشرة بدون تدخّل
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
+  if (url.origin !== self.location.origin) return;
 
   // Network-first for HTML (so user always gets latest)
   if (event.request.mode === "navigate") {
