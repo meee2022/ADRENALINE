@@ -565,28 +565,32 @@ export const supervisorBoard = query({
 
     const stops = [];
     for (const p of rows) {
+      const c = p.customerId ? await ctx.db.get(p.customerId) : null;
+      // ✅ لو الخطة مالهاش سائق مُسنَد يدوياً، نرجع للسائق الدائم للمشترك (نفس منطق صفحة السواقين).
+      //    كده المحطات تظهر تحت سائقها تلقائياً بدون إسناد يدوي — الإسناد اليدوي للاستثناءات فقط.
+      const effDriverId = p.driverId
+        ? String(p.driverId)
+        : ((c as any)?.defaultDriverId ? String((c as any).defaultDriverId) : null);
       let driverName: string | null = null;
-      if (p.driverId) {
-        const key = String(p.driverId);
-        if (!driverNames.has(key)) {
-          const d = await ctx.db.get(p.driverId);
-          driverNames.set(key, (d as any)?.name || "سائق");
+      if (effDriverId) {
+        if (!driverNames.has(effDriverId)) {
+          const d = await ctx.db.get(effDriverId as any);
+          driverNames.set(effDriverId, (d as any)?.name || "سائق");
         }
-        driverName = driverNames.get(key)!;
-        if (!perDriver[key]) perDriver[key] = { name: driverName, delivered: 0, total: 0 };
-        perDriver[key].total++;
-        if (p.status === "DELIVERED") perDriver[key].delivered++;
+        driverName = driverNames.get(effDriverId)!;
+        if (!perDriver[effDriverId]) perDriver[effDriverId] = { name: driverName, delivered: 0, total: 0 };
+        perDriver[effDriverId].total++;
+        if (p.status === "DELIVERED") perDriver[effDriverId].delivered++;
       }
       if (p.status === "DELIVERED" && (p as any).outForDeliveryAt && (p as any).deliveredAt) {
         totalDeliveredMs += (p as any).deliveredAt - (p as any).outForDeliveryAt;
         deliveredWithTime++;
       }
-      const c = p.customerId ? await ctx.db.get(p.customerId) : null;
       stops.push({
         planId: p._id,
         seq: (p as any).routeSeq ?? 999,
         status: p.status,
-        driverId: p.driverId ? String(p.driverId) : null,
+        driverId: effDriverId,
         driverName,
         customerName: (c as any)?.fullName || p.customerName || "عميل",
         phone: (c as any)?.phone || null,
