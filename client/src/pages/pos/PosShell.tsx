@@ -13,6 +13,7 @@ import PosReceipts from "./PosReceipts";
 import PosShift from "./PosShift";
 import PosOpenTickets from "./PosOpenTickets";
 import { Home, Receipt, ClipboardList, Clock, LogOut, Loader2 } from "lucide-react";
+import { PosManifest, InstallButton } from "@/components/pos/PwaInstall";
 
 export default function PosShell() {
   const { token, cashier, clearSession } = usePosStore();
@@ -37,6 +38,7 @@ export default function PosShell() {
   if (location === "/pos/login") {
     return (
       <div className="fixed inset-0 bg-slate-900">
+        <PosManifest />
         <Suspense fallback={<PosLoading />}>
           <PosLogin />
         </Suspense>
@@ -57,6 +59,7 @@ export default function PosShell() {
 
   return (
     <div className="fixed inset-0 bg-slate-100 flex flex-col" dir="ltr">
+      <PosManifest />
       {/* Top bar */}
       <header className="h-14 bg-slate-900 text-white flex items-center px-4 gap-3 shrink-0 select-none">
         <div className="font-black text-lg tracking-tight">
@@ -73,6 +76,7 @@ export default function PosShell() {
         </nav>
 
         <div className="ms-auto flex items-center gap-3">
+          <InstallButton />
           <div className="text-right leading-tight">
             <div className="text-[11px] text-slate-400 font-bold">CASHIER</div>
             <div className="text-sm font-black">{cashier?.name || "—"}</div>
