@@ -12,6 +12,7 @@ import { AlertCircle, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { convex } from "@/lib/convex";
+import { ROLE_HOME, canAccessUser, type Role } from "@/lib/permissions";
 import { api } from "@/../../convex/_generated/api";
 
 export default function Login() {
@@ -33,8 +34,15 @@ export default function Login() {
       const result = await convex.mutation(api.auth.authenticateUnified, { email, password });
       if (result.success) {
         if (result.accountType === "staff" && result.user) {
-          login(result.user.email, result.user.role, result.user.id, result.user.name, (result as any).sessionToken, (result.user as any).permissions);
-          setLocation("/");
+          const perms = (result.user as any).permissions as string[] | undefined;
+          login(result.user.email, result.user.role, result.user.id, result.user.name, (result as any).sessionToken, perms);
+          // ✅ وجّه لصفحة يقدر الموظف يوصلها فعلاً حسب دوره/صلاحياته (السائق → تطبيق السائق)
+          const su = { role: result.user.role as Role, permissions: perms };
+          let home = ROLE_HOME[result.user.role as Role] || "/";
+          if (!canAccessUser(su, home)) {
+            home = (perms || []).find((p) => p !== "/" && !p.endsWith("/*")) || "/";
+          }
+          setLocation(home);
         } else if (result.accountType === "customer" && result.customer) {
           customerLogin(result.customer, (result as any).sessionToken);
           setLocation("/");

@@ -112,8 +112,14 @@ function ProtectedRoute({
     return <Redirect to="/login" />;
   }
   if (!canAccessUser(currentUser, location)) {
-    // Redirect to the role's default home
-    const home = ROLE_HOME[role] || "/";
+    // ✅ نحوّل لصفحة يقدر المستخدم يوصلها فعلاً — نتجنّب حلقة التحويل اللا نهائية
+    //    (مثلاً سائق صلاحيته /driver فقط، لكن ROLE_HOME لدوره /delivery غير مسموحة له → بياض).
+    let home = ROLE_HOME[role] || "/";
+    if (!canAccessUser(currentUser, home)) {
+      const firstPerm = (currentUser.permissions || []).find((p) => p !== "/" && !p.endsWith("/*"));
+      home = firstPerm || "/";
+    }
+    if (home === location) home = "/"; // حماية إضافية من الحلقة
     return <Redirect to={home} />;
   }
 
