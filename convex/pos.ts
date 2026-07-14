@@ -24,29 +24,61 @@ async function requireCashier(ctx: QueryCtx | MutationCtx, token?: string | null
   return { session, user };
 }
 
+// ✅ توكن جلسة POS آمن — CSPRNG (crypto.getRandomValues) — استُبدل Math.random.
 function newToken(): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let s = "pos_";
-  for (let i = 0; i < 24; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
+  const a = new Uint8Array(24);
+  crypto.getRandomValues(a);
+  return "pos_" + Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** الدخول بـPIN. يقبل CASHIER أو ADMIN. */
+// ✅ Rate limit: نطاق محاولات فاشلة لكل نافذة زمنية.
+//    نستخدم جدول posLoginAttempts (nullable إذا لم يكن موجوداً — نتحقق بحذر).
+const RL_WINDOW_MS = 5 * 60 * 1000;   // 5 دقائق
+const RL_MAX_FAILS = 5;               // 5 محاولات فاشلة كحد
+async function checkAndRecordFailure(ctx: MutationCtx, key: string, failed: boolean) {
+  try {
+    const now = Date.now();
+    const cutoff = now - RL_WINDOW_MS;
+    const rows: any[] = await ctx.db
+      .query("posLoginAttempts")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .collect();
+    const recent = rows.filter((r: any) => r.at >= cutoff);
+    // امسح القديم للتنظيف
+    for (const r of rows) if (r.at < cutoff) await ctx.db.delete(r._id);
+    // لو المفتاح محظور، ارفض قبل أي فحص PIN
+    if (recent.length >= RL_MAX_FAILS) {
+      throw new Error(`تم قفل الدخول ${Math.ceil(RL_WINDOW_MS / 60000)} دقائق — عدد محاولات كبير`);
+    }
+    if (failed) await ctx.db.insert("posLoginAttempts", { key, at: now });
+  } catch (e: any) {
+    // Rate-limit-specific errors نرميها للأعلى؛ أي حاجة تانية (جدول مش موجود) نتغاضى (fail-open للتوافق)
+    if (String(e?.message || "").includes("تم قفل الدخول")) throw e;
+  }
+}
+
+/** الدخول بـPIN. يقبل CASHIER أو ADMIN. محمي بـrate limit. */
 export const loginWithPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, { pin }) => {
     const clean = pin.trim();
     if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
-    // البحث بين كل الحسابات النشطة اللي عندهم PIN
-    const users = await ctx.db.query("users").collect();
+    // 🔒 rate limit — نتحقق قبل أي فحص PIN (بيرمي لو تجاوز الحد)
+    await checkAndRecordFailure(ctx, "global", false);
+    // ✅ نستخدم by_role بدل جلب كل الحسابات — تبطي أقل مع نمو users
+    const cashiers = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "CASHIER")).collect();
+    const admins = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "ADMIN")).collect();
     let match: any = null;
-    for (const u of users) {
+    for (const u of [...cashiers, ...admins]) {
       if (!u.isActive) continue;
       if (!u.pinHash) continue;
-      if (u.role !== "CASHIER" && u.role !== "ADMIN") continue;
       if (await verifyPassword(clean, u.pinHash)) { match = u; break; }
     }
-    if (!match) throw new Error("PIN غير صحيح");
+    if (!match) {
+      // ✅ نسجّل الفشل — لو المحاولات تجاوزت الحد، المرة الجاية checkAndRecordFailure هترمي
+      await checkAndRecordFailure(ctx, "global", true);
+      throw new Error("PIN غير صحيح");
+    }
     const token = newToken();
     await ctx.db.insert("posSessions", {
       token,

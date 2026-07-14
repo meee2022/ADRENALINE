@@ -39,6 +39,12 @@ export default defineSchema({
     expiresAt: v.number(),
   }).index("by_token", ["token"]).index("by_cashier", ["cashierId"]),
 
+  // ✅ محاولات دخول POS الفاشلة — للـrate limiting ضد تخمين الـPIN
+  posLoginAttempts: defineTable({
+    key: v.string(),   // مفتاح تعريف (device fingerprint أو IP hash — حالياً "global" لبساطة)
+    at: v.number(),
+  }).index("by_key", ["key"]),
+
   // ===== POS: فئات مخصّصة (تسمح بترتيب Loyverse-style: Beef/Chicken/Wraps بدل تصنيف المنيو) =====
   posCategories: defineTable({
     name: v.string(),

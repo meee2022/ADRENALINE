@@ -60,8 +60,33 @@ export async function validateSession(
   };
 }
 
-const AUTH_ERR = "غير مصرّح — سجّل الدخول من جديد";
-const ADMIN_ERR = "هذه العملية تتطلب صلاحية مدير";
+export const AUTH_ERR = "غير مصرّح — سجّل الدخول من جديد";
+export const ADMIN_ERR = "هذه العملية تتطلب صلاحية مدير";
+export const ROLE_ERR = "دورك لا يسمح بهذه العملية";
+
+/**
+ * ✅ pure function — نتحقق أن دور الهوية ضمن قائمة مسموحة. تُستدعى داخل
+ *    requireRole، ومنفصلة عشان تكون قابلة للاختبار بلا Convex context.
+ *    ADMIN دائماً مسموح (super-user).
+ */
+export function assertRole(id: Identity | null, allowed: string[]): asserts id is Identity {
+  if (!id || id.accountType !== "staff") throw new Error(AUTH_ERR);
+  const role = String(id.role || "").toUpperCase();
+  if (role === "ADMIN") return;                          // ADMIN يمر دائماً
+  const ok = allowed.map((r) => r.toUpperCase()).includes(role);
+  if (!ok) throw new Error(ROLE_ERR);
+}
+
+/** ✅ يتطلّب دور من قائمة محددة (أو ADMIN تلقائياً). للـfinance/HR/kitchen…إلخ. */
+export async function requireRole(
+  ctx: QueryCtx | MutationCtx,
+  token: string | null | undefined,
+  allowed: string[],
+): Promise<Identity> {
+  const id = await validateSession(ctx, token);
+  assertRole(id, allowed);
+  return id!;
+}
 
 /** يتطلّب موظفاً مسجّلاً (أي دور staff) */
 export async function requireStaff(ctx: QueryCtx | MutationCtx, token?: string | null): Promise<Identity> {

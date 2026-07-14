@@ -6,7 +6,7 @@
 import { mutation, query } from "./_generated/server";
 import { convertUnit } from "./units";
 import { v } from "convex/values";
-import { requireStaff } from "./sessions";
+import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
 
 type PlanStatus =
   | "DRAFT"
@@ -73,8 +73,9 @@ function stripSystemFields(obj: any) {
 }
 
 export const list = query({
-  args: { date: v.optional(v.string()) },
-  handler: async (ctx, { date }) => {
+  args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { date, sessionToken }) => {
+    await requireStaff(ctx, sessionToken); // 🔒 خطط اليوم فيها بيانات مشتركين
     if (date) {
       return await ctx.db
         .query("dailyPlans")
@@ -118,8 +119,11 @@ export const getByDateAndCustomer = query({
   args: {
     date: v.string(),
     customerId: v.id("customers"),
+    sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { date, customerId }) => {
+  handler: async (ctx, { date, customerId, sessionToken }) => {
+    // 🔒 لازم موظف أو صاحب الاشتراك نفسه
+    await requireStaffOrSubscriptionOwner(ctx, sessionToken, String(customerId));
     const plans = await ctx.db
       .query("dailyPlans")
       .withIndex("by_date", (q) => q.eq("date", date))
@@ -129,9 +133,17 @@ export const getByDateAndCustomer = query({
 });
 
 export const get = query({
-  args: { id: v.id("dailyPlans") },
-  handler: async (ctx, { id }) => {
-    return await ctx.db.get(id);
+  args: { id: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
+    // 🔒 نجيب الخطة أولاً ثم نتحقق أن المستدعي موظف أو صاحب الاشتراك
+    const plan = await ctx.db.get(id);
+    if (!plan) return null;
+    if ((plan as any).customerId) {
+      await requireStaffOrSubscriptionOwner(ctx, sessionToken, String((plan as any).customerId));
+    } else {
+      await requireStaff(ctx, sessionToken);
+    }
+    return plan;
   },
 });
 

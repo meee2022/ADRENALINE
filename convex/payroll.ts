@@ -6,7 +6,10 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { validateSession, requireAdmin } from "./sessions";
+import { validateSession, requireAdmin, assertRole } from "./sessions";
+
+// ✅ الرواتب: قصر القراءة على أدوار مالية/إدارية فقط. ADMIN مسموح تلقائياً (super-user).
+const PAYROLL_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
 
 const r = (n: number) => Math.round(n);
 function derive(e: any) {
@@ -25,7 +28,7 @@ export const list = query({
   args: { month: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id || id.accountType !== "staff") return [];
+    try { assertRole(id, PAYROLL_ROLES); } catch { return []; }
     let rows = await ctx.db.query("payroll").collect();
     if (args.month) rows = rows.filter((x) => x.month === args.month);
     rows.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -38,7 +41,7 @@ export const months = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id || id.accountType !== "staff") return [];
+    try { assertRole(id, PAYROLL_ROLES); } catch { return []; }
     const rows = await ctx.db.query("payroll").collect();
     return Array.from(new Set(rows.map((x) => x.month))).sort().reverse();
   },
@@ -49,7 +52,7 @@ export const summary = query({
   args: { month: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id || id.accountType !== "staff") return null;
+    try { assertRole(id, PAYROLL_ROLES); } catch { return null; }
     let rows = await ctx.db.query("payroll").collect();
     if (args.month) rows = rows.filter((x) => x.month === args.month);
     const d = rows.map(derive);

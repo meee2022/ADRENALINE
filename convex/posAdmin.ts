@@ -260,8 +260,12 @@ export const dailySummary = query({
     const day = args.date || new Date().toISOString().slice(0, 10);
     const start = new Date(day + "T00:00:00").getTime();
     const end = new Date(day + "T23:59:59.999").getTime();
-    const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
-    const paidAll = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID");
+    // ✅ نطاق زمني عبر الفهرس بدل full-scan
+    const tickets: any[] = await ctx.db
+      .query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
+      .collect();
+    const paidAll = tickets.filter((t) => t.status === "PAID");
     const paid = paidAll.filter((t) => !t.isNonRevenue);
     const staffTix = paidAll.filter((t) => t.isNonRevenue);
     const totalSales = paid.reduce((s, t) => s + t.total, 0);
@@ -319,16 +323,24 @@ export const topItems = query({
 
 /** قائمة الفواتير المدفوعة (للسجل الشامل). */
 export const listReceipts = query({
-  args: { from: v.string(), to: v.string(), sessionToken: v.optional(v.string()) },
+  args: {
+    from: v.string(), to: v.string(),
+    // ✅ pagination: مع نمو الفواتير مافيش معنى نجيبها كلها. الافتراضي 200.
+    limit: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const start = new Date(args.from + "T00:00:00").getTime();
     const end = new Date(args.to + "T23:59:59.999").getTime();
-    const rows: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
-    const filtered = rows
-      .filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end)
-      .sort((a, b) => (b.paidAt || 0) - (a.paidAt || 0));
-    return filtered.map((t) => ({
+    const cap = Math.min(1000, Math.max(1, args.limit ?? 200));
+    // ✅ استعمل by_paidAt مباشرة: نطاق زمني عبر withIndex بدل full-scan + filter بالذاكرة
+    const rows: any[] = await ctx.db
+      .query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
+      .order("desc")
+      .take(cap);
+    return rows.map((t) => ({
       id: String(t._id),
       ticketNumber: t.ticketNumber,
       cashierName: t.cashierName,
@@ -387,10 +399,12 @@ export const profitabilityReport = query({
     const start = args.from ? new Date(args.from + "T00:00:00").getTime() : new Date(Date.now() - 30 * 86400000).getTime();
     const end = args.to ? new Date(args.to + "T23:59:59.999").getTime() : Date.now();
 
-    // كل تذكرات مدفوعة (ما عدا الموظف/الاسترجاع/الإلغاء) في الفترة
-    const tickets = (await ctx.db.query("posTickets").withIndex("by_paidAt").collect())
-      .filter((t: any) => t.paidAt && t.paidAt >= start && t.paidAt <= end
-        && t.status === "PAID" && !t.isNonRevenue);
+    // ✅ نطاق زمني عبر الفهرس (أخفّ بكتير من full-scan للجدول)
+    const tickets = (await ctx.db
+      .query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
+      .collect())
+      .filter((t: any) => t.status === "PAID" && !t.isNonRevenue);
     const ticketIds = new Set(tickets.map((t: any) => String(t._id)));
 
     // جمّع الأسطر
@@ -478,11 +492,14 @@ export const auditTrail = query({
     await requireStaff(ctx, args.sessionToken);
     const start = args.from ? new Date(args.from + "T00:00:00").getTime() : 0;
     const end = args.to ? new Date(args.to + "T23:59:59.999").getTime() : Date.now();
-    let rows = await ctx.db.query("auditLog").withIndex("by_createdAt").collect();
-    rows = rows.filter((r) => r.createdAt >= start && r.createdAt <= end);
+    // ✅ نطاق زمني عبر الفهرس + take بدل full scan + slice
+    let rows: any[] = await ctx.db
+      .query("auditLog")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", start).lte("createdAt", end))
+      .order("desc")
+      .take(500);
     if (args.action) rows = rows.filter((r) => r.action === args.action);
-    rows.sort((a, b) => b.createdAt - a.createdAt);
-    return rows.slice(0, 500).map((r: any) => ({
+    return rows.map((r: any) => ({
       id: String(r._id),
       createdAt: r.createdAt,
       action: r.action,
