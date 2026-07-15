@@ -82,7 +82,8 @@ export const createUser = mutation({
       v.literal("NUTRITIONIST"),
       v.literal("INVENTORY_MANAGER"),
       v.literal("ACCOUNTANT"),
-      v.literal("FINANCE_MANAGER")
+      v.literal("FINANCE_MANAGER"),
+      v.literal("CASHIER")
     ),
     permissions: v.optional(v.array(v.string())),
     sessionToken: v.optional(v.string()),
@@ -186,7 +187,8 @@ export const updateUser = mutation({
         v.literal("NUTRITIONIST"),
         v.literal("INVENTORY_MANAGER"),
         v.literal("ACCOUNTANT"),
-        v.literal("FINANCE_MANAGER")
+        v.literal("FINANCE_MANAGER"),
+        v.literal("CASHIER")
       )
     ),
     permissions: v.optional(v.array(v.string())),

@@ -12,6 +12,10 @@ import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
+// 🔒 مسؤولو التوصيل (لا يشمل السائق نفسه) — يقدروا يسندوا سواقين، يعدّلوا مسار،
+//    ويعيدوا الجدولة. ADMIN مسموح تلقائياً.
+const DELIVERY_MANAGER_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
+
 /* ───────────────────────── أدوات المسافة ───────────────────────── */
 
 function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
@@ -88,7 +92,7 @@ export const assignShift = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { date, deliveryTime, driverId, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
 
     const plans = (
       await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
@@ -138,20 +142,20 @@ export const assignShift = mutation({
 export const assignOne = mutation({
   args: { planId: v.id("dailyPlans"), driverId: v.id("users"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { planId, driverId, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
     await ctx.db.patch(planId, { driverId, updatedAt: Date.now() });
     return { success: true };
   },
 });
 
-/** 🔒 إسناد جماعي → ADMIN. */
+/** 🔒 إسناد جماعي → ADMIN أو مسؤول توصيل. */
 export const assignMany = mutation({
   args: {
     assignments: v.array(v.object({ planId: v.id("dailyPlans"), driverId: v.id("users") })),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { assignments, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
     if (!assignments.length) return { assigned: 0, drivers: 0 };
 
     const settings = await ctx.db.query("restaurantSettings").first();
@@ -203,7 +207,7 @@ export const setCustomerDriver = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { customerId, driverId, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
     await ctx.db.patch(customerId, { defaultDriverId: driverId ?? undefined, updatedAt: Date.now() });
     return { success: true };
   },
@@ -237,7 +241,7 @@ export const applyDefaultDrivers = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { date, deliveryTime, overwrite, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
     const plans = (
       await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
     ).filter((p: any) =>
@@ -413,7 +417,7 @@ export const markFailed = mutation({
 export const reschedule = mutation({
   args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { planId, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, DELIVERY_MANAGER_ROLES);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
     if (plan.status !== "FAILED" && plan.status !== "OUT_FOR_DELIVERY") {
