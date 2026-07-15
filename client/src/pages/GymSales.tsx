@@ -332,9 +332,31 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
 
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("ملاحظات (اختياري)", "Notes (optional)")} className="text-sm" />
 
-            <Button disabled={saving || cart.length === 0} onClick={save} className="w-full h-11 text-white font-black" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-              <Save className="h-4 w-4 me-2" />{saving ? t("جاري الحفظ…", "Saving…") : t("احفظ الطلبية", "Save order")}
-            </Button>
+            <div className="flex gap-2">
+              <Button disabled={saving || cart.length === 0} onClick={save} className="flex-1 h-11 text-white font-black" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+                <Save className="h-4 w-4 me-2" />{saving ? t("جاري الحفظ…", "Saving…") : t("احفظ الطلبية", "Save order")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving || cart.length === 0}
+                onClick={async () => {
+                  const ok = await confirmDialog({
+                    title: t("إلغاء الفاتورة", "Cancel invoice"),
+                    message: t("مسح كل الأصناف؟", "Clear all items?"),
+                    variant: "danger",
+                    confirmText: t("إلغاء الفاتورة", "Clear"),
+                    cancelText: t("رجوع", "Back"),
+                  });
+                  if (ok) { setCart([]); setNotes(""); }
+                }}
+                className="h-11 px-4 border-red-200 text-red-600 hover:bg-red-50 font-bold"
+                title={t("إلغاء الفاتورة كلها", "Cancel whole invoice")}
+                aria-label={t("إلغاء الفاتورة كلها", "Cancel whole invoice")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -668,7 +690,10 @@ function Stat({ label, value, color }: any) {
 /* ═══════════════════════════════ Returns Tab ═══════════════════════════════ */
 
 function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
-  const [days, setDays] = useState(14);
+  // 🕐 نطاق التاريخ: افتراضي آخر 7 أيام. الجم بيرجع بعد يومين، فالموظف بيسجّل خلال أسبوع.
+  //    لو نسي يفتح "أقدم" علشان يشوف طلبيات أقدم.
+  const [days, setDays] = useState(7);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const orders = useQuery(
     (api.gymSales as any).listOrdersForReturns,
     { days, gymId: (selectedGymId || undefined) as any, sessionToken }
@@ -711,25 +736,50 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
   return (
     <div className="space-y-3">
       <Card className="rounded-2xl border-slate-200">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-          <div>
-            <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
-            <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
-              <option value="">{t("كل الجمات", "All gyms")}</option>
-              {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
-            </select>
+        <CardContent className="p-4 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
+              <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                <option value="">{t("كل الجمات", "All gyms")}</option>
+                {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <StatMini label={t("إجمالي المرتجعات", "Total returned")} value={totalReturnedAll} color="#dc2626" />
+            <StatMini label={t("قيمة الهالك", "Waste value")} value={`${totalWasteAll.toFixed(2)} ر.ق`} color="#dc2626" />
           </div>
-          <div>
-            <Label className="text-xs font-bold text-slate-500">{t("المدة (يوم)", "Days")}</Label>
-            <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
-              <option value={7}>7</option>
-              <option value={14}>14</option>
-              <option value={30}>30</option>
-              <option value={60}>60</option>
-            </select>
+          {/* 🕐 اختيار نطاق التاريخ — أقل بروزًا، مخفي خلف زر */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-slate-500 font-bold">
+              {t(`عرض طلبيات آخر ${days} يوم`, `Showing last ${days} days`)}
+            </span>
+            {!showAdvanced ? (
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(true)}
+                className="text-[#0E76AC] font-bold hover:underline"
+              >
+                {t("عرض أقدم", "Show older")}
+              </button>
+            ) : (
+              <div className="flex items-center gap-1">
+                {[7, 14, 30, 60].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDays(d)}
+                    className={cn(
+                      "h-7 px-2 rounded font-bold",
+                      days === d ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    )}
+                  >{d}</button>
+                ))}
+                <button type="button" onClick={() => { setDays(7); setShowAdvanced(false); }} className="text-slate-400 hover:text-slate-600 ms-1">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
-          <StatMini label={t("إجمالي المرتجعات", "Total returned")} value={totalReturnedAll} color="#dc2626" />
-          <StatMini label={t("قيمة الهالك", "Waste value")} value={`${totalWasteAll.toFixed(2)} ر.ق`} color="#dc2626" />
         </CardContent>
       </Card>
 
