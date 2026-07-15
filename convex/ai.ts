@@ -565,6 +565,9 @@ export const generateWeeklyPlan = action({
     startDate: v.optional(v.string()),
     weeks: v.optional(v.number()),
     startRotationWeek: v.optional(v.number()),
+    // ✅ نهاية الاشتراك — لو مضبوطة، يقف التوليد عند هذا التاريخ
+    //   حتى لو الأسبوع لم يكتمل (مثلاً اشتراك يخلص الاثنين → أحد+اثنين فقط).
+    endDate: v.optional(v.string()),
     // 🔒 sessionToken مطلوب — التوليد الأسبوعي مكلف (5-20 استدعاء AI لكل مرة)،
     //    الزائر يعتمد على generateSmartPlan (يوم واحد) بحده الأضيق.
     sessionToken: v.string(),
@@ -590,14 +593,22 @@ export const generateWeeklyPlan = action({
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
+    // ✅ حد النهاية — يُوقف التوليد عند نهاية الاشتراك حتى لو الأسبوع مش كامل
+    const endBoundary = args.endDate && /^\d{4}-\d{2}-\d{2}$/.test(args.endDate)
+      ? new Date(args.endDate + "T00:00:00")
+      : null;
+
     /** يولّد أيام عمل أسبوع واحد ابتداءً من تاريخ، بأسبوع دورة مفروض اختيارياً. */
     const buildWeek = async (
       cur: Date,
       forcedRotation: number | undefined,
-    ): Promise<{ days: any[]; profileFound: boolean }> => {
+    ): Promise<{ days: any[]; profileFound: boolean; reachedEnd: boolean }> => {
       const out: any[] = [];
       let profileFound = false;
+      let reachedEnd = false;
       for (let guard = 0; guard < 12 && out.length < WORKING_DAYS.length; guard++) {
+        // ✅ لو تخطينا نهاية الاشتراك، نوقف بغض النظر عن اكتمال الأسبوع
+        if (endBoundary && cur.getTime() > endBoundary.getTime()) { reachedEnd = true; break; }
         const dow = cur.getDay();
         if (dow !== 5) { // الجمعة وحدها بلا توصيل
           const dayName = WEEKDAYS[dow];
@@ -643,7 +654,7 @@ export const generateWeeklyPlan = action({
         }
         cur.setDate(cur.getDate() + 1);
       }
-      return { days: out, profileFound };
+      return { days: out, profileFound, reachedEnd };
     };
 
     // نبدأ من startDate أو من اليوم
@@ -656,13 +667,17 @@ export const generateWeeklyPlan = action({
       const forced = args.startRotationWeek
         ? ((Math.floor(args.startRotationWeek) - 1 + w) % 4) + 1
         : undefined;
-      const { days, profileFound } = await buildWeek(cursor, forced);
+      const { days, profileFound, reachedEnd } = await buildWeek(cursor, forced);
       anyProfile = anyProfile || profileFound;
-      weeks.push({
-        index: w + 1,
-        rotationWeek: days[0]?.rotationWeek ?? forced ?? w + 1,
-        days,
-      });
+      if (days.length > 0) {
+        weeks.push({
+          index: w + 1,
+          rotationWeek: days[0]?.rotationWeek ?? forced ?? w + 1,
+          days,
+        });
+      }
+      // ✅ لو وصلنا لنهاية الاشتراك، نوقف كل التوليد
+      if (reachedEnd) break;
       // cursor يكون قد تجاوز أيام هذا الأسبوع؛ تخطَّ الخميس/الجمعة للأسبوع التالي
     }
 

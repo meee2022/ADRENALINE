@@ -250,6 +250,7 @@ export default function SmartPlan() {
           weeks: effWeeks,
           startRotationWeek: effStartRot,
           startDate: effStartDate,
+          endDate: subEndDate || undefined, // ✅ يقطع التوليد عند نهاية الاشتراك
           sessionToken,
         });
         if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذه الأسابيع.", "No meals scheduled for these weeks.")); }
