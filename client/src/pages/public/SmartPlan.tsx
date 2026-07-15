@@ -217,10 +217,18 @@ export default function SmartPlan() {
           setError(t("سجّل الدخول أولاً لتوليد خطة أسبوعية.", "Please log in to generate a weekly plan."));
           return;
         }
+        // ✅ نبدأ التوليد من تاريخ بداية اشتراك العميل (اللي حددته الأخصائية)
+        //    مش من "اليوم" — عشان الخطة تكون على أيامه الحقيقية من أول ما يبدأ.
+        //    لو التاريخ في الماضي (اشتراك بدأ فعلاً) نستخدم أقرب يوم توصيل قادم.
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const effStartDate = subStartDate && subStartDate >= todayISO
+          ? subStartDate
+          : undefined; // إذا مضى، يبدأ من اليوم (default الخادم)
         const res: any = await generateWeekly({
           ...source,
           weeks: effWeeks,
           startRotationWeek: effStartRot,
+          startDate: effStartDate,
           sessionToken,
         });
         if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذه الأسابيع.", "No meals scheduled for these weeks.")); }
