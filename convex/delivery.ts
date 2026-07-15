@@ -1,25 +1,19 @@
 /**
  * @file convex/delivery.ts
- * @description نظام التوصيل والتتبع الحي — "أدرينالين دليفري".
- *
- *   دورة الحياة:  PREPARED → OUT_FOR_DELIVERY → DELIVERED  (بأختام زمنية).
- *
- *   المكوّنات:
- *     - إسناد السائقين + ترتيب المسار (أقرب-جار من المطعم).
- *     - بثّ موقع السائق الحي (driverLocations) أثناء الجولة.
- *     - صفحة تتبع عامة للعميل عبر توكن عشوائي (بلا PII زائدة).
- *     - ETA وإشارة "السائق قرّب" محسوبة من المسافة.
- *
- *   الأمان: كل شيء خلف requireStaff عدا `tracking` (عامة عمداً — العميل يفتحها
- *   برابط سرّي يُرسل له، وتعرض حقولاً محدودة فقط).
+ * @description نظام التوصيل والتتبع — مؤمّن:
+ *   - state machine صارمة: PREPARED → OUT_FOR_DELIVERY → DELIVERED / FAILED
+ *     ورجعة (reschedule) FAILED/OUT → PREPARED (ADMIN فقط)
+ *   - إسناد/إدارة السواقين وربطهم بالعملاء وإعادة الجدولة → ADMIN
+ *   - تنفيذ (start/deliver/fail) → صاحب المحطة (DELIVERY) أو ADMIN
+ *   - updateMyLocation → DELIVERY فقط
+ *   - tracking عام (بتوكن سرّي)
  */
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
-import { requireStaff, newToken } from "./sessions";
+import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
 /* ───────────────────────── أدوات المسافة ───────────────────────── */
 
-/** مسافة هافرسين بالكيلومتر بين نقطتين. */
 function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): number {
   const R = 6371;
   const dLat = ((bLat - aLat) * Math.PI) / 180;
@@ -29,13 +23,33 @@ function haversineKm(aLat: number, aLng: number, bLat: number, bLng: number): nu
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
+function etaMinutes(km: number): number { return Math.max(1, Math.round((km / 28) * 60) + 2); }
+const NEAR_KM = 1.2;
 
-/** تقدير زمن الوصول بالدقائق (متوسط 28كم/س داخل المدينة + دقيقتان توقّف). */
-function etaMinutes(km: number): number {
-  return Math.max(1, Math.round((km / 28) * 60) + 2);
+// 🔒 State machine — الانتقالات المسموحة فقط
+const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+  PREPARED: ["OUT_FOR_DELIVERY"],
+  OUT_FOR_DELIVERY: ["DELIVERED", "FAILED"],
+  DELIVERED: [],           // نهائية
+  FAILED: ["PREPARED"],    // إعادة جدولة فقط
+};
+function assertTransition(from: string, to: string) {
+  const list = ALLOWED_TRANSITIONS[from] || [];
+  if (!list.includes(to)) {
+    throw new Error(`انتقال غير مسموح: ${from} → ${to}`);
+  }
 }
 
-const NEAR_KM = 1.2; // "السائق قرّب" ضمن 1.2 كم
+/** يتحقق أن المستدعي هو صاحب المحطة (سائقها) أو ADMIN. */
+function assertStopOwnershipOrAdmin(staff: any, plan: any) {
+  const role = String(staff.role || "").toUpperCase();
+  if (role === "ADMIN") return;
+  // السائق يقدر ينفّذ محطاته فقط
+  if (role !== "DELIVERY") throw new Error("هذه العملية للسائق أو الأدمن فقط");
+  if (!plan.driverId || String(plan.driverId) !== String(staff.userId)) {
+    throw new Error("هذه المحطة مسندة لسائق آخر");
+  }
+}
 
 /* ───────────────────────── السائقون ───────────────────────── */
 
@@ -47,18 +61,17 @@ export const listDrivers = query({
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "DELIVERY"))
       .collect();
-    // نضيف الأدمن كخيار (قد يوصّل بنفسه في المطاعم الصغيرة)
     return drivers
       .filter((d) => d.isActive)
       .map((d) => ({ _id: d._id, name: d.name, phone: (d as any).phone || "" }));
   },
 });
 
-/** تحديث هاتف السائق (يظهر للعميل أثناء التوصيل للاتصال/الواتساب). */
+/** 🔒 تحديث هاتف السائق → ADMIN. */
 export const setDriverPhone = mutation({
   args: { driverId: v.id("users"), phone: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { driverId, phone, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     await ctx.db.patch(driverId, { phone: phone.trim() || undefined, updatedAt: Date.now() } as any);
     return { success: true };
   },
@@ -66,10 +79,7 @@ export const setDriverPhone = mutation({
 
 /* ───────────────────────── الإسناد وترتيب المسار ───────────────────────── */
 
-/**
- * يسند سائقاً لكل محطات (date + shift) غير المسلّمة، ويرتّب المسار بأقرب-جار
- * انطلاقاً من موقع المطعم. المحطات بلا إحداثيات تُوضع في النهاية.
- */
+/** 🔒 إسناد وردية كاملة لسائق → ADMIN. */
 export const assignShift = mutation({
   args: {
     date: v.string(),
@@ -78,7 +88,7 @@ export const assignShift = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { date, deliveryTime, driverId, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
 
     const plans = (
       await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
@@ -86,7 +96,6 @@ export const assignShift = mutation({
 
     if (plans.length === 0) return { assigned: 0 };
 
-    // إحداثيات كل محطة من بيانات العميل
     const withCoords: { plan: any; lat: number; lng: number }[] = [];
     const noCoords: any[] = [];
     for (const p of plans) {
@@ -98,12 +107,10 @@ export const assignShift = mutation({
       }
     }
 
-    // نقطة الانطلاق: المطعم
     const settings = await ctx.db.query("restaurantSettings").first();
     let curLat = (settings as any)?.storeLat ?? 25.2854;
     let curLng = (settings as any)?.storeLng ?? 51.531;
 
-    // ترتيب أقرب-جار
     const ordered: any[] = [];
     const pool = [...withCoords];
     while (pool.length) {
@@ -127,35 +134,30 @@ export const assignShift = mutation({
   },
 });
 
-/** إسناد محطة واحدة لسائق (تعديل يدوي). */
+/** 🔒 إسناد محطة واحدة → ADMIN. */
 export const assignOne = mutation({
   args: { planId: v.id("dailyPlans"), driverId: v.id("users"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { planId, driverId, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     await ctx.db.patch(planId, { driverId, updatedAt: Date.now() });
     return { success: true };
   },
 });
 
-/**
- * ✅ إسناد جماعي: كل محطة لسائقها (تقسيم بالمنطقة). الواجهة تحسب أي منطقة
- *    لأي سائق وترسل قائمة {planId, driverId}. هنا نُسند ونرتّب مسار كل سائق
- *    على حدة (أقرب-جار من المطعم) فيبقى لكل سائق جولته مرتّبة.
- */
+/** 🔒 إسناد جماعي → ADMIN. */
 export const assignMany = mutation({
   args: {
     assignments: v.array(v.object({ planId: v.id("dailyPlans"), driverId: v.id("users") })),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { assignments, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     if (!assignments.length) return { assigned: 0, drivers: 0 };
 
     const settings = await ctx.db.query("restaurantSettings").first();
     const storeLat = (settings as any)?.storeLat ?? 25.2854;
     const storeLng = (settings as any)?.storeLng ?? 51.531;
 
-    // جمّع المحطات حسب السائق
     const byDriver = new Map<string, { plan: any; lat: number | null; lng: number | null }[]>();
     for (const a of assignments) {
       const plan = await ctx.db.get(a.planId);
@@ -169,7 +171,6 @@ export const assignMany = mutation({
 
     let assigned = 0;
     for (const [driverId, stops] of byDriver) {
-      // ترتيب أقرب-جار من المطعم لكل سائق
       const withC = stops.filter((s) => s.lat != null && s.lng != null);
       const noC = stops.filter((s) => s.lat == null || s.lng == null);
       let curLat = storeLat, curLng = storeLng;
@@ -194,23 +195,20 @@ export const assignMany = mutation({
   },
 });
 
-/* ───────────── ✅ الربط الدائم: سائق لكل عميل + لوحة السواقين ───────────── */
-
-/** ربط/فك سائق افتراضي بعميل (مسؤول توصيله الدائم). */
+/** 🔒 ربط سائق بعميل → ADMIN. */
 export const setCustomerDriver = mutation({
   args: {
     customerId: v.id("customers"),
-    driverId: v.optional(v.id("users")), // بدون قيمة = فك الربط
+    driverId: v.optional(v.id("users")),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { customerId, driverId, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     await ctx.db.patch(customerId, { defaultDriverId: driverId ?? undefined, updatedAt: Date.now() });
     return { success: true };
   },
 });
 
-/** قائمة العملاء النشطين + سائق كل واحد — لصفحة ربط السواقين. */
 export const customerAssignments = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -230,19 +228,16 @@ export const customerAssignments = query({
   },
 });
 
-/**
- * يطبّق السائق الافتراضي لكل عميل على خطط يوم/شيفت (اللي لسه بلا سائق أو الكل)،
- * ويرتّب مسار كل سائق أقرب-جار. يُستدعى بزر من لوحة السواقين.
- */
+/** 🔒 تطبيق السواقين الافتراضيين → ADMIN. */
 export const applyDefaultDrivers = mutation({
   args: {
     date: v.string(),
     deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
-    overwrite: v.optional(v.boolean()), // true = حتى المُسند مسبقاً
+    overwrite: v.optional(v.boolean()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { date, deliveryTime, overwrite, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     const plans = (
       await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
     ).filter((p: any) =>
@@ -253,7 +248,6 @@ export const applyDefaultDrivers = mutation({
     const storeLat = (settings as any)?.storeLat ?? 25.2854;
     const storeLng = (settings as any)?.storeLng ?? 51.531;
 
-    // اجمع لكل سائق محطاته من defaultDriverId
     const byDriver = new Map<string, { plan: any; lat: number | null; lng: number | null }[]>();
     let matched = 0, skipped = 0;
     for (const p of plans) {
@@ -290,10 +284,6 @@ export const applyDefaultDrivers = mutation({
   },
 });
 
-/**
- * ✅ لوحة السواقين الحيّة ليوم/شيفت: لكل سائق — كم محطة، وصّل كام، فاضل كام،
- *    في الطريق كام، وأسماء العملاء بحالتهم (للشاشة).
- */
 export const driverBoard = query({
   args: {
     date: v.string(),
@@ -346,28 +336,22 @@ export const driverBoard = query({
   },
 });
 
-/* ───────────────────────── دورة حياة التوصيل ───────────────────────── */
+/* ───────────────────────── دورة حياة التوصيل (state machine صارمة) ───────────────────────── */
 
-/**
- * يبدأ توصيل محطة: OUT_FOR_DELIVERY + ختم زمني + توليد توكن تتبع (مرة واحدة).
- * يرجّع trackToken لإرساله للعميل.
- */
+/** 🔒 يبدأ توصيل: PREPARED → OUT_FOR_DELIVERY فقط. سائق المحطة أو ADMIN. */
 export const startDelivery = mutation({
   args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { planId, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
-    const plan = await ctx.db.get(planId);
-    if (!plan) return { success: false, error: "المحطة غير موجودة" };
-    // سائق التوصيل لا يبدأ إلا محطاته
-    if (String(staff.role) === "DELIVERY" && plan.driverId && String(plan.driverId) !== String(staff.userId)) {
-      return { success: false, error: "هذه المحطة مسندة لسائق آخر" };
-    }
-    const token = (plan as any).trackToken || newToken();
+    const plan: any = await ctx.db.get(planId);
+    if (!plan) throw new Error("المحطة غير موجودة");
+    assertStopOwnershipOrAdmin(staff, plan);
+    assertTransition(plan.status, "OUT_FOR_DELIVERY");
+    const token = plan.trackToken || newToken();
     await ctx.db.patch(planId, {
       status: "OUT_FOR_DELIVERY",
       outForDeliveryAt: Date.now(),
       trackToken: token,
-      // لو لم يُسند سائق بعد، اجعله السائق الحالي
       driverId: plan.driverId || (staff.userId as any),
       updatedAt: Date.now(),
     });
@@ -375,7 +359,7 @@ export const startDelivery = mutation({
   },
 });
 
-/** يعلّم المحطة مُسلّمة + إثبات تسليم اختياري (ملاحظة/صورة). */
+/** 🔒 تسليم: OUT_FOR_DELIVERY → DELIVERED فقط. */
 export const markDelivered = mutation({
   args: {
     planId: v.id("dailyPlans"),
@@ -385,23 +369,22 @@ export const markDelivered = mutation({
   },
   handler: async (ctx, { planId, podNote, podStorageId, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
-    const plan = await ctx.db.get(planId);
-    if (!plan) return { success: false, error: "المحطة غير موجودة" };
-    if (String(staff.role) === "DELIVERY" && plan.driverId && String(plan.driverId) !== String(staff.userId)) {
-      return { success: false, error: "هذه المحطة مسندة لسائق آخر" };
-    }
+    const plan: any = await ctx.db.get(planId);
+    if (!plan) throw new Error("المحطة غير موجودة");
+    assertStopOwnershipOrAdmin(staff, plan);
+    assertTransition(plan.status, "DELIVERED");
     await ctx.db.patch(planId, {
       status: "DELIVERED",
       deliveredAt: Date.now(),
-      podNote: podNote || (plan as any).podNote,
-      podStorageId: podStorageId || (plan as any).podStorageId,
+      podNote: podNote || plan.podNote,
+      podStorageId: podStorageId || plan.podStorageId,
       updatedAt: Date.now(),
     });
     return { success: true };
   },
 });
 
-/** تعذّر التوصيل — حالة FAILED بسبب، فلا تبقى "في الطريق" للأبد. */
+/** 🔒 تعذّر التوصيل: OUT_FOR_DELIVERY → FAILED فقط، بسبب إلزامي. */
 export const markFailed = mutation({
   args: {
     planId: v.id("dailyPlans"),
@@ -410,28 +393,32 @@ export const markFailed = mutation({
   },
   handler: async (ctx, { planId, reason, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
-    const plan = await ctx.db.get(planId);
-    if (!plan) return { success: false, error: "المحطة غير موجودة" };
-    if (String(staff.role) === "DELIVERY" && plan.driverId && String(plan.driverId) !== String(staff.userId)) {
-      return { success: false, error: "هذه المحطة مسندة لسائق آخر" };
-    }
+    const plan: any = await ctx.db.get(planId);
+    if (!plan) throw new Error("المحطة غير موجودة");
+    assertStopOwnershipOrAdmin(staff, plan);
+    assertTransition(plan.status, "FAILED");
+    const r = String(reason || "").trim();
+    if (r.length < 3) throw new Error("سبب الفشل مطلوب (3 أحرف أو أكثر)");
     await ctx.db.patch(planId, {
       status: "FAILED",
       failedAt: Date.now(),
-      failReason: reason,
+      failReason: r,
       updatedAt: Date.now(),
     });
     return { success: true };
   },
 });
 
-/** إعادة جدولة محطة فاشلة/في الطريق → ترجع PREPARED لإعادة الإسناد والمحاولة. */
+/** 🔒 إعادة جدولة FAILED → PREPARED → ADMIN فقط. */
 export const reschedule = mutation({
   args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { planId, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
-    const plan = await ctx.db.get(planId);
-    if (!plan) return { success: false, error: "المحطة غير موجودة" };
+    await requireAdmin(ctx, sessionToken);
+    const plan: any = await ctx.db.get(planId);
+    if (!plan) throw new Error("المحطة غير موجودة");
+    if (plan.status !== "FAILED" && plan.status !== "OUT_FOR_DELIVERY") {
+      throw new Error("إعادة الجدولة مسموحة فقط للمحطات الفاشلة أو التي في الطريق");
+    }
     await ctx.db.patch(planId, {
       status: "PREPARED",
       outForDeliveryAt: undefined,
@@ -443,7 +430,7 @@ export const reschedule = mutation({
   },
 });
 
-/** رابط رفع صورة إثبات التسليم (Convex storage). */
+/** رابط رفع صورة إثبات التسليم — للسائق أو ADMIN. */
 export const generatePodUploadUrl = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -454,12 +441,17 @@ export const generatePodUploadUrl = mutation({
 
 /* ───────────────────────── بثّ موقع السائق ───────────────────────── */
 
+/** 🔒 بث الموقع → DELIVERY فقط (ADMIN تلقائي). */
 export const updateMyLocation = mutation({
   args: { lat: v.number(), lng: v.number(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { lat, lng, sessionToken }) => {
-    const staff = await requireStaff(ctx, sessionToken);
+    const staff = await requireRole(ctx, sessionToken, ["DELIVERY"]);
     const driverId = staff.userId as any;
     if (!driverId) return { success: false };
+    // 🔒 حدود جغرافية عامة (منع bogus values)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("إحداثيات غير صالحة");
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("إحداثيات خارج النطاق");
+
     const existing = await ctx.db
       .query("driverLocations")
       .withIndex("by_driver", (q) => q.eq("driverId", driverId))
@@ -470,7 +462,6 @@ export const updateMyLocation = mutation({
       await ctx.db.insert("driverLocations", { driverId, lat, lng, updatedAt: Date.now() });
     }
 
-    // ✅ إشعار "السائق قرّب" (مرة واحدة لكل محطة) — عند دخول نطاق NEAR_KM
     let notifiedNear = 0;
     const stops = await ctx.db
       .query("dailyPlans")
@@ -503,7 +494,6 @@ export const updateMyLocation = mutation({
 
 /* ───────────────────────── استعلامات السائق ───────────────────────── */
 
-/** محطات السائق الحالي ليوم/جولة، مرتّبة بالمسار، مع بيانات العميل. */
 export const myStops = query({
   args: {
     date: v.string(),
@@ -545,7 +535,6 @@ export const myStops = query({
 
 /* ───────────────────────── لوحة المشرف ───────────────────────── */
 
-/** كل محطات (date + shift) مع الإسناد والحالة + تحليلات موجزة. */
 export const supervisorBoard = query({
   args: {
     date: v.string(),
@@ -566,8 +555,6 @@ export const supervisorBoard = query({
     const stops = [];
     for (const p of rows) {
       const c = p.customerId ? await ctx.db.get(p.customerId) : null;
-      // ✅ لو الخطة مالهاش سائق مُسنَد يدوياً، نرجع للسائق الدائم للمشترك (نفس منطق صفحة السواقين).
-      //    كده المحطات تظهر تحت سائقها تلقائياً بدون إسناد يدوي — الإسناد اليدوي للاستثناءات فقط.
       const effDriverId = p.driverId
         ? String(p.driverId)
         : ((c as any)?.defaultDriverId ? String((c as any).defaultDriverId) : null);
@@ -609,10 +596,7 @@ export const supervisorBoard = query({
     return {
       stops,
       analytics: {
-        total: stops.length,
-        delivered,
-        outForDelivery,
-        failed,
+        total: stops.length, delivered, outForDelivery, failed,
         pending: stops.length - delivered - outForDelivery - failed,
         avgDeliveryMinutes: deliveredWithTime > 0 ? Math.round(totalDeliveredMs / deliveredWithTime / 60000) : null,
         perDriver: Object.values(perDriver),
@@ -623,11 +607,6 @@ export const supervisorBoard = query({
 
 /* ───────────────────────── تتبع العميل (عام) ───────────────────────── */
 
-/**
- * ⚠️ استعلام عام (بلا توكن جلسة) — العميل يفتحه برابط سرّي فيه trackToken.
- *    يعرض: الاسم الأول، الحالة والأختام، اسم السائق، موقع السائق (أثناء الجولة
- *    فقط)، وجهة العميل، ETA، وإشارة "قرّب". لا يعرض هاتفاً ولا عنواناً نصّياً.
- */
 export const tracking = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
@@ -647,9 +626,8 @@ export const tracking = query({
     const dest = (c as any)?.lat != null && (c as any)?.lng != null
       ? { lat: (c as any).lat, lng: (c as any).lng } : null;
 
-    // موقع السائق يُكشف فقط أثناء "في الطريق"
     let driver: { lat: number; lng: number; name: string | null } | null = null;
-    let driverPhone: string | null = null; // ✅ للتواصل (اتصال/واتساب) أثناء الجولة فقط
+    let driverPhone: string | null = null;
     let etaMin: number | null = null;
     let isNear = false;
     if (plan.status === "OUT_FOR_DELIVERY" && plan.driverId) {
@@ -659,7 +637,6 @@ export const tracking = query({
         .first();
       const d = await ctx.db.get(plan.driverId);
       driverPhone = String((d as any)?.phone || "").trim() || null;
-      // نعرض الموقع لو حديث (آخر 10 دقائق)
       if (loc && Date.now() - loc.updatedAt < 10 * 60 * 1000) {
         driver = { lat: loc.lat, lng: loc.lng, name: (d as any)?.name || null };
         if (dest) {
@@ -674,18 +651,15 @@ export const tracking = query({
 
     return {
       firstName,
-      status: plan.status, // PREPARED | OUT_FOR_DELIVERY | DELIVERED
+      status: plan.status,
       mealsCount: Array.isArray(plan.items) ? plan.items.filter((i: any) => !i.isOff).length : 0,
       preparedAt: (plan as any).updatedAt ?? plan.createdAt ?? null,
       outForDeliveryAt: (plan as any).outForDeliveryAt ?? null,
       deliveredAt: (plan as any).deliveredAt ?? null,
       deliveryTime: plan.deliveryTime,
-      store,
-      dest,
+      store, dest,
       driver: driver && Number.isFinite(driver.lat) ? driver : (driver ? { lat: null, lng: null, name: driver.name } : null),
-      driverPhone,
-      etaMin,
-      isNear,
+      driverPhone, etaMin, isNear,
       podNote: plan.status === "DELIVERED" ? ((plan as any).podNote || null) : null,
       podPhotoUrl: plan.status === "DELIVERED" && (plan as any).podStorageId
         ? await ctx.storage.getUrl((plan as any).podStorageId)

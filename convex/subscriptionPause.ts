@@ -87,18 +87,24 @@ export const pause = mutation({
       return { success: false, error: "تاريخ الرجوع يجب أن يكون بعد تاريخ التجميد" };
     }
 
-    // احذف خطط المطبخ المستقبلية من يوم التجميد فصاعداً، وإلا يفضل المطبخ يطبخ له.
+    // 🔒 لا نحذف الخطط — نأرشفها لحالة PAUSED مع حفظ الحالة السابقة.
+    //    عند الاستئناف نستعيد الخطط المؤرشفة بدل توليدها من جديد.
     const plans = await ctx.db
       .query("dailyPlans")
       .withIndex("by_customerId", (q) => q.eq("customerId", args.id))
       .collect();
-    let removed = 0;
+    let archived = 0;
     for (const p of plans) {
-      if (String(p.date).slice(0, 10) >= from) {
-        await ctx.db.delete(p._id);
-        removed++;
+      if (String(p.date).slice(0, 10) >= from && p.status !== "DELIVERED") {
+        await ctx.db.patch(p._id, {
+          notes: JSON.stringify({ pausedPrevStatus: p.status, prevNotes: p.notes || "" }),
+          status: "PAUSED",
+          updatedAt: Date.now(),
+        });
+        archived++;
       }
     }
+    const removed = archived; // للتوافق مع الواجهة الحالية (رجّع نفس المفتاح باسم مختلف)
 
     await ctx.db.patch(args.id, {
       pausedFrom: from,
@@ -139,6 +145,33 @@ export const resume = mutation({
 
     const history = Array.isArray((c as any).pauseHistory) ? (c as any).pauseHistory : [];
 
+    // 🔒 استعادة الخطط المؤرشفة (PAUSED): تلك التي تاريخها ≥ يوم الاستئناف
+    //    تُرجَع لحالتها السابقة (المخزّنة في notes JSON). الخطط بين from و on تبقى
+    //    مؤرشفة (يعتبر العميل تخطاها).
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_customerId", (q) => q.eq("customerId", args.id))
+      .collect();
+    let restored = 0;
+    for (const p of plans) {
+      if (p.status !== "PAUSED") continue;
+      const d = String(p.date).slice(0, 10);
+      if (d < on) continue; // في نطاق التجميد → تفضل مؤرشفة
+      let prevStatus = "DRAFT";
+      let prevNotes: string | undefined = undefined;
+      try {
+        const parsed = p.notes ? JSON.parse(p.notes) : null;
+        if (parsed?.pausedPrevStatus) prevStatus = String(parsed.pausedPrevStatus);
+        if (parsed?.prevNotes !== undefined) prevNotes = parsed.prevNotes || undefined;
+      } catch { /* notes مش JSON — نتركه كما هو */ }
+      await ctx.db.patch(p._id, {
+        status: prevStatus,
+        notes: prevNotes,
+        updatedAt: Date.now(),
+      });
+      restored++;
+    }
+
     await ctx.db.patch(args.id, {
       pausedFrom: undefined,
       pauseExpectedResume: undefined,
@@ -156,6 +189,7 @@ export const resume = mutation({
       frozenDeliveryDays: frozen,
       oldEndDate: c.endDate,
       newEndDate,
+      restoredPlans: restored,
     };
   },
 });

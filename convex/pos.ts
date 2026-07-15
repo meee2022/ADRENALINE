@@ -16,7 +16,7 @@ import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
-import { awardPointsForPosTicket } from "./loyalty";
+import { awardPointsForPosTicket, reversePointsForPosTicket } from "./loyalty";
 import { convertUnit } from "./units";
 
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
@@ -777,6 +777,10 @@ export const voidTicket = mutation({
       // 🔒 عكس خصم المخزون لو الفاتورة كانت مدفوعة وخصمت مخزون
       if (wasPaid) {
         try { await reverseInventoryForTicket(ctx, t.ticketNumber); } catch { /* لا نوقف */ }
+        // 🔒 عكس نقاط الولاء لو مُنِحت (idempotent)
+        if (t.customerId) {
+          try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
+        }
       }
     }
     await writeAudit(ctx, { userId: String(user._id), name: user.name, role: user.role },

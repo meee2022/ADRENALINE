@@ -70,25 +70,59 @@ export const redeem = mutation({
 
 /**
  * ✅ منح نقاط ولاء لعميل عن فاتورة POS مربوطة به.
- *   يستخدمه POS بعد الدفع لو التذكرة عليها customerId.
+ *   idempotent: لو الفاتورة سبق منحها (بنفس ticketNumber) نتجاهل بدون إضافة مكرر.
  *   يحتفظ بسجل الحركة (EARN_POS) مع رقم الفاتورة.
  */
 export async function awardPointsForPosTicket(ctx: any, customerId: string, ticketNumber: number, total: number) {
   const cust: any = await ctx.db.get(customerId);
   if (!cust) return { awarded: 0 };
   const cfg = await loyaltyConfig(ctx);
-  // نقاط لكل فاتورة كاملة (نفس منطق الاشتراك؛ يمكن تطويرها لاحقاً بنسبة من المبلغ)
   const points = Math.max(0, Math.floor(cfg.pointsPerOrder));
   if (points <= 0) return { awarded: 0 };
   const history = Array.isArray(cust.loyaltyHistory) ? cust.loyaltyHistory : [];
+  // 🔒 idempotency: لو سبق منح لنفس ticketNumber نرجع بدون تكرار
+  const alreadyEarned = history.some((h: any) =>
+    h.type === "EARN_POS" && String(h.note || "").includes(`POS #${ticketNumber}`));
+  if (alreadyEarned) return { awarded: 0, duplicate: true };
   await ctx.db.patch(customerId as any, {
     loyaltyPoints: Number(cust.loyaltyPoints || 0) + points,
     loyaltyHistory: [
       ...history,
-      { type: "EARN_POS", points, credit: 0, note: `فاتورة POS #${ticketNumber} · ${total.toFixed(2)} ر.ق`, at: Date.now() },
+      { type: "EARN_POS", points, credit: 0, note: `فاتورة POS #${ticketNumber} · ${total.toFixed(2)} ر.ق · ticketId:${ticketNumber}`, at: Date.now() },
     ].slice(-50),
     updatedAt: Date.now(),
   });
   return { awarded: points };
+}
+
+/**
+ * 🔒 عكس نقاط ولاء لفاتورة POS عند void/refund.
+ *   idempotent: لو سبق العكس نتجاهل. لو النقاط الحالية أقل من المطلوب نخصم المتاح فقط
+ *   ونسجل الفرق كديون سالبة (loyaltyPoints بيقدر يبقى سالب — سياسة عادلة لأن العميل
+ *   ممكن يكون استبدل النقاط قبل الـvoid).
+ */
+export async function reversePointsForPosTicket(ctx: any, customerId: string, ticketNumber: number) {
+  const cust: any = await ctx.db.get(customerId);
+  if (!cust) return { reversed: 0 };
+  const history = Array.isArray(cust.loyaltyHistory) ? cust.loyaltyHistory : [];
+  // ابحث عن EARN_POS الأصلي لهذه الفاتورة
+  const earnEntry = history.find((h: any) =>
+    h.type === "EARN_POS" && String(h.note || "").includes(`POS #${ticketNumber}`));
+  if (!earnEntry) return { reversed: 0 }; // لم يمنح أصلاً
+  // idempotency: لو العكس اتسجل قبل كده
+  const alreadyReversed = history.some((h: any) =>
+    h.type === "REVERSE_POS" && String(h.note || "").includes(`POS #${ticketNumber}`));
+  if (alreadyReversed) return { reversed: 0, duplicate: true };
+
+  const points = Math.abs(Number(earnEntry.points) || 0);
+  await ctx.db.patch(customerId as any, {
+    loyaltyPoints: Number(cust.loyaltyPoints || 0) - points,
+    loyaltyHistory: [
+      ...history,
+      { type: "REVERSE_POS", points: -points, credit: 0, note: `عكس نقاط فاتورة POS #${ticketNumber} (ملغاة) · ticketId:${ticketNumber}`, at: Date.now() },
+    ].slice(-50),
+    updatedAt: Date.now(),
+  });
+  return { reversed: points };
 }
 
