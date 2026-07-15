@@ -10,8 +10,10 @@ import { v } from "convex/values";
 const MENU_MANAGE_ROLES = ["NUTRITIONIST"]; // ADMIN تلقائي
 
 /**
- * 🔒 DTO عام — بدون costQAR ولا حقول تشغيلية داخلية. للاستخدام العام (زوار الموقع).
- *    يُظهر النشط فقط. لعرض إداري كامل: adminList (staff فقط).
+ * 🔒 DTO عام — بدون costQAR (تكلفة داخلية) ولا gymPrice/isGymItem (أسعار الجم).
+ *    يُظهر النشط فقط. schedule/weeks/days مسموح — العميل يحتاجها في SmartPlan
+ *    عشان يعرف الوجبة متاحة أنهي يوم في دورة المنيو (مش سر تشغيلي).
+ *    لعرض إداري كامل: adminList (staff فقط).
  */
 function publicMealDTO(m: any, imageUrl?: string | null) {
   return {
@@ -31,7 +33,11 @@ function publicMealDTO(m: any, imageUrl?: string | null) {
     priceQAR: m.priceQAR,
     imageUrl: imageUrl ?? m.imageUrl ?? null,
     sortOrder: m.sortOrder,
-    // NOT included: costQAR, gymPrice, isGymItem, weeks/days/schedule (تشغيلية داخلية)
+    // ✅ يجدولة المنيو — يحتاجها SmartPlan لعرض بدائل نفس اليوم لعميل
+    schedule: m.schedule || undefined,
+    weeks: m.weeks || undefined,
+    days: m.days || undefined,
+    // ❌ NOT included: costQAR, gymPrice, isGymItem (تكلفة/تسعير جم داخلية)
   };
 }
 
