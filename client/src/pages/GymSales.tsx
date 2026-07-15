@@ -324,19 +324,13 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
               ))}
             </div>
 
-            <div className="border-t border-slate-200 pt-3 space-y-1 text-sm">
-              {/* نعرض "قبل الخصم" و "الخصم" فقط لو فيه خصم حقيقي موجب.
-                  لو الوجبة عندها سعر جم مخصّص أعلى من سعر المنيو (أو سعر المنيو 0)
-                  الخصم يطلع سالب — نتجنبه ونعرض إجمالي واحد فقط. */}
-              {totals.discount > 0 ? (
-                <>
-                  <div className="flex justify-between text-slate-600"><span>{t("الإجمالي قبل الخصم", "Subtotal")}</span><span className="font-bold">{totals.subtotal.toFixed(2)}</span></div>
-                  <div className="flex justify-between text-emerald-700"><span>{t("الخصم", "Discount")}</span><span className="font-bold">− {totals.discount.toFixed(2)}</span></div>
-                </>
-              ) : (
-                <div className="flex justify-between text-slate-600"><span>{t("الإجمالي", "Subtotal")}</span><span className="font-bold">{totals.total.toFixed(2)}</span></div>
-              )}
-              <div className="flex justify-between text-lg font-black text-[#0E76AC] pt-1"><span>{t("الصافي المستحق", "Total due")}</span><span>{totals.total.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
+            <div className="border-t border-slate-200 pt-3 text-sm">
+              {/* أسعار المنيو الرسمية لم تُضبط بعد — نستخدم أسعار الجم مباشرة
+                  بدون عرض "خصم" لتفادي أي لخبطة. */}
+              <div className="flex justify-between items-baseline text-lg font-black text-[#0E76AC]">
+                <span>{t("الإجمالي المستحق", "Total due")}</span>
+                <span>{totals.total.toFixed(2)} {t("ر.ق", "QAR")}</span>
+              </div>
             </div>
 
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("ملاحظات (اختياري)", "Notes (optional)")} className="text-sm" />
@@ -526,11 +520,10 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           <div><b>${t("عدد أيام التوريد", "Days")}:</b> ${report.daysCount}</div>
         </div>
       </div>
-      <div class="grid">
+      <div class="grid" style="grid-template-columns:repeat(3,1fr)">
         <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("إجمالي الوجبات", "Total meals")}</div></div>
-        <div class="box"><div class="v">${report.totalSubtotal.toFixed(2)}</div><div class="l">${t("قبل الخصم", "Subtotal")}</div></div>
-        <div class="box"><div class="v" style="color:#16a34a">- ${report.totalDiscount.toFixed(2)}</div><div class="l">${t("الخصم", "Discount")}</div></div>
-        <div class="box"><div class="v">${report.totalRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق", "Total due")}</div></div>
+        <div class="box"><div class="v">${report.daysCount}</div><div class="l">${t("أيام التوريد", "Days")}</div></div>
+        <div class="box"><div class="v">${report.totalRevenue.toFixed(2)}</div><div class="l">${t("الإجمالي المستحق", "Total due")}</div></div>
       </div>
       <h3>${t("التفاصيل اليومية", "Daily breakdown")}</h3>
       <table><thead><tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th></tr></thead>
