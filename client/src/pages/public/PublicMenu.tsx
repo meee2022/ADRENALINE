@@ -246,6 +246,57 @@ export default function PublicMenuPage() {
   const todayProgress = selectedDay ? dayProgress(selectedDay) : null;
 
   /**
+   * ✅ حساب الأيام الفعلية للاشتراك من startDate إلى endDate.
+   *   - نتخطّى الجمعة (يوم إجازة).
+   *   - كل جمعة تعبر → أسبوع الدورة يتقدّم +1 (يلفّ على 1..4).
+   *   - يبدأ من `rotationInfo.rotationWeek` (أسبوع دورة تاريخ البداية).
+   * الناتج: Set من "week:day" لكل يوم توصيل فعلي داخل الاشتراك.
+   *   نستخدمه لعرض الأسابيع/الأيام المتاحة فقط ولمنع التنقل بعد نهاية الاشتراك.
+   */
+  const subEndDate = (verifiedCustomer as any)?.endDate as string | undefined;
+  const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+  const subscriptionSlots = useMemo((): Set<string> | null => {
+    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return null;
+    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
+    const start = new Date(startDate + "T00:00:00");
+    const end = new Date(subEndDate + "T00:00:00");
+    if (end.getTime() < start.getTime()) return null;
+    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
+    const slots = new Set<string>();
+    const cur = new Date(start);
+    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
+      const dow = cur.getDay(); // 0=Sun … 5=Fri … 6=Sat
+      if (dow !== 5) {
+        const dayName = DAY_NAMES[dow];
+        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) {
+          slots.add(`${rotWeek}:${dayName}`);
+        }
+      }
+      // كل جمعة → أسبوع الدورة يتقدّم
+      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return slots;
+  }, [startDate, subEndDate, rotationInfo]);
+
+  /** الأسابيع اللي عندها يوم واحد على الأقل داخل الاشتراك. */
+  const subscriptionWeeks = useMemo((): Set<number> | null => {
+    if (!subscriptionSlots) return null;
+    const s = new Set<number>();
+    for (const key of Array.from(subscriptionSlots)) {
+      const [w] = key.split(":");
+      s.add(Number(w));
+    }
+    return s;
+  }, [subscriptionSlots]);
+
+  /** هل هذا اليوم من هذا الأسبوع داخل مدة الاشتراك؟ */
+  const isSlotInSub = (week: number, day: string) => {
+    if (!subscriptionSlots) return true; // لا حد → مسموح
+    return subscriptionSlots.has(`${week}:${day}`);
+  };
+
+  /**
    * "اليوم التالي" — يرجّع { day, week } للتنقل:
    *   1. أول يوم ناقص بعد اليوم المختار في نفس الأسبوع (الأربعاء → الخميس).
    *   2. لو خلصت أيام الأسبوع كلها، نتقدّم لأول يوم ناقص في الأسبوع اللي بعده
@@ -273,38 +324,59 @@ export default function PublicMenuPage() {
     return okMeals && okSnacks;
   };
   const nextIncompleteDay = (): { day: DayOfWeek; week: number } | null => {
+    // 🔒 يعتبر السلوت "مقبول" فقط لو (أ) داخل الاشتراك، (ب) ناقص وجباته.
+    const isCandidate = (wk: number, d: DayOfWeek) =>
+      isSlotInSub(wk, d) && !dayCompleteInWeek(wk, d);
+
     // 1) نفس الأسبوع، بعد اليوم المختار
     if (selectedDay) {
       const idx = DELIVERY_DAYS.indexOf(selectedDay);
       for (let i = idx + 1; i < DELIVERY_DAYS.length; i++) {
-        if (!dayCompleteInWeek(selectedWeek, DELIVERY_DAYS[i])) {
+        if (isCandidate(selectedWeek, DELIVERY_DAYS[i])) {
           return { day: DELIVERY_DAYS[i], week: selectedWeek };
         }
       }
     }
-    // 2) الأسابيع اللاحقة (من السبت)
+    // 2) الأسابيع اللاحقة (من السبت) — محدودة بأسابيع الاشتراك
     for (let w = selectedWeek + 1; w <= maxSubWeek; w++) {
+      // تخطّى الأسابيع اللي مش في الاشتراك أصلاً
+      if (subscriptionWeeks && !subscriptionWeeks.has(w)) continue;
       for (const d of DELIVERY_DAYS) {
-        if (!dayCompleteInWeek(w, d)) return { day: d, week: w };
+        if (isCandidate(w, d)) return { day: d, week: w };
       }
     }
     // 3) لفّ داخل الأسبوع الحالي لأيام سابقة ناقصة
     if (selectedDay) {
       const idx = DELIVERY_DAYS.indexOf(selectedDay);
       for (let i = 0; i < idx; i++) {
-        if (!dayCompleteInWeek(selectedWeek, DELIVERY_DAYS[i])) {
+        if (isCandidate(selectedWeek, DELIVERY_DAYS[i])) {
           return { day: DELIVERY_DAYS[i], week: selectedWeek };
         }
       }
     }
     // 4) لفّ لأسابيع سابقة
     for (let w = 1; w < selectedWeek; w++) {
+      if (subscriptionWeeks && !subscriptionWeeks.has(w)) continue;
       for (const d of DELIVERY_DAYS) {
-        if (!dayCompleteInWeek(w, d)) return { day: d, week: w };
+        if (isCandidate(w, d)) return { day: d, week: w };
       }
     }
     return null;
   };
+
+  /**
+   * ✅ هل العميل خلّص كل يوم توصيل داخل اشتراكه؟
+   *   يستخدم subscriptionSlots (الأيام الفعلية بين البداية والنهاية) —
+   *   لو مفيش اشتراك محدد نرجع false (يخلص لما كل الدورة تكمل).
+   */
+  const subscriptionComplete = useMemo(() => {
+    if (!subscriptionSlots || subscriptionSlots.size === 0) return false;
+    for (const key of Array.from(subscriptionSlots)) {
+      const [wStr, day] = key.split(":");
+      if (!dayCompleteInWeek(Number(wStr), day as DayOfWeek)) return false;
+    }
+    return true;
+  }, [subscriptionSlots, items, mealsPerDay, snacksPerDay, hasSnackLimit]);
 
   // Avoid keywords from customer (lowercase tokens)
   const avoidTokens = useMemo(() => {
@@ -1052,9 +1124,18 @@ export default function PublicMenuPage() {
               </div>
               <p className="text-[11px] text-[#47759C] mt-2">
                 {isRtl
-                  ? "المينو مضبوط تلقائياً على بداية اشتراكك. تقدر تعدّل تاريخ البداية تحت لو حابب."
-                  : "The menu is auto-aligned to your subscription start. You can still adjust the start date below."}
+                  ? "المينو مضبوط تلقائياً على بداية اشتراكك — الأيام والأسابيع المعروضة فقط اللي داخل مدة اشتراكك."
+                  : "The menu is auto-aligned to your subscription — only days/weeks inside your subscription window are shown."}
               </p>
+              {/* ✅ بانر اكتمال — يظهر لو خلّص العميل كل يوم توصيل داخل اشتراكه */}
+              {subscriptionComplete && (
+                <div className="mt-3 rounded-xl bg-emerald-500 text-white px-4 py-3 flex items-center gap-2 font-black text-sm">
+                  <Check className="h-4 w-4" />
+                  {isRtl
+                    ? "تم اختيار الوجبات حتى نهاية اشتراكك ✓"
+                    : "Meals selected through end of subscription ✓"}
+                </div>
+              )}
             </div>
           )}
 
@@ -1093,7 +1174,10 @@ export default function PublicMenuPage() {
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {weeks.map((week) => {
+              {weeks
+                // ✅ لو للعميل اشتراك محدد، نعرض فقط الأسابيع الفعلية للاشتراك
+                .filter((week) => !subscriptionWeeks || subscriptionWeeks.has(week.value))
+                .map((week) => {
                 // الأسبوع المطابق لتاريخ بدايتك — مختار تلقائياً
                 const isForYourStart = Number(rotationInfo?.rotationWeek) === week.value;
                 return (
@@ -1127,7 +1211,12 @@ export default function PublicMenuPage() {
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {days.map((day) => {
+              {days
+                // ✅ نخفي أيام الأسبوع اللي خارج مدة الاشتراك (مثلاً لو الاشتراك
+                //    ينتهي يوم الثلاثاء من أسبوع 2، الأربعاء والخميس من نفس الأسبوع
+                //    لن يظهروا).
+                .filter((day) => isSlotInSub(selectedWeek, day.value))
+                .map((day) => {
                 const prog = dayProgress(day.value);
                 const isSel = selectedDay === day.value;
                 return (

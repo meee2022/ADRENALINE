@@ -3,7 +3,7 @@
  * @description مولّد الوجبات الذكي (المرحلة 1) — واجهة العميل
  *  مدخلان: مسجّل دخول (تلقائي) أو رقم تليفون (بدون تسجيل).
  */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
@@ -88,9 +88,27 @@ export default function SmartPlan() {
     subStartDate ? { targetDate: subStartDate } : "skip",
   ) as { rotationWeek: number; currentCookingWeek: number } | undefined;
 
+  // ✅ حساب أسابيع الاشتراك المتبقية من تاريخ البداية حتى تاريخ النهاية.
+  //    الجمعة إجازة، فنعدّ أيام التوصيل (السبت→الخميس) ونقسم على 6.
+  //    نحدد بها effWeeks عشان ما نولّدش خطة بعد انتهاء الاشتراك.
+  const subWeeksRemaining = useMemo(() => {
+    if (!subStartDate || !subEndDate) return null;
+    const start = new Date(subStartDate + "T00:00:00");
+    const end = new Date(subEndDate + "T00:00:00");
+    if (end.getTime() < start.getTime()) return 0;
+    const cur = new Date(start);
+    let delivDays = 0;
+    for (let g = 0; g < 400 && cur.getTime() <= end.getTime(); g++) {
+      if (cur.getDay() !== 5) delivDays++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return Math.max(1, Math.min(4, Math.ceil(delivDays / 6)));
+  }, [subStartDate, subEndDate]);
+
   // القيم الفعّالة: ما اختارته الأخصائية، وإلا المشتقّ من تاريخ الاشتراك،
-  // وإلا اقتراح المطبخ، وإلا 1.
-  const effWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
+  // وإلا اقتراح المطبخ، وإلا 1. ✅ نحدد الحد الأعلى بأسابيع الاشتراك المتبقية.
+  const rawEffWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
+  const effWeeks = subWeeksRemaining ? Math.min(rawEffWeeks, subWeeksRemaining) : rawEffWeeks;
   const effStartRot =
     startRot || startRotInfo?.rotationWeek || suggestions?.currentRotationWeek || 1;
 
