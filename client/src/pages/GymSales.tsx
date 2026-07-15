@@ -325,8 +325,17 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
             </div>
 
             <div className="border-t border-slate-200 pt-3 space-y-1 text-sm">
-              <div className="flex justify-between text-slate-600"><span>{t("الإجمالي قبل الخصم", "Subtotal")}</span><span className="font-bold">{totals.subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-emerald-700"><span>{t("الخصم", "Discount")}</span><span className="font-bold">− {totals.discount.toFixed(2)}</span></div>
+              {/* نعرض "قبل الخصم" و "الخصم" فقط لو فيه خصم حقيقي موجب.
+                  لو الوجبة عندها سعر جم مخصّص أعلى من سعر المنيو (أو سعر المنيو 0)
+                  الخصم يطلع سالب — نتجنبه ونعرض إجمالي واحد فقط. */}
+              {totals.discount > 0 ? (
+                <>
+                  <div className="flex justify-between text-slate-600"><span>{t("الإجمالي قبل الخصم", "Subtotal")}</span><span className="font-bold">{totals.subtotal.toFixed(2)}</span></div>
+                  <div className="flex justify-between text-emerald-700"><span>{t("الخصم", "Discount")}</span><span className="font-bold">− {totals.discount.toFixed(2)}</span></div>
+                </>
+              ) : (
+                <div className="flex justify-between text-slate-600"><span>{t("الإجمالي", "Subtotal")}</span><span className="font-bold">{totals.total.toFixed(2)}</span></div>
+              )}
               <div className="flex justify-between text-lg font-black text-[#0E76AC] pt-1"><span>{t("الصافي المستحق", "Total due")}</span><span>{totals.total.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
             </div>
 
