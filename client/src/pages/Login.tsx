@@ -148,12 +148,15 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword
+                    ? (isRtl ? "إخفاء كلمة المرور" : "Hide password")
+                    : (isRtl ? "إظهار كلمة المرور" : "Show password")}
+                  aria-pressed={showPassword}
                   className="absolute top-1/2 -translate-y-1/2 transition-colors"
                   style={{
                     [dir === "rtl" ? "left" : "right"]: "12px",
                     color: "#bcbebf",
                   }}
-                  tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -162,7 +165,8 @@ export default function Login() {
 
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium"
+              <div role="alert" aria-live="assertive"
+                className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium"
                 style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}>
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {error}

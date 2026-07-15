@@ -135,8 +135,14 @@ function ProtectedRoute({
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-[60vh] w-full">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label="جاري التحميل"
+      className="flex items-center justify-center min-h-[60vh] w-full"
+    >
       <div className="h-10 w-10 rounded-full border-4 border-[#3cc4f0]/30 border-t-[#0E76AC] animate-spin" />
+      <span className="sr-only">جاري التحميل…</span>
     </div>
   );
 }
