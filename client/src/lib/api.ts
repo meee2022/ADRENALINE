@@ -365,9 +365,11 @@ export function useDeleteModifier() {
  * لو date = undefined ما نبعتش args أصلاً (عشان Convex ما يضربش)
  */
 export function useDailyPlans(date?: string) {
+  const sessionToken = useSessionToken();
+  // 🔒 خطط اليوم = staff only — لازم نمرّر sessionToken
   const data = useConvexQuery(
     api.dailyPlans.list,
-    date ? ({ date } as any) : ({} as any),
+    sessionToken ? (date ? { date, sessionToken } : { sessionToken }) as any : "skip" as any,
   );
   return {
     data: data as DailyPlan[] | undefined,
@@ -478,7 +480,11 @@ export function useInventoryItems(args?: {
   category?: string;
   lowStock?: boolean;
 }) {
-  const data = useConvexQuery(api.inventory.listItems, args || {});
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(
+    api.inventory.listItems,
+    sessionToken ? { ...(args || {}), sessionToken } : "skip"
+  );
   return {
     data: data as InventoryItem[] | undefined,
     isLoading: data === undefined,
@@ -486,9 +492,10 @@ export function useInventoryItems(args?: {
 }
 
 export function useInventoryItem(id?: string) {
+  const sessionToken = useSessionToken();
   const data = useConvexQuery(
     api.inventory.getItemById,
-    id ? { id: id as any } : "skip"
+    id && sessionToken ? { id: id as any, sessionToken } : "skip"
   );
   return {
     data: data as InventoryItem | undefined,
@@ -497,9 +504,10 @@ export function useInventoryItem(id?: string) {
 }
 
 export function useInventoryByBarcode(barcode?: string) {
+  const sessionToken = useSessionToken();
   const data = useConvexQuery(
     api.inventory.getItemByBarcode,
-    barcode ? { barcode } : "skip"
+    barcode && sessionToken ? { barcode, sessionToken } : "skip"
   );
   return {
     data: data as any,
@@ -508,7 +516,11 @@ export function useInventoryByBarcode(barcode?: string) {
 }
 
 export function useInventorySummary() {
-  const data = useConvexQuery(api.inventory.getSummary, {});
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(
+    api.inventory.getSummary,
+    sessionToken ? { sessionToken } : "skip"
+  );
   return {
     data: data as InventorySummary | undefined,
     isLoading: data === undefined,
@@ -516,9 +528,10 @@ export function useInventorySummary() {
 }
 
 export function useInventoryBatches(itemId?: string) {
+  const sessionToken = useSessionToken();
   const data = useConvexQuery(
     api.inventory.getBatchesByItem,
-    itemId ? { itemId: itemId as any } : "skip"
+    itemId && sessionToken ? { itemId: itemId as any, sessionToken } : "skip"
   );
   return {
     data: data as InventoryBatch[] | undefined,
@@ -538,7 +551,11 @@ export function useInventoryMovements(itemId?: string, limit?: number) {
 }
 
 export function useSuppliers() {
-  const data = useConvexQuery(api.inventory.getSuppliers, {});
+  const sessionToken = useSessionToken();
+  const data = useConvexQuery(
+    api.inventory.getSuppliers,
+    sessionToken ? { sessionToken } : "skip"
+  );
   return {
     data: data as Supplier[] | undefined,
     isLoading: data === undefined,
