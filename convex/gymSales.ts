@@ -10,9 +10,11 @@
  */
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireStaff, requireAdmin, requireRole } from "./sessions";
+import { requireStaff, requireAdmin, requireRole, requireRoleOrPermission } from "./sessions";
 
 const GYM_FINANCE_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
+// ✅ صلاحية الصفحة كافية: أي موظف عنده /gym-sales في permissions يقدر يبيع/يسجّل مرتجعات
+const GYM_FINANCE_PAGES = ["/gym-sales"];
 
 /* ═══════════════════════════════ إدارة الجمات ═══════════════════════════════ */
 
@@ -429,7 +431,7 @@ export const createOrder = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const sess: any = await requireRole(ctx, args.sessionToken, GYM_FINANCE_ROLES);
+    const sess: any = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const who = sess?.userId ? undefined : undefined;
     const gym: any = await ctx.db.get(args.gymId);
     if (!gym) throw new Error("الجم غير موجود");
@@ -481,7 +483,7 @@ export const updateOrder = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRole(ctx, args.sessionToken, GYM_FINANCE_ROLES);
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const existing: any = await ctx.db.get(args.orderId);
     if (!existing) throw new Error("الطلبية غير موجودة");
     if (existing.isVoid) throw new Error("مش مسموح تعدّل طلبية ملغاة");
@@ -559,7 +561,7 @@ export const recordOrderReturns = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRole(ctx, args.sessionToken, GYM_FINANCE_ROLES);
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const order: any = await ctx.db.get(args.orderId);
     if (!order) throw new Error("الطلبية غير موجودة");
     if (order.isVoid) throw new Error("مش مسموح على طلبية ملغاة");

@@ -88,6 +88,50 @@ export async function requireRole(
   return id!;
 }
 
+/**
+ * ✅ يتطلّب واحد من:
+ *   - ADMIN (يمر دائماً)
+ *   - دور ضمن `roles`
+ *   - أو صلاحية صفحة (`permissions`) موجودة في users.permissions للمستخدم
+ *     (مطابقة exact، أو prefix — /drivers يغطي /drivers/*)
+ *
+ * الفكرة: المدير يقدر يعطي أي موظف صفحة معينة (مثلاً /drivers) ويحصل
+ * على القدرة لتشغيل mutations الصفحة تلقائياً، بدل ما يبقى مربوطاً بدور
+ * محدد فقط.
+ */
+export async function requireRoleOrPermission(
+  ctx: QueryCtx | MutationCtx,
+  token: string | null | undefined,
+  opts: { roles?: string[]; permissions?: string[] },
+): Promise<Identity> {
+  const id = await validateSession(ctx, token);
+  if (!id || id.accountType !== "staff") throw new Error(AUTH_ERR);
+  const role = String(id.role || "").toUpperCase();
+  if (role === "ADMIN") return id;
+  const allowedRoles = (opts.roles || []).map((r) => r.toUpperCase());
+  if (allowedRoles.includes(role)) return id;
+
+  // فحص الصلاحيات المخصّصة على مستوى المستخدم
+  const wanted = opts.permissions || [];
+  if (wanted.length > 0 && id.userId) {
+    const user: any = await ctx.db.get(id.userId as any);
+    const perms: string[] = Array.isArray(user?.permissions) ? user.permissions : [];
+    if (perms.length > 0) {
+      for (const w of wanted) {
+        for (const p of perms) {
+          if (p === w) return id;
+          if (p === "/") continue;
+          // /drivers/* يغطي /drivers و /drivers/foo
+          if (p.endsWith("/*") && (w === p.slice(0, -2) || w.startsWith(p.slice(0, -2) + "/"))) return id;
+          // /drivers يغطي /drivers/foo
+          if (w.startsWith(p + "/")) return id;
+        }
+      }
+    }
+  }
+  throw new Error(ROLE_ERR);
+}
+
 /** يتطلّب موظفاً مسجّلاً (أي دور staff) */
 export async function requireStaff(ctx: QueryCtx | MutationCtx, token?: string | null): Promise<Identity> {
   const id = await validateSession(ctx, token);
