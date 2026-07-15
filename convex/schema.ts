@@ -915,6 +915,13 @@ export default defineSchema({
     voidedAt: v.optional(v.number()),
     voidedBy: v.optional(v.string()),
     voidReason: v.optional(v.string()),
+    // 🔒 تتبع تسجيل المرتجعات (كل الأسطر مع بعض)
+    hasReturns: v.optional(v.boolean()),
+    returnsRecordedAt: v.optional(v.number()),
+    returnsRecordedBy: v.optional(v.string()),
+    returnedTotal: v.optional(v.number()),      // مجموع المرتجعات (وجبات)
+    wasteValue: v.optional(v.number()),          // قيمة الهالك (unitPrice × returnedQty)
+    netTotal: v.optional(v.number()),            // الفاتورة الفعلية = total - wasteValue
   })
     .index("by_date", ["date"])
     .index("by_gym_date", ["gymId", "date"]),
@@ -931,6 +938,8 @@ export default defineSchema({
     listPrice: v.number(),             // السعر الأصلي من المنيو
     unitPrice: v.number(),             // السعر الفعلي بعد الخصم/gymPrice
     lineTotal: v.number(),             // qty * unitPrice
+    // 🔒 المرتجعات = هالك (مدّة الوجبة يومين، ما بترجعش للمخزون)
+    returnedQty: v.optional(v.number()),  // عدد الوجبات اللي رجعت من هذا السطر
   })
     .index("by_order", ["orderId"])
     .index("by_meal_date", ["mealId", "date"])

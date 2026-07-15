@@ -158,6 +158,81 @@ export const setMealIsGymItem = mutation({
   },
 });
 
+/**
+ * 🔒 تطبيق قائمة أسعار الجم من ملف PDF/Excel — ADMIN فقط.
+ *    لكل صف بالاسم والسعر:
+ *      1. يبحث عن أقرب وجبة في publicMeals بالاسم (fuzzy: يهمل الحالة، المسافات
+ *         الزائدة، وعلامات الترقيم، ويجرّب Protien↔Protein).
+ *      2. يحدّث gymPrice + isGymItem=true.
+ *    يعيد تقرير: ماتشات ناجحة، أسماء لم يجد لها مطابقاً.
+ */
+export const applyGymPriceList = mutation({
+  args: {
+    rows: v.array(v.object({ name: v.string(), price: v.number() })),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const meals = await ctx.db.query("publicMeals").collect();
+
+    // تطبيع + tokenize: كلمات فقط، مع تصحيح typos ومزامنة الاختصارات
+    const STOP = new Set(["and", "with", "w", "the", "a", "of", "&"]);
+    const tokens = (s: string) => s.toLowerCase()
+      .replace(/protien/g, "protein")
+      .replace(/avacodo/g, "avocado")
+      .replace(/pistacchio/g, "pistachio")
+      .replace(/mediterrenean/g, "mediterranean")
+      .replace(/ceaser/g, "caesar")
+      .replace(/majboos/g, "majboos")
+      .replace(/\bw\/?/g, " with ")           // W/ أو W → with
+      .replace(/[^a-z0-9\s]+/g, " ")
+      .split(/\s+/)
+      .filter((t) => t && !STOP.has(t));
+
+    type Entry = { meal: any; toks: Set<string> };
+    const catalog: Entry[] = [];
+    for (const m of meals) {
+      for (const key of [m.nameEn, m.nameAr]) {
+        const toks = new Set(tokens(String(key || "")));
+        if (toks.size === 0) continue;
+        catalog.push({ meal: m, toks });
+      }
+    }
+
+    // مطابقة: أفضل Jaccard similarity ≥ 0.6
+    const findFuzzy = (name: string) => {
+      const q = new Set(tokens(name));
+      if (q.size === 0) return null;
+      let best: { meal: any; score: number } | null = null;
+      for (const e of catalog) {
+        let inter = 0;
+        for (const t of Array.from(q)) if (e.toks.has(t)) inter++;
+        const union = q.size + e.toks.size - inter;
+        const jaccard = union === 0 ? 0 : inter / union;
+        // نطلب كل token في الاستعلام موجود، أو Jaccard عالٍ
+        const containment = inter / q.size;
+        const score = Math.max(jaccard, containment * 0.9);
+        if (!best || score > best.score) best = { meal: e.meal, score };
+      }
+      return best && best.score >= 0.6 ? best.meal : null;
+    };
+
+    const matched: any[] = [];
+    const unmatched: string[] = [];
+    for (const row of args.rows) {
+      const meal = findFuzzy(row.name);
+      if (!meal) { unmatched.push(row.name); continue; }
+      if (row.price < 0 || row.price > 10000) { unmatched.push(`${row.name} (سعر غير صالح)`); continue; }
+      await ctx.db.patch(meal._id, {
+        gymPrice: row.price,
+        isGymItem: true,
+      } as any);
+      matched.push({ input: row.name, matched: meal.nameEn || meal.nameAr, price: row.price });
+    }
+    return { total: args.rows.length, matched: matched.length, unmatched, details: matched };
+  },
+});
+
 /** 🔒 تحديث جماعي — ADMIN. */
 export const bulkSetGymItems = mutation({
   args: { mealIds: v.array(v.id("publicMeals")), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
@@ -419,6 +494,183 @@ export const deleteOrder = mutation({
       updatedAt: Date.now(),
     });
     return { success: true };
+  },
+});
+
+/* ═══════════════════════════════ المرتجعات ═══════════════════════════════ */
+
+/**
+ * 🔒 تسجيل المرتجعات لطلبية — المرتجع = هالك (لا يعود للمخزون).
+ *   ADMIN أو FINANCE. يتحقق أن كل returnedQty ≤ qty الأصلي.
+ *   يحدّث السطر + يعيد حساب netTotal و wasteValue على مستوى الطلبية.
+ */
+export const recordOrderReturns = mutation({
+  args: {
+    orderId: v.id("gymOrders"),
+    returns: v.array(v.object({ lineId: v.id("gymOrderLines"), qty: v.number() })),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireRole(ctx, args.sessionToken, GYM_FINANCE_ROLES);
+    const order: any = await ctx.db.get(args.orderId);
+    if (!order) throw new Error("الطلبية غير موجودة");
+    if (order.isVoid) throw new Error("مش مسموح على طلبية ملغاة");
+
+    const lines = await ctx.db
+      .query("gymOrderLines")
+      .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
+      .collect();
+    const linesById = new Map(lines.map((l) => [String(l._id), l]));
+
+    // تحقق + تطبيق
+    for (const r of args.returns) {
+      const line: any = linesById.get(String(r.lineId));
+      if (!line) throw new Error("سطر غير موجود في الطلبية");
+      const q = Math.max(0, Math.round(Number(r.qty) || 0));
+      if (q > line.qty) throw new Error(`المرتجع (${q}) أكبر من المُرسل (${line.qty}) لسطر ${line.mealNameEn || line.mealNameAr}`);
+      await ctx.db.patch(line._id, { returnedQty: q });
+    }
+
+    // إعادة الحساب على مستوى الطلبية
+    const updatedLines = await ctx.db
+      .query("gymOrderLines")
+      .withIndex("by_order", (q) => q.eq("orderId", args.orderId))
+      .collect();
+    let returnedTotal = 0, wasteValue = 0;
+    for (const l of updatedLines) {
+      const rq = Number((l as any).returnedQty || 0);
+      returnedTotal += rq;
+      wasteValue += rq * Number(l.unitPrice || 0);
+    }
+    wasteValue = Math.round(wasteValue * 100) / 100;
+    const netTotal = Math.round((Number(order.total || 0) - wasteValue) * 100) / 100;
+
+    await ctx.db.patch(args.orderId, {
+      hasReturns: returnedTotal > 0,
+      returnsRecordedAt: Date.now(),
+      returnedTotal, wasteValue, netTotal,
+      updatedAt: Date.now(),
+    });
+    return { returnedTotal, wasteValue, netTotal };
+  },
+});
+
+/**
+ * تقرير المرتجعات — لكل وجبة: كم اترسل، كم رجع، نسبة الإرجاع، قيمة الهالك.
+ *   يُظهر الوجبات الأعلى إرجاعًا أولاً (الأولوية للإيقاف).
+ */
+export const returnsReport = query({
+  args: {
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
+    gymId: v.optional(v.id("gymAccounts")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date").collect();
+    if (args.from) lines = lines.filter((l) => l.date >= args.from!);
+    if (args.to) lines = lines.filter((l) => l.date <= args.to!);
+    if (args.gymId) lines = lines.filter((l) => String(l.gymId) === String(args.gymId));
+
+    // نستبعد أسطر الطلبيات الملغاة
+    const orderIds = Array.from(new Set(lines.map((l) => String(l.orderId))));
+    const voidOrders = new Set<string>();
+    for (const oid of orderIds) {
+      const o: any = await ctx.db.get(oid as any);
+      if (o?.isVoid) voidOrders.add(oid);
+    }
+    lines = lines.filter((l) => !voidOrders.has(String(l.orderId)));
+
+    // aggregate per meal
+    type Row = { key: string; nameEn: string; nameAr: string; sent: number; returned: number; wasteValue: number; unitPriceAvg: number; unitPriceSum: number };
+    const perMeal = new Map<string, Row>();
+    let sentTotal = 0, returnedTotal = 0, wasteValueTotal = 0, revenueTotal = 0;
+    for (const l of lines) {
+      const key = l.mealId ? String(l.mealId) : `text:${l.mealNameEn || l.mealNameAr}`;
+      const row = perMeal.get(key) || { key, nameEn: l.mealNameEn || "", nameAr: l.mealNameAr || "", sent: 0, returned: 0, wasteValue: 0, unitPriceAvg: 0, unitPriceSum: 0 };
+      const rq = Number(l.returnedQty || 0);
+      row.sent += l.qty;
+      row.returned += rq;
+      row.wasteValue += rq * Number(l.unitPrice || 0);
+      row.unitPriceSum += Number(l.unitPrice || 0) * l.qty;
+      perMeal.set(key, row);
+      sentTotal += l.qty;
+      returnedTotal += rq;
+      wasteValueTotal += rq * Number(l.unitPrice || 0);
+      revenueTotal += l.qty * Number(l.unitPrice || 0);
+    }
+    const meals = Array.from(perMeal.values()).map((r) => ({
+      ...r,
+      unitPriceAvg: r.sent > 0 ? Math.round((r.unitPriceSum / r.sent) * 100) / 100 : 0,
+      net: r.sent - r.returned,
+      returnRate: r.sent > 0 ? Math.round((r.returned / r.sent) * 1000) / 10 : 0,
+      wasteValue: Math.round(r.wasteValue * 100) / 100,
+    })).sort((a, b) => b.returnRate - a.returnRate || b.returned - a.returned);
+
+    return {
+      meals,
+      totals: {
+        sent: sentTotal,
+        returned: returnedTotal,
+        net: sentTotal - returnedTotal,
+        returnRate: sentTotal > 0 ? Math.round((returnedTotal / sentTotal) * 1000) / 10 : 0,
+        wasteValue: Math.round(wasteValueTotal * 100) / 100,
+        revenue: Math.round(revenueTotal * 100) / 100,
+        netRevenue: Math.round((revenueTotal - wasteValueTotal) * 100) / 100,
+      },
+    };
+  },
+});
+
+/**
+ * قائمة الطلبيات القابلة للتسجيل عليها مرتجعات (آخر 14 يوم).
+ *   نرجّع الأسطر مع المرتجعات المسجلة عشان الواجهة تعرض النموذج مباشرة.
+ */
+export const listOrdersForReturns = query({
+  args: {
+    days: v.optional(v.number()),
+    gymId: v.optional(v.id("gymAccounts")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const days = Math.max(1, Math.min(60, args.days ?? 14));
+    const now = new Date();
+    const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
+    orders = orders.filter((o) => o.date >= cutoffStr && !o.isVoid);
+    if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
+    orders.sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    const gymNames = new Map<string, string>();
+    const out = [];
+    for (const o of orders) {
+      const gid = String(o.gymId);
+      if (!gymNames.has(gid)) {
+        const g: any = await ctx.db.get(o.gymId);
+        gymNames.set(gid, g?.name || "");
+      }
+      const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      out.push({
+        id: String(o._id), date: o.date,
+        gymId: gid, gymName: gymNames.get(gid) || "",
+        total: o.total, mealsCount: o.mealsCount,
+        hasReturns: !!o.hasReturns,
+        returnedTotal: Number(o.returnedTotal || 0),
+        wasteValue: Number(o.wasteValue || 0),
+        netTotal: Number(o.netTotal ?? o.total),
+        lines: lines.map((l: any) => ({
+          id: String(l._id),
+          mealNameEn: l.mealNameEn || "", mealNameAr: l.mealNameAr || "",
+          qty: l.qty, unitPrice: l.unitPrice,
+          returnedQty: Number(l.returnedQty || 0),
+        })),
+      });
+    }
+    return out;
   },
 });
 

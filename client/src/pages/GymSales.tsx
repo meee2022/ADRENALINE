@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks } from "lucide-react";
+import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks, PackageX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => todayStr().slice(0, 7);
 
-type Tab = "pos" | "history" | "reports" | "items" | "prices" | "gyms";
+type Tab = "pos" | "history" | "returns" | "reports" | "items" | "prices" | "gyms";
 type CatKey = "breakfast" | "lunch" | "dinner" | "salad" | "snack" | "all";
 
 const CAT_META: Record<CatKey, { ar: string; en: string; icon: any; color: string }> = {
@@ -73,10 +73,11 @@ export default function GymSales() {
 
       <div className="max-w-7xl mx-auto px-4 pb-10">
         {/* Tabs */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-6 gap-2">
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-7 gap-2">
           {([
             ["pos",     Receipt,       t("نقطة البيع",  "POS")],
             ["history", ClipboardList, t("السجل",       "History")],
+            ["returns", PackageX,      t("المرتجعات",   "Returns")],
             ["reports", BarChart3,     t("التقارير",    "Reports")],
             ["items",   ListChecks,    t("أصناف الجم",  "Gym Items")],
             ["prices",  Settings,      t("أسعار الجم",  "Gym Prices")],
@@ -110,6 +111,7 @@ export default function GymSales() {
         <div className="mt-4">
           {tab === "pos"     && <PosTab     isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
           {tab === "history" && <HistoryTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
+          {tab === "returns" && <ReturnsTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
           {tab === "reports" && <ReportsTab isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} />}
           {tab === "items"   && <ItemsTab   isRtl={isRtl} t={t} sessionToken={sessionToken} toast={toast} />}
           {tab === "prices"  && <PricesTab  isRtl={isRtl} t={t} sessionToken={sessionToken} gyms={gyms || []} selectedGymId={selectedGymId} setSelectedGymId={setSelectedGymId} toast={toast} />}
@@ -595,6 +597,160 @@ function Stat({ label, value, color }: any) {
   );
 }
 
+/* ═══════════════════════════════ Returns Tab ═══════════════════════════════ */
+
+function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
+  const [days, setDays] = useState(14);
+  const orders = useQuery(
+    (api.gymSales as any).listOrdersForReturns,
+    { days, gymId: (selectedGymId || undefined) as any, sessionToken }
+  ) as any[] | undefined;
+  const record = useMutation((api.gymSales as any).recordOrderReturns);
+
+  // per-order per-line draft returnedQty
+  const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const setDraft = (orderId: string, lineId: string, val: string) => {
+    setDrafts((d) => ({ ...d, [orderId]: { ...(d[orderId] || {}), [lineId]: val } }));
+  };
+  const saveOrder = async (order: any) => {
+    const orderDrafts = drafts[order.id] || {};
+    const returns = order.lines.map((l: any) => {
+      const raw = orderDrafts[l.id];
+      const qty = raw !== undefined ? Number(raw || 0) : Number(l.returnedQty || 0);
+      return { lineId: l.id as any, qty };
+    });
+    setSaving(order.id);
+    try {
+      const r: any = await record({ orderId: order.id as any, returns, sessionToken });
+      toast({
+        title: t("تم الحفظ ✓", "Saved ✓"),
+        description: t(
+          `مرتجع ${r.returnedTotal} وجبة · هالك ${r.wasteValue} ر.ق · صافي ${r.netTotal} ر.ق`,
+          `Returned ${r.returnedTotal} · waste ${r.wasteValue} QAR · net ${r.netTotal} QAR`
+        ),
+      });
+      setDrafts((d) => { const cp = { ...d }; delete cp[order.id]; return cp; });
+    } catch (e: any) {
+      toast({ title: t("فشل", "Failed"), description: e?.message });
+    } finally { setSaving(null); }
+  };
+
+  const totalWasteAll = (orders || []).reduce((s: number, o: any) => s + Number(o.wasteValue || 0), 0);
+  const totalReturnedAll = (orders || []).reduce((s: number, o: any) => s + Number(o.returnedTotal || 0), 0);
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
+            <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="">{t("كل الجمات", "All gyms")}</option>
+              {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("المدة (يوم)", "Days")}</Label>
+            <select value={days} onChange={(e) => setDays(Number(e.target.value))} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value={7}>7</option>
+              <option value={14}>14</option>
+              <option value={30}>30</option>
+              <option value={60}>60</option>
+            </select>
+          </div>
+          <StatMini label={t("إجمالي المرتجعات", "Total returned")} value={totalReturnedAll} color="#dc2626" />
+          <StatMini label={t("قيمة الهالك", "Waste value")} value={`${totalWasteAll.toFixed(2)} ر.ق`} color="#dc2626" />
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-0">
+          <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-bold">
+            💡 {t("المرتجع = هالك (مدة الوجبة يومين). سجّل الكميات ثم اضغط «حفظ» — يعيد حساب الفاتورة الفعلية.", "Returns = waste (2-day shelf life). Record qty then Save — it recomputes the actual bill.")}
+          </div>
+          {!orders && <div className="p-6 text-center text-slate-400">{t("جاري التحميل…", "Loading…")}</div>}
+          {orders && orders.length === 0 && <div className="p-6 text-center text-slate-400">{t("لا توجد طلبيات في هذه المدة", "No orders in this window")}</div>}
+          <div className="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto">
+            {(orders || []).map((o: any) => {
+              const isDirty = !!drafts[o.id] && Object.keys(drafts[o.id]).length > 0;
+              return (
+                <div key={o.id} className="p-3">
+                  <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+                    <div>
+                      <div className="font-black text-sm">{o.gymName} · {o.date}</div>
+                      <div className="text-[11px] text-slate-500 font-bold">
+                        {t("مُرسل:", "Sent:")} {o.mealsCount} · {t("مرتجع:", "Returned:")} {o.returnedTotal} ·
+                        <span className="ms-1" style={{ color: "#dc2626" }}>{t("هالك", "Waste")}: {o.wasteValue.toFixed(2)} ر.ق</span> ·
+                        <span className="ms-1 font-black" style={{ color: "#0E76AC" }}>{t("صافي", "Net")}: {o.netTotal.toFixed(2)} ر.ق</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => saveOrder(o)}
+                      disabled={!isDirty || saving === o.id}
+                      className={cn("text-xs font-bold px-3 h-8 rounded-lg", isDirty && saving !== o.id ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-400 cursor-not-allowed")}
+                    >
+                      {saving === o.id ? t("جاري…", "…") : t("حفظ المرتجعات", "Save returns")}
+                    </button>
+                  </div>
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 text-slate-500">
+                      <tr>
+                        <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
+                        <th className="text-end p-2">{t("مُرسل", "Sent")}</th>
+                        <th className="text-end p-2">{t("مرتجع", "Returned")}</th>
+                        <th className="text-end p-2">{t("سعر", "Price")}</th>
+                        <th className="text-end p-2">{t("هالك", "Waste")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {o.lines.map((l: any) => {
+                        const draftVal = drafts[o.id]?.[l.id];
+                        const showVal = draftVal !== undefined ? draftVal : String(l.returnedQty || "");
+                        const rq = Number(showVal || 0);
+                        const waste = rq * l.unitPrice;
+                        return (
+                          <tr key={l.id} className="border-t border-slate-100">
+                            <td className="p-2 font-bold">{isRtl ? (l.mealNameAr || l.mealNameEn) : (l.mealNameEn || l.mealNameAr)}</td>
+                            <td className="p-2 text-end">{l.qty}</td>
+                            <td className="p-2 text-end">
+                              <input
+                                type="number" min={0} max={l.qty} step="1"
+                                value={showVal}
+                                onChange={(e) => setDraft(o.id, l.id, e.target.value)}
+                                placeholder="0"
+                                className="w-16 h-7 text-center border border-slate-200 rounded font-bold"
+                              />
+                            </td>
+                            <td className="p-2 text-end">{l.unitPrice.toFixed(2)}</td>
+                            <td className="p-2 text-end font-bold" style={{ color: rq > 0 ? "#dc2626" : "#94a3b8" }}>
+                              {waste.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function StatMini({ label, value, color }: { label: string; value: any; color?: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 p-3">
+      <p className="text-[10px] font-bold text-slate-500">{label}</p>
+      <p className="text-lg font-black mt-1" style={{ color: color || "#0E76AC" }}>{value}</p>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════ Prices Tab ═══════════════════════════════ */
 
 function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
@@ -603,8 +759,71 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
     selectedGymId ? { gymId: selectedGymId as any, sessionToken } : "skip"
   ) as any[] | undefined;
   const setPrice = useMutation(api.gymSales.setMealGymPrice);
+  const applyBulk = useMutation((api.gymSales as any).applyGymPriceList);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [importing, setImporting] = useState(false);
+
+  // 🔒 استيراد قائمة أسعار الجم (42 وجبة من ملف PDF المعتمد).
+  //    ADMIN فقط. fuzzy match بالاسم مع gymPrice + isGymItem=true.
+  const GYM_PRICE_LIST = [
+    { name: "TURKEY AND CHEESECLUB SANDWICH", price: 25 },
+    { name: "CLASSIC FATTOUSH", price: 30 },
+    { name: "AVACODO TURKEY SANDWICH", price: 25 },
+    { name: "BEETROOT SALAD", price: 25 },
+    { name: "CRISPY CHICKEN W/HONEY MUSTARD", price: 30 },
+    { name: "TENDERLOIN W/RICE", price: 49 },
+    { name: "PROTIEN LAZY CAKE", price: 18 },
+    { name: "PROTIEN LAVA CAKE", price: 20 },
+    { name: "TERIYAKI TOFU W/RICE", price: 37 },
+    { name: "PISTACCHIO SALAD", price: 30 },
+    { name: "MONGOLIAN BEEF", price: 49 },
+    { name: "CRISPY CHICKEN WRAP", price: 35 },
+    { name: "MEDITERRENEAN SALAD", price: 30 },
+    { name: "CHICKEN CEASER SALAD", price: 30 },
+    { name: "MONGOLIAN NOODLES", price: 52 },
+    { name: "CRISPY CHICKEN", price: 45 },
+    { name: "CHICKEN SHAWARMA", price: 35 },
+    { name: "CHICKEN BURGER", price: 35 },
+    { name: "SHISH TAWOOK W/RICE", price: 45 },
+    { name: "BEEF SHAWARMA BEETROOT", price: 54 },
+    { name: "CHICKEN MAJBOOS", price: 48 },
+    { name: "SPAGHETTI MEAT BALLS", price: 45 },
+    { name: "CHICKEN BREAST W/RICE", price: 42 },
+    { name: "CRISPY CHICKEN W/RICE", price: 45 },
+    { name: "IRANIAN KOFTA", price: 52 },
+    { name: "POWER BALLS", price: 20 },
+    { name: "VANILLA MUFFINS", price: 22 },
+    { name: "COOKIES", price: 20 },
+    { name: "PROTIEN BROWNIES", price: 22 },
+    { name: "BEEF SHAWARMA", price: 42 },
+    { name: "GREEK CHICKEN", price: 43 },
+    { name: "BEEF KOFTA WITH MASHED POTATO", price: 50 },
+    { name: "SHISH TAWOOK SANDWICH", price: 34 },
+    { name: "CHICKEN FAJITA SANDWICH", price: 40 },
+    { name: "STEAK SANDWICH", price: 42 },
+    { name: "DYNAMITE SHRIMP W/RICE", price: 42 },
+    { name: "BEEF FAJITA SANDWICH", price: 38 },
+    { name: "CORDON BLEU", price: 42 },
+    { name: "BEEF KOFTA WITH SAFFRON RICE", price: 50 },
+    { name: "SWEET CHILLI CHICKEN", price: 45 },
+    { name: "BEEF LASAGNA", price: 48 },
+    { name: "BEEF FAJITA WRAP", price: 38 },
+  ];
+
+  const importFromList = async () => {
+    setImporting(true);
+    try {
+      const r: any = await applyBulk({ rows: GYM_PRICE_LIST, sessionToken });
+      const msg = t(
+        `تم ${r.matched}/${r.total}. غير مطابق: ${r.unmatched.length ? r.unmatched.join("، ") : "لا شيء"}`,
+        `Matched ${r.matched}/${r.total}. Unmatched: ${r.unmatched.length ? r.unmatched.join(", ") : "none"}`
+      );
+      toast({ title: t("تم الاستيراد ✓", "Imported ✓"), description: msg });
+    } catch (e: any) {
+      toast({ title: t("فشل الاستيراد", "Import failed"), description: e?.message });
+    } finally { setImporting(false); }
+  };
 
   const filtered = useMemo(() => (meals || []).filter((m: any) => {
     const qq = q.trim().toLowerCase();
@@ -634,6 +853,16 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
           <div className="sm:col-span-2">
             <Label className="text-xs font-bold text-slate-500">{t("بحث", "Search")}</Label>
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10" />
+          </div>
+          <div className="sm:col-span-3">
+            <button
+              id="gym-import-btn"
+              onClick={importFromList}
+              disabled={importing}
+              className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
+            >
+              {importing ? t("جاري الاستيراد…", "Importing…") : t("استيراد قائمة أسعار الجم (42 وجبة)", "Import gym price list (42 meals)")}
+            </button>
           </div>
         </CardContent>
       </Card>
