@@ -598,87 +598,105 @@ export const generateWeeklyPlan = action({
       ? new Date(args.endDate + "T00:00:00")
       : null;
 
-    /** يولّد أيام عمل أسبوع واحد ابتداءً من تاريخ، بأسبوع دورة مفروض اختيارياً. */
+    /**
+     * ✅ يولّد أيام "bucket" واحدة — يبدأ من `cur` وينتهي عند أول جمعة أو
+     *   نهاية الاشتراك أو 6 أيام. الدورة تُتقدّم عند الجمعة، فيتوافق كل يوم
+     *   مع دورة المطبخ الحقيقية له.
+     * يعيد `nextRotationWeek` عشان الـbucket اللي بعده يبدأ بالدورة الصحيحة.
+     */
     const buildWeek = async (
       cur: Date,
-      forcedRotation: number | undefined,
-    ): Promise<{ days: any[]; profileFound: boolean; reachedEnd: boolean }> => {
+      initialRotation: number,
+    ): Promise<{ days: any[]; profileFound: boolean; reachedEnd: boolean; nextRotationWeek: number }> => {
       const out: any[] = [];
       let profileFound = false;
       let reachedEnd = false;
+      let rotWeek = initialRotation;
       for (let guard = 0; guard < 12 && out.length < WORKING_DAYS.length; guard++) {
-        // ✅ لو تخطينا نهاية الاشتراك، نوقف بغض النظر عن اكتمال الأسبوع
         if (endBoundary && cur.getTime() > endBoundary.getTime()) { reachedEnd = true; break; }
         const dow = cur.getDay();
-        if (dow !== 5) { // الجمعة وحدها بلا توصيل
-          const dayName = WEEKDAYS[dow];
-          const dateStr = cur.toISOString().slice(0, 10);
-
-          const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
-            customerId: args.customerId,
-            phone: args.phone,
-            todayDay: dayName,
-            todayDate: dateStr,
-            overrideRotationWeek: forcedRotation,
-          });
-          profileFound = profile.found;
-
-          let picks: any[] = [];
-          let summary = "";
-          let engine = "none";
-          if (candidates && candidates.length > 0) {
-            let result;
-            if (apiKey) {
-              try { result = await aiPlan(profile, candidates, apiKey); }
-              catch { result = ruleBasedPlan(profile, candidates); }
-            } else {
-              result = ruleBasedPlan(profile, candidates);
-            }
-            const byId = new Map(candidates.map((c: any) => [c.id, c]));
-            picks = (result.picks || [])
-              .filter((p: any) => byId.has(p.id))
-              .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
-            summary = result.summary;
-            engine = result.engine;
-          }
-
-          out.push({
-            date: dateStr,
-            day: dayName,
-            rotationWeek: meta?.rotationWeek ?? forcedRotation ?? 1,
-            picks,
-            summary,
-            engine,
-            empty: picks.length === 0,
-          });
+        if (dow === 5) {
+          // ✅ الجمعة: نغلق الـbucket الحالي (الأسبوع الحالي انتهى) ونتقدّم للدورة التالية.
+          //    الأيام بعد الجمعة تنتمي لأسبوع دورة جديد → outer loop يفتح bucket تاني.
+          rotWeek = (rotWeek % 4) + 1;
+          cur.setDate(cur.getDate() + 1);
+          break;
         }
+        // يوم توصيل عادي
+        const dayName = WEEKDAYS[dow];
+        const dateStr = cur.toISOString().slice(0, 10);
+        const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
+          customerId: args.customerId,
+          phone: args.phone,
+          todayDay: dayName,
+          todayDate: dateStr,
+          overrideRotationWeek: rotWeek, // ✅ الدورة الحقيقية لهذا اليوم
+        });
+        profileFound = profile.found;
+
+        let picks: any[] = [];
+        let summary = "";
+        let engine = "none";
+        if (candidates && candidates.length > 0) {
+          let result;
+          if (apiKey) {
+            try { result = await aiPlan(profile, candidates, apiKey); }
+            catch { result = ruleBasedPlan(profile, candidates); }
+          } else {
+            result = ruleBasedPlan(profile, candidates);
+          }
+          const byId = new Map(candidates.map((c: any) => [c.id, c]));
+          picks = (result.picks || [])
+            .filter((p: any) => byId.has(p.id))
+            .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
+          summary = result.summary;
+          engine = result.engine;
+        }
+
+        out.push({
+          date: dateStr,
+          day: dayName,
+          rotationWeek: rotWeek,
+          picks,
+          summary,
+          engine,
+          empty: picks.length === 0,
+        });
         cur.setDate(cur.getDate() + 1);
       }
-      return { days: out, profileFound, reachedEnd };
+      return { days: out, profileFound, reachedEnd, nextRotationWeek: rotWeek };
     };
 
     // نبدأ من startDate أو من اليوم
     const cursor = args.startDate ? new Date(args.startDate + "T00:00:00") : new Date();
     const weeks: any[] = [];
     let anyProfile = false;
+    // ✅ نبدأ بالدورة اللي حددها العميل (rotationWeek عند تاريخ بداية اشتراكه)،
+    //    والدورة تتقدّم تلقائياً داخل buildWeek لما نعبر جمعة.
+    let rotForNext = args.startRotationWeek ? Math.floor(args.startRotationWeek) : 1;
 
-    for (let w = 0; w < weeksCount; w++) {
-      // أسبوع الدورة لكل أسبوع: startRotationWeek + w، ملفوفة على 1..4
-      const forced = args.startRotationWeek
-        ? ((Math.floor(args.startRotationWeek) - 1 + w) % 4) + 1
-        : undefined;
-      const { days, profileFound, reachedEnd } = await buildWeek(cursor, forced);
+    // ✅ لو fيه endDate، ما نضطرش نوقف عند weeksCount — buildWeek بيرجع buckets
+    //    قد تكون قصيرة (مثلاً bucket فيه يوم واحد قبل الجمعة). نستمر لحد ما نصل
+    //    نهاية الاشتراك أو نكمل weeksCount buckets مع أيام فعلية.
+    // لو endDate مضبوط، ما نحدد بـweeksCount (server يوقف عند reachedEnd).
+    // بدون endDate، نحدد بـweeksCount + safety guard 8.
+    const maxBuckets = endBoundary ? 8 : weeksCount;
+    const bucketCap = endBoundary ? maxBuckets : weeksCount;
+    let bucketsWithDays = 0;
+    for (let g = 0; g < maxBuckets && bucketsWithDays < bucketCap; g++) {
+      const { days, profileFound, reachedEnd, nextRotationWeek } = await buildWeek(cursor, rotForNext);
       anyProfile = anyProfile || profileFound;
       if (days.length > 0) {
         weeks.push({
-          index: w + 1,
-          rotationWeek: days[0]?.rotationWeek ?? forced ?? w + 1,
+          index: weeks.length + 1,
+          rotationWeek: days[0]?.rotationWeek ?? rotForNext,
           days,
         });
+        bucketsWithDays++;
       }
+      rotForNext = nextRotationWeek;
       // ✅ لو وصلنا لنهاية الاشتراك، نوقف كل التوليد
       if (reachedEnd) break;
-      // cursor يكون قد تجاوز أيام هذا الأسبوع؛ تخطَّ الخميس/الجمعة للأسبوع التالي
     }
 
     const allDays = weeks.flatMap((wk) => wk.days);
