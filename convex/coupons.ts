@@ -24,7 +24,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken);
     const code = args.code.trim().toUpperCase();
     const existing = await ctx.db
       .query("coupons")
@@ -47,7 +47,7 @@ export const create = mutation({
 export const remove = mutation({
   args: { id: v.id("coupons"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     await ctx.db.delete(id);
     return { success: true };
   },
@@ -56,7 +56,7 @@ export const remove = mutation({
 export const toggleActive = mutation({
   args: { id: v.id("coupons"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireAdmin(ctx, sessionToken);
     const coupon = await ctx.db.get(id);
     if (!coupon) throw new Error("Coupon not found");
     await ctx.db.patch(id, { isActive: !coupon.isActive });

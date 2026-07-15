@@ -273,6 +273,13 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_email", ["email"]),
 
+  // 🔒 سجل طلبات استعادة كلمة المرور (لل rate limiting) — يحفظ فقط timestamp
+  //    ولا يحفظ الكود؛ الغرض منع flooding + تعطيل الحساب.
+  passwordResetRequests: defineTable({
+    email: v.string(),
+    at: v.number(),
+  }).index("by_email", ["email"]),
+
   // ===== Sessions (server-side auth tokens) =====
   sessions: defineTable({
     token: v.string(),
@@ -699,12 +706,18 @@ export default defineSchema({
     preferredStartDate: v.optional(v.string()),
     // ✅ توكن سرّي لصفحة جدول الوجبات العامة (رابط يُرسَل للعميل)
     planToken: v.optional(v.string()),
+    // 🔒 توكن تتبع للعميل — عشوائي وطويل (بديل رقم الطلب المتوقّع)
+    trackingToken: v.optional(v.string()),
+    // 🔒 مفتاح idempotency لمنع تكرار الطلب
+    idempotencyKey: v.optional(v.string()),
   })
     .index("by_status", ["status"])
     .index("by_phone", ["customerPhone"])
     .index("by_orderNumber", ["orderNumber"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_plan_token", ["planToken"]),
+    .index("by_plan_token", ["planToken"])
+    .index("by_tracking_token", ["trackingToken"])
+    .index("by_idem", ["idempotencyKey"]),
 
   // ===== Customer Order Items =====
   customerOrderItems: defineTable({

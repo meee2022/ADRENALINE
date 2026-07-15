@@ -28,7 +28,6 @@ export default function CustomerAuth() {
   const [mode, setMode] = useState<Mode>(initialReset ? "reset" : "register");
   const [resetStep, setResetStep] = useState<"request" | "verify">("request");
   const [code, setCode] = useState("");
-  const [devHint, setDevHint] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -67,13 +66,13 @@ export default function CustomerAuth() {
   // خطوة 1: طلب كود الاستعادة عبر البريد
   const handleRequestCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(""); setDevHint("");
+    setError("");
     if (!form.email) { setError(isRtl ? "أدخل بريدك الإلكتروني" : "Enter your email"); return; }
     setIsLoading(true);
     try {
-      const res: any = await convex.action((api as any).passwordReset.requestReset, { email: form.email });
+      await convex.action((api as any).passwordReset.requestReset, { email: form.email });
       setResetStep("verify");
-      if (res?.devCode) setDevHint(res.devCode); // يظهر فقط قبل تفعيل خدمة البريد
+      // ✅ الكود لا يُرجع في الاستجابة أبداً — يوصل عبر البريد فقط (أمان)
     } catch (err: any) {
       setError(err.message || (isRtl ? "تعذّر إرسال الكود" : "Could not send code"));
     } finally { setIsLoading(false); }
@@ -219,12 +218,7 @@ export default function CustomerAuth() {
                   <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#EAF3FB", color: "#0E76AC" }}>
                     {isRtl ? "أرسلنا كوداً إلى " : "We sent a code to "}<b dir="ltr">{form.email}</b>
                   </div>
-                  {devHint && (
-                    <div className="rounded-xl px-4 py-2 text-xs font-bold text-center"
-                      style={{ background: "#fff7ed", border: "1px dashed #fdba74", color: "#9a3412" }}>
-                      {isRtl ? "وضع الاختبار (قبل تفعيل البريد) — الكود: " : "Test mode (email not activated) — code: "}<span dir="ltr">{devHint}</span>
-                    </div>
-                  )}
+                  {/* ✅ عرض الكود في الواجهة اتشال (كان ثغرة أمنية) — الكود يوصل بالبريد فقط */}
                   <div className="space-y-1.5">
                     <Label className="text-sm font-bold" style={{ color: "#47759c" }}>
                       {isRtl ? "كود التحقق" : "Verification Code"}
@@ -296,7 +290,7 @@ export default function CustomerAuth() {
               </Button>
 
               {mode === "reset" && resetStep === "verify" && (
-                <button type="button" onClick={() => { setResetStep("request"); setCode(""); setError(""); setDevHint(""); }}
+                <button type="button" onClick={() => { setResetStep("request"); setCode(""); setError(""); }}
                   className="w-full text-xs font-bold hover:underline" style={{ color: "#47759c" }}>
                   {isRtl ? "لم يصلك الكود؟ إعادة الإرسال" : "Didn't get the code? Resend"}
                 </button>

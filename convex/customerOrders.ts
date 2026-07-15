@@ -1,7 +1,10 @@
 // convex/customerOrders.ts
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireStaff, requireAdmin, newToken } from "./sessions";
+import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
+
+// 🔒 قصر دورة الطلبات (approve/reject/updateStatus) على الأدوار المسؤولة
+const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
 import { getDayOffset } from "./lib/dates";
 import { loyaltyConfig } from "./loyalty";
 
@@ -39,53 +42,116 @@ export const create = mutation({
     customerName: v.string(),
     customerPhone: v.string(),
     customerEmail: v.optional(v.string()),
-    customerId: v.optional(v.id("customers")), // ✅ ربط بالمشترك
-    totalMeals: v.number(),
-    totalPrice: v.number(),
-    totalCalories: v.number(),
+    customerId: v.optional(v.id("customers")),
+    // 🔒 نستقبل فقط معرّفات + كميات + جدولة. كل الأسعار والسعرات وأسماء الوجبات
+    //    والصور تُقرأ من قاعدة البيانات على الخادم — نستحيل التلاعب من العميل.
     items: v.array(
       v.object({
         mealId: v.id("publicMeals"),
-        mealNameAr: v.string(),
-        mealNameEn: v.optional(v.string()),
-        calories: v.number(),
-        protein: v.optional(v.number()),
-        carbs: v.optional(v.number()),
-        fats: v.optional(v.number()),
-        category: v.string(),
-        imageUrl: v.optional(v.string()),
-        priceQAR: v.number(),
         week: v.number(),
         day: v.string(),
       })
     ),
     notes: v.optional(v.string()),
-    // ✅ تاريخ بداية التوصيل الذي اختاره العميل (yyyy-MM-dd). تراه الأخصائية
-    //    مقترحاً عند الاعتماد وتقدر تعدّله.
     preferredStartDate: v.optional(v.string()),
+    // 🔒 مفتاح idempotency: يمنع تكرار الطلب لو الفورم اتضغط مرتين أو النت قطع
+    idempotencyKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const orderNumber = generateOrderNumber();
     const now = Date.now();
 
-    // Create order
-    const orderId = await ctx.db.insert("customerOrders", {
-      customerName: args.customerName,
-      customerPhone: args.customerPhone,
-      customerEmail: args.customerEmail,
-      customerId: args.customerId, // ✅ حفظ المشترك
-      status: "pending",
-      totalMeals: args.totalMeals,
-      totalPrice: args.totalPrice,
-      totalCalories: args.totalCalories,
-      orderNumber,
-      createdAt: now,
-      notes: args.notes,
-      preferredStartDate: args.preferredStartDate,
-    });
+    // 🔒 التحقق: على الأقل وجبة واحدة، حد أقصى معقول (يمنع abuse)
+    if (args.items.length === 0) throw new Error("لازم تختار وجبة واحدة على الأقل");
+    if (args.items.length > 500) throw new Error("عدد الوجبات كبير جداً");
+    if (!args.customerName.trim() || !args.customerPhone.trim()) {
+      throw new Error("الاسم ورقم الهاتف مطلوبان");
+    }
 
-    // Create order items
-    for (const item of args.items) {
+    // 🔒 Idempotency: لو المفتاح متكرر، رجّع نفس الطلب الأصلي
+    if (args.idempotencyKey) {
+      const existing = await ctx.db
+        .query("customerOrders")
+        .withIndex("by_idem", (q) => q.eq("idempotencyKey", args.idempotencyKey))
+        .first();
+      if (existing) {
+        return { orderId: existing._id, orderNumber: existing.orderNumber, duplicate: true };
+      }
+    }
+
+    // 🔒 Rate limit: أقصى 3 طلبات لكل رقم هاتف في آخر ساعة
+    const phone = args.customerPhone.trim();
+    const cutoff = now - 60 * 60 * 1000;
+    const recentByPhone = await ctx.db
+      .query("customerOrders")
+      .withIndex("by_phone", (q) => q.eq("customerPhone", phone))
+      .collect();
+    const recent = recentByPhone.filter((o: any) => o.createdAt >= cutoff);
+    if (recent.length >= 3) {
+      throw new Error("عدد طلبات كبير من نفس الرقم — انتظر قليلاً");
+    }
+
+    // 🔒 نجيب كل الوجبات من الخادم ونتحقق أنها موجودة ونشطة
+    const mealCache = new Map<string, any>();
+    for (const it of args.items) {
+      const key = String(it.mealId);
+      if (mealCache.has(key)) continue;
+      const meal: any = await ctx.db.get(it.mealId);
+      if (!meal || !meal.isActive) {
+        throw new Error(`وجبة غير متاحة — قد تكون حُذفت من المنيو`);
+      }
+      mealCache.set(key, meal);
+    }
+
+    // 🔒 نحسب الإجماليات من بيانات الخادم فقط
+    let totalCalories = 0;
+    let totalPrice = 0;
+    const serverItems = args.items.map((it) => {
+      const meal = mealCache.get(String(it.mealId));
+      const price = Number(meal.priceQAR) || 0;
+      const cal = Number(meal.calories) || 0;
+      totalCalories += cal;
+      totalPrice += price;
+      return {
+        mealId: it.mealId,
+        mealNameAr: meal.nameAr,
+        mealNameEn: meal.nameEn,
+        calories: cal,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fats: meal.fats,
+        category: meal.category,
+        imageUrl: meal.imageUrl,
+        priceQAR: price,
+        week: it.week,
+        day: it.day,
+      };
+    });
+    totalPrice = Math.round(totalPrice * 100) / 100;
+
+    const orderNumber = generateOrderNumber();
+    // 🔒 توكن تتبع طويل وعشوائي — بديل رقم الطلب المتوقّع في رابط التتبع العام
+    const trackingToken = newToken();
+
+    // Create order (Server-computed totals)
+    const orderId = await ctx.db.insert("customerOrders", {
+      customerName: args.customerName.trim(),
+      customerPhone: phone,
+      customerEmail: args.customerEmail?.trim(),
+      customerId: args.customerId,
+      status: "pending",
+      totalMeals: serverItems.length,
+      totalPrice,
+      totalCalories,
+      orderNumber,
+      trackingToken,
+      createdAt: now,
+      notes: args.notes?.trim(),
+      preferredStartDate: args.preferredStartDate,
+      idempotencyKey: args.idempotencyKey,
+    } as any);
+
+    // Create order items with server-computed values
+    for (const item of serverItems) {
       await ctx.db.insert("customerOrderItems", {
         orderId,
         mealId: item.mealId,
@@ -109,7 +175,7 @@ export const create = mutation({
       targetRole: "NUTRITIONIST",
       type: "NEW_ORDER",
       title: "طلب جديد للمراجعة",
-      message: `${args.customerName} - ${args.totalMeals} وجبة (${orderNumber})`,
+      message: `${args.customerName} - ${serverItems.length} وجبة (${orderNumber})`,
       link: `/orders/${orderId}`,
       relatedId: orderId,
       isRead: false,
@@ -129,7 +195,26 @@ export const create = mutation({
     return {
       orderId,
       orderNumber,
+      trackingToken,
     };
+  },
+});
+
+/** ✅ استعلام بتوكن التتبع — بديل getByOrderNumber المتوقّع. عام (بلا جلسة). */
+export const getByTrackingToken = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    if (!token || token.length < 20) return null;
+    const order = await ctx.db
+      .query("customerOrders")
+      .withIndex("by_tracking_token", (q) => q.eq("trackingToken", token))
+      .first();
+    if (!order) return null;
+    const items = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", order._id))
+      .collect();
+    return { ...publicOrderView(order), items };
   },
 });
 
@@ -241,17 +326,25 @@ function publicOrderView(o: any) {
 }
 
 // ===== GET ORDER BY NUMBER (عام — تتبّع الطلب) =====
+/**
+ * 🔒 استعلام بالرقم — يتطلّب الآن رقم هاتف مطابق كتحقق (منع enumeration).
+ *    الترجيح: الجدد يستخدموا trackingToken. الرقم متروك للتوافق الرجعي.
+ */
 export const getByOrderNumber = query({
-  args: { orderNumber: v.string() },
-  handler: async (ctx, { orderNumber }) => {
+  args: { orderNumber: v.string(), phone: v.optional(v.string()) },
+  handler: async (ctx, { orderNumber, phone }) => {
     const order = await ctx.db
       .query("customerOrders")
       .withIndex("by_orderNumber", (q) => q.eq("orderNumber", orderNumber))
       .first();
 
     if (!order) return null;
+    // 🔒 لو مافيش رقم هاتف مطابق، ما نُرجعش شيئاً — يمنع تخمين الأرقام
+    const normPhone = (p?: string) => String(p || "").replace(/\D/g, "");
+    if (!phone || normPhone(phone) !== normPhone((order as any).customerPhone)) {
+      return null;
+    }
 
-    // الوجبات ليست بيانات شخصية — نُبقيها كما كانت
     const items = await ctx.db
       .query("customerOrderItems")
       .withIndex("by_orderId", (q) => q.eq("orderId", order._id))
@@ -302,7 +395,7 @@ export const updateStatus = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { orderId, status, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
     await ctx.db.patch(orderId, {
       status,
       updatedAt: Date.now(),
@@ -351,7 +444,7 @@ export const approve = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
@@ -559,7 +652,7 @@ export const reject = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { orderId, reason, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
     const order = await ctx.db.get(orderId);
     await ctx.db.patch(orderId, {
       status: "cancelled",

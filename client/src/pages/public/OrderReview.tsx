@@ -78,7 +78,6 @@ export default function OrderReview() {
 
   // Computed values from cart
   const totalMeals = getTotalMeals();
-  const totalPrice = 0;
   const totalCalories = getTotalCalories();
   const weeks = getWeeks();
   const totalWeeks = weeks.length;
@@ -109,31 +108,22 @@ export default function OrderReview() {
     }
 
     setIsSubmitting(true);
+    // 🔒 مفتاح idempotency فريد لكل محاولة (لو الفورم اتضغط مرتين مايبقاش طلبين)
+    const idem = `ord_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     try {
-      // ✅ إرسال الطلب مع customerId (إذا وُجد تلقائياً)
+      // ✅ نبعت فقط IDs + الجدولة. الأسعار والسعرات وأسماء الوجبات تُحسب على الخادم من قاعدة البيانات.
       const result = await createOrder({
         customerName,
         customerPhone,
         customerEmail,
-        customerId: findCustomerByPhone?._id, // ✅ ربط تلقائي
-        preferredStartDate: preferredStartDate || undefined, // ✅ تاريخ البداية الذي اختاره العميل
-        totalMeals,
-        totalPrice,
-        totalCalories,
+        customerId: findCustomerByPhone?._id,
+        preferredStartDate: preferredStartDate || undefined,
         items: selectedMeals.map((meal) => ({
           mealId: meal._id as any,
-          mealNameAr: meal.nameAr,
-          mealNameEn: meal.nameEn,
-          calories: meal.calories,
-          protein: meal.protein,
-          carbs: meal.carbs,
-          fats: meal.fats,
-          category: meal.category,
-          imageUrl: meal.imageUrl,
-          priceQAR: meal.priceQAR,
           week: meal.week,
           day: meal.day,
         })),
+        idempotencyKey: idem,
       });
 
       alert(t(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`, `✅ Your order was sent successfully!\nOrder number: ${result.orderNumber}\nWe'll contact you soon.`));

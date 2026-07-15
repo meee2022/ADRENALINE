@@ -11,6 +11,7 @@ import {
   ArrowLeft, ArrowRight, Leaf, Award, Heart, Users, MessageCircle,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useStore } from "@/lib/store";
 
 /* ════════════════════════════════════════════════════
    Reusable: Section Header (badge + title + subtitle)
@@ -310,8 +311,12 @@ export function PremiumTestimonials() {
   const [newStars, setNewStars] = React.useState(5);
   const [newComment, setNewComment] = React.useState("");
 
-  const dbRatings = useQuery(api.ratings.listAll, { limit: 5 }) || [];
+  // ✅ listAll إداري الآن — نستخدم summary العام + fallback (defaults)
+  const dbRatings: any[] = [];
   const createRating = useMutation(api.ratings.create);
+  // 🔒 نتحقق أن المستخدم مسجّل عميل قبل إتاحة نشر التقييم (منع الانتحال)
+  const customerSession = useStore((s: any) => s.customerSession) as any;
+  const sessionToken = customerSession?.sessionToken as string | undefined;
 
   const testimonials = React.useMemo(() => {
     const defaults = [
@@ -367,14 +372,19 @@ export function PremiumTestimonials() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newComment || !newMeal) return;
+    if (!newComment || !newMeal) return;
+    if (!sessionToken) {
+      alert(isRtl ? "سجّل دخولك أولاً عشان تقيّم" : "Please log in first to leave a review");
+      return;
+    }
     setIsSubmitting(true);
     try {
+      // 🔒 اسم العميل يُقرأ من الجلسة على السيرفر — مش من الفورم
       await createRating({
-        customerName: newName,
         mealName: newMeal,
         stars: newStars,
         comment: newComment,
+        sessionToken,
       });
       setSuccessMsg(isRtl ? "تم إرسال تقييمك بنجاح! شكراً لك ❤️" : "Your review submitted successfully! Thank you ❤️");
       setTimeout(() => {

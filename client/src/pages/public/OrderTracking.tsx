@@ -27,6 +27,7 @@ export default function OrderTracking() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (a: string, e: string) => (isRtl ? a : e);
   const [searchValue, setSearchValue] = useState("");
+  const [phoneValue, setPhoneValue] = useState(""); // 🔒 مطلوب لتتبع بالرقم (مصادقة خفيفة)
   const [searchType, setSearchType] = useState<"phone" | "order">("phone");
   const [submitted, setSubmitted] = useState(false);
 
@@ -34,9 +35,11 @@ export default function OrderTracking() {
     api.customerOrders.getByPhone,
     submitted && searchType === "phone" && searchValue ? { phone: searchValue } : "skip",
   );
+  // 🔒 التتبع بالرقم يتطلب هاتف مطابق كمصادقة (منع تخمين الأرقام)
   const orderByNumber = useQuery(
     api.customerOrders.getByOrderNumber,
-    submitted && searchType === "order" && searchValue ? { orderNumber: searchValue } : "skip",
+    submitted && searchType === "order" && searchValue && phoneValue
+      ? { orderNumber: searchValue, phone: phoneValue } : "skip",
   );
 
   const orders = searchType === "phone"
@@ -99,6 +102,15 @@ export default function OrderTracking() {
                     {t("بحث", "Search")}
                   </Button>
                 </div>
+                {/* 🔒 عند التتبع برقم الطلب — نطلب الهاتف كتحقق (منع تخمين الأرقام) */}
+                {searchType === "order" && (
+                  <Input
+                    placeholder={t("رقم هاتفك للتحقق", "Your phone for verification")}
+                    value={phoneValue}
+                    onChange={(e) => { setPhoneValue(e.target.value); setSubmitted(false); }}
+                    dir="ltr"
+                  />
+                )}
               </form>
             </CardContent>
           </Card>

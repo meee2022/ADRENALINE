@@ -17,6 +17,10 @@ import { destroyAllSessionsFor } from "./sessions";
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 دقائق
 const MAX_ATTEMPTS = 5;
 
+// 🔒 حد إرسال الأكواد: 3 طلبات لكل بريد كل 15 دقيقة — يمنع flooding + تعطيل الحساب
+const REQUEST_WINDOW_MS = 15 * 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 3;
+
 const normEmail = (e: string) => String(e || "").trim().toLowerCase();
 
 async function sha256(text: string): Promise<string> {
@@ -31,11 +35,29 @@ function gen6(): string {
   return String(a[0] % 1000000).padStart(6, "0");
 }
 
-/** داخلي: يتحقق من وجود الحساب، يولّد كوداً ويخزّن هاشه. يرجّع الكود للـaction فقط. */
+/** داخلي: يتحقق من وجود الحساب، يولّد كوداً ويخزّن هاشه. يرجّع الكود للـaction فقط.
+ *  🔒 محمي بـrate limit لكل بريد. لو تجاوز الحد، يرجع rateLimited=true
+ *     بدلاً من كشف السبب للمهاجم في الاستجابة العامة. */
 export const createCode = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
     const email = normEmail(args.email);
+    const now = Date.now();
+    const cutoff = now - REQUEST_WINDOW_MS;
+
+    // 🔒 rate limit: عدّ الطلبات لهذا البريد في النافذة الأخيرة (نظّف القديم كذلك)
+    const past = await ctx.db.query("passwordResetRequests").withIndex("by_email", (q) => q.eq("email", email)).collect();
+    let recentCount = 0;
+    for (const r of past) {
+      if (r.at < cutoff) await ctx.db.delete(r._id);
+      else recentCount++;
+    }
+    if (recentCount >= MAX_REQUESTS_PER_WINDOW) {
+      return { ok: false as const, rateLimited: true as const };
+    }
+    // نسجّل الطلب بغضّ النظر عن وجود الحساب (يمنع enumeration attack عبر توقيت الرد)
+    await ctx.db.insert("passwordResetRequests", { email, at: now });
+
     // نفس ترتيب تسجيل الدخول: موظف أولاً ثم عميل
     const found = await findAccountByEmail(ctx, args.email);
     if (!found) return { ok: false as const };
@@ -48,20 +70,23 @@ export const createCode = internalMutation({
     await ctx.db.insert("passwordResetCodes", {
       email,
       codeHash: await sha256(code),
-      expiresAt: Date.now() + CODE_TTL_MS,
+      expiresAt: now + CODE_TTL_MS,
       attempts: 0,
-      createdAt: Date.now(),
+      createdAt: now,
     });
     return { ok: true as const, code };
   },
 });
 
-/** إرسال كود الاستعادة بالإيميل. يرجّع رسالة عامة دائماً (لمنع كشف وجود البريد). */
+/** إرسال كود الاستعادة بالإيميل. يرجّع رسالة عامة دائماً (لمنع كشف وجود البريد).
+ *  🔒 لا يُرجع الكود في الاستجابة أبداً — حتى لو مزود البريد غير مُهيّأ.
+ *     إذا مفتاح Resend غير موجود، الكود يُنشأ لكن مايتبعتش (يُسجَّل في server log
+ *     للأدمن). الاستجابة تبقى موحّدة عشان تمنع enumeration + هجوم عبر التوقيت. */
 export const requestReset = action({
   args: { email: v.string() },
-  handler: async (ctx, args): Promise<{ success: boolean; devCode?: string }> => {
+  handler: async (ctx, args): Promise<{ success: boolean }> => {
     const res = await ctx.runMutation(internal.passwordReset.createCode, { email: args.email });
-    // رسالة عامة موحّدة سواء وُجد الحساب أم لا
+    // رسالة عامة موحّدة سواء وُجد الحساب أم لا أو حتى لو الـrate limit اتضرب
     if (!res.ok) return { success: true };
 
     const email = normEmail(args.email);
@@ -69,33 +94,35 @@ export const requestReset = action({
     const key = process.env.RESEND_API_KEY;
     const from = process.env.RESET_FROM_EMAIL || "Adrenaline <onboarding@resend.dev>";
 
-    if (key) {
-      try {
-        const r = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from,
-            to: [email],
-            subject: "كود استعادة كلمة المرور — Adrenaline",
-            html: `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;text-align:right;max-width:480px;margin:auto">
-              <h2 style="color:#0E2A4A">استعادة كلمة المرور</h2>
-              <p>كود التحقق الخاص بك هو:</p>
-              <div style="font-size:32px;font-weight:900;letter-spacing:6px;color:#0E76AC;background:#EAF3FB;border-radius:12px;padding:16px;text-align:center">${code}</div>
-              <p style="color:#47759C;font-size:13px">الكود صالح لمدة 10 دقائق. إذا لم تطلب الاستعادة تجاهل هذه الرسالة.</p>
-              <p style="color:#94a3b8;font-size:12px">Adrenaline Healthy Food</p>
-            </div>`,
-          }),
-        });
-        if (!r.ok) console.error("Resend error:", r.status, await r.text());
-      } catch (e) {
-        console.error("Resend send failed:", e);
-      }
+    if (!key) {
+      // 🔒 لا مزود بريد — لا نُرجع الكود مطلقاً. نسجّله في السيرفر فقط.
+      //    (الحدث ده لا يجب أن يحدث في production — يعني الأدمن نسي إعداد Resend.)
+      console.error("[passwordReset] RESEND_API_KEY missing — code NOT sent for", email);
       return { success: true };
     }
 
-    // لا يوجد مفتاح Resend بعد — نُرجع الكود للاختبار فقط (احذف هذا بعد التفعيل)
-    return { success: true, devCode: code };
+    try {
+      const r = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from,
+          to: [email],
+          subject: "كود استعادة كلمة المرور — Adrenaline",
+          html: `<div style="font-family:Cairo,Arial,sans-serif;direction:rtl;text-align:right;max-width:480px;margin:auto">
+            <h2 style="color:#0E2A4A">استعادة كلمة المرور</h2>
+            <p>كود التحقق الخاص بك هو:</p>
+            <div style="font-size:32px;font-weight:900;letter-spacing:6px;color:#0E76AC;background:#EAF3FB;border-radius:12px;padding:16px;text-align:center">${code}</div>
+            <p style="color:#47759C;font-size:13px">الكود صالح لمدة 10 دقائق. إذا لم تطلب الاستعادة تجاهل هذه الرسالة.</p>
+            <p style="color:#94a3b8;font-size:12px">Adrenaline Healthy Food</p>
+          </div>`,
+        }),
+      });
+      if (!r.ok) console.error("Resend error:", r.status, await r.text());
+    } catch (e) {
+      console.error("Resend send failed:", e);
+    }
+    return { success: true };
   },
 });
 

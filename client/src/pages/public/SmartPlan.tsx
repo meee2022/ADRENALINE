@@ -169,12 +169,13 @@ export default function SmartPlan() {
         }
       }
       if (!items.length) { setError(t("لا توجد وجبات في الخطة.", "No meals in the plan.")); setOrdering(false); return; }
-      const totalPrice = items.reduce((s, i) => s + (i.priceQAR || 0), 0);
-      const totalCalories = items.reduce((s, i) => s + (i.calories || 0), 0);
+      // 🔒 نبعت IDs فقط — الأسعار والسعرات محسوبة على الخادم
+      const idem = `sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
         ...orderIdentity(),
-        totalMeals: items.length, totalPrice, totalCalories, items,
+        items: items.map((i: any) => ({ mealId: i.mealId, week: i.week, day: i.day })),
         notes: "Weekly plan from the smart meal generator",
+        idempotencyKey: idem,
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
@@ -188,18 +189,14 @@ export default function SmartPlan() {
     try {
       const day = result?.meta?.day || WEEKDAYS[new Date().getDay()];
       const week = result?.meta?.rotationWeek || 1;
-      const items = result.picks.map((m: any) => ({
-        mealId: m.id, mealNameAr: m.nameAr, mealNameEn: m.nameEn || undefined,
-        calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
-        category: m.category, imageUrl: m.imageUrl || undefined,
-        priceQAR: m.priceQAR || 0, week, day,
-      }));
-      const totalPrice = items.reduce((s: number, i: any) => s + (i.priceQAR || 0), 0);
-      const totalCalories = items.reduce((s: number, i: any) => s + (i.calories || 0), 0);
+      // 🔒 نبعت IDs فقط
+      const items = result.picks.map((m: any) => ({ mealId: m.id, week, day }));
+      const idem = `sp_daily_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
         ...orderIdentity(),
-        totalMeals: items.length, totalPrice, totalCalories, items,
+        items,
         notes: "Order from the smart meal generator",
+        idempotencyKey: idem,
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
