@@ -880,6 +880,7 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
   ) as any[] | undefined;
   const setPrice = useMutation(api.gymSales.setMealGymPrice);
   const applyBulk = useMutation((api.gymSales as any).applyGymPriceList);
+  const applyByAr = useMutation((api.gymSales as any).applyGymPricesByArName);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [importing, setImporting] = useState(false);
@@ -931,6 +932,30 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
     { name: "BEEF FAJITA WRAP", price: 38 },
   ];
 
+  // 🔧 تصحيحات يدوية للأسماء اللي fuzzy match ما لقاش لها مطابق
+  const PENDING_MANUAL_MATCHES = [
+    { arName: "مجبوس الدجاج", price: 48 },                          // CHICKEN MAJBOOS
+    { arName: "كوردون بلو", price: 42 },                             // CORDON BLEU
+    { arName: "فتوش كلاسيكي", price: 30 },                           // CLASSIC FATTOUSH
+    { arName: "سلطة الجبن الفيتا المتوسطية", price: 30 },            // MEDITERRENEAN SALAD
+  ];
+
+  const importCorrections = async () => {
+    setImporting(true);
+    try {
+      const r: any = await applyByAr({ rows: PENDING_MANUAL_MATCHES, sessionToken });
+      toast({
+        title: t("تم تطبيق التصحيحات ✓", "Corrections applied ✓"),
+        description: t(
+          `تم ${r.matched}/${r.total}. غير مطابق: ${r.unmatched.length ? r.unmatched.join("، ") : "لا شيء"}`,
+          `Matched ${r.matched}/${r.total}. Unmatched: ${r.unmatched.length ? r.unmatched.join(", ") : "none"}`
+        ),
+      });
+    } catch (e: any) {
+      toast({ title: t("فشل", "Failed"), description: e?.message });
+    } finally { setImporting(false); }
+  };
+
   const importFromList = async () => {
     setImporting(true);
     try {
@@ -974,7 +999,7 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
             <Label className="text-xs font-bold text-slate-500">{t("بحث", "Search")}</Label>
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10" />
           </div>
-          <div className="sm:col-span-3">
+          <div className="sm:col-span-3 flex gap-2 flex-wrap">
             <button
               id="gym-import-btn"
               onClick={importFromList}
@@ -982,6 +1007,15 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
               className="h-10 px-4 rounded-lg bg-emerald-600 text-white text-sm font-bold disabled:opacity-50"
             >
               {importing ? t("جاري الاستيراد…", "Importing…") : t("استيراد قائمة أسعار الجم (42 وجبة)", "Import gym price list (42 meals)")}
+            </button>
+            <button
+              id="gym-corrections-btn"
+              onClick={importCorrections}
+              disabled={importing}
+              className="h-10 px-4 rounded-lg bg-amber-600 text-white text-sm font-bold disabled:opacity-50"
+              title={t("تطبيق التصحيحات اليدوية للأسماء اللي ما اتطابقتش", "Apply manual name-corrections for previously unmatched items")}
+            >
+              {t("تطبيق التصحيحات (4)", "Apply corrections (4)")}
             </button>
           </div>
         </CardContent>

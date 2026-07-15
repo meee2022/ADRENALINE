@@ -233,6 +233,54 @@ export const applyGymPriceList = mutation({
   },
 });
 
+/**
+ * 🔒 تطبيق أسعار جم بالاسم العربي أو الإنجليزي المباشر (بدون fuzzy).
+ *    للاستخدام لما الاسم في PDF يختلف بشدة عن اسم المنيو، والموظف يحدد
+ *    المطابقة يدوياً. يقبل arName أو enName أو مجرد id.
+ */
+export const applyGymPricesByArName = mutation({
+  args: {
+    rows: v.array(v.object({
+      arName: v.optional(v.string()),
+      enName: v.optional(v.string()),
+      mealId: v.optional(v.id("publicMeals")),
+      price: v.number(),
+    })),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const meals = await ctx.db.query("publicMeals").collect();
+    const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
+
+    const matched: any[] = [];
+    const unmatched: string[] = [];
+    for (const row of args.rows) {
+      if (row.price < 0 || row.price > 10000) {
+        unmatched.push(`${row.arName || row.enName || row.mealId} (سعر غير صالح)`);
+        continue;
+      }
+      let meal: any = null;
+      if (row.mealId) meal = await ctx.db.get(row.mealId);
+      if (!meal && row.arName) {
+        const target = norm(row.arName);
+        meal = meals.find((m: any) => norm(m.nameAr || "") === target);
+      }
+      if (!meal && row.enName) {
+        const target = norm(row.enName);
+        meal = meals.find((m: any) => norm(m.nameEn || "") === target);
+      }
+      if (!meal) {
+        unmatched.push(row.arName || row.enName || String(row.mealId));
+        continue;
+      }
+      await ctx.db.patch(meal._id, { gymPrice: row.price, isGymItem: true } as any);
+      matched.push({ input: row.arName || row.enName, matched: meal.nameAr || meal.nameEn, price: row.price });
+    }
+    return { total: args.rows.length, matched: matched.length, unmatched, details: matched };
+  },
+});
+
 /** 🔒 تحديث جماعي — ADMIN. */
 export const bulkSetGymItems = mutation({
   args: { mealIds: v.array(v.id("publicMeals")), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
