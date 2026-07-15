@@ -11,6 +11,36 @@ import { validateSession, requireAdmin, assertRole } from "./sessions";
 // ✅ الرواتب: قصر القراءة على أدوار مالية/إدارية فقط. ADMIN مسموح تلقائياً (super-user).
 const PAYROLL_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
 
+// 🔒 حدود منطقية — تمنع القيم السالبة والغريبة (خطأ إدخال أو عبث)
+const MAX_DAYS = 31;
+const MAX_AMOUNT = 1_000_000; // مليون ر.ق كسقف لأي حقل واحد — يمنع أرقاماً غير معقولة
+function assertPositive(name: string, val: number | undefined) {
+  if (val === undefined) return;
+  if (!Number.isFinite(val) || val < 0) throw new Error(`${name}: قيمة غير صالحة (لا يُسمح بالسالب)`);
+  if (val > MAX_AMOUNT) throw new Error(`${name}: قيمة كبيرة جداً (${val}) — راجع الإدخال`);
+}
+function validatePayrollFields(f: {
+  basic?: number; allowance?: number; days?: number; overtime?: number;
+  advance?: number; paid?: number; otHours?: number; fridays?: number;
+}) {
+  assertPositive("basic", f.basic);
+  assertPositive("allowance", f.allowance);
+  assertPositive("overtime", f.overtime);
+  assertPositive("advance", f.advance);
+  assertPositive("paid", f.paid);
+  if (f.days !== undefined) {
+    if (!Number.isFinite(f.days) || f.days < 0 || f.days > MAX_DAYS) {
+      throw new Error(`days: بين 0 و ${MAX_DAYS} فقط`);
+    }
+  }
+  if (f.otHours !== undefined) {
+    if (!Number.isFinite(f.otHours) || f.otHours < 0 || f.otHours > 500) throw new Error("otHours: قيمة غير معقولة");
+  }
+  if (f.fridays !== undefined) {
+    if (!Number.isFinite(f.fridays) || f.fridays < 0 || f.fridays > 6) throw new Error("fridays: بين 0 و 6 فقط");
+  }
+}
+
 const r = (n: number) => Math.round(n);
 function derive(e: any) {
   const basic = e.basic || 0, allowance = e.allowance || 0;
@@ -31,6 +61,7 @@ export const list = query({
     try { assertRole(id, PAYROLL_ROLES); } catch { return []; }
     let rows = await ctx.db.query("payroll").collect();
     if (args.month) rows = rows.filter((x) => x.month === args.month);
+    rows = rows.filter((x: any) => !x.isVoid); // 🔒 نستبعد الملغاة من الحساب
     rows.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     return rows.map(derive);
   },
@@ -55,6 +86,7 @@ export const summary = query({
     try { assertRole(id, PAYROLL_ROLES); } catch { return null; }
     let rows = await ctx.db.query("payroll").collect();
     if (args.month) rows = rows.filter((x) => x.month === args.month);
+    rows = rows.filter((x: any) => !x.isVoid); // 🔒
     const d = rows.map(derive);
     const sum = (f: (x: any) => number) => d.reduce((s, x) => s + f(x), 0);
     return {
@@ -89,6 +121,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const { sessionToken, sortOrder, ...data } = args;
+    validatePayrollFields(data); // 🔒 يرفض القيم السالبة والغير معقولة
     const existing = await ctx.db.query("payroll").withIndex("by_month", (q) => q.eq("month", data.month)).collect();
     const nextOrder = sortOrder ?? (existing.reduce((m, x) => Math.max(m, x.sortOrder ?? 0), 0) + 1);
     return await ctx.db.insert("payroll", { ...data, sortOrder: nextOrder, createdAt: Date.now() });
@@ -115,6 +148,9 @@ export const update = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const { id, sessionToken, ...rest } = args as any;
+    validatePayrollFields(rest); // 🔒
+    const existing: any = await ctx.db.get(id);
+    if (existing?.isVoid) throw new Error("مش مسموح تعدّل سجل ملغى");
     const updates: any = { updatedAt: Date.now() };
     for (const [k, val] of Object.entries(rest)) if (val !== undefined) updates[k] = val;
     await ctx.db.patch(id, updates);
@@ -122,11 +158,26 @@ export const update = mutation({
   },
 });
 
+/**
+ * 🔒 الحذف = soft void — الحذف الفعلي محظور.
+ *   يستلزم سبب إلزامي، ويُوسم isVoid=true مع أثر تدقيق (voidedBy/voidedAt/voidReason).
+ *   السجل يفضل موجود للتدقيق لكن يُستبعد من list/summary/derive.
+ */
 export const remove = mutation({
-  args: { id: v.id("payroll"), sessionToken: v.optional(v.string()) },
+  args: { id: v.id("payroll"), reason: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
-    await ctx.db.delete(args.id);
+    const id: any = await requireAdmin(ctx, args.sessionToken);
+    const existing: any = await ctx.db.get(args.id);
+    if (!existing) throw new Error("السجل غير موجود");
+    if (existing.isVoid) return { success: true, alreadyVoid: true };
+    const reason = String(args.reason || "").trim();
+    if (reason.length < 3) throw new Error("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
+    const actor = id?.userId ? (await ctx.db.get(id.userId as any) as any)?.name : undefined;
+    await ctx.db.patch(args.id, {
+      isVoid: true, voidedAt: Date.now(),
+      voidedBy: actor || undefined, voidReason: reason,
+      updatedAt: Date.now(),
+    });
     return { success: true };
   },
 });

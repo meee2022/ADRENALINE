@@ -3,7 +3,11 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { convertUnit } from "./units";
-import { requireStaff } from "./sessions";
+import { requireStaff, requireAdmin, requireRole } from "./sessions";
+
+// 🔒 صلاحيات المخزون — منفصلة عن staff العام
+const INV_MANAGE_ROLES = ["INVENTORY_MANAGER"];   // استلام/استهلاك/تسوية/هالك (ADMIN تلقائي)
+// إدارة الأصناف والموردين والاستلام الجماعي → ADMIN فقط (قرار مالي)
 
 // ينشئ إشعار "مخزون منخفض" لمدير المخزون عند هبوط الصنف للحد الأدنى — بدون تكرار
 async function maybeLowStockAlert(ctx: any, itemId: Id<"inventoryItems">, newStock: number) {
@@ -314,7 +318,7 @@ export const createItem = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 إنشاء صنف = قرار مالي
     // Check if barcode already exists
     if (args.barcode) {
       const existing = await ctx.db
@@ -377,7 +381,7 @@ export const updateItem = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 تعديل الحد الأدنى/المستهدف يؤثر على قرارات الشراء
     // ⚠️ sessionToken يُستبعد من الـrest-spread وإلا خُزِّن داخل الوثيقة
     const { id, sessionToken: _t, ...updates } = args;
 
@@ -414,10 +418,11 @@ export const receiveStock = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒 مدير مخزون أو ADMIN
     if (args.quantity <= 0) {
       throw new Error("Quantity must be positive");
     }
+    if (args.unitCost < 0) throw new Error("التكلفة لا يمكن أن تكون سالبة");
 
     // Get current item
     const item = await ctx.db.get(args.itemId);
@@ -470,7 +475,7 @@ export const consumeStock = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒
     if (args.quantity <= 0) {
       throw new Error("Quantity must be positive");
     }
@@ -538,9 +543,12 @@ export const adjustStock = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒 التسويات = مدير مخزون أو ADMIN
     if (args.newQuantity < 0) {
       throw new Error("Quantity cannot be negative");
+    }
+    if (!args.note || args.note.trim().length < 3) {
+      throw new Error("سبب التسوية مطلوب (3 أحرف أو أكثر)"); // 🔒 لا تسوية بدون سبب
     }
 
     // Get current item
@@ -571,13 +579,12 @@ export const adjustStock = mutation({
   },
 });
 
-// ===== Demo seed for the waste/consumption report (run once to populate) =====
-// Adds a priced batch + kitchen-consume + waste movements to the first few items.
-// Safe to ignore/clean later; only affects movement history (not current stock here).
+// ⛔ seedWasteDemo — دالة تجريبية. مقفولة على ADMIN فقط لمنع تلويث بيانات الإنتاج.
+//    تُبقى للاستخدام في بيئة اختبار مبدئية؛ في الإنتاج لا يُستدعى إطلاقاً.
 export const seedWasteDemo = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 ADMIN فقط (كان requireStaff)
     const now = Date.now();
     const items = (await ctx.db.query("inventoryItems").collect()).slice(0, 6);
     if (items.length === 0) throw new Error("لا توجد أصناف في المخزون — أضف أصناف أولاً");
@@ -621,12 +628,16 @@ export const recordWaste = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒
     if (args.quantity <= 0) throw new Error("الكمية يجب أن تكون أكبر من صفر");
     const item = await ctx.db.get(args.itemId);
     if (!item) throw new Error("الصنف غير موجود");
+    // 🔒 لا يُسمح بتسجيل هالك أكبر من الرصيد — يمنع عدم اتساق الحركة مع الرصيد
+    if (args.quantity > item.currentStock) {
+      throw new Error(`الكمية (${args.quantity}) أكبر من الرصيد المتاح (${item.currentStock}) — عدّل الرصيد بتسوية أولاً`);
+    }
     const now = Date.now();
-    const newStock = Math.max(0, item.currentStock - args.quantity);
+    const newStock = item.currentStock - args.quantity; // معروف إنه ≥ 0 بعد التحقق أعلاه
     await ctx.db.insert("inventoryMovements", {
       itemId: args.itemId,
       type: "consume",
@@ -737,7 +748,7 @@ export const receiveMany = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 استلام جماعي = فاتورة مالية → ADMIN
     const now = Date.now();
     const note = args.invoiceNo ? `فاتورة: ${args.invoiceNo}` : "استلام بضاعة";
     let count = 0, totalQty = 0, totalCost = 0;
@@ -799,7 +810,7 @@ export const createSupplier = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 إنشاء مورد = قرار شراء
     const supplierId = await ctx.db.insert("suppliers", {
       name: args.name,
       phone: args.phone,
@@ -817,7 +828,7 @@ export const updateSupplier = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 تعديل مورد
     // ⚠️ sessionToken يُستبعد من الـrest-spread وإلا خُزِّن داخل الوثيقة
     const { id, sessionToken: _t, ...rest } = args;
     await ctx.db.patch(id, rest);

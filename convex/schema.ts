@@ -261,6 +261,11 @@ export default defineSchema({
     sortOrder: v.number(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
+    // 🔒 soft delete — الحذف الفعلي محظور، ننقل السجل لـisVoid=true مع سبب ومنفذ
+    isVoid: v.optional(v.boolean()),
+    voidedAt: v.optional(v.number()),
+    voidedBy: v.optional(v.string()),
+    voidReason: v.optional(v.string()),
   })
     .index("by_month", ["month"]),
 
@@ -905,6 +910,11 @@ export default defineSchema({
     createdBy: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
+    // 🔒 soft delete — الحذف الفعلي محظور، ننقل الطلبية لـisVoid=true مع سبب ومنفذ
+    isVoid: v.optional(v.boolean()),
+    voidedAt: v.optional(v.number()),
+    voidedBy: v.optional(v.string()),
+    voidReason: v.optional(v.string()),
   })
     .index("by_date", ["date"])
     .index("by_gym_date", ["gymId", "date"]),
