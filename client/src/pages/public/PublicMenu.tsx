@@ -255,24 +255,43 @@ export default function PublicMenuPage() {
    */
   const subEndDate = (verifiedCustomer as any)?.endDate as string | undefined;
   const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
+
+  /**
+   * ✅ منطق الاختيار الصحيح:
+   *   - النافذة تبدأ من **بكرة** (اليوم انقضى ميعاد تحضيره في المطبخ)،
+   *     مش من تاريخ بداية الاشتراك لو ده مضى.
+   *   - لو الاشتراك في المستقبل، تبدأ من تاريخ بدايته.
+   *   - النافذة تنتهي عند تاريخ نهاية الاشتراك (inclusive).
+   *   - نلفّ أسبوع الدورة بشكل صحيح بعد كل جمعة، بدءاً من رقم الدورة في
+   *     تاريخ بداية الاشتراك (rotationInfo.rotationWeek).
+   */
   const subscriptionSlots = useMemo((): Set<string> | null => {
     if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return null;
     if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
-    const start = new Date(startDate + "T00:00:00");
+    const subStart = new Date(startDate + "T00:00:00");
     const end = new Date(subEndDate + "T00:00:00");
-    if (end.getTime() < start.getTime()) return null;
+    if (end.getTime() < subStart.getTime()) return null;
+
+    // نقطة بداية الاختيار الفعلية (تكون بكرة لو الاشتراك بدأ)
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const today = new Date(todayISO + "T00:00:00");
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const effStart = subStart.getTime() > today.getTime() ? subStart : tomorrow;
+
     let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
     const slots = new Set<string>();
-    const cur = new Date(start);
+    // نبدأ الحسبة من subStart (عشان نطابق rotation cycle الصحيح)،
+    // بس نضيف slot بس لو التاريخ ≥ effStart.
+    const cur = new Date(subStart);
     for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
       const dow = cur.getDay(); // 0=Sun … 5=Fri … 6=Sat
-      if (dow !== 5) {
+      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
         const dayName = DAY_NAMES[dow];
         if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) {
           slots.add(`${rotWeek}:${dayName}`);
         }
       }
-      // كل جمعة → أسبوع الدورة يتقدّم
+      // كل جمعة → أسبوع الدورة يتقدّم (mod 4)
       if (dow === 5) rotWeek = (rotWeek % 4) + 1;
       cur.setDate(cur.getDate() + 1);
     }
@@ -295,6 +314,24 @@ export default function PublicMenuPage() {
     if (!subscriptionSlots) return true; // لا حد → مسموح
     return subscriptionSlots.has(`${week}:${day}`);
   };
+
+  // ✅ لو الأسبوع/اليوم المختار خارج نافذة الاشتراك (مثلاً اليوم انقضى)،
+  //   نلقائياً نقلب لأول slot صالح.
+  useEffect(() => {
+    if (!subscriptionSlots || subscriptionSlots.size === 0) return;
+    const currentKey = `${selectedWeek}:${selectedDay}`;
+    if (subscriptionSlots.has(currentKey)) return; // المختار صالح بالفعل
+    // نبحث عن أول slot موجود بترتيب أسبوع/يوم طبيعي
+    for (let w = 1; w <= 4; w++) {
+      for (const d of DELIVERY_DAYS) {
+        if (subscriptionSlots.has(`${w}:${d}`)) {
+          if (w !== selectedWeek) { setSelectedWeek(w); setWeekTouched(true); }
+          if (d !== selectedDay) setSelectedDay(d);
+          return;
+        }
+      }
+    }
+  }, [subscriptionSlots, selectedWeek, selectedDay]);
 
   /**
    * "اليوم التالي" — يرجّع { day, week } للتنقل:

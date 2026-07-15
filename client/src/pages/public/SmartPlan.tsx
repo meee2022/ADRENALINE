@@ -235,13 +235,16 @@ export default function SmartPlan() {
           setError(t("سجّل الدخول أولاً لتوليد خطة أسبوعية.", "Please log in to generate a weekly plan."));
           return;
         }
-        // ✅ نبدأ التوليد من تاريخ بداية اشتراك العميل (اللي حددته الأخصائية)
-        //    مش من "اليوم" — عشان الخطة تكون على أيامه الحقيقية من أول ما يبدأ.
-        //    لو التاريخ في الماضي (اشتراك بدأ فعلاً) نستخدم أقرب يوم توصيل قادم.
-        const todayISO = new Date().toISOString().slice(0, 10);
-        const effStartDate = subStartDate && subStartDate >= todayISO
-          ? subStartDate
-          : undefined; // إذا مضى، يبدأ من اليوم (default الخادم)
+        // ✅ نقطة البداية = ماكس(بداية الاشتراك، بكرة):
+        //   - لو الاشتراك بيبدأ في المستقبل → من تاريخ بدايته.
+        //   - لو الاشتراك بدأ فعلاً → من بكرة (اليوم انقضى ميعاد تحضيره).
+        const today = new Date(); today.setHours(0,0,0,0);
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+        const effStartDate =
+          subStartDate && subStartDate > tomorrowISO
+            ? subStartDate
+            : tomorrowISO;
         const res: any = await generateWeekly({
           ...source,
           weeks: effWeeks,
