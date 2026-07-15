@@ -9,12 +9,18 @@
  * @frontend client/src/pages/GymSales.tsx
  */
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { requireStaff, requireAdmin, requireRole, requireRoleOrPermission } from "./sessions";
+import { mutation, query, type MutationCtx } from "./_generated/server";
+import { requireStaff, requireAdmin, requireRoleOrPermission } from "./sessions";
 
 const GYM_FINANCE_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
-// ✅ صلاحية الصفحة كافية: أي موظف عنده /gym-sales في permissions يقدر يبيع/يسجّل مرتجعات
+// صلاحية الصفحة تغطي البيع والمرتجعات وإدارة حسابات الجيم وأصنافه وأسعاره.
 const GYM_FINANCE_PAGES = ["/gym-sales"];
+
+const requireGymSalesAccess = (ctx: MutationCtx, sessionToken?: string) =>
+  requireRoleOrPermission(ctx, sessionToken, {
+    roles: GYM_FINANCE_ROLES,
+    permissions: GYM_FINANCE_PAGES,
+  });
 
 /* ═══════════════════════════════ إدارة الجمات ═══════════════════════════════ */
 
@@ -44,7 +50,7 @@ export const addGym = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     const name = args.name.trim();
     if (!name) throw new Error("اسم الجم مطلوب");
     const id = await ctx.db.insert("gymAccounts", {
@@ -74,7 +80,7 @@ export const updateGym = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     const patch: any = { updatedAt: Date.now() };
     if (args.name !== undefined) patch.name = args.name.trim();
     if (args.address !== undefined) patch.address = args.address.trim() || undefined;
@@ -98,11 +104,84 @@ export const setMealGymPrice = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     await ctx.db.patch(args.mealId, {
       gymPrice: args.gymPrice != null && args.gymPrice >= 0 ? args.gymPrice : undefined,
     } as any);
     return { success: true };
+  },
+});
+
+/** Update the gym-only display names without changing the public menu. */
+export const setMealGymNames = mutation({
+  args: {
+    mealId: v.id("publicMeals"),
+    nameAr: v.string(),
+    nameEn: v.string(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const meal: any = await ctx.db.get(args.mealId);
+    if (!meal || !meal.isActive || !meal.isGymItem) {
+      throw new Error("الصنف غير موجود ضمن أصناف الجيم");
+    }
+    const nameAr = args.nameAr.trim();
+    const nameEn = args.nameEn.trim();
+    if (!nameAr && !nameEn) throw new Error("اكتب اسم الوجبة بالعربي أو الإنجليزي");
+    await ctx.db.patch(args.mealId, {
+      gymNameAr: nameAr || undefined,
+      gymNameEn: nameEn || undefined,
+    });
+    return { ok: true };
+  },
+});
+
+/** Create a meal that belongs exclusively to the gym sales catalogue. */
+export const createGymMeal = mutation({
+  args: {
+    nameAr: v.string(),
+    nameEn: v.string(),
+    category: v.union(
+      v.literal("breakfast"),
+      v.literal("lunch"),
+      v.literal("dinner"),
+      v.literal("salad"),
+      v.literal("snack"),
+    ),
+    gymPrice: v.number(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const nameAr = args.nameAr.trim();
+    const nameEn = args.nameEn.trim();
+    if (!nameAr && !nameEn) throw new Error("اكتب اسم الوجبة بالعربي أو الإنجليزي");
+    const gymPrice = Number(args.gymPrice);
+    if (!Number.isFinite(gymPrice) || gymPrice < 0) throw new Error("سعر الجيم غير صالح");
+    const slug = `gym-${Date.now()}-${nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "meal"}`;
+    const id = await ctx.db.insert("publicMeals", {
+      nameAr: nameAr || nameEn,
+      nameEn: nameEn || undefined,
+      slug,
+      calories: 0,
+      protein: 0,
+      carbs: 0,
+      fats: 0,
+      category: args.category,
+      tags: [],
+      ingredients: [],
+      priceQAR: gymPrice,
+      gymPrice,
+      gymNameAr: nameAr || undefined,
+      gymNameEn: nameEn || undefined,
+      isGymItem: true,
+      isGymOnly: true,
+      isActive: true,
+      sortOrder: Date.now(),
+      createdAt: Date.now(),
+    });
+    return { id: String(id) };
   },
 });
 
@@ -123,8 +202,8 @@ export const listMealsForGym = query({
         const hasCustom = m.gymPrice != null && m.gymPrice >= 0;
         const effectivePrice = hasCustom ? Number(m.gymPrice) : Math.round(listPrice * (1 - discount / 100) * 100) / 100;
         return {
-          id: String(m._id), nameEn: m.nameEn || m.nameAr || "",
-          nameAr: m.nameAr || m.nameEn || "", category: m.category || "other",
+          id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
+          nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
           listPrice, gymPrice: hasCustom ? Number(m.gymPrice) : null,
           effectivePrice, isCustom: hasCustom, sortOrder: m.sortOrder ?? 0,
         };
@@ -140,8 +219,8 @@ export const listAllMealsForGymAdmin = query({
     const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
     return meals
       .map((m: any) => ({
-        id: String(m._id), nameEn: m.nameEn || m.nameAr || "",
-        nameAr: m.nameAr || m.nameEn || "", category: m.category || "other",
+        id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
+        nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
         listPrice: Number(m.priceQAR) || 0,
         gymPrice: m.gymPrice != null && m.gymPrice >= 0 ? Number(m.gymPrice) : null,
         isGymItem: !!m.isGymItem,
@@ -154,7 +233,7 @@ export const listAllMealsForGymAdmin = query({
 export const setMealIsGymItem = mutation({
   args: { mealId: v.id("publicMeals"), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     await ctx.db.patch(args.mealId, { isGymItem: args.isGymItem } as any);
     return { ok: true };
   },
@@ -174,7 +253,7 @@ export const applyGymPriceList = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     const meals = await ctx.db.query("publicMeals").collect();
 
     // تطبيع + tokenize: كلمات فقط، مع تصحيح typos ومزامنة الاختصارات
@@ -251,7 +330,7 @@ export const applyGymPricesByArName = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     const meals = await ctx.db.query("publicMeals").collect();
     const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
 
@@ -287,7 +366,7 @@ export const applyGymPricesByArName = mutation({
 export const bulkSetGymItems = mutation({
   args: { mealIds: v.array(v.id("publicMeals")), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
     for (const id of args.mealIds) {
       await ctx.db.patch(id, { isGymItem: args.isGymItem } as any);
     }
@@ -399,8 +478,8 @@ async function buildGymOrderLines(
     mealsCount += qty;
     out.push({
       mealId: meal._id,
-      mealNameEn: meal.nameEn || meal.nameAr || "",
-      mealNameAr: meal.nameAr || meal.nameEn || "",
+      mealNameEn: meal.gymNameEn || meal.nameEn || meal.nameAr || "",
+      mealNameAr: meal.gymNameAr || meal.nameAr || meal.nameEn || "",
       qty, listPrice, unitPrice,
       lineTotal: Math.round(qty * unitPrice * 100) / 100,
     });
@@ -680,6 +759,7 @@ export const returnsReport = query({
 export const listOrdersForReturns = query({
   args: {
     days: v.optional(v.number()),
+    date: v.optional(v.string()),
     gymId: v.optional(v.id("gymAccounts")),
     sessionToken: v.optional(v.string()),
   },
@@ -691,7 +771,7 @@ export const listOrdersForReturns = query({
     const cutoffStr = cutoff.toISOString().slice(0, 10);
 
     let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
-    orders = orders.filter((o) => o.date >= cutoffStr && !o.isVoid);
+    orders = orders.filter((o) => !o.isVoid && (args.date ? o.date === args.date : o.date >= cutoffStr));
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
     orders.sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -728,14 +808,19 @@ export const listOrdersForReturns = query({
 
 export const monthlyReport = query({
   args: {
-    month: v.string(),
+    month: v.optional(v.string()),
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
     gymId: v.optional(v.id("gymAccounts")),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
-    const from = `${args.month}-01`;
-    const to = `${args.month}-31`;
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const from = args.from || (args.month ? `${args.month}-01` : "");
+    const to = args.to || (args.month ? `${args.month}-31` : "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      throw new Error("نطاق التاريخ غير صالح");
+    }
     let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
     orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
@@ -768,7 +853,7 @@ export const monthlyReport = query({
     const totalDiscount = Math.round(orders.reduce((s, o) => s + o.discountAmount, 0) * 100) / 100;
 
     return {
-      month: args.month, totalMeals, totalRevenue, totalSubtotal, totalDiscount,
+      month: args.month, from, to, totalMeals, totalRevenue, totalSubtotal, totalDiscount,
       daysCount: days.length,
       avgPerDay: days.length ? Math.round((totalRevenue / days.length) * 100) / 100 : 0,
       bestDay: days.length ? days.reduce((a, b) => (b.total > a.total ? b : a)) : null,

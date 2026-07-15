@@ -19,6 +19,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { currentUser } = useStore();
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const [isCompactDesktop, setIsCompactDesktop] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth < 1180
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { dir, language } = useLanguage();
 
@@ -37,6 +40,16 @@ export function AppLayout({ children }: AppLayoutProps) {
     if (isMobile) setIsSidebarOpen(false);
   }, [location, isMobile]);
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1179px)");
+    const update = () => setIsCompactDesktop(media.matches);
+    media.addEventListener("change", update);
+    update();
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const useDrawerNavigation = isMobile || isCompactDesktop;
+
   if (!currentUser) return null;
 
   return (
@@ -45,7 +58,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       className="h-screen w-full bg-background overflow-hidden print:h-auto print:overflow-visible"
     >
       {/* ✅ Desktop */}
-      {!isMobile ? (
+      {!useDrawerNavigation ? (
         <div className="h-full w-full flex overflow-hidden print:block print:overflow-visible">
           {/* Sidebar — hidden on print */}
           <aside
@@ -110,7 +123,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
 
           {/* Mobile Bottom Navigation */}
-          <MobileBottomNav />
+          {isMobile && <MobileBottomNav />}
         </div>
       )}
     </div>

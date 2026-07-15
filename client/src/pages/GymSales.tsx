@@ -60,8 +60,8 @@ export default function GymSales() {
   const noGyms = gyms && gyms.length === 0;
 
   return (
-    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40">
-      <div className="max-w-7xl mx-auto px-4 pt-4">
+    <div dir={isRtl ? "rtl" : "ltr"} className="gym-sales-page min-h-full bg-gradient-to-br from-slate-50 via-white to-blue-50/40">
+      <div className="gym-sales-header max-w-7xl mx-auto px-4 pt-4">
         <DashboardHeader
           icon={<Dumbbell className="h-6 w-6" />}
           titleAr="مبيعات الجم"
@@ -71,9 +71,9 @@ export default function GymSales() {
         />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 pb-10">
+      <div className="gym-sales-content max-w-7xl mx-auto px-4 pb-10">
         {/* Tabs */}
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-7 gap-2">
+        <div className="gym-sales-tabs mt-4 grid grid-cols-2 sm:grid-cols-7 gap-2">
           {([
             ["pos",     Receipt,       t("نقطة البيع",  "POS")],
             ["history", ClipboardList, t("السجل",       "History")],
@@ -210,9 +210,9 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="gym-pos-layout grid grid-cols-1 min-[850px]:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)] gap-4">
       {/* Left: meal grid */}
-      <div className="lg:col-span-2 space-y-3">
+      <div className="min-w-0 space-y-3">
         {/* Header controls */}
         <Card className="rounded-2xl border-slate-200">
           <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -264,7 +264,7 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
         </Card>
 
         {/* Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        <div className="gym-pos-meals grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
           {(!meals) && <p className="col-span-full text-center text-sm text-slate-500 py-8">{t("جاري التحميل…", "Loading…")}</p>}
           {meals && filtered.length === 0 && <p className="col-span-full text-center text-sm text-slate-500 py-8">{t("لا توجد وجبات مطابقة", "No matching meals")}</p>}
           {filtered.map((m: any) => (
@@ -291,15 +291,15 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
       </div>
 
       {/* Right: cart */}
-      <div className="lg:col-span-1">
-        <Card className="rounded-2xl border-slate-200 lg:sticky lg:top-4">
+      <div className="min-w-0">
+        <Card className="gym-pos-cart rounded-2xl border-slate-200 min-[850px]:sticky min-[850px]:top-3">
           <CardContent className="p-4 space-y-3">
             <h3 className="font-black text-slate-900 flex items-center gap-2">
               <Receipt className="h-5 w-5 text-[#0E76AC]" /> {t("الفاتورة", "Invoice")}
               <span className="ms-auto text-xs font-bold text-slate-500">{cart.length} {t("صنف", "items")} · {totals.mealsCount} {t("وجبة", "meals")}</span>
             </h3>
 
-            <div className="max-h-[420px] overflow-y-auto -mx-2 px-2 divide-y divide-slate-100">
+            <div className="gym-pos-cart-lines max-h-[420px] overflow-y-auto -mx-2 px-2 divide-y divide-slate-100">
               {cart.length === 0 && (
                 <p className="text-sm text-slate-400 text-center py-8">{t("اضغط على وجبة لإضافتها", "Click a meal to add it")}</p>
               )}
@@ -476,26 +476,44 @@ function HistoryTab({ isRtl, t, sessionToken, gyms }: any) {
 /* ═══════════════════════════════ Reports Tab ═══════════════════════════════ */
 
 function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
+  const [period, setPeriod] = useState<"day" | "week" | "month" | "custom">("month");
   const [month, setMonth] = useState(thisMonth());
+  const [anchorDate, setAnchorDate] = useState(todayStr());
+  const [customFrom, setCustomFrom] = useState(todayStr());
+  const [customTo, setCustomTo] = useState(todayStr());
   const [gymId, setGymId] = useState<string>("");
-  const report = useQuery(api.gymSales.monthlyReport, { month, gymId: (gymId || undefined) as any, sessionToken }) as any;
-  // ✅ تقرير المرتجعات لنفس الشهر — يوضح: نسبة الإرجاع لكل وجبة + قيمة الهالك
-  const monthFrom = `${month}-01`;
-  const monthTo = `${month}-31`;
+  const selectedRange = useMemo(() => {
+    if (period === "month") return { from: `${month}-01`, to: `${month}-31` };
+    if (period === "custom") return { from: customFrom, to: customTo };
+    if (period === "day") return { from: anchorDate, to: anchorDate };
+    const date = new Date(`${anchorDate}T12:00:00`);
+    const day = date.getDay();
+    date.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+    const from = date.toISOString().slice(0, 10);
+    date.setDate(date.getDate() + 6);
+    return { from, to: date.toISOString().slice(0, 10) };
+  }, [period, month, anchorDate, customFrom, customTo]);
+  const reportArgs = period === "month"
+    ? { month, gymId: (gymId || undefined) as any, sessionToken }
+    : { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken };
+  const report = useQuery(api.gymSales.monthlyReport, reportArgs) as any;
   const returnsRep = useQuery(
     (api.gymSales as any).returnsReport,
-    { from: monthFrom, to: monthTo, gymId: (gymId || undefined) as any, sessionToken }
+    { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken }
   ) as any;
 
   const maxDay = useMemo(() => {
     if (!report?.days?.length) return 0;
     return Math.max(...report.days.map((d: any) => d.total));
   }, [report]);
+  const rangeLabel = selectedRange.from === selectedRange.to
+    ? selectedRange.from
+    : `${selectedRange.from} - ${selectedRange.to}`;
 
   const printInvoice = () => {
     if (!report) return;
     const gym = gyms.find((g: any) => g.id === gymId);
-    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("فاتورة الشهر", "Monthly invoice")} — ${month}</title>
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("تقرير مبيعات الجيم", "Gym sales report")} — ${rangeLabel}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
         body{margin:0;padding:20px;color:#0f1516;font-size:12px}
@@ -513,10 +531,10 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         @page{size:A4;margin:12mm}
       </style></head><body>
       <div class="head">
-        <h1>${t("فاتورة الشهر - Adrenaline", "Monthly invoice - Adrenaline")}</h1>
+        <h1>${t("تقرير مبيعات الجيم - Adrenaline", "Gym sales report - Adrenaline")}</h1>
         <div class="info">
           <div><b>${t("الجم", "Gym")}:</b> ${gym?.name || t("كل الجمات", "All gyms")}</div>
-          <div><b>${t("الشهر", "Month")}:</b> ${month}</div>
+          <div><b>${t("الفترة", "Period")}:</b> ${rangeLabel}</div>
           <div><b>${t("عدد أيام التوريد", "Days")}:</b> ${report.daysCount}</div>
         </div>
       </div>
@@ -532,11 +550,15 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <h3 style="margin-top:20px">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</h3>
       <table><thead><tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
       <tbody>${report.meals.map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.qty}</td><td class="n">${m.revenue.toFixed(2)}</td></tr>`).join("")}</tbody></table>
+      <h3 style="margin-top:20px">${t("المرتجعات والهالك", "Returns and waste")}</h3>
+      <table><thead><tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
+      <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
+      <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
       </body></html>`;
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `gym-invoice-${month}.html`;
+    a.href = url; a.download = `gym-report-${selectedRange.from}-${selectedRange.to}.html`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
@@ -544,11 +566,28 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   return (
     <div className="space-y-3">
       <Card className="rounded-2xl border-slate-200">
-        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div>
+            <Label className="text-xs font-bold text-slate-500">{t("نوع التقرير", "Report period")}</Label>
+            <select value={period} onChange={(e) => setPeriod(e.target.value as any)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+              <option value="day">{t("يومي", "Daily")}</option>
+              <option value="week">{t("أسبوعي", "Weekly")}</option>
+              <option value="month">{t("شهري", "Monthly")}</option>
+              <option value="custom">{t("نطاق مخصص", "Custom range")}</option>
+            </select>
+          </div>
+          {period === "month" && <div>
             <Label className="text-xs font-bold text-slate-500">{t("الشهر", "Month")}</Label>
             <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10" />
-          </div>
+          </div>}
+          {(period === "day" || period === "week") && <div>
+            <Label className="text-xs font-bold text-slate-500">{period === "week" ? t("اختر يومًا من الأسبوع", "A day in the week") : t("اليوم", "Date")}</Label>
+            <Input type="date" value={anchorDate} onChange={(e) => setAnchorDate(e.target.value)} className="h-10" />
+          </div>}
+          {period === "custom" && <>
+            <div><Label className="text-xs font-bold text-slate-500">{t("من", "From")}</Label><Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-10" /></div>
+            <div><Label className="text-xs font-bold text-slate-500">{t("إلى", "To")}</Label><Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-10" /></div>
+          </>}
           <div>
             <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
             <select value={gymId} onChange={(e) => setGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -558,7 +597,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </div>
           <div className="flex items-end">
             <Button onClick={printInvoice} className="w-full h-10 font-black text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-              <Printer className="h-4 w-4 me-2" /> {t("فاتورة الشهر", "Monthly invoice")}
+              <Printer className="h-4 w-4 me-2" /> {t("استخراج التقرير", "Export report")}
             </Button>
           </div>
         </CardContent>
@@ -618,7 +657,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
 
       {/* ✅ ملخص المرتجعات + قيمة الهالك للشهر */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label={t("مرتجعات الشهر", "Returned this month")} value={returnsRep?.totals?.returned ?? "—"} color="#dc2626" />
+        <Stat label={t("مرتجعات الفترة", "Returned in period")} value={returnsRep?.totals?.returned ?? "—"} color="#dc2626" />
         <Stat label={t("نسبة الإرجاع", "Return rate %")} value={returnsRep?.totals?.returnRate != null ? `${returnsRep.totals.returnRate}%` : "—"} color="#dc2626" />
         <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={returnsRep?.totals?.wasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
         <Stat label={t("صافي الإيراد بعد الهالك", "Net revenue after waste")} value={returnsRep?.totals?.netRevenue?.toFixed(2) ?? "—"} color="#16a34a" />
@@ -669,7 +708,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   );
                 })}
                 {(!returnsRep || returnsRep.meals.filter((m: any) => m.returned > 0).length === 0) && (
-                  <tr><td colSpan={6} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذا الشهر", "No returns recorded this month")}</td></tr>
+                  <tr><td colSpan={6} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذه الفترة", "No returns recorded in this period")}</td></tr>
                 )}
               </tbody>
             </table>
@@ -695,16 +734,26 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
   // 🕐 نطاق التاريخ: افتراضي آخر 7 أيام. الجم بيرجع بعد يومين، فالموظف بيسجّل خلال أسبوع.
   //    لو نسي يفتح "أقدم" علشان يشوف طلبيات أقدم.
   const [days, setDays] = useState(7);
+  const [returnsDate, setReturnsDate] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const orders = useQuery(
     (api.gymSales as any).listOrdersForReturns,
-    { days, gymId: (selectedGymId || undefined) as any, sessionToken }
+    { days, date: returnsDate || undefined, gymId: (selectedGymId || undefined) as any, sessionToken }
   ) as any[] | undefined;
   const record = useMutation((api.gymSales as any).recordOrderReturns);
 
   // per-order per-line draft returnedQty
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState<string | null>(null);
+  const [selectedReturnOrderId, setSelectedReturnOrderId] = useState("");
+
+  useEffect(() => {
+    if (selectedReturnOrderId && orders && !orders.some((order) => order.id === selectedReturnOrderId)) {
+      setSelectedReturnOrderId("");
+    }
+  }, [orders, selectedReturnOrderId]);
+
+  const selectedReturnOrder = (orders || []).find((order: any) => order.id === selectedReturnOrderId);
 
   const setDraft = (orderId: string, lineId: string, val: string) => {
     setDrafts((d) => ({ ...d, [orderId]: { ...(d[orderId] || {}), [lineId]: val } }));
@@ -739,7 +788,7 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
     <div className="space-y-3">
       <Card className="rounded-2xl border-slate-200">
         <CardContent className="p-4 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
               <Label className="text-xs font-bold text-slate-500">{t("الجم", "Gym")}</Label>
               <select value={selectedGymId || ""} onChange={(e) => setSelectedGymId(e.target.value)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
@@ -747,11 +796,33 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                 {gyms.map((g: any) => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("مرتجعات يوم محدد", "Returns for a date")}</Label>
+              <div className="flex gap-1">
+                <Input type="date" value={returnsDate} onChange={(e) => setReturnsDate(e.target.value)} className="h-10" />
+                {returnsDate && <button type="button" onClick={() => setReturnsDate("")} className="h-10 w-10 shrink-0 rounded-lg bg-slate-100 text-slate-600" title={t("إلغاء تحديد اليوم", "Clear date")}><X className="mx-auto h-4 w-4" /></button>}
+              </div>
+            </div>
             <StatMini label={t("إجمالي المرتجعات", "Total returned")} value={totalReturnedAll} color="#dc2626" />
             <StatMini label={t("قيمة الهالك", "Waste value")} value={`${totalWasteAll.toFixed(2)} ر.ق`} color="#dc2626" />
           </div>
+          <div>
+            <Label className="text-xs font-bold text-slate-500">{t("اختر الفاتورة المطلوب تسجيل مرتجع لها", "Choose the invoice for this return")}</Label>
+            <select
+              value={selectedReturnOrderId}
+              onChange={(e) => setSelectedReturnOrderId(e.target.value)}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold focus:border-[#0E76AC] focus:outline-none"
+            >
+              <option value="">{t("اختر فاتورة…", "Select an invoice…")}</option>
+              {(orders || []).map((order: any) => (
+                <option key={order.id} value={order.id}>
+                  {order.date} · {order.gymName} · {order.mealsCount} {t("وجبة", "meals")} · {Number(order.netTotal ?? order.total).toFixed(2)} {t("ر.ق", "QAR")} · #{String(order.id).slice(-6).toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
           {/* 🕐 اختيار نطاق التاريخ — أقل بروزًا، مخفي خلف زر */}
-          <div className="flex items-center gap-2 text-xs">
+          {!returnsDate && <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-500 font-bold">
               {t(`عرض طلبيات آخر ${days} يوم`, `Showing last ${days} days`)}
             </span>
@@ -781,7 +852,7 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                 </button>
               </div>
             )}
-          </div>
+          </div>}
         </CardContent>
       </Card>
 
@@ -792,8 +863,9 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
           </div>
           {!orders && <div className="p-6 text-center text-slate-400">{t("جاري التحميل…", "Loading…")}</div>}
           {orders && orders.length === 0 && <div className="p-6 text-center text-slate-400">{t("لا توجد طلبيات في هذه المدة", "No orders in this window")}</div>}
+          {orders && orders.length > 0 && !selectedReturnOrder && <div className="p-8 text-center text-slate-500"><Receipt className="mx-auto mb-2 h-7 w-7 text-[#0E76AC]" /><p className="font-bold">{t("اختر الفاتورة من القائمة بالأعلى لعرض أصنافها", "Choose an invoice above to view its items")}</p></div>}
           <div className="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto">
-            {(orders || []).map((o: any) => {
+            {(selectedReturnOrder ? [selectedReturnOrder] : []).map((o: any) => {
               const isDirty = !!drafts[o.id] && Object.keys(drafts[o.id]).length > 0;
               return (
                 <div key={o.id} className="p-3">
@@ -879,10 +951,12 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
     selectedGymId ? { gymId: selectedGymId as any, sessionToken } : "skip"
   ) as any[] | undefined;
   const setPrice = useMutation(api.gymSales.setMealGymPrice);
+  const setNames = useMutation(api.gymSales.setMealGymNames);
   const applyBulk = useMutation((api.gymSales as any).applyGymPriceList);
   const applyByAr = useMutation((api.gymSales as any).applyGymPricesByArName);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [nameDrafts, setNameDrafts] = useState<Record<string, { nameAr: string; nameEn: string }>>({});
   const [importing, setImporting] = useState(false);
 
   // 🔒 استيراد قائمة أسعار الجم (42 وجبة من ملف PDF المعتمد).
@@ -978,10 +1052,17 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
   const save = async (mealId: string) => {
     const raw = drafts[mealId];
     const val = raw === "" || raw == null ? undefined : Number(raw);
+    const names = nameDrafts[mealId];
     try {
-      await setPrice({ mealId: mealId as any, gymPrice: val, sessionToken });
+      if (names) {
+        await setNames({ mealId: mealId as any, nameAr: names.nameAr, nameEn: names.nameEn, sessionToken });
+      }
+      if (raw !== undefined) {
+        await setPrice({ mealId: mealId as any, gymPrice: val, sessionToken });
+      }
       toast({ title: t("تم الحفظ ✓", "Saved ✓") });
       setDrafts((d) => { const cp = { ...d }; delete cp[mealId]; return cp; });
+      setNameDrafts((d) => { const cp = { ...d }; delete cp[mealId]; return cp; });
     } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
   };
 
@@ -1042,11 +1123,35 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
               {filtered.map((m: any) => {
                 const draftVal = drafts[m.id];
                 const displayVal = draftVal !== undefined ? draftVal : (m.gymPrice != null ? String(m.gymPrice) : "");
-                const dirty = draftVal !== undefined;
+                const nameDraft = nameDrafts[m.id];
+                const dirty = draftVal !== undefined || nameDraft !== undefined;
                 return (
                   <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50">
                     <td className="p-2">
-                      <p className="font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</p>
+                      <div className="grid min-w-[240px] grid-cols-1 gap-1 sm:grid-cols-2">
+                        <Input
+                          value={nameDraft?.nameAr ?? m.nameAr ?? ""}
+                          onChange={(e) => setNameDrafts((d) => ({
+                            ...d,
+                            [m.id]: { nameAr: e.target.value, nameEn: d[m.id]?.nameEn ?? m.nameEn ?? "" },
+                          }))}
+                          aria-label={t("اسم الوجبة بالعربي", "Arabic meal name")}
+                          placeholder={t("الاسم بالعربي", "Arabic name")}
+                          className="h-8 text-xs font-bold"
+                          dir="rtl"
+                        />
+                        <Input
+                          value={nameDraft?.nameEn ?? m.nameEn ?? ""}
+                          onChange={(e) => setNameDrafts((d) => ({
+                            ...d,
+                            [m.id]: { nameAr: d[m.id]?.nameAr ?? m.nameAr ?? "", nameEn: e.target.value },
+                          }))}
+                          aria-label={t("اسم الوجبة بالإنجليزي", "English meal name")}
+                          placeholder={t("الاسم بالإنجليزي", "English name")}
+                          className="h-8 text-xs font-bold"
+                          dir="ltr"
+                        />
+                      </div>
                       <p className="text-[10px] text-slate-400">{m.category}</p>
                     </td>
                     <td className={cn("p-2 text-end font-bold", m.listPrice === 0 && "text-red-600")}>
@@ -1169,10 +1274,34 @@ function GymsTab({ isRtl, t, sessionToken, gyms, toast }: any) {
 function ItemsTab({ isRtl, t, sessionToken, toast }: any) {
   const meals = useQuery(api.gymSales.listAllMealsForGymAdmin, { sessionToken }) as any[] | undefined;
   const setItem = useMutation(api.gymSales.setMealIsGymItem);
+  const createGymMeal = useMutation(api.gymSales.createGymMeal);
   const bulkSet = useMutation(api.gymSales.bulkSetGymItems);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "gym" | "menu">("all");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newMeal, setNewMeal] = useState({ nameAr: "", nameEn: "", category: "lunch", gymPrice: "" });
+
+  const createMeal = async () => {
+    setCreating(true);
+    try {
+      await createGymMeal({
+        nameAr: newMeal.nameAr,
+        nameEn: newMeal.nameEn,
+        category: newMeal.category as any,
+        gymPrice: Number(newMeal.gymPrice),
+        sessionToken,
+      });
+      toast({ title: t("تمت إضافة وجبة الجيم ✓", "Gym meal added ✓") });
+      setNewMeal({ nameAr: "", nameEn: "", category: "lunch", gymPrice: "" });
+      setShowCreate(false);
+    } catch (e: any) {
+      toast({ title: t("فشل", "Failed"), description: e?.message });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!meals) return [];
@@ -1206,6 +1335,25 @@ function ItemsTab({ isRtl, t, sessionToken, toast }: any) {
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button onClick={() => setShowCreate((value) => !value)} className="h-10 font-bold text-white" style={{ background: "#0E76AC" }}>
+          <Plus className="me-1 h-4 w-4" /> {t("وجبة جيم جديدة", "New gym meal")}
+        </Button>
+      </div>
+
+      {showCreate && <Card className="rounded-lg border-2 border-[#0E76AC]/30">
+        <CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div><Label>{t("الاسم بالعربي", "Arabic name")}</Label><Input value={newMeal.nameAr} onChange={(e) => setNewMeal((m) => ({ ...m, nameAr: e.target.value }))} dir="rtl" /></div>
+          <div><Label>{t("الاسم بالإنجليزي", "English name")}</Label><Input value={newMeal.nameEn} onChange={(e) => setNewMeal((m) => ({ ...m, nameEn: e.target.value }))} dir="ltr" /></div>
+          <div><Label>{t("التصنيف", "Category")}</Label><select value={newMeal.category} onChange={(e) => setNewMeal((m) => ({ ...m, category: e.target.value }))} className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm"><option value="breakfast">{t("فطور", "Breakfast")}</option><option value="lunch">{t("غداء", "Lunch")}</option><option value="dinner">{t("عشاء", "Dinner")}</option><option value="salad">{t("سلطة", "Salad")}</option><option value="snack">{t("سناك", "Snack")}</option></select></div>
+          <div><Label>{t("سعر الجيم", "Gym price")}</Label><Input type="number" min="0" step="0.01" value={newMeal.gymPrice} onChange={(e) => setNewMeal((m) => ({ ...m, gymPrice: e.target.value }))} /></div>
+          <div className="flex justify-end gap-2 sm:col-span-2 lg:col-span-4">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>{t("إلغاء", "Cancel")}</Button>
+            <Button onClick={createMeal} disabled={creating || (!newMeal.nameAr.trim() && !newMeal.nameEn.trim()) || newMeal.gymPrice === ""} className="text-white" style={{ background: "#0E76AC" }}>{creating ? t("جاري الحفظ…", "Saving…") : t("إضافة الوجبة", "Add meal")}</Button>
+          </div>
+        </CardContent>
+      </Card>}
+
       <Card className="rounded-2xl border-slate-200">
         <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div className="sm:col-span-2 relative">

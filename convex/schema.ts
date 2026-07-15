@@ -661,9 +661,13 @@ export default defineSchema({
     // ✅ سعر مؤقّت للجم (اختياري). لو موجود يُستخدم كما هو في فواتير الجم؛
     //    لو غير موجود يُحسب من priceQAR بخصم الجم (gymAccounts.discountPct).
     gymPrice: v.optional(v.number()),
+    // Optional display names used only by gym sales, without changing the public menu names.
+    gymNameAr: v.optional(v.string()),
+    gymNameEn: v.optional(v.string()),
     // ✅ يحدد لو الصنف يظهر في POS الجم (المدير يفعّل/يعطل من واجهة إدارة الأصناف).
     //    الأصناف الافتراضية = false (مش هتظهر في الجم).
     isGymItem: v.optional(v.boolean()),
+    isGymOnly: v.optional(v.boolean()),
     isActive: v.boolean(),
     sortOrder: v.number(),
     // Scheduling fields
