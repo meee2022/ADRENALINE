@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
+import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
@@ -152,8 +153,13 @@ export default function Coupons() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            if (confirm(`${t("حذف الكود","Delete code")} ${c.code}؟`)) removeMutation({ id: c._id, sessionToken });
+                          onClick={async () => {
+                            if (await confirmDialog({
+                              title: t("تأكيد الحذف", "Confirm Delete"),
+                              message: `${t("حذف الكود","Delete code")} ${c.code}؟`,
+                              variant: "danger",
+                              confirmText: t("حذف", "Delete"),
+                            })) removeMutation({ id: c._id, sessionToken });
                           }}
                           className="text-red-500"
                         >

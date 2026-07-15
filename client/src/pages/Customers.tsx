@@ -72,6 +72,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { confirmDialog } from "@/lib/dialogs";
 
 /* =========================
    Date helpers - DD/MM/YYYY format
@@ -750,7 +751,11 @@ export default function Customers() {
 
   const runImport = async () => {
     if (!importPreview.length || importRunning) return;
-    const ok = confirm(isRtl ? "تأكيد الاستيراد؟" : "Confirm import?");
+    const ok = await confirmDialog({
+      title: isRtl ? "استيراد المشتركين" : "Import Customers",
+      message: isRtl ? "تأكيد الاستيراد؟" : "Confirm import?",
+      confirmText: isRtl ? "استيراد" : "Import",
+    });
     if (!ok) return;
 
     setImportRunning(true);
@@ -1655,9 +1660,12 @@ export default function Customers() {
               onSkipDays={(c) => { setPauseSection("skip"); setPauseTarget(c); }}
               onPrintPlan={setPrintTarget}
               onDelete={async (id, name) => {
-                const ok = confirm(
-                  isRtl ? `حذف ${name}؟` : `Delete ${name}?`
-                );
+                const ok = await confirmDialog({
+                  title: isRtl ? "تأكيد الحذف" : "Confirm Delete",
+                  message: isRtl ? `حذف ${name}؟` : `Delete ${name}?`,
+                  variant: "danger",
+                  confirmText: isRtl ? "حذف" : "Delete",
+                });
                 if (!ok) return;
                 await deleteCustomer.mutateAsync(id);
               }}

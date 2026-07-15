@@ -8,6 +8,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -121,7 +122,12 @@ export default function Payroll() {
   };
 
   const del = async (r: any) => {
-    if (!confirm(t(`حذف ${r.name}؟`, `Delete ${r.name}?`))) return;
+    if (!(await confirmDialog({
+      title: t("تأكيد الحذف", "Confirm Delete"),
+      message: t(`حذف ${r.name}؟`, `Delete ${r.name}?`),
+      variant: "danger",
+      confirmText: t("حذف", "Delete"),
+    }))) return;
     try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { alert(e?.message || "Error"); }
   };
 

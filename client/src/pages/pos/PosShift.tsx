@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { Clock, Play, Square, Banknote, TrendingUp, Receipt } from "lucide-react";
+import { confirmDialog, alertDialog } from "@/lib/dialogs";
 
 export default function PosShift() {
   const token = usePosStore((s) => s.token) as string;
@@ -24,16 +25,20 @@ export default function PosShift() {
   const doOpen = async () => {
     setBusy(true);
     try { await openShift({ token, openingCash: Number(opening) || 0 }); }
-    catch (e: any) { alert(e?.message || "خطأ"); }
+    catch (e: any) { await alertDialog({ title: "خطأ", message: e?.message || "خطأ" }); }
     finally { setBusy(false); }
   };
   const doClose = async () => {
-    if (!confirm("إغلاق الوردية دلوقتي؟")) return;
+    if (!(await confirmDialog({
+      title: "إغلاق الوردية",
+      message: "إغلاق الوردية دلوقتي؟",
+      confirmText: "إغلاق",
+    }))) return;
     setBusy(true);
     try {
       const r = await closeShift({ token, closingCash: Number(closing) || 0, notes: notes || undefined });
       setCloseResult(r);
-    } catch (e: any) { alert(e?.message || "خطأ"); }
+    } catch (e: any) { await alertDialog({ title: "خطأ", message: e?.message || "خطأ" }); }
     finally { setBusy(false); }
   };
 

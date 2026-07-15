@@ -9,6 +9,7 @@ import type { Id } from "@/../../convex/_generated/dataModel";
 import { convex } from "@/lib/convex";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
+import { confirmDialog } from "@/lib/dialogs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -117,7 +118,12 @@ export default function PublicMealsManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("هل أنت متأكد من حذف هذه الوجبة؟", "Are you sure you want to delete this meal?"))) return;
+    if (!(await confirmDialog({
+      title: t("تأكيد الحذف", "Confirm Delete"),
+      message: t("هل أنت متأكد من حذف هذه الوجبة؟", "Are you sure you want to delete this meal?"),
+      variant: "danger",
+      confirmText: t("حذف", "Delete"),
+    }))) return;
 
     try {
       await convex.mutation(api.publicMeals.remove, { id: id as Id<"publicMeals">, sessionToken });

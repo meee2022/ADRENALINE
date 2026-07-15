@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -407,7 +408,7 @@ function HistoryTab({ isRtl, t, sessionToken, gyms }: any) {
                     <button onClick={() => setOpenId(openId === r.id ? null : r.id)} className="text-xs font-bold text-[#0E76AC] hover:underline">
                       {openId === r.id ? t("إغلاق", "Close") : t("تفاصيل", "Details")}
                     </button>
-                    <button onClick={async () => { if (confirm(t("حذف الطلبية؟", "Delete order?"))) { await deleteOrder({ orderId: r.id as any, sessionToken }); } }} className="ms-3 text-xs font-bold text-red-600 hover:underline">
+                    <button onClick={async () => { if (await confirmDialog({ title: t("تأكيد الحذف","Confirm Delete"), message: t("حذف الطلبية؟", "Delete order?"), variant: "danger", confirmText: t("حذف","Delete") })) { await deleteOrder({ orderId: r.id as any, sessionToken }); } }} className="ms-3 text-xs font-bold text-red-600 hover:underline">
                       {t("حذف", "Delete")}
                     </button>
                   </td>
@@ -813,7 +814,7 @@ function ItemsTab({ isRtl, t, sessionToken, toast }: any) {
   };
 
   const clearAll = async () => {
-    if (!confirm(t("هذا سيلغي إدراج كل الأصناف من الجم — متأكد؟", "This will unmark ALL gym items — confirm?"))) return;
+    if (!(await confirmDialog({ title: t("تأكيد","Confirm"), message: t("هذا سيلغي إدراج كل الأصناف من الجم — متأكد؟", "This will unmark ALL gym items — confirm?"), variant: "danger" }))) return;
     const ids = (meals || []).filter((m: any) => m.isGymItem).map((m: any) => m.id);
     if (!ids.length) return;
     await bulkSet({ mealIds: ids as any, isGymItem: false, sessionToken });

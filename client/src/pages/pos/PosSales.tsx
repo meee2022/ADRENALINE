@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
+import { confirmDialog } from "@/lib/dialogs";
 import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3 } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
@@ -142,7 +143,7 @@ export default function PosSales() {
         <div className="p-4 shrink-0" style={{ borderBottom: "1px solid #1B2A48" }}>
           <div className="flex items-center justify-between mb-3">
             <button
-              onClick={() => { if (cart.length && confirm("مسح الطلب الحالي؟")) { clearCart(); setCustomerName(""); setDiscountPct(0); } }}
+              onClick={async () => { if (cart.length && await confirmDialog({ title: "مسح الطلب", message: "مسح الطلب الحالي؟", variant: "danger", confirmText: "مسح" })) { clearCart(); setCustomerName(""); setDiscountPct(0); } }}
               className="text-slate-400 hover:text-red-400 transition-colors"
               title="مسح الطلب"
             >
