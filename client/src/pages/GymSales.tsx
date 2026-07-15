@@ -454,6 +454,13 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const [month, setMonth] = useState(thisMonth());
   const [gymId, setGymId] = useState<string>("");
   const report = useQuery(api.gymSales.monthlyReport, { month, gymId: (gymId || undefined) as any, sessionToken }) as any;
+  // ✅ تقرير المرتجعات لنفس الشهر — يوضح: نسبة الإرجاع لكل وجبة + قيمة الهالك
+  const monthFrom = `${month}-01`;
+  const monthTo = `${month}-31`;
+  const returnsRep = useQuery(
+    (api.gymSales as any).returnsReport,
+    { from: monthFrom, to: monthTo, gymId: (gymId || undefined) as any, sessionToken }
+  ) as any;
 
   const maxDay = useMemo(() => {
     if (!report?.days?.length) return 0;
@@ -582,6 +589,67 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
               {(!report || report.meals.length === 0) && <tr><td colSpan={3} className="text-center text-slate-400 py-6">{t("لا توجد بيانات", "No data")}</td></tr>}
             </tbody>
           </table>
+        </CardContent>
+      </Card>
+
+      {/* ✅ ملخص المرتجعات + قيمة الهالك للشهر */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Stat label={t("مرتجعات الشهر", "Returned this month")} value={returnsRep?.totals?.returned ?? "—"} color="#dc2626" />
+        <Stat label={t("نسبة الإرجاع", "Return rate %")} value={returnsRep?.totals?.returnRate != null ? `${returnsRep.totals.returnRate}%` : "—"} color="#dc2626" />
+        <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={returnsRep?.totals?.wasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
+        <Stat label={t("صافي الإيراد بعد الهالك", "Net revenue after waste")} value={returnsRep?.totals?.netRevenue?.toFixed(2) ?? "—"} color="#16a34a" />
+      </div>
+
+      {/* ✅ أكتر الوجبات إرجاعًا — قرارات إيقاف/تقليل الإنتاج */}
+      <Card className="rounded-2xl border-slate-200">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-black">{t("أكثر الوجبات إرجاعًا (مرشحة للإيقاف/التقليل)", "Most returned meals (candidates to reduce/stop)")}</h3>
+            <span className="text-[10px] text-slate-400 font-bold">
+              {t("مرتّبة حسب نسبة الإرجاع", "Sorted by return rate")}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-600">
+                <tr>
+                  <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
+                  <th className="text-center p-2">{t("مُرسل", "Sent")}</th>
+                  <th className="text-center p-2">{t("مرتجع", "Returned")}</th>
+                  <th className="text-center p-2">{t("صافي", "Net")}</th>
+                  <th className="text-center p-2">{t("نسبة الإرجاع", "Return %")}</th>
+                  <th className="text-end p-2">{t("قيمة الهالك", "Waste (QAR)")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => {
+                  const bad = m.returnRate >= 20;
+                  const meh = m.returnRate >= 10 && m.returnRate < 20;
+                  return (
+                    <tr key={m.key} className="border-t border-slate-100">
+                      <td className="p-2 font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td>
+                      <td className="p-2 text-center font-black">{m.sent}</td>
+                      <td className="p-2 text-center font-black" style={{ color: "#dc2626" }}>{m.returned}</td>
+                      <td className="p-2 text-center font-black text-slate-700">{m.net}</td>
+                      <td className="p-2 text-center">
+                        <span className="inline-block px-2 py-0.5 rounded-full font-black text-xs"
+                          style={{
+                            background: bad ? "#fee2e2" : meh ? "#fef3c7" : "#dcfce7",
+                            color: bad ? "#991b1b" : meh ? "#92400e" : "#166534",
+                          }}>
+                          {m.returnRate}%
+                        </span>
+                      </td>
+                      <td className="p-2 text-end font-black" style={{ color: "#dc2626" }}>{m.wasteValue.toFixed(2)}</td>
+                    </tr>
+                  );
+                })}
+                {(!returnsRep || returnsRep.meals.filter((m: any) => m.returned > 0).length === 0) && (
+                  <tr><td colSpan={6} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذا الشهر", "No returns recorded this month")}</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
     </div>
