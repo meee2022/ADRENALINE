@@ -44,18 +44,18 @@ const DAY_LABEL_AR: Record<string, string> = {
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
 type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
 
-/** أيام التوصيل: السبت → الأربعاء (الخميس والجمعة إجازة). */
-const DELIVERY_DAYS: DayOfWeek[] = ["saturday", "sunday", "monday", "tuesday", "wednesday"];
+/** أيام التوصيل: السبت → الخميس (الجمعة فقط إجازة — 6 أيام). */
+const DELIVERY_DAYS: DayOfWeek[] = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"];
 
-/** يوم اليوم لو كان يوم توصيل، وإلا أقرب يوم توصيل قادم (السبت بعد الخميس/الجمعة). */
+/** يوم اليوم لو كان يوم توصيل، وإلا أقرب يوم توصيل قادم (السبت بعد الجمعة). */
 function defaultDay(): DayOfWeek {
   const names: string[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const today = names[new Date().getDay()];
   if (DELIVERY_DAYS.includes(today as DayOfWeek)) return today as DayOfWeek;
-  return "saturday";
+  return "saturday"; // الجمعة → السبت
 }
 
-/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة) كـ yyyy-MM-dd. */
+/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd. */
 function nextDeliveryDateISO(): string {
   const d = new Date();
   for (let i = 0; i < 8; i++) {
@@ -394,6 +394,9 @@ export default function PublicMenuPage() {
   // ✅ املأ تاريخ البداية تلقائياً من اشتراك العميل المسجَّل (بعد تأكيد رقمه).
   //    الأخصائية سجّلت بدايته ونهايته، فلا يخمّن العميل — المينو يُبنى على اشتراكه.
   //    نتبنّاه مرة واحدة لكل مشترك، ولو كان في الماضي (بدأ فعلاً) نُبقي أقرب يوم توصيل.
+  // ✅ نتبنّى تاريخ بداية الاشتراك دائماً — لا نسأل العميل. لو الاشتراك بدأ فعلاً
+  //    نستخدم تاريخه (فيتوافق أسبوع الدورة مع دورة المطبخ الحقيقية للعميل). لو في
+  //    المستقبل نُبقيه — النظام يعرف يحسب أسبوع الدورة الصحيح لكل تاريخ.
   const appliedSubRef = useRef<string | null>(null);
   useEffect(() => {
     const sub = verifiedCustomer as any;
@@ -401,8 +404,7 @@ export default function PublicMenuPage() {
     if (appliedSubRef.current === String(sub._id)) return;
     appliedSubRef.current = String(sub._id);
     const subStart = sub.startDate;
-    const todayISO = new Date().toISOString().slice(0, 10);
-    if (subStart && /^\d{4}-\d{2}-\d{2}$/.test(subStart) && subStart >= todayISO) {
+    if (subStart && /^\d{4}-\d{2}-\d{2}$/.test(subStart)) {
       setStartDate(subStart);
       setWeekTouched(false);
     }
@@ -999,7 +1001,9 @@ export default function PublicMenuPage() {
             </div>
           )}
 
-          {/* ✅ تاريخ بداية التوصيل — منه يُشتق أسبوع الدورة */}
+          {/* ✅ تاريخ بداية التوصيل — يظهر فقط للزائر بلا اشتراك. المشترك المسجّل
+              يستخدم تاريخ اشتراكه تلقائياً (اللي تحدده الأخصائية) — بلا سؤال. */}
+          {!(verifiedCustomer as any)?.startDate && (
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-2">
               {isRtl ? "متى يبدأ توصيلك؟" : "When does delivery start?"}
@@ -1026,6 +1030,7 @@ export default function PublicMenuPage() {
                 : "Pick your start day; the system aligns the meals to the right week — even if you start next week."}
             </p>
           </div>
+          )}
 
           {/* Week Tabs */}
           <div className="mb-4">
