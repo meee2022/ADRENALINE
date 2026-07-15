@@ -245,9 +245,24 @@ export default function PublicMenuPage() {
 
   const todayProgress = selectedDay ? dayProgress(selectedDay) : null;
 
-  /** أول يوم لسه ناقص في هذا الأسبوع — لزر "اليوم التالي". */
-  const nextIncompleteDay = () =>
-    DELIVERY_DAYS.find((d) => d !== selectedDay && !dayProgress(d).complete) ?? null;
+  /**
+   * "اليوم التالي" — أول يوم ناقص بعد اليوم المختار (بالترتيب الطبيعي)،
+   *   وإذا خلصت الأيام اللاحقة نلفّ للسابقة الناقصة. لو الأسبوع كله كامل نعيد null.
+   *   يمنع الوثوب من الأربعاء إلى السبت طالما الخميس لسه ناقص.
+   */
+  const nextIncompleteDay = () => {
+    if (!selectedDay) return DELIVERY_DAYS.find((d) => !dayProgress(d).complete) ?? null;
+    const idx = DELIVERY_DAYS.indexOf(selectedDay);
+    // بعد اليوم المختار
+    for (let i = idx + 1; i < DELIVERY_DAYS.length; i++) {
+      if (!dayProgress(DELIVERY_DAYS[i]).complete) return DELIVERY_DAYS[i];
+    }
+    // ثم قبله (لو فيه يوم ناقص متروك)
+    for (let i = 0; i < idx; i++) {
+      if (!dayProgress(DELIVERY_DAYS[i]).complete) return DELIVERY_DAYS[i];
+    }
+    return null;
+  };
 
   // Avoid keywords from customer (lowercase tokens)
   const avoidTokens = useMemo(() => {
