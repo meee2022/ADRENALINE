@@ -6,7 +6,7 @@
  *   - markAsRead: يتحقق أن الإشعار يخص دور المستدعي (staff) أو عميل (owner)
  */
 import { mutation, query, internalMutation } from "./_generated/server";
-import { requireAdmin, requireStaff, validateSession, requireStaffOrSubscriptionOwner } from "./sessions";
+import { requireAdmin, requireStaff, validateSession, requireStaffOrSubscriptionOwner, AUTH_ERR } from "./sessions";
 import { v } from "convex/values";
 
 const NOTIF_TYPE = v.union(
@@ -62,7 +62,7 @@ export const listForRole = query({
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
     const role = roleFromIdentity(id);
-    if (!role) throw new Error("غير مصرّح");
+    if (!role) throw new Error(AUTH_ERR);
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_createdAt")
@@ -105,7 +105,7 @@ export const markAsRead = mutation({
   args: { id: v.id("notifications"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await validateSession(ctx, args.sessionToken);
-    if (!identity) throw new Error("غير مصرّح");
+    if (!identity) throw new Error(AUTH_ERR);
     const notif: any = await ctx.db.get(args.id);
     if (!notif) return;
     if (identity.accountType === "staff") {
@@ -115,7 +115,7 @@ export const markAsRead = mutation({
       }
     } else {
       // عميل — لا يعلّم إلا إشعاراته
-      if (!identity.customerAccountId) throw new Error("غير مصرّح");
+      if (!identity.customerAccountId) throw new Error(AUTH_ERR);
       const acct: any = await ctx.db.get(identity.customerAccountId as any);
       if (!acct?.customerId || String(notif.targetCustomerId) !== String(acct.customerId)) {
         throw new Error("مش إشعارك");
@@ -130,7 +130,7 @@ export const markAllAsRead = mutation({
   handler: async (ctx, args) => {
     const identity = await validateSession(ctx, args.sessionToken);
     const role = roleFromIdentity(identity);
-    if (!role) throw new Error("غير مصرّح");
+    if (!role) throw new Error(AUTH_ERR);
     const now = Date.now();
     let count = 0;
     if (role === "ADMIN") {
