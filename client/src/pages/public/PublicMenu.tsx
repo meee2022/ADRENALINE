@@ -246,20 +246,62 @@ export default function PublicMenuPage() {
   const todayProgress = selectedDay ? dayProgress(selectedDay) : null;
 
   /**
-   * "اليوم التالي" — أول يوم ناقص بعد اليوم المختار (بالترتيب الطبيعي)،
-   *   وإذا خلصت الأيام اللاحقة نلفّ للسابقة الناقصة. لو الأسبوع كله كامل نعيد null.
-   *   يمنع الوثوب من الأربعاء إلى السبت طالما الخميس لسه ناقص.
+   * "اليوم التالي" — يرجّع { day, week } للتنقل:
+   *   1. أول يوم ناقص بعد اليوم المختار في نفس الأسبوع (الأربعاء → الخميس).
+   *   2. لو خلصت أيام الأسبوع كلها، نتقدّم لأول يوم ناقص في الأسبوع اللي بعده
+   *      (سبت الأسبوع الجاي، مش سبت الأسبوع اللي فات).
+   *   3. أقصى أسبوع = min(4, durationWeeks) — الدورة 4 أسابيع كحد أقصى.
+   *   4. لو كل شيء كامل، نلفّ للأسبوع الحالي لأول يوم ناقص (fallback نادر).
+   *   5. null = خلصت الاشتراك كله ✓
    */
-  const nextIncompleteDay = () => {
-    if (!selectedDay) return DELIVERY_DAYS.find((d) => !dayProgress(d).complete) ?? null;
-    const idx = DELIVERY_DAYS.indexOf(selectedDay);
-    // بعد اليوم المختار
-    for (let i = idx + 1; i < DELIVERY_DAYS.length; i++) {
-      if (!dayProgress(DELIVERY_DAYS[i]).complete) return DELIVERY_DAYS[i];
+  const maxSubWeek = Math.max(
+    1,
+    Math.min(4, Number((verifiedCustomer as any)?.durationWeeks) || 4),
+  );
+  const dayCompleteInWeek = (wk: number, dy: DayOfWeek) => {
+    if (wk === selectedWeek) return dayProgress(dy).complete;
+    // check other weeks by counting items directly
+    const picked = items.filter((i: any) => i.week === wk && i.day === dy);
+    const mainMeals = picked.filter((i: any) =>
+      ["breakfast", "lunch", "dinner"].includes(String(i.category || "").toLowerCase()),
+    ).length;
+    const snacks = picked.filter((i: any) =>
+      !["breakfast", "lunch", "dinner"].includes(String(i.category || "").toLowerCase()),
+    ).length;
+    const okMeals = !mealsPerDay || mainMeals >= mealsPerDay;
+    const okSnacks = !hasSnackLimit || snacks >= snacksPerDay;
+    return okMeals && okSnacks;
+  };
+  const nextIncompleteDay = (): { day: DayOfWeek; week: number } | null => {
+    // 1) نفس الأسبوع، بعد اليوم المختار
+    if (selectedDay) {
+      const idx = DELIVERY_DAYS.indexOf(selectedDay);
+      for (let i = idx + 1; i < DELIVERY_DAYS.length; i++) {
+        if (!dayCompleteInWeek(selectedWeek, DELIVERY_DAYS[i])) {
+          return { day: DELIVERY_DAYS[i], week: selectedWeek };
+        }
+      }
     }
-    // ثم قبله (لو فيه يوم ناقص متروك)
-    for (let i = 0; i < idx; i++) {
-      if (!dayProgress(DELIVERY_DAYS[i]).complete) return DELIVERY_DAYS[i];
+    // 2) الأسابيع اللاحقة (من السبت)
+    for (let w = selectedWeek + 1; w <= maxSubWeek; w++) {
+      for (const d of DELIVERY_DAYS) {
+        if (!dayCompleteInWeek(w, d)) return { day: d, week: w };
+      }
+    }
+    // 3) لفّ داخل الأسبوع الحالي لأيام سابقة ناقصة
+    if (selectedDay) {
+      const idx = DELIVERY_DAYS.indexOf(selectedDay);
+      for (let i = 0; i < idx; i++) {
+        if (!dayCompleteInWeek(selectedWeek, DELIVERY_DAYS[i])) {
+          return { day: DELIVERY_DAYS[i], week: selectedWeek };
+        }
+      }
+    }
+    // 4) لفّ لأسابيع سابقة
+    for (let w = 1; w < selectedWeek; w++) {
+      for (const d of DELIVERY_DAYS) {
+        if (!dayCompleteInWeek(w, d)) return { day: d, week: w };
+      }
     }
     return null;
   };
@@ -1177,13 +1219,23 @@ export default function PublicMenuPage() {
                       {(() => {
                         const nxt = nextIncompleteDay();
                         if (!nxt) return null;
-                        const lbl = isRtl ? DAY_LABEL_AR[nxt] || nxt : nxt;
+                        const lbl = isRtl ? DAY_LABEL_AR[nxt.day] || nxt.day : nxt.day;
+                        // ✅ لو الأسبوع مختلف نلحقه بالتسمية عشان العميل يعرف
+                        const weekLbl = nxt.week !== selectedWeek
+                          ? (isRtl ? ` (الأسبوع ${nxt.week})` : ` (Week ${nxt.week})`)
+                          : "";
                         return (
                           <button
-                            onClick={() => setSelectedDay(nxt)}
+                            onClick={() => {
+                              if (nxt.week !== selectedWeek) {
+                                setSelectedWeek(nxt.week);
+                                setWeekTouched(true);
+                              }
+                              setSelectedDay(nxt.day);
+                            }}
                             className="text-[11px] font-black px-3 py-1.5 rounded-full bg-[#3CC4F0] text-white hover:brightness-95 transition"
                           >
-                            {isRtl ? `التالي: ${lbl} ←` : `Next: ${lbl} →`}
+                            {isRtl ? `التالي: ${lbl}${weekLbl} ←` : `Next: ${lbl}${weekLbl} →`}
                           </button>
                         );
                       })()}
