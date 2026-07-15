@@ -3,14 +3,77 @@
  * @description إدارة الوجبات العامة للموقع
  */
 import { mutation, query } from "./_generated/server";
-import { requireAdmin, requireStaff } from "./sessions";
+import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
 import { v } from "convex/values";
 
+// 🔒 صلاحيات المنيو — إدارة الوجبات لأدوار التغذية والمنيو، مش لأي staff
+const MENU_MANAGE_ROLES = ["NUTRITIONIST"]; // ADMIN تلقائي
+
+/**
+ * 🔒 DTO عام — بدون costQAR ولا حقول تشغيلية داخلية. للاستخدام العام (زوار الموقع).
+ *    يُظهر النشط فقط. لعرض إداري كامل: adminList (staff فقط).
+ */
+function publicMealDTO(m: any, imageUrl?: string | null) {
+  return {
+    _id: m._id,
+    nameAr: m.nameAr,
+    nameEn: m.nameEn || "",
+    slug: m.slug,
+    descriptionAr: m.descriptionAr || "",
+    descriptionEn: m.descriptionEn || "",
+    calories: m.calories,
+    protein: m.protein,
+    carbs: m.carbs,
+    fats: m.fats,
+    category: m.category,
+    tags: m.tags || [],
+    ingredients: m.ingredients || [],
+    priceQAR: m.priceQAR,
+    imageUrl: imageUrl ?? m.imageUrl ?? null,
+    sortOrder: m.sortOrder,
+    // NOT included: costQAR, gymPrice, isGymItem, weeks/days/schedule (تشغيلية داخلية)
+  };
+}
+
+/**
+ * قائمة الوجبات.
+ * - بدون sessionToken أو جلسة غير staff → النشط فقط + DTO منزوع الحقول الداخلية.
+ * - staff بجلسة صالحة → الوثيقة كاملة (بما فيها costQAR/schedule/gymPrice/isActive)
+ *   للتوافق مع شاشات الإدارة الحالية.
+ */
 export const list = query({
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = args.sessionToken ? await validateSession(ctx, args.sessionToken) : null;
+    const isStaff = identity?.accountType === "staff";
+    if (isStaff) {
+      const all = await ctx.db.query("publicMeals").collect();
+      return Promise.all(
+        all.map(async (meal) => {
+          const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : null;
+          return imageUrl ? { ...meal, imageUrl } : meal;
+        })
+      );
+    }
+    const meals = await ctx.db
+      .query("publicMeals")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+    return Promise.all(
+      meals.map(async (meal) => {
+        const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : null;
+        return publicMealDTO(meal, imageUrl);
+      })
+    );
+  },
+});
+
+/** 🔒 قائمة إدارية كاملة — للموظفين فقط. */
+export const adminList = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const meals = await ctx.db.query("publicMeals").collect();
-    
-    // Add imageUrl from storageId
     return Promise.all(
       meals.map(async (meal) => {
         if (meal.storageId) {
@@ -23,80 +86,83 @@ export const list = query({
   },
 });
 
+/**
+ * قائمة المنيو للموقع العام — النشط فقط، DTO منزوع الحقول الداخلية.
+ * تُبقى العلامة hasAbout للواجهة (نص تفاصيل قابل للتحميل عند فتح المنيو).
+ */
 export const listMeals = query({
   args: {
     category: v.optional(v.string()),
     search: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    let meals = ctx.db.query("publicMeals");
+    const identity = args.sessionToken ? await validateSession(ctx, args.sessionToken) : null;
+    const isStaff = identity?.accountType === "staff";
+    let results = isStaff
+      ? await ctx.db.query("publicMeals").collect()
+      : await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
 
-    // Filter by category if provided
     if (args.category && args.category !== "الكل") {
-      meals = meals.filter((q) => q.eq(q.field("category"), args.category));
+      results = results.filter((m) => m.category === args.category);
     }
-
-    let results = await meals.collect();
-
-    // Filter by search term if provided
     if (args.search) {
-      const searchLower = args.search.toLowerCase();
+      const s = args.search.toLowerCase();
       results = results.filter(
-        (meal) =>
-          meal.nameAr?.toLowerCase().includes(searchLower) ||
-          meal.nameEn?.toLowerCase().includes(searchLower)
+        (m) => m.nameAr?.toLowerCase().includes(s) || m.nameEn?.toLowerCase().includes(s)
       );
     }
 
-    // Add imageUrl from storageId
     return Promise.all(
       results.map(async (meal) => {
-        // ⚡ aboutAr/aboutEn نصوص طويلة (~28KB عبر 192 وجبة) لا تُقرأ إلا داخل
-        //    نافذة تفاصيل الوجبة. نستبعدها من القائمة ونجلبها عند الفتح
-        //    (publicMeals.getBySlug). نُبقي `hasAbout` حتى تعرف النافذة أن
-        //    هناك نصاً قادماً فتحجز مكانه بدل أن يقفز التخطيط.
-        const { aboutAr, aboutEn, ...light } = meal as any;
-        const hasAbout = Boolean(
-          String(aboutAr || "").trim() || String(aboutEn || "").trim()
-        );
-        const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : undefined;
-        return imageUrl ? { ...light, hasAbout, imageUrl } : { ...light, hasAbout };
+        const hasAbout = Boolean(String((meal as any).aboutAr || "").trim() || String((meal as any).aboutEn || "").trim());
+        const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : null;
+        if (isStaff) {
+          // للأدمن: الوثيقة كاملة (aboutAr/En مستبعدين لتقليل الحجم — يُقرأ من getBySlug/getById)
+          const { aboutAr, aboutEn, ...light } = meal as any;
+          return { ...light, hasAbout, imageUrl };
+        }
+        return { ...publicMealDTO(meal, imageUrl), hasAbout };
       })
     );
   },
 });
 
+/** 🔒 يحوّل عام/إداري حسب وجود جلسة موظف. */
+async function toMealResponse(ctx: any, meal: any, sessionToken?: string) {
+  const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : null;
+  if (sessionToken) {
+    const id = await validateSession(ctx, sessionToken);
+    if (id?.accountType === "staff") {
+      return imageUrl ? { ...meal, imageUrl } : meal;
+    }
+  }
+  return publicMealDTO(meal, imageUrl);
+}
+
 export const getById = query({
-  args: { id: v.id("publicMeals") },
+  args: { id: v.id("publicMeals"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const meal = await ctx.db.get(args.id);
     if (!meal) return null;
-    
-    // Add imageUrl from storageId
-    if (meal.storageId) {
-      const imageUrl = await ctx.storage.getUrl(meal.storageId);
-      return { ...meal, imageUrl };
-    }
-    return meal;
+    // للزائر: نُظهر النشط فقط + DTO منزوع الحقول الداخلية
+    const isStaffCall = !!args.sessionToken && (await validateSession(ctx, args.sessionToken))?.accountType === "staff";
+    if (!isStaffCall && !(meal as any).isActive) return null;
+    return await toMealResponse(ctx, meal, args.sessionToken);
   },
 });
 
 export const getBySlug = query({
-  args: { slug: v.string() },
+  args: { slug: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const meal = await ctx.db
       .query("publicMeals")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
-    
     if (!meal) return null;
-    
-    // Add imageUrl from storageId
-    if (meal.storageId) {
-      const imageUrl = await ctx.storage.getUrl(meal.storageId);
-      return { ...meal, imageUrl };
-    }
-    return meal;
+    const isStaffCall = !!args.sessionToken && (await validateSession(ctx, args.sessionToken))?.accountType === "staff";
+    if (!isStaffCall && !(meal as any).isActive) return null;
+    return await toMealResponse(ctx, meal, args.sessionToken);
   },
 });
 
@@ -136,7 +202,12 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, MENU_MANAGE_ROLES); // 🔒 NUTRITIONIST/ADMIN
+    // 🔒 validation
+    validateMealFields(args);
+    // 🔒 slug فريد
+    const dupSlug = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", args.slug)).first();
+    if (dupSlug) throw new Error("slug مكرر — اختر واحد مختلف");
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: args.nameAr,
       nameEn: args.nameEn,
@@ -203,21 +274,69 @@ export const update = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, MENU_MANAGE_ROLES); // 🔒
     const { id, sessionToken: _t, ...updates } = args;
+    validateMealFields(updates);
+    if (updates.slug) {
+      const dup = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", updates.slug!)).first();
+      if (dup && String(dup._id) !== String(id)) throw new Error("slug مكرر");
+    }
     await ctx.db.patch(id, updates);
     return id;
   },
 });
 
+/**
+ * 🔒 حذف = ref-check صارم. الوجبة المستخدَمة في طلبات/خطط/رسيبيات/POS/gym
+ *    لا تُحذف — عطّلها بـisActive:false بديلاً.
+ */
 export const remove = mutation({
   args: { id: v.id("publicMeals"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireAdmin(ctx, args.sessionToken); // 🔒 حذف نهائي = ADMIN
+    // ref checks
+    const orderItems = await ctx.db.query("customerOrderItems").withIndex("by_mealId", (q) => q.eq("mealId", args.id)).take(1);
+    if (orderItems.length) throw new Error("الوجبة مستخدمة في طلبات — عطّلها بدل الحذف");
+    const posLines = await ctx.db.query("posTicketLines").collect();
+    if (posLines.some((l: any) => String(l.mealId) === String(args.id))) {
+      throw new Error("الوجبة مستخدمة في فواتير POS");
+    }
+    const gymLines = await ctx.db.query("gymOrderLines").collect();
+    if (gymLines.some((l: any) => String(l.mealId) === String(args.id))) {
+      throw new Error("الوجبة مستخدمة في طلبات الجم");
+    }
+    // احذف الصورة من التخزين لو موجودة
+    const meal: any = await ctx.db.get(args.id);
+    if (meal?.storageId) { try { await ctx.storage.delete(meal.storageId); } catch { /* ignore */ } }
     await ctx.db.delete(args.id);
     return { success: true };
   },
 });
+
+/** 🔒 validation نطاق للقيم الغذائية والأسعار والجدولة. */
+function validateMealFields(m: any) {
+  if (m.calories !== undefined && (m.calories < 0 || m.calories > 5000)) throw new Error("سعرات غير معقولة");
+  if (m.protein !== undefined && (m.protein < 0 || m.protein > 500)) throw new Error("بروتين غير معقول");
+  if (m.carbs !== undefined && (m.carbs < 0 || m.carbs > 500)) throw new Error("كربوهيدرات غير معقولة");
+  if (m.fats !== undefined && (m.fats < 0 || m.fats > 500)) throw new Error("دهون غير معقولة");
+  if (m.priceQAR !== undefined && (m.priceQAR < 0 || m.priceQAR > 10000)) throw new Error("سعر غير صالح");
+  if (m.costQAR !== undefined && (m.costQAR < 0 || m.costQAR > 10000)) throw new Error("تكلفة غير صالحة");
+  if (m.gymPrice !== undefined && m.gymPrice !== null && (m.gymPrice < 0 || m.gymPrice > 10000)) throw new Error("سعر جم غير صالح");
+  if (m.weeks) {
+    for (const w of m.weeks) if (!Number.isInteger(w) || w < 1 || w > 4) throw new Error("weeks لازم 1..4");
+  }
+  const VALID_DAYS = new Set(["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]);
+  if (m.days) {
+    for (const d of m.days) if (!VALID_DAYS.has(String(d).toLowerCase())) throw new Error("day غير صالح");
+  }
+  if (m.schedule) {
+    for (const s of m.schedule) {
+      if (!Number.isInteger(s.week) || s.week < 1 || s.week > 4) throw new Error("schedule.week 1..4");
+      if (!VALID_DAYS.has(String(s.day).toLowerCase())) throw new Error("schedule.day غير صالح");
+    }
+  }
+  if (m.slug !== undefined && !/^[a-z0-9-]{2,80}$/.test(String(m.slug))) throw new Error("slug: أحرف صغيرة/أرقام/- فقط (2-80)");
+}
 
 export const deleteAll = mutation({
   args: { sessionToken: v.optional(v.string()) },

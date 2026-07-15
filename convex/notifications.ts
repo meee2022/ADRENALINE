@@ -1,9 +1,12 @@
 /**
  * @file convex/notifications.ts
- * @description نظام الإشعارات الداخلية - للأدوار والمستخدمين
+ * @description إشعارات داخلية — مؤمّنة:
+ *   - listForRole/unreadCount/markAllAsRead: الدور يُستخرج من الجلسة، مش من args
+ *   - listForCustomer/markAllAsReadForCustomer: تتطلب جلسة مالك الاشتراك
+ *   - markAsRead: يتحقق أن الإشعار يخص دور المستدعي (staff) أو عميل (owner)
  */
 import { mutation, query, internalMutation } from "./_generated/server";
-import { requireAdmin, requireStaff } from "./sessions";
+import { requireAdmin, requireStaff, validateSession, requireStaffOrSubscriptionOwner } from "./sessions";
 import { v } from "convex/values";
 
 const NOTIF_TYPE = v.union(
@@ -24,9 +27,12 @@ const ROLE = v.union(
   v.literal("INVENTORY_MANAGER"),
 );
 
-/**
- * إنشاء إشعار - يستخدم داخلياً من mutations أخرى
- */
+/** يحوّل دور المستخدم لاستعلام دقيق. ADMIN يشوف الكل. */
+function roleFromIdentity(id: any): string | null {
+  if (!id || id.accountType !== "staff") return null;
+  return String(id.role || "").toUpperCase() || null;
+}
+
 export const create = mutation({
   args: {
     targetRole: v.optional(ROLE),
@@ -41,33 +47,34 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const id = await ctx.db.insert("notifications", {
-      ...args,
-      isRead: false,
-      createdAt: Date.now(),
+      ...args, isRead: false, createdAt: Date.now(),
     });
     return id;
   },
 });
 
 /**
- * جلب إشعارات حسب الدور (آخر 50)
+ * 🔒 قائمة إشعارات — الدور من الجلسة، مش من args.
+ * ADMIN يشوف الكل. باقي الأدوار يشوفوا إشعارات دورهم فقط.
  */
 export const listForRole = query({
-  args: { role: ROLE, onlyUnread: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
+  args: { onlyUnread: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    const id = await validateSession(ctx, args.sessionToken);
+    const role = roleFromIdentity(id);
+    if (!role) throw new Error("غير مصرّح");
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_createdAt")
       .order("desc")
       .take(100);
-
     return all
       .filter((n) => {
-        // إشعار للدور أو إشعار عام (بدون targetRole = للجميع/ADMIN)
-        const matchRole = n.targetRole === args.role
-          || (args.role === "ADMIN" && !n.targetRole);
-        if (!matchRole) return false;
+        if (role === "ADMIN") {
+          // ADMIN يشوف الكل (بما فيها العام)
+        } else {
+          if (n.targetRole !== role) return false;
+        }
         if (args.onlyUnread && n.isRead) return false;
         return true;
       })
@@ -75,74 +82,78 @@ export const listForRole = query({
   },
 });
 
-/**
- * عدد الإشعارات غير المقروءة لدور معين
- */
 export const unreadCount = query({
-  args: { role: ROLE, sessionToken: v.optional(v.string()) },
+  args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
-    const all = await ctx.db
-      .query("notifications")
-      .withIndex("by_targetRole", (q) => q.eq("targetRole", args.role).eq("isRead", false))
-      .collect();
-
-    // أيضاً الإشعارات بدون targetRole (للأدمن)
-    let adminGlobal: any[] = [];
-    if (args.role === "ADMIN") {
-      const global = await ctx.db.query("notifications").order("desc").take(100);
-      adminGlobal = global.filter((n) => !n.targetRole && !n.isRead);
+    const id = await validateSession(ctx, args.sessionToken);
+    const role = roleFromIdentity(id);
+    if (!role) return 0;
+    if (role === "ADMIN") {
+      const all = await ctx.db.query("notifications").order("desc").take(200);
+      return all.filter((n: any) => !n.isRead).length;
     }
-
-    return all.length + adminGlobal.length;
+    const rows = await ctx.db
+      .query("notifications")
+      .withIndex("by_targetRole", (q) => q.eq("targetRole", role as any).eq("isRead", false))
+      .collect();
+    return rows.length;
   },
 });
 
-/**
- * تعليم إشعار كمقروء
- */
+/** 🔒 markAsRead — يتحقق أن الإشعار يخص المستدعي (staff بنفس الدور أو عميل مالك). */
 export const markAsRead = mutation({
   args: { id: v.id("notifications"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    const identity = await validateSession(ctx, args.sessionToken);
+    if (!identity) throw new Error("غير مصرّح");
+    const notif: any = await ctx.db.get(args.id);
+    if (!notif) return;
+    if (identity.accountType === "staff") {
+      const role = roleFromIdentity(identity);
+      if (role !== "ADMIN") {
+        if (notif.targetRole && notif.targetRole !== role) throw new Error("مش إشعارك");
+      }
+    } else {
+      // عميل — لا يعلّم إلا إشعاراته
+      if (!identity.customerAccountId) throw new Error("غير مصرّح");
+      const acct: any = await ctx.db.get(identity.customerAccountId as any);
+      if (!acct?.customerId || String(notif.targetCustomerId) !== String(acct.customerId)) {
+        throw new Error("مش إشعارك");
+      }
+    }
     await ctx.db.patch(args.id, { isRead: true, readAt: Date.now() });
   },
 });
 
-/**
- * تعليم كل إشعارات الدور كمقروءة
- */
 export const markAllAsRead = mutation({
-  args: { role: ROLE, sessionToken: v.optional(v.string()) },
+  args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
-    const all = await ctx.db
-      .query("notifications")
-      .withIndex("by_targetRole", (q) => q.eq("targetRole", args.role).eq("isRead", false))
-      .collect();
-
+    const identity = await validateSession(ctx, args.sessionToken);
+    const role = roleFromIdentity(identity);
+    if (!role) throw new Error("غير مصرّح");
     const now = Date.now();
-    for (const n of all) {
-      await ctx.db.patch(n._id, { isRead: true, readAt: now });
-    }
-
-    if (args.role === "ADMIN") {
-      const global = await ctx.db.query("notifications").order("desc").take(200);
+    let count = 0;
+    if (role === "ADMIN") {
+      const global = await ctx.db.query("notifications").order("desc").take(500);
       for (const n of global) {
-        if (!n.targetRole && !n.isRead) {
-          await ctx.db.patch(n._id, { isRead: true, readAt: now });
-        }
+        if (!n.isRead) { await ctx.db.patch(n._id, { isRead: true, readAt: now }); count++; }
       }
+    } else {
+      const rows = await ctx.db
+        .query("notifications")
+        .withIndex("by_targetRole", (q) => q.eq("targetRole", role as any).eq("isRead", false))
+        .collect();
+      for (const n of rows) { await ctx.db.patch(n._id, { isRead: true, readAt: now }); count++; }
     }
-
-    return { success: true, count: all.length };
+    return { success: true, count };
   },
 });
 
-// إشعارات عميل معيّن (بوابة العميل)
+/** 🔒 إشعارات عميل — لصاحب الاشتراك أو موظف فقط. */
 export const listForCustomer = query({
-  args: { customerId: v.id("customers"), onlyUnread: v.optional(v.boolean()) },
+  args: { customerId: v.id("customers"), onlyUnread: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, String(args.customerId));
     let rows = await ctx.db
       .query("notifications")
       .withIndex("by_targetCustomer", (q) => q.eq("targetCustomerId", args.customerId))
@@ -153,8 +164,9 @@ export const listForCustomer = query({
 });
 
 export const markAllAsReadForCustomer = mutation({
-  args: { customerId: v.id("customers") },
+  args: { customerId: v.id("customers"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, String(args.customerId));
     const open = await ctx.db
       .query("notifications")
       .withIndex("by_targetCustomer", (q) => q.eq("targetCustomerId", args.customerId).eq("isRead", false))
@@ -165,9 +177,6 @@ export const markAllAsReadForCustomer = mutation({
   },
 });
 
-/**
- * حذف الإشعارات القديمة (أكثر من 30 يوم)
- */
 export const cleanupOld = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -177,17 +186,11 @@ export const cleanupOld = mutation({
       .query("notifications")
       .withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff))
       .collect();
-
-    for (const n of old) {
-      await ctx.db.delete(n._id);
-    }
+    for (const n of old) await ctx.db.delete(n._id);
     return { deleted: old.length };
   },
 });
 
-/**
- * Helper: إنشاء إشعار لعدة أدوار دفعة واحدة
- */
 export const broadcast = mutation({
   args: {
     roles: v.array(ROLE),
@@ -203,14 +206,9 @@ export const broadcast = mutation({
     const ids: any[] = [];
     for (const role of args.roles) {
       const id = await ctx.db.insert("notifications", {
-        targetRole: role,
-        type: args.type,
-        title: args.title,
-        message: args.message,
-        link: args.link,
-        relatedId: args.relatedId,
-        isRead: false,
-        createdAt: Date.now(),
+        targetRole: role, type: args.type, title: args.title,
+        message: args.message, link: args.link, relatedId: args.relatedId,
+        isRead: false, createdAt: Date.now(),
       });
       ids.push(id);
     }

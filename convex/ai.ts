@@ -78,15 +78,15 @@ export const getSmartPlanData = query({
         .first();
     }
 
-    // 2) بناء بروفايل — بدون البيانات الحساسة لو المستدعي غير معتمد
-    const profile = customer
+    // 2) بناء بروفايل — للزائر غير المعتمد نعيد قيم عامة فقط بحيث لا يستطيع
+    //    الاستنتاج بوجود/عدم وجود اشتراك بهاتف عشوائي.
+    const profile = (customer && authorized)
       ? {
           found: true,
           goal: customer.goalType || customer.goals || "",
-          // 🔒 حساسية/ممنوعات/تفضيلات = بيانات صحية شخصية — تُرجع فقط للمعتمدين
-          allergies: authorized ? (customer.allergies || "") : "",
-          avoid: authorized ? (customer.avoid || "") : "",
-          preferences: authorized ? (customer.preferences || "") : "",
+          allergies: customer.allergies || "",
+          avoid: customer.avoid || "",
+          preferences: customer.preferences || "",
           mealsPerDay: customer.mealsPerDay ?? 3,
           snacksPerDay: customer.snacksPerDay ?? 1,
         }
@@ -189,11 +189,11 @@ export const getSmartPlanData = query({
         started,
         day,
         date: effDate,
-        // مدة اشتراك العميل — تقترحها الواجهة كعدد أسابيع افتراضي
-        durationWeeks: (customer as any)?.durationWeeks ?? null,
-        // ✅ تواريخ الاشتراك — تعرضها الواجهة وتشتق منها دورة البداية (كالمنيو اليدوي)
-        startDate: (customer as any)?.startDate ?? null,
-        endDate: (customer as any)?.endDate ?? null,
+        // 🔒 بيانات الاشتراك (مدة/بداية/نهاية) = خاصة — لا تُرجع إلا للمعتمدين.
+        //    للزائر بلا جلسة نعيد null حتى لا يستطيع كشف وجود اشتراك بهاتف عشوائي.
+        durationWeeks: authorized ? ((customer as any)?.durationWeeks ?? null) : null,
+        startDate: authorized ? ((customer as any)?.startDate ?? null) : null,
+        endDate: authorized ? ((customer as any)?.endDate ?? null) : null,
       },
     };
   },
@@ -247,6 +247,25 @@ export const chat = action({
   },
   handler: async (ctx, args): Promise<any> => {
     const isEn = args.lang === "en";
+
+    // 🔒 حدود طول: يمنع payload ضخم يستنزف tokens
+    const MAX_MSG_CHARS = 2000;
+    const MAX_TOTAL_CHARS = 12000;
+    let total = 0;
+    for (const m of args.messages) {
+      const len = (m.content || "").length;
+      if (len > MAX_MSG_CHARS) {
+        return { ok: false, reply: isEn
+          ? `Message too long (max ${MAX_MSG_CHARS} chars).`
+          : `الرسالة طويلة جداً (الحد ${MAX_MSG_CHARS} حرف).` };
+      }
+      total += len;
+    }
+    if (total > MAX_TOTAL_CHARS) {
+      return { ok: false, reply: isEn
+        ? "Conversation too long. Please start a new chat."
+        : "المحادثة طويلة جداً. ابدأ محادثة جديدة." };
+    }
 
     // 💸 دلو عام: سقف تكلفة مطلق على المساعد الذكي (نقطة نهاية عامة)
     const gate = await ctx.runMutation(internal.rateLimit.consume, {
@@ -479,6 +498,9 @@ export const getPlanSuggestions = query({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    // 🔒 sessionToken اختياري — لو موجود ومعتمد، نمرّره لـgetSmartPlanData
+    //    فترجع تواريخ الاشتراك. غير معتمد → null (لا تسريب وجود اشتراك).
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
     const today = new Date();
@@ -489,6 +511,7 @@ export const getPlanSuggestions = query({
       phone: args.phone,
       todayDay: wd,
       todayDate: dateStr,
+      sessionToken: args.sessionToken,
     });
     // مدة الاشتراك قد تكون 5+ أسابيع، لكن دورة الوجبات 4 أسابيع فقط،
     // فنقترح حتى 4 (لا 1). القيمة صفر/غير معروفة ⇒ نقترح أسبوعاً واحداً.

@@ -164,7 +164,7 @@ export default function Kitchen() {
   // ✅ وجبات العملاء المخصّصين لهذا اليوم (من قوالبهم) — منفصلة لأنها لكل شخص بكمياته
   const customized = useQuery(api.customizedPlans.forDate, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
   // ✅ وجبات المنيو العام (مصدر أطباق الأساس للمخصّص) — لترجمة اسم الطبق للإنجليزي في الكشف
-  const publicMealsList = useQuery(api.publicMeals.listMeals, {}) as any[] | undefined;
+  const publicMealsList = useQuery(api.publicMeals.listMeals, { sessionToken: sessionTok }) as any[] | undefined;
   // ✅ حصص البرامج من إعدادات المطعم (كارب جم + مدى البروتين لكل برنامج)
   const restSettings = useQuery(api.restaurantSettings.get) as any;
   const programPortions = restSettings?.programPortions || {

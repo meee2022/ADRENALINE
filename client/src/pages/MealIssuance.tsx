@@ -49,7 +49,7 @@ export default function MealIssuance() {
   const [q, setQ] = useState("");
   const [menuCat, setMenuCat] = useState("all");
 
-  const meals = (useQuery(api.publicMeals.list, {}) as any[] | undefined) || [];
+  const meals = (useQuery(api.publicMeals.list, { sessionToken }) as any[] | undefined) || [];
   const rows = (useQuery(api.mealIssuances.listByDate, { date, sessionToken }) as any[] | undefined) || [];
   const summary = useQuery(api.mealIssuances.summary, { date, month, sessionToken }) as any;
 

@@ -17,6 +17,7 @@ import type { DailyPlan } from "@/lib/api";
 import { DailyPlanItem } from "@/lib/types";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -310,7 +311,8 @@ export default function PlansPage() {
   const { data: menuItems = [] } = useMenuItems();
   const { data: modifiers = [] } = useModifiers();
   // ✅ منيو العميل (مصدر الجدول الأسبوعي الوحيد) — للتعبئة التلقائية واقتراحات اليوم
-  const publicMeals = (useQuery(api.publicMeals.list, {}) as any[] | undefined) || [];
+  const sessionToken = useStore((s: any) => s.sessionToken) || undefined;
+  const publicMeals = (useQuery(api.publicMeals.list, { sessionToken }) as any[] | undefined) || [];
   const [weekOverride, setWeekOverride] = useState<number | null>(null);
 
   const formattedDate = format(date, "yyyy-MM-dd");

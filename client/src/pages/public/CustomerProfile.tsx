@@ -54,10 +54,12 @@ export default function CustomerProfile() {
     currentCustomer?.phone ? { phone: currentCustomer.phone } : "skip"
   ) || [];
 
-  // إشعارات العميل (حالة الطلب) — تفاعلية
+  // إشعارات العميل (حالة الطلب) — تفاعلية. 🔒 لازم sessionToken
   const notifs = useQuery(
     api.notifications.listForCustomer,
-    profile?.subscription?.id ? { customerId: profile.subscription.id } : "skip"
+    profile?.subscription?.id && sessionToken
+      ? { customerId: profile.subscription.id, sessionToken }
+      : "skip"
   ) || [];
 
   const setActive = useMutation(api.customers.setSubscriptionActive);
@@ -120,7 +122,7 @@ export default function CustomerProfile() {
   };
   const markAllRead = async () => {
     if (!profile?.subscription?.id) return;
-    try { await markAllReadMut({ customerId: profile.subscription.id }); } catch (e) { console.error(e); }
+    try { await markAllReadMut({ customerId: profile.subscription.id, sessionToken }); } catch (e) { console.error(e); }
   };
   const upcomingDays: string[] = (() => {
     const sub = profile?.subscription;

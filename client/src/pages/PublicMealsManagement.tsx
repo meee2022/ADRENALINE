@@ -56,7 +56,7 @@ export default function PublicMealsManagement() {
     cutoffTime: "18:00",
   });
 
-  const meals = useQuery(api.publicMeals.list) || [];
+  const meals = useQuery(api.publicMeals.list, sessionToken ? { sessionToken } : {}) || [];
 
   const handleAdd = () => {
     setSelectedMeal(null);

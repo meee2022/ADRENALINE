@@ -36,7 +36,7 @@ export default function PublicPlansNew() {
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);
-  const meals = useQuery(api.publicMeals.list) || [];
+  const meals = useQuery(api.publicMeals.list, {}) || [];
   const headerImage = (meals.find((m: any) => m.imageUrl)?.imageUrl) || undefined;
   const comparisonPlans = plans.filter(p => p.showInComparison);
 

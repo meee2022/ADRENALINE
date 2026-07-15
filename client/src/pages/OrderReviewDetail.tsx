@@ -149,7 +149,7 @@ export default function OrderReviewDetail() {
   }, [orderData]);
 
   // تبديل وجبة اقترحها الـAI قبل الاعتماد
-  const allMeals: any[] = useQuery(api.publicMeals.listMeals, {}) || [];
+  const allMeals: any[] = useQuery(api.publicMeals.listMeals, { sessionToken }) || [];
   const [swapTarget, setSwapTarget] = useState<any>(null);
   const [swapping, setSwapping] = useState(false);
   const doSwap = async (m: any) => {

@@ -48,14 +48,15 @@ export function NotificationBell() {
   // (يحدث عندما يبقى currentUser في التخزين بينما بطلت الجلسة على السيرفر.)
   const canQuery = Boolean(role && sessionToken);
 
+  // 🔒 الدور يُستخرج من الجلسة على الخادم — مش من args
   const notifications = useQuery(
     api.notifications.listForRole,
-    canQuery ? { role, onlyUnread: false, sessionToken } : "skip",
+    canQuery ? { onlyUnread: false, sessionToken } : "skip",
   ) || [];
 
   const unreadCount = useQuery(
     api.notifications.unreadCount,
-    canQuery ? { role, sessionToken } : "skip",
+    canQuery ? { sessionToken } : "skip",
   ) || 0;
 
   const markAsRead = useMutation(api.notifications.markAsRead);
@@ -104,7 +105,7 @@ export function NotificationBell() {
   const wasOpenRef = useRef(false);
   useEffect(() => {
     if (wasOpenRef.current && !open && canQuery && unreadCount > 0) {
-      markAllAsRead({ role, sessionToken }).catch(() => {});
+      markAllAsRead({ sessionToken }).catch(() => {});
     }
     wasOpenRef.current = open;
   }, [open, canQuery, unreadCount, role, sessionToken]);
@@ -123,7 +124,7 @@ export function NotificationBell() {
           <h3 className="font-bold text-slate-800 text-sm">{isRtl ? "الإشعارات" : "Notifications"}</h3>
           {unreadCount > 0 && (
             <button
-              onClick={() => markAllAsRead({ role, sessionToken })}
+              onClick={() => markAllAsRead({ sessionToken })}
               className="text-[11px] text-cyan-600 hover:text-cyan-700 font-medium flex items-center gap-1"
             >
               <CheckCheck className="h-3 w-3" />

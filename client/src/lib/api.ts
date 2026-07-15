@@ -141,8 +141,9 @@ export function useCreateCustomer() {
 export function useUpdateCustomer() {
   const mutation = useConvexMutation(api.customers.update);
   const sessionToken = useSessionToken();
+  // 🔒 spread الحقول مباشرة (whitelist server-side) بدل التغليف في data
   const run = ({ id, data }: { id: string; data: any }) =>
-    mutation({ id: id as any, data, sessionToken });
+    mutation({ id: id as any, ...(data || {}), sessionToken });
   return { mutate: run, mutateAsync: run, isLoading: false };
 }
 

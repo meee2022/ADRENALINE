@@ -28,7 +28,7 @@ export default function HomePage() {
   const { data: allPlans = [] } = usePublicPlans("week");
   const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
-  const allMeals = useQuery(api.publicMeals.list) || [];
+  const allMeals = useQuery(api.publicMeals.list, {}) || [];
   const bestSellersRaw = useQuery((api.publicMeals as any).bestSellers, { limit: 6 });
   const bestSellers = bestSellersRaw || [];
   const bestSellersLoading = bestSellersRaw === undefined;
