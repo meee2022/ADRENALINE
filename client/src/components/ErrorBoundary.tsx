@@ -16,6 +16,30 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  refCode?: string; // ✅ رقم مرجعي يعرضه المستخدم لفريق الدعم بدل الرسالة الخام
+}
+
+/** رقم مرجعي عشوائي قصير (~8 حروف) — للربط بسجل التشخيص. */
+function makeRefCode(): string {
+  const a = new Uint8Array(4);
+  (globalThis.crypto || (window as any).crypto).getRandomValues(a);
+  return "ERR-" + Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+/** يحاول إرسال الخطأ لـendpoint داخلي لو مضبوط (VITE_ERROR_LOG_ENDPOINT). */
+async function shipToServer(payload: any) {
+  try {
+    const url = (import.meta as any).env?.VITE_ERROR_LOG_ENDPOINT;
+    if (!url) return;
+    await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    });
+  } catch {
+    // لا نمنع UI بسبب فشل التقرير
+  }
 }
 
 // class component لا يستطيع استخدام hook — نقرأ اللغة من نفس مفتاح التخزين
@@ -32,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, refCode: makeRefCode() };
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
@@ -61,7 +85,16 @@ export class ErrorBoundary extends Component<Props, State> {
       }
       return;
     }
+    // ✅ سجل محلياً + أرسل لـendpoint داخلي (لو مضبوط) — لا نعد المستخدم بشيء لا يحدث
     logError(error.message, error.stack || errorInfo.componentStack);
+    void shipToServer({
+      refCode: this.state.refCode,
+      message: error.message,
+      stack: error.stack || errorInfo.componentStack,
+      path: window.location.pathname,
+      userAgent: navigator.userAgent,
+      at: Date.now(),
+    });
   }
 
   handleReset = () => {
@@ -100,11 +133,13 @@ export class ErrorBoundary extends Component<Props, State> {
               {tr("عذراً، حدث خطأ غير متوقع", "Sorry, an unexpected error occurred")}
             </h1>
             <p className="text-sm text-slate-600 mb-4">
-              {tr("تم تسجيل المشكلة تلقائياً. يمكنك المحاولة مرة أخرى أو تحديث الصفحة.", "The issue has been logged automatically. You can try again or refresh the page.")}
+              {tr("تم تسجيل المشكلة. جرّب مجدداً أو حدّث الصفحة. لو استمر الخطأ، أرسل الرقم المرجعي لفريق الدعم.", "The issue has been logged. Try again or refresh the page. If it persists, send the reference code to support.")}
             </p>
-            {this.state.error?.message && (
-              <p className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3 mb-4 font-mono break-words">
-                {this.state.error.message}
+            {/* 🔒 لا نعرض error.message للمستخدم النهائي (قد يحتوي أسماء دوال داخلية).
+                نعرض رقماً مرجعياً مختصراً يقرأه الدعم لربطه بالسجل. */}
+            {this.state.refCode && (
+              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 mb-4 font-mono break-words select-all">
+                {tr("الرقم المرجعي:", "Reference code:")} <span className="font-bold text-slate-700">{this.state.refCode}</span>
               </p>
             )}
             <div className="flex gap-2 justify-center">
