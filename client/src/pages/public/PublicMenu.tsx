@@ -342,10 +342,12 @@ export default function PublicMenuPage() {
    *   4. لو كل شيء كامل، نلفّ للأسبوع الحالي لأول يوم ناقص (fallback نادر).
    *   5. null = خلصت الاشتراك كله ✓
    */
-  const maxSubWeek = Math.max(
-    1,
-    Math.min(4, Number((verifiedCustomer as any)?.durationWeeks) || 4),
-  );
+  // ✅ حد الأسابيع الأعلى — نعتمد على الأسابيع الفعلية اللي فيها يوم واحد على الأقل
+  //    في الاشتراك (subscriptionWeeks) بدل durationWeeks — لأن الجمعة قد ترمي
+  //    اليوم الأخير من الاشتراك في أسبوع دورة مختلف عن أسبوع البداية.
+  const maxSubWeek = subscriptionWeeks && subscriptionWeeks.size > 0
+    ? Math.max(...Array.from(subscriptionWeeks))
+    : Math.max(1, Math.min(4, Number((verifiedCustomer as any)?.durationWeeks) || 4));
   const dayCompleteInWeek = (wk: number, dy: DayOfWeek) => {
     if (wk === selectedWeek) return dayProgress(dy).complete;
     // check other weeks by counting items directly
