@@ -210,16 +210,23 @@ export default function SmartPlan() {
     setError(""); setResult(null); setWeekly(null); setOrderNo(""); setLoading(true);
     const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
     try {
+      // 🔒 التوليد الأسبوعي يستلزم جلسة (منع استنزاف رصيد AI من الزوار)
+      const sessionToken = useStore.getState().sessionToken || undefined;
       if (mode === "week") {
+        if (!sessionToken) {
+          setError(t("سجّل الدخول أولاً لتوليد خطة أسبوعية.", "Please log in to generate a weekly plan."));
+          return;
+        }
         const res: any = await generateWeekly({
           ...source,
           weeks: effWeeks,
           startRotationWeek: effStartRot,
+          sessionToken,
         });
         if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذه الأسابيع.", "No meals scheduled for these weeks.")); }
         else setWeekly(res);
       } else {
-        const res: any = await generate(source);
+        const res: any = await generate({ ...source, sessionToken });
         if (!res.ok) { setError(res.error || t("تعذّر توليد الخطة", "Could not generate the plan")); }
         else setResult(res);
       }

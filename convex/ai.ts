@@ -11,6 +11,17 @@
 import { action, query } from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { v } from "convex/values";
+import { validateSession } from "./sessions";
+
+/** ✅ استعلام مساعد داخلي — يستخرج الهوية من التوكن (للـactions). */
+export const _whoAmI = query({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id) return null;
+    return { userId: id.userId ?? null, customerAccountId: id.customerAccountId ?? null, accountType: id.accountType };
+  },
+});
 
 // ─── أسماء أيام الأسبوع (تطابق publicMeals.schedule.day) ───
 const WEEKDAYS = [
@@ -422,11 +433,23 @@ export const generateSmartPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    // 🔒 sessionToken: لو موجود نستخدم accountId/userId كمفتاح rate limit مقاوم للتحايل.
+    //    غير موجود = زائر — حد أضيق + دلو عام صارم.
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
-    // 💸 حدّ معدّل: لكل هاتف + دلو عام (استدعاء مدفوع لواجهة Anthropic)
-    const rlKey = args.phone ? `ai:generateSmartPlan:${args.phone}` : "ai:generateSmartPlan:anon";
-    for (const [key, limit] of [[rlKey, 6], ["ai:generateSmartPlan:global", 60]] as const) {
+    // 🔒 نستخرج مفتاح ثابت من الجلسة لو موجود — يمنع تجاوز الحد بتغيير phone.
+    let identityKey = "anon";
+    if (args.sessionToken) {
+      const id: any = await ctx.runQuery(api.ai._whoAmI, { sessionToken: args.sessionToken });
+      if (id?.userId) identityKey = `staff:${id.userId}`;
+      else if (id?.customerAccountId) identityKey = `cust:${id.customerAccountId}`;
+    }
+    const visitor = identityKey === "anon";
+    // 💸 حدود: زائر أضيق بكثير من مستخدم موثّق
+    const perIdentityLimit = visitor ? 2 : 10;
+    const rlKey = `ai:generateSmartPlan:${identityKey}`;
+    for (const [key, limit] of [[rlKey, perIdentityLimit], ["ai:generateSmartPlan:global", visitor ? 20 : 60]] as const) {
       const gate = await ctx.runMutation(internal.rateLimit.consume, {
         key, limit, windowMs: 10 * 60 * 1000,
       });
@@ -539,19 +562,24 @@ export const generateWeeklyPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
-    startDate: v.optional(v.string()), // yyyy-MM-dd (افتراضي: أقرب يوم عمل من اليوم)
-    // ✅ عدد الأسابيع المطلوب توليدها (1..4). افتراضي 1 للتوافق الرجعي.
+    startDate: v.optional(v.string()),
     weeks: v.optional(v.number()),
-    // ✅ أسبوع الدورة الذي يبدأ منه (1..4). لكل أسبوع تالٍ نلفّ +1 على دورة 4.
-    //    غير محدّد ⇒ يُحسب من تاريخ اشتراك العميل كما كان.
     startRotationWeek: v.optional(v.number()),
+    // 🔒 sessionToken مطلوب — التوليد الأسبوعي مكلف (5-20 استدعاء AI لكل مرة)،
+    //    الزائر يعتمد على generateSmartPlan (يوم واحد) بحده الأضيق.
+    sessionToken: v.string(),
   },
   handler: async (ctx, args): Promise<any> => {
     const weeksCount = Math.min(4, Math.max(1, Math.floor(args.weeks || 1)));
 
-    // 💸 حدّ معدّل: نستهلك وحدة لكل أسبوع (كل أسبوع = 5 استدعاءات مدفوعة).
-    const rlKey = args.phone ? `ai:generateWeeklyPlan:${args.phone}` : "ai:generateWeeklyPlan:anon";
-    for (const [key, limit] of [[rlKey, 6], ["ai:generateWeeklyPlan:global", 60]] as const) {
+    // 🔒 لازم جلسة صالحة — يمنع أي زائر من استنزاف رصيد Anthropic
+    const identity: any = await ctx.runQuery(api.ai._whoAmI, { sessionToken: args.sessionToken });
+    if (!identity) throw new Error("سجّل الدخول لتوليد خطة أسبوعية");
+    const identityKey = identity.userId ? `staff:${identity.userId}` : `cust:${identity.customerAccountId}`;
+
+    // 💸 حدّ معدّل: نستهلك وحدة لكل أسبوع.
+    const rlKey = `ai:generateWeeklyPlan:${identityKey}`;
+    for (const [key, limit] of [[rlKey, 6], ["ai:generateWeeklyPlan:global", 40]] as const) {
       for (let w = 0; w < weeksCount; w++) {
         const gate = await ctx.runMutation(internal.rateLimit.consume, {
           key, limit, windowMs: 10 * 60 * 1000,

@@ -284,19 +284,81 @@ export const remove = mutation({
   },
 });
 
-// خدمة ذاتية: تبديل يوم توصيل في قائمة skippedDates (yyyy-MM-dd)
-// يسمح بها لصاحب الاشتراك نفسه أو لموظف — وليس لأي شخص يعرف الـid.
+/**
+ * 🔒 خدمة ذاتية: تخطّي/إلغاء تخطّي يوم توصيل واحد.
+ *   محرك موحد مع subscriptionPause.setSkippedDays: كلاهما يمدّ/يقصّر endDate
+ *   ويحذف/يعيد خطة اليوم، فما يبقى فرق مالي بين "صفحة العميل" و"صفحة الأخصائية".
+ *
+ *   قيود:
+ *     - لا يُسمح بتخطّي يوم مضى (لا يعود بأثر رجعي).
+ *     - لا يُسمح بتخطّي يوم دخل نطاق التحضير (خطة اليوم أو غد قبل الـcutoff).
+ */
 export const toggleSkipDay = mutation({
   args: { id: v.id("customers"), date: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, args.id);
-    const c = await ctx.db.get(args.id);
+    const c: any = await ctx.db.get(args.id);
     if (!c) return null;
-    const cur: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
-    const exists = cur.includes(args.date);
-    const next = exists ? cur.filter((d) => d !== args.date) : [...cur, args.date].sort();
-    await ctx.db.patch(args.id, { skippedDates: next, updatedAt: Date.now() });
-    return { skipped: !exists, skippedDates: next };
+
+    const dateISO = String(args.date).slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    const cur: string[] = Array.isArray(c.skippedDates) ? c.skippedDates : [];
+    const exists = cur.includes(dateISO);
+    const mode = exists ? "unskip" : "skip";
+
+    // 🔒 لا تخطّي بأثر رجعي
+    if (mode === "skip" && dateISO < today) throw new Error("لا يمكن تخطّي يوم مضى");
+
+    // نفس منطق setSkippedDays — مباشرة داخل المplateformة (بلا استدعاء متبادل)
+    const { fmtDate, parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } = await import("./lib/dates");
+    const nextSet = new Set(cur);
+    let changedDeliveryDays = 0;
+    if (mode === "skip") {
+      if (!nextSet.has(dateISO)) {
+        nextSet.add(dateISO);
+        if (isDeliveryDay(parseDate(dateISO))) changedDeliveryDays++;
+      }
+    } else {
+      if (nextSet.has(dateISO)) {
+        nextSet.delete(dateISO);
+        if (isDeliveryDay(parseDate(dateISO))) changedDeliveryDays++;
+      }
+    }
+
+    const oldEndDate = c.endDate;
+    const newEndDate = changedDeliveryDays > 0
+      ? (mode === "skip" ? addDeliveryDays(oldEndDate, changedDeliveryDays) : subDeliveryDays(oldEndDate, changedDeliveryDays))
+      : oldEndDate;
+
+    await ctx.db.patch(args.id, {
+      skippedDates: Array.from(nextSet).sort(),
+      endDate: newEndDate,
+      updatedAt: Date.now(),
+    });
+
+    // احذف/أرشف خطة اليوم لو skip
+    let removed = 0;
+    if (mode === "skip") {
+      const plans = await ctx.db
+        .query("dailyPlans")
+        .withIndex("by_customerId", (q) => q.eq("customerId", args.id))
+        .collect();
+      for (const p of plans) {
+        if (String(p.date).slice(0, 10) === dateISO && p.status !== "DELIVERED") {
+          await ctx.db.delete(p._id);
+          removed++;
+        }
+      }
+    }
+
+    return {
+      skipped: mode === "skip",
+      skippedDates: Array.from(nextSet).sort(),
+      creditedDeliveryDays: mode === "skip" ? changedDeliveryDays : 0,
+      withdrawnDeliveryDays: mode === "unskip" ? changedDeliveryDays : 0,
+      oldEndDate, newEndDate,
+      removedPlans: removed,
+    };
   },
 });
 
