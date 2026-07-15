@@ -6,10 +6,14 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { ClipboardList } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PosOpenTickets() {
   const token = usePosStore((s) => s.token) as string;
   const rows = useQuery(api.pos.listOpenTickets, { token }) as any[] | undefined;
+  const { language } = useLanguage();
+  const isAr = language === "ar";
+  const t = (a: string, e: string) => (isAr ? a : e);
 
   return (
     <div className="h-full overflow-y-auto p-4 bg-slate-100">
@@ -19,18 +23,18 @@ export default function PosOpenTickets() {
             <ClipboardList className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Open Tickets</h1>
-            <p className="text-slate-500 text-sm font-bold">فواتير معلّقة لسه ما اتدفعتش</p>
+            <h1 className="text-2xl font-black text-slate-900">{t("فواتير مفتوحة", "Open Tickets")}</h1>
+            <p className="text-slate-500 text-sm font-bold">{t("فواتير معلّقة لسه ما اتدفعتش", "Parked tickets — not yet paid")}</p>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          {!rows && <div className="p-8 text-center text-slate-500">Loading…</div>}
+          {!rows && <div role="status" aria-live="polite" className="p-8 text-center text-slate-500">{t("جاري التحميل…", "Loading…")}</div>}
           {rows && rows.length === 0 && (
             <div className="p-12 text-center">
               <ClipboardList className="h-12 w-12 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 font-bold">مفيش فواتير معلّقة</p>
-              <p className="text-slate-400 text-sm mt-1">الميزة هتبقى متاحة كاملة قريباً</p>
+              <p className="text-slate-500 font-bold">{t("مفيش فواتير معلّقة", "No parked tickets")}</p>
+              <p className="text-slate-400 text-sm mt-1">{t("الميزة هتبقى متاحة كاملة قريباً", "Full feature coming soon")}</p>
             </div>
           )}
           <div className="divide-y divide-slate-100">

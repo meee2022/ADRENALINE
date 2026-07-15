@@ -9,6 +9,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { confirmDialog } from "@/lib/dialogs";
+import { useLanguage } from "@/lib/i18n";
 import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3 } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
@@ -29,6 +30,9 @@ const MENU_CAT_META: Record<string, { label: string; labelAr: string; icon: any 
 const genLocalOrderNo = () => Math.floor(1000 + Math.random() * 9000);
 
 export default function PosSales() {
+  const { language } = useLanguage();
+  const isAr = language === "ar";
+  const tt = (a: string, e: string) => (isAr ? a : e);
   const { token, cart, setCart, clearCart } = usePosStore();
   const items = useQuery(api.pos.listItems, { token: token || undefined }) as any[] | undefined;
   const posCats = useQuery(api.pos.listCategories, { token: token || undefined }) as any[] | undefined;
@@ -346,8 +350,8 @@ export default function PosSales() {
         <div className="p-4 shrink-0" style={{ borderBottom: "1px solid #1B2A48" }}>
           <div className="flex items-center justify-between mb-3">
             <div className="text-end">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Point of Sale</p>
-              <h1 className="text-2xl font-black text-white leading-tight">طلب جديد</h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{tt("نقطة البيع", "Point of Sale")}</p>
+              <h1 className="text-2xl font-black text-white leading-tight">{tt("طلب جديد", "New Order")}</h1>
             </div>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />

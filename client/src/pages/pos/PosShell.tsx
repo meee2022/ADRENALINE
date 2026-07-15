@@ -14,10 +14,14 @@ import PosShift from "./PosShift";
 import PosOpenTickets from "./PosOpenTickets";
 import { Home, Receipt, ClipboardList, Clock, LogOut, Loader2 } from "lucide-react";
 import { PosManifest, InstallButton } from "@/components/pos/PwaInstall";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PosShell() {
   const { token, cashier, clearSession } = usePosStore();
   const [location, setLocation] = useLocation();
+  const { language, dir } = useLanguage();
+  const isAr = language === "ar";
+  const t = (a: string, e: string) => (isAr ? a : e);
   const me = useQuery(api.pos.me, token ? { token } : "skip");
   const logout = useMutation(api.pos.logout);
 
@@ -58,7 +62,7 @@ export default function PosShell() {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-100 flex flex-col" dir="ltr">
+    <div className="fixed inset-0 bg-slate-100 flex flex-col" dir={dir}>
       <PosManifest />
       {/* Top bar */}
       <header className="h-14 bg-slate-900 text-white flex items-center px-4 gap-3 shrink-0 select-none">
@@ -69,24 +73,25 @@ export default function PosShell() {
         </div>
 
         <nav className="flex items-center gap-1 ms-6">
-          <NavBtn href="/pos" active={location === "/pos"} icon={Home}>Sales</NavBtn>
-          <NavBtn href="/pos/tickets" active={location === "/pos/tickets"} icon={ClipboardList}>Open Tickets</NavBtn>
-          <NavBtn href="/pos/receipts" active={location === "/pos/receipts"} icon={Receipt}>Receipts</NavBtn>
-          <NavBtn href="/pos/shift" active={location === "/pos/shift"} icon={Clock}>Shift</NavBtn>
+          <NavBtn href="/pos" active={location === "/pos"} icon={Home}>{t("مبيعات", "Sales")}</NavBtn>
+          <NavBtn href="/pos/tickets" active={location === "/pos/tickets"} icon={ClipboardList}>{t("فواتير مفتوحة", "Open Tickets")}</NavBtn>
+          <NavBtn href="/pos/receipts" active={location === "/pos/receipts"} icon={Receipt}>{t("الإيصالات", "Receipts")}</NavBtn>
+          <NavBtn href="/pos/shift" active={location === "/pos/shift"} icon={Clock}>{t("الوردية", "Shift")}</NavBtn>
         </nav>
 
         <div className="ms-auto flex items-center gap-3">
           <InstallButton />
-          <div className="text-right leading-tight">
-            <div className="text-[11px] text-slate-400 font-bold">CASHIER</div>
+          <div className={isAr ? "text-left leading-tight" : "text-right leading-tight"}>
+            <div className="text-[11px] text-slate-400 font-bold">{t("الكاشير", "CASHIER")}</div>
             <div className="text-sm font-black">{cashier?.name || "—"}</div>
           </div>
           <button
             onClick={doLogout}
             className="h-9 px-3 rounded-lg bg-slate-800 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition-colors"
-            title="Logout"
+            title={t("خروج", "Logout")}
+            aria-label={t("خروج", "Logout")}
           >
-            <LogOut className="h-3.5 w-3.5" /> Logout
+            <LogOut className="h-3.5 w-3.5" /> {t("خروج", "Logout")}
           </button>
         </div>
       </header>

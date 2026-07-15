@@ -8,11 +8,15 @@ import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { Receipt, CheckCircle2, XCircle, RotateCcw } from "lucide-react";
 import ReceiptModal from "./PosReceipt";
+import { useLanguage } from "@/lib/i18n";
 
 export default function PosReceipts() {
   const token = usePosStore((s) => s.token) as string;
   const rows = useQuery(api.pos.myTodayReceipts, { token }) as any[] | undefined;
   const [open, setOpen] = useState<string | null>(null);
+  const { language } = useLanguage();
+  const isAr = language === "ar";
+  const t = (a: string, e: string) => (isAr ? a : e);
 
   return (
     <div className="h-full overflow-y-auto p-4 bg-slate-100">
@@ -22,14 +26,14 @@ export default function PosReceipts() {
             <Receipt className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Today's Receipts</h1>
-            <p className="text-slate-500 text-sm font-bold">{rows?.length || 0} ticket{(rows?.length || 0) !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-black text-slate-900">{t("إيصالات اليوم", "Today's Receipts")}</h1>
+            <p className="text-slate-500 text-sm font-bold">{rows?.length || 0} {t("فاتورة", "ticket") + ((rows?.length || 0) !== 1 && !isAr ? "s" : "")}</p>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
-          {!rows && <div className="p-8 text-center text-slate-500">Loading…</div>}
-          {rows && rows.length === 0 && <div className="p-8 text-center text-slate-500 font-bold">No receipts yet today</div>}
+          {!rows && <div role="status" aria-live="polite" className="p-8 text-center text-slate-500">{t("جاري التحميل…", "Loading…")}</div>}
+          {rows && rows.length === 0 && <div className="p-8 text-center text-slate-500 font-bold">{t("مفيش إيصالات اليوم بعد", "No receipts yet today")}</div>}
           <div className="divide-y divide-slate-100">
             {rows?.map((r: any) => (
               <button
