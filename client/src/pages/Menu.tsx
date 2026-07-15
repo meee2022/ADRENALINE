@@ -1212,6 +1212,7 @@ function MenuItemsTab({
 
   return (
     <div className="space-y-4" dir={language === "ar" ? "rtl" : "ltr"}>
+      <h1 className="sr-only">{language === "ar" ? "المنيو" : "Menu"}</h1>
       {/* Header with Icon */}
       <div className="flex items-center justify-between gap-3 flex-wrap bg-gradient-to-r from-cyan-50 to-blue-50 p-4 sm:p-6 rounded-2xl shadow-sm">
         <div className="flex items-center gap-3 sm:gap-4">

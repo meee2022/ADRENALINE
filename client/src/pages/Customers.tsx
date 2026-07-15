@@ -803,6 +803,8 @@ export default function Customers() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6">
+      {/* ✅ H1 دلالي مخفي بصرياً — لبنية الصفحة وقارئات الشاشة */}
+      <h1 className="sr-only">{isRtl ? "المشتركين" : "Subscribers"}</h1>
       {/* Header — unified brand hero */}
       <DashboardHeader
         icon={<Users className="h-6 w-6 sm:h-7 sm:w-7" />}

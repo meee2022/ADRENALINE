@@ -152,6 +152,7 @@ export default function Payroll() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="space-y-4 sm:space-y-6 print:space-y-2">
+      <h1 className="sr-only">{t("الرواتب", "Payroll")}</h1>
       <div className="print:hidden">
         <DashboardHeader
           icon={<Banknote className="h-6 w-6 sm:h-7 sm:w-7" />}

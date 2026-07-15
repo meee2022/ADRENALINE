@@ -5,10 +5,13 @@
  *   فمعاينة الروابط بتاعتهم بتيجي من الـmeta الثابتة في index.html — التخصيص ده أساسًا لجوجل.
  */
 import { useEffect } from "react";
+import { useLanguage } from "@/lib/i18n";
 
 const SITE = "https://adrenalinehealthy.com";
-const DEFAULT_DESC =
+const DEFAULT_DESC_AR =
   "وجبات صحية ولذيذة محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل في كل أنحاء قطر.";
+const DEFAULT_DESC_EN =
+  "Fresh, calorie-tracked healthy meals prepared daily by our dietitians and delivered anywhere in Qatar.";
 const DEFAULT_IMG = SITE + "/adrenaline-logo-full.png";
 
 function upsertMeta(key: { name?: string; property?: string }, content: string) {
@@ -34,29 +37,49 @@ function upsertCanonical(href: string) {
 }
 
 export interface SeoOpts {
-  title: string;
-  description?: string;
+  /** عنوان الصفحة — إما نص واحد، أو ثنائي اللغة {ar, en}. */
+  title: string | { ar: string; en: string };
+  description?: string | { ar: string; en: string };
   path?: string;   // مثل "/public/plans"
-  image?: string;  // رابط صورة كامل (للوجبات)
+  image?: string;  // رابط صورة كامل
 }
 
-/** يحدّث عنوان الصفحة وميتاها. استخدمه في أول أي صفحة عامة. */
+/**
+ * يحدّث عنوان الصفحة وميتاها حسب اللغة الحالية.
+ * - title/description يقبلا نص واحد (للتوافق) أو ثنائي اللغة.
+ * - يضبط <html lang> و <html dir> تلقائياً.
+ * - يضيف og:locale و hreflang alternates.
+ */
 export function useSeo(opts: SeoOpts) {
   const { title, description, path, image } = opts;
+  const { language } = useLanguage();
   useEffect(() => {
-    const desc = description || DEFAULT_DESC;
+    const isAr = language === "ar";
+    const pick = (v: string | { ar: string; en: string } | undefined, fallback: string) => {
+      if (!v) return fallback;
+      if (typeof v === "string") return v;
+      return isAr ? v.ar : v.en;
+    };
+    const t = pick(title, "Adrenaline Healthy Food");
+    const desc = pick(description, isAr ? DEFAULT_DESC_AR : DEFAULT_DESC_EN);
     const url = SITE + (path || (typeof window !== "undefined" ? window.location.pathname : "/"));
     const img = image || DEFAULT_IMG;
 
-    document.title = title;
+    document.title = t;
+    // ✅ ضبط lang/dir على الـhtml (بعض الصفحات لم تكن تحدّثها)
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("lang", isAr ? "ar" : "en");
+      document.documentElement.setAttribute("dir", isAr ? "rtl" : "ltr");
+    }
     upsertMeta({ name: "description" }, desc);
-    upsertMeta({ property: "og:title" }, title);
+    upsertMeta({ property: "og:title" }, t);
     upsertMeta({ property: "og:description" }, desc);
     upsertMeta({ property: "og:url" }, url);
     upsertMeta({ property: "og:image" }, img);
-    upsertMeta({ name: "twitter:title" }, title);
+    upsertMeta({ property: "og:locale" }, isAr ? "ar_QA" : "en_US");
+    upsertMeta({ name: "twitter:title" }, t);
     upsertMeta({ name: "twitter:description" }, desc);
     upsertMeta({ name: "twitter:image" }, img);
     upsertCanonical(url);
-  }, [title, description, path, image]);
+  }, [title, description, path, image, language]);
 }

@@ -156,6 +156,7 @@ export default function InventoryPage() {
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24">
+      <h1 className="sr-only">{isRtl ? "المخزون" : "Inventory"}</h1>
       {/* Header */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-200 px-4 py-4 shadow-sm">
         <div className="max-w-6xl mx-auto">
