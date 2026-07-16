@@ -232,6 +232,69 @@
   display: none;  /* Chrome, Safari, Opera */
 }
 
+/* POS identity: bright operational surfaces tuned for restaurant counter displays. */
+.pos-shell-header {
+  background: linear-gradient(105deg, #173b55 0%, #47759c 46%, #2bb0dc 100%);
+}
+
+.pos-items-canvas {
+  background:
+    linear-gradient(rgba(60, 196, 240, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(60, 196, 240, 0.035) 1px, transparent 1px),
+    #edf5f8;
+  background-size: 28px 28px;
+}
+
+.pos-sales-screen button:focus-visible,
+.pos-shell button:focus-visible,
+.pos-shell a:focus-visible {
+  outline: 3px solid rgba(60, 196, 240, 0.28);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1024px) {
+  .pos-ticket-panel {
+    width: clamp(275px, 32vw, 330px) !important;
+  }
+  .pos-items-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .pos-ticket-panel {
+    width: 280px !important;
+  }
+  .pos-items-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pos-item-card {
+    aspect-ratio: 1 / 1;
+  }
+}
+
+@media (max-height: 720px) {
+  .pos-shell-header {
+    min-height: 54px;
+  }
+  .pos-ticket-panel > div:first-child {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+  .pos-item-card {
+    aspect-ratio: 1.18 / 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pos-shell *,
+  .pos-sales-screen * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 /* Compact cashier displays: keep the POS usable on 768px-tall screens and scaled Windows desktops. */
 @media (min-width: 768px) and (max-height: 820px) {
   .gym-sales-header {
@@ -276,6 +339,151 @@
 /* =========================
    ✅ GLOBAL PRINT STYLES
    ========================= */
+/* Compact POS terminals often expose a small CSS viewport because of Windows scaling. */
+/* Gym operations: layered cool surfaces keep dense reports readable without a white-on-white feel. */
+.gym-sales-page {
+  background:
+    linear-gradient(180deg, rgba(60, 196, 240, 0.08) 0, rgba(60, 196, 240, 0) 260px),
+    #eaf0f5;
+}
+
+.gym-sales-page .gym-sales-header > div {
+  border: 1px solid rgba(60, 196, 240, 0.35);
+  box-shadow: 0 16px 36px rgba(14, 42, 74, 0.18);
+}
+
+.gym-sales-page .gym-sales-content .bg-card {
+  background-color: #f8fbfd;
+  border-color: #c7d5e1;
+  border-width: 1px;
+  box-shadow: 0 5px 16px rgba(30, 64, 92, 0.08);
+}
+
+.gym-sales-page .gym-sales-content .bg-card:hover {
+  box-shadow: 0 9px 24px rgba(30, 64, 92, 0.12);
+}
+
+.gym-sales-page .gym-report-panel {
+  background: #f8fbfd;
+  border-color: #bdcedc;
+  box-shadow: 0 7px 20px rgba(30, 64, 92, 0.09);
+}
+
+.gym-sales-page .gym-report-panel > div:first-child {
+  background: #f1f6fa;
+}
+
+.gym-sales-page .gym-tab-body > div {
+  animation: gym-tab-enter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gym-sales-page .gym-tab-body div.bg-white,
+.gym-sales-page .gym-tab-body table.bg-white {
+  background-color: #f8fbfd;
+  border-color: #c7d5e1;
+}
+
+.gym-sales-page .gym-meal-tile {
+  background: linear-gradient(145deg, #fdfefe, #f1f6fa);
+  border-color: #c7d5e1;
+  box-shadow: 0 3px 10px rgba(30, 64, 92, 0.06);
+}
+
+.gym-sales-page .gym-meal-tile:hover {
+  background: #fdfefe;
+  box-shadow: 0 8px 20px rgba(14, 118, 172, 0.14);
+}
+
+.gym-sales-page .gym-pos-cart {
+  background: linear-gradient(160deg, #f8fbfd, #eef5f9);
+  border-color: #9fb8ca;
+  box-shadow: 0 10px 28px rgba(30, 64, 92, 0.13);
+}
+
+.gym-sales-page .gym-pos-cart-lines > div {
+  padding-inline: 0.25rem;
+}
+
+.gym-sales-page .gym-tab-body table thead {
+  background-color: #e5eef5;
+  color: #3e5d76;
+}
+
+.gym-sales-page .gym-tab-body table thead th {
+  border-bottom: 1px solid #b9cad7;
+}
+
+.gym-sales-page .gym-tab-body table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.gym-sales-page .gym-tab-body table tbody tr:hover {
+  background-color: rgba(60, 196, 240, 0.08);
+}
+
+.gym-sales-page .gym-tab-body label {
+  color: #49677f;
+}
+
+@keyframes gym-tab-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gym-sales-page .gym-tab-body > div { animation: none; }
+}
+
+.gym-sales-page input,
+.gym-sales-page select {
+  background-color: #fdfefe;
+  border-color: #bdcedc;
+}
+
+.gym-sales-page input:focus,
+.gym-sales-page select:focus {
+  border-color: #3cc4f0;
+  box-shadow: 0 0 0 3px rgba(60, 196, 240, 0.14);
+  outline: none;
+}
+
+.gym-sales-page table tbody tr:nth-child(even) {
+  background-color: rgba(226, 236, 244, 0.36);
+}
+
+@media (max-width: 1180px), (max-height: 760px) {
+  .pos-sales-screen .pos-ticket-panel {
+    width: min(340px, 36vw);
+  }
+
+  .pos-sales-screen .pos-ticket-panel > div:first-child {
+    padding: 0.65rem;
+  }
+
+  .pos-sales-screen .pos-ticket-panel button.h-16 {
+    height: 2.75rem;
+    flex-direction: row;
+  }
+
+  .pos-sales-screen .pos-ticket-panel > div:last-child {
+    padding: 0.65rem;
+  }
+
+  .pos-sales-screen .pos-ticket-panel button.h-14 {
+    height: 2.75rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .pos-sales-screen {
+    overflow-x: auto;
+  }
+
+  .pos-sales-screen .pos-ticket-panel {
+    width: 310px;
+  }
+}
+
 @media print {
   /* Reset background — clean white paper */
   html, body, #root {

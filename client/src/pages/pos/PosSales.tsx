@@ -1,8 +1,6 @@
 /**
  * @file client/src/pages/pos/PosSales.tsx
- * @description شاشة البيع الرئيسية — Dark theme بهوية أدرينالين (كحلي + سماوي + أحمر للـcharge).
- *   Grid كبير بصور حقيقية على شمال الشاشة (RTL) وتذكرة على يمين مع Order type toggle
- *   ورقم طلب وخصم % وزر Charge كبير أحمر — زي POS المطاعم الاحترافي.
+ * @description شاشة البيع الرئيسية بهوية أدرينالين المضيئة، محسّنة للكاشير والشاشات الصغيرة.
  */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
@@ -10,6 +8,8 @@ import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { confirmDialog } from "@/lib/dialogs";
 import { useLanguage } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { getPosMealImage } from "@/lib/posMealImages";
 import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3 } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
@@ -87,7 +87,7 @@ export default function PosSales() {
   }, [cart, discountPct]);
 
   const addToCart = (m: any) => {
-    if (!shift) { alert("افتح وردية أول من تبويب Shift"); return; }
+    if (!shift) { alert(tt("افتح وردية أولاً من تبويب الوردية", "Open a shift first")); return; }
     const idx = cart.findIndex((l: any) => l.mealId === m.id);
     if (idx >= 0) {
       const cp = [...cart]; cp[idx] = { ...cp[idx], qty: cp[idx].qty + 1 }; setCart(cp);
@@ -129,7 +129,7 @@ export default function PosSales() {
       setDiscountPct(0);
       setShowReceiptId(r.id);
     } catch (e: any) {
-      alert(e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || "خطأ");
+      alert(e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || tt("حدث خطأ", "Something went wrong"));
     } finally { setBusy(false); }
   };
 
@@ -140,27 +140,27 @@ export default function PosSales() {
   ];
 
   return (
-    <div dir="rtl" className="h-full flex text-white" style={{ background: "#0B1220" }}>
+    <div className="pos-sales-screen h-full flex min-w-0 bg-[#edf5f8] text-[#0F1516]">
       {/* ═══════════ Ticket (يمين في RTL) ═══════════ */}
-      <aside className="w-[380px] shrink-0 flex flex-col border-l" style={{ background: "#101A2E", borderColor: "#1B2A48" }}>
+      <aside className="pos-ticket-panel w-[clamp(290px,31vw,390px)] shrink-0 flex flex-col border-s border-[#d8e6ec] bg-[#f8fbfc] shadow-[8px_0_30px_rgba(71,117,156,0.08)]">
         {/* Header: order type + order # */}
-        <div className="p-4 shrink-0" style={{ borderBottom: "1px solid #1B2A48" }}>
+        <div className="shrink-0 border-b border-[#dce9ee] bg-white p-3.5 sm:p-4">
           <div className="flex items-center justify-between mb-3">
             <button
-              onClick={async () => { if (cart.length && await confirmDialog({ title: "مسح الطلب", message: "مسح الطلب الحالي؟", variant: "danger", confirmText: "مسح" })) { clearCart(); setCustomerName(""); setDiscountPct(0); } }}
-              className="text-slate-400 hover:text-red-400 transition-colors"
-              title="مسح الطلب"
+              onClick={async () => { if (cart.length && await confirmDialog({ title: tt("مسح الطلب", "Clear order"), message: tt("هل تريد مسح الطلب الحالي؟", "Clear the current order?"), variant: "danger", confirmText: tt("مسح", "Clear") })) { clearCart(); setCustomerName(""); setDiscountPct(0); } }}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-red-100 bg-red-50 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
+              title={tt("مسح الطلب", "Clear order")}
             >
               <Trash2 className="h-5 w-5" />
             </button>
             <div className="text-end">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">الطلب الحالي</p>
-              <p className="text-lg font-black text-cyan-400">#{localOrderNo}</p>
+              <p className="text-[10px] font-bold uppercase text-[#6f8795]">{tt("الطلب الحالي", "Current order")}</p>
+              <p className="text-lg font-black text-[#0E76AC]">#{localOrderNo}</p>
             </div>
           </div>
 
           {/* Order type toggle */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 rounded-xl" style={{ background: "#0B1220" }}>
+          <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-[#d9e7ed] bg-[#edf5f8] p-1">
             {ORDER_TYPES.map((o) => {
               const Icon = o.icon;
               const active = orderType === o.key;
@@ -169,12 +169,12 @@ export default function PosSales() {
                   key={o.key}
                   onClick={() => setOrderType(o.key)}
                   className={`h-16 rounded-lg text-xs font-black flex flex-col items-center justify-center gap-1 transition-all ${
-                    active ? "text-white shadow-lg" : "text-slate-400 hover:text-white hover:bg-white/5"
+                    active ? "text-white shadow-[0_5px_16px_rgba(60,196,240,0.26)]" : "text-[#607987] hover:bg-white hover:text-[#173b55]"
                   }`}
-                  style={active ? { background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" } : {}}
+                  style={active ? { background: "linear-gradient(135deg,#3CC4F0,#47759C)" } : {}}
                 >
                   <Icon className="h-4 w-4" />
-                  {o.ar}
+                  {isAr ? o.ar : o.en}
                 </button>
               );
             })}
@@ -182,17 +182,17 @@ export default function PosSales() {
 
           {/* Customer name + auto-link by phone */}
           <div className="relative mt-3">
-            <User2 className="absolute h-4 w-4 top-3 start-3 text-slate-500 pointer-events-none" />
+            <User2 className="absolute h-4 w-4 top-3 start-3 text-[#78909c] pointer-events-none" />
             <input
               value={linkedCustomer ? linkedCustomer.fullName : customerName}
               onChange={(e) => { setCustomerName(e.target.value); if (linkedCustomer) setLinkedCustomer(null); }}
-              placeholder="اسم أو رقم العميل (اختياري)"
-              className="w-full h-10 ps-9 pe-16 rounded-lg text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none"
-              style={{ background: "#0B1220", border: linkedCustomer ? "1px solid #059669" : "1px solid #1B2A48" }}
+              placeholder={tt("اسم أو رقم العميل (اختياري)", "Customer name or phone (optional)")}
+              className="w-full h-10 ps-9 pe-16 rounded-xl bg-[#f7fafb] text-xs font-bold text-[#0F1516] placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#3CC4F0]/20"
+              style={{ border: linkedCustomer ? "1px solid #10b981" : "1px solid #d8e4e9" }}
             />
             {linkedCustomer && (
               <button onClick={() => { setLinkedCustomer(null); setCustomerName(""); }} className="absolute top-2 end-2 text-[10px] font-bold text-red-400 hover:bg-white/5 rounded px-1.5 py-1">
-                إلغاء الربط
+                {tt("إلغاء الربط", "Unlink")}
               </button>
             )}
             {/* لو لقى مشترك بنفس الرقم يعرض bar لربطه */}
@@ -203,14 +203,14 @@ export default function PosSales() {
                 style={{ background: "#0d1f30", border: "1px solid #065f46" }}
               >
                 <span className="text-emerald-300">✓ {foundCustomer.fullName}</span>
-                <span className="text-amber-300">{foundCustomer.loyaltyPoints} نقطة · اضغط للربط</span>
+                <span className="text-amber-300">{foundCustomer.loyaltyPoints} {tt("نقطة · اضغط للربط", "points · tap to link")}</span>
               </button>
             )}
             {linkedCustomer && (
               <div className="mt-2 rounded-lg p-2 flex items-center justify-between text-[11px] font-bold"
                    style={{ background: "#0a1d17", border: "1px solid #065f46" }}>
-                <span className="text-emerald-300">🎁 هيكسب نقاط ولاء تلقائياً</span>
-                <span className="text-amber-300">{linkedCustomer.loyaltyPoints} نقطة حالياً</span>
+                <span className="text-emerald-300">{tt("سيحصل على نقاط الولاء تلقائياً", "Loyalty points will be earned automatically")}</span>
+                <span className="text-amber-300">{linkedCustomer.loyaltyPoints} {tt("نقطة حالياً", "current points")}</span>
               </div>
             )}
           </div>
@@ -219,34 +219,34 @@ export default function PosSales() {
         {/* Shift warning */}
         {shift === null && (
           <div className="p-3 bg-amber-500/10 border-b text-amber-300 text-xs font-bold text-center" style={{ borderColor: "#3d3013" }}>
-            ⚠ افتح وردية أوّل من تبويب Shift
+            {tt("افتح وردية أولاً من تبويب الوردية", "Open a shift first")}
           </div>
         )}
 
         {/* Cart lines */}
         <div className="flex-1 overflow-y-auto">
           {cart.length === 0 && (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full grid place-items-center" style={{ background: "#1B2A48" }}>
-                <ChefHat className="h-7 w-7 text-slate-500" />
+            <div className="p-10 text-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl grid place-items-center border border-[#cfe8f1] bg-[#eaf8fc]">
+                <ChefHat className="h-7 w-7 text-[#3aaed5]" />
               </div>
-              <p className="text-slate-500 text-sm font-bold">اضغط على وجبة لإضافتها للطلب</p>
+              <p className="text-[#708693] text-sm font-bold">{tt("اضغط على وجبة لإضافتها للطلب", "Select an item to add it")}</p>
             </div>
           )}
-          <div className="divide-y" style={{ borderColor: "#1B2A48" }}>
+          <div className="divide-y divide-[#e3edf1]">
             {cart.map((l: any, i: number) => (
-              <div key={i} className="p-3 hover:bg-white/5 transition-colors">
+              <div key={i} className="p-3 hover:bg-[#eef9fc] transition-colors">
                 <div className="flex items-start gap-2 mb-2">
-                  <p className="flex-1 min-w-0 font-black text-sm text-white truncate">{l.name}</p>
-                  <span className="text-sm font-black text-white">{(l.qty * l.unitPrice).toFixed(2)}</span>
+                  <p className="flex-1 min-w-0 font-black text-sm text-[#17324d] truncate">{l.name}</p>
+                  <span className="text-sm font-black text-[#0E76AC]">{(l.qty * l.unitPrice).toFixed(2)}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center rounded-lg overflow-hidden" style={{ background: "#0B1220", border: "1px solid #1B2A48" }}>
-                    <button onClick={() => setQty(i, l.qty - 1)} className="w-8 h-8 hover:bg-white/5 grid place-items-center text-slate-300">
+                  <div className="flex items-center rounded-lg overflow-hidden border border-[#d8e5ea] bg-white">
+                    <button onClick={() => setQty(i, l.qty - 1)} className="w-8 h-8 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
                       <Minus className="h-3.5 w-3.5" />
                     </button>
-                    <span className="w-9 h-8 text-center font-black text-white grid place-items-center text-sm">{l.qty}</span>
-                    <button onClick={() => setQty(i, l.qty + 1)} className="w-8 h-8 hover:bg-white/5 grid place-items-center text-slate-300">
+                    <span className="w-9 h-8 text-center font-black text-[#17324d] grid place-items-center text-sm">{l.qty}</span>
+                    <button onClick={() => setQty(i, l.qty + 1)} className="w-8 h-8 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -262,22 +262,22 @@ export default function PosSales() {
             {cart.length > 0 && (
               <div className="p-3 grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setCart([...cart, { mealId: null, name: "توصيل", qty: 1, unitPrice: 10 }])}
+                  onClick={() => setCart([...cart, { mealId: null, name: tt("توصيل", "Delivery"), qty: 1, unitPrice: 10 }])}
                   className="h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 text-orange-300 hover:bg-orange-500/10 transition-colors"
                   style={{ border: "1px solid #3d2818" }}
                 >
-                  <Truck className="h-3.5 w-3.5" /> + توصيل 10
+                  <Truck className="h-3.5 w-3.5" /> + {tt("توصيل", "Delivery")} 10
                 </button>
                 <button
                   onClick={() => {
-                    const nm = prompt("اسم الصنف؟"); if (!nm) return;
-                    const p = Number(prompt("السعر؟") || "0");
+                    const nm = prompt(tt("اسم الصنف؟", "Item name?")); if (!nm) return;
+                    const p = Number(prompt(tt("السعر؟", "Price?")) || "0");
                     setCart([...cart, { mealId: null, name: nm, qty: 1, unitPrice: p }]);
                   }}
                   className="h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 text-slate-300 hover:bg-white/5 transition-colors"
                   style={{ border: "1px solid #1B2A48" }}
                 >
-                  <Plus className="h-3.5 w-3.5" /> صنف مخصّص
+                  <Plus className="h-3.5 w-3.5" /> {tt("صنف مخصّص", "Custom item")}
                 </button>
               </div>
             )}
@@ -285,49 +285,48 @@ export default function PosSales() {
         </div>
 
         {/* Totals */}
-        <div className="p-4 shrink-0" style={{ borderTop: "1px solid #1B2A48" }}>
+        <div className="shrink-0 border-t border-[#d8e6ec] bg-white p-3.5 sm:p-4 shadow-[0_-10px_28px_rgba(71,117,156,0.06)]">
           {/* Discount + comment mini bar */}
           <div className="flex items-center gap-2 mb-3">
-            <div className="flex-1 flex items-center rounded-lg" style={{ background: "#0B1220", border: "1px solid #1B2A48" }}>
-              <span className="ps-3 text-slate-500"><Percent className="h-3.5 w-3.5" /></span>
+            <div className="flex-1 flex items-center rounded-xl border border-[#d8e5ea] bg-[#f7fafb]">
+              <span className="ps-3 text-[#78909c]"><Percent className="h-3.5 w-3.5" /></span>
               <input
                 type="number" min={0} max={100}
                 value={discountPct || ""}
                 onChange={(e) => setDiscountPct(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-                placeholder="خصم %"
-                className="w-full h-9 px-2 bg-transparent text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none"
+                placeholder={tt("خصم %", "Discount %")}
+                className="w-full h-9 px-2 bg-transparent text-xs font-bold text-[#17324d] placeholder:text-[#94a3b8] focus:outline-none"
               />
             </div>
             <button
               onClick={() => {
-                const note = prompt("ملاحظة على الطلب:");
-                if (note != null) alert("الملاحظة: " + note); // placeholder — يمكن تخزينها لاحقاً
+                const note = prompt(tt("ملاحظة على الطلب:", "Order note:"));
+                if (note != null) alert(tt("الملاحظة: ", "Note: ") + note); // placeholder — يمكن تخزينها لاحقاً
               }}
-              className="h-9 px-3 rounded-lg text-xs font-bold text-slate-300 flex items-center gap-1.5 hover:bg-white/5"
-              style={{ border: "1px solid #1B2A48" }}
-              title="ملاحظة على الطلب"
+              className="h-9 px-3 rounded-xl border border-[#d8e5ea] bg-white text-xs font-bold text-[#607987] flex items-center gap-1.5 hover:bg-[#eef8fb]"
+              title={tt("ملاحظة على الطلب", "Order note")}
             >
-              <MessageSquare className="h-3.5 w-3.5" /> تعليق
+              <MessageSquare className="h-3.5 w-3.5" /> {tt("تعليق", "Note")}
             </button>
           </div>
 
           {/* Amounts */}
           <div className="space-y-1 mb-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-400 font-bold">المجموع الفرعي</span>
-              <span className="font-black text-white">{totals.subtotal.toFixed(2)}</span>
+              <span className="text-[#708693] font-bold">{tt("المجموع الفرعي", "Subtotal")}</span>
+              <span className="font-black text-[#17324d]">{totals.subtotal.toFixed(2)}</span>
             </div>
             {totals.discount > 0 && (
               <div className="flex justify-between text-emerald-400">
-                <span className="font-bold">الخصم</span>
+                <span className="font-bold">{tt("الخصم", "Discount")}</span>
                 <span className="font-black">- {totals.discount.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between items-baseline pt-2 border-t" style={{ borderColor: "#1B2A48" }}>
-              <span className="text-slate-300 font-bold text-xs uppercase">الإجمالي</span>
-              <span className="text-3xl font-black text-white">
+            <div className="flex justify-between items-baseline pt-2 border-t border-[#e1eaee]">
+              <span className="text-[#526f7e] font-bold text-xs uppercase">{tt("الإجمالي", "Total")}</span>
+              <span className="text-3xl font-black text-[#0E76AC]">
                 {totals.total.toFixed(2)}
-                <span className="text-sm text-slate-400 ms-1">ر.ق</span>
+                <span className="text-sm text-[#78909c] ms-1">{tt("ر.ق", "QAR")}</span>
               </span>
             </div>
           </div>
@@ -337,9 +336,9 @@ export default function PosSales() {
             onClick={() => setShowCharge(true)}
             disabled={cart.length === 0 || !shift}
             className="w-full h-14 rounded-xl text-white font-black text-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed active:scale-95 shadow-xl"
-            style={{ background: "linear-gradient(135deg,#dc2626,#991b1b)" }}
+            style={{ background: "linear-gradient(135deg,#3CC4F0,#2BB0DC 55%,#47759C)" }}
           >
-            دفع {totals.total.toFixed(2)} ر.ق
+            {tt("دفع", "Charge")} {totals.total.toFixed(2)} {tt("ر.ق", "QAR")}
           </button>
         </div>
       </aside>
@@ -347,26 +346,25 @@ export default function PosSales() {
       {/* ═══════════ Items area (شمال في RTL) ═══════════ */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header: label + search + categories */}
-        <div className="p-4 shrink-0" style={{ borderBottom: "1px solid #1B2A48" }}>
+        <div className="shrink-0 border-b border-[#d8e6ec] bg-white px-3 py-3 sm:px-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-end">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{tt("نقطة البيع", "Point of Sale")}</p>
-              <h1 className="text-2xl font-black text-white leading-tight">{tt("طلب جديد", "New Order")}</h1>
+              <p className="text-[10px] font-bold uppercase text-[#78909c]">{tt("نقطة البيع", "Point of Sale")}</p>
+              <h1 className="text-xl sm:text-2xl font-black text-[#17324d] leading-tight">{tt("طلب جديد", "New Order")}</h1>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-[10px] font-bold text-emerald-300 uppercase">متصل</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 uppercase">{tt("متصل", "Online")}</span>
             </div>
           </div>
 
           {/* Search */}
           <div className="relative mb-3">
-            <Search className="absolute h-4 w-4 top-3 start-3 text-slate-500 pointer-events-none" />
+            <Search className="absolute h-4 w-4 top-3.5 start-3 text-[#78909c] pointer-events-none" />
             <input
               value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="ابحث عن صنف…"
-              className="w-full h-11 ps-9 pe-3 rounded-xl text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-500"
-              style={{ background: "#101A2E", border: "1px solid #1B2A48" }}
+              placeholder={tt("ابحث عن صنف…", "Search items...")}
+              className="w-full h-11 ps-9 pe-3 rounded-xl border border-[#d5e3e9] bg-[#f7fafb] text-sm font-bold text-[#17324d] placeholder:text-[#94a3b8] focus:border-[#3CC4F0] focus:outline-none focus:ring-2 focus:ring-[#3CC4F0]/15"
             />
           </div>
 
@@ -381,11 +379,11 @@ export default function PosSales() {
                   key={c.id}
                   onClick={() => setActiveCat(c.id)}
                   className={`shrink-0 h-10 px-4 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-all ${
-                    active ? "text-white shadow-lg" : "text-slate-400 hover:text-white"
+                    active ? "text-white shadow-[0_4px_14px_rgba(60,196,240,0.24)]" : "text-[#607987] hover:border-[#b9d9e5] hover:bg-[#f1fafc] hover:text-[#173b55]"
                   }`}
                   style={active
-                    ? { background: "linear-gradient(135deg,#dc2626,#991b1b)" }
-                    : { background: "#101A2E", border: "1px solid #1B2A48" }}
+                    ? { background: "linear-gradient(135deg,#3CC4F0,#47759C)" }
+                    : { background: "#fff", border: "1px solid #d8e5ea" }}
                 >
                   {Icon && <Icon className="h-4 w-4" />}
                   {c.name || c.nameEn}
@@ -396,25 +394,25 @@ export default function PosSales() {
         </div>
 
         {/* Grid */}
-        <div className="flex-1 overflow-y-auto p-3">
-          {(!items) && <p className="text-center text-slate-500 py-16 font-bold">جاري التحميل…</p>}
+        <div className="pos-items-canvas flex-1 overflow-y-auto p-3 sm:p-4">
+          {(!items) && <p className="text-center text-slate-500 py-16 font-bold">{tt("جاري التحميل…", "Loading...")}</p>}
           {items && filtered.length === 0 && (
-            <p className="text-center text-slate-500 py-16 font-bold">لا توجد أصناف مطابقة</p>
+            <p className="text-center text-slate-500 py-16 font-bold">{tt("لا توجد أصناف مطابقة", "No matching items")}</p>
           )}
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="pos-items-grid grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {filtered.map((m: any) => {
-              const hasImage = !!m.imageUrl;
+              const imageUrl = m.imageUrl || getPosMealImage(m.nameEn, m.name, m.nameAr);
+              const hasImage = !!imageUrl;
               return (
                 <button
                   key={m.id}
                   onClick={() => addToCart(m)}
-                  className="group aspect-square rounded-xl relative overflow-hidden shadow-lg hover:shadow-2xl active:scale-95 transition-all"
-                  style={{ background: "#101A2E", border: "1px solid #1B2A48" }}
+                  className="pos-item-card group aspect-[1.08/1] rounded-2xl relative overflow-hidden border border-[#d8e6ec] bg-white shadow-[0_5px_16px_rgba(71,117,156,0.09)] hover:-translate-y-0.5 hover:border-[#9edcf0] hover:shadow-[0_12px_28px_rgba(71,117,156,0.16)] active:scale-[0.98] transition-all"
                 >
                   {hasImage ? (
                     <>
                       <img
-                        src={m.imageUrl}
+                        src={imageUrl}
                         alt={m.name}
                         loading="lazy"
                         className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
@@ -422,21 +420,21 @@ export default function PosSales() {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
                     </>
                   ) : (
-                    <div className="absolute inset-0 grid place-items-center">
-                      <ChefHat className="h-10 w-10 text-slate-600" />
+                    <div className="absolute inset-0 grid place-items-center bg-[linear-gradient(145deg,#f8fbfc,#eaf6fa)]">
+                      <ChefHat className="h-10 w-10 text-[#b1dce9]" />
                     </div>
                   )}
 
                   {/* Add badge — أعلى شمال (RTL: end = left) */}
-                  <div className="absolute top-2 end-2 h-7 w-7 rounded-full bg-white/95 text-slate-900 grid place-items-center shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute top-2 end-2 h-8 w-8 rounded-xl bg-[#3CC4F0] text-white grid place-items-center shadow-lg opacity-90 group-hover:opacity-100 transition-opacity">
                     <Plus className="h-4 w-4" strokeWidth={3} />
                   </div>
 
                   {/* Name — أسفل */}
-                  <div className="absolute inset-x-0 bottom-0 p-2.5 text-start">
-                    <p className="font-black text-white text-sm leading-tight line-clamp-2 drop-shadow-lg">{m.name}</p>
-                    <p className="mt-1 text-xs font-black text-red-400 drop-shadow-lg">
-                      {Number(m.price).toFixed(2)} <span className="text-[10px] text-white/70">ر.ق</span>
+                  <div className={cn("absolute inset-x-0 bottom-0 p-2.5 text-start", !hasImage && "border-t border-[#e2edf1] bg-white/95")}>
+                    <p className={cn("font-black text-sm leading-tight line-clamp-2", hasImage ? "text-white drop-shadow-lg" : "text-[#17324d]")}>{m.name}</p>
+                    <p className={cn("mt-1 text-xs font-black", hasImage ? "text-[#6ee1ff] drop-shadow-lg" : "text-[#0E76AC]")}>
+                  {Number(m.price).toFixed(2)} <span className={cn("text-[10px]", hasImage ? "text-white/70" : "text-[#78909c]")}>{tt("ر.ق", "QAR")}</span>
                     </p>
                   </div>
                 </button>

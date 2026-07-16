@@ -250,7 +250,7 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/meal-issuance", iconKey: "mealIssuance", labelAr: "حصر الصادر", labelEn: "Meal Issuance",
         roles: ["ADMIN", "KITCHEN"] },
-      { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات الجم", labelEn: "Gym Sales",
+      { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات المنافذ", labelEn: "Outlet Sales",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/pos-admin", iconKey: "posAdmin", labelAr: "نقطة البيع (POS)", labelEn: "Point of Sale (POS)",
         roles: ["ADMIN"] },

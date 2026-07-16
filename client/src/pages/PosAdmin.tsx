@@ -386,8 +386,11 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
   const items = useQuery(api.posAdmin.listItemsForAdmin, { sessionToken }) as any[] | undefined;
   const cats = useQuery(api.posAdmin.listCategories, { sessionToken }) as any[] | undefined;
   const upsert = useMutation(api.posAdmin.upsertItemMeta);
+  const applyOnlinePrices = useMutation(api.posAdmin.applyOnlinePriceList);
   const [q, setQ] = useState("");
   const [drafts, setDrafts] = useState<Record<string, any>>({});
+  const [importingPrices, setImportingPrices] = useState(false);
+  const [priceImportResult, setPriceImportResult] = useState<any | null>(null);
   const colors = ["#dc2626","#ea580c","#f59e0b","#16a34a","#0891b2","#0E76AC","#7c3aed","#db2777","#475569"];
 
   const filtered = useMemo(() => (items || []).filter((m: any) => {
@@ -414,22 +417,55 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
     } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
   };
 
+  const importOnlinePrices = async () => {
+    setImportingPrices(true);
+    try {
+      const result = await applyOnlinePrices({ sessionToken });
+      setPriceImportResult(result);
+      toast({
+        title: t("تم استيراد أسعار الأونلاين ✓", "Online prices imported ✓"),
+        description: `${result.total}/${result.total} ${t("صنف أونلاين جاهز", "online items ready")}`,
+      });
+    } catch (e: any) {
+      toast({ title: t("فشل استيراد الأسعار", "Price import failed"), description: e?.message });
+    } finally {
+      setImportingPrices(false);
+    }
+  };
   return (
     <div className="space-y-3">
       <Card className="rounded-2xl">
-        <CardContent className="p-3">
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10" />
+        <CardContent className="p-3 space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10 min-w-0 flex-1" />
+            <Button onClick={importOnlinePrices} disabled={importingPrices} className="h-10 shrink-0 text-white font-bold" style={{ background: "#0E76AC" }}>
+              <RefreshCw className={cn("h-4 w-4 me-2", importingPrices && "animate-spin")} />
+              {importingPrices ? t("جاري المطابقة…", "Matching…") : t("استيراد أسعار الأونلاين", "Import online prices")}
+            </Button>
+          </div>
+          {priceImportResult && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs">
+              <div className="flex flex-wrap gap-3 font-bold">
+                <span className="text-emerald-700">{t("إجمالي أصناف الأونلاين", "Online items")}: {priceImportResult.total}</span>
+                <span className="text-cyan-700">{t("أصناف جديدة", "Created")}: {priceImportResult.created?.length || 0}</span>
+                <span className="text-slate-600">{t("أسعار قديمة أُوقفت", "Old prices disabled")}: {priceImportResult.disabled || 0}</span>
+              </div>
+              {priceImportResult.unmatched.length > 0 && <details className="mt-2"><summary className="cursor-pointer font-bold text-[#0E76AC]">{t("عرض الأسماء غير المطابقة", "Show unmatched names")}</summary><div className="mt-2 grid gap-1 sm:grid-cols-2 lg:grid-cols-3">{priceImportResult.unmatched.map((name: string) => <span key={name} className="rounded bg-white px-2 py-1 text-slate-600">{name}</span>)}</div></details>}
+            </div>
+          )}
         </CardContent>
       </Card>
 
       <Card className="rounded-2xl">
         <CardContent className="p-0">
-          <div className="max-h-[70vh] overflow-y-auto">
-            <table className="w-full text-sm">
+          <div className="max-h-[70vh] overflow-auto">
+            <table className="min-w-[900px] w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
                 <tr>
                   <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
-                  <th className="text-start p-2">{t("سعر POS", "POS Price")}</th>
+                  <th className="text-start p-2">{t("السعر العادي", "Regular price")}</th>
+                  <th className="text-start p-2">{t("سعر الجيم", "Gym price")}</th>
+                  <th className="text-start p-2">{t("سعر الأونلاين", "Online price")}</th>
                   <th className="text-start p-2">{t("لون الزر", "Button color")}</th>
                   <th className="text-start p-2">{t("فئة POS", "POS Category")}</th>
                   <th className="text-center p-2">{t("مخفي", "Hidden")}</th>
@@ -445,12 +481,13 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
                     <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50">
                       <td className="p-2">
                         <div className="font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</div>
-                        <div className="text-[10px] text-slate-400">{t("سعر المنيو", "Menu")}: {m.menuPrice}</div>
                       </td>
+                      <td className="p-2 font-bold text-slate-700">{Number(m.menuPrice).toFixed(2)}</td>
+                      <td className="p-2 font-bold text-emerald-700">{m.gymPrice == null ? "—" : Number(m.gymPrice).toFixed(2)}</td>
                       <td className="p-2">
                         <input type="number" step="0.01"
                           defaultValue={m.posPrice ?? ""}
-                          placeholder={String(m.menuPrice)}
+                          placeholder={t("مطلوب", "Required")}
                           onChange={(e) => set(m.id, { posPrice: e.target.value })}
                           className="w-20 h-8 text-center border border-slate-200 rounded font-bold" />
                       </td>

@@ -4,11 +4,12 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import { sanitizeUserText } from "@/lib/userError"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-type ToasterToast = ToastProps & {
+type ToasterToast = Omit<ToastProps, "title"> & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
@@ -141,6 +142,11 @@ type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
   const id = genId()
+  const safeProps = {
+    ...props,
+    title: sanitizeUserText(props.title) as React.ReactNode,
+    description: sanitizeUserText(props.description) as React.ReactNode,
+  }
 
   const update = (props: ToasterToast) =>
     dispatch({
@@ -152,7 +158,7 @@ function toast({ ...props }: Toast) {
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
+      ...safeProps,
       id,
       open: true,
       onOpenChange: (open) => {

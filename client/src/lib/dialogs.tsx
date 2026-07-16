@@ -17,6 +17,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { getUserError } from "@/lib/userError";
 
 type ConfirmOpts = {
   title?: string;
@@ -26,6 +28,7 @@ type ConfirmOpts = {
   variant?: "default" | "danger";
 };
 type AlertOpts = { title?: string; message: string; okText?: string };
+type PromptOpts = ConfirmOpts & { placeholder?: string; minLength?: number };
 
 let container: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -45,12 +48,14 @@ function isRtl(): boolean {
 
 type PendingDialog =
   | ({ kind: "confirm"; resolve: (v: boolean) => void } & ConfirmOpts)
+  | ({ kind: "prompt"; resolve: (v: string | null) => void } & PromptOpts)
   | ({ kind: "alert"; resolve: () => void } & AlertOpts);
 
 let currentSetter: ((d: PendingDialog | null) => void) | null = null;
 
 function DialogHost() {
   const [pending, setPending] = useState<PendingDialog | null>(null);
+  const [promptValue, setPromptValue] = useState("");
   useEffect(() => { currentSetter = setPending; return () => { currentSetter = null; }; }, []);
   if (!pending) return null;
   const rtl = isRtl();
@@ -74,6 +79,32 @@ function DialogHost() {
             <AlertDialogAction
               onClick={() => { resolve(true); setPending(null); }}
               className={danger ? "bg-red-600 hover:bg-red-700 focus:ring-red-600" : undefined}
+            >{cText}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  }
+
+  if (pending.kind === "prompt") {
+    const { title, message, confirmText, cancelText, variant, placeholder, minLength = 1, resolve } = pending;
+    const cText = confirmText || (rtl ? "تأكيد" : "Confirm");
+    const xText = cancelText || (rtl ? "إلغاء" : "Cancel");
+    const valid = promptValue.trim().length >= minLength;
+    return (
+      <AlertDialog open onOpenChange={(o) => { if (!o) { resolve(null); setPromptValue(""); setPending(null); } }}>
+        <AlertDialogContent dir={rtl ? "rtl" : "ltr"}>
+          <AlertDialogHeader>
+            {title && <AlertDialogTitle>{title}</AlertDialogTitle>}
+            <AlertDialogDescription className="whitespace-pre-wrap">{message}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input autoFocus value={promptValue} onChange={(e) => setPromptValue(e.target.value)} placeholder={placeholder} className="h-11" />
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { resolve(null); setPromptValue(""); setPending(null); }}>{xText}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!valid}
+              onClick={() => { if (valid) { resolve(promptValue.trim()); setPromptValue(""); setPending(null); } }}
+              className={variant === "danger" ? "bg-red-600 hover:bg-red-700 focus:ring-red-600" : undefined}
             >{cText}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -122,9 +153,22 @@ export function confirmDialog(opts: ConfirmOpts): Promise<boolean> {
 /** Alert بديل window.alert — يعيد Promise<void>. */
 export function alertDialog(opts: AlertOpts): Promise<void> {
   mountIfNeeded();
+  const safeOpts = { ...opts, message: getUserError(opts.message, isRtl() ? "ar" : "en") };
   return new Promise<void>((resolve) => {
     const tryOpen = () => {
-      if (currentSetter) currentSetter({ kind: "alert", ...opts, resolve });
+      if (currentSetter) currentSetter({ kind: "alert", ...safeOpts, resolve });
+      else setTimeout(tryOpen, 20);
+    };
+    tryOpen();
+  });
+}
+
+/** Prompt dialog for short, required operational reasons. */
+export function promptDialog(opts: PromptOpts): Promise<string | null> {
+  mountIfNeeded();
+  return new Promise<string | null>((resolve) => {
+    const tryOpen = () => {
+      if (currentSetter) currentSetter({ kind: "prompt", ...opts, resolve });
       else setTimeout(tryOpen, 20);
     };
     tryOpen();

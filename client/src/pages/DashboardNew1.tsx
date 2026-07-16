@@ -354,13 +354,13 @@ export default function DashboardNew() {
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-cyan-100 text-[#0E76AC]"><Dumbbell className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-[#47759c]">{tr("مبيعات الجم اليوم", "Gym sales today")}</p>
+              <p className="text-xs font-bold text-[#47759c]">{tr("مبيعات المنافذ اليوم", "Outlet sales today")}</p>
               <p className="text-2xl font-black text-[#17324d]">{gymToday.revenue.toFixed(2)} <span className="text-xs text-slate-400">QAR</span></p>
             </div>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">{gymToday.orders} {tr("طلبية", "orders")} · {gymToday.meals} {tr("وجبة", "meals")}</p>
           <button onClick={() => navigate("/gym-sales")} className="mt-3 flex w-full items-center justify-between rounded-lg border border-cyan-200 bg-cyan-50/50 px-3 py-2 text-[11px] font-black text-[#0E76AC] hover:bg-cyan-50">
-            {tr("لوحة الجم", "Gym POS")} <ArrowIcon className="h-3.5 w-3.5" />
+            {tr("لوحة المنافذ", "Outlet sales")} <ArrowIcon className="h-3.5 w-3.5" />
           </button>
         </div>
 

@@ -144,7 +144,7 @@ export const listItems = query({
     const metaByMeal = new Map(metas.map((m: any) => [String(m.mealId), m]));
     const out = await Promise.all(meals.map(async (m: any) => {
       const meta = metaByMeal.get(String(m._id));
-      const price = meta?.posPrice != null ? meta.posPrice : (Number(m.priceQAR) || 0);
+      const price = meta?.posPrice != null ? Number(meta.posPrice) : null;
       const imageUrl = m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null);
       return {
         id: String(m._id),
@@ -153,12 +153,13 @@ export const listItems = query({
         menuCategory: m.category || "other",
         posCategoryId: meta?.posCategoryId ? String(meta.posCategoryId) : null,
         color: meta?.color || null, imageUrl, price,
+        hasOnlinePrice: price != null && Number.isFinite(price) && price >= 0,
         isHidden: !!meta?.isHidden,
         sortOrder: meta?.sortOrder ?? m.sortOrder ?? 0,
       };
     }));
     return out
-      .filter((m) => !m.isHidden)
+      .filter((m) => !m.isHidden && m.hasOnlinePrice)
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
   },
 });
@@ -287,8 +288,9 @@ async function buildServerLines(
         .query("posItems")
         .withIndex("by_meal", (q) => q.eq("mealId", meal._id))
         .first();
-      const price = meta?.posPrice != null ? Number(meta.posPrice) : Number(meal.priceQAR) || 0;
-      if (!Number.isFinite(price) || price < 0) throw new Error("سعر الوجبة غير صالح");
+      if (meta?.posPrice == null) throw new Error("هذا الصنف غير مفعّل للبيع أونلاين: حدّد سعر الأونلاين أولاً");
+      const price = Number(meta.posPrice);
+      if (!Number.isFinite(price) || price < 0) throw new Error("سعر الأونلاين للصنف غير صالح");
       const name = meta?.displayName || meal.nameEn || meal.nameAr || "—";
       out.push({
         mealId: meal._id, name, qty, unitPrice: price,

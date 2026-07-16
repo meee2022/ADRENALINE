@@ -664,10 +664,14 @@ export default defineSchema({
     // Optional display names used only by gym sales, without changing the public menu names.
     gymNameAr: v.optional(v.string()),
     gymNameEn: v.optional(v.string()),
+    // Expected return window for gym consignments. Defaults to 4 for snacks/sweets, otherwise 2.
+    gymReturnAfterDays: v.optional(v.number()),
     // ✅ يحدد لو الصنف يظهر في POS الجم (المدير يفعّل/يعطل من واجهة إدارة الأصناف).
     //    الأصناف الافتراضية = false (مش هتظهر في الجم).
     isGymItem: v.optional(v.boolean()),
     isGymOnly: v.optional(v.boolean()),
+    // Created specifically for the online/delivery POS. Never expose on the subscriber menu.
+    isOnlineOnly: v.optional(v.boolean()),
     isActive: v.boolean(),
     sortOrder: v.number(),
     // Scheduling fields
@@ -890,6 +894,7 @@ export default defineSchema({
   // ✅ الجديد: قائمة الجمات (يبدأ بواحد، قابل للإضافة).
   gymAccounts: defineTable({
     name: v.string(),
+    outletType: v.optional(v.union(v.literal("GYM"), v.literal("STORE"), v.literal("KIOSK"), v.literal("OTHER"))),
     address: v.optional(v.string()),
     contactName: v.optional(v.string()),
     contactPhone: v.optional(v.string()),
@@ -899,6 +904,19 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   }).index("by_active", ["isActive"]),
+
+  // Per-outlet catalogue: availability and prices stay isolated from all other channels.
+  outletCatalogItems: defineTable({
+    outletId: v.id("gymAccounts"),
+    mealId: v.id("publicMeals"),
+    price: v.number(),
+    isActive: v.boolean(),
+    sortOrder: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_outlet", ["outletId"])
+    .index("by_outlet_meal", ["outletId", "mealId"]),
 
   // ✅ الجديد: طلبية جم يومية (رأس الفاتورة).
   // NOTE: gymOrders — idempotencyKey handled at app-level via unique constraint search.
@@ -948,6 +966,36 @@ export default defineSchema({
     .index("by_order", ["orderId"])
     .index("by_meal_date", ["mealId", "date"])
     .index("by_date", ["date"]),
+
+  // Every save is an immutable return batch tied to the original invoice.
+  gymReturnBatches: defineTable({
+    orderId: v.id("gymOrders"),
+    gymId: v.id("gymAccounts"),
+    orderDate: v.string(),
+    returnDate: v.string(),
+    totalQty: v.number(),
+    wasteValue: v.number(),
+    recordedBy: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_order", ["orderId"])
+    .index("by_return_date", ["returnDate"])
+    .index("by_gym_return_date", ["gymId", "returnDate"]),
+
+  gymReturnBatchLines: defineTable({
+    returnId: v.id("gymReturnBatches"),
+    orderId: v.id("gymOrders"),
+    orderLineId: v.id("gymOrderLines"),
+    mealId: v.optional(v.id("publicMeals")),
+    mealNameEn: v.optional(v.string()),
+    mealNameAr: v.optional(v.string()),
+    qty: v.number(),
+    unitPrice: v.number(),
+    wasteValue: v.number(),
+    expectedAfterDays: v.number(),
+  })
+    .index("by_return", ["returnId"])
+    .index("by_order", ["orderId"]),
 
   // ===== Restaurant Settings =====
   restaurantSettings: defineTable({

@@ -65,7 +65,7 @@ export const list = query({
       .query("publicMeals")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
-    const publicMeals = meals.filter((meal: any) => !meal.isGymOnly);
+    const publicMeals = meals.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly);
     return Promise.all(
       publicMeals.map(async (meal) => {
         const imageUrl = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : null;
@@ -109,7 +109,7 @@ export const listMeals = query({
     let results = isStaff
       ? await ctx.db.query("publicMeals").collect()
       : await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
-    if (!isStaff) results = results.filter((meal: any) => !meal.isGymOnly);
+    if (!isStaff) results = results.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly);
 
     if (args.category && args.category !== "الكل") {
       results = results.filter((m) => m.category === args.category);
@@ -155,7 +155,7 @@ export const getById = query({
     if (!meal) return null;
     // للزائر: نُظهر النشط فقط + DTO منزوع الحقول الداخلية
     const isStaffCall = !!args.sessionToken && (await validateSession(ctx, args.sessionToken))?.accountType === "staff";
-    if (!isStaffCall && (!(meal as any).isActive || (meal as any).isGymOnly)) return null;
+    if (!isStaffCall && (!(meal as any).isActive || (meal as any).isGymOnly || (meal as any).isOnlineOnly)) return null;
     return await toMealResponse(ctx, meal, args.sessionToken);
   },
 });
@@ -169,7 +169,7 @@ export const getBySlug = query({
       .first();
     if (!meal) return null;
     const isStaffCall = !!args.sessionToken && (await validateSession(ctx, args.sessionToken))?.accountType === "staff";
-    if (!isStaffCall && (!(meal as any).isActive || (meal as any).isGymOnly)) return null;
+    if (!isStaffCall && (!(meal as any).isActive || (meal as any).isGymOnly || (meal as any).isOnlineOnly)) return null;
     return await toMealResponse(ctx, meal, args.sessionToken);
   },
 });
@@ -380,7 +380,7 @@ export const bestSellers = query({
       .collect();
 
     // رتّب الوجبات النشطة حسب عدد الطلبات (ثم sortOrder كاحتياطي)
-    const ranked = active.filter((meal: any) => !meal.isGymOnly).sort((a, b) => {
+    const ranked = active.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly).sort((a, b) => {
       const ca = counts.get(String(a._id)) || 0;
       const cb = counts.get(String(b._id)) || 0;
       if (cb !== ca) return cb - ca;

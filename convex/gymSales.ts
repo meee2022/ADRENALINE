@@ -32,6 +32,7 @@ export const listGyms = query({
     rows.sort((a, b) => (a.isActive === b.isActive ? a.name.localeCompare(b.name) : a.isActive ? -1 : 1));
     return rows.map((g) => ({
       id: String(g._id), name: g.name, address: g.address || "",
+      outletType: g.outletType || "GYM",
       contactName: g.contactName || "", contactPhone: g.contactPhone || "",
       discountPct: g.discountPct, notes: g.notes || "", isActive: g.isActive,
     }));
@@ -42,6 +43,7 @@ export const listGyms = query({
 export const addGym = mutation({
   args: {
     name: v.string(),
+    outletType: v.optional(v.union(v.literal("GYM"), v.literal("STORE"), v.literal("KIOSK"), v.literal("OTHER"))),
     address: v.optional(v.string()),
     contactName: v.optional(v.string()),
     contactPhone: v.optional(v.string()),
@@ -55,6 +57,7 @@ export const addGym = mutation({
     if (!name) throw new Error("اسم الجم مطلوب");
     const id = await ctx.db.insert("gymAccounts", {
       name,
+      outletType: args.outletType || "GYM",
       address: args.address?.trim() || undefined,
       contactName: args.contactName?.trim() || undefined,
       contactPhone: args.contactPhone?.trim() || undefined,
@@ -71,6 +74,7 @@ export const updateGym = mutation({
   args: {
     id: v.id("gymAccounts"),
     name: v.optional(v.string()),
+    outletType: v.optional(v.union(v.literal("GYM"), v.literal("STORE"), v.literal("KIOSK"), v.literal("OTHER"))),
     address: v.optional(v.string()),
     contactName: v.optional(v.string()),
     contactPhone: v.optional(v.string()),
@@ -83,6 +87,7 @@ export const updateGym = mutation({
     await requireGymSalesAccess(ctx, args.sessionToken);
     const patch: any = { updatedAt: Date.now() };
     if (args.name !== undefined) patch.name = args.name.trim();
+    if (args.outletType !== undefined) patch.outletType = args.outletType;
     if (args.address !== undefined) patch.address = args.address.trim() || undefined;
     if (args.contactName !== undefined) patch.contactName = args.contactName.trim() || undefined;
     if (args.contactPhone !== undefined) patch.contactPhone = args.contactPhone.trim() || undefined;
@@ -123,8 +128,8 @@ export const setMealGymNames = mutation({
   handler: async (ctx, args) => {
     await requireGymSalesAccess(ctx, args.sessionToken);
     const meal: any = await ctx.db.get(args.mealId);
-    if (!meal || !meal.isActive || !meal.isGymItem) {
-      throw new Error("الصنف غير موجود ضمن أصناف الجيم");
+    if (!meal || !meal.isActive) {
+      throw new Error("الصنف غير موجود");
     }
     const nameAr = args.nameAr.trim();
     const nameEn = args.nameEn.trim();
@@ -195,20 +200,194 @@ export const listMealsForGym = query({
       if (g) discount = g.discountPct;
     }
     const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+    const outletRows: any[] = args.gymId
+      ? await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.gymId!)).collect()
+      : [];
+    const hasOutletCatalog = outletRows.length > 0;
+    const outletByMeal = new Map(outletRows.filter((row) => row.isActive).map((row) => [String(row.mealId), row]));
     return meals
-      .filter((m: any) => !!m.isGymItem)
+      .filter((m: any) => hasOutletCatalog ? outletByMeal.has(String(m._id)) : !!m.isGymItem)
       .map((m: any) => {
         const listPrice = Number(m.priceQAR) || 0;
-        const hasCustom = m.gymPrice != null && m.gymPrice >= 0;
-        const effectivePrice = hasCustom ? Number(m.gymPrice) : Math.round(listPrice * (1 - discount / 100) * 100) / 100;
+        const outletRow: any = outletByMeal.get(String(m._id));
+        const hasCustom = outletRow ? true : m.gymPrice != null && m.gymPrice >= 0;
+        const effectivePrice = outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : Math.round(listPrice * (1 - discount / 100) * 100) / 100;
         return {
           id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
           nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
-          listPrice, gymPrice: hasCustom ? Number(m.gymPrice) : null,
-          effectivePrice, isCustom: hasCustom, sortOrder: m.sortOrder ?? 0,
+          listPrice, gymPrice: outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : null,
+          effectivePrice, isCustom: hasCustom, sortOrder: outletRow?.sortOrder ?? m.sortOrder ?? 0,
+          returnAfterDays: Number(m.gymReturnAfterDays || (m.category === "snack" ? 4 : 2)),
         };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
+  },
+});
+
+/** Copy the online/delivery catalogue to one outlet without touching public or global outlet prices. */
+export const copyOnlineCatalogToOutlet = mutation({
+  args: { outletId: v.id("gymAccounts"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const outlet: any = await ctx.db.get(args.outletId);
+    if (!outlet) throw new Error("المنفذ غير موجود");
+    const posRows: any[] = await ctx.db.query("posItems").collect();
+    const onlineRows = posRows
+      .filter((row) => row.posPrice != null && Number.isFinite(Number(row.posPrice)) && Number(row.posPrice) >= 0)
+      .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+    const existing: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.outletId)).collect();
+    const byMeal = new Map(existing.map((row) => [String(row.mealId), row]));
+    const included = new Set<string>();
+    for (let index = 0; index < onlineRows.length; index++) {
+      const row = onlineRows[index];
+      const meal: any = await ctx.db.get(row.mealId);
+      if (!meal || !meal.isActive) continue;
+      included.add(String(row.mealId));
+      const current: any = byMeal.get(String(row.mealId));
+      const values = { price: Number(row.posPrice), isActive: true, sortOrder: index + 1, updatedAt: Date.now() };
+      if (current) await ctx.db.patch(current._id, values);
+      else await ctx.db.insert("outletCatalogItems", { outletId: args.outletId, mealId: row.mealId, ...values, createdAt: Date.now() });
+    }
+    for (const row of existing) {
+      if (!included.has(String(row.mealId)) && row.isActive) await ctx.db.patch(row._id, { isActive: false, updatedAt: Date.now() });
+    }
+    return { outletId: String(args.outletId), outletName: outlet.name, total: included.size };
+  },
+});
+
+/** Full catalogue editor for one outlet, including disabled items and their retained prices. */
+export const listOutletCatalogAdmin = query({
+  args: { outletId: v.id("gymAccounts"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const outlet: any = await ctx.db.get(args.outletId);
+    if (!outlet) throw new Error("المنفذ غير موجود");
+    const meals: any[] = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+    const rows: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.outletId)).collect();
+    const hasOutletCatalog = rows.length > 0;
+    const byMeal = new Map(rows.map((row) => [String(row.mealId), row]));
+    return meals.map((meal) => {
+      const row: any = byMeal.get(String(meal._id));
+      const fallbackPrice = meal.gymPrice != null
+        ? Number(meal.gymPrice)
+        : Math.round(Number(meal.priceQAR || 0) * (1 - Number(outlet.discountPct || 0) / 100) * 100) / 100;
+      return {
+        id: String(meal._id),
+        nameAr: meal.gymNameAr || meal.nameAr || meal.nameEn || "",
+        nameEn: meal.gymNameEn || meal.nameEn || meal.nameAr || "",
+        category: meal.category,
+        menuPrice: Number(meal.priceQAR || 0),
+        outletPrice: row ? Number(row.price) : fallbackPrice,
+        listPrice: Number(meal.priceQAR || 0),
+        gymPrice: row ? Number(row.price) : fallbackPrice,
+        effectivePrice: row ? Number(row.price) : fallbackPrice,
+        isCustom: !!row,
+        isEnabled: row ? !!row.isActive : !hasOutletCatalog && !!meal.isGymItem,
+        hasOutletRecord: !!row,
+        sortOrder: row?.sortOrder ?? meal.sortOrder ?? 0,
+      };
+    }).sort((a, b) => Number(b.isEnabled) - Number(a.isEnabled) || a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
+  },
+});
+
+/** Enable, disable, or reprice one item for one outlet. Disabled rows retain their price. */
+export const setOutletCatalogItem = mutation({
+  args: {
+    outletId: v.id("gymAccounts"),
+    mealId: v.id("publicMeals"),
+    isEnabled: v.optional(v.boolean()),
+    price: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const outlet: any = await ctx.db.get(args.outletId);
+    const meal: any = await ctx.db.get(args.mealId);
+    if (!outlet || !meal) throw new Error("المنفذ أو الصنف غير موجود");
+    if (args.price !== undefined && (!Number.isFinite(args.price) || args.price < 0)) throw new Error("سعر المنفذ غير صالح");
+    const outletRows: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.outletId)).collect();
+    if (outletRows.length === 0) {
+      const legacyMeals: any[] = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+      for (const legacyMeal of legacyMeals.filter((item) => item.isGymItem)) {
+        const legacyPrice = legacyMeal.gymPrice != null
+          ? Number(legacyMeal.gymPrice)
+          : Math.round(Number(legacyMeal.priceQAR || 0) * (1 - Number(outlet.discountPct || 0) / 100) * 100) / 100;
+        await ctx.db.insert("outletCatalogItems", {
+          outletId: args.outletId,
+          mealId: legacyMeal._id,
+          price: legacyPrice,
+          isActive: true,
+          sortOrder: legacyMeal.sortOrder ?? 0,
+          createdAt: Date.now(),
+        });
+      }
+    }
+    const existing: any = await ctx.db.query("outletCatalogItems").withIndex("by_outlet_meal", (q) => q.eq("outletId", args.outletId).eq("mealId", args.mealId)).first();
+    const fallbackPrice = meal.gymPrice != null
+      ? Number(meal.gymPrice)
+      : Math.round(Number(meal.priceQAR || 0) * (1 - Number(outlet.discountPct || 0) / 100) * 100) / 100;
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        isActive: args.isEnabled ?? existing.isActive,
+        price: args.price ?? existing.price,
+        updatedAt: Date.now(),
+      });
+    } else {
+      await ctx.db.insert("outletCatalogItems", {
+        outletId: args.outletId,
+        mealId: args.mealId,
+        price: args.price ?? fallbackPrice,
+        isActive: args.isEnabled ?? true,
+        sortOrder: meal.sortOrder ?? Date.now(),
+        createdAt: Date.now(),
+      });
+    }
+    return { ok: true };
+  },
+});
+
+/** Create an item exclusively for one outlet and attach its independent price. */
+export const createOutletMeal = mutation({
+  args: {
+    outletId: v.id("gymAccounts"),
+    nameAr: v.string(),
+    nameEn: v.string(),
+    category: v.union(v.literal("breakfast"), v.literal("lunch"), v.literal("dinner"), v.literal("salad"), v.literal("snack")),
+    price: v.number(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const outlet = await ctx.db.get(args.outletId);
+    if (!outlet) throw new Error("اختر منفذًا صحيحًا");
+    const nameAr = args.nameAr.trim();
+    const nameEn = args.nameEn.trim();
+    if (!nameAr && !nameEn) throw new Error("اكتب اسم الصنف");
+    if (!Number.isFinite(args.price) || args.price < 0) throw new Error("سعر المنفذ غير صالح");
+    const mealId = await ctx.db.insert("publicMeals", {
+      nameAr: nameAr || nameEn,
+      nameEn: nameEn || undefined,
+      slug: `outlet-${Date.now()}-${(nameEn || nameAr).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "item"}`,
+      calories: 0, protein: 0, carbs: 0, fats: 0,
+      category: args.category,
+      tags: [], ingredients: [],
+      priceQAR: args.price,
+      isGymItem: false,
+      isGymOnly: true,
+      isOnlineOnly: false,
+      isActive: true,
+      sortOrder: Date.now(),
+      createdAt: Date.now(),
+    });
+    await ctx.db.insert("outletCatalogItems", {
+      outletId: args.outletId,
+      mealId,
+      price: args.price,
+      isActive: true,
+      sortOrder: Date.now(),
+      createdAt: Date.now(),
+    });
+    return { id: String(mealId) };
   },
 });
 
@@ -224,6 +403,7 @@ export const listAllMealsForGymAdmin = query({
         listPrice: Number(m.priceQAR) || 0,
         gymPrice: m.gymPrice != null && m.gymPrice >= 0 ? Number(m.gymPrice) : null,
         isGymItem: !!m.isGymItem,
+        returnAfterDays: Number(m.gymReturnAfterDays || (m.category === "snack" ? 4 : 2)),
       }))
       .sort((a, b) => a.nameEn.localeCompare(b.nameEn));
   },
@@ -235,6 +415,17 @@ export const setMealIsGymItem = mutation({
   handler: async (ctx, args) => {
     await requireGymSalesAccess(ctx, args.sessionToken);
     await ctx.db.patch(args.mealId, { isGymItem: args.isGymItem } as any);
+    return { ok: true };
+  },
+});
+
+export const setMealReturnWindow = mutation({
+  args: { mealId: v.id("publicMeals"), days: v.number(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const days = Math.round(args.days);
+    if (days < 1 || days > 14) throw new Error("مدة المرتجع يجب أن تكون بين يوم و14 يوماً");
+    await ctx.db.patch(args.mealId, { gymReturnAfterDays: days } as any);
     return { ok: true };
   },
 });
@@ -393,6 +584,9 @@ export const getOrder = query({
       discountPct: order.discountPct, subtotal: order.subtotal,
       discountAmount: order.discountAmount, total: order.total,
       mealsCount: order.mealsCount, notes: order.notes || "",
+      returnedTotal: Number(order.returnedTotal || 0),
+      wasteValue: Number(order.wasteValue || 0),
+      netTotal: Number(order.netTotal ?? order.total),
       isVoid: !!order.isVoid,
       voidedAt: order.voidedAt || null,
       voidReason: order.voidReason || null,
@@ -402,6 +596,8 @@ export const getOrder = query({
         mealId: l.mealId ? String(l.mealId) : null,
         mealNameEn: l.mealNameEn || "", mealNameAr: l.mealNameAr || "",
         qty: l.qty, listPrice: l.listPrice, unitPrice: l.unitPrice, lineTotal: l.lineTotal,
+        returnedQty: Number(l.returnedQty || 0),
+        wasteValue: Math.round(Number(l.returnedQty || 0) * Number(l.unitPrice || 0) * 100) / 100,
       })),
     };
   },
@@ -435,6 +631,9 @@ export const listOrders = query({
         gymName: gymNames.get(key) || "",
         subtotal: r.subtotal, discountAmount: r.discountAmount,
         total: r.total, mealsCount: r.mealsCount,
+        returnedTotal: Number(r.returnedTotal || 0),
+        wasteValue: Number(r.wasteValue || 0),
+        netTotal: Number(r.netTotal ?? r.total),
         isVoid: !!r.isVoid,
       });
     }
@@ -461,15 +660,22 @@ async function buildGymOrderLines(
   const out: any[] = [];
   let subtotal = 0, total = 0, mealsCount = 0;
   const discountPct = Number(gym.discountPct) || 0;
+  const outletRows: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q: any) => q.eq("outletId", gym._id)).collect();
+  const hasOutletCatalog = outletRows.length > 0;
+  const outletByMeal = new Map(outletRows.filter((row) => row.isActive).map((row) => [String(row.mealId), row]));
   for (const l of clientLines) {
     const qty = Math.max(0, Math.round(Number(l.qty) || 0));
     if (qty === 0) continue;
     if (!l.mealId) throw new Error("mealId مطلوب لكل سطر");
     const meal: any = await ctx.db.get(l.mealId);
     if (!meal || !meal.isActive) throw new Error("وجبة غير متوفرة");
+    const outletRow: any = outletByMeal.get(String(meal._id));
+    if (hasOutletCatalog && !outletRow) throw new Error("الصنف غير متاح في هذا المنفذ");
     const listPrice = Number(meal.priceQAR) || 0;
     const hasCustom = meal.gymPrice != null && meal.gymPrice >= 0;
-    const unitPrice = hasCustom
+    const unitPrice = outletRow
+      ? Number(outletRow.price)
+      : hasCustom
       ? Number(meal.gymPrice)
       : Math.round(listPrice * (1 - discountPct / 100) * 100) / 100;
     if (unitPrice < 0) throw new Error("سعر غير صالح");
@@ -572,6 +778,19 @@ export const updateOrder = mutation({
     const built = await buildGymOrderLines(ctx, gym, args.lines);
 
     const oldLines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", args.orderId)).collect();
+    const returnedByMeal = new Map(oldLines.map((line: any) => [String(line.mealId), Number(line.returnedQty || 0)]));
+    let returnedTotal = 0;
+    let wasteValue = 0;
+    for (const line of built.lines) {
+      const returnedQty = returnedByMeal.get(String(line.mealId)) || 0;
+      if (returnedQty > line.qty) {
+        throw new Error(`لا يمكن تقليل ${line.mealNameAr || line.mealNameEn} عن الكمية المرتجعة (${returnedQty})`);
+      }
+      returnedTotal += returnedQty;
+      wasteValue += returnedQty * line.unitPrice;
+    }
+    wasteValue = Math.round(wasteValue * 100) / 100;
+    const netTotal = Math.round((built.total - wasteValue) * 100) / 100;
     for (const l of oldLines) await ctx.db.delete(l._id);
 
     await ctx.db.patch(args.orderId, {
@@ -580,6 +799,10 @@ export const updateOrder = mutation({
       subtotal: built.subtotal, discountAmount: built.discountAmount,
       total: built.total, mealsCount: built.mealsCount,
       notes: args.notes?.trim() || undefined,
+      hasReturns: returnedTotal > 0,
+      returnedTotal,
+      wasteValue,
+      netTotal,
       updatedAt: Date.now(),
     });
     for (const l of built.lines) {
@@ -589,12 +812,14 @@ export const updateOrder = mutation({
         mealNameEn: l.mealNameEn, mealNameAr: l.mealNameAr,
         qty: l.qty, listPrice: l.listPrice,
         unitPrice: l.unitPrice, lineTotal: l.lineTotal,
+        returnedQty: returnedByMeal.get(String(l.mealId)) || undefined,
       });
     }
     return {
       success: true, subtotal: built.subtotal,
       discountAmount: built.discountAmount,
       total: built.total, mealsCount: built.mealsCount,
+      returnedTotal, wasteValue, netTotal,
     };
   },
 });
@@ -637,13 +862,16 @@ export const recordOrderReturns = mutation({
   args: {
     orderId: v.id("gymOrders"),
     returns: v.array(v.object({ lineId: v.id("gymOrderLines"), qty: v.number() })),
+    returnDate: v.string(),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const actor = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.returnDate)) throw new Error("تاريخ المرتجع غير صالح");
     const order: any = await ctx.db.get(args.orderId);
     if (!order) throw new Error("الطلبية غير موجودة");
     if (order.isVoid) throw new Error("مش مسموح على طلبية ملغاة");
+    if (args.returnDate < order.date) throw new Error("تاريخ المرتجع لا يمكن أن يسبق تاريخ الفاتورة");
 
     const lines = await ctx.db
       .query("gymOrderLines")
@@ -651,13 +879,47 @@ export const recordOrderReturns = mutation({
       .collect();
     const linesById = new Map(lines.map((l) => [String(l._id), l]));
 
-    // تحقق + تطبيق
+    const batchLines: Array<{ line: any; qty: number; expectedAfterDays: number }> = [];
     for (const r of args.returns) {
       const line: any = linesById.get(String(r.lineId));
       if (!line) throw new Error("سطر غير موجود في الطلبية");
       const q = Math.max(0, Math.round(Number(r.qty) || 0));
-      if (q > line.qty) throw new Error(`المرتجع (${q}) أكبر من المُرسل (${line.qty}) لسطر ${line.mealNameEn || line.mealNameAr}`);
-      await ctx.db.patch(line._id, { returnedQty: q });
+      if (q === 0) continue;
+      const alreadyReturned = Number(line.returnedQty || 0);
+      if (alreadyReturned + q > line.qty) throw new Error(`إجمالي المرتجع أكبر من المتبقي لصنف ${line.mealNameEn || line.mealNameAr}`);
+      const meal: any = line.mealId ? await ctx.db.get(line.mealId) : null;
+      const expectedAfterDays = Number(meal?.gymReturnAfterDays || (meal?.category === "snack" ? 4 : 2));
+      batchLines.push({ line, qty: q, expectedAfterDays });
+    }
+    if (batchLines.length === 0) throw new Error("أدخل كمية مرتجع واحدة على الأقل");
+
+    const batchQty = batchLines.reduce((sum, item) => sum + item.qty, 0);
+    const batchWaste = Math.round(batchLines.reduce((sum, item) => sum + item.qty * Number(item.line.unitPrice || 0), 0) * 100) / 100;
+    const returnId = await ctx.db.insert("gymReturnBatches", {
+      orderId: args.orderId,
+      gymId: order.gymId,
+      orderDate: order.date,
+      returnDate: args.returnDate,
+      totalQty: batchQty,
+      wasteValue: batchWaste,
+      recordedBy: String((actor as any).userId || (actor as any).role || "staff"),
+      createdAt: Date.now(),
+    });
+    for (const item of batchLines) {
+      const line = item.line;
+      await ctx.db.patch(line._id, { returnedQty: Number(line.returnedQty || 0) + item.qty });
+      await ctx.db.insert("gymReturnBatchLines", {
+        returnId,
+        orderId: args.orderId,
+        orderLineId: line._id,
+        mealId: line.mealId,
+        mealNameEn: line.mealNameEn,
+        mealNameAr: line.mealNameAr,
+        qty: item.qty,
+        unitPrice: Number(line.unitPrice || 0),
+        wasteValue: Math.round(item.qty * Number(line.unitPrice || 0) * 100) / 100,
+        expectedAfterDays: item.expectedAfterDays,
+      });
     }
 
     // إعادة الحساب على مستوى الطلبية
@@ -677,10 +939,11 @@ export const recordOrderReturns = mutation({
     await ctx.db.patch(args.orderId, {
       hasReturns: returnedTotal > 0,
       returnsRecordedAt: Date.now(),
+      returnsRecordedBy: String((actor as any).userId || (actor as any).role || "staff"),
       returnedTotal, wasteValue, netTotal,
       updatedAt: Date.now(),
     });
-    return { returnedTotal, wasteValue, netTotal };
+    return { returnId: String(returnId), batchQty, batchWaste, returnedTotal, wasteValue, netTotal };
   },
 });
 
@@ -784,6 +1047,7 @@ export const listOrdersForReturns = query({
         gymNames.set(gid, g?.name || "");
       }
       const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      const batches = await ctx.db.query("gymReturnBatches").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
       out.push({
         id: String(o._id), date: o.date,
         gymId: gid, gymName: gymNames.get(gid) || "",
@@ -792,12 +1056,22 @@ export const listOrdersForReturns = query({
         returnedTotal: Number(o.returnedTotal || 0),
         wasteValue: Number(o.wasteValue || 0),
         netTotal: Number(o.netTotal ?? o.total),
-        lines: lines.map((l: any) => ({
+        batches: batches.sort((a, b) => b.returnDate.localeCompare(a.returnDate)).map((batch: any) => ({
+          id: String(batch._id), returnDate: batch.returnDate, totalQty: batch.totalQty, wasteValue: batch.wasteValue,
+        })),
+        lines: await Promise.all(lines.map(async (l: any) => {
+          const meal: any = l.mealId ? await ctx.db.get(l.mealId) : null;
+          const returnAfterDays = Number(meal?.gymReturnAfterDays || (meal?.category === "snack" ? 4 : 2));
+          const expected = new Date(`${o.date}T12:00:00`); expected.setDate(expected.getDate() + returnAfterDays);
+          return {
           id: String(l._id),
           mealNameEn: l.mealNameEn || "", mealNameAr: l.mealNameAr || "",
           qty: l.qty, unitPrice: l.unitPrice,
           returnedQty: Number(l.returnedQty || 0),
-        })),
+          remainingQty: Math.max(0, Number(l.qty) - Number(l.returnedQty || 0)),
+          returnAfterDays,
+          expectedReturnDate: expected.toISOString().slice(0, 10),
+        }; })),
       });
     }
     return out;
