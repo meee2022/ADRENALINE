@@ -13,6 +13,8 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
+import { subscriptionState } from "@/lib/subscription";
+import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 const WEEKDAYS_AR: Record<string,string> = {
@@ -114,6 +116,12 @@ export default function SmartPlan() {
 
   /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فارغ = زائر لم يعرّف نفسه. */
   const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
+
+  /* ⛔ اشتراك منتهٍ: كان النظام يعامله كسارٍ ويبني خطة لأيام لن تُوصَّل.
+        (subWeeksRemaining كانت تقارن النهاية بالبداية لا باليوم، فلم تكشفه.)
+        الآن نوقف البناء ونوجّهه للتجديد. */
+  const subState = useMemo(() => subscriptionState(subEndDate), [subEndDate]);
+  const subExpired = subState.status === "expired";
 
   /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
   const orderIdentity = () => ({
@@ -319,6 +327,18 @@ export default function SmartPlan() {
             </div>
           )}
 
+          {/* ⛔ اشتراك منتهٍ ⇒ إشعار التجديد بدل أدوات البناء — لا معنى لبناء
+              خطة لأيام لن تُوصَّل. */}
+          {subExpired && subState.status === "expired" && (
+            <SubscriptionExpiredNotice
+              name={whoName || undefined}
+              endDate={subState.endDate}
+              daysAgo={subState.daysAgo}
+              isRtl={isRtl}
+            />
+          )}
+
+          {!subExpired && <>
           {/* ✅ شرح آلية التوليد — الخطوات الفعلية اللي بيعملها النظام، بلا وعود
               زيادة: الملف الشخصي ← استبعاد الممنوعات ← وجبات دورتك ← مراجعة الأخصائي. */}
           <details style={{
@@ -499,6 +519,7 @@ export default function SmartPlan() {
               </div>
             </>
           )}
+          </>}
           {error && <p style={{ color: "#C0392B", fontSize: 14, marginTop: 12 }}>{error}</p>}
         </div>
 

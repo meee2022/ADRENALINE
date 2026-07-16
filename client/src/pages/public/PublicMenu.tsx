@@ -26,6 +26,8 @@ import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { subscriptionState } from "@/lib/subscription";
+import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
   getVerifiedCustomerId,
@@ -262,6 +264,11 @@ export default function PublicMenuPage() {
    *   نستخدمه لعرض الأسابيع/الأيام المتاحة فقط ولمنع التنقل بعد نهاية الاشتراك.
    */
   const subEndDate = (verifiedCustomer as any)?.endDate as string | undefined;
+  /* ⛔ اشتراك منتهٍ: الصفحة كانت تعرض تاريخ الانتهاء بلا فحصه، فيقدر المشترك
+        المنتهي يختار وجبات لأيام لن تُوصَّل إليه. نفس الحكم في الخطة الذكية
+        (lib/subscription.ts) — مصدر واحد فلا يفترقان. */
+  const subState = useMemo(() => subscriptionState(subEndDate), [subEndDate]);
+  const subExpired = subState.status === "expired";
   const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 
   /**
@@ -1139,6 +1146,16 @@ export default function PublicMenuPage() {
               </p>
             </div>
           </div>
+
+          {/* ⛔ اشتراك منتهٍ ⇒ إشعار التجديد فوق كل شيء */}
+          {subExpired && subState.status === "expired" && (
+            <SubscriptionExpiredNotice
+              name={(verifiedCustomer as any)?.fullName || undefined}
+              endDate={subState.endDate}
+              daysAgo={subState.daysAgo}
+              isRtl={isRtl}
+            />
+          )}
 
           {/* ✅ بطاقة اشتراكك — تظهر لو رقمك مرتبط باشتراك مسجَّل عند الأخصائية */}
           {(verifiedCustomer as any)?.startDate && (
