@@ -46,6 +46,29 @@ export function isSnackCategory(category: any): boolean {
   return (SNACK_CATEGORIES as readonly string[]).includes(norm(category));
 }
 
+/**
+ * مسمّى التصنيف كما يراه المشترك.
+ *
+ *   ⚖️ قرار المنتج: المشترك يشوف **فطور/غداء/عشاء/سناك فقط** — بلا "سلطة".
+ *   السلطة سناك، فتبويب وشارة منفصلين ليها كانا بيلخبطوا: العميل يعدّها
+ *   صنفاً ثالثاً بينما اشتراكه فيه وجبات وسناكات بس.
+ *
+ *   ⚠️ التصنيف في قاعدة البيانات يفضل "salad" كما هو — ده مسمّى عرض فقط،
+ *      فالمطبخ والتقارير والإدارة تكمل تفرّق بينهم.
+ */
+export function customerCategoryLabel(category: any, isRtl: boolean): string {
+  const c = norm(category);
+  const AR: Record<string, string> = {
+    breakfast: "فطور", lunch: "غداء", dinner: "عشاء",
+    snack: "سناك", salad: "سناك", // ← السلطة تُعرض سناك
+  };
+  const EN: Record<string, string> = {
+    breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner",
+    snack: "Snack", salad: "Snack",
+  };
+  return (isRtl ? AR[c] : EN[c]) || String(category || "");
+}
+
 /** أيام الأسبوع بترتيب Date.getDay() — الأحد 0 … السبت 6. */
 export const DAY_NAMES = [
   "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",

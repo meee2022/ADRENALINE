@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionState } from "@/lib/subscription";
-import { mealScheduledFor, localISO } from "@/lib/mealSchedule";
+import { mealScheduledFor, localISO, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
@@ -26,9 +26,7 @@ const WEEKDAYS_EN: Record<string,string> = {
   saturday:"Saturday", sunday:"Sunday", monday:"Monday", tuesday:"Tuesday",
   wednesday:"Wednesday", thursday:"Thursday", friday:"Friday",
 };
-const CAT_AR: Record<string,string> = {
-  breakfast:"فطور", lunch:"غداء", dinner:"عشاء", snack:"سناك", salad:"سلطة",
-};
+
 
 const B = {
   brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A",
@@ -830,7 +828,7 @@ export default function SmartPlan() {
               </div>
               <p style={{ fontSize: 12.5, color: B.ink2, margin: "0 0 14px" }}>
                 📅 {t(
-                  `بدائل ${CAT_AR[swap.meal?.category] || ""} ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
+                  `بدائل ${customerCategoryLabel(swap.meal?.category, true)} ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
                   `${WEEKDAYS_EN[swap.day] || swap.day} ${swap.meal?.category || ""} alternatives — rotation week ${swap.week}`,
                 )}
               </p>

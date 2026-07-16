@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState } from "@/lib/subscription";
-import { mealScheduledFor, localISO, isMainCategory, isSnackCategory } from "@/lib/mealSchedule";
+import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -71,7 +71,7 @@ function nextDeliveryDateISO(): string {
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "المنيو | أدرينالين للوجبات الصحية", description: "تصفّح منيو أدرينالين: وجبات صحية متنوعة بسعرات وماكروز واضحة — فطار، غدا، عشا، سلطات وسناكس.", path: "/public/menu" });
+  useSeo({ title: "المنيو | أدرينالين للوجبات الصحية", description: "تصفّح منيو أدرينالين: وجبات صحية متنوعة بسعرات وماكروز واضحة — فطور وغداء وعشاء وسناكات.", path: "/public/menu" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
   
@@ -525,15 +525,22 @@ export default function PublicMenuPage() {
     );
   };
 
-  const { data: allMeals = [] } = usePublicMeals({
-    category: activeCategory,
-    search: searchQuery,
-  });
+  // ⚠️ لا نمرّر التصنيف للخادم: كان category="snack" يرجّع السناكات فقط،
+  //    فبعد دمج السلطة فيه كانت هتختفي من التبويب. نجلب ونفلتر محلياً
+  //    بنفس مصنّف الخطة الذكية (isSnackCategory).
+  const { data: allMeals = [] } = usePublicMeals({ search: searchQuery });
 
   const menuHeaderImage = (allMeals.find((m: any) => m.imageUrl)?.imageUrl) || undefined;
 
   // Filter meals by selected week and day using exact schedule pairs
   const filteredMeals = allMeals.filter((meal: any) => {
+    // فلترة التبويب — "سناكس" يشمل السلطة
+    if (activeCategory !== "all") {
+      const ok = activeCategory === "snack"
+        ? isSnackCategory(meal.category)
+        : String(meal.category || "").toLowerCase() === activeCategory;
+      if (!ok) return false;
+    }
     // ✅ نفس حكم الخطة الذكية (lib/mealSchedule.ts) — كانت المقارنة هنا بـ===
     //    بلا توحيد نوع، فأي جدولة تُكتب بأسبوع نصّي "2" أو يوم "Saturday"
     //    كانت تختفي من المنيو اليدوي وحده بينما تظهر في الذكية.
@@ -604,7 +611,8 @@ export default function PublicMenuPage() {
     { id: "breakfast" as Category, labelAr: "الإفطار", labelEn: "Breakfast" },
     { id: "lunch" as Category, labelAr: "الغداء", labelEn: "Lunch" },
     { id: "dinner" as Category, labelAr: "العشاء", labelEn: "Dinner" },
-    { id: "salad" as Category, labelAr: "سلطات", labelEn: "Salads" },
+    // ⚖️ لا تبويب "سلطات": السلطة سناك، وتبويب منفصل كان بيوهم المشترك
+    //    إنها صنف ثالث بينما اشتراكه وجبات + سناكات فقط. تظهر تحت "سناكس".
     { id: "snack" as Category, labelAr: "سناكس", labelEn: "Snacks" },
   ];
 
@@ -1492,15 +1500,11 @@ export default function PublicMenuPage() {
                           meal.category === "breakfast" && "bg-orange-500 text-white",
                           meal.category === "lunch" && "bg-cyan-500 text-white",
                           meal.category === "dinner" && "bg-indigo-500 text-white",
-                          meal.category === "salad" && "bg-green-500 text-white",
-                          meal.category === "snack" && "bg-amber-500 text-white"
+                          // السلطة سناك ⇒ نفس لون السناك ونفس المسمّى
+                          isSnackCategory(meal.category) && "bg-amber-500 text-white"
                         )}
                       >
-                        {meal.category === "breakfast" && (isRtl ? "فطور" : "Breakfast")}
-                        {meal.category === "lunch" && (isRtl ? "غداء" : "Lunch")}
-                        {meal.category === "dinner" && (isRtl ? "عشاء" : "Dinner")}
-                        {meal.category === "salad" && (isRtl ? "سلطة" : "Salad")}
-                        {meal.category === "snack" && (isRtl ? "سناك" : "Snack")}
+                        {customerCategoryLabel(meal.category, isRtl)}
                       </Badge>
                     </div>
                   </div>
@@ -1654,15 +1658,10 @@ export default function PublicMenuPage() {
                     selectedMeal.category === "breakfast" && "bg-orange-500 text-white",
                     selectedMeal.category === "lunch" && "bg-cyan-500 text-white",
                     selectedMeal.category === "dinner" && "bg-indigo-500 text-white",
-                    selectedMeal.category === "salad" && "bg-green-500 text-white",
-                    selectedMeal.category === "snack" && "bg-amber-500 text-white"
+                    isSnackCategory(selectedMeal.category) && "bg-amber-500 text-white"
                   )}
                 >
-                  {selectedMeal.category === "breakfast" && (isRtl ? "فطور" : "Breakfast")}
-                  {selectedMeal.category === "lunch" && (isRtl ? "غداء" : "Lunch")}
-                  {selectedMeal.category === "dinner" && (isRtl ? "عشاء" : "Dinner")}
-                  {selectedMeal.category === "salad" && (isRtl ? "سلطة" : "Salad")}
-                  {selectedMeal.category === "snack" && (isRtl ? "سناك" : "Snack")}
+                  {customerCategoryLabel(selectedMeal.category, isRtl)}
                 </Badge>
                 {selectedMeal.tags?.map((tag: string, idx: number) => (
                   <Badge
