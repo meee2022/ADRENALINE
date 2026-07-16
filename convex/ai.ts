@@ -103,16 +103,19 @@ export const getSmartPlanData = query({
      *   أي حماية وبيرجّع mealsPerDay/snacksPerDay/allergies/avoid لنفس الرقم —
      *   ونفس الصفحة بتناديه. فحجبها هنا كان بيكسر التخصيص بلا أي مقابل أمني.
      *
-     *   ⚖️ الحدّ: الحقول المكشوفة عامّاً بالفعل (الوجبات/السناكات/الحساسية/
-     *   الممنوعات) تُستخدم بمطابقة الهاتف. أما goal و preferences فغير موجودين
-     *   في publicCustomerView ⇒ يظلّان للمعتمدين فقط.
+     *   ⚖️ الحدّ: الحقول المكشوفة عامّاً بالفعل تُستخدم بمطابقة الهاتف.
+     *   والهدف منها: goals قيمته مكرّرة في program، وprogram موجود في
+     *   publicCustomerView ⇒ استخدامه لا يكشف جديداً. أما preferences فغير
+     *   مكشوف في أي مسار عام ⇒ يظل للمعتمدين فقط.
      *
      *   ⚠️ الحماية الحقيقية = التحقق من ملكية الرقم (OTP)، وهي شغل منفصل.
      */
     const profile = customer
       ? {
           found: true,
-          goal: authorized ? (customer.goalType || customer.goals || "") : "",
+          // الهدف يحدّد السعرات المستهدفة (targetCaloriesFor). بدونه كل
+          // المشتركين بالرقم كانوا ياخدوا 2000 سعرة الافتراضية مهما كان هدفهم.
+          goal: customer.goalType || customer.goals || customer.program || "",
           allergies: customer.allergies || "",
           avoid: customer.avoid || "",
           preferences: authorized ? (customer.preferences || "") : "",

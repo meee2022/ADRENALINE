@@ -11,7 +11,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useSeo } from "@/lib/seo";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
-import { Sparkles } from "lucide-react";
+import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionState } from "@/lib/subscription";
 import { mealScheduledFor, localISO } from "@/lib/mealSchedule";
@@ -122,6 +122,9 @@ export default function SmartPlan() {
    *  وهما اللي الخادم يبني عليهما الخطة (profile.mealsPerDay/snacksPerDay). */
   const subMeals: number | null = (matchedCustomer as any)?.mealsPerDay ?? null;
   const subSnacks: number = Number((matchedCustomer as any)?.snacksPerDay || 0);
+  /** الممنوعات والحساسية — نفس ما يعرضه المنيو اليدوي في شريطه البارز. */
+  const subAllergies: string = String((matchedCustomer as any)?.allergies || "").trim();
+  const subAvoid: string = String((matchedCustomer as any)?.avoid || "").trim();
 
   /* ⛔ اشتراك منتهٍ: كان النظام يعامله كسارٍ ويبني خطة لأيام لن تُوصَّل.
         (subWeeksRemaining كانت تقارن النهاية بالبداية لا باليوم، فلم تكشفه.)
@@ -328,6 +331,37 @@ export default function SmartPlan() {
                   {t(`دورة المطبخ لاشتراكك: ${startRotInfo.rotationWeek}`, `Your rotation: ${startRotInfo.rotationWeek}`)}
                 </span>
               )}
+            </div>
+          )}
+
+          {/* ⚠️ الممنوعات والحساسية — الخطة تُبنى باستبعادها فعلاً (ai.isBlocked)،
+              والمنيو اليدوي بيعرضها في شريط بارز. كانت الذكية تقول "نستبعد
+              حساسيتك" في الشرح بلا ما تُظهرها، فما كانش المشترك يقدر يتأكد
+              إن المسجّل عند الأخصائية صحيح. */}
+          {(subAllergies || subAvoid) && !subExpired && (
+            <div style={{
+              display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 14,
+              padding: "11px 13px", borderRadius: 12,
+              background: "linear-gradient(135deg,#fef2f2,#fff5f5)", border: "1.5px solid #fecaca",
+            }}>
+              <AlertTriangle style={{ width: 17, height: 17, color: "#dc2626", flexShrink: 0, marginTop: 1 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 900, color: "#dc2626", marginBottom: 3, letterSpacing: ".02em" }}>
+                  {t("تنبيه: ممنوعات وحساسية", "Allergies & Restrictions")}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "2px 12px", fontSize: 12 }}>
+                  {subAllergies && (
+                    <span style={{ fontWeight: 600, color: "#991b1b" }}>
+                      <b style={{ fontWeight: 900 }}>{t("حساسية: ", "Allergy: ")}</b>{subAllergies}
+                    </span>
+                  )}
+                  {subAvoid && (
+                    <span style={{ fontWeight: 600, color: "#9a3412" }}>
+                      <b style={{ fontWeight: 900 }}>{t("ممنوع: ", "Avoid: ")}</b>{subAvoid}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
