@@ -273,8 +273,10 @@ export default function PublicMenuPage() {
     if (end.getTime() < subStart.getTime()) return null;
 
     // نقطة بداية الاختيار الفعلية (تكون بكرة لو الاشتراك بدأ)
-    const todayISO = new Date().toISOString().slice(0, 10);
-    const today = new Date(todayISO + "T00:00:00");
+    // ⚠️ نستخدم تاريخ محلي — toISOString بيتحوّل لـUTC وبيرجّع اليوم السابق
+    //     في المناطق ذات UTC+ (قطر UTC+3).
+    const _now = new Date(); _now.setHours(0, 0, 0, 0);
+    const today = _now;
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const effStart = subStart.getTime() > today.getTime() ? subStart : tomorrow;
 

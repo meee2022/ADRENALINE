@@ -238,9 +238,12 @@ export default function SmartPlan() {
         // ✅ نقطة البداية = ماكس(بداية الاشتراك، بكرة):
         //   - لو الاشتراك بيبدأ في المستقبل → من تاريخ بدايته.
         //   - لو الاشتراك بدأ فعلاً → من بكرة (اليوم انقضى ميعاد تحضيره).
-        const today = new Date(); today.setHours(0,0,0,0);
-        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+        //   ⚠️ نستخدم تنسيق تاريخ محلي (مش toISOString) لأن UTC ممكن يرجّع
+        //     تاريخ اليوم السابق في المناطق ذات UTC+ (قطر UTC+3).
+        const _t = new Date(); _t.setHours(0,0,0,0);
+        const _tom = new Date(_t); _tom.setDate(_tom.getDate() + 1);
+        const tomorrowISO =
+          `${_tom.getFullYear()}-${String(_tom.getMonth()+1).padStart(2,'0')}-${String(_tom.getDate()).padStart(2,'0')}`;
         const effStartDate =
           subStartDate && subStartDate > tomorrowISO
             ? subStartDate
