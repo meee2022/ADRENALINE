@@ -9,6 +9,7 @@ import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -321,10 +322,11 @@ export default function Attendance() {
       <table><thead><tr><th>#</th><th>${t("الموظف", "Employee")}</th><th>${t("أيام الحضور", "Present days")}</th><th>${t("الغياب", "Absence")}</th><th>${t("التأخير", "Late")}</th><th>${t("الأوفرتايم (س)", "Overtime (h)")}</th></tr></thead>
       <tbody>${rows}</tbody></table>
       </body></html>`;
-    const w = window.open("", "_blank", "width=900,height=1000");
-    if (!w) { alert(t("اسمح بالنوافذ المنبثقة للطباعة", "Allow pop-ups to print")); return; }
-    w.document.write(html); w.document.close(); w.focus();
-    setTimeout(() => w.print(), 300);
+    openPrintDoc(html, {
+      fileName: `${t("تقرير الحضور", "Attendance report")} - ADRENALINE - ${month}`,
+      isRtl,
+      width: 900,
+    });
   };
 
   return (

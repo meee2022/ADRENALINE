@@ -5,7 +5,8 @@
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
-import { Printer, Download, X, CheckCircle2 } from "lucide-react";
+import { Printer, X, CheckCircle2 } from "lucide-react";
+import { openPrintDoc } from "@/lib/printDoc";
 
 type Props = { ticketId: string; onClose: () => void };
 
@@ -13,27 +14,16 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
   const token = usePosStore((s) => s.token);
   const t = useQuery(api.pos.getTicket, token ? { token, ticketId: ticketId as any } : "skip") as any;
 
+  // الطباعة والحفظ كـPDF نفس المسار — شاشة الطباعة فيها الاتنين
+  // (طابعة حرارية أو "حفظ كـPDF")، فلا داعي لتنزيل HTML منفصل.
   const printReceipt = () => {
     if (!t) return;
-    const html = buildReceiptHtml(t);
-    const w = window.open("", "_blank", "width=400,height=700");
-    if (!w) return;
-    w.document.write(html);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 200);
-  };
-
-  const downloadReceipt = () => {
-    if (!t) return;
-    const html = buildReceiptHtml(t);
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `receipt-${t.ticketNumber}.html`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 3000);
+    openPrintDoc(buildReceiptHtml(t), {
+      fileName: `ADRENALINE receipt ${t.ticketNumber}`,
+      isRtl: false,
+      width: 400,
+      height: 700,
+    });
   };
 
   return (
@@ -84,12 +74,10 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-3 gap-2 p-3 bg-white border-t border-slate-200">
-          <button onClick={downloadReceipt} className="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center gap-1">
-            <Download className="h-4 w-4" /> Save
-          </button>
+        <div className="grid grid-cols-2 gap-2 p-3 bg-white border-t border-slate-200">
+          {/* زر واحد: شاشة الطباعة نفسها فيها الطابعة الحرارية و"حفظ كـPDF" */}
           <button onClick={printReceipt} className="h-12 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm flex items-center justify-center gap-1">
-            <Printer className="h-4 w-4" /> Print
+            <Printer className="h-4 w-4" /> Print / PDF
           </button>
           <button onClick={onClose} className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">
             New Sale

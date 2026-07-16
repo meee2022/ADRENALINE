@@ -24,6 +24,7 @@ import {
   Calendar as CalendarIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { openPrintDoc } from "@/lib/printDoc";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 import { format, subDays, differenceInDays } from "date-fns";
@@ -192,11 +193,16 @@ export default function InventoryReportsPage() {
       <div class="wrap"><table><thead><tr>
         <th>${tr("المنتج", "Product")}</th><th>${tr("الفئة", "Category")}</th><th>${tr("المخزون", "Stock")}</th><th>${tr("الحد الأدنى", "Min")}</th><th>${tr("الحالة", "Status")}</th>
       </tr></thead><tbody>${rows}</tbody></table></div>
-      <script>(function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);})();<\/script>
       </body></html>`;
-    const w = window.open("", "_blank", "width=900,height=800");
-    if (!w) { toast({ title: isRtl ? "اسمح بالنوافذ المنبثقة" : "Allow pop-ups" }); return; }
-    w.document.write(html); w.document.close();
+    // 📅 تاريخ محلي (قطر UTC+3) — toISOString بترجع UTC فبتدي تاريخ إمبارح مساءً.
+    const n = new Date();
+    const today = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+    openPrintDoc(html, {
+      fileName: `${tr("تقرير المخزون", "Inventory report")} - ADRENALINE - ${today}`,
+      isRtl,
+      width: 900,
+      height: 800,
+    });
   };
 
   const handleShowDetails = () => {

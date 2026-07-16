@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,10 +91,11 @@ export default function OnlineOrders() {
       <tbody>${rowsHtml || '<tr><td colspan=4 class=c>—</td></tr>'}</tbody>
       <tfoot><tr><td class="r">${t("الإجمالي", "Total")}</td><td class="c">${monthT.orders}</td><td class="c">${monthT.meals}</td><td class="c" style="color:#0E76AC">${Math.round(monthT.revenue)} ${t("ر.ق", "QAR")}</td></tr></tfoot>
       </table></body></html>`;
-    const w = window.open("", "_blank", "width=900,height=1000");
-    if (!w) { alert(t("اسمح بالنوافذ المنبثقة", "Allow pop-ups")); return; }
-    w.document.write(html); w.document.close(); w.focus();
-    setTimeout(() => w.print(), 300);
+    openPrintDoc(html, {
+      fileName: `${t("طلبات أونلاين", "Online orders report")} - ADRENALINE - ${month}`,
+      isRtl,
+      width: 900,
+    });
   };
 
   // 🖥️ شاشة المتابعة الموحّدة: يفتح لوحات المنصّات الثلاث كنوافذ مرتّبة تلقائياً

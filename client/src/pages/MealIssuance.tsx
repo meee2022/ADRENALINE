@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,10 +130,11 @@ export default function MealIssuance() {
       <h2>${isRtl ? "حسب الوجبة" : "By meal"}</h2><table><thead><tr><th>#</th><th>${isRtl ? "الوجبة" : "Meal"}</th><th>${isRtl ? "العدد" : "Count"}</th></tr></thead><tbody>${mealRows || '<tr><td colspan=3 class=c>—</td></tr>'}</tbody></table>
       <h2>${isRtl ? "حسب المستلم" : "By recipient"}</h2><table><thead><tr><th>${isRtl ? "المستلم" : "Recipient"}</th><th>${isRtl ? "العدد" : "Count"}</th></tr></thead><tbody>${recRows || '<tr><td colspan=2 class=c>—</td></tr>'}</tbody></table>
       </body></html>`;
-    const w = window.open("", "_blank", "width=900,height=1000");
-    if (!w) { alert(t("اسمح بالنوافذ المنبثقة", "Allow pop-ups")); return; }
-    w.document.write(html); w.document.close(); w.focus();
-    setTimeout(() => w.print(), 300);
+    openPrintDoc(html, {
+      fileName: `${isRtl ? "حصر الصادر" : "Meal issuance report"} - ADRENALINE - ${month}`,
+      isRtl,
+      width: 900,
+    });
   };
 
   return (
