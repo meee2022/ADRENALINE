@@ -6,6 +6,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
 import { normalizePhone } from "./lib/phone";
+import { parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } from "./lib/dates";
 
 /* =========================
    Date helpers (server)
@@ -309,8 +310,8 @@ export const toggleSkipDay = mutation({
     // 🔒 لا تخطّي بأثر رجعي
     if (mode === "skip" && dateISO < today) throw new Error("لا يمكن تخطّي يوم مضى");
 
-    // نفس منطق setSkippedDays — مباشرة داخل المplateformة (بلا استدعاء متبادل)
-    const { fmtDate, parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } = await import("./lib/dates");
+    // نفس منطق setSkippedDays — مباشرة هنا (بلا استدعاء متبادل).
+    // ⚠️ الاستيراد في أعلى الملف — Convex لا يدعم `await import()` الديناميكي.
     const nextSet = new Set(cur);
     let changedDeliveryDays = 0;
     if (mode === "skip") {

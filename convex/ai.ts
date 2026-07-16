@@ -67,9 +67,11 @@ export const getSmartPlanData = query({
   },
   handler: async (ctx, args) => {
     // 🔒 نتحقق لو المستدعي معتمد (موظف أو صاحب الاشتراك)
+    //    ⚠️ validateSession مستوردة في أعلى الملف — Convex لا يدعم
+    //    `await import()` الديناميكي وكان يرمي "dynamic module import unsupported"
+    //    لكل مستخدم مسجّل دخول (الزائر بلا توكن كان يمر فلم يظهر البق).
     let authorized = false;
     if (args.sessionToken) {
-      const { validateSession } = await import("./sessions");
       const id = await validateSession(ctx, args.sessionToken);
       if (id?.accountType === "staff") authorized = true;
       else if (id?.customerAccountId && args.customerId) {
