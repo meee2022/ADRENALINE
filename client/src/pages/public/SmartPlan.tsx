@@ -118,6 +118,11 @@ export default function SmartPlan() {
   /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فارغ = زائر لم يعرّف نفسه. */
   const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
 
+  /** عدد وجبات/سناكات الاشتراك — نفس ما يعرضه المنيو اليدوي في ترويسته،
+   *  وهما اللي الخادم يبني عليهما الخطة (profile.mealsPerDay/snacksPerDay). */
+  const subMeals: number | null = (matchedCustomer as any)?.mealsPerDay ?? null;
+  const subSnacks: number = Number((matchedCustomer as any)?.snacksPerDay || 0);
+
   /* ⛔ اشتراك منتهٍ: كان النظام يعامله كسارٍ ويبني خطة لأيام لن تُوصَّل.
         (subWeeksRemaining كانت تقارن النهاية بالبداية لا باليوم، فلم تكشفه.)
         الآن نوقف البناء ونوجّهه للتجديد. */
@@ -301,6 +306,17 @@ export default function SmartPlan() {
             }}>
               {whoName && (
                 <span style={{ fontWeight: 900, color: B.ink, fontSize: 14 }}>👤 {whoName}</span>
+              )}
+              {/* ✅ عدد الوجبات والسناكات — المنيو اليدوي بيعرضهم في ترويسته
+                  ("4 وجبات + 2 سناك يومياً")، وهما اللي الخطة تُبنى عليهم فعلاً،
+                  فلازم يبانوا هنا كمان. */}
+              {subMeals != null && (
+                <span style={{ ...pill, background: "#0E2A4A", color: "#fff", border: "none" }}>
+                  {t(
+                    `${subMeals} ${subMeals === 2 ? "وجبتان" : subMeals === 1 ? "وجبة" : "وجبات"}${subSnacks ? ` + ${subSnacks} ${subSnacks === 2 ? "سناك" : "سناك"}` : ""} يومياً`,
+                    `${subMeals} meal${subMeals === 1 ? "" : "s"}${subSnacks ? ` + ${subSnacks} snack${subSnacks === 1 ? "" : "s"}` : ""} daily`,
+                  )}
+                </span>
               )}
               {subStartDate && <span style={pill}>{t("يبدأ", "Starts")}: {subStartDate}</span>}
               {subEndDate && <span style={pill}>{t("ينتهي", "Ends")}: {subEndDate}</span>}

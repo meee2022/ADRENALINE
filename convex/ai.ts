@@ -381,8 +381,19 @@ function ruleBasedPlan(profile: any, candidates: any[]) {
   const nMeals = Math.max(1, Math.min(profile.mealsPerDay || 3, mains.length));
   const nSnacks = Math.max(0, Math.min(profile.snacksPerDay || 1, snacks.length));
 
+  /* 🔴 كان: mains مرتّبة بالبروتين ثم نأخذ أعلى N بلا نظر للتصنيف — فمشترك
+   *    3 وجبات ممكن ياخد 3 عشاء وما ياخدش فطور ولا غدا، لأن الأعلى بروتيناً
+   *    صادف إنهم عشاء. الخطة لازم تغطّي اليوم: فطور ثم غداء ثم عشاء، وأي
+   *    وجبة زيادة (mealsPerDay=4 وعندنا 3 تصنيفات) تدور على نفس الترتيب.
+   *    الأعلى بروتيناً يبقى معيار الاختيار **داخل** كل تصنيف. */
+  const byCat: Record<string, any[]> = { breakfast: [], lunch: [], dinner: [] };
+  for (const m of mains) (byCat[m.category] ||= []).push(m); // mains مرتّبة بالبروتين أصلاً
+  const ORDER = ["breakfast", "lunch", "dinner"];
   for (let i = 0; i < nMeals; i++) {
-    const m = mains[i];
+    const cat = ORDER[i % ORDER.length];
+    // لو التصنيف خلص (أو لا وجبات فيه اليوم) نقع على أي رئيسية متبقية
+    const m = byCat[cat]?.shift()
+      || ORDER.map((c) => byCat[c]).find((arr) => arr?.length)?.shift();
     if (!m) break;
     picks.push({ id: m.id, reason: "وجبة غنية بالبروتين تناسب هدفك الغذائي" });
     kcal += m.calories || 0;
