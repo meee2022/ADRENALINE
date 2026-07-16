@@ -3,7 +3,7 @@
  * @description مبيعات الجم — POS مقسّم بالتبويبات: نقطة بيع + سجل + تقارير + إدارة الجمات + أسعار الجم.
  * @convex convex/gymSales.ts
  */
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
@@ -15,7 +15,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks, PackageX, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { openPrintDoc } from "@/lib/printDoc";
 import { confirmDialog, promptDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -616,6 +615,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const [customFrom, setCustomFrom] = useState(todayStr());
   const [customTo, setCustomTo] = useState(todayStr());
   const [gymId, setGymId] = useState<string>("");
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const selectedRange = useMemo(() => {
     if (period === "month") return { from: `${month}-01`, to: `${month}-31` };
     if (period === "custom") return { from: customFrom, to: customTo };
@@ -662,8 +662,12 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     ? selectedRange.from
     : `${selectedRange.from} - ${selectedRange.to}`;
 
-  const printInvoice = () => {
-    if (!report) return;
+  /**
+   * يبني مستند التقرير. نفس النص بالضبط يُعرض في المعاينة ويُطبع —
+   * فاللي المدير بيشوفه هو اللي بيطلع، مفيش نسختين تفترقا.
+   */
+  const buildReportHtml = (): string | null => {
+    if (!report) return null;
     const gym = gyms.find((g: any) => g.id === gymId);
 
     // 💰 الأرقام المالية من الخادم (monthlyReport) — هو المرجع، لا نحسبها هنا.
@@ -866,11 +870,18 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <div class="foot">ADRENALINE Healthy Food — ${t("تقرير مبيعات المنافذ", "Outlet sales report")} · ${rangeLabel}</div>
       </div>
       </body></html>`;
-    // 📄 PDF عبر طباعة المتصفح — المدير بيطلب التقرير جاهز، مش ملف HTML.
-    openPrintDoc(html, {
-      fileName: `${t("تقرير مبيعات المنافذ", "Outlet sales report")} - ${gym?.name || t("كل المنافذ", "All outlets")} - ${rangeLabel}`,
-      isRtl,
-    });
+    return html;
+  };
+
+  const reportFileName = () => {
+    const gym = gyms.find((g: any) => g.id === gymId);
+    return `${t("تقرير مبيعات المنافذ", "Outlet sales report")} - ${gym?.name || t("كل المنافذ", "All outlets")} - ${rangeLabel}`;
+  };
+
+  /** يفتح المعاينة — لا يطبع. المدير يشوف الورقة الأول ويقرر. */
+  const previewReport = () => {
+    const html = buildReportHtml();
+    if (html) setPreviewHtml(html);
   };
 
   return (
@@ -906,8 +917,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             </select>
           </div>
           <div className="flex items-end">
-            <Button onClick={printInvoice} className="w-full h-10 font-black text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-              <Printer className="h-4 w-4 me-2" /> {t("تصدير التقرير PDF", "Export report PDF")}
+            <Button onClick={previewReport} disabled={!report} className="w-full h-10 font-black text-white disabled:opacity-50" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+              <Printer className="h-4 w-4 me-2" /> {t("معاينة وتصدير PDF", "Preview & export PDF")}
             </Button>
           </div>
         </CardContent>
@@ -1119,6 +1130,109 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </CardContent>
         </Card>
       )}
+
+      {previewHtml && (
+        <ReportPreview
+          html={previewHtml}
+          fileName={reportFileName()}
+          isRtl={isRtl}
+          t={t}
+          onClose={() => setPreviewHtml(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * معاينة التقرير قبل الطباعة — WYSIWYG حقيقي.
+ *
+ *   الـiframe بيعرض نفس نص الـHTML اللي بيتطبع، والطباعة بتنادي print()
+ *   على نفس الـiframe ده — مش على نسخة تانية. فمستحيل المعاينة تفترق
+ *   عن الورقة. (ده اللي كان بيحصل قبل كده: الشاشة كود والـPDF كود تاني،
+ *   فاتفرقوا في الأرقام والأحكام.)
+ *
+ *   اسم ملف الـPDF بياخده المتصفح من <title> المستند — والبنّاء بيحقنه.
+ */
+function ReportPreview({ html, fileName, isRtl, t, onClose }: any) {
+  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const [scale, setScale] = useState(1);
+  const [docH, setDocH] = useState(1123); // A4 واحدة مبدئياً، ثم على ارتفاع المحتوى
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+
+  const A4_W = 794; // بكسل عند 96dpi
+
+  // نصغّر الورقة لتملأ عرض النافذة — العرض بصري فقط، الطباعة بتفضل A4 كامل.
+  useEffect(() => {
+    const fit = () => {
+      const w = wrapRef.current?.clientWidth || A4_W;
+      setScale(Math.min(1, (w - 24) / A4_W));
+    };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, []);
+
+  // نحقن العنوان في المستند عشان يبقى اسم ملف الـPDF مفهوم
+  const docHtml = useMemo(() => {
+    const safe = String(fileName || "report").replace(/[\\/:*?"<>|]+/g, "-").slice(0, 120);
+    const esc = safe.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    return /<title>[\s\S]*?<\/title>/i.test(html)
+      ? html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${esc}</title>`)
+      : html.replace(/<head>/i, `<head><title>${esc}</title>`);
+  }, [html, fileName]);
+
+  /** يضبط طول الـiframe على طول المستند — ورقم ثابت يقصّ التقارير الطويلة. */
+  const onFrameLoad = () => {
+    const d = frameRef.current?.contentDocument;
+    if (d?.body) setDocH(Math.max(1123, d.body.scrollHeight + 24));
+  };
+
+  const doPrint = () => {
+    const w = frameRef.current?.contentWindow;
+    if (!w) return;
+    w.focus();
+    w.print(); // نفس المستند المعروض — لا إعادة بناء
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-900/70 backdrop-blur-sm" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="flex items-center justify-between gap-3 border-b border-slate-700 bg-[#0E2A4A] px-4 py-3 text-white">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-black">{t("معاينة التقرير", "Report preview")}</div>
+          <div className="truncate text-[11px] font-bold text-white/60">
+            {t("ده اللي هيطلع في الـPDF بالظبط", "This is exactly what the PDF will contain")}
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button onClick={doPrint}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#3cc4f0] px-4 text-xs font-black text-[#0E2A4A] hover:bg-[#5ad0f5]">
+            <Printer className="h-4 w-4" /> {t("طباعة / حفظ PDF", "Print / Save PDF")}
+          </button>
+          <button onClick={onClose} aria-label={t("إغلاق", "Close")}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div ref={wrapRef} className="flex-1 overflow-auto p-3">
+        <div className="mx-auto shadow-2xl" style={{ width: A4_W * scale, height: docH * scale }}>
+          <iframe
+            ref={frameRef}
+            srcDoc={docHtml}
+            onLoad={onFrameLoad}
+            title={fileName}
+            className="block border-0 bg-white"
+            style={{
+              width: A4_W,
+              height: docH,
+              transform: `scale(${scale})`,
+              transformOrigin: isRtl ? "top right" : "top left",
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
