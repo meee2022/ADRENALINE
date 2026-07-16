@@ -344,7 +344,7 @@ export default function PosSales() {
       </aside>
 
       {/* ═══════════ Items area (شمال في RTL) ═══════════ */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="pos-items-panel flex-1 flex flex-col min-w-0">
         {/* Header: label + search + categories */}
         <div className="shrink-0 border-b border-[#d8e6ec] bg-white px-3 py-3 sm:px-4">
           <div className="flex items-center justify-between mb-3">
@@ -399,7 +399,7 @@ export default function PosSales() {
           {items && filtered.length === 0 && (
             <p className="text-center text-slate-500 py-16 font-bold">{tt("لا توجد أصناف مطابقة", "No matching items")}</p>
           )}
-          <div className="pos-items-grid grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="pos-items-grid grid gap-2.5 sm:gap-3">
             {filtered.map((m: any) => {
               const imageUrl = m.imageUrl || getPosMealImage(m.nameEn, m.name, m.nameAr);
               const hasImage = !!imageUrl;

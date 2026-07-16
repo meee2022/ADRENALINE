@@ -245,6 +245,10 @@
   background-size: 28px 28px;
 }
 
+.pos-items-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(145px, 100%), 1fr));
+}
+
 .pos-sales-screen button:focus-visible,
 .pos-shell button:focus-visible,
 .pos-shell a:focus-visible {
@@ -254,22 +258,39 @@
 
 @media (max-width: 1024px) {
   .pos-ticket-panel {
-    width: clamp(275px, 32vw, 330px) !important;
+    width: clamp(270px, 31vw, 310px) !important;
   }
   .pos-items-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr));
+  }
+  .pos-item-card {
+    aspect-ratio: 1.18 / 1;
+    border-radius: 0.75rem;
   }
 }
 
 @media (max-width: 760px) {
+  .pos-sales-screen {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .pos-items-panel {
+    order: 1;
+    min-height: calc(100dvh - 54px);
+  }
   .pos-ticket-panel {
-    width: 280px !important;
+    order: 2;
+    width: 100% !important;
+    min-height: calc(100dvh - 54px);
+    border-inline-start: 0;
+    border-top: 1px solid #d8e6ec;
   }
   .pos-items-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(128px, 100%), 1fr));
   }
   .pos-item-card {
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 1.12 / 1;
   }
 }
 
@@ -453,7 +474,7 @@
 
 @media (max-width: 1180px), (max-height: 760px) {
   .pos-sales-screen .pos-ticket-panel {
-    width: min(340px, 36vw);
+    width: min(310px, 32vw);
   }
 
   .pos-sales-screen .pos-ticket-panel > div:first-child {
@@ -475,12 +496,8 @@
 }
 
 @media (max-width: 760px) {
-  .pos-sales-screen {
-    overflow-x: auto;
-  }
-
   .pos-sales-screen .pos-ticket-panel {
-    width: 310px;
+    width: 100%;
   }
 }
 
