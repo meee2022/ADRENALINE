@@ -761,8 +761,10 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
               فلازم خلفية بيضا — على خلفية كحلي الكلمة السودا بتختفي. ── */
         .lh{display:flex;justify-content:space-between;align-items:flex-start;
             padding:14px 20px 12px;border-bottom:3px solid #0E76AC}
-        .lh img{height:38px;width:auto;display:block}
-        .lh .meta{text-align:${isRtl ? "left" : "right"};font-size:10px;color:#47759c;line-height:1.7}
+        /* الشعار في جهة النهاية والبيانات في جهة البداية — ترتيب DOM (meta ثم img)
+           بيعكس نفسه تلقائياً مع dir، فعربي: بيانات يمين وشعار شمال، وإنجليزي العكس. */
+        .lh img{height:38px;width:auto;display:block;flex-shrink:0}
+        .lh .meta{text-align:start;font-size:10px;color:#47759c;line-height:1.7}
         .lh .meta b{color:#0E2A4A}
         .doc-t{background:#0E2A4A;color:#fff;padding:8px 20px;font-size:15px;font-weight:900;
                display:flex;justify-content:space-between;align-items:center}
@@ -816,12 +818,12 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         @media print{thead{display:table-header-group}tr{break-inside:avoid}}
       </style></head><body>
       <div class="lh">
-        <img src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
         <div class="meta">
           <div><b>${t("المنفذ", "Outlet")}:</b> ${gym?.name || t("كل المنافذ", "All outlets")}</div>
           <div><b>${t("أيام التوريد", "Supply days")}:</b> ${report.daysCount}</div>
           <div><b>${t("تاريخ الإصدار", "Issued")}:</b> ${issuedAt}</div>
         </div>
+        <img src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
       </div>
       <div class="doc-t">
         <span>${t("تقرير مبيعات المنافذ", "Outlet sales report")}</span>
