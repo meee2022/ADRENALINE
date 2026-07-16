@@ -596,13 +596,18 @@ export default function PlansPage() {
     document.body.removeChild(link);
   };
 
+  /**
+   * ✅ ألوان التصنيفات — مشتقّة من هوية أدرينالين فقط:
+   *    سماوي #3cc4f0 · أزرق فولاذي #47759c · أزرق عميق #0E76AC · كحلي #0E2A4A
+   *    (بدل الأصفر/الأخضر اللي كانوا خارج الهوية)
+   */
   const getCategoryAccent = (name: string) => {
     const n = name.toUpperCase();
-    if (n.includes("BREAKFAST") || n.includes("فطور")) return { color: "#f59e0b", bg: "#fffbeb", light: "#fef3c7", icon: "☀️" };
-    if (n.includes("LUNCH") || n.includes("غداء"))    return { color: "#3cc4f0", bg: "#ecfeff", light: "#cffafe", icon: "🍽️" };
-    if (n.includes("DINNER") || n.includes("عشاء"))   return { color: "#47759c", bg: "#eff6ff", light: "#dbeafe", icon: "🌙" };
-    if (n.includes("SNACK") || n.includes("سناك"))    return { color: "#10b981", bg: "#f0fdf4", light: "#d1fae5", icon: "🥗" };
-    return { color: "#3cc4f0", bg: "#f8fafc", light: "#f1f5f9", icon: "🍴" };
+    if (n.includes("BREAKFAST") || n.includes("فطور")) return { color: "#3cc4f0", bg: "#f2fbfe", light: "#d7f2fc", icon: "☀️" };
+    if (n.includes("LUNCH") || n.includes("غداء"))    return { color: "#0E76AC", bg: "#f0f8fc", light: "#cfe8f5", icon: "🍽️" };
+    if (n.includes("DINNER") || n.includes("عشاء"))   return { color: "#47759c", bg: "#f3f6f9", light: "#dbe5ee", icon: "🌙" };
+    if (n.includes("SNACK") || n.includes("سناك"))    return { color: "#0E2A4A", bg: "#f2f5f8", light: "#d6dee7", icon: "🥗" };
+    return { color: "#47759c", bg: "#f8fafc", light: "#f1f5f9", icon: "🍴" };
   };
 
   const isToday = formattedDate === format(new Date(), "yyyy-MM-dd");
@@ -1271,102 +1276,67 @@ export default function PlansPage() {
                       <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-2">
                         {isRtl ? "تفاصيل الاشتراك" : "Subscription"}
                       </p>
+                      {/* ✅ ثلاث بطاقات بتدرّج واحد من الهوية — سماوي → فولاذي → كحلي */}
                       <div className="grid grid-cols-3 gap-2">
-                        <div className="rounded-xl p-2.5 text-center"
-                          style={{ background: "linear-gradient(135deg, #ecfeff, #f0fdff)", border: "1px solid #a5f3fc" }}>
-                          <p className="text-2xl font-black tabular-nums" style={{ color: "#0891b2" }}>{mealsCount}</p>
-                          <p className="text-[10px] text-gray-500 font-medium mt-0.5">{isRtl ? "وجبات" : "Meals"}</p>
+                        {[
+                          { value: mealsCount, label: isRtl ? "وجبات" : "Meals", tone: "#3cc4f0", tint: "#f2fbfe", edge: "#bfe9f8" },
+                          { value: snacksCount, label: isRtl ? "سناكات" : "Snacks", tone: "#0E76AC", tint: "#f0f8fc", edge: "#c4e2f1" },
+                          { value: totalMeals, label: isRtl ? "الإجمالي" : "Total", tone: "#0E2A4A", tint: "#f4f6f9", edge: "#d3dbe4" },
+                        ].map((s) => (
+                          <div key={s.label} className="rounded-xl p-2.5 text-center"
+                            style={{ background: s.tint, border: `1px solid ${s.edge}` }}>
+                            <p className="text-2xl font-black tabular-nums" style={{ color: s.tone }}>{s.value}</p>
+                            <p className="text-[10px] font-medium mt-0.5" style={{ color: "#47759c" }}>{s.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ✅ لوحة واحدة لكل قيود/تفضيلات العميل — بدل 5 صناديق ملوّنة مرصوصة.
+                      الأحمر محجوز للحساسية فقط (سلامة). الباقي بهوية أدرينالين. */}
+                  {(c.allergies || c.avoid || c.preferences || c.portions || c.notes) && (
+                    <div className="mx-4 mb-4 rounded-xl overflow-hidden"
+                      style={{ border: "1px solid #e6ebf0" }}>
+                      {[
+                        c.allergies && {
+                          key: "allergies", label: isRtl ? "حساسية" : "Allergy", value: c.allergies,
+                          icon: "⚠", tone: "#dc2626", tint: "#fef2f2", critical: true,
+                        },
+                        c.avoid && {
+                          key: "avoid", label: isRtl ? "ممنوعات" : "Avoid", value: c.avoid,
+                          icon: "✕", tone: "#0E2A4A", tint: "#f5f7f9",
+                        },
+                        c.preferences && {
+                          key: "prefs", label: isRtl ? "تفضيلات" : "Prefers", value: c.preferences,
+                          icon: "★", tone: "#3cc4f0", tint: "#f5fcfe",
+                        },
+                        c.portions && {
+                          key: "portions", label: isRtl ? "الكميات" : "Portions", value: c.portions,
+                          icon: "⚖", tone: "#0E76AC", tint: "#f5fafd",
+                        },
+                        c.notes && {
+                          key: "notes", label: isRtl ? "ملاحظات" : "Notes", value: c.notes,
+                          icon: "✎", tone: "#47759c", tint: "#f7f9fb",
+                        },
+                      ].filter(Boolean).map((row: any, i: number) => (
+                        <div key={row.key}
+                          className="flex items-stretch text-xs"
+                          style={{
+                            background: row.tint,
+                            borderTop: i === 0 ? "none" : "1px solid #e6ebf0",
+                          }}>
+                          <div className="w-1 flex-shrink-0" style={{ background: row.tone }} />
+                          <div className="w-8 flex-shrink-0 flex items-center justify-center font-black"
+                            style={{ color: row.tone }}>{row.icon}</div>
+                          <div className="flex-1 min-w-0 py-2.5 pe-3 flex items-baseline gap-2 flex-wrap">
+                            <span className="text-[10px] font-black uppercase tracking-wide flex-shrink-0"
+                              style={{ color: row.tone }}>{row.label}</span>
+                            <span className={cn("leading-relaxed", row.critical ? "font-bold" : "font-medium")}
+                              style={{ color: row.critical ? "#991b1b" : "#0f1516" }}>{row.value}</span>
+                          </div>
                         </div>
-                        <div className="rounded-xl p-2.5 text-center"
-                          style={{ background: "linear-gradient(135deg, #f0fdf4, #f7fef9)", border: "1px solid #bbf7d0" }}>
-                          <p className="text-2xl font-black tabular-nums text-emerald-600">{snacksCount}</p>
-                          <p className="text-[10px] text-gray-500 font-medium mt-0.5">{isRtl ? "سناكات" : "Snacks"}</p>
-                        </div>
-                        <div className="rounded-xl p-2.5 text-center"
-                          style={{ background: "linear-gradient(135deg, #f8fafc, #f1f5f9)", border: "1px solid #e2e8f0" }}>
-                          <p className="text-2xl font-black tabular-nums text-gray-700">{totalMeals}</p>
-                          <p className="text-[10px] text-gray-500 font-medium mt-0.5">{isRtl ? "الإجمالي" : "Total"}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Allergies (high priority — red) */}
-                  {c.allergies && (
-                    <div className="mx-4 mb-3 rounded-xl p-3 flex items-start gap-2.5"
-                      style={{ background: "linear-gradient(135deg, #fef2f2, #fff5f5)", border: "1.5px solid #fca5a5" }}>
-                      <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center bg-red-500">
-                        <AlertTriangle className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold text-red-600 uppercase tracking-wide mb-1">
-                          {isRtl ? "⚠ حساسية" : "⚠ Allergies"}
-                        </p>
-                        <p className="text-xs font-semibold text-red-800 leading-relaxed">{c.allergies}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Avoid / Forbidden items */}
-                  {c.avoid && (
-                    <div className="mx-4 mb-3 rounded-xl p-3 flex items-start gap-2.5"
-                      style={{ background: "#fff7ed", border: "1px solid #fed7aa" }}>
-                      <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center"
-                        style={{ background: "#f97316" }}>
-                        <span className="text-white text-xs font-black">✕</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold text-orange-600 uppercase tracking-wide mb-1">
-                          {isRtl ? "ممنوعات" : "Avoid"}
-                        </p>
-                        <p className="text-xs font-semibold text-orange-800 leading-relaxed">{c.avoid}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Preferences */}
-                  {c.preferences && (
-                    <div className="mx-4 mb-3 rounded-xl p-3 flex items-start gap-2.5"
-                      style={{ background: "#ecfeff", border: "1px solid #a5f3fc" }}>
-                      <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center"
-                        style={{ background: "#3cc4f0" }}>
-                        <span className="text-white text-xs font-black">★</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: "#0891b2" }}>
-                          {isRtl ? "تفضيلات" : "Preferences"}
-                        </p>
-                        <p className="text-xs font-semibold leading-relaxed" style={{ color: "#155e75" }}>{c.preferences}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Portions */}
-                  {c.portions && (
-                    <div className="mx-4 mb-3 rounded-xl p-3 flex items-start gap-2.5"
-                      style={{ background: "#fefce8", border: "1px solid #fde68a" }}>
-                      <div className="h-7 w-7 rounded-lg flex-shrink-0 flex items-center justify-center"
-                        style={{ background: "#eab308" }}>
-                        <span className="text-white text-xs font-black">⚖</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-wide mb-1 text-yellow-700">
-                          {isRtl ? "الكميات" : "Portions"}
-                        </p>
-                        <p className="text-xs font-semibold leading-relaxed text-yellow-900">{c.portions}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* General delivery notes */}
-                  {c.notes && (
-                    <div className="mx-4 mb-3 rounded-xl p-3 flex items-start gap-2.5"
-                      style={{ background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-                      <StickyNote className="h-4 w-4 text-blue-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[11px] font-bold text-blue-600 mb-0.5">{isRtl ? "ملاحظات التوصيل" : "Delivery Notes"}</p>
-                        <p className="text-xs text-blue-700 leading-relaxed">{c.notes}</p>
-                      </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1424,6 +1394,43 @@ export default function PlansPage() {
                           {isRtl ? "وجبات اليوم" : "Today's Meals"}
                         </h3>
                       </div>
+
+                      {/* ✅ شريط تحذير واحد ثابت — بدل تكراره داخل كل بطاقة وجبة.
+                          يفضل ظاهر أثناء التمرير فالأخصائية بتشوفه وهي بتختار. */}
+                      {(cust?.allergies || cust?.avoid) && (
+                        <div className="sticky top-[57px] z-20 mb-3 rounded-xl overflow-hidden"
+                          style={{
+                            border: cust?.allergies ? "1.5px solid #fca5a5" : "1px solid #d6dee7",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          }}>
+                          {cust?.allergies && (
+                            <div className="flex items-stretch text-xs" style={{ background: "#fef2f2" }}>
+                              <div className="w-9 flex-shrink-0 flex items-center justify-center text-white font-black"
+                                style={{ background: "#dc2626" }}>⚠</div>
+                              <div className="flex-1 min-w-0 px-3 py-2 flex items-baseline gap-2 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-wide text-red-600 flex-shrink-0">
+                                  {isRtl ? "حساسية" : "Allergy"}
+                                </span>
+                                <span className="font-bold text-red-900">{cust.allergies}</span>
+                              </div>
+                            </div>
+                          )}
+                          {cust?.avoid && (
+                            <div className="flex items-stretch text-xs"
+                              style={{ background: "#f5f7f9", borderTop: cust?.allergies ? "1px solid #fca5a5" : "none" }}>
+                              <div className="w-9 flex-shrink-0 flex items-center justify-center text-white font-black"
+                                style={{ background: "#0E2A4A" }}>✕</div>
+                              <div className="flex-1 min-w-0 px-3 py-2 flex items-baseline gap-2 flex-wrap">
+                                <span className="text-[10px] font-black uppercase tracking-wide flex-shrink-0"
+                                  style={{ color: "#0E2A4A" }}>
+                                  {isRtl ? "ممنوعات" : "Avoid"}
+                                </span>
+                                <span className="font-semibold" style={{ color: "#0f1516" }}>{cust.avoid}</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div
                         className="grid gap-3"
@@ -1505,34 +1512,8 @@ export default function PlansPage() {
                                     suggestedIds={scheduledByCategory[String(item.categoryId)] || []}
                                   />
 
-                                  {/* Customer warnings — clean single-line strip */}
-                                  {(cust?.allergies || cust?.avoid) && (
-                                    <div className="rounded-xl overflow-hidden"
-                                      style={{ border: "1px solid #fecaca" }}>
-                                      {cust?.allergies && (
-                                        <div className="flex items-stretch text-[10px]"
-                                          style={{ background: "#fef2f2" }}>
-                                          <div className="px-2 py-1.5 flex items-center justify-center font-black text-white"
-                                            style={{ background: "#ef4444", minWidth: "26px" }}>⚠</div>
-                                          <div className="flex-1 px-2 py-1.5 flex items-center min-w-0">
-                                            <span className="font-bold text-red-700 flex-shrink-0">{isRtl ? "حساسية:" : "Allergy:"}&nbsp;</span>
-                                            <span className="text-red-800 truncate">{cust.allergies}</span>
-                                          </div>
-                                        </div>
-                                      )}
-                                      {cust?.avoid && (
-                                        <div className="flex items-stretch text-[10px]"
-                                          style={{ background: "#fff7ed", borderTop: cust?.allergies ? "1px solid #fecaca" : "none" }}>
-                                          <div className="px-2 py-1.5 flex items-center justify-center font-black text-white"
-                                            style={{ background: "#f97316", minWidth: "26px" }}>✕</div>
-                                          <div className="flex-1 px-2 py-1.5 flex items-center min-w-0">
-                                            <span className="font-bold text-orange-700 flex-shrink-0">{isRtl ? "ممنوع:" : "Avoid:"}&nbsp;</span>
-                                            <span className="text-orange-800 truncate">{cust.avoid}</span>
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                  {/* ℹ️ تحذيرات العميل (حساسية/ممنوعات) لم تعد تتكرّر في كل بطاقة —
+                                      تظهر مرة واحدة في شريط ثابت أعلى قسم الوجبات. */}
 
                                   {/* Modifiers picker */}
                                   <ModifiersPicker
@@ -1542,22 +1523,24 @@ export default function PlansPage() {
                                     isRtl={isRtl}
                                   />
 
-                                  {/* Active modifiers preview */}
+                                  {/* Active modifiers preview — ألوان الهوية */}
                                   {hasMods && (
                                     <div className="flex flex-wrap gap-1">
-                                      {activeMods.map((mod: any) => (
-                                        <span
-                                          key={mod._id}
-                                          className={cn(
-                                            "text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md border",
-                                            mod.group === "AVOID" && "bg-red-50 text-red-700 border-red-200",
-                                            mod.group === "PREF" && "bg-cyan-50 text-cyan-700 border-cyan-200",
-                                            mod.group === "PORTION" && "bg-amber-50 text-amber-700 border-amber-200"
-                                          )}
-                                        >
-                                          {mod.name}
-                                        </span>
-                                      ))}
+                                      {activeMods.map((mod: any) => {
+                                        const tone =
+                                          mod.group === "AVOID" ? { fg: "#0E2A4A", bg: "#f2f5f8", bd: "#d6dee7" }
+                                          : mod.group === "PREF" ? { fg: "#0E76AC", bg: "#f2fbfe", bd: "#bfe9f8" }
+                                          : { fg: "#47759c", bg: "#f6f8fa", bd: "#dde5ec" };
+                                        return (
+                                          <span
+                                            key={mod._id}
+                                            className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md border"
+                                            style={{ color: tone.fg, background: tone.bg, borderColor: tone.bd }}
+                                          >
+                                            {mod.name}
+                                          </span>
+                                        );
+                                      })}
                                     </div>
                                   )}
 
