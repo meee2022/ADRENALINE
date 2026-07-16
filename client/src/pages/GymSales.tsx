@@ -931,6 +931,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     return html;
   };
 
+  /* ── المحتوى المختار يفلتر الصفحة والمستند معاً ──
+        المحدّد واقف جنب فلتري الفترة والمنفذ اللي بيغيّروا الصفحة، فلازم
+        يتصرّف زيهم — وإلا المعاينة ما تبقاش "نفس اللي شايفه". */
+  const showDailyChart = scope === "full";
+  const showPerMeal = scope === "full";
+  const showReturnsBlocks = scope === "full" || scope === "returns";
+  const showTopBlock = scope === "full" || scope === "top";
+
   /** عنوان المستند حسب محتواه — يظهر في شريط العنوان وفي اسم ملف الـPDF. */
   const scopeTitle = () =>
     scope === "returns" ? t("تقرير المرتجعات والهالك", "Returns and waste report")
@@ -990,7 +998,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </div>
           <div className="flex items-end">
             <Button onClick={previewReport} disabled={!report} className="w-full h-10 font-black text-white disabled:opacity-50" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-              <Printer className="h-4 w-4 me-2" /> {t("معاينة وتصدير PDF", "Preview & export PDF")}
+              <Printer className="h-4 w-4 me-2" /> {t("طباعة المعروض PDF", "Print this view as PDF")}
             </Button>
           </div>
         </CardContent>
@@ -999,16 +1007,36 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       {/* ⚠️ "الصافي المستحق" كان بيعرض totalRevenue (الإجمالي قبل خصم المرتجعات)
           فكان بيقول 8985 بينما بطاقة "صافي الإيراد بعد الهالك" تحت بتقول 8552 —
           رقمان متناقضان لنفس الشيء. الصافي = الإجمالي − الهالك. */}
-      {/* الصف يُقرأ كمعادلة: إجمالي التوريد − قيمة الهالك = الصافي المستحق */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <Stat label={t("إجمالي الوجبات", "Total meals")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
-        <Stat label={t("إجمالي التوريد (ر.ق)", "Gross supplied (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#47759c" />
-        <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
-        <Stat label={t("الصافي المستحق (ر.ق)", "Net due (QAR)")} value={(report?.netRevenue ?? report?.totalRevenue)?.toFixed(2) ?? "—"} color="#16a34a" />
-        <Stat label={t("متوسط يومي (صافي)", "Avg/day (net)")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
-        <Stat label={t("أيام التوريد", "Days")} value={report?.daysCount ?? "—"} color="#f59e0b" />
+      {/* البطاقات تتبع المحتوى المختار — نفس منطق بطاقات المستند.
+          في الوضع الكامل الصف يُقرأ كمعادلة: التوريد − الهالك = الصافي. */}
+      <div className={cn("grid gap-3 grid-cols-2", scope === "full" ? "lg:grid-cols-3 xl:grid-cols-6" : "lg:grid-cols-4")}>
+        {scope === "returns" ? (
+          <>
+            <Stat label={t("الكمية المورّدة", "Supplied")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
+            <Stat label={t("المرتجع (هالك)", "Returned (waste)")} value={report?.totalReturned ?? "—"} color="#dc2626" />
+            <Stat label={t("نسبة الارتجاع", "Return rate")} value={decision?.totals?.wastePct != null ? `${decision.totals.wastePct}%` : "—"} color="#dc2626" />
+            <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
+          </>
+        ) : scope === "top" ? (
+          <>
+            <Stat label={t("الكمية المورّدة", "Supplied")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
+            <Stat label={t("الكمية المستهلكة", "Consumed")} value={report?.deliveredMeals ?? "—"} color="#0E76AC" />
+            <Stat label={t("عدد الأصناف المُباعة", "Items sold")} value={decision?.topSellers?.length ?? "—"} color="#7c3aed" />
+            <Stat label={t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")} value={(report?.netRevenue ?? report?.totalRevenue)?.toFixed(2) ?? "—"} color="#16a34a" />
+          </>
+        ) : (
+          <>
+            <Stat label={t("إجمالي الوجبات", "Total meals")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
+            <Stat label={t("إجمالي التوريد (ر.ق)", "Gross supplied (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#47759c" />
+            <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
+            <Stat label={t("الصافي المستحق (ر.ق)", "Net due (QAR)")} value={(report?.netRevenue ?? report?.totalRevenue)?.toFixed(2) ?? "—"} color="#16a34a" />
+            <Stat label={t("متوسط يومي (صافي)", "Avg/day (net)")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
+            <Stat label={t("أيام التوريد", "Days")} value={report?.daysCount ?? "—"} color="#f59e0b" />
+          </>
+        )}
       </div>
 
+      {showDailyChart && (
       <section className="gym-report-panel overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
           <div>
@@ -1039,7 +1067,9 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             {(!report || report.days.length === 0) && <p className="text-center text-slate-400 py-6 text-sm">{t("لا توجد بيانات", "No data")}</p>}
         </div>
       </section>
+      )}
 
+      {showPerMeal && (
       <section className="gym-report-panel overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
           <div>
@@ -1089,16 +1119,20 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </table>
         </div>
       </section>
+      )}
 
       {/* ✅ ملخص المرتجعات + قيمة الهالك للشهر */}
+      {showReturnsBlocks && (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Stat label={t("مرتجعات الفترة", "Returned in period")} value={returnsRep?.totals?.returned ?? "—"} color="#dc2626" />
         <Stat label={t("نسبة الإرجاع", "Return rate %")} value={returnsRep?.totals?.returnRate != null ? `${returnsRep.totals.returnRate}%` : "—"} color="#dc2626" />
         <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={returnsRep?.totals?.wasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
         <Stat label={t("صافي الإيراد بعد الهالك", "Net revenue after waste")} value={returnsRep?.totals?.netRevenue?.toFixed(2) ?? "—"} color="#16a34a" />
       </div>
+      )}
 
       {/* ✅ أكتر الوجبات إرجاعًا — قرارات إيقاف/تقليل الإنتاج */}
+      {showReturnsBlocks && (
       <Card className="rounded-2xl border-slate-200">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -1162,10 +1196,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* 📊 أعلى الأصناف خسارة — قراءة بصرية سريعة: طول الشريط = قيمة الهالك.
           CSS خالص (لا مكتبة شارت) عشان يطبع صح ويفضل خفيف. */}
-      {wasteChart.length > 0 && (
+      {showReturnsBlocks && wasteChart.length > 0 && (
         <Card className="rounded-2xl border-slate-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -1207,7 +1242,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
 
       {/* 🏆 الأصناف الأعلى مبيعاً — بالاستهلاك الفعلي (المورّد − المرتجع)،
           مش بالمورّد: الصنف اللي بيترجع نصه مش أعلى مبيعاً. */}
-      {topSellers.length > 0 && (
+      {showTopBlock && topSellers.length > 0 && (
         <Card className="rounded-2xl border-slate-200">
           <CardContent className="p-4">
             <div className="mb-3 flex items-center justify-between">
