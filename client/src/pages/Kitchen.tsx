@@ -466,11 +466,14 @@ export default function Kitchen() {
     const allPlansToday = dailyPlans.filter(
       (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
+    // 🔀 من بُني له قالب مصدره القالب — نستبعد خطته اليومية القديمة هنا
+    const tplNames = new Set((customized || []).map((c: any) => c.customerName));
     const byPerson: Record<string, { name: string; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string }> }> = {};
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
       const program = (customer?.program || plan.program || "").toUpperCase();
       if (!program.includes("CUSTOM")) return;
+      if (tplNames.has(customer?.fullName || plan.customerName)) return;
       const name = customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer");
       const key = name + "|" + plan.deliveryTime;
       if (!byPerson[key]) byPerson[key] = {
@@ -486,26 +489,33 @@ export default function Kitchen() {
       });
     });
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
-  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl, customized]);
 
-  // ✅ مصدر موحّد للمخصّصين (شاشة + كشف): من خطط اليوم الفعلية، + أصحاب القوالب
-  //    اللي مالهمش خطة اليوم. كل عميل: {name, deliveryTime, allergies, meals[]}.
+  /**
+   * ✅ مصدر موحّد للمخصّصين (شاشة + كشف).
+   *    🔀 القالب هو المصدر — لا الخطة اليومية. المخصّص وجباته تُبنى مرة واحدة في
+   *    صفحة «الوجبات المخصّصة» وتتكرر، فلا يُملأ يوم بيوم. الخطة اليومية تبقى
+   *    fallback لسجلات قديمة لمن لم يُبنَ له قالب بعد (تختفي تلقائياً فور بناء قالبه).
+   *    قبل هذا كانت الأولوية معكوسة، فمن عنده الاثنان ظهر بخطته لا بقالبه.
+   */
   const customizedAll = useMemo(() => {
     const list: { name: string; deliveryTime: string; allergies: string; meals: string[] }[] = [];
     const seen = new Set<string>();
-    for (const p of customizedByPerson) {
-      seen.add(p.name);
-      list.push({
-        name: p.name, deliveryTime: p.deliveryTime, allergies: p.allergies,
-        meals: p.items.map((it: any) => (it.note ? `${it.meal} — ${it.note}` : it.meal)).filter(Boolean),
-      });
-    }
+    // 1) القوالب أولاً — المصدر المعتمد
     for (const c of (customized || [])) {
-      if (seen.has(c.customerName)) continue;
+      seen.add(c.customerName);
       list.push({
         name: c.customerName, deliveryTime: c.deliveryTime,
         allergies: [c.allergies, c.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
         meals: (c.items || []).map((it: any) => composeCustItem(it)).filter(Boolean),
+      });
+    }
+    // 2) خطط قديمة لمن لا قالب له — حتى لا يفقد أحد أكله أثناء الانتقال
+    for (const p of customizedByPerson) {
+      if (seen.has(p.name)) continue;
+      list.push({
+        name: p.name, deliveryTime: p.deliveryTime, allergies: p.allergies,
+        meals: p.items.map((it: any) => (it.note ? `${it.meal} — ${it.note}` : it.meal)).filter(Boolean),
       });
     }
     return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));

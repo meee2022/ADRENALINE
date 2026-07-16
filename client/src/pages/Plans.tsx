@@ -330,6 +330,15 @@ export default function PlansPage() {
     [customers, selectedCustomerId]
   );
 
+  /**
+   * ✅ المشترك المخصّص — وجباته تُبنى في صفحة «الوجبات المخصّصة» من قالب واحد
+   *    (بنّاء جرامات) يتكرر تلقائياً، لا من خطة يومية لكل يوم. ظهوره هنا كان
+   *    يخلق مصدرين للمطبخ لنفس العميل (ازدواج في الأكل والاستيكر).
+   *    القاعدة الآن: المخصّص مصدره القالب فقط.
+   */
+  const isCustomizedCustomer = (c: any) =>
+    String(c?.program || c?.goalType || c?.goals || "").toUpperCase().includes("CUSTOM");
+
   // ✅ نصفّي المشتركين اللي اشتراكهم يشمل التاريخ المختار — كل يوم يعرض
   //   بس اللي فعلاً هيوصلهم فيه، مش كل المشتركين النشطين.
   const activeCustomers = useMemo(
@@ -337,6 +346,8 @@ export default function PlansPage() {
       const targetISO = formattedDate;
       return (customers || [])
         .filter((c: any) => c?.status === "ACTIVE" || c?.isActive === true || c?.isActive === undefined)
+        // 🔀 المخصّصون لهم صفحتهم — نستبعدهم هنا لمنع ازدواج مصدر المطبخ
+        .filter((c: any) => !isCustomizedCustomer(c))
         .filter((c: any) => {
           // لو مفيش startDate/endDate نعرضه (fallback)
           if (!c?.startDate && !c?.endDate) return true;
@@ -349,6 +360,14 @@ export default function PlansPage() {
         );
     },
     [customers, formattedDate]
+  );
+
+  /** عدد المخصّصين المستبعدين — نعرض لافتة إرشاد للأخصائية بدل إخفاء صامت. */
+  const customizedCount = useMemo(
+    () => (customers || []).filter(
+      (c: any) => (c?.isActive !== false) && isCustomizedCustomer(c),
+    ).length,
+    [customers],
   );
 
   const sortedCategories = useMemo(
@@ -947,11 +966,11 @@ export default function PlansPage() {
                 <div className="flex items-center gap-2 flex-wrap pt-1">
                   <span className="text-[11px] font-semibold text-gray-400 mr-1">{isRtl ? "البرنامج:" : "Program:"}</span>
                   {[
+                    // ℹ️ «مخصص» اتشال — المخصّصون لهم صفحتهم (الوجبات المخصّصة)
                     { key: null, label: isRtl ? "الكل" : "All", color: "#47759c" },
-                    { key: "CUSTOMIZED", label: isRtl ? "مخصص (Customized)" : "Customized", color: "#8b5cf6" },
                     { key: "FITNESS", label: "Fitness", color: "#06b6d4" },
                     { key: "DIET", label: "Diet", color: "#3cc4f0" },
-                    { key: "BULK", label: "Bulk", color: "#f59e0b" },
+                    { key: "BULK", label: "Bulk", color: "#0E76AC" },
                     { key: "STANDARD", label: "Standard", color: "#64748b" },
                   ].map((f) => {
                     const active = programFilter === f.key;
@@ -987,6 +1006,40 @@ export default function PlansPage() {
                   })}
                 </div>
               </div>
+
+              {/* ─── لافتة المخصّصين — إرشاد بدل إخفاء صامت ─── */}
+              {customizedCount > 0 && (
+                <button
+                  onClick={() => setLocation("/customized")}
+                  className="w-full rounded-2xl p-3 flex items-center gap-3 text-start transition-all hover:-translate-y-0.5"
+                  style={{
+                    background: "linear-gradient(135deg, #f2fbfe, #ffffff)",
+                    border: "1px solid #bfe9f8",
+                    boxShadow: "0 2px 10px rgba(60,196,240,0.10)",
+                  }}
+                >
+                  <div className="h-9 w-9 rounded-xl flex-shrink-0 flex items-center justify-center text-white"
+                    style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+                    <UtensilsCrossed className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-black" style={{ color: "#0E2A4A" }}>
+                      {isRtl
+                        ? `${customizedCount} مشترك مخصّص — وجباتهم في صفحة «الوجبات المخصّصة»`
+                        : `${customizedCount} customized subscribers — managed in «Customized Meals»`}
+                    </p>
+                    <p className="text-[11px] mt-0.5" style={{ color: "#47759c" }}>
+                      {isRtl
+                        ? "وجباتهم تُبنى من قالب واحد يتكرر — لا تُملأ يوم بيوم هنا."
+                        : "Their meals come from one repeating template — not filled day-by-day here."}
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-black flex-shrink-0 px-3 h-8 rounded-lg flex items-center gap-1"
+                    style={{ background: "#3cc4f0", color: "#fff" }}>
+                    {isRtl ? "افتح ←" : "Open →"}
+                  </span>
+                </button>
+              )}
 
               {/* ─── Customer cards grid ─── */}
               {filtered.length === 0 ? (

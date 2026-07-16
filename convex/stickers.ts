@@ -79,10 +79,17 @@ export const get = query({
       .collect();
 
     const wantAll = args.deliveryTime === "ALL";
+    // 🔀 المخصّص الذي بُني له قالب: مصدره القالب (الكود بالأسفل)، فنستبعد أي خطة
+    //    يومية قديمة له هنا — وإلا فازت الخطة على القالب وطُبع استيكر قديم.
+    //    من لا قالب له تبقى خطته تعمل (fallback أثناء الانتقال).
+    const tplCustomerIds = new Set(
+      (await ctx.db.query("customizedTemplates").collect()).map((t: any) => String(t.customerId)),
+    );
     const plans = plansAll.filter(
       (p: any) =>
         (wantAll || String(p.deliveryTime || "") === args.deliveryTime) &&
-        isPrintableStatus(p.status),
+        isPrintableStatus(p.status) &&
+        !(p.customerId && tplCustomerIds.has(String(p.customerId))),
     );
 
     // ملاحظة: لا نرجع مبكراً عند غياب الخطط العادية — العملاء المخصّصون
