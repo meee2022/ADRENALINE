@@ -62,7 +62,34 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
   w.document.write(doc);
   w.document.close();
   w.focus();
-  // مهلة بسيطة تسمح للخطوط والتخطيط يستقروا قبل ما تتفتح شاشة الطباعة.
-  if (autoPrint) setTimeout(() => { try { w.print(); } catch { /* المستخدم يطبع يدوياً */ } }, 350);
+  if (autoPrint) waitForImagesThenPrint(w);
   return true;
+}
+
+/**
+ * ⚠️ لازم ننتظر الصور (الشعار في ترويسة التقارير) قبل الطباعة — لو اتفتحت
+ *    شاشة الطباعة والصورة لسه بتحمّل بيطلع الـPDF بشعار ناقص.
+ *    مهلة احتياطية 3ث لو صورة اتعلّقت، عشان ما نستناش للأبد.
+ */
+function waitForImagesThenPrint(w: Window): void {
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    // مهلة بسيطة كمان تسمح للخطوط والتخطيط يستقروا بعد آخر صورة.
+    setTimeout(() => { try { w.focus(); w.print(); } catch { /* المستخدم يطبع يدوياً */ } }, 250);
+  };
+
+  const start = () => {
+    const imgs = Array.from(w.document.images || []);
+    const pending = imgs.filter((i) => !i.complete);
+    if (pending.length === 0) { go(); return; }
+    let left = pending.length;
+    const dec = () => { if (--left <= 0) go(); };
+    pending.forEach((i) => { i.addEventListener("load", dec); i.addEventListener("error", dec); });
+    setTimeout(go, 3000); // احتياطي
+  };
+
+  // document.write متزامن، فالصور موجودة في الـDOM دلوقتي.
+  start();
 }

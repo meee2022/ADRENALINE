@@ -1099,11 +1099,19 @@ export const monthlyReport = query({
     orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
 
-    const byDay = new Map<string, { date: string; meals: number; total: number }>();
+    // 💰 المرتجع تالف ولا يُحاسَب عليه المنفذ، فالمستحق الفعلي = الإجمالي − قيمة الهالك.
+    //    netTotal متخزّنة على الطلبية (تُحسب في updateOrder/recordReturns)؛ الطلبيات
+    //    القديمة قبل ميزة المرتجعات ما فيهاش الحقل، فنرجع لـtotal (لا مرتجعات = الصافي هو الإجمالي).
+    const netOf = (o: any) => Number(o.netTotal ?? o.total);
+
+    const byDay = new Map<string, { date: string; meals: number; total: number; waste: number; net: number; returned: number }>();
     for (const o of orders) {
-      const d = byDay.get(o.date) || { date: o.date, meals: 0, total: 0 };
+      const d = byDay.get(o.date) || { date: o.date, meals: 0, total: 0, waste: 0, net: 0, returned: 0 };
       d.meals += o.mealsCount;
       d.total = Math.round((d.total + o.total) * 100) / 100;
+      d.waste = Math.round((d.waste + Number(o.wasteValue || 0)) * 100) / 100;
+      d.net = Math.round((d.net + netOf(o)) * 100) / 100;
+      d.returned += Number(o.returnedTotal || 0);
       byDay.set(o.date, d);
     }
     const days = Array.from(byDay.values()).sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -1125,11 +1133,17 @@ export const monthlyReport = query({
     const totalRevenue = Math.round(orders.reduce((s, o) => s + o.total, 0) * 100) / 100;
     const totalSubtotal = Math.round(orders.reduce((s, o) => s + o.subtotal, 0) * 100) / 100;
     const totalDiscount = Math.round(orders.reduce((s, o) => s + o.discountAmount, 0) * 100) / 100;
+    const totalWasteValue = Math.round(orders.reduce((s, o) => s + Number(o.wasteValue || 0), 0) * 100) / 100;
+    const totalReturned = orders.reduce((s, o) => s + Number(o.returnedTotal || 0), 0);
+    /** المستحق الفعلي على المنفذ بعد خصم المرتجعات. */
+    const netRevenue = Math.round(orders.reduce((s, o) => s + netOf(o), 0) * 100) / 100;
+    const deliveredMeals = totalMeals - totalReturned;
 
     return {
       month: args.month, from, to, totalMeals, totalRevenue, totalSubtotal, totalDiscount,
+      totalWasteValue, totalReturned, netRevenue, deliveredMeals,
       daysCount: days.length,
-      avgPerDay: days.length ? Math.round((totalRevenue / days.length) * 100) / 100 : 0,
+      avgPerDay: days.length ? Math.round((netRevenue / days.length) * 100) / 100 : 0,
       bestDay: days.length ? days.reduce((a, b) => (b.total > a.total ? b : a)) : null,
       worstDay: days.length ? days.reduce((a, b) => (b.total < a.total ? b : a)) : null,
       days, meals,

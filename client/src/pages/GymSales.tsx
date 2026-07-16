@@ -651,17 +651,37 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const printInvoice = () => {
     if (!report) return;
     const gym = gyms.find((g: any) => g.id === gymId);
+
+    // 💰 الأرقام المالية من الخادم (monthlyReport) — هو المرجع، لا نحسبها هنا.
+    //    ?? للطلبيات القديمة قبل ميزة المرتجعات (لا مرتجع ⇒ الصافي = الإجمالي).
+    const wasteValue = Number(report.totalWasteValue || 0);
+    const netRevenue = Number(report.netRevenue ?? report.totalRevenue);
+    const returnedQty = Number(report.totalReturned || 0);
+    const delivered = Number(report.deliveredMeals ?? report.totalMeals);
+    // 📅 تاريخ محلي (قطر UTC+3) — toISOString بترجع UTC فبتدي تاريخ غلط.
+    const n = new Date();
+    const issuedAt = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("تقرير مبيعات المنافذ", "Outlet sales report")} — ${rangeLabel}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
-        body{margin:0;padding:20px;color:#0f1516;font-size:12px}
-        h1{font-size:20px;margin:0 0 6px;color:#0E2A4A}
-        .head{border-bottom:2px solid #0E76AC;padding-bottom:10px;margin-bottom:15px}
-        .info{color:#47759c;font-size:11px;line-height:1.6}
+        body{margin:0;padding:0;color:#0f1516;font-size:12px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+        /* ── ترويسة رسمية (ورق المطعم): الشعار سماوي + "HEALTHY FOOD" أسود،
+              فلازم خلفية بيضا — على خلفية كحلي الكلمة السودا بتختفي. ── */
+        .lh{display:flex;justify-content:space-between;align-items:flex-start;
+            padding:14px 20px 12px;border-bottom:3px solid #0E76AC}
+        .lh img{height:38px;width:auto;display:block}
+        .lh .meta{text-align:${isRtl ? "left" : "right"};font-size:10px;color:#47759c;line-height:1.7}
+        .lh .meta b{color:#0E2A4A}
+        .doc-t{background:#0E2A4A;color:#fff;padding:8px 20px;font-size:15px;font-weight:900;
+               display:flex;justify-content:space-between;align-items:center}
+        .doc-t .rng{font-size:11px;font-weight:700;opacity:.85}
+        .wrap{padding:14px 20px 20px}
+
         table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11px}
         th,td{border:1px solid #cdd9e4;padding:6px 8px}
         th{background:#0E76AC;color:#fff;text-align:${isRtl ? "right" : "left"}}
-        td.n{text-align:${isRtl ? "left" : "right"};font-family:monospace;font-weight:700}
+        td.n{text-align:${isRtl ? "left" : "right"};font-variant-numeric:tabular-nums;font-weight:700}
         tr.tot td{background:#dcebf5;color:#0E76AC;font-weight:900;font-size:13px}
         .box{border:1px solid #cdd9e4;border-radius:8px;padding:8px 12px;text-align:center}
         .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 20px}
@@ -670,28 +690,51 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
            يتقسم على صفحتين، فما يبقاش في جدول بلا هوية في الصفحة التانية. */
         tr.cap td{background:#0E2A4A;color:#fff;font-weight:900;font-size:13px;
                   padding:7px 9px;text-align:${isRtl ? "right" : "left"};border:1px solid #0E2A4A}
+
+        /* ── الخلاصة المالية: الإجمالي − الهالك = المستحق ── */
+        .fin{margin-top:18px;border:1px solid #cdd9e4;border-radius:10px;overflow:hidden;break-inside:avoid}
+        .fin-h{background:#0E2A4A;color:#fff;font-weight:900;font-size:13px;padding:7px 10px}
+        .fin table{margin:0;font-size:12px}
+        .fin td{border:none;border-bottom:1px solid #e8eef4;padding:8px 12px}
+        .fin tr:last-child td{border-bottom:none}
+        .fin .lbl{color:#47759c;font-weight:700}
+        .fin .val{text-align:${isRtl ? "left" : "right"};font-weight:900;font-variant-numeric:tabular-nums;width:150px}
+        .fin .minus .val{color:#b91c1c}
+        .fin .net td{background:#0E76AC;color:#fff;font-size:14px}
+        .fin .net .lbl{color:#fff}
+
+        .sign{margin-top:26px;display:flex;justify-content:space-between;gap:40px;break-inside:avoid}
+        .sign div{flex:1;border-top:1px solid #94a3b8;padding-top:5px;font-size:10px;
+                  color:#47759c;font-weight:700;text-align:center}
+        .foot{margin-top:14px;font-size:9px;color:#94a3b8;text-align:center}
         @page{size:A4;margin:12mm}
         /* thead بيتكرر تلقائياً في كل صفحة — نأكّدها صراحةً */
         @media print{thead{display:table-header-group}tr{break-inside:avoid}}
       </style></head><body>
-      <div class="head">
-        <h1>${t("تقرير مبيعات المنافذ - Adrenaline", "Outlet sales report - Adrenaline")}</h1>
-        <div class="info">
+      <div class="lh">
+        <img src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
+        <div class="meta">
           <div><b>${t("المنفذ", "Outlet")}:</b> ${gym?.name || t("كل المنافذ", "All outlets")}</div>
-          <div><b>${t("الفترة", "Period")}:</b> ${rangeLabel}</div>
-          <div><b>${t("عدد أيام التوريد", "Days")}:</b> ${report.daysCount}</div>
+          <div><b>${t("أيام التوريد", "Supply days")}:</b> ${report.daysCount}</div>
+          <div><b>${t("تاريخ الإصدار", "Issued")}:</b> ${issuedAt}</div>
         </div>
       </div>
-      <div class="grid" style="grid-template-columns:repeat(3,1fr)">
-        <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("إجمالي الوجبات", "Total meals")}</div></div>
-        <div class="box"><div class="v">${report.daysCount}</div><div class="l">${t("أيام التوريد", "Days")}</div></div>
-        <div class="box"><div class="v">${report.totalRevenue.toFixed(2)}</div><div class="l">${t("الإجمالي المستحق", "Total due")}</div></div>
+      <div class="doc-t">
+        <span>${t("تقرير مبيعات المنافذ", "Outlet sales report")}</span>
+        <span class="rng">${rangeLabel}</span>
+      </div>
+      <div class="wrap">
+      <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("وجبات مُرسلة", "Meals sent")}</div></div>
+        <div class="box"><div class="v">${delivered}</div><div class="l">${t("وجبات مُستهلكة", "Meals consumed")}</div></div>
+        <div class="box"><div class="v" style="color:#b91c1c">${returnedQty}</div><div class="l">${t("مرتجع (تالف)", "Returned (waste)")}</div></div>
+        <div class="box"><div class="v">${netRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق (ر.ق)", "Net due (QAR)")}</div></div>
       </div>
       <table><thead>
-      <tr class="cap"><td colspan="3">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
-      <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th></tr></thead>
-      <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td></tr>`).join("")}
-      <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td></tr></tbody></table>
+      <tr class="cap"><td colspan="5">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
+      <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("الهالك (ر.ق)", "Waste (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
+      <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td><td class="n" style="color:${Number(d.waste) > 0 ? "#b91c1c" : "#94a3b8"}">${Number(d.waste || 0).toFixed(2)}</td><td class="n">${Number(d.net ?? d.total).toFixed(2)}</td></tr>`).join("")}
+      <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td><td class="n">${wasteValue.toFixed(2)}</td><td class="n">${netRevenue.toFixed(2)}</td></tr></tbody></table>
       <table style="margin-top:20px"><thead>
       <tr class="cap"><td colspan="3">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</td></tr>
       <tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
@@ -701,6 +744,26 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
       <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
+
+      <div class="fin">
+        <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
+        <table>
+          <tr><td class="lbl">${t("إجمالي التوريد", "Gross supplied")} (${report.totalMeals} ${t("وجبة", "meals")})</td>
+              <td class="val">${report.totalRevenue.toFixed(2)}</td></tr>
+          <tr class="minus"><td class="lbl">${t("يُخصم — مرتجع تالف", "Less — returned (waste)")} (${returnedQty} ${t("وجبة", "meals")})</td>
+              <td class="val">− ${wasteValue.toFixed(2)}</td></tr>
+          <tr class="net"><td class="lbl">${t("الصافي المستحق على المنفذ", "Net due from outlet")}</td>
+              <td class="val">${netRevenue.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
+        </table>
+      </div>
+
+      <div class="sign">
+        <div>${t("مسؤول المنافذ", "Outlet supervisor")}</div>
+        <div>${t("مدير المطعم", "Restaurant manager")}</div>
+        <div>${t("ممثل المنفذ", "Outlet representative")}</div>
+      </div>
+      <div class="foot">ADRENALINE Healthy Food — ${t("تقرير مبيعات المنافذ", "Outlet sales report")} · ${rangeLabel}</div>
+      </div>
       </body></html>`;
     // 📄 PDF عبر طباعة المتصفح — المدير بيطلب التقرير جاهز، مش ملف HTML.
     openPrintDoc(html, {
