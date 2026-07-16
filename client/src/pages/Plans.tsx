@@ -371,9 +371,37 @@ export default function PlansPage() {
   const restaurantRotationWeek = rotationInfo?.rotationWeek || 1;
   const rotationWeek = weekOverride || restaurantRotationWeek;
 
-  // ✅ خريطة وجبات اليوم: categoryId → [menuItemId] — من جدول publicMeals (مصدر واحد، مطابقة مطبّعة بالاسم)
+  /**
+   * ✅ ربط تصنيف المنيو العام (publicMeals.category) بخانات الأخصائية (mealCategories).
+   *    publicMeals.category هو مصدر الحقيقة — نفس الحقل اللي بيفلتر بيه العميل في
+   *    المنيو. أما menuItems.categoryId فبيانات داخلية قديمة وغير موثوقة
+   *    (فيه أصناف بتشاور على تصنيفات محذوفة، وسناكات متصنّفة فطور).
+   */
+  const PUBLIC_CAT_ALIASES: Record<string, string[]> = {
+    breakfast: ["breakfast", "فطور", "فطار", "الفطور", "الفطار"],
+    lunch:     ["lunch", "غداء", "الغداء"],
+    dinner:    ["dinner", "عشاء", "العشاء"],
+    snack:     ["snacks", "snack", "سناك", "سناكس", "سناكات"],
+    salad:     ["salad", "salads", "سلطات", "سلطة"],
+  };
+
+  /** publicMeals.category → [mealCategories._id] (قد يطابق أكثر من خانة: "Snacks" و"سناك") */
+  const slotIdsForPublicCat = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const [pubCat, aliases] of Object.entries(PUBLIC_CAT_ALIASES)) {
+      const ids = (categories as any[])
+        .filter((c) => aliases.includes(String(c?.name || "").trim().toLowerCase()))
+        .map((c) => String(c._id));
+      if (ids.length) map[pubCat] = ids;
+    }
+    return map;
+  }, [categories]);
+
+  // ✅ خريطة وجبات اليوم: mealCategoryId → [menuItemId]
   const scheduledByCategory = useMemo(() => {
-    const normName = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/s/g, "").replace(/(.)\1+/g, "$1");
+    // نُبقي الحروف العربية — النسخة القديمة كانت تمسحها فيفشل الرجوع لـnameAr دائماً
+    const normName = (s: string) =>
+      String(s || "").toLowerCase().replace(/[^a-z0-9؀-ۿ]/g, "").replace(/s/g, "").replace(/(.)\1+/g, "$1");
     const miByNorm = new Map<string, any>();
     (menuItems as any[]).forEach((m) => { const k = normName(m.name); if (k && !miByNorm.has(k)) miByNorm.set(k, m); });
     const map: Record<string, string[]> = {};
@@ -382,12 +410,14 @@ export default function PlansPage() {
       if (!pm.schedule.some((x: any) => x.week === rotationWeek && x.day === planDayName)) return;
       const mi = miByNorm.get(normName(pm.nameEn)) || miByNorm.get(normName(pm.nameAr));
       if (!mi) return;
-      const cat = String(mi.categoryId);
-      (map[cat] ||= []);
-      if (!map[cat].includes(mi._id)) map[cat].push(mi._id);
+      // 🔑 الخانة تُشتقّ من تصنيف المنيو العام، لا من menuItem.categoryId
+      for (const slotId of slotIdsForPublicCat[String(pm.category)] || []) {
+        (map[slotId] ||= []);
+        if (!map[slotId].includes(mi._id)) map[slotId].push(mi._id);
+      }
     });
     return map;
-  }, [publicMeals, menuItems, rotationWeek, planDayName]);
+  }, [publicMeals, menuItems, rotationWeek, planDayName, slotIdsForPublicCat]);
 
   const scheduledCount = useMemo(() => Object.values(scheduledByCategory).reduce((s, a) => s + a.length, 0), [scheduledByCategory]);
 
@@ -1440,8 +1470,13 @@ export default function PlansPage() {
                           const category = sortedCategories.find((c: any) => c._id === item.categoryId);
                           if (!category) return null;
                           const accent = getCategoryAccent(category.name);
+                          // ✅ قائمة الاختيار = أصناف الخانة + أي صنف مجدول اليوم لها.
+                          //    بدون الشق الثاني كان المقترح يُفلتر ويختفي، لأن
+                          //    menuItem.categoryId قديم/محذوف لكثير من الأصناف.
+                          const slotSuggestedIds = scheduledByCategory[String(item.categoryId)] || [];
+                          const slotSugSet = new Set(slotSuggestedIds);
                           const categoryItems = menuItems.filter(
-                            (m: any) => m.categoryId === category._id && m.isActive
+                            (m: any) => m.isActive && (m.categoryId === category._id || slotSugSet.has(m._id))
                           );
                           const showIndex = (catCounts[item.categoryId] || 0) > 1;
                           const canRemove = (catCounts[item.categoryId] || 0) > 1;
@@ -1509,7 +1544,7 @@ export default function PlansPage() {
                                     items={categoryItems}
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}
-                                    suggestedIds={scheduledByCategory[String(item.categoryId)] || []}
+                                    suggestedIds={slotSuggestedIds}
                                   />
 
                                   {/* ℹ️ تحذيرات العميل (حساسية/ممنوعات) لم تعد تتكرّر في كل بطاقة —
