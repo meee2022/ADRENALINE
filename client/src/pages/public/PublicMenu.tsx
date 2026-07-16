@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState } from "@/lib/subscription";
+import { mealScheduledFor, localISO } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -57,13 +58,6 @@ function defaultDay(): DayOfWeek {
   return "saturday"; // الجمعة → السبت
 }
 
-/** ✅ تنسيق تاريخ محلي yyyy-MM-dd — تجنّب toISOString لأنه يحوّل لـUTC. */
-function localISO(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 /** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd (بالتوقيت المحلي). */
 function nextDeliveryDateISO(): string {
@@ -550,12 +544,12 @@ export default function PublicMenuPage() {
 
   // Filter meals by selected week and day using exact schedule pairs
   const filteredMeals = allMeals.filter((meal: any) => {
-    // Use precise schedule pairs if available
+    // ✅ نفس حكم الخطة الذكية (lib/mealSchedule.ts) — كانت المقارنة هنا بـ===
+    //    بلا توحيد نوع، فأي جدولة تُكتب بأسبوع نصّي "2" أو يوم "Saturday"
+    //    كانت تختفي من المنيو اليدوي وحده بينما تظهر في الذكية.
     if (meal.schedule && meal.schedule.length > 0) {
-      if (selectedDay) {
-        return meal.schedule.some((s: any) => s.week === selectedWeek && s.day === selectedDay);
-      }
-      return meal.schedule.some((s: any) => s.week === selectedWeek);
+      if (selectedDay) return mealScheduledFor(meal, selectedWeek, selectedDay);
+      return meal.schedule.some((s: any) => Number(s?.week) === Number(selectedWeek));
     }
     // Fallback: legacy weeks/days arrays
     const hasSchedule = meal.weeks && meal.weeks.length > 0;

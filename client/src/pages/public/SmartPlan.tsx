@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionState } from "@/lib/subscription";
+import { mealScheduledFor, localISO } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
@@ -141,18 +142,9 @@ export default function SmartPlan() {
   //    البدائل = وجبات نفس اليوم/دورة المطبخ فقط (لا كل وجبات المطعم).
   const allMeals: any[] = (useQuery(api.publicMeals.listMeals, {}) as any[]) || [];
   const [swap, setSwap] = useState<any>(null); // {src:"weekly"|"day", di?, i, week, day, meal}
-  // يطابق الباك اند (ai.matchesToday): الوجبة تظهر فقط لو **مجدولة صراحةً**
-  //    لهذا (الأسبوع + اليوم). وجبة بلا جدولة لا تُدرج — فلا يتسرّب منيو الأسبوع كله.
-  const mealAvailable = (m: any, wk: number, dy: string) => {
-    if (!wk || !dy) return false;
-    const d = String(dy).toLowerCase();
-    if (Array.isArray(m.schedule) && m.schedule.length)
-      return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === d);
-    const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
-    const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
-    if (weeks.length || days.length) return weeks.includes(wk) && days.includes(d);
-    return false; // بلا جدولة → لا تظهر (نلتزم بمنيو اليوم)
-  };
+  // الوجبة تظهر فقط لو **مجدولة صراحةً** لهذا (الأسبوع + اليوم) — نفس حكم
+  //    المنيو اليدوي وai.matchesToday، من lib/mealSchedule.ts.
+  const mealAvailable = mealScheduledFor;
   const toPick = (m: any) => ({
     id: m._id, nameAr: m.nameAr, nameEn: m.nameEn, calories: m.calories,
     protein: m.protein, carbs: m.carbs, fats: m.fats, category: m.category,
@@ -251,10 +243,8 @@ export default function SmartPlan() {
         //   - لو الاشتراك بدأ فعلاً → من بكرة (اليوم انقضى ميعاد تحضيره).
         //   ⚠️ نستخدم تنسيق تاريخ محلي (مش toISOString) لأن UTC ممكن يرجّع
         //     تاريخ اليوم السابق في المناطق ذات UTC+ (قطر UTC+3).
-        const _t = new Date(); _t.setHours(0,0,0,0);
-        const _tom = new Date(_t); _tom.setDate(_tom.getDate() + 1);
-        const tomorrowISO =
-          `${_tom.getFullYear()}-${String(_tom.getMonth()+1).padStart(2,'0')}-${String(_tom.getDate()).padStart(2,'0')}`;
+        const _tom = new Date(); _tom.setHours(0, 0, 0, 0); _tom.setDate(_tom.getDate() + 1);
+        const tomorrowISO = localISO(_tom);
         const effStartDate =
           subStartDate && subStartDate > tomorrowISO
             ? subStartDate
@@ -272,10 +262,8 @@ export default function SmartPlan() {
       } else {
         // ✅ نبعت targetDate = بكرة (بالتوقيت المحلي) — عشان النظام يقترح خطة
         //     ليوم غد اللي فعلاً هيوصله، مش يوم النهاردة (اللي انقضى ميعاده).
-        const _t = new Date(); _t.setHours(0,0,0,0);
-        const _tom = new Date(_t); _tom.setDate(_tom.getDate() + 1);
-        const targetDate =
-          `${_tom.getFullYear()}-${String(_tom.getMonth()+1).padStart(2,'0')}-${String(_tom.getDate()).padStart(2,'0')}`;
+        const _tom = new Date(); _tom.setHours(0, 0, 0, 0); _tom.setDate(_tom.getDate() + 1);
+        const targetDate = localISO(_tom);
         const res: any = await generate({ ...source, targetDate, sessionToken });
         if (!res.ok) { setError(res.error || t("تعذّر إنشاء الخطة", "Could not generate the plan")); }
         else setResult(res);
