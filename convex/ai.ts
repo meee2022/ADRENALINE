@@ -91,15 +91,31 @@ export const getSmartPlanData = query({
         .first();
     }
 
-    // 2) بناء بروفايل — للزائر غير المعتمد نعيد قيم عامة فقط بحيث لا يستطيع
-    //    الاستنتاج بوجود/عدم وجود اشتراك بهاتف عشوائي.
-    const profile = (customer && authorized)
+    /* 2) بناء بروفايل.
+     *
+     *   🔴 كان الشرط (customer && authorized): المشترك اللي بيدخل رقمه في
+     *   الموقع العام مالوش sessionToken ⇒ authorized=false ⇒ found=false،
+     *   فيقع على الافتراضي (3 وجبات + 1 سناك = 4) مهما كان اشتراكه، وتظهر له
+     *   «لم نجد اشتراكاً مرتبطاً» بينما بطاقة الاشتراك فوقها تعرض اسمه وتواريخه
+     *   — تناقض على نفس الشاشة. (مثال حقيقي: اشتراك 4 وجبات + 2 سناك ⇒ طلعت 4.)
+     *
+     *   والحجب مكانش بيحمي أصلاً: customers.findPublicByPhone استعلام عام بلا
+     *   أي حماية وبيرجّع mealsPerDay/snacksPerDay/allergies/avoid لنفس الرقم —
+     *   ونفس الصفحة بتناديه. فحجبها هنا كان بيكسر التخصيص بلا أي مقابل أمني.
+     *
+     *   ⚖️ الحدّ: الحقول المكشوفة عامّاً بالفعل (الوجبات/السناكات/الحساسية/
+     *   الممنوعات) تُستخدم بمطابقة الهاتف. أما goal و preferences فغير موجودين
+     *   في publicCustomerView ⇒ يظلّان للمعتمدين فقط.
+     *
+     *   ⚠️ الحماية الحقيقية = التحقق من ملكية الرقم (OTP)، وهي شغل منفصل.
+     */
+    const profile = customer
       ? {
           found: true,
-          goal: customer.goalType || customer.goals || "",
+          goal: authorized ? (customer.goalType || customer.goals || "") : "",
           allergies: customer.allergies || "",
           avoid: customer.avoid || "",
-          preferences: customer.preferences || "",
+          preferences: authorized ? (customer.preferences || "") : "",
           mealsPerDay: customer.mealsPerDay ?? 3,
           snacksPerDay: customer.snacksPerDay ?? 1,
         }
