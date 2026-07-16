@@ -55,14 +55,22 @@ function defaultDay(): DayOfWeek {
   return "saturday"; // الجمعة → السبت
 }
 
-/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd. */
+/** ✅ تنسيق تاريخ محلي yyyy-MM-dd — تجنّب toISOString لأنه يحوّل لـUTC. */
+function localISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd (بالتوقيت المحلي). */
 function nextDeliveryDateISO(): string {
   const d = new Date();
   for (let i = 0; i < 8; i++) {
-    if (d.getDay() !== 5) return d.toISOString().slice(0, 10); // الجمعة = 5
+    if (d.getDay() !== 5) return localISO(d); // الجمعة = 5
     d.setDate(d.getDate() + 1);
   }
-  return d.toISOString().slice(0, 10);
+  return localISO(d);
 }
 
 export default function PublicMenuPage() {
@@ -1191,7 +1199,7 @@ export default function PublicMenuPage() {
               <input
                 type="date"
                 value={startDate}
-                min={new Date().toISOString().slice(0, 10)}
+                min={localISO(new Date())}
                 onChange={(e) => { setStartDate(e.target.value); setWeekTouched(false); }}
                 className="h-10 px-3 rounded-xl border border-gray-200 text-sm bg-white"
               />
