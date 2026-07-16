@@ -828,10 +828,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <span class="rng">${rangeLabel}</span>
       </div>
       <div class="wrap">
-      <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="grid" style="grid-template-columns:repeat(5,1fr)">
         <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("وجبات مُرسلة", "Meals sent")}</div></div>
         <div class="box"><div class="v">${delivered}</div><div class="l">${t("وجبات مُستهلكة", "Meals consumed")}</div></div>
         <div class="box"><div class="v" style="color:#b91c1c">${returnedQty}</div><div class="l">${t("مرتجع (تالف)", "Returned (waste)")}</div></div>
+        <div class="box"><div class="v" style="color:#b91c1c">${wasteValue.toFixed(2)}</div><div class="l">${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</div></div>
         <div class="box"><div class="v">${netRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق (ر.ق)", "Net due (QAR)")}</div></div>
       </div>
       <div class="fin">
@@ -927,9 +928,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       {/* ⚠️ "الصافي المستحق" كان بيعرض totalRevenue (الإجمالي قبل خصم المرتجعات)
           فكان بيقول 8985 بينما بطاقة "صافي الإيراد بعد الهالك" تحت بتقول 8552 —
           رقمان متناقضان لنفس الشيء. الصافي = الإجمالي − الهالك. */}
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
+      {/* الصف يُقرأ كمعادلة: إجمالي التوريد − قيمة الهالك = الصافي المستحق */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <Stat label={t("إجمالي الوجبات", "Total meals")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
         <Stat label={t("إجمالي التوريد (ر.ق)", "Gross supplied (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#47759c" />
+        <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
         <Stat label={t("الصافي المستحق (ر.ق)", "Net due (QAR)")} value={(report?.netRevenue ?? report?.totalRevenue)?.toFixed(2) ?? "—"} color="#16a34a" />
         <Stat label={t("متوسط يومي (صافي)", "Avg/day (net)")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
         <Stat label={t("أيام التوريد", "Days")} value={report?.daysCount ?? "—"} color="#f59e0b" />
