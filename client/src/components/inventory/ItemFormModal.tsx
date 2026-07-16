@@ -29,6 +29,9 @@ import { Barcode, Scan } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { useQuery } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 
 interface ItemFormModalProps {
   open: boolean;
@@ -61,6 +64,8 @@ export default function ItemFormModal({
 }: ItemFormModalProps) {
   const { t, isRtl } = useLanguage();
   const { toast } = useToast();
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const setup: any = useQuery(api.inventorySetup.getSetupData, sessionToken ? { sessionToken } : "skip");
 
   const { data: suppliers = [] } = useSuppliers();
   const createMutation = useCreateInventoryItem();
@@ -72,6 +77,12 @@ export default function ItemFormModal({
     nameEn: "",
     category: "vegetables" as any,
     unit: "kg" as any,
+    sku: "",
+    itemType: "ingredient",
+    purchaseUnit: "kg",
+    purchaseToBaseFactor: 1,
+    defaultLocationId: "",
+    notes: "",
     supplierId: "",
     minStock: 0,
     targetStock: 0,
@@ -87,6 +98,12 @@ export default function ItemFormModal({
         nameEn: item.nameEn || "",
         category: item.category,
         unit: item.unit,
+        sku: item.sku || "",
+        itemType: item.itemType || "ingredient",
+        purchaseUnit: item.purchaseUnit || item.unit,
+        purchaseToBaseFactor: item.purchaseToBaseFactor || 1,
+        defaultLocationId: item.defaultLocationId || "",
+        notes: item.notes || "",
         supplierId: item.supplierId || "",
         minStock: item.minStock,
         targetStock: item.targetStock,
@@ -126,6 +143,12 @@ export default function ItemFormModal({
         nameEn: formData.nameEn.trim() || undefined,
         category: formData.category,
         unit: formData.unit,
+        sku: formData.sku.trim() || undefined,
+        itemType: formData.itemType,
+        purchaseUnit: formData.purchaseUnit || formData.unit,
+        purchaseToBaseFactor: Number(formData.purchaseToBaseFactor) || 1,
+        defaultLocationId: formData.defaultLocationId || undefined,
+        notes: formData.notes.trim() || undefined,
         supplierId: formData.supplierId || undefined,
         minStock: formData.minStock,
         targetStock: formData.targetStock,
@@ -166,7 +189,7 @@ export default function ItemFormModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={cn("sm:max-w-[500px]", isRtl && "rtl")}
+        className={cn("max-h-[90vh] overflow-y-auto sm:max-w-[620px]", isRtl && "rtl")}
         dir={isRtl ? "rtl" : "ltr"}
       >
         <DialogHeader>
@@ -258,7 +281,7 @@ export default function ItemFormModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((cat) => (
+                  {(setup?.categories?.length ? setup.categories.map((c: any) => ({ value: c.code, ar: c.nameAr, en: c.nameEn })) : CATEGORIES).map((cat: any) => (
                     <SelectItem key={cat.value} value={cat.value}>
                       {isRtl ? cat.ar : cat.en}
                     </SelectItem>
@@ -281,7 +304,7 @@ export default function ItemFormModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {UNITS.map((unit) => (
+                  {(setup?.units?.length ? setup.units.map((u: any) => ({ value: u.code, ar: u.nameAr, en: u.nameEn })) : UNITS).map((unit: any) => (
                     <SelectItem key={unit.value} value={unit.value}>
                       {isRtl ? unit.ar : unit.en}
                     </SelectItem>
@@ -290,6 +313,20 @@ export default function ItemFormModal({
               </Select>
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>{isRtl ? "نوع الصنف" : "Item type"}</Label><Select value={formData.itemType} onValueChange={(value) => setFormData({ ...formData, itemType: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ingredient">{isRtl ? "مادة غذائية" : "Ingredient"}</SelectItem><SelectItem value="packaging">{isRtl ? "تغليف" : "Packaging"}</SelectItem><SelectItem value="consumable">{isRtl ? "مستهلكات" : "Consumable"}</SelectItem><SelectItem value="asset">{isRtl ? "عهدة / أصل" : "Asset"}</SelectItem></SelectContent></Select></div>
+            <div className="space-y-2"><Label>{isRtl ? "كود الصنف SKU" : "SKU"}</Label><Input value={formData.sku} onChange={(e) => setFormData({ ...formData, sku: e.target.value })} /></div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2"><Label>{isRtl ? "وحدة الشراء" : "Purchase unit"}</Label><Select value={formData.purchaseUnit} onValueChange={(value) => setFormData({ ...formData, purchaseUnit: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{(setup?.units?.length ? setup.units.map((u: any) => ({ value: u.code, ar: u.nameAr, en: u.nameEn })) : UNITS).map((u: any) => <SelectItem key={u.value} value={u.value}>{isRtl ? u.ar : u.en}</SelectItem>)}</SelectContent></Select></div>
+            <div className="space-y-2"><Label>{isRtl ? `كل وحدة شراء = كم ${formData.unit}` : `Base units per purchase unit`}</Label><Input type="number" min="0.0001" step="0.0001" value={formData.purchaseToBaseFactor} onChange={(e) => setFormData({ ...formData, purchaseToBaseFactor: Number(e.target.value) })} /></div>
+          </div>
+
+          <div className="space-y-2"><Label>{isRtl ? "موقع التخزين الافتراضي" : "Default location"}</Label><Select value={formData.defaultLocationId || "none"} onValueChange={(value) => setFormData({ ...formData, defaultLocationId: value === "none" ? "" : value })}><SelectTrigger><SelectValue placeholder={isRtl ? "اختر الموقع" : "Select location"} /></SelectTrigger><SelectContent><SelectItem value="none">{isRtl ? "غير محدد" : "Not set"}</SelectItem>{(setup?.locations || []).map((l: any) => <SelectItem key={l._id} value={l._id}>{isRtl ? l.nameAr : l.nameEn}</SelectItem>)}</SelectContent></Select></div>
+
+          <div className="space-y-2"><Label>{isRtl ? "ملاحظات التخزين" : "Storage notes"}</Label><Input value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder={isRtl ? "مثال: الرف B2، يحفظ مجمداً" : "e.g. Shelf B2, keep frozen"} /></div>
 
           {/* Supplier */}
           <div className="space-y-2">

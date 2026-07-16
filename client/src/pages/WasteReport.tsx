@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { TrendingDown, Coins, Percent, ChefHat, ArrowRight, Trash2, PieChart } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
+import { useStore } from "@/lib/store";
 
 const RANGES = [
   { days: 7, ar: "٧ أيام", en: "7 days" },
@@ -23,7 +24,11 @@ export default function WasteReport() {
   const { isRtl } = useLanguage();
   const [, setLocation] = useLocation();
   const [days, setDays] = useState(30);
-  const report: any = useQuery(api.inventory.getConsumptionReport, { days });
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const report: any = useQuery(
+    api.inventory.getConsumptionReport,
+    sessionToken ? { days, sessionToken } : "skip",
+  );
   const r = report || { totalWasted: 0, totalWasteValue: 0, totalConsumed: 0, totalConsumedValue: 0, wastePct: 0, byReason: [], perItem: [] };
 
   const kpis = [

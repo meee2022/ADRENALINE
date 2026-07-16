@@ -298,20 +298,14 @@ export const createItem = mutation({
     barcode: v.optional(v.string()),
     nameAr: v.string(),
     nameEn: v.optional(v.string()),
-    category: v.union(
-      v.literal("vegetables"),
-      v.literal("proteins"),
-      v.literal("dairy"),
-      v.literal("dry_goods"),
-      v.literal("other")
-    ),
-    unit: v.union(
-      v.literal("kg"),
-      v.literal("piece"),
-      v.literal("liter"),
-      v.literal("pack"),
-      v.literal("box")
-    ),
+    category: v.string(),
+    unit: v.string(),
+    sku: v.optional(v.string()),
+    itemType: v.optional(v.string()),
+    purchaseUnit: v.optional(v.string()),
+    purchaseToBaseFactor: v.optional(v.number()),
+    defaultLocationId: v.optional(v.id("inventoryLocations")),
+    notes: v.optional(v.string()),
     supplierId: v.optional(v.id("suppliers")),
     minStock: v.number(),
     targetStock: v.number(),
@@ -337,6 +331,12 @@ export const createItem = mutation({
       nameEn: args.nameEn,
       category: args.category,
       unit: args.unit,
+      sku: args.sku,
+      itemType: args.itemType || "ingredient",
+      purchaseUnit: args.purchaseUnit,
+      purchaseToBaseFactor: args.purchaseToBaseFactor,
+      defaultLocationId: args.defaultLocationId,
+      notes: args.notes,
       supplierId: args.supplierId,
       minStock: args.minStock,
       targetStock: args.targetStock,
@@ -357,24 +357,14 @@ export const updateItem = mutation({
     barcode: v.optional(v.string()),
     nameAr: v.optional(v.string()),
     nameEn: v.optional(v.string()),
-    category: v.optional(
-      v.union(
-        v.literal("vegetables"),
-        v.literal("proteins"),
-        v.literal("dairy"),
-        v.literal("dry_goods"),
-        v.literal("other")
-      )
-    ),
-    unit: v.optional(
-      v.union(
-        v.literal("kg"),
-        v.literal("piece"),
-        v.literal("liter"),
-        v.literal("pack"),
-        v.literal("box")
-      )
-    ),
+    category: v.optional(v.string()),
+    unit: v.optional(v.string()),
+    sku: v.optional(v.string()),
+    itemType: v.optional(v.string()),
+    purchaseUnit: v.optional(v.string()),
+    purchaseToBaseFactor: v.optional(v.number()),
+    defaultLocationId: v.optional(v.id("inventoryLocations")),
+    notes: v.optional(v.string()),
     supplierId: v.optional(v.id("suppliers")),
     minStock: v.optional(v.number()),
     targetStock: v.optional(v.number()),
@@ -413,6 +403,8 @@ export const receiveStock = mutation({
     unitCost: v.number(),
     supplierId: v.optional(v.id("suppliers")),
     expiryDate: v.optional(v.string()),
+    lotNumber: v.optional(v.string()),
+    locationId: v.optional(v.id("inventoryLocations")),
     receivedAt: v.string(),
     notes: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
@@ -440,6 +432,8 @@ export const receiveStock = mutation({
       unitCost: args.unitCost,
       supplierId: args.supplierId,
       expiryDate: args.expiryDate,
+      lotNumber: args.lotNumber,
+      locationId: args.locationId || item.defaultLocationId,
       receivedAt: args.receivedAt,
       notes: args.notes,
     });
@@ -452,6 +446,7 @@ export const receiveStock = mutation({
       unitCost: args.unitCost,
       supplierId: args.supplierId,
       batchId,
+      locationId: args.locationId || item.defaultLocationId,
       note: args.notes,
       createdAt: now,
     });
@@ -734,15 +729,18 @@ export const receiveMany = mutation({
           v.object({
             nameAr: v.string(),
             nameEn: v.optional(v.string()),
-            category: v.union(v.literal("vegetables"), v.literal("proteins"), v.literal("dairy"), v.literal("dry_goods"), v.literal("other")),
-            unit: v.union(v.literal("kg"), v.literal("piece"), v.literal("liter"), v.literal("pack"), v.literal("box")),
+            category: v.string(),
+            unit: v.string(),
             minStock: v.optional(v.number()),
             targetStock: v.optional(v.number()),
           }),
         ),
         quantity: v.number(),
         unitCost: v.number(),
+        quantityInPurchaseUnit: v.optional(v.boolean()),
         expiryDate: v.optional(v.string()),
+        lotNumber: v.optional(v.string()),
+        locationId: v.optional(v.id("inventoryLocations")),
       }),
     ),
     sessionToken: v.optional(v.string()),
@@ -753,8 +751,7 @@ export const receiveMany = mutation({
     const note = args.invoiceNo ? `فاتورة: ${args.invoiceNo}` : "استلام بضاعة";
     let count = 0, totalQty = 0, totalCost = 0;
     for (const line of args.lines) {
-      const qty = line.quantity;
-      if (!qty || qty <= 0) continue;
+      if (!line.quantity || line.quantity <= 0) continue;
       let itemId = line.itemId;
       if (!itemId && line.newItem) {
         itemId = await ctx.db.insert("inventoryItems", {
@@ -764,7 +761,7 @@ export const receiveMany = mutation({
           unit: line.newItem.unit,
           supplierId: args.supplierId,
           minStock: line.newItem.minStock ?? 0,
-          targetStock: line.newItem.targetStock ?? qty,
+          targetStock: line.newItem.targetStock ?? line.quantity,
           currentStock: 0,
           avgWeeklyUsage: 0,
           createdAt: now,
@@ -774,13 +771,18 @@ export const receiveMany = mutation({
       if (!itemId) continue;
       const item = await ctx.db.get(itemId);
       if (!item) continue;
+      const factor = line.quantityInPurchaseUnit ? Math.max(0.000001, item.purchaseToBaseFactor || 1) : 1;
+      const qty = line.quantity * factor;
+      const baseUnitCost = line.quantityInPurchaseUnit ? line.unitCost / factor : line.unitCost;
       const batchId = await ctx.db.insert("inventoryBatches", {
         itemId,
         quantityReceived: qty,
         quantityRemaining: qty,
-        unitCost: line.unitCost,
+        unitCost: baseUnitCost,
         supplierId: args.supplierId,
         expiryDate: line.expiryDate,
+        lotNumber: line.lotNumber,
+        locationId: line.locationId || item.defaultLocationId,
         receivedAt: args.receivedAt,
         notes: note,
       });
@@ -788,15 +790,16 @@ export const receiveMany = mutation({
         itemId,
         type: "receive",
         quantity: qty,
-        unitCost: line.unitCost,
+        unitCost: baseUnitCost,
         supplierId: args.supplierId,
         batchId,
+        locationId: line.locationId || item.defaultLocationId,
         note,
         createdAt: now,
       });
       await ctx.db.patch(itemId, { currentStock: item.currentStock + qty, updatedAt: now });
       await resolveLowStock(ctx, itemId, item.currentStock + qty);
-      count++; totalQty += qty; totalCost += qty * line.unitCost;
+      count++; totalQty += qty; totalCost += line.quantity * line.unitCost;
     }
     return { count, totalQty, totalCost: Math.round(totalCost * 100) / 100 };
   },
@@ -807,6 +810,12 @@ export const createSupplier = mutation({
   args: {
     name: v.string(),
     phone: v.optional(v.string()),
+    contactName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    taxNumber: v.optional(v.string()),
+    paymentTerms: v.optional(v.string()),
+    notes: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -814,6 +823,13 @@ export const createSupplier = mutation({
     const supplierId = await ctx.db.insert("suppliers", {
       name: args.name,
       phone: args.phone,
+      contactName: args.contactName,
+      email: args.email,
+      address: args.address,
+      taxNumber: args.taxNumber,
+      paymentTerms: args.paymentTerms,
+      notes: args.notes,
+      isActive: true,
       createdAt: Date.now(),
     });
     return supplierId;
@@ -825,6 +841,13 @@ export const updateSupplier = mutation({
     id: v.id("suppliers"),
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
+    contactName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    taxNumber: v.optional(v.string()),
+    paymentTerms: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -838,8 +861,9 @@ export const updateSupplier = mutation({
 
 // إحصائيات مشتريات لكل مورّد (عدد فواتير، قيمة، أصناف، آخر شراء)
 export const getSupplierStats = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     const batches = await ctx.db.query("inventoryBatches").collect();
     const stats: Record<string, { purchases: number; totalValue: number; items: Set<string>; lastPurchase: string }> = {};
     for (const b of batches) {

@@ -46,7 +46,7 @@ const CATEGORY_LABELS = {
   other: { ar: "أخرى", en: "Other" },
 };
 
-const UNIT_LABELS = {
+const UNIT_LABELS: Record<string, { ar: string; en: string }> = {
   kg: { ar: "كجم", en: "kg" },
   piece: { ar: "قطعة", en: "piece" },
   liter: { ar: "لتر", en: "liter" },
@@ -58,6 +58,7 @@ export default function InventoryPage() {
   const { t, isRtl } = useLanguage();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -73,9 +74,11 @@ export default function InventoryPage() {
   const { data: barcodeResult } = useInventoryByBarcode(search && search.length > 3 ? search : undefined);
 
   // Consumption & waste (الهالك) report
-  const wasteReport: any = useQuery(api.inventory.getConsumptionReport, { days: 30 });
+  const wasteReport: any = useQuery(
+    api.inventory.getConsumptionReport,
+    sessionToken ? { days: 30, sessionToken } : "skip",
+  );
   const recordWaste = useMutation(api.inventory.recordWaste);
-  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const [wasteItem, setWasteItem] = useState<any>(null);
   const [wasteQty, setWasteQty] = useState("");
   const [wasteReason, setWasteReason] = useState("");
@@ -217,6 +220,7 @@ export default function InventoryPage() {
           {/* Quick links — full inventory cycle from one place */}
           <div className="flex items-center gap-2 overflow-x-auto pt-3 mt-1">
             <span className="text-xs text-gray-500 whitespace-nowrap">{isRtl ? "دورة المخزون:" : "Cycle:"}</span>
+            <button onClick={() => setLocation("/inventory/setup")} className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#0E76AC] hover:bg-[#095f8c] border border-[#0E76AC] rounded-lg px-3 py-1.5 whitespace-nowrap">⚙ {isRtl ? "بدء وإعداد المخزون" : "Setup & Opening Stock"}</button>
             <button onClick={() => setLocation("/inventory/receive")} className="flex items-center gap-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📥 {isRtl ? "استلام بضاعة" : "Receive"}</button>
             <button onClick={() => setLocation("/menu-management")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📦 {isRtl ? "الوصفات (الرسبي)" : "Recipes"}</button>
             <button onClick={() => setLocation("/kitchen")} className="flex items-center gap-1.5 text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg px-3 py-1.5 whitespace-nowrap">🍳 {isRtl ? "المطبخ (خصم تلقائي)" : "Kitchen"}</button>
@@ -444,7 +448,9 @@ export default function InventoryPage() {
                           )}
                           <div className="flex items-center gap-2 mt-2">
                             <Badge className={cn("text-xs px-2 py-0.5", getCategoryColor(item.category))}>
-                              {isRtl ? CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS].ar : CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS].en}
+                              {CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS]
+                                ? (isRtl ? CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS].ar : CATEGORY_LABELS[item.category as keyof typeof CATEGORY_LABELS].en)
+                                : item.category}
                             </Badge>
                             {item.barcode && (
                               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -476,7 +482,7 @@ export default function InventoryPage() {
                             {isRtl ? "الكمية المتوفرة:" : "Available:"}
                           </span>
                           <span className="font-bold text-gray-900">
-                            {item.currentStock} {isRtl ? UNIT_LABELS[item.unit].ar : UNIT_LABELS[item.unit].en}
+                            {item.currentStock} {UNIT_LABELS[item.unit] ? (isRtl ? UNIT_LABELS[item.unit].ar : UNIT_LABELS[item.unit].en) : item.unit}
                           </span>
                         </div>
 
@@ -485,7 +491,7 @@ export default function InventoryPage() {
                             {isRtl ? "الهدف:" : "Target:"}
                           </span>
                           <span className="text-gray-700">
-                            {item.targetStock} {isRtl ? UNIT_LABELS[item.unit].ar : UNIT_LABELS[item.unit].en}
+                            {item.targetStock} {UNIT_LABELS[item.unit] ? (isRtl ? UNIT_LABELS[item.unit].ar : UNIT_LABELS[item.unit].en) : item.unit}
                           </span>
                         </div>
 

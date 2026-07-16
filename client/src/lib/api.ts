@@ -425,8 +425,14 @@ export interface InventoryItem {
   barcode?: string;
   nameAr: string;
   nameEn?: string;
-  category: "vegetables" | "proteins" | "dairy" | "dry_goods" | "other";
-  unit: "kg" | "piece" | "liter" | "pack" | "box";
+  category: string;
+  unit: string;
+  sku?: string;
+  itemType?: string;
+  purchaseUnit?: string;
+  purchaseToBaseFactor?: number;
+  defaultLocationId?: string;
+  notes?: string;
   supplierId?: string;
   minStock: number;
   targetStock: number;
@@ -444,6 +450,8 @@ export interface InventoryBatch {
   unitCost: number;
   supplierId?: string;
   expiryDate?: string;
+  lotNumber?: string;
+  locationId?: string;
   receivedAt: string;
   notes?: string;
 }
@@ -464,6 +472,12 @@ export interface Supplier {
   _id: string;
   name: string;
   phone?: string;
+  contactName?: string;
+  email?: string;
+  address?: string;
+  taxNumber?: string;
+  paymentTerms?: string;
+  notes?: string;
   createdAt: number;
 }
 

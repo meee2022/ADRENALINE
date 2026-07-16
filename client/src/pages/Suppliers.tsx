@@ -23,12 +23,12 @@ export default function SuppliersPage() {
   const { isRtl } = useLanguage();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
-  const suppliers: any[] = useQuery(api.inventory.getSuppliers, {}) || [];
-  const stats: any[] = useQuery(api.inventory.getSupplierStats, {}) || [];
+  const suppliers: any[] = useQuery(api.inventory.getSuppliers, sessionToken ? { sessionToken } : "skip") || [];
+  const stats: any[] = useQuery(api.inventory.getSupplierStats, sessionToken ? { sessionToken } : "skip") || [];
   const createSupplier = useMutation(api.inventory.createSupplier);
   const updateSupplier = useMutation(api.inventory.updateSupplier);
-  const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const statsMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -39,20 +39,22 @@ export default function SuppliersPage() {
 
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState({ name: "", phone: "" });
+  const emptyForm = { name: "", phone: "", contactName: "", email: "", address: "", taxNumber: "", paymentTerms: "", notes: "" };
+  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
 
-  const openAdd = () => { setEditing(null); setForm({ name: "", phone: "" }); setShowModal(true); };
-  const openEdit = (s: any) => { setEditing(s); setForm({ name: s.name || "", phone: s.phone || "" }); setShowModal(true); };
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setShowModal(true); };
+  const openEdit = (s: any) => { setEditing(s); setForm({ ...emptyForm, ...s }); setShowModal(true); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) { toast({ title: isRtl ? "خطأ" : "Error", description: isRtl ? "الاسم مطلوب" : "Name is required", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      if (editing) { await updateSupplier({ id: editing._id, name: form.name.trim(), phone: form.phone.trim() || undefined, sessionToken }); toast({ title: isRtl ? "تم التعديل" : "Updated" }); }
-      else { await createSupplier({ name: form.name.trim(), phone: form.phone.trim() || undefined, sessionToken }); toast({ title: isRtl ? "تمت الإضافة" : "Added" }); }
-      setShowModal(false); setForm({ name: "", phone: "" }); setEditing(null);
+      const payload = { name: form.name.trim(), phone: form.phone.trim() || undefined, contactName: form.contactName.trim() || undefined, email: form.email.trim() || undefined, address: form.address.trim() || undefined, taxNumber: form.taxNumber.trim() || undefined, paymentTerms: form.paymentTerms.trim() || undefined, notes: form.notes.trim() || undefined, sessionToken };
+      if (editing) { await updateSupplier({ id: editing._id, ...payload }); toast({ title: isRtl ? "تم التعديل" : "Updated" }); }
+      else { await createSupplier(payload); toast({ title: isRtl ? "تمت الإضافة" : "Added" }); }
+      setShowModal(false); setForm(emptyForm); setEditing(null);
     } catch (error: any) {
       toast({ title: isRtl ? "خطأ" : "Error", description: error?.message || (isRtl ? "فشلت العملية" : "Operation failed"), variant: "destructive" });
     } finally { setSaving(false); }
@@ -121,7 +123,7 @@ export default function SuppliersPage() {
       </div>
 
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className={cn("sm:max-w-[420px]", isRtl && "rtl")}>
+        <DialogContent className={cn("max-h-[90vh] overflow-y-auto sm:max-w-[560px]", isRtl && "rtl")}>
           <DialogHeader><DialogTitle>{editing ? (isRtl ? "تعديل المورّد" : "Edit Supplier") : (isRtl ? "إضافة مورّد جديد" : "Add New Supplier")}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -132,6 +134,10 @@ export default function SuppliersPage() {
               <Label>{isRtl ? "رقم الهاتف (اختياري)" : "Phone (optional)"}</Label>
               <Input type="tel" placeholder="+974 XXXX XXXX" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} dir="ltr" />
             </div>
+            <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label>{isRtl ? "اسم المسؤول" : "Contact"}</Label><Input value={form.contactName} onChange={(e)=>setForm({...form,contactName:e.target.value})}/></div><div className="space-y-2"><Label>{isRtl ? "البريد" : "Email"}</Label><Input type="email" value={form.email} onChange={(e)=>setForm({...form,email:e.target.value})}/></div></div>
+            <div className="space-y-2"><Label>{isRtl ? "العنوان" : "Address"}</Label><Input value={form.address} onChange={(e)=>setForm({...form,address:e.target.value})}/></div>
+            <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label>{isRtl ? "الرقم الضريبي" : "Tax number"}</Label><Input value={form.taxNumber} onChange={(e)=>setForm({...form,taxNumber:e.target.value})}/></div><div className="space-y-2"><Label>{isRtl ? "شروط الدفع" : "Payment terms"}</Label><Input value={form.paymentTerms} onChange={(e)=>setForm({...form,paymentTerms:e.target.value})}/></div></div>
+            <div className="space-y-2"><Label>{isRtl ? "ملاحظات" : "Notes"}</Label><Input value={form.notes} onChange={(e)=>setForm({...form,notes:e.target.value})}/></div>
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="outline" onClick={() => setShowModal(false)} className="flex-1">{isRtl ? "إلغاء" : "Cancel"}</Button>
               <Button type="submit" disabled={saving} className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white">{saving ? (isRtl ? "جارٍ الحفظ..." : "Saving...") : editing ? (isRtl ? "حفظ" : "Save") : (isRtl ? "إضافة" : "Add")}</Button>

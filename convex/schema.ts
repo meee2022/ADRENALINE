@@ -494,27 +494,60 @@ export default defineSchema({
   suppliers: defineTable({
     name: v.string(),
     phone: v.optional(v.string()),
+    contactName: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    taxNumber: v.optional(v.string()),
+    paymentTerms: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    isActive: v.optional(v.boolean()),
     createdAt: v.number(),
   }),
+
+  inventoryCategories: defineTable({
+    code: v.string(),
+    nameAr: v.string(),
+    nameEn: v.string(),
+    color: v.optional(v.string()),
+    isActive: v.boolean(),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+  }).index("by_code", ["code"]).index("by_active", ["isActive"]),
+
+  inventoryLocations: defineTable({
+    code: v.string(),
+    nameAr: v.string(),
+    nameEn: v.string(),
+    locationType: v.string(),
+    parentId: v.optional(v.id("inventoryLocations")),
+    isActive: v.boolean(),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+  }).index("by_code", ["code"]).index("by_active", ["isActive"]),
+
+  inventoryUnits: defineTable({
+    code: v.string(),
+    nameAr: v.string(),
+    nameEn: v.string(),
+    dimension: v.string(),
+    baseFactor: v.number(),
+    isActive: v.boolean(),
+    sortOrder: v.number(),
+    createdAt: v.number(),
+  }).index("by_code", ["code"]).index("by_active", ["isActive"]),
 
   inventoryItems: defineTable({
     barcode: v.optional(v.string()),
     nameAr: v.string(),
     nameEn: v.optional(v.string()),
-    category: v.union(
-      v.literal("vegetables"),
-      v.literal("proteins"),
-      v.literal("dairy"),
-      v.literal("dry_goods"),
-      v.literal("other")
-    ),
-    unit: v.union(
-      v.literal("kg"),
-      v.literal("piece"),
-      v.literal("liter"),
-      v.literal("pack"),
-      v.literal("box")
-    ),
+    category: v.string(),
+    unit: v.string(),
+    sku: v.optional(v.string()),
+    itemType: v.optional(v.string()), // ingredient | packaging | consumable | asset
+    purchaseUnit: v.optional(v.string()),
+    purchaseToBaseFactor: v.optional(v.number()),
+    defaultLocationId: v.optional(v.id("inventoryLocations")),
+    notes: v.optional(v.string()),
     supplierId: v.optional(v.id("suppliers")),
     minStock: v.number(),
     targetStock: v.number(),
@@ -533,6 +566,8 @@ export default defineSchema({
     unitCost: v.number(), // QAR
     supplierId: v.optional(v.id("suppliers")),
     expiryDate: v.optional(v.string()), // yyyy-MM-dd
+    lotNumber: v.optional(v.string()),
+    locationId: v.optional(v.id("inventoryLocations")),
     receivedAt: v.string(), // yyyy-MM-dd
     notes: v.optional(v.string()),
   })
@@ -546,12 +581,41 @@ export default defineSchema({
     unitCost: v.optional(v.number()),
     supplierId: v.optional(v.id("suppliers")),
     batchId: v.optional(v.id("inventoryBatches")),
+    locationId: v.optional(v.id("inventoryLocations")),
+    referenceType: v.optional(v.string()),
+    referenceId: v.optional(v.string()),
     note: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_itemId", ["itemId"])
     .index("by_type", ["type"])
     .index("by_createdAt", ["createdAt"]),
+
+  inventoryStocktakes: defineTable({
+    title: v.string(),
+    stocktakeType: v.string(), // OPENING | CYCLE | FULL
+    status: v.string(), // DRAFT | REVIEW | APPROVED | CANCELLED
+    locationId: v.optional(v.id("inventoryLocations")),
+    countedAt: v.string(),
+    notes: v.optional(v.string()),
+    createdBy: v.optional(v.id("users")),
+    approvedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+    approvedAt: v.optional(v.number()),
+  }).index("by_status", ["status"]).index("by_createdAt", ["createdAt"]),
+
+  inventoryStocktakeLines: defineTable({
+    stocktakeId: v.id("inventoryStocktakes"),
+    itemId: v.id("inventoryItems"),
+    systemQuantity: v.number(),
+    countedQuantity: v.number(),
+    unitCost: v.optional(v.number()),
+    expiryDate: v.optional(v.string()),
+    lotNumber: v.optional(v.string()),
+    locationId: v.optional(v.id("inventoryLocations")),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_stocktake", ["stocktakeId"]).index("by_item", ["itemId"]),
 
   // أوامر الشراء (إعادة طلب من المورّد)
   purchaseOrders: defineTable({

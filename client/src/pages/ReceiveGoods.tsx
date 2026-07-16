@@ -24,8 +24,8 @@ const UNITS = [
   { v: "pack", ar: "عبوة", en: "Pack" }, { v: "box", ar: "صندوق", en: "Box" },
 ];
 
-type Line = { mode: "existing" | "new"; itemId: string; nameAr: string; category: string; unit: string; quantity: string; unitCost: string; expiryDate: string; };
-const emptyLine = (): Line => ({ mode: "existing", itemId: "", nameAr: "", category: "proteins", unit: "kg", quantity: "", unitCost: "", expiryDate: "" });
+type Line = { mode: "existing" | "new"; itemId: string; nameAr: string; category: string; unit: string; quantity: string; unitCost: string; expiryDate: string; lotNumber: string; locationId: string; quantityInPurchaseUnit: boolean; };
+const emptyLine = (): Line => ({ mode: "existing", itemId: "", nameAr: "", category: "proteins", unit: "kg", quantity: "", unitCost: "", expiryDate: "", lotNumber: "", locationId: "", quantityInPurchaseUnit: false });
 
 export default function ReceiveGoods() {
   const { isRtl } = useLanguage();
@@ -35,6 +35,7 @@ export default function ReceiveGoods() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const items: any[] = useQuery(api.inventory.listItems, { sessionToken }) || [];
   const suppliers: any[] = useQuery(api.inventory.getSuppliers, { sessionToken }) || [];
+  const setup: any = useQuery(api.inventorySetup.getSetupData, sessionToken ? { sessionToken } : "skip");
   const receiveMany = useMutation(api.inventory.receiveMany);
   const createSupplier = useMutation(api.inventory.createSupplier);
 
@@ -59,6 +60,9 @@ export default function ReceiveGoods() {
       const qty = (cols[1] || "").replace(/[^\d.]/g, "");
       const cost = (cols[2] || "").replace(/[^\d.]/g, "");
       const expiry = (cols[3] || "").match(/\d{4}-\d{2}-\d{2}/)?.[0] || "";
+      const lotNumber = cols[4] || "";
+      const locationCode = cols[5] || "";
+      const locationId = setup?.locations?.find((l: any) => l.code.toLowerCase() === locationCode.toLowerCase())?._id || "";
       if (!name || !qty) continue; // skips header rows (qty non-numeric)
       const existing = items.find((it) =>
         (it.nameAr || "").trim().toLowerCase() === name.toLowerCase() ||
@@ -66,8 +70,8 @@ export default function ReceiveGoods() {
       );
       parsed.push(
         existing
-          ? { ...emptyLine(), mode: "existing", itemId: existing._id, unit: existing.unit, quantity: qty, unitCost: cost, expiryDate: expiry }
-          : { ...emptyLine(), mode: "new", nameAr: name, quantity: qty, unitCost: cost, expiryDate: expiry },
+          ? { ...emptyLine(), mode: "existing", itemId: existing._id, unit: existing.unit, quantity: qty, unitCost: cost, expiryDate: expiry, lotNumber, locationId }
+          : { ...emptyLine(), mode: "new", nameAr: name, quantity: qty, unitCost: cost, expiryDate: expiry, lotNumber, locationId },
       );
     }
     if (parsed.length) {
@@ -105,8 +109,8 @@ export default function ReceiveGoods() {
         receivedAt,
         invoiceNo: invoiceNo || undefined,
         lines: valid.map((l) => l.mode === "existing"
-          ? { itemId: l.itemId as any, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, expiryDate: l.expiryDate || undefined }
-          : { newItem: { nameAr: l.nameAr.trim(), category: l.category as any, unit: l.unit as any, targetStock: Number(l.quantity) }, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, expiryDate: l.expiryDate || undefined }),
+          ? { itemId: l.itemId as any, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, quantityInPurchaseUnit: l.quantityInPurchaseUnit, expiryDate: l.expiryDate || undefined, lotNumber: l.lotNumber || undefined, locationId: (l.locationId || undefined) as any }
+          : { newItem: { nameAr: l.nameAr.trim(), category: l.category as any, unit: l.unit as any, targetStock: Number(l.quantity) }, quantity: Number(l.quantity), unitCost: Number(l.unitCost) || 0, expiryDate: l.expiryDate || undefined, lotNumber: l.lotNumber || undefined, locationId: (l.locationId || undefined) as any }),
       });
       toast({ title: isRtl ? "تم استلام البضاعة ✅" : "Goods received ✅", description: isRtl ? `${res.count} صنف · ${res.totalCost.toLocaleString()} ر.ق أُضيفت للمخزون` : `${res.count} items · ${res.totalCost.toLocaleString()} QAR added` });
       setLocation("/inventory");
@@ -194,7 +198,7 @@ export default function ReceiveGoods() {
                 <div className="col-span-12 sm:col-span-4 space-y-1">
                   <Label className="text-[10px] text-slate-400">{isRtl ? "الصنف" : "Item"}</Label>
                   <select value={l.mode === "new" ? "__new__" : l.itemId}
-                    onChange={(e) => { if (e.target.value === "__new__") setLine(i, { mode: "new", itemId: "" }); else { const it = items.find((x) => x._id === e.target.value); setLine(i, { mode: "existing", itemId: e.target.value, unit: it?.unit || l.unit }); } }}
+                    onChange={(e) => { if (e.target.value === "__new__") setLine(i, { mode: "new", itemId: "", quantityInPurchaseUnit: false }); else { const it = items.find((x) => x._id === e.target.value); setLine(i, { mode: "existing", itemId: e.target.value, unit: it?.unit || l.unit, quantityInPurchaseUnit: Number(it?.purchaseToBaseFactor || 1) !== 1 }); } }}
                     className={selCls}>
                     <option value="">{isRtl ? "اختر صنف" : "Select item"}</option>
                     {items.map((it) => <option key={it._id} value={it._id}>{isRtl ? it.nameAr : (it.nameEn || it.nameAr)} ({it.currentStock} {it.unit})</option>)}
@@ -206,9 +210,12 @@ export default function ReceiveGoods() {
                   <div className="col-span-3 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "النوع" : "Cat"}</Label><select value={l.category} onChange={(e) => setLine(i, { category: e.target.value })} className={selCls}>{CATEGORIES.map((c) => <option key={c.v} value={c.v}>{isRtl ? c.ar : c.en}</option>)}</select></div>
                 </>)}
                 <div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الكمية" : "Qty"}</Label><Input type="number" step="0.01" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} className="h-9 text-sm" /></div>
+                {l.mode === "existing" && Number(items.find((x)=>x._id===l.itemId)?.purchaseToBaseFactor || 1) !== 1 && <label className="col-span-6 sm:col-span-2 flex h-9 items-center gap-2 rounded-md border border-cyan-200 bg-cyan-50 px-2 text-[11px] font-bold text-cyan-800"><input type="checkbox" checked={l.quantityInPurchaseUnit} onChange={(e)=>setLine(i,{quantityInPurchaseUnit:e.target.checked})}/>{isRtl ? `الكمية بوحدة الشراء (${items.find((x)=>x._id===l.itemId)?.purchaseUnit})` : `Use purchase unit (${items.find((x)=>x._id===l.itemId)?.purchaseUnit})`}</label>}
                 {l.mode === "new" && (<div className="col-span-4 sm:col-span-1 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الوحدة" : "Unit"}</Label><select value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} className={selCls}>{UNITS.map((u) => <option key={u.v} value={u.v}>{isRtl ? u.ar : u.en}</option>)}</select></div>)}
                 <div className="col-span-4 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "سعر الوحدة" : "Unit cost"}</Label><Input type="number" step="0.01" value={l.unitCost} onChange={(e) => setLine(i, { unitCost: e.target.value })} className="h-9 text-sm" /></div>
                 <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "الصلاحية" : "Expiry"}</Label><Input type="date" value={l.expiryDate} onChange={(e) => setLine(i, { expiryDate: e.target.value })} className="h-9 text-sm" /></div>
+                <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "رقم التشغيلة" : "Lot no."}</Label><Input value={l.lotNumber} onChange={(e) => setLine(i, { lotNumber: e.target.value })} className="h-9 text-sm" /></div>
+                <div className="col-span-6 sm:col-span-2 space-y-1"><Label className="text-[10px] text-slate-400">{isRtl ? "موقع التخزين" : "Location"}</Label><select value={l.locationId} onChange={(e) => setLine(i, { locationId: e.target.value })} className={selCls}><option value="">{isRtl ? "الموقع الافتراضي" : "Default location"}</option>{(setup?.locations || []).map((x:any)=><option key={x._id} value={x._id}>{isRtl?x.nameAr:x.nameEn}</option>)}</select></div>
                 <div className="col-span-6 sm:col-span-1 flex items-center justify-between gap-2">
                   <span className="text-sm font-bold text-cyan-700 tabular-nums">{lineTotal(l).toLocaleString()}</span>
                   {lines.length > 1 && <button onClick={() => removeLine(i)} className="text-red-500 hover:text-red-700"><Trash2 className="h-4 w-4" /></button>}
