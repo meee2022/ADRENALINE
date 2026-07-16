@@ -113,6 +113,9 @@ export default function SmartPlan() {
     startRot || startRotInfo?.rotationWeek || suggestions?.currentRotationWeek || 1;
 
   /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
+  /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فاضي = زائر لسه ما عرّفش نفسه. */
+  const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
+
   const orderIdentity = () => ({
     customerName:
       currentCustomer?.fullName || matchedCustomer?.fullName || "عميل غير مسجّل",
@@ -291,7 +294,59 @@ export default function SmartPlan() {
           background: "#fff", border: `1px solid ${B.line}`, borderRadius: 18,
           padding: 24, marginBottom: 26, boxShadow: "0 10px 30px -18px rgba(14,42,74,.25)",
         }}>
+          {/* ✅ بطاقة «مَن أنت واشتراكك» — كانت داخل وضع الأسبوع فقط، والصفحة
+              تفتح على وضع اليوم، فالداخل أول مرة ما كان يشوف اسمه ولا اشتراكه
+              ولا يفهم على أي أساس تُبنى الخطة. الآن تظهر في الوضعين. */}
+          {(whoName || subStartDate) && (
+            <div style={{
+              display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
+              padding: "12px 14px", borderRadius: 12, marginBottom: 14,
+              background: "#F2FBFF", border: `1px solid ${B.line}`,
+            }}>
+              {whoName && (
+                <span style={{ fontWeight: 900, color: B.ink, fontSize: 14 }}>👤 {whoName}</span>
+              )}
+              {subStartDate && <span style={pill}>{t("يبدأ", "Starts")}: {subStartDate}</span>}
+              {subEndDate && <span style={pill}>{t("ينتهي", "Ends")}: {subEndDate}</span>}
+              {suggestions?.durationWeeks && (
+                <span style={pill}>{t(`المدة: ${suggestions.durationWeeks} أسابيع`, `${suggestions.durationWeeks} weeks`)}</span>
+              )}
+              {startRotInfo?.rotationWeek && (
+                <span style={{ ...pill, background: "#0E76AC", color: "#fff", border: "none" }}>
+                  {t(`دورة المطبخ لاشتراكك: ${startRotInfo.rotationWeek}`, `Your rotation: ${startRotInfo.rotationWeek}`)}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* ✅ شرح آلية التوليد — الخطوات الفعلية اللي بيعملها النظام، بلا وعود
+              زيادة: الملف الشخصي ← استبعاد الممنوعات ← وجبات دورتك ← مراجعة الأخصائي. */}
+          <details style={{
+            marginBottom: 16, borderRadius: 12, border: `1px solid ${B.line}`,
+            background: "#fff", overflow: "hidden",
+          }}>
+            <summary style={{
+              cursor: "pointer", padding: "11px 14px", fontWeight: 900, fontSize: 13,
+              color: B.ink, listStyle: "none", display: "flex", alignItems: "center", gap: 8,
+            }}>
+              <span style={{ color: B.accent }}>ℹ️</span>
+              {t("كيف تُبنى خطتك؟", "How is your plan built?")}
+            </summary>
+            <ol style={{ margin: 0, padding: "0 34px 14px", fontSize: 12.5, color: B.ink2, lineHeight: 2, fontWeight: 600 }}>
+              <li>{t("نقرأ ملفك: هدفك والسعرات المناسبة له.", "We read your profile: your goal and its calorie target.")}</li>
+              <li>{t("نستبعد حساسيتك والأصناف اللي ما بتحبهاش.", "We exclude your allergies and disliked items.")}</li>
+              <li>{t("نختار من وجبات المطبخ في دورة اشتراكك لليوم ده — مش من كل المنيو.", "We pick from the kitchen's meals for your rotation on that day — not the whole menu.")}</li>
+              <li>{t("أخصائي التغذية يراجع الخطة قبل التأكيد.", "The nutritionist reviews the plan before confirming.")}</li>
+            </ol>
+          </details>
+
           {/* Day / Week toggle */}
+          <p style={{ margin: "0 0 8px", fontSize: 12.5, fontWeight: 700, color: B.ink2 }}>
+            {t(
+              "اختر المدى: خطة اليوم لتجربة سريعة، أو خطة الأسبوع لتغطية مدة اشتراكك.",
+              "Choose the range: a daily plan for a quick try, or a weekly plan to cover your subscription.",
+            )}
+          </p>
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {([
               { k: "day", label: t("خطة اليوم", "Daily plan"), emoji: "📅 " },
@@ -316,27 +371,6 @@ export default function SmartPlan() {
               display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16,
               padding: 14, borderRadius: 12, background: "#F2FBFF", border: `1px solid ${B.line}`,
             }}>
-              {/* ✅ بطاقة الاشتراك — بداية/نهاية/مدة + دورة البداية المشتقّة من التاريخ */}
-              {subStartDate && (
-                <div style={{
-                  width: "100%", display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
-                  padding: "10px 12px", borderRadius: 10, background: "#fff", border: `1px solid ${B.line}`,
-                }}>
-                  <span style={{ fontWeight: 900, color: B.ink, fontSize: 13 }}>
-                    👤 {t("اشتراكك", "Your subscription")}
-                  </span>
-                  <span style={pill}>{t("يبدأ", "Starts")}: {subStartDate}</span>
-                  {subEndDate && <span style={pill}>{t("ينتهي", "Ends")}: {subEndDate}</span>}
-                  {suggestions?.durationWeeks && (
-                    <span style={pill}>{t(`المدة: ${suggestions.durationWeeks} أسابيع`, `${suggestions.durationWeeks} weeks`)}</span>
-                  )}
-                  {startRotInfo?.rotationWeek && (
-                    <span style={{ ...pill, background: "#0E76AC", color: "#fff", border: "none" }}>
-                      {t(`يبدأ من دورة ${startRotInfo.rotationWeek}`, `Starts at rotation ${startRotInfo.rotationWeek}`)}
-                    </span>
-                  )}
-                </div>
-              )}
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
                   {t("عدد الأسابيع", "Number of weeks")}
@@ -346,20 +380,36 @@ export default function SmartPlan() {
                     </span>
                   ) : null}
                 </label>
+                {/* ✅ الأسابيع فوق المتبقي من الاشتراك تُقصّ في effWeeks — كانت
+                    الأزرار تسمح بالضغط ثم يضيء رقم آخر بلا تفسير. نعطّلها ونشرح. */}
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[1, 2, 3, 4].map((n) => (
-                    <button key={n} onClick={() => setWeeksSel(n)}
-                      style={{
-                        flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontWeight: 900, fontSize: 14,
-                        fontFamily: "'Cairo',sans-serif",
-                        border: `1.5px solid ${effWeeks === n ? "#0E76AC" : B.line}`,
-                        background: effWeeks === n ? "#0E76AC" : "#fff",
-                        color: effWeeks === n ? "#fff" : B.ink2,
-                      }}>
-                      {n}
-                    </button>
-                  ))}
+                  {[1, 2, 3, 4].map((n) => {
+                    const blocked = subWeeksRemaining != null && n > subWeeksRemaining;
+                    return (
+                      <button key={n} onClick={() => !blocked && setWeeksSel(n)} disabled={blocked}
+                        title={blocked ? t("خارج مدة اشتراكك", "Beyond your subscription") : ""}
+                        style={{
+                          flex: 1, padding: "8px 0", borderRadius: 9, fontWeight: 900, fontSize: 14,
+                          fontFamily: "'Cairo',sans-serif",
+                          cursor: blocked ? "not-allowed" : "pointer",
+                          opacity: blocked ? 0.4 : 1,
+                          border: `1.5px solid ${effWeeks === n ? "#0E76AC" : B.line}`,
+                          background: effWeeks === n ? "#0E76AC" : "#fff",
+                          color: effWeeks === n ? "#fff" : B.ink2,
+                        }}>
+                        {n}
+                      </button>
+                    );
+                  })}
                 </div>
+                {subWeeksRemaining != null && subWeeksRemaining < 4 && (
+                  <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: B.ink2 }}>
+                    {t(
+                      `اشتراكك يغطّي ${subWeeksRemaining} ${subWeeksRemaining === 1 ? "أسبوع" : "أسابيع"} — مش هنولّد بعد تاريخ انتهائه.`,
+                      `Your subscription covers ${subWeeksRemaining} week(s) — we won't generate past its end date.`,
+                    )}
+                  </p>
+                )}
               </div>
 
               <div style={{ flex: 1, minWidth: 180 }}>
