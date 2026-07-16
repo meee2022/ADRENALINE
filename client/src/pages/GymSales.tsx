@@ -703,18 +703,42 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </tr>`).join("")}</tbody></table>`
       : "";
 
-    /* ── الربح: يظهر فقط لو كل الأصناف لها تكلفة. غير كده نقول للمدير
-          صراحةً إنه غير متاح وليه — أفضل من رقم ناقص يبني عليه قرار. ── */
+    /* ── سجل الأصناف الكامل — القراءة الأساسية: كل صنف راح كام، رجع كام،
+          خسّر كام، وصافي إيراده. مرتّب بالخسارة الأعلى أولاً عشان اللي
+          بيوجع يبان فوق. (لو التقرير لسه بيحمّل نرجع للجدول القديم.) ── */
+    const ledger: any[] = decision?.meals || [];
+    const ledgerHtml = ledger.length
+      ? `<table style="margin-top:20px"><thead>
+          <tr class="cap"><td colspan="6">${t("سجل الأصناف — رايح ومرتجع", "Item ledger — sent and returned")}</td></tr>
+          <tr><th>${t("الصنف", "Item")}</th><th>${t("رايح", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("نسبة الهدر", "Waste %")}</th><th>${t("الخسارة (ر.ق)", "Loss (QAR)")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th></tr></thead>
+          <tbody>${[...ledger].sort((a: any, b: any) => b.wasteValue - a.wasteValue || b.sent - a.sent).map((m: any) => `<tr>
+            <td>${nameOf(m)}</td>
+            <td class="n">${m.sent}</td>
+            <td class="n" style="color:${m.returned > 0 ? "#b91c1c" : "#94a3b8"}">${m.returned}</td>
+            <td class="n" style="color:${m.returnRate >= 15 ? "#b91c1c" : m.returnRate > 0 ? "#c2410c" : "#15803d"}">${m.returnRate}%</td>
+            <td class="n" style="color:${m.wasteValue > 0 ? "#b91c1c" : "#94a3b8"}">${Number(m.wasteValue).toFixed(2)}</td>
+            <td class="n">${Number(m.netRevenue).toFixed(2)}</td></tr>`).join("")}
+          <tr class="tot"><td>${t("الإجمالي", "Total")}</td>
+            <td class="n">${decision.totals.totalSent}</td>
+            <td class="n">${decision.totals.totalReturned}</td>
+            <td class="n">${decision.totals.wastePct}%</td>
+            <td class="n">${Number(decision.totals.totalWaste).toFixed(2)}</td>
+            <td class="n">${Number(decision.totals.netRevenue).toFixed(2)}</td></tr></tbody></table>`
+      : `<table style="margin-top:20px"><thead>
+          <tr class="cap"><td colspan="3">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</td></tr>
+          <tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
+          <tbody>${report.meals.map((m: any) => `<tr><td>${nameOf(m)}</td><td class="n">${m.qty}</td><td class="n">${m.revenue.toFixed(2)}</td></tr>`).join("")}</tbody></table>`;
+
+    /* ── تكلفة التحضير: تظهر فقط لو كل الأصناف لها تكلفة مسجّلة. القراءة
+          الأساسية للتقرير على مستوى الوجبة (راح/رجع/خسر)، والتكلفة طبقة
+          إضافية اختيارية — فلا نزعج المدير بتحذير عن بيانات لم يطلبها. ── */
     const cov = decision?.costCoverage;
     const profitHtml = cov?.profitAvailable
       ? `<tr class="minus"><td class="lbl">${t("يُخصم — تكلفة التحضير", "Less — preparation cost")}</td>
              <td class="val">− ${Number(decision.totals.totalCost).toFixed(2)}</td></tr>
          <tr class="profit"><td class="lbl">${t("صافي الربح", "Net profit")}</td>
              <td class="val">${Number(decision.totals.totalProfit).toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>`
-      : `<tr><td class="lbl" colspan="2"><div class="warn">${t(
-          `⚠ الربح غير متاح — تكلفة التحضير غير مسجّلة (${cov?.mealsWithCost ?? 0} من ${cov?.mealsTotal ?? 0} صنف). سجّلها من صفحة "الوجبات العامة" ليظهر الربح تلقائياً.`,
-          `⚠ Profit unavailable — preparation cost not set (${cov?.mealsWithCost ?? 0} of ${cov?.mealsTotal ?? 0} items). Set it in "Public meals" and profit appears automatically.`,
-        )}</div></td></tr>`;
+      : "";
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("تقرير مبيعات المنافذ", "Outlet sales report")} — ${rangeLabel}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -759,8 +783,6 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
 
         .fin .profit td{background:#15803d;color:#fff;font-size:14px}
         .fin .profit .lbl{color:#fff}
-        .warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;
-              padding:8px 10px;font-size:10.5px;font-weight:700;line-height:1.6}
 
         /* ── قرارات مطلوبة: أبرز قسم في التقرير — إطار أحمر يلفت النظر ── */
         .act{margin-top:18px;border:2px solid #b91c1c;border-radius:10px;overflow:hidden;break-inside:avoid}
@@ -824,10 +846,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("الهالك (ر.ق)", "Waste (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
       <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td><td class="n" style="color:${Number(d.waste) > 0 ? "#b91c1c" : "#94a3b8"}">${Number(d.waste || 0).toFixed(2)}</td><td class="n">${Number(d.net ?? d.total).toFixed(2)}</td></tr>`).join("")}
       <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td><td class="n">${wasteValue.toFixed(2)}</td><td class="n">${netRevenue.toFixed(2)}</td></tr></tbody></table>
-      <table style="margin-top:20px"><thead>
-      <tr class="cap"><td colspan="3">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</td></tr>
-      <tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
-      <tbody>${report.meals.map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.qty}</td><td class="n">${m.revenue.toFixed(2)}</td></tr>`).join("")}</tbody></table>
+      ${ledgerHtml}
       <table style="margin-top:20px"><thead>
       <tr class="cap"><td colspan="4">${t("المرتجعات والهالك", "Returns and waste")}</td></tr>
       <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
