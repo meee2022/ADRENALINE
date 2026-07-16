@@ -1238,17 +1238,19 @@ export const decisionReport = query({
       const profit = hasCost ? Math.round((netRevenue - (totalCost as number)) * 100) / 100 : null;
       const margin = hasCost && netRevenue > 0 ? Math.round(((profit as number) / netRevenue) * 1000) / 10 : null;
 
+      // الصياغة تظهر في مستند رسمي يُسلَّم للإدارة — عربية فصحى، بصيغة الخبر
+      // لا الأمر، وبلا عاميّة.
       let verdict: "STOP" | "REDUCE" | "OK" = "OK";
       let reason = "";
       if (r.sent >= MIN_SAMPLE && returnRate >= STOP_RATE) {
         verdict = "STOP";
-        reason = `${returnRate}% من الكمية بترجع تالفة — خسارة ${r.wasteValue.toFixed(2)} ر.ق`;
+        reason = `تُرتجع ${returnRate}% من الكمية المورّدة هالكةً — بقيمة ${r.wasteValue.toFixed(2)} ر.ق`;
       } else if (r.sent >= MIN_SAMPLE && returnRate >= REDUCE_RATE) {
         verdict = "REDUCE";
-        reason = `${returnRate}% مرتجع — قلّل الكمية الموردة`;
+        reason = `نسبة ارتجاع ${returnRate}% — يُوصى بتخفيض الكمية المورّدة`;
       } else if (hasCost && (profit as number) < 0) {
         verdict = "STOP";
-        reason = `يُباع بأقل من تكلفته — خسارة ${Math.abs(profit as number).toFixed(2)} ر.ق`;
+        reason = `سعر البيع أقل من التكلفة — خسارة ${Math.abs(profit as number).toFixed(2)} ر.ق`;
       }
 
       return { ...r, soldQty, netRevenue, returnRate, totalCost, profit, margin, verdict, reason };

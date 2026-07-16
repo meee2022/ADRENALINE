@@ -577,13 +577,13 @@ function HistoryTab({ isRtl, t, sessionToken, gyms, toast }: any) {
             <div className="border-t-2 border-slate-100 bg-slate-50 p-4">
               <h4 className="font-black mb-2">{t("أسطر الطلبية", "Order lines")} — {openOrder.date} · {openOrder.gymName}</h4>
               {openOrder.returnedTotal > 0 && <div className="mb-3 grid grid-cols-3 gap-2">
-                <StatMini label={t("مرتجع", "Returned")} value={openOrder.returnedTotal} color="#dc2626" />
+                <StatMini label={t("المرتجع", "Returned")} value={openOrder.returnedTotal} color="#dc2626" />
                 <StatMini label={t("قيمة الهالك", "Waste value")} value={openOrder.wasteValue.toFixed(2)} color="#dc2626" />
                 <StatMini label={t("صافي الفاتورة", "Net invoice")} value={openOrder.netTotal.toFixed(2)} color="#0E76AC" />
               </div>}
               <table className="w-full text-sm bg-white rounded-lg overflow-hidden">
                 <thead className="bg-slate-100 text-xs text-slate-600">
-                  <tr><th className="text-start p-2">{t("الوجبة", "Meal")}</th><th className="text-center p-2">{t("الكمية", "Qty")}</th><th className="text-center p-2">{t("مرتجع", "Returned")}</th><th className="text-end p-2">{t("سعر الوحدة", "Unit")}</th><th className="text-end p-2">{t("الهالك", "Waste")}</th><th className="text-end p-2">{t("الإجمالي", "Total")}</th></tr>
+                  <tr><th className="text-start p-2">{t("الوجبة", "Meal")}</th><th className="text-center p-2">{t("الكمية", "Qty")}</th><th className="text-center p-2">{t("المرتجع", "Returned")}</th><th className="text-end p-2">{t("سعر الوحدة", "Unit")}</th><th className="text-end p-2">{t("الهالك", "Waste")}</th><th className="text-end p-2">{t("الإجمالي", "Total")}</th></tr>
                 </thead>
                 <tbody>
                   {openOrder.lines.map((l: any) => (
@@ -658,6 +658,12 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     () => (wasteChart.length ? Math.max(...wasteChart.map((m: any) => m.wasteValue)) : 0),
     [wasteChart],
   );
+  /** أعلى 8 أصناف مبيعاً — decision.topSellers مرتّبة أصلاً بالاستهلاك الفعلي. */
+  const topSellers = useMemo(() => (decision?.topSellers || []).slice(0, 8), [decision]);
+  const maxSold = useMemo(
+    () => (topSellers.length ? Math.max(...topSellers.map((m: any) => m.soldQty)) : 0),
+    [topSellers],
+  );
   const rangeLabel = selectedRange.from === selectedRange.to
     ? selectedRange.from
     : `${selectedRange.from} - ${selectedRange.to}`;
@@ -688,27 +694,27 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     const actions: any[] = decision?.actions || [];
     const actionsHtml = actions.length
       ? `<div class="act">
-          <div class="act-h">${t("قرارات مطلوبة — أصناف بتسبب خسائر", "Action required — items causing losses")}</div>
+          <div class="act-h">${t("التوصيات — الأصناف المسبّبة للهدر", "Recommendations — items causing waste")}</div>
           <table>
-            <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("مُرسل", "Sent")}</th><th>${t("مرتجع", "Ret.")}</th><th>${t("نسبة الهدر", "Waste %")}</th><th>${t("الخسارة (ر.ق)", "Loss (QAR)")}</th><th>${t("القرار", "Decision")}</th></tr></thead>
+            <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("التوصية", "Recommendation")}</th></tr></thead>
             <tbody>${actions.map((a: any) => `<tr>
               <td><b>${nameOf(a)}</b><div class="why">${esc(a.reason)}</div></td>
               <td class="n">${a.sent}</td><td class="n">${a.returned}</td>
               <td class="n" style="color:#b91c1c;font-weight:900">${a.returnRate}%</td>
               <td class="n" style="color:#b91c1c">${Number(a.wasteValue).toFixed(2)}</td>
-              <td class="c"><span class="tag ${a.verdict === "STOP" ? "stop" : "red"}">${a.verdict === "STOP" ? t("أوقف", "STOP") : t("قلّل الكمية", "REDUCE")}</span></td>
+              <td class="c"><span class="tag ${a.verdict === "STOP" ? "stop" : "red"}">${a.verdict === "STOP" ? t("إيقاف التوريد", "Discontinue") : t("تخفيض الكمية", "Reduce quantity")}</span></td>
             </tr>`).join("")}</tbody>
           </table>
         </div>`
-      : `<div class="act"><div class="act-h">${t("قرارات مطلوبة", "Action required")}</div>
-          <div class="none">${t("لا توجد أصناف تسبب هدراً في هذه الفترة ✅", "No loss-causing items this period ✅")}</div></div>`;
+      : `<div class="act ok"><div class="act-h">${t("التوصيات", "Recommendations")}</div>
+          <div class="none">${t("لا توجد أصناف مسبّبة للهدر خلال هذه الفترة.", "No waste-causing items during this period.")}</div></div>`;
 
     /* ── أفضل الوجبات مبيعاً — بالمُستهلك فعلاً (بعد خصم المرتجع)، مش المُرسل. ── */
     const top: any[] = (decision?.topSellers || []).slice(0, 8);
     const topSellersHtml = top.length
       ? `<table style="margin-top:18px"><thead>
-          <tr class="cap"><td colspan="5">${t("أفضل الأصناف مبيعاً (بالمُستهلك فعلاً)", "Best sellers (by actual consumption)")}</td></tr>
-          <tr><th>#</th><th>${t("الصنف", "Item")}</th><th>${t("مُستهلك", "Consumed")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th><th>${t("نسبة الهدر", "Waste %")}</th></tr></thead>
+          <tr class="cap"><td colspan="5">${t("الأصناف الأعلى مبيعاً — حسب الاستهلاك الفعلي", "Top selling items — by actual consumption")}</td></tr>
+          <tr><th>#</th><th>${t("الصنف", "Item")}</th><th>${t("المستهلك", "Consumed")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th></tr></thead>
           <tbody>${top.map((m: any, i: number) => `<tr>
             <td class="c">${i + 1}</td><td>${nameOf(m)}</td>
             <td class="n">${m.soldQty}</td><td class="n">${Number(m.netRevenue).toFixed(2)}</td>
@@ -722,8 +728,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     const ledger: any[] = decision?.meals || [];
     const ledgerHtml = ledger.length
       ? `<table style="margin-top:20px"><thead>
-          <tr class="cap"><td colspan="6">${t("سجل الأصناف — رايح ومرتجع", "Item ledger — sent and returned")}</td></tr>
-          <tr><th>${t("الصنف", "Item")}</th><th>${t("رايح", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("نسبة الهدر", "Waste %")}</th><th>${t("الخسارة (ر.ق)", "Loss (QAR)")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th></tr></thead>
+          <tr class="cap"><td colspan="6">${t("بيان الأصناف — الكميات المورّدة والمرتجعة", "Item statement — supplied and returned")}</td></tr>
+          <tr><th>${t("الصنف", "Item")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th></tr></thead>
           <tbody>${[...ledger].sort((a: any, b: any) => b.wasteValue - a.wasteValue || b.sent - a.sent).map((m: any) => `<tr>
             <td>${nameOf(m)}</td>
             <td class="n">${m.sent}</td>
@@ -805,6 +811,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         .act table{margin:0}
         .act .why{font-size:9.5px;color:#b91c1c;font-weight:700;margin-top:2px}
         .act .none{padding:12px;text-align:center;color:#15803d;font-weight:800;font-size:12px}
+        /* لا هدر ⇒ لا داعي للإطار الأحمر التحذيري */
+        .act.ok{border-color:#15803d} .act.ok .act-h{background:#15803d}
         .tag{display:inline-block;border-radius:50px;padding:2px 9px;font-size:10px;font-weight:900;color:#fff}
         .tag.stop{background:#b91c1c} .tag.red{background:#c2410c}
         td.c{text-align:center}
@@ -831,9 +839,9 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       </div>
       <div class="wrap">
       <div class="grid" style="grid-template-columns:repeat(5,1fr)">
-        <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("وجبات مُرسلة", "Meals sent")}</div></div>
-        <div class="box"><div class="v">${delivered}</div><div class="l">${t("وجبات مُستهلكة", "Meals consumed")}</div></div>
-        <div class="box"><div class="v" style="color:#b91c1c">${returnedQty}</div><div class="l">${t("مرتجع (تالف)", "Returned (waste)")}</div></div>
+        <div class="box"><div class="v">${report.totalMeals}</div><div class="l">${t("الكمية المورّدة", "Supplied")}</div></div>
+        <div class="box"><div class="v">${delivered}</div><div class="l">${t("الكمية المستهلكة", "Consumed")}</div></div>
+        <div class="box"><div class="v" style="color:#b91c1c">${returnedQty}</div><div class="l">${t("المرتجع (هالك)", "Returned (waste)")}</div></div>
         <div class="box"><div class="v" style="color:#b91c1c">${wasteValue.toFixed(2)}</div><div class="l">${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</div></div>
         <div class="box"><div class="v">${netRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق (ر.ق)", "Net due (QAR)")}</div></div>
       </div>
@@ -842,7 +850,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <table>
           <tr><td class="lbl">${t("إجمالي التوريد", "Gross supplied")} (${report.totalMeals} ${t("وجبة", "meals")})</td>
               <td class="val">${report.totalRevenue.toFixed(2)}</td></tr>
-          <tr class="minus"><td class="lbl">${t("يُخصم — مرتجع تالف", "Less — returned (waste)")} (${returnedQty} ${t("وجبة", "meals")})</td>
+          <tr class="minus"><td class="lbl">${t("يُخصم — قيمة المرتجع الهالك", "Less — returned (waste) value")} (${returnedQty} ${t("وجبة", "meals")})</td>
               <td class="val">− ${wasteValue.toFixed(2)}</td></tr>
           <tr class="net"><td class="lbl">${t("الصافي المستحق على المنفذ", "Net due from outlet")}</td>
               <td class="val">${netRevenue.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
@@ -852,14 +860,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
 
       <table><thead>
       <tr class="cap"><td colspan="5">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
-      <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("الهالك (ر.ق)", "Waste (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
+      <tr><th>${t("التاريخ", "Date")}</th><th>${t("الكمية المورّدة", "Supplied")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
       <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td><td class="n" style="color:${Number(d.waste) > 0 ? "#b91c1c" : "#94a3b8"}">${Number(d.waste || 0).toFixed(2)}</td><td class="n">${Number(d.net ?? d.total).toFixed(2)}</td></tr>`).join("")}
       <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td><td class="n">${wasteValue.toFixed(2)}</td><td class="n">${netRevenue.toFixed(2)}</td></tr></tbody></table>
       ${ledgerHtml}
       <table style="margin-top:20px"><thead>
       <tr class="cap"><td colspan="4">${t("المرتجعات والهالك", "Returns and waste")}</td></tr>
-      <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
-      <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
+      <tr><th>${t("الوجبة", "Meal")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
+      <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات مسجّلة خلال هذه الفترة.", "No returns recorded during this period.")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
 
       ${topSellersHtml}
@@ -1033,7 +1041,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <Card className="rounded-2xl border-slate-200">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-black">{t("تحليل الأصناف وقرار الإنتاج", "Item performance and production decision")}</h3>
+            <h3 className="font-black">{t("التوصيات — الأصناف المسبّبة للهدر", "Recommendations — items causing waste")}</h3>
             <span className="text-[10px] text-slate-400 font-bold">
               {t("مرتّبة حسب نسبة الإرجاع", "Sorted by return rate")}
             </span>
@@ -1042,12 +1050,12 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600">
                 <tr>
-                  <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
-                  <th className="text-center p-2">{t("مُرسل", "Sent")}</th>
-                  <th className="text-center p-2">{t("مرتجع", "Returned")}</th>
-                  <th className="text-center p-2">{t("صافي", "Net")}</th>
-                  <th className="text-center p-2">{t("نسبة الإرجاع", "Return %")}</th>
-                  <th className="text-end p-2">{t("قيمة الهالك", "Waste (QAR)")}</th>
+                  <th className="text-start p-2">{t("الصنف", "Item")}</th>
+                  <th className="text-center p-2">{t("المورّد", "Supplied")}</th>
+                  <th className="text-center p-2">{t("المرتجع", "Returned")}</th>
+                  <th className="text-center p-2">{t("المستهلك", "Consumed")}</th>
+                  <th className="text-center p-2">{t("نسبة الارتجاع", "Return rate")}</th>
+                  <th className="text-end p-2">{t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th>
                   <th className="text-center p-2">{t("التوصية", "Recommendation")}</th>
                 </tr>
               </thead>
@@ -1061,10 +1069,10 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   const bad = m.verdict === "STOP";
                   const meh = m.verdict === "REDUCE";
                   const recommendation = bad
-                    ? t("أوقف", "Stop")
+                    ? t("إيقاف التوريد", "Discontinue")
                     : meh
-                      ? t("قلّل الكمية", "Reduce quantity")
-                      : t("استمر وراقب", "Continue and monitor");
+                      ? t("تخفيض الكمية", "Reduce quantity")
+                      : t("استمرار ومتابعة", "Continue and monitor");
                   return (
                     <tr key={m.key} className="border-t border-slate-100">
                       <td className="p-2 font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td>
@@ -1131,6 +1139,50 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                 `إجمالي الخسارة في الفترة: ${Number(decision?.totals?.totalWaste || 0).toFixed(2)} ر.ق — ${decision?.totals?.wastePct ?? 0}% من الكمية الموردة`,
                 `Total loss this period: ${Number(decision?.totals?.totalWaste || 0).toFixed(2)} QAR — ${decision?.totals?.wastePct ?? 0}% of supplied quantity`,
               )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 🏆 الأصناف الأعلى مبيعاً — بالاستهلاك الفعلي (المورّد − المرتجع)،
+          مش بالمورّد: الصنف اللي بيترجع نصه مش أعلى مبيعاً. */}
+      {topSellers.length > 0 && (
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-black">{t("الأصناف الأعلى مبيعاً", "Top selling items")}</h3>
+              <span className="text-[10px] font-bold text-slate-400">
+                {t("حسب الاستهلاك الفعلي", "By actual consumption")}
+              </span>
+            </div>
+            <div className="space-y-2.5">
+              {topSellers.map((m: any, i: number) => {
+                const pct = maxSold > 0 ? Math.round((m.soldQty / maxSold) * 100) : 0;
+                return (
+                  <div key={m.key} className="flex items-center gap-3">
+                    <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-[#0E2A4A] text-[10px] font-black text-white">
+                      {i + 1}
+                    </span>
+                    <div className="w-40 shrink-0 truncate text-xs font-bold text-slate-700" title={isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}>
+                      {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
+                    </div>
+                    <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-slate-100">
+                      <div className="h-full rounded-md transition-[width] duration-500"
+                        style={{ width: `${Math.max(pct, 3)}%`, background: "linear-gradient(90deg,#0E2A4A,#3cc4f0)" }} />
+                      <span className="absolute inset-y-0 flex items-center px-2 text-[10px] font-black text-white"
+                        style={{ [isRtl ? "right" : "left"]: 0 } as any}>
+                        {m.soldQty}
+                      </span>
+                    </div>
+                    <div className="w-20 shrink-0 text-end text-xs font-black tabular-nums text-emerald-700">
+                      {Number(m.netRevenue).toFixed(2)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 border-t border-slate-100 pt-2.5 text-[11px] font-bold text-slate-500">
+              {t("الأرقام: الكمية المستهلكة · صافي الإيراد (ر.ق)", "Figures: consumed quantity · net revenue (QAR)")}
             </div>
           </CardContent>
         </Card>
