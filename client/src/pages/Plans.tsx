@@ -330,14 +330,25 @@ export default function PlansPage() {
     [customers, selectedCustomerId]
   );
 
+  // ✅ نصفّي المشتركين اللي اشتراكهم يشمل التاريخ المختار — كل يوم يعرض
+  //   بس اللي فعلاً هيوصلهم فيه، مش كل المشتركين النشطين.
   const activeCustomers = useMemo(
-    () =>
-      (customers || [])
+    () => {
+      const targetISO = formattedDate;
+      return (customers || [])
         .filter((c: any) => c?.status === "ACTIVE" || c?.isActive === true || c?.isActive === undefined)
+        .filter((c: any) => {
+          // لو مفيش startDate/endDate نعرضه (fallback)
+          if (!c?.startDate && !c?.endDate) return true;
+          if (c?.startDate && targetISO < String(c.startDate).slice(0, 10)) return false;
+          if (c?.endDate && targetISO > String(c.endDate).slice(0, 10)) return false;
+          return true;
+        })
         .sort((a: any, b: any) =>
           String(a?.fullName || "").toLowerCase().localeCompare(String(b?.fullName || "").toLowerCase())
-        ),
-    [customers]
+        );
+    },
+    [customers, formattedDate]
   );
 
   const sortedCategories = useMemo(
@@ -350,15 +361,15 @@ export default function PlansPage() {
   const planDayName = DAY_NAMES[date.getDay()];
   const DAY_AR: Record<string, string> = { saturday: "السبت", sunday: "الأحد", monday: "الإثنين", tuesday: "الثلاثاء", wednesday: "الأربعاء", thursday: "الخميس", friday: "الجمعة" };
 
-  // ✅ أسبوع الدورة (1-4): من تاريخ اشتراك العميل (كل عميل على دورته)، مع تجاوز يدوي اختياري
-  const rotationWeek = useMemo(() => {
-    if (weekOverride) return weekOverride;
-    const s = (selectedCustomer as any)?.startDate;
-    const start = s ? new Date(s) : null;
-    if (!start || isNaN(start.getTime())) return 1;
-    const days = Math.floor((date.getTime() - start.getTime()) / 86400000);
-    return (Math.floor(Math.max(0, days) / 7) % 4) + 1;
-  }, [weekOverride, selectedCustomer, date]);
+  // ✅ أسبوع الدورة (1-4) = دورة المطعم الفعلية في التاريخ المختار.
+  //   نستخدم rotationWeekAt من السيرفر — نفس المنطق اللي بيستخدمه المطبخ والعميل،
+  //   عشان يكون كل الشاشات متسقة. لو الأخصائية عايزة تجرب أسبوع آخر → weekOverride.
+  const rotationInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    formattedDate ? { targetDate: formattedDate } : "skip",
+  ) as { rotationWeek: number; currentCookingWeek: number; fridaysAhead: number } | undefined;
+  const restaurantRotationWeek = rotationInfo?.rotationWeek || 1;
+  const rotationWeek = weekOverride || restaurantRotationWeek;
 
   // ✅ خريطة وجبات اليوم: categoryId → [menuItemId] — من جدول publicMeals (مصدر واحد، مطابقة مطبّعة بالاسم)
   const scheduledByCategory = useMemo(() => {
@@ -637,10 +648,27 @@ export default function PlansPage() {
             </button>
           </div>
 
-          {/* Center: title */}
-          <h1 className="text-base font-bold text-gray-800 absolute left-1/2 -translate-x-1/2">
-            {isRtl ? "الخطط اليومية" : "Daily Plans"}
-          </h1>
+          {/* Center: title + rotation badge */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+            <h1 className="text-base font-bold text-gray-800">
+              {isRtl ? "الخطط اليومية" : "Daily Plans"}
+            </h1>
+            {/* ✅ دورة المطبخ لهذا اليوم — نفس المنطق اللي يستخدمه العميل والمطبخ */}
+            {rotationInfo && (
+              <span
+                className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-black"
+                style={{ background: "#eaf6fd", color: "#0E76AC", border: "1px solid #bfe6f7" }}
+                title={isRtl
+                  ? `المطبخ الآن على أسبوع ${rotationInfo.currentCookingWeek} — في هذا التاريخ سيكون على أسبوع ${rotationInfo.rotationWeek}`
+                  : `Kitchen now on week ${rotationInfo.currentCookingWeek} — on this date it will be on week ${rotationInfo.rotationWeek}`}
+              >
+                <Sparkles className="h-3 w-3" />
+                {isRtl
+                  ? `المطعم في دورة ${rotationInfo.rotationWeek}`
+                  : `Restaurant · Week ${rotationInfo.rotationWeek}`}
+              </span>
+            )}
+          </div>
 
           {/* Right: actions */}
           <div className="flex items-center gap-1">
