@@ -17,6 +17,35 @@
  *      لو غيّرت المنطق هنا، غيّره هناك — المنطق واحد بحكم المنتج.
  */
 
+/* ═══════════════ تصنيف الوجبات: رئيسية مقابل سناك ═══════════════
+ *
+ *   ⚖️ قرار المنتج: **السلطة سناك**.
+ *
+ *   كان المنيو اليدوي فيه 3 تعريفات متضاربة في نفس الملف:
+ *     - عدّاد اليوم        : category === "snack"        (يتجاهل السلطة)
+ *     - عدّاد تقدّم الأسبوع : !isMain                     (يحسب السلطة)
+ *     - بوابة حد السناك    : category === "snack"        (فالسلطة بلا حد!)
+ *   وconvex/ai.ts يحسبه ["snack","salad"]. النتيجة: نفس الخطة تُعدّ بأربع
+ *   طرق مختلفة حسب مين بيسأل.
+ *
+ *   ⚠️ convex/ai.ts نسخته الخاصة (خادم، لا يستورد من client) — متوافقة مع
+ *      هنا. لو غيّرت التصنيف، غيّره هناك.
+ */
+export const MAIN_CATEGORIES = ["breakfast", "lunch", "dinner"] as const;
+export const SNACK_CATEGORIES = ["snack", "salad"] as const;
+
+const norm = (c: any) => String(c || "").toLowerCase().trim();
+
+/** وجبة رئيسية؟ (فطور/غداء/عشاء) */
+export function isMainCategory(category: any): boolean {
+  return (MAIN_CATEGORIES as readonly string[]).includes(norm(category));
+}
+
+/** سناك؟ (سناك أو سلطة) */
+export function isSnackCategory(category: any): boolean {
+  return (SNACK_CATEGORIES as readonly string[]).includes(norm(category));
+}
+
 /** أيام الأسبوع بترتيب Date.getDay() — الأحد 0 … السبت 6. */
 export const DAY_NAMES = [
   "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",

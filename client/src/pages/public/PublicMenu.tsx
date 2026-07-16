@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState } from "@/lib/subscription";
-import { mealScheduledFor, localISO } from "@/lib/mealSchedule";
+import { mealScheduledFor, localISO, isMainCategory, isSnackCategory } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -225,20 +225,14 @@ export default function PublicMenuPage() {
   const selectedToday = items.filter(
     (i: any) => i.week === selectedWeek && i.day === selectedDay
   );
-  const mainMealsToday = selectedToday.filter((i: any) =>
-    ["breakfast", "lunch", "dinner"].includes(String(i.category).toLowerCase())
-  ).length;
-  const snacksToday = selectedToday.filter((i: any) =>
-    String(i.category).toLowerCase() === "snack"
-  ).length;
+  const mainMealsToday = selectedToday.filter((i: any) => isMainCategory(i.category)).length;
+  const snacksToday = selectedToday.filter((i: any) => isSnackCategory(i.category)).length;
 
   /** كم وجبة/سناك اختار العميل ليوم معيّن في الأسبوع الحالي، وهل اكتمل؟ */
   const dayProgress = (dayValue: string) => {
     const picked = items.filter((i: any) => i.week === selectedWeek && i.day === dayValue);
-    const meals = picked.filter((i: any) =>
-      ["breakfast", "lunch", "dinner"].includes(String(i.category).toLowerCase()),
-    ).length;
-    const snacks = picked.filter((i: any) => String(i.category).toLowerCase() === "snack").length;
+    const meals = picked.filter((i: any) => isMainCategory(i.category)).length;
+    const snacks = picked.filter((i: any) => isSnackCategory(i.category)).length;
     // بدون حدود مسجّلة لا نعتبر اليوم "مكتملاً" أبداً — نتركه مفتوحاً
     const complete =
       (hasMealLimit || hasSnackLimit) &&
@@ -363,12 +357,8 @@ export default function PublicMenuPage() {
     if (wk === selectedWeek) return dayProgress(dy).complete;
     // check other weeks by counting items directly
     const picked = items.filter((i: any) => i.week === wk && i.day === dy);
-    const mainMeals = picked.filter((i: any) =>
-      ["breakfast", "lunch", "dinner"].includes(String(i.category || "").toLowerCase()),
-    ).length;
-    const snacks = picked.filter((i: any) =>
-      !["breakfast", "lunch", "dinner"].includes(String(i.category || "").toLowerCase()),
-    ).length;
+    const mainMeals = picked.filter((i: any) => isMainCategory(i.category)).length;
+    const snacks = picked.filter((i: any) => isSnackCategory(i.category)).length;
     const okMeals = !mealsPerDay || mainMeals >= mealsPerDay;
     const okSnacks = !hasSnackLimit || snacks >= snacksPerDay;
     return okMeals && okSnacks;
@@ -461,7 +451,7 @@ export default function PublicMenuPage() {
     }
 
     // ✅ Check subscription limits — نُخبره بما يفعله بعدها، لا نكتفي بالرفض
-    const isSnack = String(meal.category).toLowerCase() === "snack";
+    const isSnack = isSnackCategory(meal.category);
     const dayLabelNow = isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay;
     if (isSnack && snacksToday >= snacksPerDay) {
       toast({
@@ -1445,7 +1435,9 @@ export default function PublicMenuPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {meals.map((meal: any) => {
                 const hasConflict = mealHasAvoidConflict(meal);
-                const isSnackMeal = String(meal.category).toLowerCase() === "snack";
+                // السلطة سناك ⇒ تُقاس بحد السناكات. كانت تُقاس بحد الوجبات
+                // الرئيسية (فرع else)، فتُقفل غلط أو تُفتح غلط.
+                const isSnackMeal = isSnackCategory(meal.category);
                 const atLimit = isSnackMeal
                   ? snacksToday >= snacksPerDay
                   : mainMealsToday >= mealsPerDay;
