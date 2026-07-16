@@ -1075,6 +1075,12 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
           <div className="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto">
             {(selectedReturnOrder ? [selectedReturnOrder] : []).map((o: any) => {
               const isDirty = Object.values(drafts[o.id] || {}).some((value) => Number(value) > 0);
+              // ✅ عدد الأصناف اللي بيتم إرجاعها بعد النافذة المتوقعة (للتنبيه فقط)
+              const overdueCount = o.lines.reduce((acc: number, l: any) => {
+                const rq = Number(drafts[o.id]?.[l.id] || 0);
+                const isOver = !!l.expectedReturnDate && batchReturnDate > l.expectedReturnDate;
+                return isOver && rq > 0 ? acc + 1 : acc;
+              }, 0);
               return (
                 <div key={o.id} className="p-4">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
@@ -1094,6 +1100,17 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                       {saving === o.id ? t("جاري…", "…") : t("حفظ المرتجعات", "Save returns")}
                     </button>
                   </div>
+                  {/* ✅ بانر تحذير بسيط لو فيه أصناف بعد نافذة الإرجاع المتوقعة */}
+                  {overdueCount > 0 && (
+                    <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800">
+                      <span aria-hidden="true">⚠</span>
+                      <span>
+                        {isRtl
+                          ? `${overdueCount} صنف بيتم إرجاعه بعد نافذة الإرجاع الرسمية. مسموح لكن تأكّد من صلاحية الوجبة قبل التسجيل.`
+                          : `${overdueCount} item(s) being returned after the expected window. Allowed, but verify meal condition before recording.`}
+                      </span>
+                    </div>
+                  )}
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="min-w-[860px] w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
@@ -1118,10 +1135,21 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                         const remainingQty = Number(l.remainingQty ?? (l.qty - l.returnedQty));
                         const afterBatch = Math.max(0, remainingQty - rq);
                         const isSweet = l.returnAfterDays === 4;
+                        // ✅ تحذير: لو تاريخ الدفعة الحالية بعد النافذة المتوقعة، وفيه كمية للإرجاع
+                        //   نعرض badge أصفر جنب التاريخ — العميل يقدر يكمّل (نافذ ماديًا)
+                        //   بس يعرف إن الوجبة خرجت من نافذة الصلاحية الرسمية.
+                        const overdue = !!l.expectedReturnDate && batchReturnDate > l.expectedReturnDate;
                         return (
                           <tr key={l.id} className="border-t border-slate-100">
                             <td className="p-3 font-bold text-slate-900">{isRtl ? (l.mealNameAr || l.mealNameEn) : (l.mealNameEn || l.mealNameAr)}{isSweet && <span className="ms-2 rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black text-violet-700">{t("سويت · 4 أيام", "Sweet · 4 days")}</span>}</td>
-                            <td className="p-3 text-center"><span className="rounded-md bg-cyan-50 px-2 py-1 font-bold tabular-nums text-cyan-800" dir="ltr">{l.expectedReturnDate || "—"}</span></td>
+                            <td className="p-3 text-center">
+                              <span className={cn("rounded-md px-2 py-1 font-bold tabular-nums", overdue ? "bg-amber-100 text-amber-800" : "bg-cyan-50 text-cyan-800")} dir="ltr">{l.expectedReturnDate || "—"}</span>
+                              {overdue && rq > 0 && (
+                                <span className="ms-1 inline-block rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black text-white" title={t("مرتجع بعد النافذة المتوقعة", "Return after expected window")}>
+                                  ⚠ {t("متأخر", "Overdue")}
+                                </span>
+                              )}
+                            </td>
                             <td className="p-3 text-end font-black tabular-nums">{l.qty}</td>
                             <td className="p-3 text-end font-black tabular-nums text-red-600">{l.returnedQty}</td>
                             <td className="p-3 text-end font-black tabular-nums text-red-600">{previousWaste.toFixed(2)}</td>
