@@ -464,7 +464,7 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
                 <tr>
                   <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
                   <th className="text-start p-2">{t("السعر العادي", "Regular price")}</th>
-                  <th className="text-start p-2">{t("سعر الجيم", "Gym price")}</th>
+                  <th className="text-start p-2">{t("سعر المنفذ", "Outlet price")}</th>
                   <th className="text-start p-2">{t("سعر الأونلاين", "Online price")}</th>
                   <th className="text-start p-2">{t("لون الزر", "Button color")}</th>
                   <th className="text-start p-2">{t("فئة POS", "POS Category")}</th>
