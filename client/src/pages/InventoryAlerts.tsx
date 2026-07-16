@@ -35,7 +35,10 @@ export default function InventoryAlerts() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [days, setDays] = useState(7);
-  const data: any = useQuery(api.inventory.getAlerts, { days });
+  const data: any = useQuery(
+    api.inventory.getAlerts,
+    sessionToken ? { days, sessionToken } : "skip",
+  );
   const generatePO = useMutation(api.purchaseOrders.generateFromLowStock);
 
   const a = data || {

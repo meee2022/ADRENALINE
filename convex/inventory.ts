@@ -183,6 +183,7 @@ export const getAlerts = query({
         return {
           itemId: it._id,
           nameAr: it.nameAr,
+          nameEn: it.nameEn,
           unit: it.unit,
           currentStock: Number(it.currentStock || 0),
           minStock: Number(it.minStock || 0),
@@ -207,6 +208,7 @@ export const getAlerts = query({
         batchId: b._id,
         itemId: b.itemId,
         nameAr: inv?.nameAr || "—",
+        nameEn: inv?.nameEn,
         unit: inv?.unit || "",
         quantity: qty,
         value: Math.round(qty * unitCost * 100) / 100,

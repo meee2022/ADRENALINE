@@ -68,6 +68,7 @@ const AboutPage = lazy(() => import("@/pages/public/AboutPage"));
 const SmartPlan = lazy(() => import("@/pages/public/SmartPlan"));
 const HowToSubscribe = lazy(() => import("@/pages/public/HowToSubscribe"));
 const ContactPage = lazy(() => import("@/pages/public/ContactPage"));
+const CalorieCalculator = lazy(() => import("@/pages/public/CalorieCalculator"));
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useStore } from "@/lib/store";
@@ -159,6 +160,7 @@ function Router() {
       <Route path="/public/order-review" component={OrderReview} />
       <Route path="/public/about" component={AboutPage} />
       <Route path="/public/contact" component={ContactPage} />
+      <Route path="/public/calorie-calculator" component={CalorieCalculator} />
       <Route path="/customer/auth" component={CustomerAuth} />
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/smart-plan" component={SmartPlan} />

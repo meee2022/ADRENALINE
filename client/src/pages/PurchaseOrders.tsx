@@ -27,7 +27,10 @@ export default function PurchaseOrders() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const orders: any[] = useQuery(api.purchaseOrders.list, { sessionToken }) || [];
+  const orders: any[] = useQuery(
+    api.purchaseOrders.list,
+    sessionToken ? { sessionToken } : "skip",
+  ) || [];
   const generate = useMutation(api.purchaseOrders.generateFromLowStock);
   const updateStatus = useMutation(api.purchaseOrders.updateStatus);
   const remove = useMutation(api.purchaseOrders.remove);

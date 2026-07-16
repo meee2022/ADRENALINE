@@ -33,8 +33,8 @@ export default function ReceiveGoods() {
   const [, setLocation] = useLocation();
 
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const items: any[] = useQuery(api.inventory.listItems, { sessionToken }) || [];
-  const suppliers: any[] = useQuery(api.inventory.getSuppliers, { sessionToken }) || [];
+  const items: any[] = useQuery(api.inventory.listItems, sessionToken ? { sessionToken } : "skip") || [];
+  const suppliers: any[] = useQuery(api.inventory.getSuppliers, sessionToken ? { sessionToken } : "skip") || [];
   const setup: any = useQuery(api.inventorySetup.getSetupData, sessionToken ? { sessionToken } : "skip");
   const receiveMany = useMutation(api.inventory.receiveMany);
   const createSupplier = useMutation(api.inventory.createSupplier);

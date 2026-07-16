@@ -4,7 +4,7 @@
  */
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles } from "lucide-react";
+import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -55,6 +55,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               </a>
               <a href="/public/menu" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
                 {isRtl ? "المنيو" : "Menu"}
+              </a>
+              <a href="/public/calorie-calculator" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap flex items-center gap-1.5">
+                <Calculator className="h-3.5 w-3.5" />
+                {isRtl ? "حاسبة السعرات" : "Calorie Calculator"}
               </a>
               <a href="/customer/smart-plan"
                 className="text-[15px] font-bold px-3 py-1.5 rounded-full text-[#0E76AC] hover:text-white hover:bg-[#0E76AC] transition-colors whitespace-nowrap flex items-center gap-1"
@@ -236,6 +240,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               >
                 <Sparkles className="h-4 w-4" />
                 {isRtl ? "خطتي الذكية" : "Smart Plan"}
+              </a>
+              <a
+                href="/public/calorie-calculator"
+                className="flex items-center gap-2 rounded-lg px-4 py-2 font-medium text-[#0F1516] hover:bg-[#3CC4F0]/10"
+              >
+                <Calculator className="h-4 w-4 text-[#0E76AC]" />
+                {isRtl ? "حاسبة السعرات" : "Calorie Calculator"}
               </a>
               <a
                 href="/public/how-to-subscribe"
