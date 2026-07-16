@@ -37,7 +37,7 @@ export default function MealDetailsPage() {
       <PublicLayout>
         <div className="flex items-center justify-center min-h-screen">
           <p className="text-xl text-[#47759C]">
-            {isRtl ? "جاري التحميل..." : "Loading..."}
+            {isRtl ? "جارٍ التحميل…" : "Loading..."}
           </p>
         </div>
       </PublicLayout>

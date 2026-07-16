@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "أدرينالين للوجبات الصحية | وجبات دايت وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل لباب بيتك في قطر. اشترك في باقتك دلوقتي.", path: "/" });
+  useSeo({ title: "أدرينالين للوجبات الصحية | وجبات دايت وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل لباب بيتك في قطر. اشترك في باقتك الآن.", path: "/" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
 

@@ -158,7 +158,7 @@ export function PremiumAbout() {
 
             <p className="text-base md:text-lg leading-relaxed mb-6" style={{ color: "#47759C" }}>
               {isRtl
-                ? "في أدرينالين، نؤمن أن الأكل الصحي مش لازم يكون ممل. فريقنا من الشيفات وأخصائيي التغذية يحضّر لك وجبات يومية متوازنة، طازجة، ومدروسة بدقة تناسب أهدافك."
+                ? "في أدرينالين، نؤمن بأن الغذاء الصحي لا ينبغي أن يكون رتيباً. يُعِدّ فريقنا من الطهاة وأخصائيي التغذية وجبات يومية متوازنة وطازجة، مدروسة بدقة لتناسب أهدافك."
                 : "At Adrenaline, we believe healthy eating doesn't have to be boring. Our team of chefs and nutritionists crafts daily meals that are balanced, fresh, and tailored to your goals."}
             </p>
 
@@ -374,7 +374,7 @@ export function PremiumTestimonials() {
     e.preventDefault();
     if (!newComment || !newMeal) return;
     if (!sessionToken) {
-      alert(isRtl ? "سجّل دخولك أولاً عشان تقيّم" : "Please log in first to leave a review");
+      alert(isRtl ? "يُرجى تسجيل الدخول أولاً لإضافة تقييمك" : "Please log in first to leave a review");
       return;
     }
     setIsSubmitting(true);
@@ -661,7 +661,7 @@ export function PremiumTestimonials() {
                       }}
                     >
                       {isSubmitting
-                        ? (isRtl ? "جاري الإرسال..." : "Sending...")
+                        ? (isRtl ? "جارٍ الإرسال…" : "Sending...")
                         : (isRtl ? "إرسال التقييم" : "Submit Review")}
                     </button>
                   </div>
@@ -715,7 +715,7 @@ export function PremiumContact({ phone }: { phone?: string }) {
           badgeIcon={<MapPin className="h-4 w-4" />}
           badgeAr="تواصل معنا" badgeEn="GET IN TOUCH"
           titleAr="نحن هنا لخدمتك" titleEn="We're Here For You"
-          subtitleAr="تواصل معنا في أي وقت بالطريقة اللي تناسبك" subtitleEn="Reach us anytime, the way you prefer"
+          subtitleAr="تواصل معنا في أي وقت بالطريقة التي تناسبك" subtitleEn="Reach us anytime, the way you prefer"
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">

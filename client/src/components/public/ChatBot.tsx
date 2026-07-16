@@ -36,7 +36,7 @@ export default function ChatBot() {
       const res: any = await chat({ messages: next, lang: isRtl ? "ar" : "en" });
       setMsgs([...next, { role: "assistant", content: res.reply }]);
     } catch {
-      setMsgs([...next, { role: "assistant", content: isRtl ? "حصل خطأ مؤقت، حاول تاني 🌿" : "A temporary error occurred, please try again 🌿" }]);
+      setMsgs([...next, { role: "assistant", content: isRtl ? "حدث خطأ مؤقت، يُرجى المحاولة مرة أخرى 🌿" : "A temporary error occurred, please try again 🌿" }]);
     } finally { setLoading(false); }
   };
 

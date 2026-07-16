@@ -777,7 +777,7 @@ export default function PublicMenuPage() {
                   <div className="space-y-4">
                     <div className="text-center py-6">
                       <div className="inline-block h-8 w-8 rounded-full border-2 border-gray-200 border-t-[#3CC4F0] animate-spin" />
-                      <p className="text-xs text-gray-400 mt-3">{isRtl ? "جاري التحقق..." : "Verifying..."}</p>
+                      <p className="text-xs text-gray-400 mt-3">{isRtl ? "جارٍ التحقق…" : "Verifying..."}</p>
                     </div>
                     <button
                       onClick={handleResetPhone}
@@ -1173,7 +1173,7 @@ export default function PublicMenuPage() {
               </div>
               <p className="text-[11px] text-[#47759C] mt-2">
                 {isRtl
-                  ? "المينو مضبوط تلقائياً على بداية اشتراكك — الأيام والأسابيع المعروضة فقط اللي داخل مدة اشتراكك."
+                  ? "يُضبط المنيو تلقائياً على بداية اشتراكك — ولا تُعرض سوى الأيام والأسابيع الواقعة ضمن مدته."
                   : "The menu is auto-aligned to your subscription — only days/weeks inside your subscription window are shown."}
               </p>
               {/* ✅ بانر اكتمال — يظهر لو خلّص العميل كل يوم توصيل داخل اشتراكه */}

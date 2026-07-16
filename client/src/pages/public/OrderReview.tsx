@@ -382,7 +382,7 @@ export default function OrderReview() {
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{t("جاري الإرسال...", "Sending...")}</span>
+                <span>{t("جارٍ الإرسال…", "Sending...")}</span>
               </>
             ) : (
               <>
