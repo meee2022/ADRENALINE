@@ -666,7 +666,13 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         .box{border:1px solid #cdd9e4;border-radius:8px;padding:8px 12px;text-align:center}
         .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 20px}
         .box .v{font-size:20px;font-weight:900;color:#0E76AC} .box .l{font-size:10px;color:#47759c}
+        /* عنوان الجدول جوه thead — عشان يتكرر مع سطر العناوين لما الجدول
+           يتقسم على صفحتين، فما يبقاش في جدول بلا هوية في الصفحة التانية. */
+        tr.cap td{background:#0E2A4A;color:#fff;font-weight:900;font-size:13px;
+                  padding:7px 9px;text-align:${isRtl ? "right" : "left"};border:1px solid #0E2A4A}
         @page{size:A4;margin:12mm}
+        /* thead بيتكرر تلقائياً في كل صفحة — نأكّدها صراحةً */
+        @media print{thead{display:table-header-group}tr{break-inside:avoid}}
       </style></head><body>
       <div class="head">
         <h1>${t("تقرير مبيعات المنافذ - Adrenaline", "Outlet sales report - Adrenaline")}</h1>
@@ -681,15 +687,18 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <div class="box"><div class="v">${report.daysCount}</div><div class="l">${t("أيام التوريد", "Days")}</div></div>
         <div class="box"><div class="v">${report.totalRevenue.toFixed(2)}</div><div class="l">${t("الإجمالي المستحق", "Total due")}</div></div>
       </div>
-      <h3>${t("التفاصيل اليومية", "Daily breakdown")}</h3>
-      <table><thead><tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th></tr></thead>
+      <table><thead>
+      <tr class="cap"><td colspan="3">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
+      <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th></tr></thead>
       <tbody>${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td></tr>`).join("")}
       <tr class="tot"><td>${t("الإجمالي", "Grand total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td></tr></tbody></table>
-      <h3 style="margin-top:20px">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</h3>
-      <table><thead><tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
+      <table style="margin-top:20px"><thead>
+      <tr class="cap"><td colspan="3">${t("تفصيل حسب الوجبة", "Per-meal breakdown")}</td></tr>
+      <tr><th>${t("الوجبة", "Meal")}</th><th>${t("الكمية", "Qty")}</th><th>${t("الإيراد (ر.ق)", "Revenue (QAR)")}</th></tr></thead>
       <tbody>${report.meals.map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.qty}</td><td class="n">${m.revenue.toFixed(2)}</td></tr>`).join("")}</tbody></table>
-      <h3 style="margin-top:20px">${t("المرتجعات والهالك", "Returns and waste")}</h3>
-      <table><thead><tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
+      <table style="margin-top:20px"><thead>
+      <tr class="cap"><td colspan="4">${t("المرتجعات والهالك", "Returns and waste")}</td></tr>
+      <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
       <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
       </body></html>`;
