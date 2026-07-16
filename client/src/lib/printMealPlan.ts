@@ -9,6 +9,8 @@
  * (نفس أسلوب تقرير الحضور الشهري في Attendance.tsx)
  */
 
+import { openPrintDoc } from "./printDoc";
+
 export type MealRow = {
   /** العمود الأول: التاريخ أو اليوم أو رقم الوجبة */
   label: string;
@@ -171,21 +173,13 @@ export function printMealPlan(input: PrintMealPlanInput): void {
     <div class="foot">ADRENALINE Healthy Food — طُبع في ${new Date().toLocaleString("ar-EG")}</div>
     </body></html>`;
 
-  openPrintWindow(html);
+  openPrintWindow(html, true, input.title);
 }
 
-/** يفتح نافذة الطباعة ويطبع. مشترك بين كل التقارير.
+/** يفتح نافذة الطباعة ويطبع — يفوّض للهيلبر المشترك في printDoc.ts.
  *  autoPrint=false لو الـ HTML يتكفّل بالطباعة بنفسه (مثلاً بعد تحميل الصور). */
-function openPrintWindow(html: string, autoPrint = true): void {
-  const w = window.open("", "_blank", "width=980,height=1000");
-  if (!w) {
-    alert("اسمح بالنوافذ المنبثقة (pop-ups) للطباعة");
-    return;
-  }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
-  if (autoPrint) setTimeout(() => w.print(), 350);
+function openPrintWindow(html: string, autoPrint = true, fileName?: string): void {
+  openPrintDoc(html, { autoPrint, fileName, width: 980, height: 1000 });
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -299,7 +293,7 @@ export function printWeeklyReport(input: WeeklyReportInput): void {
     <div class="foot">ADRENALINE Healthy Food</div>
     </body></html>`;
 
-  openPrintWindow(html);
+  openPrintWindow(html, true, `${input.customerName} - Weekly Report`);
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -443,5 +437,5 @@ export async function printMealPlanCards(input: PrintMealPlanInput): Promise<voi
     </body></html>`;
 
   // autoPrint=false: صفحة الطباعة تطبع نفسها بعد اكتمال الصور.
-  openPrintWindow(html, false);
+  openPrintWindow(html, false, safeName);
 }

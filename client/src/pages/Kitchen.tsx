@@ -35,6 +35,7 @@ import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/lib/kitchenSheet";
+import { openPrintDoc } from "@/lib/printDoc";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 import {
@@ -787,17 +788,11 @@ export default function Kitchen() {
       ${dishHtml}
       ${custHtml}
       </body></html>`;
-    // ✅ ننزّل ملف HTML مستقل (بدل معاينة الطباعة المنبثقة) — الطاقم يفتحه ويطبعه/يحفظه PDF بنفسه،
-    //    أوضح وأثبت من المعاينة التلقائية.
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `kitchen-sheet-${formattedDate}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    // 📄 PDF عبر طباعة المتصفح — نفس مسار باقي التقارير (لا ملفات HTML).
+    openPrintDoc(html, {
+      fileName: `${isRtl ? "كشف المطبخ" : "Kitchen sheet"} - ADRENALINE - ${formattedDate}`,
+      isRtl,
+    });
   };
 
   const handleMarkPrepared = async (planId: string) => {

@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks, PackageX, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { openPrintDoc } from "@/lib/printDoc";
 import { confirmDialog, promptDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 
@@ -692,12 +693,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
       </body></html>`;
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `gym-report-${selectedRange.from}-${selectedRange.to}.html`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    // 📄 PDF عبر طباعة المتصفح — المدير بيطلب التقرير جاهز، مش ملف HTML.
+    openPrintDoc(html, {
+      fileName: `${t("تقرير مبيعات المنافذ", "Outlet sales report")} - ${gym?.name || t("كل المنافذ", "All outlets")} - ${rangeLabel}`,
+      isRtl,
+    });
   };
 
   return (
@@ -734,7 +734,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </div>
           <div className="flex items-end">
             <Button onClick={printInvoice} className="w-full h-10 font-black text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-              <Printer className="h-4 w-4 me-2" /> {t("استخراج التقرير", "Export report")}
+              <Printer className="h-4 w-4 me-2" /> {t("تصدير التقرير PDF", "Export report PDF")}
             </Button>
           </div>
         </CardContent>

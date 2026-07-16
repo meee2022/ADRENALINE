@@ -11,6 +11,8 @@
  *   بلغة العرض في Kitchen.tsx قبل تمريرها هنا).
  */
 
+import { openPrintDoc } from "./printDoc";
+
 export type KitchenPerson = {
   no: number;
   phone: string;
@@ -216,11 +218,12 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       </div>
       <div class="foot">ADRENALINE Healthy Food — ${esc(tr.title)} ${esc(dateStr)}</div>
     </div>
-    <script>(function(){setTimeout(function(){try{window.focus();window.print();}catch(e){}},250);})();<\/script>
     </body></html>`;
 
-  const w = window.open("", "_blank", "width=1100,height=800");
-  if (!w) { alert(lang === "ar" ? "اسمح بالنوافذ المنبثقة للطباعة" : "Allow pop-ups to print"); return; }
-  w.document.write(html);
-  w.document.close();
+  openPrintDoc(html, {
+    fileName: `ADRENALINE-kitchen-${dateStr}`,
+    isRtl: lang === "ar",
+    width: 1100,
+    height: 800,
+  });
 }
