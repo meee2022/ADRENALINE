@@ -649,6 +649,15 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     if (!report?.meals?.length) return 0;
     return Math.max(...report.meals.map((meal: any) => meal.revenue));
   }, [report]);
+  /** أعلى 6 أصناف خسارة — للشارت. الأصناف بلا هدر لا تُعرض (شريط صفر بلا معنى). */
+  const wasteChart = useMemo(() => {
+    const rows = (decision?.meals || []).filter((m: any) => m.wasteValue > 0);
+    return [...rows].sort((a: any, b: any) => b.wasteValue - a.wasteValue).slice(0, 6);
+  }, [decision]);
+  const maxWaste = useMemo(
+    () => (wasteChart.length ? Math.max(...wasteChart.map((m: any) => m.wasteValue)) : 0),
+    [wasteChart],
+  );
   const rangeLabel = selectedRange.from === selectedRange.to
     ? selectedRange.from
     : `${selectedRange.from} - ${selectedRange.to}`;
@@ -798,9 +807,6 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         .sign div{flex:1;border-top:1px solid #94a3b8;padding-top:5px;font-size:10px;
                   color:#47759c;font-weight:700;text-align:center}
         .foot{margin-top:14px;font-size:9px;color:#94a3b8;text-align:center}
-        /* الصفحة الأولى = ملخص القرار (أرقام + فلوس + قرارات + أفضل مبيعاً).
-           الجداول التفصيلية تبدأ صفحة جديدة — المدير يقرأ القرار في صفحة واحدة. */
-        .pb{break-before:page;page-break-before:always}
         @page{size:A4;margin:12mm}
         /* thead بيتكرر تلقائياً في كل صفحة — نأكّدها صراحةً */
         @media print{thead{display:table-header-group}tr{break-inside:avoid}}
@@ -837,10 +843,6 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         </table>
       </div>
 
-      ${actionsHtml}
-      ${topSellersHtml}
-
-      <div class="pb"></div>
       <table><thead>
       <tr class="cap"><td colspan="5">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
       <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("الهالك (ر.ق)", "Waste (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
@@ -852,6 +854,9 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
       <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
+
+      ${topSellersHtml}
+      ${actionsHtml}
 
       <div class="sign">
         <div>${t("مسؤول المنافذ", "Outlet supervisor")}</div>
@@ -908,10 +913,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* ⚠️ "الصافي المستحق" كان بيعرض totalRevenue (الإجمالي قبل خصم المرتجعات)
+          فكان بيقول 8985 بينما بطاقة "صافي الإيراد بعد الهالك" تحت بتقول 8552 —
+          رقمان متناقضان لنفس الشيء. الصافي = الإجمالي − الهالك. */}
+      <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
         <Stat label={t("إجمالي الوجبات", "Total meals")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
-        <Stat label={t("الصافي المستحق", "Total due (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#16a34a" />
-        <Stat label={t("متوسط يومي", "Avg/day")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
+        <Stat label={t("إجمالي التوريد (ر.ق)", "Gross supplied (QAR)")} value={report?.totalRevenue?.toFixed(2) ?? "—"} color="#47759c" />
+        <Stat label={t("الصافي المستحق (ر.ق)", "Net due (QAR)")} value={(report?.netRevenue ?? report?.totalRevenue)?.toFixed(2) ?? "—"} color="#16a34a" />
+        <Stat label={t("متوسط يومي (صافي)", "Avg/day (net)")} value={report?.avgPerDay?.toFixed(2) ?? "—"} color="#7c3aed" />
         <Stat label={t("أيام التوريد", "Days")} value={report?.daysCount ?? "—"} color="#f59e0b" />
       </div>
 
@@ -1027,20 +1036,25 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                 </tr>
               </thead>
               <tbody>
-                {(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => {
-                  const bad = m.returnRate >= 20;
-                  const meh = m.returnRate >= 10 && m.returnRate < 20;
+                {/* ⚠️ الحكم من decisionReport (الخادم) — كانت الصفحة بتحكم بعتبات
+                    خاصة بيها (20%/10%) تخالف عتبات التقرير المطبوع (40%/15%)،
+                    فنفس الصنف يطلع "راجع للإيقاف" على الشاشة و"قلّل الكمية" في
+                    الـPDF. مصدر واحد = حكم واحد. */}
+                {(decision?.meals || []).filter((m: any) => m.returned > 0)
+                  .sort((a: any, b: any) => b.returnRate - a.returnRate).map((m: any) => {
+                  const bad = m.verdict === "STOP";
+                  const meh = m.verdict === "REDUCE";
                   const recommendation = bad
-                    ? t("راجع للإيقاف", "Review for stopping")
+                    ? t("أوقف", "Stop")
                     : meh
-                      ? t("قلّل الإنتاج", "Reduce production")
+                      ? t("قلّل الكمية", "Reduce quantity")
                       : t("استمر وراقب", "Continue and monitor");
                   return (
                     <tr key={m.key} className="border-t border-slate-100">
                       <td className="p-2 font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td>
                       <td className="p-2 text-center font-black">{m.sent}</td>
                       <td className="p-2 text-center font-black" style={{ color: "#dc2626" }}>{m.returned}</td>
-                      <td className="p-2 text-center font-black text-slate-700">{m.net}</td>
+                      <td className="p-2 text-center font-black text-slate-700">{m.soldQty}</td>
                       <td className="p-2 text-center">
                         <span className="inline-block px-2 py-0.5 rounded-full font-black text-xs"
                           style={{
@@ -1055,7 +1069,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                     </tr>
                   );
                 })}
-                {(!returnsRep || returnsRep.meals.filter((m: any) => m.returned > 0).length === 0) && (
+                {(!decision || decision.meals.filter((m: any) => m.returned > 0).length === 0) && (
                   <tr><td colSpan={7} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذه الفترة", "No returns recorded in this period")}</td></tr>
                 )}
               </tbody>
@@ -1063,6 +1077,48 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           </div>
         </CardContent>
       </Card>
+
+      {/* 📊 أعلى الأصناف خسارة — قراءة بصرية سريعة: طول الشريط = قيمة الهالك.
+          CSS خالص (لا مكتبة شارت) عشان يطبع صح ويفضل خفيف. */}
+      {wasteChart.length > 0 && (
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black">{t("أعلى الأصناف خسارة", "Biggest losses by item")}</h3>
+              <span className="text-[10px] text-slate-400 font-bold">{t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</span>
+            </div>
+            <div className="space-y-2.5">
+              {wasteChart.map((m: any) => {
+                const pct = maxWaste > 0 ? Math.round((m.wasteValue / maxWaste) * 100) : 0;
+                return (
+                  <div key={m.key} className="flex items-center gap-3">
+                    <div className="w-40 shrink-0 truncate text-xs font-bold text-slate-700" title={isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}>
+                      {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
+                    </div>
+                    <div className="relative h-6 flex-1 overflow-hidden rounded-md bg-slate-100">
+                      <div className="h-full rounded-md transition-[width] duration-500"
+                        style={{ width: `${Math.max(pct, 3)}%`, background: m.verdict === "STOP" ? "linear-gradient(90deg,#b91c1c,#ef4444)" : "linear-gradient(90deg,#c2410c,#f97316)" }} />
+                      <span className="absolute inset-y-0 flex items-center px-2 text-[10px] font-black text-white"
+                        style={{ [isRtl ? "right" : "left"]: 0 } as any}>
+                        {m.returnRate}%
+                      </span>
+                    </div>
+                    <div className="w-20 shrink-0 text-end text-xs font-black text-red-600 tabular-nums">
+                      {m.wasteValue.toFixed(2)}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 border-t border-slate-100 pt-2.5 text-[11px] font-bold text-slate-500">
+              {t(
+                `إجمالي الخسارة في الفترة: ${Number(decision?.totals?.totalWaste || 0).toFixed(2)} ر.ق — ${decision?.totals?.wastePct ?? 0}% من الكمية الموردة`,
+                `Total loss this period: ${Number(decision?.totals?.totalWaste || 0).toFixed(2)} QAR — ${decision?.totals?.wastePct ?? 0}% of supplied quantity`,
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
