@@ -635,6 +635,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     (api.gymSales as any).returnsReport,
     { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken }
   ) as any;
+  // تقرير القرار: الأفضل مبيعاً + الأصناف اللي بتسبب هدر + الربح (لو التكلفة معبّاة)
+  const decision = useQuery(
+    (api.gymSales as any).decisionReport,
+    { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken }
+  ) as any;
 
   const maxDay = useMemo(() => {
     if (!report?.days?.length) return 0;
@@ -661,6 +666,55 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     // 📅 تاريخ محلي (قطر UTC+3) — toISOString بترجع UTC فبتدي تاريخ غلط.
     const n = new Date();
     const issuedAt = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`;
+
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
+    const nameOf = (m: any) => esc(isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr));
+
+    /* ── قرارات مطلوبة: الأصناف اللي بتسبب هدر. أول قسم بعد الخلاصة لأنه
+          السبب اللي المدير بيطلب التقرير عشانه. ── */
+    const actions: any[] = decision?.actions || [];
+    const actionsHtml = actions.length
+      ? `<div class="act">
+          <div class="act-h">${t("قرارات مطلوبة — أصناف بتسبب خسائر", "Action required — items causing losses")}</div>
+          <table>
+            <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("مُرسل", "Sent")}</th><th>${t("مرتجع", "Ret.")}</th><th>${t("نسبة الهدر", "Waste %")}</th><th>${t("الخسارة (ر.ق)", "Loss (QAR)")}</th><th>${t("القرار", "Decision")}</th></tr></thead>
+            <tbody>${actions.map((a: any) => `<tr>
+              <td><b>${nameOf(a)}</b><div class="why">${esc(a.reason)}</div></td>
+              <td class="n">${a.sent}</td><td class="n">${a.returned}</td>
+              <td class="n" style="color:#b91c1c;font-weight:900">${a.returnRate}%</td>
+              <td class="n" style="color:#b91c1c">${Number(a.wasteValue).toFixed(2)}</td>
+              <td class="c"><span class="tag ${a.verdict === "STOP" ? "stop" : "red"}">${a.verdict === "STOP" ? t("أوقف", "STOP") : t("قلّل الكمية", "REDUCE")}</span></td>
+            </tr>`).join("")}</tbody>
+          </table>
+        </div>`
+      : `<div class="act"><div class="act-h">${t("قرارات مطلوبة", "Action required")}</div>
+          <div class="none">${t("لا توجد أصناف تسبب هدراً في هذه الفترة ✅", "No loss-causing items this period ✅")}</div></div>`;
+
+    /* ── أفضل الوجبات مبيعاً — بالمُستهلك فعلاً (بعد خصم المرتجع)، مش المُرسل. ── */
+    const top: any[] = (decision?.topSellers || []).slice(0, 8);
+    const topSellersHtml = top.length
+      ? `<table style="margin-top:18px"><thead>
+          <tr class="cap"><td colspan="5">${t("أفضل الأصناف مبيعاً (بالمُستهلك فعلاً)", "Best sellers (by actual consumption)")}</td></tr>
+          <tr><th>#</th><th>${t("الصنف", "Item")}</th><th>${t("مُستهلك", "Consumed")}</th><th>${t("صافي الإيراد (ر.ق)", "Net revenue (QAR)")}</th><th>${t("نسبة الهدر", "Waste %")}</th></tr></thead>
+          <tbody>${top.map((m: any, i: number) => `<tr>
+            <td class="c">${i + 1}</td><td>${nameOf(m)}</td>
+            <td class="n">${m.soldQty}</td><td class="n">${Number(m.netRevenue).toFixed(2)}</td>
+            <td class="n" style="color:${m.returnRate >= 15 ? "#b91c1c" : "#15803d"}">${m.returnRate}%</td>
+          </tr>`).join("")}</tbody></table>`
+      : "";
+
+    /* ── الربح: يظهر فقط لو كل الأصناف لها تكلفة. غير كده نقول للمدير
+          صراحةً إنه غير متاح وليه — أفضل من رقم ناقص يبني عليه قرار. ── */
+    const cov = decision?.costCoverage;
+    const profitHtml = cov?.profitAvailable
+      ? `<tr class="minus"><td class="lbl">${t("يُخصم — تكلفة التحضير", "Less — preparation cost")}</td>
+             <td class="val">− ${Number(decision.totals.totalCost).toFixed(2)}</td></tr>
+         <tr class="profit"><td class="lbl">${t("صافي الربح", "Net profit")}</td>
+             <td class="val">${Number(decision.totals.totalProfit).toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>`
+      : `<tr><td class="lbl" colspan="2"><div class="warn">${t(
+          `⚠ الربح غير متاح — تكلفة التحضير غير مسجّلة (${cov?.mealsWithCost ?? 0} من ${cov?.mealsTotal ?? 0} صنف). سجّلها من صفحة "الوجبات العامة" ليظهر الربح تلقائياً.`,
+          `⚠ Profit unavailable — preparation cost not set (${cov?.mealsWithCost ?? 0} of ${cov?.mealsTotal ?? 0} items). Set it in "Public meals" and profit appears automatically.`,
+        )}</div></td></tr>`;
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${t("تقرير مبيعات المنافذ", "Outlet sales report")} — ${rangeLabel}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -703,10 +757,28 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         .fin .net td{background:#0E76AC;color:#fff;font-size:14px}
         .fin .net .lbl{color:#fff}
 
+        .fin .profit td{background:#15803d;color:#fff;font-size:14px}
+        .fin .profit .lbl{color:#fff}
+        .warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e;border-radius:8px;
+              padding:8px 10px;font-size:10.5px;font-weight:700;line-height:1.6}
+
+        /* ── قرارات مطلوبة: أبرز قسم في التقرير — إطار أحمر يلفت النظر ── */
+        .act{margin-top:18px;border:2px solid #b91c1c;border-radius:10px;overflow:hidden;break-inside:avoid}
+        .act-h{background:#b91c1c;color:#fff;font-weight:900;font-size:13px;padding:7px 10px}
+        .act table{margin:0}
+        .act .why{font-size:9.5px;color:#b91c1c;font-weight:700;margin-top:2px}
+        .act .none{padding:12px;text-align:center;color:#15803d;font-weight:800;font-size:12px}
+        .tag{display:inline-block;border-radius:50px;padding:2px 9px;font-size:10px;font-weight:900;color:#fff}
+        .tag.stop{background:#b91c1c} .tag.red{background:#c2410c}
+        td.c{text-align:center}
+
         .sign{margin-top:26px;display:flex;justify-content:space-between;gap:40px;break-inside:avoid}
         .sign div{flex:1;border-top:1px solid #94a3b8;padding-top:5px;font-size:10px;
                   color:#47759c;font-weight:700;text-align:center}
         .foot{margin-top:14px;font-size:9px;color:#94a3b8;text-align:center}
+        /* الصفحة الأولى = ملخص القرار (أرقام + فلوس + قرارات + أفضل مبيعاً).
+           الجداول التفصيلية تبدأ صفحة جديدة — المدير يقرأ القرار في صفحة واحدة. */
+        .pb{break-before:page;page-break-before:always}
         @page{size:A4;margin:12mm}
         /* thead بيتكرر تلقائياً في كل صفحة — نأكّدها صراحةً */
         @media print{thead{display:table-header-group}tr{break-inside:avoid}}
@@ -730,6 +802,23 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <div class="box"><div class="v" style="color:#b91c1c">${returnedQty}</div><div class="l">${t("مرتجع (تالف)", "Returned (waste)")}</div></div>
         <div class="box"><div class="v">${netRevenue.toFixed(2)}</div><div class="l">${t("الصافي المستحق (ر.ق)", "Net due (QAR)")}</div></div>
       </div>
+      <div class="fin">
+        <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
+        <table>
+          <tr><td class="lbl">${t("إجمالي التوريد", "Gross supplied")} (${report.totalMeals} ${t("وجبة", "meals")})</td>
+              <td class="val">${report.totalRevenue.toFixed(2)}</td></tr>
+          <tr class="minus"><td class="lbl">${t("يُخصم — مرتجع تالف", "Less — returned (waste)")} (${returnedQty} ${t("وجبة", "meals")})</td>
+              <td class="val">− ${wasteValue.toFixed(2)}</td></tr>
+          <tr class="net"><td class="lbl">${t("الصافي المستحق على المنفذ", "Net due from outlet")}</td>
+              <td class="val">${netRevenue.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
+          ${profitHtml}
+        </table>
+      </div>
+
+      ${actionsHtml}
+      ${topSellersHtml}
+
+      <div class="pb"></div>
       <table><thead>
       <tr class="cap"><td colspan="5">${t("التفاصيل اليومية", "Daily breakdown")}</td></tr>
       <tr><th>${t("التاريخ", "Date")}</th><th>${t("عدد الوجبات", "Meals")}</th><th>${t("الإجمالي (ر.ق)", "Total (QAR)")}</th><th>${t("الهالك (ر.ق)", "Waste (QAR)")}</th><th>${t("الصافي (ر.ق)", "Net (QAR)")}</th></tr></thead>
@@ -744,18 +833,6 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <tr><th>${t("الوجبة", "Meal")}</th><th>${t("مرسل", "Sent")}</th><th>${t("مرتجع", "Returned")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste (QAR)")}</th></tr></thead>
       <tbody>${(returnsRep?.meals || []).filter((m: any) => m.returned > 0).map((m: any) => `<tr><td>${isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td><td class="n">${m.sent}</td><td class="n">${m.returned}</td><td class="n">${m.wasteValue.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد مرتجعات في هذه الفترة", "No returns in this period")}</td></tr>`}
       <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${returnsRep?.totals?.sent || 0}</td><td class="n">${returnsRep?.totals?.returned || 0}</td><td class="n">${Number(returnsRep?.totals?.wasteValue || 0).toFixed(2)}</td></tr></tbody></table>
-
-      <div class="fin">
-        <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
-        <table>
-          <tr><td class="lbl">${t("إجمالي التوريد", "Gross supplied")} (${report.totalMeals} ${t("وجبة", "meals")})</td>
-              <td class="val">${report.totalRevenue.toFixed(2)}</td></tr>
-          <tr class="minus"><td class="lbl">${t("يُخصم — مرتجع تالف", "Less — returned (waste)")} (${returnedQty} ${t("وجبة", "meals")})</td>
-              <td class="val">− ${wasteValue.toFixed(2)}</td></tr>
-          <tr class="net"><td class="lbl">${t("الصافي المستحق على المنفذ", "Net due from outlet")}</td>
-              <td class="val">${netRevenue.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
-        </table>
-      </div>
 
       <div class="sign">
         <div>${t("مسؤول المنافذ", "Outlet supervisor")}</div>

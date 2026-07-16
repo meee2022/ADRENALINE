@@ -1151,3 +1151,144 @@ export const monthlyReport = query({
     };
   },
 });
+
+/* ═══════════════════════ تقرير القرار (Decision report) ═══════════════════════
+ *
+ *   السؤال اللي بيجاوب عليه: إيه اللي بيكسّب؟ إيه اللي بيخسّر؟ إيه اللي نوقفه؟
+ *
+ *   ═══ الخسارة ═══
+ *   المرتجع تالف (صلاحية يومين للرئيسي / 4 للحلويات) ⇒ قيمته خسارة فعلية،
+ *   والمنفذ لا يُحاسَب عليه. فـ: الصافي المستحق = الإجمالي − قيمة الهالك.
+ *
+ *   ═══ الربح ═══
+ *   ⚠️ الربح = الإيراد − التكلفة، والتكلفة (publicMeals.costQAR) اختيارية
+ *   وغير معبّأة حالياً لأي وجبة. فبدل ما نخترع رقم: نحسب الربح فقط للأصناف
+ *   اللي لها تكلفة، ونرجّع costCoverage عشان التقرير يقول للمدير صراحةً
+ *   إن الربح غير متاح ولماذا. تتعبّى التكلفة من صفحة إدارة الوجبات العامة.
+ *
+ *   ═══ عتبات "أوقف/قلّل" ═══
+ *   معايَرة على البيانات الفعلية (مرتجعات 62.5% / 25% / 9.1%):
+ *     ≥ 40% ⇒ أوقف   — أكتر من ثلث الإنتاج بيترمي
+ *     ≥ 15% ⇒ قلّل   — هدر ملحوظ لكن الصنف بيتباع
+ *     <  15% ⇒ مقبول
+ *   MIN_SAMPLE: لا نحكم على صنف اتوردّ أقل من 5 مرات — عيّنة صغيرة تدي
+ *   نِسَب مضلّلة (مرتجع واحد من 2 = 50% وده مش دليل على حاجة).
+ *   ═══════════════════════════════════════════════════════════════════════════ */
+
+const STOP_RATE = 40;
+const REDUCE_RATE = 15;
+const MIN_SAMPLE = 5;
+
+export const decisionReport = query({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    gymId: v.optional(v.id("gymAccounts")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const { from, to } = args;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      throw new Error("نطاق التاريخ غير صالح");
+    }
+
+    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
+    orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
+    if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
+    const orderIds = new Set(orders.map((o) => String(o._id)));
+
+    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date").collect();
+    lines = lines.filter((l) => l.date >= from && l.date <= to && orderIds.has(String(l.orderId)));
+
+    // تكلفة الوجبة (لو معبّاة) — نقرأها مرة واحدة لكل mealId
+    const costById = new Map<string, number>();
+    for (const id of new Set(lines.map((l) => l.mealId).filter(Boolean).map(String))) {
+      const m: any = await ctx.db.get(id as any);
+      const c = Number(m?.costQAR || 0);
+      if (c > 0) costById.set(id, c);
+    }
+
+    const byMeal = new Map<string, any>();
+    for (const l of lines) {
+      const key = l.mealId ? String(l.mealId) : `text:${l.mealNameEn || l.mealNameAr}`;
+      const row = byMeal.get(key) || {
+        key, nameAr: l.mealNameAr || "", nameEn: l.mealNameEn || "",
+        unitPrice: Number(l.unitPrice || 0),
+        sent: 0, returned: 0, revenue: 0, wasteValue: 0,
+        unitCost: l.mealId ? (costById.get(String(l.mealId)) ?? null) : null,
+      };
+      const ret = Number(l.returnedQty || 0);
+      row.sent += Number(l.qty || 0);
+      row.returned += ret;
+      row.revenue = Math.round((row.revenue + Number(l.lineTotal || 0)) * 100) / 100;
+      row.wasteValue = Math.round((row.wasteValue + ret * Number(l.unitPrice || 0)) * 100) / 100;
+      byMeal.set(key, row);
+    }
+
+    const meals = Array.from(byMeal.values()).map((r) => {
+      const soldQty = r.sent - r.returned;                       // المُستهلك فعلاً
+      const netRevenue = Math.round((r.revenue - r.wasteValue) * 100) / 100;
+      const returnRate = r.sent ? Math.round((r.returned / r.sent) * 1000) / 10 : 0;
+
+      // الربح: فقط لو التكلفة معروفة. التكلفة تُدفع على كل وحدة أُنتجت (بما فيها
+      // المرتجع التالف — اتصنع واترمى)، فالتكلفة على r.sent مش على soldQty.
+      const hasCost = r.unitCost != null && r.unitCost > 0;
+      const totalCost = hasCost ? Math.round(r.unitCost * r.sent * 100) / 100 : null;
+      const profit = hasCost ? Math.round((netRevenue - (totalCost as number)) * 100) / 100 : null;
+      const margin = hasCost && netRevenue > 0 ? Math.round(((profit as number) / netRevenue) * 1000) / 10 : null;
+
+      let verdict: "STOP" | "REDUCE" | "OK" = "OK";
+      let reason = "";
+      if (r.sent >= MIN_SAMPLE && returnRate >= STOP_RATE) {
+        verdict = "STOP";
+        reason = `${returnRate}% من الكمية بترجع تالفة — خسارة ${r.wasteValue.toFixed(2)} ر.ق`;
+      } else if (r.sent >= MIN_SAMPLE && returnRate >= REDUCE_RATE) {
+        verdict = "REDUCE";
+        reason = `${returnRate}% مرتجع — قلّل الكمية الموردة`;
+      } else if (hasCost && (profit as number) < 0) {
+        verdict = "STOP";
+        reason = `يُباع بأقل من تكلفته — خسارة ${Math.abs(profit as number).toFixed(2)} ر.ق`;
+      }
+
+      return { ...r, soldQty, netRevenue, returnRate, totalCost, profit, margin, verdict, reason };
+    });
+
+    meals.sort((a, b) => b.soldQty - a.soldQty);
+
+    const totalRevenue = Math.round(meals.reduce((s, m) => s + m.revenue, 0) * 100) / 100;
+    const totalWaste = Math.round(meals.reduce((s, m) => s + m.wasteValue, 0) * 100) / 100;
+    const netRevenue = Math.round((totalRevenue - totalWaste) * 100) / 100;
+    const totalSent = meals.reduce((s, m) => s + m.sent, 0);
+    const totalReturned = meals.reduce((s, m) => s + m.returned, 0);
+
+    const costed = meals.filter((m) => m.totalCost != null);
+    const costCoverage = {
+      mealsTotal: meals.length,
+      mealsWithCost: costed.length,
+      /** الربح متاح فقط لو كل الأصناف لها تكلفة — أي نقص يخلّي الرقم مضلّلاً. */
+      profitAvailable: costed.length > 0 && costed.length === meals.length,
+      revenueSharePct: totalRevenue > 0
+        ? Math.round((costed.reduce((s, m) => s + m.revenue, 0) / totalRevenue) * 1000) / 10
+        : 0,
+    };
+    const totalCost = costed.length ? Math.round(costed.reduce((s, m) => s + (m.totalCost as number), 0) * 100) / 100 : null;
+    const totalProfit = costCoverage.profitAvailable ? Math.round((netRevenue - (totalCost as number)) * 100) / 100 : null;
+
+    return {
+      from, to,
+      totals: {
+        totalRevenue, totalWaste, netRevenue, totalSent, totalReturned,
+        soldQty: totalSent - totalReturned,
+        wastePct: totalSent ? Math.round((totalReturned / totalSent) * 1000) / 10 : 0,
+        totalCost, totalProfit,
+      },
+      costCoverage,
+      topSellers: [...meals].filter((m) => m.soldQty > 0).slice(0, 10),
+      actions: meals.filter((m) => m.verdict !== "OK")
+        .sort((a, b) => b.wasteValue - a.wasteValue),
+      meals,
+      thresholds: { STOP_RATE, REDUCE_RATE, MIN_SAMPLE },
+    };
+  },
+});
