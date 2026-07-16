@@ -34,7 +34,7 @@ const B = {
 
 export default function SmartPlan() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "خطتي الذكية | أدرينالين للوجبات الصحية", description: "دع الذكاء الاصطناعي يختار لك وجبات اليوم حسب هدفك وسعراتك وما لا تحبه — ثم يراجعها أخصائي التغذية.", path: "/customer/smart-plan" });
+  useSeo({ title: "خطتي الذكية | أدرينالين للوجبات الصحية", description: "خطة وجبات تُبنى وفق هدفك وسعراتك المستهدفة، مع استبعاد ما لديك من حساسية وما لا تفضّله — ويراجعها أخصائي التغذية قبل اعتمادها.", path: "/customer/smart-plan" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (ar: string, en: string) => (isRtl ? ar : en);
   const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);
@@ -112,10 +112,10 @@ export default function SmartPlan() {
   const effStartRot =
     startRot || startRotInfo?.rotationWeek || suggestions?.currentRotationWeek || 1;
 
-  /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
-  /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فاضي = زائر لسه ما عرّفش نفسه. */
+  /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فارغ = زائر لم يعرّف نفسه. */
   const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
 
+  /** الاسم والرقم والاشتراك المرسلة مع الطلب — من الحساب، أو من الرقم، وإلا مجهول. */
   const orderIdentity = () => ({
     customerName:
       currentCustomer?.fullName || matchedCustomer?.fullName || "عميل غير مسجّل",
@@ -200,7 +200,7 @@ export default function SmartPlan() {
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
-      setError(t("تعذّر إنشاء الطلب، حاول مرة أخرى.", "Could not create the order, please try again."));
+      setError(t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -221,7 +221,7 @@ export default function SmartPlan() {
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
     } catch (e) {
-      setError(t("تعذّر إنشاء الطلب، حاول مرة أخرى.", "Could not create the order, please try again."));
+      setError(t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -235,7 +235,7 @@ export default function SmartPlan() {
       const sessionToken = useStore.getState().sessionToken || undefined;
       if (mode === "week") {
         if (!sessionToken) {
-          setError(t("سجّل الدخول أولاً لتوليد خطة أسبوعية.", "Please log in to generate a weekly plan."));
+          setError(t("يُرجى تسجيل الدخول أولاً لإنشاء خطة أسبوعية.", "Please log in to generate a weekly plan."));
           return;
         }
         // ✅ نقطة البداية = ماكس(بداية الاشتراك، بكرة):
@@ -269,11 +269,11 @@ export default function SmartPlan() {
         const targetDate =
           `${_tom.getFullYear()}-${String(_tom.getMonth()+1).padStart(2,'0')}-${String(_tom.getDate()).padStart(2,'0')}`;
         const res: any = await generate({ ...source, targetDate, sessionToken });
-        if (!res.ok) { setError(res.error || t("تعذّر توليد الخطة", "Could not generate the plan")); }
+        if (!res.ok) { setError(res.error || t("تعذّر إنشاء الخطة", "Could not generate the plan")); }
         else setResult(res);
       }
     } catch (e: any) {
-      setError(t("حصل خطأ أثناء التوليد، حاول مرة أخرى.", "An error occurred while generating, please try again."));
+      setError(t("حدث خطأ أثناء الإنشاء، يُرجى المحاولة مرة أخرى.", "An error occurred while generating, please try again."));
     } finally {
       setLoading(false);
     }
@@ -285,7 +285,7 @@ export default function SmartPlan() {
         eyebrowAr="مدعوم بالذكاء الاصطناعي" eyebrowEn="AI-POWERED"
         icon={<Sparkles className="w-3.5 h-3.5" style={{ color: "#3AC7F4" }} />}
         titleAr="خطة وجباتك الذكية" titleEn="Your Smart Meal Plan"
-        subtitleAr="اختر خطة اليوم أو الأسبوع — نختار لك من الوجبات المتاحة حسب هدفك وما تفضّله."
+        subtitleAr="اختر خطة يوم أو أسبوع — تُختار وجباتك من المتاح وفق هدفك وتفضيلاتك، ويعتمدها أخصائي التغذية."
         subtitleEn="Pick a daily or weekly plan — we choose from available meals by your goal and preferences."
       />
       <div dir={isRtl ? "rtl" : "ltr"} style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
@@ -333,18 +333,18 @@ export default function SmartPlan() {
               {t("كيف تُبنى خطتك؟", "How is your plan built?")}
             </summary>
             <ol style={{ margin: 0, padding: "0 34px 14px", fontSize: 12.5, color: B.ink2, lineHeight: 2, fontWeight: 600 }}>
-              <li>{t("نقرأ ملفك: هدفك والسعرات المناسبة له.", "We read your profile: your goal and its calorie target.")}</li>
-              <li>{t("نستبعد حساسيتك والأصناف اللي ما بتحبهاش.", "We exclude your allergies and disliked items.")}</li>
-              <li>{t("نختار من وجبات المطبخ في دورة اشتراكك لليوم ده — مش من كل المنيو.", "We pick from the kitchen's meals for your rotation on that day — not the whole menu.")}</li>
-              <li>{t("أخصائي التغذية يراجع الخطة قبل التأكيد.", "The nutritionist reviews the plan before confirming.")}</li>
+              <li>{t("نطّلع على ملفك الغذائي: هدفك والسعرات المناسبة له.", "We read your profile: your goal and its calorie target.")}</li>
+              <li>{t("نستبعد ما لديك من حساسية والأصناف التي لا تفضّلها.", "We exclude your allergies and the items you don't prefer.")}</li>
+              <li>{t("نختار من وجبات المطبخ المقرّرة في دورة اشتراكك لذلك اليوم — لا من المنيو كاملاً.", "We select from the kitchen's scheduled meals for your rotation on that day — not from the entire menu.")}</li>
+              <li>{t("يراجع أخصائي التغذية الخطة قبل اعتمادها.", "The nutritionist reviews the plan before approving it.")}</li>
             </ol>
           </details>
 
           {/* Day / Week toggle */}
           <p style={{ margin: "0 0 8px", fontSize: 12.5, fontWeight: 700, color: B.ink2 }}>
             {t(
-              "اختر المدى: خطة اليوم لتجربة سريعة، أو خطة الأسبوع لتغطية مدة اشتراكك.",
-              "Choose the range: a daily plan for a quick try, or a weekly plan to cover your subscription.",
+              "اختر المدى: خطة يوم واحد للاطّلاع السريع، أو خطة أسبوعية تغطّي مدة اشتراكك.",
+              "Choose the range: a single-day plan for a quick look, or a weekly plan covering your subscription.",
             )}
           </p>
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
@@ -405,8 +405,8 @@ export default function SmartPlan() {
                 {subWeeksRemaining != null && subWeeksRemaining < 4 && (
                   <p style={{ margin: "6px 0 0", fontSize: 11, fontWeight: 700, color: B.ink2 }}>
                     {t(
-                      `اشتراكك يغطّي ${subWeeksRemaining} ${subWeeksRemaining === 1 ? "أسبوع" : "أسابيع"} — مش هنولّد بعد تاريخ انتهائه.`,
-                      `Your subscription covers ${subWeeksRemaining} week(s) — we won't generate past its end date.`,
+                      `يغطّي اشتراكك ${arWeeks(subWeeksRemaining)} — ولن يتم التوليد بعد تاريخ انتهائه.`,
+                      `Your subscription covers ${subWeeksRemaining} week${subWeeksRemaining === 1 ? "" : "s"} — no plan is generated past its end date.`,
                     )}
                   </p>
                 )}
@@ -454,18 +454,18 @@ export default function SmartPlan() {
             /* 1) مسجّل دخول — لا سؤال أصلاً */
             <button onClick={() => run(true)} disabled={loading}
               style={btnPrimary(loading)}>
-              {loading ? t("جاري التوليد…", "Generating…") : t(`توليد خطتي (${currentCustomer?.fullName || "حسابي"})`, `Generate my plan (${currentCustomer?.fullName || "my account"})`)}
+              {loading ? t("جارٍ الإنشاء…", "Generating…") : t(`أنشئ خطتي (${currentCustomer?.fullName || "حسابي"})`, `Generate my plan (${currentCustomer?.fullName || "my account"})`)}
             </button>
           ) : phone.trim().length >= 6 && !changingPhone ? (
             /* 2) رقمه محفوظ من المنيو — نعرضه ونمضي، بلا إعادة إدخال */
             <>
               <p style={{ fontSize: 14, color: B.ink2, margin: "0 0 12px", fontWeight: 700 }}>
-                {t("سنولّد الخطة على رقمك:", "We'll build the plan for your number:")}{" "}
+                {t("سنُنشئ الخطة للرقم:", "We'll build the plan for this number:")}{" "}
                 <span dir="ltr" style={{ fontWeight: 900, color: B.accent }}>{phone}</span>
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                 <button onClick={() => run(false)} disabled={loading} style={btnPrimary(loading)}>
-                  {loading ? t("جاري التوليد…", "Generating…") : t("ولّد خطتي", "Generate my plan")}
+                  {loading ? t("جارٍ الإنشاء…", "Generating…") : t("أنشئ خطتي", "Generate my plan")}
                 </button>
                 <button
                   onClick={() => setChangingPhone(true)}
@@ -482,7 +482,7 @@ export default function SmartPlan() {
             /* 3) أول مرة — نسأل مرة واحدة ونحفظ الرقم للمنيو أيضاً */
             <>
               <p style={{ fontSize: 14, color: B.ink2, margin: "0 0 12px", fontWeight: 700 }}>
-                {t("أدخل رقم هاتفك لجلب بيانات اشتراكك (أو سجّل الدخول):", "Enter your phone to fetch your subscription (or sign in):")}
+                {t("يُرجى إدخال رقم هاتفك لعرض بيانات اشتراكك، أو تسجيل الدخول:", "Enter your phone to fetch your subscription (or sign in):")}
               </p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 <input value={phone} onChange={(e) => setPhone(e.target.value)}
@@ -494,7 +494,7 @@ export default function SmartPlan() {
                 <button onClick={() => { saveVerifiedPhone(phone); setChangingPhone(false); run(false); }}
                   disabled={loading || phone.trim().length < 6}
                   style={btnPrimary(loading || phone.trim().length < 6)}>
-                  {loading ? t("جاري التوليد…", "Generating…") : t("ولّد خطتي", "Generate my plan")}
+                  {loading ? t("جارٍ الإنشاء…", "Generating…") : t("أنشئ خطتي", "Generate my plan")}
                 </button>
               </div>
             </>
@@ -824,6 +824,16 @@ const chip: React.CSSProperties = {
   fontSize: 11, fontWeight: 700, color: "#0E2A4A",
   background: "#EAF3FB", borderRadius: 50, padding: "3px 10px",
 };
+
+/**
+ * صيغة عدد الأسابيع بالعربية الفصحى — العربية فيها مفرد ومثنّى وجمع،
+ * فـ"2 أسابيع" خطأ نحوي والصواب "أسبوعان". النطاق هنا 1..4 (دورة المطبخ).
+ */
+function arWeeks(n: number): string {
+  if (n === 1) return "أسبوعاً واحداً";
+  if (n === 2) return "أسبوعين";
+  return `${n} أسابيع`;
+}
 
 const pill: React.CSSProperties = {
   fontSize: 12, fontWeight: 800, color: "#2D4A67",
