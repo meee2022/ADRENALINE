@@ -259,7 +259,13 @@ export default function SmartPlan() {
         if (!res.ok) { setError(t("لا توجد وجبات مجدولة لهذه الأسابيع.", "No meals scheduled for these weeks.")); }
         else setWeekly(res);
       } else {
-        const res: any = await generate({ ...source, sessionToken });
+        // ✅ نبعت targetDate = بكرة (بالتوقيت المحلي) — عشان النظام يقترح خطة
+        //     ليوم غد اللي فعلاً هيوصله، مش يوم النهاردة (اللي انقضى ميعاده).
+        const _t = new Date(); _t.setHours(0,0,0,0);
+        const _tom = new Date(_t); _tom.setDate(_tom.getDate() + 1);
+        const targetDate =
+          `${_tom.getFullYear()}-${String(_tom.getMonth()+1).padStart(2,'0')}-${String(_tom.getDate()).padStart(2,'0')}`;
+        const res: any = await generate({ ...source, targetDate, sessionToken });
         if (!res.ok) { setError(res.error || t("تعذّر توليد الخطة", "Could not generate the plan")); }
         else setResult(res);
       }

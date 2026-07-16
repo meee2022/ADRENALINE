@@ -433,6 +433,10 @@ export const generateSmartPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    // ✅ targetDate (yyyy-MM-dd) — تاريخ اليوم المطلوب (عادةً بكرة).
+    //     يحسبه العميل بالتوقيت المحلي لتفادي مشاكل UTC.
+    //     غير مضبوط ⇒ السيرفر يستخدم "الآن UTC" (سلوك رجعي).
+    targetDate: v.optional(v.string()),
     // 🔒 sessionToken: لو موجود نستخدم accountId/userId كمفتاح rate limit مقاوم للتحايل.
     //    غير موجود = زائر — حد أضيق + دلو عام صارم.
     sessionToken: v.optional(v.string()),
@@ -456,10 +460,19 @@ export const generateSmartPlan = action({
       if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
     }
 
-    // اسم اليوم + التاريخ (يُحسبان هنا في الـaction)
-    const now = new Date();
-    const todayDay = WEEKDAYS[now.getDay()];
-    const todayDate = now.toISOString().slice(0, 10); // yyyy-MM-dd
+    // ✅ اسم اليوم + التاريخ — نفضّل targetDate من العميل (بالتوقيت المحلي)
+    //     لتفادي انزلاق اليوم بسبب UTC. لو مش موجود، نرجع للسلوك القديم.
+    let todayDay: string;
+    let todayDate: string;
+    if (args.targetDate && /^\d{4}-\d{2}-\d{2}$/.test(args.targetDate)) {
+      todayDate = args.targetDate;
+      const [y, m, d] = args.targetDate.split("-").map(Number);
+      todayDay = WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    } else {
+      const now = new Date();
+      todayDay = WEEKDAYS[now.getDay()];
+      todayDate = now.toISOString().slice(0, 10);
+    }
 
     const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
       customerId: args.customerId,
