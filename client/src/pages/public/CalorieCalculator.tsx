@@ -111,8 +111,17 @@ export default function CalorieCalculator() {
       return goalTerms[goal].reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0);
     };
     const active = restaurantPlans.filter((plan: any) => plan.isActive !== false);
-    const matched = active.map((plan: any) => ({ plan, score: score(plan) })).filter((item) => item.score > 0).sort((a, b) => b.score - a.score || a.plan.sortOrder - b.plan.sortOrder);
-    return (matched.length ? matched : active.map((plan: any) => ({ plan, score: 0 })).sort((a, b) => a.plan.sortOrder - b.plan.sortOrder)).slice(0, 2).map((item) => item.plan);
+    const matched = active
+      .map((plan: any) => ({ plan, score: score(plan) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score || a.plan.sortOrder - b.plan.sortOrder);
+    const candidates = matched.length
+      ? matched
+      : active.map((plan: any) => ({ plan, score: 0 })).sort((a, b) => a.plan.sortOrder - b.plan.sortOrder);
+    const durationOrder = ["week", "two_weeks", "month"];
+    return durationOrder
+      .map((duration) => candidates.find((item) => item.plan.duration === duration)?.plan)
+      .filter(Boolean);
   }, [goal, restaurantPlans]);
 
   const setGoalSafe = (next: Goal) => {
@@ -120,6 +129,10 @@ export default function CalorieCalculator() {
     if (next === "lose") setPace(0.5);
     if (next === "gain") setPace(0.25);
   };
+
+  const weeklyReferencePrice = Number(
+    recommendedPlans.find((plan: any) => plan.duration === "week")?.options?.[0]?.priceQAR || 0,
+  );
 
   return (
     <PublicLayout>
@@ -244,7 +257,15 @@ export default function CalorieCalculator() {
                 </div>
               )}
 
-              <a href="/public/plans" className="m-5 mt-0 flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#3cc4f0] px-5 font-black text-[#082a45] transition hover:bg-[#62d7fa] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200">
+              {/* يقفز لقسم «الباقة الأقرب لهدفك» المحسوب أدناه، لا لصفحة الباقات
+                  العامة — فالزائر يرى ما حُسب له فعلاً. القفز عبر href الأصلي
+                  (#anchor) فهو يعمل دائماً؛ لا نستخدم preventDefault + scrollIntoView
+                  لأن السلاسة قد تفشل بصمت فيُلغى القفز كلياً. السلاسة بـCSS
+                  (scroll-smooth على القسم). وإن لم توجد باقات مطابقة نوجّه لكل الباقات. */}
+              <a
+                href={recommendedPlans.length > 0 ? "#recommended-plans" : "/public/plans"}
+                className="m-5 mt-0 flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#3cc4f0] px-5 font-black text-[#082a45] transition hover:bg-[#62d7fa] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200"
+              >
                 {t("شاهد الخطط المناسبة", "Explore suitable plans")}
                 {isAr ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
               </a>
@@ -256,10 +277,10 @@ export default function CalorieCalculator() {
         </section>
 
         {recommendedPlans.length > 0 && (
-          <section className="border-t border-slate-200 bg-white px-4 py-12">
+          <section id="recommended-plans" className="scroll-mt-20 border-t border-slate-200 bg-white px-4 py-12">
             <div className="mx-auto max-w-6xl">
-              <div className="grid gap-6 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
-                <div>
+              <div>
+                <div className="max-w-3xl">
                   <span className="inline-flex items-center gap-2 rounded-full bg-cyan-50 px-3 py-1.5 text-xs font-black text-[#087fae]">
                     <Target className="h-4 w-4" />
                     {t("من باقات أدرينالين الحالية", "From current Adrenaline plans")}
@@ -269,29 +290,42 @@ export default function CalorieCalculator() {
                     {t("هذه توصية من الباقات المنشورة فعليًا في المطعم. عدد الوجبات والسناك والسعر معروض كما هو، ويُضبط اختيار الوجبات داخل الباقة حسب احتياجك المحسوب.", "This recommendation only uses plans currently published by the restaurant. Meal counts, snacks and prices are shown exactly as listed; meal selection can then be adjusted around your calculated target.")}
                   </p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="mt-8 grid gap-4 md:grid-cols-3">
                   {recommendedPlans.map((plan: any, index: number) => {
                     const option = plan.options?.[0];
                     const duration = plan.duration === "month" ? t("شهري", "Monthly") : plan.duration === "two_weeks" ? t("أسبوعان", "Two weeks") : t("أسبوعي", "Weekly");
+                    const isMonthly = plan.duration === "month";
+                    const isTwoWeeks = plan.duration === "two_weeks";
+                    const comparisonWeeks = isMonthly ? 4 : isTwoWeeks ? 2 : 1;
+                    const saving = option && weeklyReferencePrice
+                      ? Math.max(0, weeklyReferencePrice * comparisonWeeks - Number(option.priceQAR))
+                      : 0;
                     return (
-                      <article key={plan._id} className="overflow-hidden rounded-lg border border-slate-200 bg-[#f8fbfc] shadow-[0_10px_32px_rgba(15,42,67,.07)]">
-                        <div className="grid grid-cols-[112px_1fr]">
-                          <div className="relative min-h-40 overflow-hidden bg-[#e8f4f8]">
+                      <article key={plan._id} className={`relative overflow-hidden rounded-lg border shadow-[0_12px_36px_rgba(15,42,67,.09)] ${isMonthly ? "border-[#0d3556] bg-[#0d3556] text-white md:-translate-y-2" : "border-slate-200 bg-[#f8fbfc]"}`}>
+                        {isMonthly && <div className="absolute inset-x-0 top-0 z-10 bg-[#3cc4f0] px-3 py-2 text-center text-[11px] font-black text-[#082a45]">{t("أفضل قيمة للاشتراك المنتظم", "Best value for a regular subscription")}</div>}
+                        <div className={`grid grid-cols-[120px_1fr] ${isMonthly ? "pt-8" : ""}`}>
+                          <div className="relative min-h-48 overflow-hidden bg-[#e8f4f8]">
                             {plan.imageUrl ? <img src={plan.imageUrl} alt={isAr ? plan.nameAr : (plan.nameEn || plan.nameAr)} className="absolute inset-0 h-full w-full object-cover" /> : null}
                           </div>
-                          <div className="p-4">
+                          <div className="flex flex-col p-4">
                             <div className="flex items-center justify-between gap-2">
-                              <span className="text-[10px] font-black text-[#087fae]">{duration}</span>
-                              {index === 0 && <span className="rounded-full bg-[#0d3556] px-2 py-1 text-[9px] font-black text-white">{t("الأنسب", "Best match")}</span>}
+                              <span className={`text-[10px] font-black ${isMonthly ? "text-sky-200" : "text-[#087fae]"}`}>{duration}</span>
+                              {isTwoWeeks && <span className="rounded-full bg-cyan-100 px-2 py-1 text-[9px] font-black text-[#075e82]">{t("اختيار عملي", "Practical choice")}</span>}
+                              {!isMonthly && !isTwoWeeks && index === 0 && <span className="rounded-full bg-[#0d3556] px-2 py-1 text-[9px] font-black text-white">{t("للتجربة", "Try it")}</span>}
                             </div>
                             <h3 className="mt-3 font-black leading-6">{isAr ? String(plan.nameAr || "").replace(/حزمة/g, "باقة") : (plan.nameEn || plan.nameAr)}</h3>
                             {option && (
-                              <div className="mt-3 text-xs leading-6 text-slate-600">
+                              <div className={`mt-3 text-xs leading-6 ${isMonthly ? "text-sky-100" : "text-slate-600"}`}>
                                 <p>{option.mealsCount} {t("وجبات", "meals")} + {option.snacksCount} {t("سناك", "snacks")}</p>
-                                <strong className="mt-1 block text-base font-black text-[#0d6f9d]" dir="ltr">{option.priceQAR} QAR</strong>
+                                <strong className={`mt-1 block text-xl font-black ${isMonthly ? "text-[#52d1f7]" : "text-[#0d6f9d]"}`} dir="ltr">{option.priceQAR} QAR</strong>
+                                {saving > 0 && (
+                                  <span className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ${isMonthly ? "bg-emerald-400/15 text-emerald-200" : "bg-emerald-50 text-emerald-700"}`}>
+                                    {t(`وفر ${saving} ر.ق مقارنة بتكرار الأسبوع`, `Save ${saving} QAR vs repeating weekly`)}
+                                  </span>
+                                )}
                               </div>
                             )}
-                            <a href="/public/plans" className="mt-3 inline-flex items-center gap-1 text-xs font-black text-[#087fae] hover:underline">
+                            <a href={`/public/plans?duration=${plan.duration}`} className={`mt-auto pt-4 inline-flex items-center gap-1 text-xs font-black hover:underline ${isMonthly ? "text-[#52d1f7]" : "text-[#087fae]"}`}>
                               {t("التفاصيل والخيارات", "Details and options")}
                               {isAr ? <ArrowLeft className="h-3.5 w-3.5" /> : <ArrowRight className="h-3.5 w-3.5" />}
                             </a>

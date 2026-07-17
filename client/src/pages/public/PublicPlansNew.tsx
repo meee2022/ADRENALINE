@@ -33,7 +33,13 @@ export default function PublicPlansNew() {
   const planName = (p: any) => isRtl ? String(p.nameAr || "").replace(/حزمة/g, "باقة") : (p.nameEn || p.nameAr);
   // في الإنجليزي: لا نرجع للعربي حتى لا يظهر وصف عربي في وضع اللغة الإنجليزية
   const planDesc = (p: any) => isRtl ? p.descriptionAr : (p.descriptionEn || "");
-  const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">("week");
+  // نفتح على المدة القادمة من ?duration= (رابط «التفاصيل» في حاسبة السعرات
+  // يمرّرها) لتُفتح الصفحة على تاب الباقة الموصى بها مباشرةً، لا على الأسبوعي دائماً.
+  const initialDuration = (() => {
+    const d = new URLSearchParams(window.location.search).get("duration");
+    return d === "two_weeks" || d === "month" ? d : "week";
+  })();
+  const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">(initialDuration);
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);
   const meals = useQuery(api.publicMeals.list, {}) || [];
