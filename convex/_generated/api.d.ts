@@ -46,6 +46,7 @@ import type * as mealCategories from "../mealCategories.js";
 import type * as mealImages from "../mealImages.js";
 import type * as mealIngredients from "../mealIngredients.js";
 import type * as mealIssuances from "../mealIssuances.js";
+import type * as mealNameFix from "../mealNameFix.js";
 import type * as menuAlignment from "../menuAlignment.js";
 import type * as menuDedupe from "../menuDedupe.js";
 import type * as menuItems from "../menuItems.js";
@@ -124,6 +125,7 @@ declare const fullApi: ApiFromModules<{
   mealImages: typeof mealImages;
   mealIngredients: typeof mealIngredients;
   mealIssuances: typeof mealIssuances;
+  mealNameFix: typeof mealNameFix;
   menuAlignment: typeof menuAlignment;
   menuDedupe: typeof menuDedupe;
   menuItems: typeof menuItems;
