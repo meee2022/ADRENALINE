@@ -5,7 +5,7 @@ import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
 // 🔒 قصر دورة الطلبات (approve/reject/updateStatus) على الأدوار المسؤولة
 const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
-import { getDayOffset } from "./lib/dates";
+import { getDayOffset, addDeliveryDays, isDeliveryDay, parseDate } from "./lib/dates";
 import { loyaltyConfig } from "./loyalty";
 
 // Helper: Generate unique order number
@@ -483,7 +483,13 @@ export const approve = mutation({
     //    مباشرةً — لا بعد 12 يوماً. لذلك نرتّب أسابيع الدورة المختارة تصاعدياً
     //    ونحوّلها إلى ترتيب متتالٍ 0،1،2… فالأسبوع الأول المختار = أول أسبوع توصيل.
     const mealsByDate: Record<string, typeof items> = {};
-    const startDateObj = new Date(startDate);
+
+    // 🚫 لا توصيل يوم الجمعة — والبداية نفسها قد تقع فيها. وقع ذلك فعلاً:
+    //    خطط MANSOUR KETBI بدأت 2026-07-10 وهو جمعة. ننقلها لأول يوم توصيل.
+    const startIso = String(startDate).slice(0, 10);
+    const firstDelivery = isDeliveryDay(parseDate(startIso))
+      ? startIso
+      : addDeliveryDays(startIso, 1);
 
     const chosenWeeks = Array.from(new Set(items.map((it) => Number(it.week)))).sort((a, b) => a - b);
     const weekRank = new Map(chosenWeeks.map((w, i) => [w, i])); // دورة → ترتيب متتالٍ
@@ -496,12 +502,15 @@ export const approve = mutation({
       if (overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)) {
         dateKey = overrideDate;
       } else {
-        // ترتيب الأسبوع بين الأسابيع المختارة (لا رقم الدورة نفسه) × 6 أيام توصيل
-        const weekOffset = (weekRank.get(Number(item.week)) ?? 0) * 6;
-        const dayOffset = getDayOffset(item.day);
-        const deliveryDate = new Date(startDateObj);
-        deliveryDate.setDate(deliveryDate.getDate() + weekOffset + dayOffset);
-        dateKey = deliveryDate.toISOString().split("T")[0];
+        // ترتيب الوجبة بين أيام التوصيل: (ترتيب الأسبوع × 6) + ترتيب اليوم.
+        //
+        // ⚠️ كان يُجمع هذا الرقم على التقويم مباشرةً — والأسبوع 7 أيام تقويمية
+        //    لا 6. فبعد الأسبوع الأول ينزلق كل شيء يوماً، ويتراكم الانزياح
+        //    أسبوعاً بعد أسبوع، فتقع خطط على الجمعة ولا توصيل فيها. حدث فعلاً
+        //    لكل اشتراك متعدد الأسابيع (17 و24 و31 يوليو كلها جُمَع).
+        //    الآن نعدّ **أيام التوصيل** نفسها فتُتخطّى الجمعة بحكم التعريف.
+        const n = (weekRank.get(Number(item.week)) ?? 0) * 6 + getDayOffset(item.day);
+        dateKey = addDeliveryDays(firstDelivery, n);
       }
 
       if (!mealsByDate[dateKey]) mealsByDate[dateKey] = [];
