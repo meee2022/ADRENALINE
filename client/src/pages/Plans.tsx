@@ -288,14 +288,55 @@ function ModifiersPicker({
   );
 }
 
+/**
+ * تاريخ فتح الصفحة.
+ *
+ * 🍳 المطبخ يطبخ اليوم لتوصيل الغد — فالأخصائية تخطّط **توصيل الغد**، لا اليوم
+ *    (الذي طُبخ أمس وخرج للتوصيل). هذا نفس افتراضي صفحة المطبخ بالضبط.
+ *    والجمعة الحالة الفارقة: يوم عمل كامل يُطبخ فيه لتوصيل السبت، ولا توصيل
+ *    فيه — فالفتح على «اليوم» كان يُظهر للأخصائية جمعةً فارغة أبداً.
+ *    (الخميس هو الإجازة الوحيدة: لا توصيل الجمعة ⇒ لا طبخ الخميس.)
+ *
+ * ونحترم ?date= القادم من صفحة المراجعة — كان يُهمَل فيقفز المستخدم لليوم.
+ */
+function initialPlanDate(): Date {
+  const p = new URLSearchParams(window.location.search).get("date");
+  if (p && /^\d{4}-\d{2}-\d{2}$/.test(p)) {
+    // ⚠️ لا new Date("2026-07-18"): تُقرأ منتصف ليل UTC فيزحف اليوم حسب المنطقة
+    const [y, m, d] = p.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return t;
+}
+
+/** ?customer= القادم من «تعديل» في صفحة المراجعة — كان يُهمَل فتُفتح بلا مشترك. */
+function initialCustomerId(): string | null {
+  return new URLSearchParams(window.location.search).get("customer");
+}
+
+/**
+ * مرجع فارغ ثابت.
+ *
+ * ⚠️ `const { data: x = [] } = useQuery()` يُنشئ مصفوفة **جديدة كل رندر** ما دام
+ *    data غير مُحمَّل. وهذه المصفوفة في اعتماديات useEffect الذي يستدعي
+ *    setCurrentPlan بكائن جديد ⇒ رندر ⇒ مصفوفة جديدة ⇒ حلقة لا نهائية
+ *    («Maximum update depth exceeded») تُسقِط الصفحة على شاشة الخطأ.
+ *    لم تكن تظهر لأن المشترك لا يُفتح إلا بعد اكتمال التحميل؛ وفتحُه من
+ *    ?customer= يقع في أول رندر — أي في قلب فترة التحميل. مرجع ثابت واحد
+ *    يقطع الحلقة من جذرها.
+ */
+const EMPTY: any[] = [];
+
 /* ─── Main Component ──────────────────────────────────── */
 export default function PlansPage() {
   const { t, isRtl } = useLanguage();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
-  const [date, setDate] = useState<Date>(new Date());
-  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [date, setDate] = useState<Date>(initialPlanDate);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(initialCustomerId);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isCustomerOpen, setIsCustomerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -306,8 +347,8 @@ export default function PlansPage() {
   const [programFilter, setProgramFilter] = useState<string | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Partial<DailyPlan> | null>(null);
 
-  const { data: customers = [] } = useCustomers();
-  const { data: categories = [] } = useCategories();
+  const { data: customers = EMPTY } = useCustomers();
+  const { data: categories = EMPTY } = useCategories();
   const { data: menuItems = [] } = useMenuItems();
   const { data: modifiers = [] } = useModifiers();
   // ✅ منيو العميل (مصدر الجدول الأسبوعي الوحيد) — للتعبئة التلقائية واقتراحات اليوم
@@ -316,10 +357,10 @@ export default function PlansPage() {
   const [weekOverride, setWeekOverride] = useState<number | null>(null);
 
   const formattedDate = format(date, "yyyy-MM-dd");
-  const { data: dailyPlans = [] } = useDailyPlans(formattedDate);
+  const { data: dailyPlans = EMPTY } = useDailyPlans(formattedDate);
 
   const yesterdayDate = subDays(date, 1);
-  const { data: yesterdayPlans = [] } = useDailyPlans(format(yesterdayDate, "yyyy-MM-dd"));
+  const { data: yesterdayPlans = EMPTY } = useDailyPlans(format(yesterdayDate, "yyyy-MM-dd"));
 
   const createPlanMutation = useCreateDailyPlan();
   const updatePlanMutation = useUpdateDailyPlan();
@@ -665,6 +706,8 @@ export default function PlansPage() {
   };
 
   const isToday = formattedDate === format(new Date(), "yyyy-MM-dd");
+  // «بكرة» هو الافتراضي — نسمّيه باسمه بدل تاريخ مجرّد، وإلا بدا الفتح عشوائياً
+  const isTomorrowDate = formattedDate === format(addDays(new Date(), 1), "yyyy-MM-dd");
 
   /* ═══════════════════════════════════════════
      RENDER
@@ -690,7 +733,11 @@ export default function PlansPage() {
                 <button className="flex items-center gap-1.5 px-3 h-8 rounded-lg hover:bg-gray-50 transition-colors group">
                   <CalendarIcon className="h-3.5 w-3.5 text-[#3cc4f0]" />
                   <span className="text-sm font-semibold text-gray-700">
-                    {isToday ? (isRtl ? "اليوم" : "Today") : format(date, "d MMM", { locale: dateLocale })}
+                    {isTomorrowDate
+                      ? (isRtl ? "توصيل بكرة" : "Tomorrow")
+                      : isToday
+                        ? (isRtl ? "اليوم" : "Today")
+                        : format(date, "d MMM", { locale: dateLocale })}
                   </span>
                   <ChevronDown className="h-3 w-3 text-gray-400 group-hover:text-gray-600" />
                 </button>
