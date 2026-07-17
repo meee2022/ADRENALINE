@@ -43,6 +43,7 @@ import type * as lib_phone from "../lib/phone.js";
 import type * as loyalty from "../loyalty.js";
 import type * as manager from "../manager.js";
 import type * as mealCategories from "../mealCategories.js";
+import type * as mealCategoryFix from "../mealCategoryFix.js";
 import type * as mealDedupe from "../mealDedupe.js";
 import type * as mealImages from "../mealImages.js";
 import type * as mealIngredients from "../mealIngredients.js";
@@ -127,6 +128,7 @@ declare const fullApi: ApiFromModules<{
   loyalty: typeof loyalty;
   manager: typeof manager;
   mealCategories: typeof mealCategories;
+  mealCategoryFix: typeof mealCategoryFix;
   mealDedupe: typeof mealDedupe;
   mealImages: typeof mealImages;
   mealIngredients: typeof mealIngredients;

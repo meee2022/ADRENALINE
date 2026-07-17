@@ -5,7 +5,8 @@
  *   المصدر: ADRENALINE HEALTHY NEW.xlsx (إنجليزي) + ADRENALINE HEALTHY  عربي.xlsx
  *   المولِّد: tmp/parse_excel.py
  *
- *   البنية: "أسبوع:يوم" → أسماء الوجبات (الخياران معاً، بلا تكرار داخل اليوم).
+ *   البنية: OFFICIAL = "أسبوع:يوم" → أسماء الوجبات (الخياران معاً، بلا تكرار).
+ *          OFFICIAL_SLOTS = "أسبوع:يوم" → { اسم: تصنيف } — الخانة من الإكسل.
  *   6 أيام (السبت→الخميس) × 4 أسابيع = 24 يوماً × 9 وجبات = 216.
  *   الجمعة إجازة فلا تظهر.
  */
@@ -63,4 +64,41 @@ export const OFFICIAL_AR: Record<string, string[]> = {
   "4:tuesday": ["دجاج مع الليمون", "سندويش شاورما لحم", "شكشوكة", "شوربة عدس", "فول", "كاري السلمون", "كرات الطاقة", "كفتة ايرانية", "ﺑﻭﺩﻳﻧﺞ ﺑﺫﻭﺭ ﺍﻟﺷﻳﺎ"],
   "4:wednesday": ["توست البيض مع الافوكادو", "ريزوتو الدجاج", "سلطة الكينوا مع الباشن فروت", "سموذي  الماﺗﺷﺎ", "سندويش لحم البسطرمه", "شوربة ذرة", "شوفان مع زبدة الفول السوداني", "لحم البقر فيندالو مع ارز", "مجبوس الدجاج"],
   "4:thursday": ["برغر لحم بقري", "بودينج مع الارز", "سلطة البحر المتوسط و الفيتا", "سندويش دجاج مع افوكادو", "شوربة الخضار", "فلافل راب", "مافن لبناني", "نودلز اللحم", "ﺩﺟﺎﺝ ﺑﺎﻟﻔﻠﻔﻝ ﺍﻟﺣﻠﻭ"],
+};
+
+/**
+ * خانة كل وجبة في الإكسل: "أسبوع:يوم" → { اسم الوجبة: التصنيف }.
+ *
+ * ⚠️ أُضيف بعد اكتشاف أن OFFICIAL يحفظ الأسماء **بلا خانتها**، فمرّ صنفان
+ *    بتصنيف مخالف للإكسل بصمت: FALAFEL WRAP (فطور في الإكسل، غداء في القاعدة)
+ *    وSPAGHETTI BOLOGNESE (عشاء في الإكسل، غداء في القاعدة). المرجع الناقص
+ *    لا يكشف الخطأ.
+ *
+ * سناك1 وسناك2 في الإكسل كلاهما "snack" في القاعدة — تصنيف واحد لا اثنان.
+ */
+export const OFFICIAL_SLOTS: Record<string, Record<string, string>> = {
+  "1:saturday": { "BEEF KOFTA WRAP": "dinner", "BEETROOT SALAD": "snack", "CHICKEN SOUP": "snack", "CHICKEN TERYAKI BOWL": "lunch", "EGG WITH ZAATER": "breakfast", "GARLIC BUTTER CHICKEN": "lunch", "HALLOUMI SANDWICH": "breakfast", "HONEY GLAZE SALMON": "dinner", "SWEET POTATO ENERGY BOOSTER": "snack" },
+  "1:sunday": { "BEEF BALLS WITH RICE": "lunch", "BROWNIES": "snack", "CEASAR SALAD": "snack", "CHICKEN CURRY": "lunch", "CINNAMON APPLE YOGURT": "snack", "HUUMUS": "breakfast", "MIX VEGE OMELETE": "breakfast", "SHRIMP TACOS": "dinner", "SPAGHETTI BOLOGNESE": "dinner" },
+  "1:monday": { "BEEF ALFREDO": "lunch", "CHICKEN PARMESAN": "dinner", "CHICKEN SHAWARMA": "dinner", "EGG CROISANT": "breakfast", "HEALTHY CHICKEN MAJBOUS": "lunch", "LENTIL SOUP": "snack", "NORMAL Pancake": "breakfast", "PISTACHIO SALAD": "snack", "UMM ALI": "snack" },
+  "1:tuesday": { "BAHAMAS LAVA CAKE": "snack", "BEEF LASAGNA": "dinner", "BEEF STROGANOF": "lunch", "CRAB SALAD": "snack", "CRISPY CHICKEN CUTLETS": "lunch", "EGG BURRITO": "breakfast", "SOUTHWEST CHICKEN WRAP": "dinner", "SUNNY SIDE EGG W/ BROWN BREAD": "breakfast", "VEGETABLES SOUP": "snack" },
+  "1:wednesday": { "BEEF KOFTA DELIGHT": "dinner", "CHICKEN FAJITA SANDWICH": "dinner", "CROISANT CHEESE": "breakfast", "DATE BALLS": "snack", "DYNAMITE SHRIMP": "lunch", "GREEK INFUSION": "snack", "OMELETE PIZZA": "breakfast", "SHISHTAWOOK & RICE": "lunch", "WALDORAF SALAD": "snack" },
+  "1:thursday": { "BEEF SHAWERMA W/ BEETROOT RICE": "dinner", "BERRY OATMEAL BOWL": "breakfast", "CREAMY GARLIC CHICKEN": "lunch", "FRUIT SALAD": "snack", "MEDITERRANEAN FETA SALAD": "snack", "NEW GREEK CHICKEN": "lunch", "SALMON PESTO PASTA": "dinner", "TIRAMISU": "snack", "TURKEY CHEESE WRAP": "breakfast" },
+  "2:saturday": { "BROCOLI SOUP": "snack", "CEASAR SALAD": "snack", "CHICKEN TACOS": "lunch", "CHOCOLATE Pancakes": "breakfast", "IRANIAN CHICKEN": "lunch", "ORIENTAL BREAKFAST": "breakfast", "SALMON NO CARB": "dinner", "STEAK SANDWICH": "dinner", "TALBINA": "snack" },
+  "2:sunday": { "BEETROOT SALAD": "snack", "CHICKEN HERBS": "dinner", "CINNAMON APPLE YOGURT": "snack", "CORDON BLUE": "lunch", "CROISANT ZAATER": "breakfast", "FISH SYADIAH": "lunch", "FRUIT SALAD": "snack", "GARLIC BUTTER STEAK & POTATOES": "dinner", "NEW Egg sandwich": "breakfast" },
+  "2:monday": { "BUFFALO CHICKEN WRAP": "dinner", "CAJUN CHICKEN PASTA": "lunch", "CHICKEN VEGETABLES": "lunch", "COOKIES": "snack", "DAWOUD BASHA": "dinner", "FATTOUSH": "snack", "MEXICAN OMELETE": "breakfast", "MUSHROOM SOUP": "snack", "SWEET POTATO DELIGHT": "breakfast" },
+  "2:tuesday": { "BEEF SHAWERMA SANDWICH": "dinner", "Chia  Seeds  Pudding": "snack", "ENERGY BALLS": "snack", "FOUL": "breakfast", "IRANIAN KOFTA": "dinner", "LEMON CHICKEN": "lunch", "NEW EGG SHAKSHOUKA": "breakfast", "SHRIMP CURRY": "lunch", "lentil soup": "snack" },
+  "2:wednesday": { "BEEF PASTRAMI SANDWICH": "dinner", "BEEF VINDALO & RICE": "lunch", "CHICKEN MAJBOUS": "dinner", "CHOCOLATE PEANUTBUTTER": "breakfast", "CORN SOUP": "snack", "EGG AVOCADO TOAST": "breakfast", "JAMAICAN JERK SALMON": "lunch", "MATCHA SMOOTHIE SHAKE": "snack", "PASSION FRUIT QUINOA SALAD": "snack" },
+  "2:thursday": { "BEEF BURGER": "dinner", "BEEF NOODLES": "lunch", "Chicken Avocado Sandwich": "dinner", "FALAFEL WRAP": "breakfast", "LEBANESE TRADITIONAL MUFFIN": "breakfast", "MEDITERRANEEN FETA SALAD": "snack", "RICE PUDDING": "snack", "SWEET CHILI CHICKEN": "lunch", "VEGETABLES SOUP": "snack" },
+  "3:saturday": { "BAHAMAS LAVA CAKE": "snack", "BEEF KOFTA W/ SAFRON RICE": "lunch", "BROCOLI SOUP": "snack", "CRISPY STRIPS": "dinner", "EGG MUFFIN": "breakfast", "LEMON SHRIMP": "dinner", "NORMAL PANCAKES": "breakfast", "PENNE CHICKEN PASTA": "lunch", "WALDORAF SALAD": "snack" },
+  "3:sunday": { "CHICKEN BIRYANI": "lunch", "CHICKEN MESAKHAN": "dinner", "CROISANT TURKEY": "breakfast", "HALLOUMI MUFFIN": "breakfast", "MUFFIN": "snack", "MUSHROOM SOUP": "snack", "PISTACHIO SALAD": "snack", "SALMON W/ SALSA": "lunch", "STUFFED PEPPERS": "dinner" },
+  "3:monday": { "BEEF ROLLS SWEET POTATOES": "dinner", "CAJUN SHRIMP PASTA": "lunch", "CHICKEN FATTAH": "dinner", "CROISANT EGG RING": "breakfast", "LAZY CAKE": "snack", "LENTIL SOUP": "snack", "NEW Roasted Beef Sandwich": "lunch", "OMELETE PIZZA": "breakfast", "PASSION FRUIT QUINOA SALAD": "snack" },
+  "3:tuesday": { "CHOCOLATE PANCAKES": "breakfast", "CORN SOUP": "snack", "CRAB SALAD": "snack", "Peri  Peri Chicken & Rice": "lunch", "SHISHTAWOOK WRAP": "dinner", "SPAGHETTI BEEF BALLS": "lunch", "SUNNY SIDE EGG W/ BROWN BREAD": "breakfast", "TIRAMISU": "snack", "TURKEY SANDWICH": "dinner" },
+  "3:wednesday": { "CEASAR SALAD": "snack", "CHICKEN STROGANOF": "lunch", "FAJITA BEEF SANDWICH": "dinner", "GREEK INFUSION": "snack", "NEW EGG SHAKSHOUKA": "breakfast", "SHRIMP MAJBOUS": "lunch", "STEAK W/ MASHED POTATOES": "dinner", "TURKEY ENGLISH MUFFIN": "breakfast", "VEGETABLES SOUP": "snack" },
+  "3:thursday": { "CHICKEN ALFREDO": "lunch", "CHICKEN TAJEN": "dinner", "EGG QUESADILLAS": "breakfast", "FRUIT SALAD": "snack", "GRILLED CHICKEN BURGER": "dinner", "MANGOLIAN NOODLES": "lunch", "MEDITERRANEEN FETA SALAD": "snack", "PEANUTBUTTER OATMEAL": "breakfast", "RASPBERRY RICE PUDDING": "snack" },
+  "4:saturday": { "BROCOLI SOUP": "snack", "CEASAR SALAD": "snack", "CHICKEN TACOS": "lunch", "CHOCOLATE Pancakes": "breakfast", "IRANIAN CHICKEN": "lunch", "ORIENTAL BREAKFAST": "breakfast", "SALMON NO CARB": "dinner", "STEAK SANDWICH": "dinner", "TALBINA": "snack" },
+  "4:sunday": { "BEETROOT SALAD": "snack", "CHICKEN HERBS": "dinner", "CINNAMON APPLE YOGURT": "snack", "CORDON BLUE": "lunch", "CREAMY ZUCCHINI CHICKEN PASTA": "dinner", "CROISANT ZAATER": "breakfast", "FISH SYADIAH": "lunch", "FRUIT SALAD": "snack", "NEW Egg sandwich": "breakfast" },
+  "4:monday": { "BUFFALO CHICKEN WRAP": "dinner", "CAJUN SHRIMP PASTA": "lunch", "CHICKEN VEGETABLES": "lunch", "COOKIES": "snack", "DAWOUD BASHA": "dinner", "FATTOUSH": "snack", "MEXICAN OMELETE": "breakfast", "MUSHROOM SOUP": "snack", "SWEET POTATO DELIGHT": "breakfast" },
+  "4:tuesday": { "BEEF SHAWERMA SANDWICH": "dinner", "Chia  Seeds  Pudding": "snack", "ENERGY BALLS": "snack", "FOUL": "breakfast", "IRANIAN KOFTA": "dinner", "LEMON CHICKEN": "lunch", "NEW EGG SHAKSHOUKA": "breakfast", "SALMON CURRY": "lunch", "lentil soup": "snack" },
+  "4:wednesday": { "BEEF PASTRAMI SANDWICH": "dinner", "BEEF VINDALO & RICE": "lunch", "CHICKEN MAJBOUS": "dinner", "CHICKEN RIZOTTO": "lunch", "CHOCOLATE PEANUTBUTTER": "breakfast", "CORN SOUP": "snack", "EGG AVOCADO TOAST": "breakfast", "MATCHA SMOOTHIE SHAKE": "snack", "PASSION FRUIT QUINOA SALAD": "snack" },
+  "4:thursday": { "BEEF BURGER": "dinner", "BEEF NOODLES": "lunch", "Chicken Avocado Sandwich": "dinner", "FALAFEL WRAP": "breakfast", "LEBANESE TRADITIONAL MUFFIN": "breakfast", "MEDITERRANEEN FETA SALAD": "snack", "RICE PUDDING": "snack", "SWEET CHILI CHICKEN": "lunch", "VEGETABLES SOUP": "snack" },
 };
