@@ -82,7 +82,10 @@ export default function CalorieCalculator() {
     const adjustmentCap = tdee * 0.25;
     const adjustment = Math.min(rawAdjustment, adjustmentCap);
     const targetCalories = Math.round(goal === "lose" ? tdee - adjustment : goal === "gain" ? tdee + adjustment : tdee);
-    const proteinPerKg = goal === "lose" ? 2 : goal === "gain" ? 1.8 : 1.6;
+    // البروتين (جم/كجم من وزن الجسم): وقت التنزيل نرفعه إلى 2.2 لحماية الكتلة
+    // العضلية أثناء العجز — أقرب لتوصيات ISSN (2.2-2.4 وقت العجز) مع بقائه في
+    // الحد الآمن للعموم لا الرياضيين النحاف فقط. الثبات 1.6 والتضخيم 1.8 قياسيان.
+    const proteinPerKg = goal === "lose" ? 2.2 : goal === "gain" ? 1.8 : 1.6;
     const protein = Math.round(safeWeight * proteinPerKg);
     const fat = Math.round(safeWeight * (goal === "gain" ? 0.9 : 0.8));
     const carbs = Math.max(0, Math.round((targetCalories - protein * 4 - fat * 9) / 4));
