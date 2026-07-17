@@ -338,6 +338,20 @@ export const remove = mutation({
     if (has(await ctx.db.query("ratings").collect(), "publicMealId")) {
       throw new Error("الوجبة عليها تقييمات عملاء — عطّلها بدل الحذف");
     }
+    // 🔗 ربط الخطة اليدوية (menuItems.publicMealId) — حذفها يقطع الجسر
+    //    فتختفي الوجبة من خطة الأخصائية بصمت.
+    if (has(await ctx.db.query("menuItems").collect(), "publicMealId")) {
+      throw new Error("الوجبة مربوطة بصنف في منيو المطبخ — فُكّ الربط أولاً");
+    }
+    // ⚠️ dailyPlans.items نوعه v.any(): الـmealId بداخله ليس مفتاحاً في
+    //    السكيما، فلا يظهر في أي فحص للمفاتيح. حذفها هنا يترك خطة مطبخ
+    //    تشير إلى وجبة غير موجودة — وهذا ما يصل المشترك خطأً.
+    const plans = await ctx.db.query("dailyPlans").collect();
+    const inPlan = (plans as any[]).some((p) =>
+      (Array.isArray(p.items) ? p.items : []).some((it: any) => String(it?.mealId ?? "") === id));
+    if (inPlan) {
+      throw new Error("الوجبة مستعملة في خطط يومية — عطّلها بدل الحذف");
+    }
 
     // احذف الصورة من التخزين لو موجودة
     const meal: any = await ctx.db.get(args.id);
