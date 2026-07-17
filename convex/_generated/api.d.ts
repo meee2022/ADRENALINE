@@ -53,6 +53,7 @@ import type * as menuItems from "../menuItems.js";
 import type * as menuOfficial from "../menuOfficial.js";
 import type * as menuSync from "../menuSync.js";
 import type * as modifiers from "../modifiers.js";
+import type * as nameStyle from "../nameStyle.js";
 import type * as notifications from "../notifications.js";
 import type * as onlineOrders from "../onlineOrders.js";
 import type * as onlinePriceList from "../onlinePriceList.js";
@@ -134,6 +135,7 @@ declare const fullApi: ApiFromModules<{
   menuOfficial: typeof menuOfficial;
   menuSync: typeof menuSync;
   modifiers: typeof modifiers;
+  nameStyle: typeof nameStyle;
   notifications: typeof notifications;
   onlineOrders: typeof onlineOrders;
   onlinePriceList: typeof onlinePriceList;
