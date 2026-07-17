@@ -3,7 +3,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRoute, useLocation } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
@@ -150,6 +150,22 @@ export default function OrderReviewDetail() {
 
   // تبديل وجبة اقترحها الـAI قبل الاعتماد
   const allMeals: any[] = useQuery(api.publicMeals.listMeals, { sessionToken }) || [];
+
+  // 🖼️ خريطة الصورة الحيّة لكل وجبة (mealId → imageUrl).
+  //    عناصر الطلب تخزّن imageUrl لقطةً وقت الإنشاء، وكان أغلبها فارغاً لأن الصور
+  //    انتقلت إلى storageId لاحقاً. listMeals يحلّ storageId إلى رابط، فنقرأ الصورة
+  //    الحيّة منه بدل اللقطة القديمة، وإلا اختفت صور المراجعة (179 وجبة).
+  const liveImageByMeal = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const m of allMeals) {
+      if (m?._id && m?.imageUrl) map.set(String(m._id), m.imageUrl);
+    }
+    return map;
+  }, [allMeals]);
+  const mealImage = (item: any): string | null => {
+    const url = liveImageByMeal.get(String(item?.mealId ?? "")) || item?.imageUrl || "";
+    return url && url.trim() ? url : null; // لا نُرجِع "" أبداً (يسبّب src="" وإعادة تحميل)
+  };
   const [swapTarget, setSwapTarget] = useState<any>(null);
   const [swapping, setSwapping] = useState(false);
   const doSwap = async (m: any) => {
@@ -586,9 +602,9 @@ export default function OrderReviewDetail() {
                             className="bg-[#F7FBFE] border border-gray-100 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
                           >
                             <div className="relative">
-                              {meal.imageUrl && (
+                              {mealImage(meal) && (
                                 <img
-                                  src={meal.imageUrl}
+                                  src={mealImage(meal)!}
                                   alt={meal.mealNameAr}
                                   className="w-full h-24 object-cover"
                                 />
