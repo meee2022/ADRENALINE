@@ -229,8 +229,18 @@ export default function Delivery() {
         <DashboardHeader
           icon={<Truck className="h-6 w-6 sm:h-7 sm:w-7" />}
           titleAr="توصيل الطلبات" titleEn="Delivery Orders"
-          subtitleAr={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
-          subtitleEn={format(date, "EEEE, d MMMM yyyy", { locale: dateLocale })}
+          {...(() => {
+            // 🚚 التاريخ وحده يُربك: الخطط تفتح على الغد والمطبخ على الغد
+            //    والتوصيل على اليوم — والثلاثة تعني **يوم التوصيل**. نُسمّي
+            //    الموقع بالاسم كما تفعل الصفحتان الأخريان، فلا يظن السائق
+            //    أنه ينظر إلى يوم غير الذي يوصّل فيه.
+            const isTodayDate = formattedDate === format(new Date(), "yyyy-MM-dd");
+            const d = format(date, "EEEE, d MMMM yyyy", { locale: dateLocale });
+            return {
+              subtitleAr: isTodayDate ? `🚚 توصيل اليوم — ${d}` : `توصيل — ${d}`,
+              subtitleEn: isTodayDate ? `🚚 Today's delivery — ${d}` : `Delivery — ${d}`,
+            };
+          })()}
           kpis={[
             { value: plans.length, labelAr: "للتوصيل", labelEn: "To Deliver" },
             { value: deliveredPlans.length, labelAr: "تم التسليم", labelEn: "Delivered" },
