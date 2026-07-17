@@ -50,6 +50,7 @@ import type * as mealNameFix from "../mealNameFix.js";
 import type * as menuAlignment from "../menuAlignment.js";
 import type * as menuDedupe from "../menuDedupe.js";
 import type * as menuItems from "../menuItems.js";
+import type * as menuLink from "../menuLink.js";
 import type * as menuOfficial from "../menuOfficial.js";
 import type * as menuSync from "../menuSync.js";
 import type * as modifiers from "../modifiers.js";
@@ -132,6 +133,7 @@ declare const fullApi: ApiFromModules<{
   menuAlignment: typeof menuAlignment;
   menuDedupe: typeof menuDedupe;
   menuItems: typeof menuItems;
+  menuLink: typeof menuLink;
   menuOfficial: typeof menuOfficial;
   menuSync: typeof menuSync;
   modifiers: typeof modifiers;

@@ -428,9 +428,15 @@ export default defineSchema({
     macros: v.optional(v.string()),
     isActive: v.boolean(),
     tags: v.optional(v.array(v.string())),
+    // 🔗 الرابط الثابت بالمنيو العام (publicMeals) — مصدر الجدولة والاسم العربي
+    //    والصورة. كان الربط يتم بمطابقة الاسم وقت العرض، فأي فرق إملائي
+    //    (SHAWERMA/Shawarma) يُسقِط الوجبة من خطة الأخصائية بصمت بلا خطأ.
+    //    الآن يُحسم مرة واحدة ويُخزَّن، فتصحيح أي اسم لا يكسر الربط.
+    publicMealId: v.optional(v.id("publicMeals")),
   })
     .index("by_categoryId", ["categoryId"])
-    .index("by_active", ["isActive"]),
+    .index("by_active", ["isActive"])
+    .index("by_publicMeal", ["publicMealId"]),
 
   addons: defineTable({
     name: v.string(),

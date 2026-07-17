@@ -417,17 +417,22 @@ export default function PlansPage() {
   }, [categories]);
 
   // ✅ خريطة وجبات اليوم: mealCategoryId → [menuItemId]
+  //
+  // 🔗 الربط بالـID المخزَّن (menuItems.publicMealId)، لا بمطابقة الاسم.
+  //    المطابقة بالاسم كانت تُسقِط 15 وجبة مجدولة من 139 **بصمت**: أي فرق
+  //    إملائي (BEEF SHAWERMA / Beef Shawarma) يترك الخانة فاضية بلا خطأ،
+  //    فتظن الأخصائية أن لا وجبة مقرّرة. والأسوأ: كل تصحيح إملائي لاحق
+  //    يكسر المزيد. الرابط يُحسم مرة واحدة في convex/menuLink.ts.
   const scheduledByCategory = useMemo(() => {
-    // نُبقي الحروف العربية — النسخة القديمة كانت تمسحها فيفشل الرجوع لـnameAr دائماً
-    const normName = (s: string) =>
-      String(s || "").toLowerCase().replace(/[^a-z0-9؀-ۿ]/g, "").replace(/s/g, "").replace(/(.)\1+/g, "$1");
-    const miByNorm = new Map<string, any>();
-    (menuItems as any[]).forEach((m) => { const k = normName(m.name); if (k && !miByNorm.has(k)) miByNorm.set(k, m); });
+    const miByMeal = new Map<string, any>();
+    (menuItems as any[]).forEach((m) => {
+      if (m.publicMealId && !miByMeal.has(String(m.publicMealId))) miByMeal.set(String(m.publicMealId), m);
+    });
     const map: Record<string, string[]> = {};
     (publicMeals as any[]).forEach((pm) => {
       if (!Array.isArray(pm.schedule)) return;
       if (!pm.schedule.some((x: any) => x.week === rotationWeek && x.day === planDayName)) return;
-      const mi = miByNorm.get(normName(pm.nameEn)) || miByNorm.get(normName(pm.nameAr));
+      const mi = miByMeal.get(String(pm._id));
       if (!mi) return;
       // 🔑 الخانة تُشتقّ من تصنيف المنيو العام، لا من menuItem.categoryId
       for (const slotId of slotIdsForPublicCat[String(pm.category)] || []) {
