@@ -302,17 +302,43 @@ export const remove = mutation({
   args: { id: v.id("publicMeals"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken); // 🔒 حذف نهائي = ADMIN
-    // ref checks
+
+    /* 🔒 فحص المراجع — كل جدول يشير إلى publicMeals.
+     *
+     *   🔴 كان يفحص 3 جداول فقط (الطلبات · فواتير POS · طلبات الجم) من أصل 8.
+     *   فوجبة موجودة في كتالوج المنافذ أو أصناف POS أو حصر الصادر أو
+     *   التقييمات أو مرتجعات الجم — ولا شيء غيرها — كانت تُحذف بنجاح
+     *   ويفضل المرجع معلّقاً على وجبة غير موجودة، بلا أي خطأ ظاهر.
+     *   (حالة حقيقية: «فتوش كلاسيكي» مستخدمة في كتالوج المنافذ فقط.)
+     */
+    const id = String(args.id);
+    const has = (rows: any[], key: string) => rows.some((r: any) => String(r[key] ?? "") === id);
+
     const orderItems = await ctx.db.query("customerOrderItems").withIndex("by_mealId", (q) => q.eq("mealId", args.id)).take(1);
     if (orderItems.length) throw new Error("الوجبة مستخدمة في طلبات — عطّلها بدل الحذف");
-    const posLines = await ctx.db.query("posTicketLines").collect();
-    if (posLines.some((l: any) => String(l.mealId) === String(args.id))) {
-      throw new Error("الوجبة مستخدمة في فواتير POS");
+
+    if (has(await ctx.db.query("posTicketLines").collect(), "mealId")) {
+      throw new Error("الوجبة مستخدمة في فواتير POS — عطّلها بدل الحذف");
     }
-    const gymLines = await ctx.db.query("gymOrderLines").collect();
-    if (gymLines.some((l: any) => String(l.mealId) === String(args.id))) {
-      throw new Error("الوجبة مستخدمة في طلبات الجم");
+    if (has(await ctx.db.query("gymOrderLines").collect(), "mealId")) {
+      throw new Error("الوجبة مستخدمة في طلبات المنافذ — عطّلها بدل الحذف");
     }
+    if (has(await ctx.db.query("gymReturnBatchLines").collect(), "mealId")) {
+      throw new Error("الوجبة مستخدمة في مرتجعات المنافذ — عطّلها بدل الحذف");
+    }
+    if (has(await ctx.db.query("outletCatalogItems").collect(), "mealId")) {
+      throw new Error("الوجبة موجودة في كتالوج المنافذ — احذفها منه أولاً");
+    }
+    if (has(await ctx.db.query("posItems").collect(), "mealId")) {
+      throw new Error("الوجبة موجودة في أصناف نقطة البيع — احذفها منها أولاً");
+    }
+    if (has(await ctx.db.query("mealIssuances").collect(), "publicMealId")) {
+      throw new Error("الوجبة مستخدمة في حصر الصادر — عطّلها بدل الحذف");
+    }
+    if (has(await ctx.db.query("ratings").collect(), "publicMealId")) {
+      throw new Error("الوجبة عليها تقييمات عملاء — عطّلها بدل الحذف");
+    }
+
     // احذف الصورة من التخزين لو موجودة
     const meal: any = await ctx.db.get(args.id);
     if (meal?.storageId) { try { await ctx.storage.delete(meal.storageId); } catch { /* ignore */ } }

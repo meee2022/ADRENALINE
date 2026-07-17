@@ -22,6 +22,33 @@ import { requireAdmin } from "./sessions";
 
 type Fix = { ar: string; en?: string; newAr: string; newEn?: string; why: string };
 
+/**
+ * إملاء إنجليزي — المطابقة بالاسم الإنجليزي الحالي بالضبط.
+ * ⚠️ إملاء فقط: لا نغيّر اسم طبق لآخر. «Chicken Madrooba» مثلاً تُترك —
+ *    مضروبة طبق قائم بذاته لا تحريف لغيره.
+ */
+const EN_FIXES: { en: string; newEn: string }[] = [
+  { en: "Chicken Harps", newEn: "Chicken Herbs" },
+  { en: "Teryaki Chicken", newEn: "Teriyaki Chicken" },
+  { en: "Chicken Teryaki", newEn: "Chicken Teriyaki" },
+  { en: "Slamon with Salsa", newEn: "Salmon with Salsa" },
+  { en: "Spaghette  Meat Ball", newEn: "Spaghetti Meat Balls" },
+  { en: "Spaghette Bolognese", newEn: "Spaghetti Bolognese" },
+  { en: "Creamu Zucchini Pasta", newEn: "Creamy Zucchini Pasta" },
+  { en: "Falafal Wrap", newEn: "Falafel Wrap" },
+  { en: "Chicken Ceasar Salad", newEn: "Chicken Caesar Salad" },
+  { en: "Beef Stragnoff", newEn: "Beef Stroganoff" },
+  { en: "Mongolia Beef Noodles", newEn: "Mongolian Beef Noodles" },
+  { en: "MANGOLIAN NOODLES", newEn: "MONGOLIAN NOODLES" },
+  { en: "BEEF VINDALO & RICE", newEn: "BEEF VINDALOO & RICE" },
+  { en: "Cordon Blue", newEn: "Cordon Bleu" },
+  { en: "Classic Fattouch", newEn: "Classic Fattoush" },
+  { en: "Shishatwook with Rice", newEn: "Shish Tawook with Rice" },
+  { en: "Shishatawook with Rice", newEn: "Shish Tawook with Rice" },
+  { en: "CROISANT EGG RING", newEn: "CROISSANT EGG RING" },
+  { en: "Crispy Chicken  Cutlets", newEn: "Crispy Chicken Cutlets" },
+];
+
 /** المطابقة بالاسم العربي الحالي؛ en اختياري لتمييز الصفوف المتشابهة. */
 const FIXES: Fix[] = [
   { ar: "دجاج هارب", newAr: "دجاج بالأعشاب", newEn: "Chicken Herbs",
@@ -71,6 +98,20 @@ async function plan(ctx: any) {
   return rows;
 }
 
+/** خطة إصلاح الإملاء الإنجليزي — منفصلة عن العربي. */
+async function planEn(ctx: any) {
+  const meals = await ctx.db.query("publicMeals").collect();
+  return EN_FIXES.map((f) => {
+    const hits = meals.filter((m: any) => m.nameEn === f.en);
+    return {
+      from: f.en, to: f.newEn,
+      ar: hits[0]?.nameAr ?? null,
+      ids: hits.map((m: any) => String(m._id)),
+      status: hits.length === 0 ? "لا مطابق" : hits.length > 1 ? "أكثر من مطابق" : "جاهز",
+    };
+  });
+}
+
 /** 🔍 معاينة — لا تكتب شيئاً. */
 export const preview = query({
   args: { sessionToken: v.optional(v.string()) },
@@ -85,6 +126,7 @@ export const preview = query({
         multi: rows.filter((r) => r.status === "أكثر من مطابق").length,
       },
       rows,
+      en: await planEn(ctx),
     };
   },
 });
@@ -108,6 +150,15 @@ export const apply = mutation({
       await ctx.db.patch(id as any, patch);
       updated++;
     }
-    return { updated, skipped };
+    // ── الإملاء الإنجليزي ──
+    let updatedEn = 0;
+    for (const r of await planEn(ctx)) {
+      if (r.status !== "جاهز") { skipped.push(`EN: ${r.from} (${r.status})`); continue; }
+      const cur: any = await ctx.db.get(r.ids[0] as any);
+      if (!cur || cur.nameEn !== r.from) { skipped.push(`EN: ${r.from} (تغيّر قبل الكتابة)`); continue; }
+      await ctx.db.patch(r.ids[0] as any, { nameEn: r.to });
+      updatedEn++;
+    }
+    return { updated, updatedEn, skipped };
   },
 });
