@@ -110,8 +110,12 @@ export default function SmartPlan() {
   // وإلا اقتراح المطبخ، وإلا 1. ✅ نحدد الحد الأعلى بأسابيع الاشتراك المتبقية.
   const rawEffWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
   const effWeeks = subWeeksRemaining ? Math.min(rawEffWeeks, subWeeksRemaining) : rawEffWeeks;
+  // 🔒 دورة البداية يحددها النظام من الاشتراك — لا يختارها العميل. لو له اشتراك
+  //    معروف (startRotInfo)، دورته هي المرجع مهما ضغط العميل، فلا يبدأ من دورة
+  //    خاطئة (نفس قاعدة المينو اليدوي: النظام يضعه على بدايته الصحيحة).
+  const subLockedRot = startRotInfo?.rotationWeek || null;
   const effStartRot =
-    startRot || startRotInfo?.rotationWeek || suggestions?.currentRotationWeek || 1;
+    subLockedRot || startRot || suggestions?.currentRotationWeek || 1;
 
   /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فارغ = زائر لم يعرّف نفسه. */
   const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
@@ -482,18 +486,23 @@ export default function SmartPlan() {
                   ) : null}
                 </label>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {[1, 2, 3, 4].map((n) => (
-                    <button key={n} onClick={() => setStartRot(n)}
+                  {[1, 2, 3, 4].map((n) => {
+                    // 🔒 لو للعميل اشتراك، دورة البداية مقفولة على دورته — الباقي معطّل.
+                    const locked = subLockedRot != null && subLockedRot !== n;
+                    return (
+                    <button key={n} disabled={locked}
+                      onClick={() => { if (!locked) setStartRot(n); }}
                       style={{
-                        flex: 1, padding: "8px 0", borderRadius: 9, cursor: "pointer", fontWeight: 900, fontSize: 14,
-                        fontFamily: "'Cairo',sans-serif",
+                        flex: 1, padding: "8px 0", borderRadius: 9, cursor: locked ? "not-allowed" : "pointer",
+                        fontWeight: 900, fontSize: 14, fontFamily: "'Cairo',sans-serif",
                         border: `1.5px solid ${effStartRot === n ? "#0E76AC" : B.line}`,
-                        background: effStartRot === n ? "#0E76AC" : "#fff",
-                        color: effStartRot === n ? "#fff" : B.ink2,
+                        background: effStartRot === n ? "#0E76AC" : locked ? "#f3f4f6" : "#fff",
+                        color: effStartRot === n ? "#fff" : locked ? "#cbd5e1" : B.ink2,
                       }}>
                       {n}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
