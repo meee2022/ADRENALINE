@@ -257,7 +257,27 @@ export default function PublicMealsManagement() {
                         className="h-12 w-12 rounded-lg object-cover"
                       />
                     </TableCell>
-                    <TableCell className="font-medium">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col gap-1">
+                        <span>{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</span>
+                        {(() => {
+                          // 🏷️ لأي قناة الوجبة؟ (مشترك/منفذ/أونلاين) — عشان تفرّقهم بلمحة
+                          const ch = meal.isGymOnly
+                            ? { l: t("منفذ · كافيه", "Outlet · Cafe"), c: "bg-amber-100 text-amber-700" }
+                            : meal.isOnlineOnly
+                              ? { l: t("أونلاين", "Online"), c: "bg-violet-100 text-violet-700" }
+                              : { l: t("مشترك", "Subscriber"), c: "bg-cyan-100 text-cyan-700" };
+                          const sub = !meal.isGymOnly && !meal.isOnlineOnly;
+                          const noSched = sub && !(Array.isArray(meal.schedule) && meal.schedule.length);
+                          return (
+                            <span className="flex flex-wrap gap-1">
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${ch.c}`}>{ch.l}</span>
+                              {noSched && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{t("غير مجدول", "Unscheduled")}</span>}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline">{getCategoryLabel(meal.category)}</Badge>
                     </TableCell>
