@@ -201,6 +201,17 @@ export default function OrderReviewDetail() {
   const order = orderData;
   const items = orderData.items || [];
 
+  // 🔗 المشترك المرتبط بالطلب (بالرقم) — لعرض اشتراكه أثناء المراجعة: كم وجبة
+  //    وسناك في اليوم، ومن متى إلى متى. فتراجع الأخصائية أن المحدَّد يطابق اشتراكه.
+  const digits = (s: any) => String(s || "").replace(/\D/g, "");
+  const orderPhone8 = digits(order.customerPhone).slice(-8);
+  const linkedSub: any = (customers as any[]).find(
+    (c) => digits(c.phone || c.mobile || c.whatsapp).slice(-8) === orderPhone8,
+  );
+  const subMeals = linkedSub?.mealsPerDay ?? null;
+  const subSnacks = linkedSub?.snacksPerDay ?? null;
+  const subPerDay = (subMeals ?? 0) + (subSnacks ?? 0);
+
   // Group items by week and day
   const groupedByWeek: Record<number, Record<string, typeof items>> = {};
   items.forEach((item) => {
@@ -465,6 +476,31 @@ export default function OrderReviewDetail() {
             <p className="font-bold text-gray-900 text-sm">{createdDate}</p>
           </div>
         </div>
+
+        {/* 📋 اشتراك المشترك — للمراجعة: كم وجبة/سناك في اليوم، ومن متى إلى متى.
+            نعرضه فقط لو وُجد المشترك المرتبط (بالرقم). */}
+        {linkedSub && (
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-lg border-2 border-primary/30">
+              <p className="text-xs text-gray-500 mb-1">{t("وجبات الاشتراك / يوم","Subscription meals/day")}</p>
+              <p className="font-bold text-primary text-lg">
+                {subMeals ?? "؟"}{t(" وجبة"," meals")} + {subSnacks ?? "؟"}{t(" سناك"," snacks")} = {subPerDay}
+              </p>
+            </div>
+            <div className="bg-white p-4 rounded-lg border-2 border-primary/30">
+              <p className="text-xs text-gray-500 mb-1">{t("بداية الاشتراك","Subscription start")}</p>
+              <p className="font-bold text-gray-900 text-sm">{linkedSub.startDate || t("غير محدد","Not set")}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg border-2 border-primary/30">
+              <p className="text-xs text-gray-500 mb-1">{t("نهاية الاشتراك","Subscription end")}</p>
+              <p className="font-bold text-gray-900 text-sm">{linkedSub.endDate || t("غير محدد","Not set")}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg border-2 border-primary/30">
+              <p className="text-xs text-gray-500 mb-1">{t("البرنامج","Program")}</p>
+              <p className="font-bold text-gray-900 text-sm">{linkedSub.program || linkedSub.goals || "—"}</p>
+            </div>
+          </div>
+        )}
 
         {order.notes && (
           <div className="mt-4 p-4 bg-white rounded-lg">

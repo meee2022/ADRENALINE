@@ -5,7 +5,7 @@ import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
 // 🔒 قصر دورة الطلبات (approve/reject/updateStatus) على الأدوار المسؤولة
 const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
-import { getDayOffset, addDeliveryDays, isDeliveryDay, parseDate } from "./lib/dates";
+import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { loyaltyConfig } from "./loyalty";
 
 // Helper: Generate unique order number
@@ -484,34 +484,52 @@ export const approve = mutation({
     //    ونحوّلها إلى ترتيب متتالٍ 0،1،2… فالأسبوع الأول المختار = أول أسبوع توصيل.
     const mealsByDate: Record<string, typeof items> = {};
 
-    // 🚫 لا توصيل يوم الجمعة — والبداية نفسها قد تقع فيها. وقع ذلك فعلاً:
-    //    خطط MANSOUR KETBI بدأت 2026-07-10 وهو جمعة. ننقلها لأول يوم توصيل.
+    // 🚫 لا توصيل يوم الجمعة — والبداية نفسها قد تقع فيها. ننقلها لأول يوم توصيل.
     const startIso = String(startDate).slice(0, 10);
     const firstDelivery = isDeliveryDay(parseDate(startIso))
       ? startIso
       : addDeliveryDays(startIso, 1);
 
-    const chosenWeeks = Array.from(new Set(items.map((it) => Number(it.week)))).sort((a, b) => a - b);
-    const weekRank = new Map(chosenWeeks.map((w, i) => [w, i])); // دورة → ترتيب متتالٍ
+    // مرجع الدورة: أسبوع الطبخ الحالي عند اليوم — منه نشتقّ دورة أي تاريخ.
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const curCookWeek = Number((settings as any)?.currentCookingWeek) || 1;
+    const anchorISO = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10); // قطر
+
+    /**
+     * التاريخ الحقيقي لصنف يحمل (week=دورة, day=اليوم): نمشي على التقويم من أول
+     * يوم توصيل ونلتقط أول يوم يومُه = day ودورتُه = week. هذا يَعكس بالضبط ما
+     * فعله مولّد خطة العميل (ai.buildWeek): يمشي على التقويم، يتخطّى الجمعة،
+     * ويعطي كل يوم اسمَه الحقيقي ودورتَه الحقيقية. فالاسم يطابق التاريخ دائماً،
+     * والجمعة تُتخطّى بحكم التعريف (ليست يوم توصيل فلا يقع عليها تطابق).
+     *
+     * ⚠️ لا نجمع ترتيباً × 6 على التقويم: الأسبوع 7 أيام لا 6، فالجمع يزحلق يوماً
+     *    كل أسبوع ويضع «السبت» على يوم اثنين. المطابقة بالتاريخ الحقيقي تُنهي ذلك.
+     */
+    const dateForSlot = (week: number, day: string): string | null => {
+      const target = String(day).toLowerCase();
+      let cur = parseDate(firstDelivery);
+      for (let i = 0; i < 366; i++) {
+        const iso = fmtDate(cur);
+        if (isDeliveryDay(cur) && dayNameOf(iso) === target
+          && rotationWeekAtDate(curCookWeek, anchorISO, iso) === Number(week)) {
+          return iso;
+        }
+        cur = addDays(cur, 1);
+      }
+      return null;
+    };
 
     for (const item of items) {
       const overrideKey = `${item.week}-${item.day}`;
       const overrideDate = dateOverrides?.[overrideKey];
 
-      let dateKey: string;
+      let dateKey: string | null;
       if (overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)) {
         dateKey = overrideDate;
       } else {
-        // ترتيب الوجبة بين أيام التوصيل: (ترتيب الأسبوع × 6) + ترتيب اليوم.
-        //
-        // ⚠️ كان يُجمع هذا الرقم على التقويم مباشرةً — والأسبوع 7 أيام تقويمية
-        //    لا 6. فبعد الأسبوع الأول ينزلق كل شيء يوماً، ويتراكم الانزياح
-        //    أسبوعاً بعد أسبوع، فتقع خطط على الجمعة ولا توصيل فيها. حدث فعلاً
-        //    لكل اشتراك متعدد الأسابيع (17 و24 و31 يوليو كلها جُمَع).
-        //    الآن نعدّ **أيام التوصيل** نفسها فتُتخطّى الجمعة بحكم التعريف.
-        const n = (weekRank.get(Number(item.week)) ?? 0) * 6 + getDayOffset(item.day);
-        dateKey = addDeliveryDays(firstDelivery, n);
+        dateKey = dateForSlot(Number(item.week), item.day);
       }
+      if (!dateKey) continue; // لا تاريخ مطابق (يوم غير صالح) — نتخطّى بدل وضعه غلط
 
       if (!mealsByDate[dateKey]) mealsByDate[dateKey] = [];
       mealsByDate[dateKey].push(item);
