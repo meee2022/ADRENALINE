@@ -310,6 +310,8 @@ function initialPlanDate(): Date {
   }
   const t = new Date();
   t.setDate(t.getDate() + 1);
+  // 🚫 الجمعة لا توصيل — لو صادف الغد جمعةً نقفز للسبت (أول يوم توصيل تالٍ).
+  if (t.getDay() === 5) t.setDate(t.getDate() + 1);
   return t;
 }
 
@@ -1034,8 +1036,16 @@ export default function PlansPage() {
                 </div>
               </div>
 
+              {/* 🚫 الجمعة لا توصيل — لا خطط ولا ملء */}
+              {planDayName === "friday" && (
+                <div className="w-full rounded-2xl px-4 py-3 flex items-center justify-center gap-2 font-bold text-amber-800 bg-amber-50 border border-amber-200 text-sm">
+                  {isRtl ? "🚫 الجمعة يوم عمل بلا توصيل — لا خطط توصيل لهذا اليوم (المطبخ يطبخ للسبت)" : "Friday is a work day with no delivery — no delivery plans"}
+                </div>
+              )}
+
               {/* ─── ملء جماعي: مسودّات لكل من بلا خطة (يحترم الممنوعات والحدود) ─── */}
-              {pendingCount > 0 && (
+              {/*    يظهر فقط عند وجود وجبات مجدولة لليوم — فلا يُعرض على الجمعة (0 مجدول) */}
+              {pendingCount > 0 && scheduledCount > 0 && (
                 <button
                   onClick={handleFillAllPlanless}
                   disabled={bulkFilling}
