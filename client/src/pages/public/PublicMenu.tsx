@@ -29,6 +29,7 @@ import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotBlockDate, localToday } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel } from "@/lib/mealSchedule";
+import { confirmDialog } from "@/lib/dialogs";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -595,7 +596,7 @@ export default function PublicMenuPage() {
   };
   
   // Handle adding meal to cart
-  const handleAddToCart = (meal: any, e?: React.MouseEvent) => {
+  const handleAddToCart = async (meal: any, e?: React.MouseEvent) => {
     e?.stopPropagation();
 
     if (!selectedDay) {
@@ -642,9 +643,9 @@ export default function PublicMenuPage() {
 
     // ⚠ Warn about avoid conflict
     if (mealHasAvoidConflict(meal)) {
-      const ok = window.confirm(isRtl
+      const ok = await confirmDialog({ message: isRtl
         ? `⚠ تنبيه: هذه الوجبة قد تحتوي على شيء من ممنوعاتك (${[verifiedCustomer?.allergies, verifiedCustomer?.avoid].filter(Boolean).join(" / ")}). هل تريد المتابعة؟`
-        : `⚠ Warning: This meal may contain items you avoid. Continue anyway?`);
+        : `⚠ Warning: This meal may contain items you avoid. Continue anyway?` });
       if (!ok) return;
     }
 

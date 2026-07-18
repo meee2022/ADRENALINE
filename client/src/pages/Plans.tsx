@@ -749,12 +749,12 @@ export default function PlansPage() {
 
       // ✅ بعد تأكيد الخطة، اسأل لو عاوز ينتقل لعميل آخر
       if (status === "CONFIRMED") {
-        setTimeout(() => {
-          const goNext = window.confirm(
+        setTimeout(async () => {
+          const goNext = await confirmDialog({ message:
             isRtl
               ? "تم تأكيد الخطة بنجاح ✓\n\nهل تريد العودة لاختيار عميل آخر؟"
               : "Plan confirmed ✓\n\nGo back to select another customer?"
-          );
+          });
           if (goNext) {
             setSelectedCustomerId(null);
             setCurrentPlan(null);
