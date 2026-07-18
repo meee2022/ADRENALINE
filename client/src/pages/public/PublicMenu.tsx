@@ -24,7 +24,8 @@ import {
 import { useCartStore } from "@/lib/cartStore";
 import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
+import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotBlockDate, localToday } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, customerCategoryLabel } from "@/lib/mealSchedule";
@@ -353,6 +354,100 @@ export default function PublicMenuPage() {
     return orderedSubSlots.length; // الكل مكتمل
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderedSubSlots, items, mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit]);
+
+  /* ═══ إكمال باقي الوجبات بالخطة الذكية ═══
+   *  144 وجبة يدوياً كثيرة. الزر يستدعي نفس محرّك الذكية (generateWeeklyPlan)
+   *  الذي يطبّق كل القيود (حساسية/ممنوعات/تفضيلات) ويتقدّم بالدورة كل جمعة،
+   *  ثم يملأ الخانات الفاضية فقط — لا يلمس ما اختاره العميل يدوياً. */
+  const generateWeeklyPlan = useAction(api.ai.generateWeeklyPlan);
+  const [autoFilling, setAutoFilling] = useState(false);
+
+  /** عدد أيام الاشتراك التي لم تكتمل بعد (خانات ينفع الذكاء يملأها). */
+  const remainingSlotsCount = useMemo(
+    () => orderedSubSlots.filter(({ week, day }) => {
+      const picked = items.filter((it: any) => it.week === week && it.day === day);
+      const meals = picked.filter((p: any) => isMainCategory(p.category)).length;
+      const snacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
+      const done = (hasMealLimit || hasSnackLimit)
+        && (!hasMealLimit || meals >= mealsPerDay) && (!hasSnackLimit || snacks >= snacksPerDay);
+      return !done;
+    }).length,
+    [orderedSubSlots, items, mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit],
+  );
+
+  const handleAutoComplete = async () => {
+    if (autoFilling) return;
+    const token = getSessionToken() || undefined;
+    if (!token) {
+      // 🔒 التوليد الأسبوعي يستلزم جلسة (يمنع استنزاف رصيد AI) — نفس حكم الخطة الذكية.
+      toast({
+        title: isRtl ? "سجّل الدخول للإكمال التلقائي" : "Log in for auto-complete",
+        description: isRtl ? "الإكمال الذكي يحتاج حساب مسجَّل الدخول." : "Smart auto-complete needs a logged-in account.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!startDate || !subEndDate) {
+      toast({ title: isRtl ? "لا يوجد اشتراك محدّد المدة" : "No dated subscription", variant: "destructive" });
+      return;
+    }
+    setAutoFilling(true);
+    // عدّادات محلية: items لا تتحدّث داخل الحلقة، فنتتبّع ما أضفناه يدوياً
+    const localCounts: Record<string, { meals: number; snacks: number }> = {};
+    const addedKeys = new Set<string>();
+    try {
+      const res: any = await generateWeeklyPlan({
+        phone: verifiedPhone || undefined,
+        startDate,
+        endDate: subEndDate,
+        startRotationWeek: startRotForSub,
+        sessionToken: token,
+      });
+      // خريطة سريعة لما هو موجود بالفعل لكل (أسبوع:يوم) — لا نكرّر ولا نتخطّى الحدود
+      let added = 0;
+      for (const wk of (res?.weeks || [])) {
+        for (const d of (wk.days || [])) {
+          const week = Number(d.rotationWeek);
+          const day = d.day as DayOfWeek;
+          if (!orderedSubSlots.some((s) => s.week === week && s.day === day)) continue; // خارج الاشتراك
+          for (const pick of (d.picks || [])) {
+            const isSnack = isSnackCategory(pick.category);
+            // عدّ ما في السلة لهذا اليوم بعد ما أضفنا
+            const picked = items.concat([]).filter((it: any) => it.week === week && it.day === day);
+            const curMeals = picked.filter((p: any) => isMainCategory(p.category)).length;
+            const curSnacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
+            // ملاحظة: items لا تتحدّث فوراً داخل الحلقة، فنعتمد عدّاداً محلياً
+            const key = `${week}:${day}`;
+            localCounts[key] = localCounts[key] || { meals: curMeals, snacks: curSnacks };
+            const c = localCounts[key];
+            if (isSnack) { if (hasSnackLimit && c.snacks >= snacksPerDay) continue; }
+            else { if (hasMealLimit && c.meals >= mealsPerDay) continue; }
+            // موجودة مسبقاً؟ لا نكرّر
+            const already = items.some((it: any) => it._id === pick.id && it.week === week && it.day === day)
+              || addedKeys.has(`${pick.id}:${key}`);
+            if (already) continue;
+            addItem({
+              _id: pick.id, nameAr: pick.nameAr, nameEn: pick.nameEn || "",
+              category: pick.category, calories: pick.calories, protein: pick.protein,
+              carbs: pick.carbs, fats: pick.fats, imageUrl: pick.imageUrl || undefined,
+              priceQAR: pick.priceQAR || 0, week, day,
+            });
+            addedKeys.add(`${pick.id}:${key}`);
+            if (isSnack) c.snacks++; else c.meals++;
+            added++;
+          }
+        }
+      }
+      toast({
+        title: isRtl ? "✨ اكتملت الخطة" : "✨ Plan completed",
+        description: isRtl ? `أضاف الذكاء ${added} وجبة للخانات الفاضية` : `AI added ${added} meals to empty slots`,
+      });
+    } catch (e: any) {
+      toast({ title: isRtl ? "تعذّر الإكمال" : "Auto-complete failed", description: String(e?.message || e), variant: "destructive" });
+    } finally {
+      setAutoFilling(false);
+    }
+  };
 
   const slotChronoIdx = (week: number, day: string) =>
     orderedSubSlots.findIndex((s) => s.week === week && s.day === day);
@@ -1290,6 +1385,26 @@ export default function PublicMenuPage() {
                 : "Pick your start day; the system aligns the meals to the right week — even if you start next week."}
             </p>
           </div>
+          )}
+
+          {/* ✨ إكمال باقي الوجبات تلقائياً بالخطة الذكية — يملأ الخانات الفاضية فقط */}
+          {startDate && subEndDate && remainingSlotsCount > 0 && (
+            <button
+              onClick={handleAutoComplete}
+              disabled={autoFilling}
+              className={cn(
+                "w-full mb-4 rounded-2xl px-4 py-3 flex items-center justify-center gap-2 font-black text-white transition-all",
+                autoFilling ? "opacity-70 cursor-wait" : "hover:brightness-110 active:scale-[0.99]",
+              )}
+              style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}
+            >
+              <Sparkles className="h-5 w-5" />
+              {autoFilling
+                ? (isRtl ? "يكمّل الخطة…" : "Completing…")
+                : (isRtl
+                    ? `أكمل باقي الوجبات بالخطة الذكية (${remainingSlotsCount} يوم)`
+                    : `Auto-complete remaining days with AI (${remainingSlotsCount})`)}
+            </button>
           )}
 
           {/* Week Tabs */}
