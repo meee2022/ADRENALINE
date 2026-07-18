@@ -13,7 +13,7 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
-import { subscriptionState } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
@@ -89,22 +89,14 @@ export default function SmartPlan() {
     subStartDate ? { targetDate: subStartDate } : "skip",
   ) as { rotationWeek: number; currentCookingWeek: number } | undefined;
 
-  // ✅ حساب أسابيع الاشتراك المتبقية من تاريخ البداية حتى تاريخ النهاية.
-  //    الجمعة إجازة، فنعدّ أيام التوصيل (السبت→الخميس) ونقسم على 6.
-  //    نحدد بها effWeeks عشان ما نولّدش خطة بعد انتهاء الاشتراك.
+  // ✅ أسابيع الاشتراك المتبقية — من **المصدر الوحيد** (lib/subscription)، نفس ما
+  //    يستخدمه المنيو اليدوي. أيام التوصيل الفعلية ÷ 6 (يتخطّى الجمعة)، بحد أقصى 4.
   const subWeeksRemaining = useMemo(() => {
     if (!subStartDate || !subEndDate) return null;
-    const start = new Date(subStartDate + "T00:00:00");
-    const end = new Date(subEndDate + "T00:00:00");
-    if (end.getTime() < start.getTime()) return 0;
-    const cur = new Date(start);
-    let delivDays = 0;
-    for (let g = 0; g < 400 && cur.getTime() <= end.getTime(); g++) {
-      if (cur.getDay() !== 5) delivDays++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return Math.max(1, Math.min(4, Math.ceil(delivDays / 6)));
-  }, [subStartDate, subEndDate]);
+    const slots = orderedSubscriptionSlots(subStartDate, subEndDate, startRotInfo?.rotationWeek || 1);
+    if (!slots.length) return 0;
+    return Math.max(1, Math.min(4, Math.ceil(slots.length / 6)));
+  }, [subStartDate, subEndDate, startRotInfo]);
 
   // القيم الفعّالة: ما اختارته الأخصائية، وإلا المشتقّ من تاريخ الاشتراك،
   // وإلا اقتراح المطبخ، وإلا 1. ✅ نحدد الحد الأعلى بأسابيع الاشتراك المتبقية.

@@ -26,7 +26,7 @@ import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
-import { subscriptionState } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
@@ -323,59 +323,17 @@ export default function PublicMenuPage() {
    *       أسبوع للعميل لا أوله. الافتراض على أسبوع 1 كان يبدأ العميل من نهاية
    *       اشتراكه — لخبطة مسند. البداية الحقيقية تُنهي ذلك.
    */
-  const firstSubSlot = useMemo((): { week: number; day: DayOfWeek } | null => {
-    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return null;
-    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
-    const subStart = new Date(startDate + "T00:00:00");
-    const end = new Date(subEndDate + "T00:00:00");
-    if (end.getTime() < subStart.getTime()) return null;
-    const _now = new Date(); _now.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(_now); tomorrow.setDate(tomorrow.getDate() + 1);
-    const effStart = subStart.getTime() > _now.getTime() ? subStart : tomorrow;
-    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
-    const cur = new Date(subStart);
-    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
-      const dow = cur.getDay();
-      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
-        const dayName = DAY_NAMES[dow];
-        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) {
-          return { week: rotWeek, day: dayName as DayOfWeek }; // أول slot فعلي
-        }
-      }
-      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return null;
-  }, [startDate, subEndDate, rotationInfo]);
+  //   ✅ المصدر الوحيد: lib/subscription — نفس الحساب يستخدمه المنيو والذكية.
+  const startRotForSub = Number(rotationInfo?.rotationWeek) || 1;
+  const firstSubSlot = useMemo(
+    () => firstSubscriptionSlot(startDate, subEndDate, startRotForSub),
+    [startDate, subEndDate, startRotForSub],
+  ) as { week: number; day: DayOfWeek } | null;
 
-  /**
-   * ✅ أيام الاشتراك **مرتّبة زمنياً** — نفس calendar-walk، بس نحتفظ بالترتيب.
-   *    دورات العميل قد تلفّ [2,3,4,1]، فالترتيب الزمني ليس رقم الدورة. عليه نبني
-   *    القفل التسلسلي: العميل يُكمل يوماً بيوم ولا يقفز لأسبوع بعده قبل إكماله.
-   */
-  const orderedSubSlots = useMemo((): { week: number; day: DayOfWeek }[] => {
-    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return [];
-    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return [];
-    const subStart = new Date(startDate + "T00:00:00");
-    const end = new Date(subEndDate + "T00:00:00");
-    if (end.getTime() < subStart.getTime()) return [];
-    const _now = new Date(); _now.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(_now); tomorrow.setDate(tomorrow.getDate() + 1);
-    const effStart = subStart.getTime() > _now.getTime() ? subStart : tomorrow;
-    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
-    const out: { week: number; day: DayOfWeek }[] = [];
-    const cur = new Date(subStart);
-    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
-      const dow = cur.getDay();
-      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
-        const dayName = DAY_NAMES[dow];
-        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) out.push({ week: rotWeek, day: dayName as DayOfWeek });
-      }
-      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return out;
-  }, [startDate, subEndDate, rotationInfo]);
+  const orderedSubSlots = useMemo(
+    () => orderedSubscriptionSlots(startDate, subEndDate, startRotForSub),
+    [startDate, subEndDate, startRotForSub],
+  ) as { week: number; day: DayOfWeek }[];
 
   /** فهرس أول يوم لم يكتمل اختيار وجباته — حدّ التقدّم المسموح. */
   const firstIncompleteIdx = useMemo(() => {
