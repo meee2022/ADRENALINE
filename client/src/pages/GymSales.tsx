@@ -2155,6 +2155,8 @@ function OutletItemsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelect
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newMeal, setNewMeal] = useState({ nameAr: "", nameEn: "", category: "lunch", price: "" });
+  // ✏️ تعديل سعر صنف لهذا المنفذ فقط (لا يؤثّر على المنافذ الأخرى ولا المنيو العام)
+  const [editPrice, setEditPrice] = useState<{ id: string; val: string } | null>(null);
 
   const selectedOutlet = gyms.find((g: any) => g.id === selectedGymId);
   const filtered = useMemo(() => (meals || []).filter((m: any) => {
@@ -2170,6 +2172,20 @@ function OutletItemsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelect
     try {
       await setItem({ outletId: selectedGymId as any, mealId: m.id as any, isEnabled: !m.isEnabled, sessionToken });
       toast({ title: !m.isEnabled ? t("تم تفعيل الصنف بنفس سعره", "Item enabled with its saved price") : t("تم إيقاف الصنف لهذا المنفذ فقط", "Item disabled for this outlet only") });
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
+    finally { setSavingId(null); }
+  };
+
+  // ✏️ حفظ سعر جديد لصنف في هذا المنفذ فقط — يستدعي نفس setOutletCatalogItem بحقل price.
+  const savePrice = async (m: any) => {
+    if (!selectedGymId || !editPrice) return;
+    const p = Number(editPrice.val);
+    if (!Number.isFinite(p) || p < 0) { toast({ title: t("سعر غير صالح", "Invalid price"), variant: "destructive" }); return; }
+    setSavingId(m.id);
+    try {
+      await setItem({ outletId: selectedGymId as any, mealId: m.id as any, price: p, sessionToken });
+      toast({ title: t("تم تحديث سعر هذا المنفذ فقط ✓", "Price updated for this outlet only ✓") });
+      setEditPrice(null);
     } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
     finally { setSavingId(null); }
   };
@@ -2235,7 +2251,22 @@ function OutletItemsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelect
               {items.map((m: any) => <div key={m.id} className={cn("flex items-center gap-3 p-3", m.isEnabled ? "bg-emerald-50/30" : "bg-white")}>
                 <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border-2", m.isEnabled ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent")}><Check className="h-4 w-4" /></button>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{isRtl ? m.nameAr || m.nameEn : m.nameEn || m.nameAr}</p><p className="text-[10px] text-slate-400">{m.outletCategory || m.category}{m.priceUnit === "gram" ? ` · ${t("بالوزن (جرام)","by weight (grams)")}` : m.priceUnit === "piece" ? ` · ${t("بالقطعة","per piece")}` : ""}</p></div>
-                <div className="text-end"><p className="text-sm font-black text-[#0E76AC]">{fmtPrice(m)}</p><p className="text-[10px] text-slate-400">{t("السعر محفوظ حتى عند الإيقاف","Price retained when disabled")}</p></div>
+                {editPrice?.id === m.id ? (
+                  <div className="flex items-center gap-1">
+                    <Input type="number" min="0" step={m.priceUnit === "gram" ? "0.001" : "0.01"} autoFocus value={editPrice?.val ?? ""}
+                      onChange={(e) => setEditPrice({ id: m.id, val: e.target.value })}
+                      onKeyDown={(e) => { if (e.key === "Enter") savePrice(m); if (e.key === "Escape") setEditPrice(null); }}
+                      className="h-8 w-24 text-end font-black" />
+                    <button onClick={() => savePrice(m)} disabled={savingId === m.id} className="h-8 rounded-lg bg-emerald-600 px-2 text-xs font-bold text-white">{t("حفظ","Save")}</button>
+                    <button onClick={() => setEditPrice(null)} className="h-8 rounded-lg bg-slate-100 px-2 text-xs font-bold text-slate-600"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setEditPrice({ id: m.id, val: String(m.outletPrice) })} title={t("اضغط لتعديل سعر هذا المنفذ","Tap to edit this outlet's price")}
+                    className="text-end group">
+                    <p className="text-sm font-black text-[#0E76AC] group-hover:underline">{fmtPrice(m)} <Pencil className="inline h-3 w-3 opacity-40" /></p>
+                    <p className="text-[10px] text-slate-400">{t("سعر هذا المنفذ — اضغط للتعديل","This outlet's price — tap to edit")}</p>
+                  </button>
+                )}
                 <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("h-8 min-w-[92px] rounded-lg px-3 text-xs font-bold", m.isEnabled ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700")}>{m.isEnabled ? t("إيقاف هنا","Disable here") : t("إعادة التفعيل","Re-enable")}</button>
               </div>)}
             </div>
