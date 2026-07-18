@@ -13,6 +13,7 @@ import { CalendarIcon, Printer, Share2 } from "lucide-react";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { slotToDate } from "@/lib/subscription";
 import { localISO } from "@/lib/mealSchedule";
 import type { Id } from "@/../../convex/_generated/dataModel";
@@ -114,7 +115,7 @@ export default function OrderReviewDetail() {
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
       window.location.href = wa;
     } catch (e: any) {
-      alert(t("تعذّر إنشاء الرابط: ", "Couldn't create link: ") + String(e?.message || e));
+      void alertDialog({ message: t("تعذّر إنشاء الرابط: ", "Couldn't create link: ") + String(e?.message || e) });
     } finally {
       setSharing(false);
     }
@@ -124,20 +125,21 @@ export default function OrderReviewDetail() {
   // ✅ حذف الطلب نهائياً (أدمن فقط) — لتنظيف التجارب، غير الرفض.
   const handleDeleteOrder = async () => {
     if (!orderId) return;
-    const ok = confirm(
-      t("⚠️ حذف نهائي للخطة كلها (وأصنافها وأي خطط مطبخ منها). لا يمكن التراجع.\nمتأكد؟",
-        "⚠️ Permanently delete the whole plan (its items and any kitchen plans). This can't be undone.\nSure?")
-    );
+    const ok = await confirmDialog({
+      message: t("⚠️ حذف نهائي للخطة كلها (وأصنافها وأي خطط مطبخ منها). لا يمكن التراجع.\nمتأكد؟",
+        "⚠️ Permanently delete the whole plan (its items and any kitchen plans). This can't be undone.\nSure?"),
+      variant: "danger", confirmText: isRtl ? "حذف" : "Delete",
+    });
     if (!ok) return;
     try {
       const r: any = await deleteOrderMutation({ orderId: orderId as any, sessionToken });
       if (r?.success) {
         navigate("/orders/pending");
       } else {
-        alert(r?.error || t("❌ تعذّر الحذف","❌ Delete failed"));
+        void alertDialog({ message: r?.error || t("❌ تعذّر الحذف","❌ Delete failed") });
       }
     } catch (e: any) {
-      alert(String(e?.message || e));
+      void alertDialog({ message: String(e?.message || e) });
     }
   };
 
@@ -284,9 +286,9 @@ export default function OrderReviewDetail() {
     }
 
     if (!effectiveStartDate) {
-      alert(
-        (isRtl ? `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.` : `⚠️ Set a date for at least the first day (${firstKey}) or set the delivery start date above.`)
-      );
+      void alertDialog({
+        message: (isRtl ? `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.` : `⚠️ Set a date for at least the first day (${firstKey}) or set the delivery start date above.`),
+      });
       return;
     }
 
@@ -308,7 +310,7 @@ export default function OrderReviewDetail() {
             order.orderNumber || "",
             effectiveStartDate,
           );
-          if (confirm(t("✅ تم الاعتماد! هل تريد إرسال رسالة واتساب للعميل بالتأكيد؟", "✅ Approved! Do you want to send a WhatsApp confirmation to the customer?"))) {
+          if (await confirmDialog({ message: t("✅ تم الاعتماد! هل تريد إرسال رسالة واتساب للعميل بالتأكيد؟", "✅ Approved! Do you want to send a WhatsApp confirmation to the customer?") })) {
             openWhatsApp(order.customerPhone, msg);
           }
         }
@@ -318,13 +320,13 @@ export default function OrderReviewDetail() {
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
-      alert(t("❌ حدث خطأ أثناء الاعتماد", "❌ An error occurred while approving"));
+      void alertDialog({ message: t("❌ حدث خطأ أثناء الاعتماد", "❌ An error occurred while approving") });
     }
   };
 
   const handleReject = async () => {
     if (!orderId || !rejectReason.trim()) {
-      alert(t("⚠️ يرجى كتابة سبب الرفض","⚠️ Please write a rejection reason"));
+      void alertDialog({ message: t("⚠️ يرجى كتابة سبب الرفض","⚠️ Please write a rejection reason") });
       return;
     }
     try {
@@ -341,7 +343,7 @@ export default function OrderReviewDetail() {
             order.customerName || "عميلنا الكريم",
             rejectReason,
           );
-          if (confirm(t("هل تريد إرسال رسالة الاعتذار للعميل عبر واتساب؟","Send the apology message to the customer via WhatsApp?"))) {
+          if (await confirmDialog({ message: t("هل تريد إرسال رسالة الاعتذار للعميل عبر واتساب؟","Send the apology message to the customer via WhatsApp?") })) {
             openWhatsApp(order.customerPhone, msg);
           }
         }
@@ -351,7 +353,7 @@ export default function OrderReviewDetail() {
       navigate("/orders/pending");
     } catch (error) {
       console.error(error);
-      alert(t("❌ حدث خطأ أثناء الرفض", "❌ An error occurred while rejecting"));
+      void alertDialog({ message: t("❌ حدث خطأ أثناء الرفض", "❌ An error occurred while rejecting") });
     }
   };
 
@@ -414,7 +416,7 @@ export default function OrderReviewDetail() {
         groups,
       });
     } catch (e: any) {
-      alert(t("تعذّر التحميل: ","Download failed: ") + String(e?.message || e));
+      void alertDialog({ message: t("تعذّر التحميل: ","Download failed: ") + String(e?.message || e) });
     } finally {
       setDownloadingPlan(false);
     }
@@ -686,7 +688,7 @@ export default function OrderReviewDetail() {
                                     try {
                                       await noteItemMutation({ itemId: meal._id, note: txt, sessionToken });
                                     } catch (e: any) {
-                                      alert(e?.message || t("تعذّر الحفظ", "Save failed"));
+                                      void alertDialog({ message: e?.message || t("تعذّر الحفظ", "Save failed") });
                                     }
                                   }}
                                   className="text-gray-400 hover:text-amber-600 transition-colors text-sm"
@@ -703,11 +705,11 @@ export default function OrderReviewDetail() {
                                 </button>
                                 <button
                                   onClick={async () => {
-                                    if (!confirm(t(`حذف "${meal.mealNameAr}" من الطلب؟`, `Remove "${meal.mealNameAr}" from the order?`))) return;
+                                    if (!(await confirmDialog({ message: t(`حذف "${meal.mealNameAr}" من الطلب؟`, `Remove "${meal.mealNameAr}" from the order?`), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
                                     try {
                                       await removeItemMutation({ itemId: meal._id, sessionToken });
                                     } catch (e: any) {
-                                      alert(e?.message || t("تعذّر الحذف", "Delete failed"));
+                                      void alertDialog({ message: e?.message || t("تعذّر الحذف", "Delete failed") });
                                     }
                                   }}
                                   className="text-gray-400 hover:text-red-600 transition-colors text-sm"
@@ -954,7 +956,7 @@ export default function OrderReviewDetail() {
                 const rawPhone = linkedCust?.phone || (order as any).customerPhone || "";
                 const phone = String(rawPhone).replace(/\D/g, "");
                 if (!phone) {
-                  alert(t("⚠️ رقم الهاتف غير متوفر لهذا العميل", "⚠️ Phone number not available for this customer"));
+                  void alertDialog({ message: t("⚠️ رقم الهاتف غير متوفر لهذا العميل", "⚠️ Phone number not available for this customer") });
                   return;
                 }
                 // تأكد إن الرقم بصيغة دولية (لو رقم قطر بدون code، ضيف 974)

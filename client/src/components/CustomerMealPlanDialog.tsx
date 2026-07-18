@@ -9,6 +9,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useCategories, useMenuItems, useModifiers } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog } from "@/lib/dialogs";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +115,7 @@ export function CustomerMealPlanDialog({
         groups,
       });
     } catch (e: any) {
-      alert((isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e));
+      void alertDialog({ message: (isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e) });
     } finally {
       setDownloading(false);
     }

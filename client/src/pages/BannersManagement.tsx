@@ -10,6 +10,7 @@ import { Plus, Trash2, Image as ImageIcon, Upload, Eye, EyeOff } from "lucide-re
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 
 export default function BannersManagement() {
   const { language, dir } = useLanguage();
@@ -111,7 +112,7 @@ export default function BannersManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("هل أنت متأكد من حذف هذا البانر؟", "Are you sure you want to delete this banner?"))) return;
+    if (!(await confirmDialog({ message: t("هل أنت متأكد من حذف هذا البانر؟", "Are you sure you want to delete this banner?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
 
     try {
       await deleteBanner({ id: id as any, sessionToken });

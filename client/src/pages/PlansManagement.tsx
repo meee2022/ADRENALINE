@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,7 +148,7 @@ export default function PlansManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("plans_management.delete_confirm"))) return;
+    if (!(await confirmDialog({ message: t("plans_management.delete_confirm"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
 
     try {
       await convex.mutation(api.publicPlans.remove, { id: id as Id<"publicPlans">, sessionToken });

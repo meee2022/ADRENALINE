@@ -8,7 +8,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
-import { confirmDialog } from "@/lib/dialogs";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,7 +73,7 @@ export default function Payroll() {
 
   const saveBulk = async () => {
     const targets = bulkRows.filter((r: any) => (Number(bulkHours[r._id]) || 0) > 0);
-    if (!targets.length) { alert(t("أدخل ساعات لموظف واحد على الأقل", "Enter hours for at least one employee")); return; }
+    if (!targets.length) { void alertDialog({ message: t("أدخل ساعات لموظف واحد على الأقل", "Enter hours for at least one employee") }); return; }
     setBulkSaving(true);
     try {
       for (const r of targets) {
@@ -82,7 +82,7 @@ export default function Payroll() {
       }
       setBulkHours({});
       setBulkOpen(false);
-    } catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
     finally { setBulkSaving(false); }
   };
 
@@ -106,7 +106,7 @@ export default function Payroll() {
   };
 
   const save = async () => {
-    if (!form.name.trim()) { alert(t("أدخل الاسم", "Enter a name")); return; }
+    if (!form.name.trim()) { void alertDialog({ message: t("أدخل الاسم", "Enter a name") }); return; }
     const num = (v: string) => Number(v) || 0;
     const payload: any = {
       name: form.name.trim(), designation: form.designation.trim(),
@@ -118,7 +118,7 @@ export default function Payroll() {
       if (editingId) await updateM({ id: editingId as any, ...payload });
       else await createM(payload);
       setDialogOpen(false);
-    } catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
   };
 
   const del = async (r: any) => {
@@ -128,7 +128,7 @@ export default function Payroll() {
       variant: "danger",
       confirmText: t("حذف", "Delete"),
     }))) return;
-    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { alert(e?.message || "Error"); }
+    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "Error" }); }
   };
 
   // livePreview الحقول المشتقة داخل الديالوج

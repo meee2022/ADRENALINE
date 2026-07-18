@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog } from "@/lib/dialogs";
 import { useStore } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -96,7 +97,7 @@ export default function ManagerLive() {
   const requestNotif = async () => {
     if (!("Notification" in window)) return;
     if (Notification.permission === "granted") { setNotifOn(true); return; }
-    if (Notification.permission === "denied") { alert(t("مرفوض — فعّلها من إعدادات المتصفح", "Denied — enable from browser settings")); return; }
+    if (Notification.permission === "denied") { void alertDialog({ message: t("مرفوض — فعّلها من إعدادات المتصفح", "Denied — enable from browser settings") }); return; }
     const r = await Notification.requestPermission();
     setNotifOn(r === "granted");
   };

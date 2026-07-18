@@ -9,6 +9,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,13 +96,13 @@ export default function MealIssuance() {
       });
       setOpen(false);
     } catch (e: any) {
-      alert(e?.message || t("فشل التسجيل", "Failed"));
+      void alertDialog({ message: e?.message || t("فشل التسجيل", "Failed") });
     } finally { setSaving(false); }
   };
 
   const del = async (id: string) => {
-    if (!confirm(t("حذف السجل ده؟", "Delete this entry?"))) return;
-    try { await removeM({ id: id as any, sessionToken }); } catch (e: any) { alert(e?.message || "err"); }
+    if (!(await confirmDialog({ message: t("حذف السجل ده؟", "Delete this entry?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
+    try { await removeM({ id: id as any, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "err" }); }
   };
 
   const dayTotal = summary?.day?.total ?? 0;

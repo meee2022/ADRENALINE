@@ -2,6 +2,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,7 +76,7 @@ export default function RestaurantSettings() {
     try {
       await setProgramPortions({ portions, sessionToken });
     } catch (e: any) {
-      alert(t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e));
+      void alertDialog({ message: t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e) });
     } finally {
       setIsSavingPortions(false);
     }
@@ -124,10 +125,10 @@ export default function RestaurantSettings() {
     setIsSaving(true);
     try {
       await updateSettings({ ...formData, sessionToken });
-      alert(t("✅ تم حفظ الإعدادات بنجاح!", "✅ Settings saved successfully!"));
+      void alertDialog({ message: t("✅ تم حفظ الإعدادات بنجاح!", "✅ Settings saved successfully!") });
     } catch (error) {
       console.error(error);
-      alert(t("❌ حدث خطأ أثناء الحفظ", "❌ An error occurred while saving"));
+      void alertDialog({ message: t("❌ حدث خطأ أثناء الحفظ", "❌ An error occurred while saving") });
     } finally {
       setIsSaving(false);
     }
@@ -136,7 +137,7 @@ export default function RestaurantSettings() {
   const handleInitialize = async () => {
     try {
       await initializeDefault({ sessionToken });
-      alert(t("✅ تم إنشاء الإعدادات الافتراضية!", "✅ Default settings created!"));
+      void alertDialog({ message: t("✅ تم إنشاء الإعدادات الافتراضية!", "✅ Default settings created!") });
     } catch (error) {
       console.error(error);
     }
@@ -148,13 +149,13 @@ export default function RestaurantSettings() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert(t("❌ يرجى اختيار صورة فقط", "❌ Please select an image file only"));
+      void alertDialog({ message: t("❌ يرجى اختيار صورة فقط", "❌ Please select an image file only") });
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert(t("❌ حجم الصورة يجب أن يكون أقل من 5 ميجابايت", "❌ Image size must be less than 5 MB"));
+      void alertDialog({ message: t("❌ حجم الصورة يجب أن يكون أقل من 5 ميجابايت", "❌ Image size must be less than 5 MB") });
       return;
     }
 
@@ -179,10 +180,10 @@ export default function RestaurantSettings() {
       // 3. Update settings with new logo
       await updateHeroLogo({ storageId, sessionToken });
 
-      alert(t("✅ تم رفع الشعار بنجاح!","✅ Logo uploaded successfully!"));
+      void alertDialog({ message: t("✅ تم رفع الشعار بنجاح!","✅ Logo uploaded successfully!") });
     } catch (error: any) {
       console.error("Logo upload error:", error);
-      alert(`${t("❌ خطأ في رفع الشعار:", "❌ Logo upload error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}`);
+      void alertDialog({ message: `${t("❌ خطأ في رفع الشعار:", "❌ Logo upload error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}` });
     } finally {
       setIsUploadingLogo(false);
       if (logoInputRef.current) {
@@ -192,17 +193,17 @@ export default function RestaurantSettings() {
   };
 
   const handleLogoDelete = async () => {
-    if (!confirm(t("هل أنت متأكد من حذف الشعار؟","Delete the logo?"))) {
+    if (!(await confirmDialog({ message: t("هل أنت متأكد من حذف الشعار؟","Delete the logo?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) {
       return;
     }
 
     setIsDeletingLogo(true);
     try {
       await deleteHeroLogo({ sessionToken });
-      alert(t("✅ تم حذف الشعار بنجاح!","✅ Logo deleted successfully!"));
+      void alertDialog({ message: t("✅ تم حذف الشعار بنجاح!","✅ Logo deleted successfully!") });
     } catch (error: any) {
       console.error("Logo delete error:", error);
-      alert(`${t("❌ خطأ في حذف الشعار:", "❌ Logo delete error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}`);
+      void alertDialog({ message: `${t("❌ خطأ في حذف الشعار:", "❌ Logo delete error:")} ${error?.message || t("حاول مرة أخرى", "Please try again")}` });
     } finally {
       setIsDeletingLogo(false);
     }

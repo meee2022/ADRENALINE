@@ -19,6 +19,7 @@ import { ar, enUS } from "date-fns/locale";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { alertDialog } from "@/lib/dialogs";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -597,7 +598,7 @@ export default function Kitchen() {
   const [exporting, setExporting] = useState<null | "xlsx" | "pdf">(null);
   const exportSheet = async (kind: "xlsx" | "pdf") => {
     if (!kitchenPeople.length) {
-      alert(isRtl ? "لا توجد وجبات لهذا اليوم" : "No meals for this day");
+      void alertDialog({ message: isRtl ? "لا توجد وجبات لهذا اليوم" : "No meals for this day" });
       return;
     }
     setExporting(kind);
@@ -606,7 +607,7 @@ export default function Kitchen() {
       if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, kitchenPeople, lang);
       else await downloadKitchenPdf(formattedDate, kitchenPeople, lang);
     } catch (e: any) {
-      alert((isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e));
+      void alertDialog({ message: (isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e) });
     } finally {
       setExporting(null);
     }
@@ -811,7 +812,7 @@ export default function Kitchen() {
       try {
         await updatePlanMutation.mutateAsync({ id: planId, data: { status: "PREPARED" } });
       } catch {
-        alert(isRtl ? "❌ فشل تحديث الحالة. حاول مرة أخرى." : "❌ Failed to update status. Please try again.");
+        void alertDialog({ message: isRtl ? "❌ فشل تحديث الحالة. حاول مرة أخرى." : "❌ Failed to update status. Please try again." });
       }
     }
   };

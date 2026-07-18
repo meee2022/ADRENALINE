@@ -6,6 +6,7 @@ import * as React from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { alertDialog } from "@/lib/dialogs";
 import {
   ChefHat, Sparkles, Star, Quote, MapPin, Phone, Clock, Instagram,
   ArrowLeft, ArrowRight, Leaf, Award, Heart, Users, MessageCircle,
@@ -374,7 +375,7 @@ export function PremiumTestimonials() {
     e.preventDefault();
     if (!newComment || !newMeal) return;
     if (!sessionToken) {
-      alert(isRtl ? "يُرجى تسجيل الدخول أولاً لإضافة تقييمك" : "Please log in first to leave a review");
+      void alertDialog({ message: isRtl ? "يُرجى تسجيل الدخول أولاً لإضافة تقييمك" : "Please log in first to leave a review" });
       return;
     }
     setIsSubmitting(true);

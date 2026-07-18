@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2, UserCog, Link2, Clock, Radio } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -133,7 +134,7 @@ export default function Delivery() {
         const phone = customer?.phone || (plan as any)?.customerPhone;
         const name = customer?.fullName || (plan as any)?.customerName;
         if (phone && name) {
-          if (confirm(isRtl ? "إرسال رسالة شكر للعميل عبر واتساب؟" : "Send thank-you WhatsApp message?")) {
+          if (await confirmDialog({ message: isRtl ? "إرسال رسالة شكر للعميل عبر واتساب؟" : "Send thank-you WhatsApp message?" })) {
             openWhatsApp(phone, WhatsAppTemplates.delivered(name));
           }
         }

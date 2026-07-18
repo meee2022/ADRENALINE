@@ -8,6 +8,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -109,8 +110,8 @@ function OverviewTab({ t, sessionToken }: any) {
   const saveTax = async () => {
     try {
       await setPosTax({ pct: Number(taxPct) || 0, inclusive: taxIncl, label: taxLabel, sessionToken });
-      alert(t("تم حفظ إعدادات الضريبة", "Tax settings saved"));
-    } catch (e: any) { alert(e?.message || "خطأ"); }
+      void alertDialog({ message: t("تم حفظ إعدادات الضريبة", "Tax settings saved") });
+    } catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
   };
 
   return (
@@ -367,7 +368,7 @@ function CategoriesTab({ t, sessionToken, toast }: any) {
                 <button onClick={() => update({ id: c.id as any, isActive: !c.isActive, sessionToken })} className="flex-1 text-xs font-bold px-2 py-1 rounded bg-slate-100 hover:bg-slate-200">
                   {c.isActive ? t("موقوف", "Hide") : t("تفعيل", "Show")}
                 </button>
-                <button onClick={async () => { if (confirm(t("حذف؟", "Delete?"))) { await del({ id: c.id as any, sessionToken }); toast({ title: t("محذوف", "Deleted") }); } }} className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">
+                <button onClick={async () => { if (await confirmDialog({ message: t("حذف؟", "Delete?"), variant: "danger", confirmText: "حذف" })) { await del({ id: c.id as any, sessionToken }); toast({ title: t("محذوف", "Deleted") }); } }} className="text-xs font-bold px-2 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200">
                   <Trash2 className="h-3 w-3" />
                 </button>
               </div>

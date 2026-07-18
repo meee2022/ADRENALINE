@@ -10,6 +10,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -306,8 +307,8 @@ export default function Customized() {
     }));
 
   // نسخ وجبات اليوم الحالي لكل أيام هذا الأسبوع (لعميل يأكل نفس الشيء كل يوم في الأسبوع)
-  const applyToAllDays = () => {
-    if (!window.confirm(t("نسخ وجبات هذا اليوم لكل أيام هذا الأسبوع؟", "Copy this day's meals to all days of this week?"))) return;
+  const applyToAllDays = async () => {
+    if (!(await confirmDialog({ message: t("نسخ وجبات هذا اليوم لكل أيام هذا الأسبوع؟", "Copy this day's meals to all days of this week?") }))) return;
     setWeekSlots((prev) => {
       const src = (prev[activeWeek]?.[activeDay] || []).map((s) => ({ ...s }));
       const d: Record<string, Slot[]> = {};
@@ -317,8 +318,8 @@ export default function Customized() {
   };
 
   // نسخ هذا الأسبوع بالكامل لباقي أسابيع الدورة (لعميل يأكل نفس الشيء كل أسبوع)
-  const applyWeekToAll = () => {
-    if (!window.confirm(t("نسخ هذا الأسبوع لكل أسابيع الدورة (1–4)؟", "Copy this week to all cycle weeks (1–4)?"))) return;
+  const applyWeekToAll = async () => {
+    if (!(await confirmDialog({ message: t("نسخ هذا الأسبوع لكل أسابيع الدورة (1–4)؟", "Copy this week to all cycle weeks (1–4)?") }))) return;
     setWeekSlots((prev) => {
       const srcDays = prev[activeWeek] || {};
       const next: Record<number, Record<string, Slot[]>> = {};
@@ -354,7 +355,7 @@ export default function Customized() {
       await saveTemplate({ customerId: selectedId as any, slots: { weeks }, sessionToken });
       setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e: any) {
-      alert(t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e));
+      void alertDialog({ message: t("تعذّر الحفظ: ", "Save failed: ") + String(e?.message || e) });
     } finally { setSaving(false); }
   };
 

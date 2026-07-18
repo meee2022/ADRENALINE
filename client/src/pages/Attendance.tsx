@@ -11,6 +11,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,9 +127,9 @@ export default function Attendance() {
   ) as any[] | undefined) || [];
   const saveOtApproval = async (name: string, raw: string) => {
     const v = raw.trim() === "" ? undefined : Number(raw);
-    if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { alert(t("رقم غير صحيح", "Invalid number")); return; }
+    if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { void alertDialog({ message: t("رقم غير صحيح", "Invalid number") }); return; }
     try { await otApprovalM({ name, month, otHours: v, sessionToken }); setEditOt(null); }
-    catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
   };
 
   // ---- Single add/edit ----
@@ -142,7 +143,7 @@ export default function Attendance() {
     setDialogOpen(true);
   };
   const saveOne = async () => {
-    if (!form.name.trim()) { alert(t("اكتب اسم الموظف", "Enter employee name")); return; }
+    if (!form.name.trim()) { void alertDialog({ message: t("اكتب اسم الموظف", "Enter employee name") }); return; }
     try {
       await upsertM({
         name: form.name.trim(), designation: form.designation || undefined, date, status: form.status,
@@ -150,11 +151,11 @@ export default function Attendance() {
         note: form.note.trim() || undefined, source: "manual", sessionToken,
       });
       setDialogOpen(false);
-    } catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
   };
   const del = async (r: any) => {
-    if (!confirm(t(`حذف حضور ${r.name}؟`, `Delete ${r.name}'s record?`))) return;
-    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { alert(e?.message || "Error"); }
+    if (!(await confirmDialog({ message: t(`حذف حضور ${r.name}؟`, `Delete ${r.name}'s record?`), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
+    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "Error" }); }
   };
 
   // ---- Bulk mark ----
@@ -179,7 +180,7 @@ export default function Attendance() {
       checkOut: bulkRows[e.name]?.checkOut || undefined,
     }));
     try { await bulkM({ date, rows: payload, source: "manual", sessionToken }); setBulkOpen(false); }
-    catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
   };
 
   // ---- Biometric import ----
@@ -237,18 +238,18 @@ export default function Attendance() {
         setImportText(lines.join("\n"));
       }
     } catch (e: any) {
-      alert(t("تعذّر قراءة الملف — جرّب تصديره كـ CSV", "Couldn't read file — try exporting as CSV"));
+      void alertDialog({ message: t("تعذّر قراءة الملف — جرّب تصديره كـ CSV", "Couldn't read file — try exporting as CSV") });
     }
   };
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const runImport = async () => {
-    if (parsed.length === 0) { alert(t("لم يتم التعرّف على أي سجلّ", "No records recognized")); return; }
+    if (parsed.length === 0) { void alertDialog({ message: t("لم يتم التعرّف على أي سجلّ", "No records recognized") }); return; }
     // ✅ حماية: لو عدد ضخم غير منطقي، أكّد قبل ما نكمّل
     const empCount = new Set(parsed.map((p) => p.name)).size;
-    if (empCount > 400 && !confirm(t(
+    if (empCount > 400 && !(await confirmDialog({ message: t(
       `تم التعرّف على ${empCount} "موظف" — ده رقم كبير وقد يعني إن الملف اتقرأ غلط. تكمّل؟`,
-      `Detected ${empCount} "employees" — that's unusually high and may mean the file was misread. Continue?`))) return;
+      `Detected ${empCount} "employees" — that's unusually high and may mean the file was misread. Continue?`) }))) return;
     setImporting(true); setImportProgress(0);
     try {
       // ✅ اتصال HTTP منفصل (بمعزل عن الاتصال التفاعلي) عشان الاستيراد الكبير مايهنّجش الموقع
@@ -263,27 +264,27 @@ export default function Attendance() {
         setImportProgress(Math.min(100, Math.round(((i + slice.length) / parsed.length) * 100)));
         await new Promise((r) => setTimeout(r, 40)); // يترك الشاشة تتنفّس وتحدّث المؤشّر
       }
-      alert(t(`تم استيراد ${parsed.length} بصمة (${empSet.size} موظف)`, `Imported ${parsed.length} punches (${empSet.size} employees)`));
+      void alertDialog({ message: t(`تم استيراد ${parsed.length} بصمة (${empSet.size} موظف)`, `Imported ${parsed.length} punches (${empSet.size} employees)`) });
       setImportOpen(false); setImportText(""); setImportFileName("");
-    } catch (e: any) { alert(e?.message || t("فشل الاستيراد", "Import failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الاستيراد", "Import failed") }); }
     finally { setImporting(false); setImportProgress(0); }
   };
 
   // ---- Sync to payroll ----
   const runSync = async () => {
-    if (!confirm(t(`ترحيل حضور وأوفرتايم شهر ${month} إلى كشف الرواتب؟`, `Sync ${month} attendance & overtime to payroll?`))) return;
+    if (!(await confirmDialog({ message: t(`ترحيل حضور وأوفرتايم شهر ${month} إلى كشف الرواتب؟`, `Sync ${month} attendance & overtime to payroll?`) }))) return;
     try {
       const res: any = await syncM({ month, sessionToken });
       const msg = t(`تم تحديث ${res.updated} موظف في الرواتب`, `Updated ${res.updated} payroll rows`)
         + (res.unmatched?.length ? "\n" + t("غير مطابق: ", "Unmatched: ") + res.unmatched.join(", ") : "");
-      alert(msg);
-    } catch (e: any) { alert(e?.message || t("فشل الترحيل", "Sync failed")); }
+      void alertDialog({ message: msg });
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الترحيل", "Sync failed") }); }
   };
 
   // ---- طباعة تقرير شهري شامل (A4) ----
   const handlePrintMonthly = () => {
     const emps2 = (summary?.employees || []) as any[];
-    if (!emps2.length) { alert(t("لا توجد بيانات لهذا الشهر", "No data for this month")); return; }
+    if (!emps2.length) { void alertDialog({ message: t("لا توجد بيانات لهذا الشهر", "No data for this month") }); return; }
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
     const sorted = [...emps2].sort((a, b) => (b.workedDays || 0) - (a.workedDays || 0));
     const tot = {

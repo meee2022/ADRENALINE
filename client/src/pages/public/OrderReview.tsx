@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog } from "@/lib/dialogs";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionShortfall, orderedSubscriptionSlots } from "@/lib/subscription";
 import { AlertTriangle, MessageCircle } from "lucide-react";
@@ -134,26 +135,26 @@ export default function OrderReview() {
 
   const handleSubmit = async () => {
     if (!customerPhone) {
-      alert(t("يرجى إدخال رقم الجوال", "Please enter your phone number"));
+      void alertDialog({ message: t("يرجى إدخال رقم الجوال", "Please enter your phone number") });
       return;
     }
     // الاسم مطلوب فقط لو لا حساب مربوط بالرقم؛ المربوط يكفيه customerId.
     if (!customerName && !findCustomerByPhone) {
-      alert(t("يرجى إدخال الاسم", "Please enter your name"));
+      void alertDialog({ message: t("يرجى إدخال الاسم", "Please enter your name") });
       return;
     }
 
     if (selectedMeals.length === 0) {
-      alert(t("يرجى اختيار وجبات أولاً", "Please select meals first"));
+      void alertDialog({ message: t("يرجى اختيار وجبات أولاً", "Please select meals first") });
       return;
     }
 
     // 🔒 مطابقة الاشتراك: لازم يُكمل كل أيام اشتراكه قبل الإرسال.
     if (isShort) {
-      alert(t(
+      void alertDialog({ message: t(
         "خطتك غير مكتملة. أكمل باقي وجبات أيام اشتراكك أولاً لتأكيد الخطة وإرسالها.",
         "Your plan is incomplete. Please complete the rest of your subscription days before confirming and sending.",
-      ));
+      ) });
       return;
     }
 
@@ -178,12 +179,12 @@ export default function OrderReview() {
         idempotencyKey: idem,
       });
 
-      alert(t(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`, `✅ Your order was sent successfully!\nOrder number: ${result.orderNumber}\nWe'll contact you soon.`));
+      void alertDialog({ message: t(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`, `✅ Your order was sent successfully!\nOrder number: ${result.orderNumber}\nWe'll contact you soon.`) });
       clearCart();
       setLocation("/");
     } catch (error) {
       console.error("Error submitting order:", error);
-      alert(t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again."));
+      void alertDialog({ message: t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again.") });
     } finally {
       setIsSubmitting(false);
     }

@@ -5,6 +5,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -204,7 +205,7 @@ export default function Users() {
   };
 
   const handleDelete = async (userId: string) => {
-    if (!confirm(t("users.delete_confirm"))) return;
+    if (!(await confirmDialog({ message: t("users.delete_confirm"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
 
     try {
       await convex.mutation(api.users.deleteUser, { userId: userId as Id<"users">, sessionToken });

@@ -731,7 +731,7 @@ export default function Customers() {
         rows = csvToObjects(text);
       }
     } catch {
-      alert(isRtl ? "الملف غير صالح" : "Invalid file");
+      void alertDialog({ message: isRtl ? "الملف غير صالح" : "Invalid file" });
       return;
     }
 
@@ -742,9 +742,9 @@ export default function Customers() {
     }
 
     if (mapped.length === 0) {
-      alert(
-        isRtl ? "لا توجد بيانات صالحة للاستيراد" : "No valid rows to import",
-      );
+      void alertDialog({
+        message: isRtl ? "لا توجد بيانات صالحة للاستيراد" : "No valid rows to import",
+      });
       return;
     }
 
@@ -767,10 +767,10 @@ export default function Customers() {
     try {
       const res = await importCustomers.mutateAsync(importPreview);
       setImportStats(res);
-      alert(isRtl ? "تم الاستيراد ✅" : "Imported ✅");
+      void alertDialog({ message: isRtl ? "تم الاستيراد ✅" : "Imported ✅" });
     } catch (e) {
       console.error(e);
-      alert(isRtl ? "فشل الاستيراد" : "Import failed");
+      void alertDialog({ message: isRtl ? "فشل الاستيراد" : "Import failed" });
     } finally {
       setImportRunning(false);
     }
@@ -1473,7 +1473,7 @@ export default function Customers() {
                         onClick={async () => {
                           const addr = form.getValues("address");
                           if (!addr || !addr.trim()) {
-                            alert(isRtl ? "أدخل العنوان أولاً" : "Enter an address first");
+                            void alertDialog({ message: isRtl ? "أدخل العنوان أولاً" : "Enter an address first" });
                             return;
                           }
                           setGeocoding(true);
@@ -1483,7 +1483,7 @@ export default function Customers() {
                               form.setValue("lat", res.lat, { shouldDirty: true });
                               form.setValue("lng", res.lng, { shouldDirty: true });
                             } else {
-                              alert(isRtl ? "تعذّر تحديد الموقع — حدّده يدوياً على الخريطة" : "Couldn't locate — pin it manually");
+                              void alertDialog({ message: isRtl ? "تعذّر تحديد الموقع — حدّده يدوياً على الخريطة" : "Couldn't locate — pin it manually" });
                             }
                           } finally { setGeocoding(false); }
                         }}
@@ -1518,7 +1518,7 @@ export default function Customers() {
                             form.setValue("lng", res.lng, { shouldDirty: true });
                             setLocLink("");
                           } else {
-                            alert(isRtl ? "تعذّر قراءة الموقع من الرابط — افتحه وانسخ الرابط الكامل، أو حدّده على الخريطة" : "Couldn't read the link — open it and copy the full URL, or pin it on the map");
+                            void alertDialog({ message: isRtl ? "تعذّر قراءة الموقع من الرابط — افتحه وانسخ الرابط الكامل، أو حدّده على الخريطة" : "Couldn't read the link — open it and copy the full URL, or pin it on the map" });
                           }
                         } finally { setResolvingLink(false); }
                       }}

@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,7 @@ export default function MenuManagement() {
   const syncFromPublicMutation = useMutation(api.menuItems.syncFromPublicMeals);
 
   const handleSyncFromPublic = async () => {
-    if (!window.confirm(isRtl ? "هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم." : "Copy all meals from the public website menu?\nMeals already existing with the same name will be skipped.")) {
+    if (!(await confirmDialog({ message: isRtl ? "هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم." : "Copy all meals from the public website menu?\nMeals already existing with the same name will be skipped." }))) {
       return;
     }
     setIsSyncing(true);
@@ -88,7 +89,7 @@ export default function MenuManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm(t("menu_management.delete_confirm"))) return;
+    if (!(await confirmDialog({ message: t("menu_management.delete_confirm"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
 
     try {
       await convex.mutation(api.menuItems.remove, { id: id as Id<"menuItems">, sessionToken });

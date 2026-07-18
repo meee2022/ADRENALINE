@@ -8,6 +8,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/store";
+import { confirmDialog } from "@/lib/dialogs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Trash2, Plus, Boxes } from "lucide-react";
@@ -62,7 +63,7 @@ export function IngredientsDialog({
   };
 
   const handleRemove = async (id: string) => {
-    if (!confirm(t("حذف هذا المكوّن من الوجبة؟", "Remove this ingredient from the meal?"))) return;
+    if (!(await confirmDialog({ message: t("حذف هذا المكوّن من الوجبة؟", "Remove this ingredient from the meal?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
     await removeMutation({ id: id as any, sessionToken });
     toast({ title: t("تم الحذف", "Deleted") });
   };

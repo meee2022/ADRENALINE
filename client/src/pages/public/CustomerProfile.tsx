@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -113,11 +114,11 @@ export default function CustomerProfile() {
     try {
       const r = await redeemMut({ customerId: profile.subscription.id, sessionToken });
       await loadProfile();
-      alert(isRtl
+      void alertDialog({ message: isRtl
         ? `تم استبدال ${r.redeemed} نقطة برصيد خصم ${r.credit} ر.ق ✅`
-        : `Redeemed ${r.redeemed} points for ${r.credit} QAR credit ✅`);
+        : `Redeemed ${r.redeemed} points for ${r.credit} QAR credit ✅` });
     } catch (e: any) {
-      alert(e?.message || (isRtl ? "تعذّر الاستبدال" : "Redeem failed"));
+      void alertDialog({ message: e?.message || (isRtl ? "تعذّر الاستبدال" : "Redeem failed") });
     } finally { setBusy(false); }
   };
   const markAllRead = async () => {

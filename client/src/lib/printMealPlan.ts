@@ -10,6 +10,7 @@
  */
 
 import { openPrintDoc } from "./printDoc";
+import { alertDialog } from "./dialogs";
 
 export type MealRow = {
   /** العمود الأول: التاريخ أو اليوم أو رقم الوجبة */
@@ -65,7 +66,7 @@ function groupRows(g: MealGroup): MealRow[] {
 export function printMealPlan(input: PrintMealPlanInput): void {
   const groups = input.groups.filter((g) => groupRows(g).length > 0);
   if (groups.length === 0) {
-    alert("لا توجد وجبات لطباعتها");
+    void alertDialog({ message: "لا توجد وجبات لطباعتها" });
     return;
   }
 
@@ -214,7 +215,7 @@ export type WeeklyReportInput = {
 export function printWeeklyReport(input: WeeklyReportInput): void {
   const weeks = input.weeks.filter((w) => w.days.length > 0);
   if (weeks.length === 0) {
-    alert("لا توجد وجبات لطباعتها");
+    void alertDialog({ message: "لا توجد وجبات لطباعتها" });
     return;
   }
 
@@ -304,7 +305,7 @@ export function printWeeklyReport(input: WeeklyReportInput): void {
 export async function printMealPlanCards(input: PrintMealPlanInput): Promise<void> {
   const groups = input.groups.filter((g) => groupRows(g).length > 0);
   if (groups.length === 0) {
-    alert("لا توجد وجبات لطباعتها");
+    void alertDialog({ message: "لا توجد وجبات لطباعتها" });
     return;
   }
 

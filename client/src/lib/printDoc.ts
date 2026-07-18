@@ -12,6 +12,8 @@
  *   وبنحقنه كـ<title> — كده المدير يلاقي "تقرير-مبيعات-المنافذ-…" مش "document".
  */
 
+import { alertDialog } from "./dialogs";
+
 /** ينظّف اسم الملف من المحارف الممنوعة في ويندوز/ماك. */
 export function safeFileName(s: string): string {
   return String(s || "")
@@ -41,11 +43,11 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
 
   const w = window.open("", "_blank", `width=${width},height=${height}`);
   if (!w) {
-    alert(
-      isRtl
+    void alertDialog({
+      message: isRtl
         ? "المتصفح منع النافذة المنبثقة — اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة."
         : "Pop-up blocked — allow pop-ups for this site, then try again.",
-    );
+    });
     return false;
   }
 

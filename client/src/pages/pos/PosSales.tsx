@@ -6,11 +6,11 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
-import { confirmDialog } from "@/lib/dialogs";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { getPosMealImage } from "@/lib/posMealImages";
-import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3 } from "lucide-react";
+import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, ShoppingCart, ChevronDown } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
 
@@ -55,6 +55,7 @@ export default function PosSales() {
   const [showCharge, setShowCharge] = useState(false);
   const [showReceiptId, setShowReceiptId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [localOrderNo] = useState(genLocalOrderNo);
 
   const usePosCategories = (posCats?.length ?? 0) > 0;
@@ -87,7 +88,7 @@ export default function PosSales() {
   }, [cart, discountPct]);
 
   const addToCart = (m: any) => {
-    if (!shift) { alert(tt("افتح وردية أولاً من تبويب الوردية", "Open a shift first")); return; }
+    if (!shift) { void alertDialog({ message: tt("افتح وردية أولاً من تبويب الوردية", "Open a shift first") }); return; }
     const idx = cart.findIndex((l: any) => l.mealId === m.id);
     if (idx >= 0) {
       const cp = [...cart]; cp[idx] = { ...cp[idx], qty: cp[idx].qty + 1 }; setCart(cp);
@@ -129,7 +130,7 @@ export default function PosSales() {
       setDiscountPct(0);
       setShowReceiptId(r.id);
     } catch (e: any) {
-      alert(e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || tt("حدث خطأ", "Something went wrong"));
+      void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || tt("حدث خطأ", "Something went wrong") });
     } finally { setBusy(false); }
   };
 
@@ -141,14 +142,35 @@ export default function PosSales() {
 
   return (
     <div className="pos-sales-screen h-full flex min-w-0 bg-[#edf5f8] text-[#0F1516]">
+      {mobileCartOpen && (
+        <button
+          type="button"
+          aria-label={tt("إغلاق السلة", "Close cart")}
+          className="pos-mobile-cart-backdrop"
+          onClick={() => setMobileCartOpen(false)}
+        />
+      )}
+      <button
+        type="button"
+        className="pos-mobile-cart-toggle"
+        onClick={() => setMobileCartOpen(true)}
+        aria-expanded={mobileCartOpen}
+      >
+        <span className="flex items-center gap-2"><ShoppingCart className="h-5 w-5" />{tt("السلة", "Cart")} ({totals.count})</span>
+        <strong>{totals.total.toFixed(2)} {tt("ر.ق", "QAR")}</strong>
+      </button>
       {/* ═══════════ Ticket (يمين في RTL) ═══════════ */}
-      <aside className="pos-ticket-panel w-[clamp(290px,31vw,390px)] shrink-0 flex flex-col border-s border-[#d8e6ec] bg-[#f8fbfc] shadow-[8px_0_30px_rgba(71,117,156,0.08)]">
+      <aside className={cn("pos-ticket-panel w-[clamp(290px,31vw,390px)] shrink-0 flex flex-col border-s border-[#d8e6ec] bg-[#f8fbfc] shadow-[8px_0_30px_rgba(71,117,156,0.08)]", mobileCartOpen && "is-mobile-open")}>
         {/* Header: order type + order # */}
         <div className="shrink-0 border-b border-[#dce9ee] bg-white p-3.5 sm:p-4">
           <div className="flex items-center justify-between mb-3">
+            <button type="button" onClick={() => setMobileCartOpen(false)} className="pos-mobile-cart-close" aria-label={tt("إغلاق السلة", "Close cart")}>
+              <ChevronDown className="h-5 w-5" />
+            </button>
             <button
+              aria-label={tt("مسح الطلب", "Clear order")}
               onClick={async () => { if (cart.length && await confirmDialog({ title: tt("مسح الطلب", "Clear order"), message: tt("هل تريد مسح الطلب الحالي؟", "Clear the current order?"), variant: "danger", confirmText: tt("مسح", "Clear") })) { clearCart(); setCustomerName(""); setDiscountPct(0); } }}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-red-100 bg-red-50 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-100 bg-red-50 text-red-400 transition-colors hover:bg-red-100 hover:text-red-600"
               title={tt("مسح الطلب", "Clear order")}
             >
               <Trash2 className="h-5 w-5" />
@@ -242,16 +264,16 @@ export default function PosSales() {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center rounded-lg overflow-hidden border border-[#d8e5ea] bg-white">
-                    <button onClick={() => setQty(i, l.qty - 1)} className="w-8 h-8 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
+                    <button aria-label={tt("تقليل الكمية", "Decrease quantity")} onClick={() => setQty(i, l.qty - 1)} className="h-10 w-10 shrink-0 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
                       <Minus className="h-3.5 w-3.5" />
                     </button>
-                    <span className="w-9 h-8 text-center font-black text-[#17324d] grid place-items-center text-sm">{l.qty}</span>
-                    <button onClick={() => setQty(i, l.qty + 1)} className="w-8 h-8 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
+                    <span className="h-10 w-9 text-center font-black text-[#17324d] grid place-items-center text-sm">{l.qty}</span>
+                    <button aria-label={tt("زيادة الكمية", "Increase quantity")} onClick={() => setQty(i, l.qty + 1)} className="h-10 w-10 shrink-0 hover:bg-[#eef8fb] grid place-items-center text-[#607987]">
                       <Plus className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   <span className="text-[11px] text-slate-500 font-bold">× {Number(l.unitPrice).toFixed(2)}</span>
-                  <button onClick={() => removeLine(i)} className="ms-auto text-slate-500 hover:text-red-400 rounded p-1">
+                  <button aria-label={tt("حذف الصنف", "Remove item")} onClick={() => removeLine(i)} className="ms-auto grid h-10 w-10 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-500">
                     <X className="h-4 w-4" />
                   </button>
                 </div>
@@ -301,7 +323,7 @@ export default function PosSales() {
             <button
               onClick={() => {
                 const note = prompt(tt("ملاحظة على الطلب:", "Order note:"));
-                if (note != null) alert(tt("الملاحظة: ", "Note: ") + note); // placeholder — يمكن تخزينها لاحقاً
+                if (note != null) void alertDialog({ message: tt("الملاحظة: ", "Note: ") + note }); // placeholder — يمكن تخزينها لاحقاً
               }}
               className="h-9 px-3 rounded-xl border border-[#d8e5ea] bg-white text-xs font-bold text-[#607987] flex items-center gap-1.5 hover:bg-[#eef8fb]"
               title={tt("ملاحظة على الطلب", "Order note")}

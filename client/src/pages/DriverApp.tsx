@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { openWhatsApp, WhatsAppTemplates } from "@/lib/whatsapp";
 import { useLanguage } from "@/lib/i18n";
+import { confirmDialog } from "@/lib/dialogs";
 
 const B = { brand: "#3cc4f0", deep: "#0E76AC", ink: "#0E2A4A" };
 
@@ -108,8 +109,8 @@ export default function DriverApp() {
       if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
       toast({ title: t("تم التسليم ✅", "Delivered ✅"), description: stop.customerName });
       if (stop.phone) {
-        setTimeout(() => {
-          if (confirm(t("إرسال رسالة شكر للعميل؟", "Send a thank-you message to the customer?"))) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0]));
+        setTimeout(async () => {
+          if (await confirmDialog({ message: t("إرسال رسالة شكر للعميل؟", "Send a thank-you message to the customer?") })) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0]));
         }, 300);
       }
     } catch (e: any) {
@@ -136,7 +137,7 @@ export default function DriverApp() {
       const r: any = await markDelivered({ planId: stop.planId, podStorageId: storageId, sessionToken });
       if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
       toast({ title: t("تم التسليم مع صورة ✅", "Delivered with photo ✅"), description: stop.customerName });
-      if (stop.phone) setTimeout(() => { if (confirm(t("إرسال رسالة شكر للعميل؟", "Send a thank-you message?"))) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0])); }, 300);
+      if (stop.phone) setTimeout(async () => { if (await confirmDialog({ message: t("إرسال رسالة شكر للعميل؟", "Send a thank-you message?") })) openWhatsApp(stop.phone, WhatsAppTemplates.delivered(String(stop.customerName).split(" ")[0])); }, 300);
     } catch (e: any) {
       toast({ title: t("فشل رفع الصورة", "Photo upload failed"), description: String(e?.message || e), variant: "destructive" });
     } finally { setBusy(null); }

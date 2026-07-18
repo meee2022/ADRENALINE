@@ -9,6 +9,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { openPrintDoc } from "@/lib/printDoc";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,18 +55,18 @@ export default function OnlineOrders() {
 
   const add = async () => {
     const amt = Number(amount);
-    if (isNaN(amt) || amt < 0) { alert(t("اكتب قيمة الطلب صح", "Enter a valid amount")); return; }
+    if (isNaN(amt) || amt < 0) { void alertDialog({ message: t("اكتب قيمة الطلب صح", "Enter a valid amount") }); return; }
     setSaving(true);
     try {
       await logM({ date, platform: platform as any, mealsCount: meals, amount: amt, orderRef: orderRef.trim() || undefined, sessionToken });
       setMeals(1); setAmount(""); setOrderRef("");
-    } catch (e: any) { alert(e?.message || t("فشل التسجيل", "Failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل التسجيل", "Failed") }); }
     finally { setSaving(false); }
   };
 
   const del = async (id: string) => {
-    if (!confirm(t("حذف الطلب ده؟", "Delete this order?"))) return;
-    try { await removeM({ id: id as any, sessionToken }); } catch (e: any) { alert(e?.message || "err"); }
+    if (!(await confirmDialog({ message: t("حذف الطلب ده؟", "Delete this order?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
+    try { await removeM({ id: id as any, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "err" }); }
   };
 
   const dayT = summary?.day?.totals || { orders: 0, meals: 0, revenue: 0 };

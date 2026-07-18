@@ -8,6 +8,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,7 +66,7 @@ export default function Leaves() {
   };
 
   const save = async () => {
-    if (!form.name.trim() || !form.startDate || !form.endDate) { alert(t("املأ الاسم والتواريخ", "Fill name and dates")); return; }
+    if (!form.name.trim() || !form.startDate || !form.endDate) { void alertDialog({ message: t("املأ الاسم والتواريخ", "Fill name and dates") }); return; }
     const payload: any = {
       name: form.name.trim(), type: form.type, startDate: form.startDate, endDate: form.endDate,
       days: Number(form.days) || daysBetween(form.startDate, form.endDate), paid: !!form.paid,
@@ -75,11 +76,11 @@ export default function Leaves() {
       if (editingId) await updateM({ id: editingId as any, ...payload });
       else await createM(payload);
       setDialogOpen(false);
-    } catch (e: any) { alert(e?.message || t("فشل الحفظ", "Save failed")); }
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
   };
   const del = async (r: any) => {
-    if (!confirm(t(`حذف إجازة ${r.name}؟`, `Delete ${r.name}'s leave?`))) return;
-    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { alert(e?.message || "Error"); }
+    if (!(await confirmDialog({ message: t(`حذف إجازة ${r.name}؟`, `Delete ${r.name}'s leave?`), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
+    try { await removeM({ id: r._id, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "Error" }); }
   };
 
   const fmt = (d: string) => d;

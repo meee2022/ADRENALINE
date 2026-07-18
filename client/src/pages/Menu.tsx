@@ -67,6 +67,7 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -655,9 +656,9 @@ function CategoriesTab({ categories }: { categories: MealCategory[] }) {
       setName("");
     } catch (error: any) {
       console.error("Failed to save category:", error);
-      alert(
-        error?.message || (language === "ar" ? "فشل الحفظ" : "Save failed"),
-      );
+      void alertDialog({
+        message: error?.message || (language === "ar" ? "فشل الحفظ" : "Save failed"),
+      });
     }
   };
 
@@ -681,27 +682,28 @@ function CategoriesTab({ categories }: { categories: MealCategory[] }) {
       await reorderCategories.mutateAsync(reorderedCategories);
     } catch (error: any) {
       console.error("Failed to reorder categories:", error);
-      alert(
-        error?.message ||
+      void alertDialog({
+        message: error?.message ||
           (language === "ar" ? "فشل الترتيب" : "Reorder failed"),
-      );
+      });
     }
   };
 
   const onDelete = async (cat: MealCategory) => {
-    const ok = window.confirm(
-      language === "ar"
+    const ok = await confirmDialog({
+      message: language === "ar"
         ? `هل تريد حذف الصنف "${cat.name}"؟\nلن يتم الحذف إذا كان عليه وجبات.`
         : `Delete category "${cat.name}"?\nIt can't be deleted if it has items.`,
-    );
+      variant: "danger", confirmText: "حذف",
+    });
     if (!ok) return;
 
     try {
       await deleteCategory.mutateAsync(cat._id);
     } catch (error: any) {
-      alert(
-        error?.message || (language === "ar" ? "فشل الحذف" : "Delete failed"),
-      );
+      void alertDialog({
+        message: error?.message || (language === "ar" ? "فشل الحذف" : "Delete failed"),
+      });
     }
   };
 
@@ -1025,26 +1027,27 @@ function MenuItemsTab({
       resetForm();
     } catch (error: any) {
       console.error("Failed to save menu item:", error);
-      alert(
-        error?.message || (language === "ar" ? "فشل الحفظ" : "Save failed"),
-      );
+      void alertDialog({
+        message: error?.message || (language === "ar" ? "فشل الحفظ" : "Save failed"),
+      });
     }
   };
 
   const onDeleteItem = async (item: MenuItem) => {
-    const ok = window.confirm(
-      language === "ar"
+    const ok = await confirmDialog({
+      message: language === "ar"
         ? `حذف الوجبة "${item.name}"؟`
         : `Delete "${item.name}"?`,
-    );
+      variant: "danger", confirmText: "حذف",
+    });
     if (!ok) return;
 
     try {
       await deleteMenuItem.mutateAsync(item._id);
     } catch (error: any) {
-      alert(
-        error?.message || (language === "ar" ? "فشل الحذف" : "Delete failed"),
-      );
+      void alertDialog({
+        message: error?.message || (language === "ar" ? "فشل الحذف" : "Delete failed"),
+      });
     }
   };
 
@@ -1415,9 +1418,10 @@ function MenuItemsTab({
               categoryName={selectedCategory?.name || "Unknown"}
               onEdit={openEdit}
               onDelete={async (id, name) => {
-                const ok = confirm(
-                  language === "ar" ? `حذف ${name}؟` : `Delete ${name}?`
-                );
+                const ok = await confirmDialog({
+                  message: language === "ar" ? `حذف ${name}؟` : `Delete ${name}?`,
+                  variant: "danger", confirmText: "حذف",
+                });
                 if (!ok) return;
                 await deleteMenuItem.mutateAsync(id);
               }}
@@ -1506,19 +1510,20 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
       reset();
     } catch (err: any) {
       console.error(err);
-      alert(isRtl ? "فشل الحفظ" : "Save failed");
+      void alertDialog({ message: isRtl ? "فشل الحفظ" : "Save failed" });
     }
   };
 
   const onDelete = async (m: Modifier) => {
-    const ok = confirm(
-      isRtl ? `حذف "${(m as any).name}"؟` : `Delete "${(m as any).name}"?`,
-    );
+    const ok = await confirmDialog({
+      message: isRtl ? `حذف "${(m as any).name}"؟` : `Delete "${(m as any).name}"?`,
+      variant: "danger", confirmText: isRtl ? "حذف" : "Delete",
+    });
     if (!ok) return;
     try {
       await deleteModifier.mutateAsync((m as any)._id);
     } catch (err) {
-      alert(isRtl ? "فشل الحذف" : "Delete failed");
+      void alertDialog({ message: isRtl ? "فشل الحذف" : "Delete failed" });
     }
   };
 
