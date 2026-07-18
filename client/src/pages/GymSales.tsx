@@ -1072,6 +1072,57 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         )}
       </div>
 
+      {/* 💵 كشف الحساب على الشاشة — نفس جدول الطباعة (كان يظهر في الـPDF فقط) */}
+      {scope === "statement" && report && (() => {
+        const commissionRate = Number((gyms.find((g: any) => g.id === gymId) as any)?.discountPct ?? 20);
+        const sales = Number(report.netRevenue ?? report.totalRevenue);
+        const commission = Math.round(sales * commissionRate) / 100;
+        const receivable = Math.round((sales - commission) * 100) / 100;
+        return (
+          <div className="space-y-3">
+            <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="bg-[#0E76AC] text-white text-[12px]">
+                  <tr>
+                    <th className="px-3 py-2.5 text-start">{t("التاريخ", "Date")}</th>
+                    <th className="px-3 py-2.5 text-end">{t("كمية الإنتاج", "Production Qty")}</th>
+                    <th className="px-3 py-2.5 text-end">{t("قيمة الإنتاج", "Production Amount")}</th>
+                    <th className="px-3 py-2.5 text-end">{t("كمية المرتجع", "Return Qty")}</th>
+                    <th className="px-3 py-2.5 text-end">{t("قيمة المرتجع", "Return Amount")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {(report.days || []).map((d: any) => (
+                    <tr key={d.date}>
+                      <td className="px-3 py-2.5 font-bold tabular-nums text-slate-700" dir="ltr">{d.date}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.meals}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.total.toFixed(2)}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.returned || 0}</td>
+                      <td className={cn("px-3 py-2.5 text-end font-black tabular-nums", Number(d.waste) > 0 ? "text-red-600" : "text-slate-400")}>{Number(d.waste || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-cyan-50 text-[#0E76AC]">
+                    <td className="px-3 py-2.5 font-black">{t("الإجمالي", "Total")}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalMeals}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalRevenue.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalReturned}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{Number(report.totalWasteValue || 0).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+            <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="bg-[#0E2A4A] px-4 py-2.5 text-sm font-black text-white">{t("الخلاصة المالية", "Financial summary")}</div>
+              <div className="divide-y divide-slate-100 text-sm">
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("المبيعات (الإنتاج − المرتجع)", "Sales (production − returns)")}</span><span className="font-black tabular-nums">{sales.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("العمولة", "Commission")} ({commissionRate}%)</span><span className="font-black tabular-nums text-red-600">− {commission.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between bg-[#0E76AC] px-4 py-3 text-white"><span className="font-black">{t("المستحق (Receivable)", "Receivable")}</span><span className="font-black tabular-nums">{receivable.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
+
       {showDailyChart && (
       <section className="gym-report-panel overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
