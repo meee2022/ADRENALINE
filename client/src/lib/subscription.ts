@@ -13,7 +13,7 @@
  *   getFullYear/getMonth/getDate المحلية.
  */
 
-import { localISO } from "./mealSchedule";
+import { localISO, isSnackCategory, isMainCategory } from "./mealSchedule";
 
 /** تاريخ اليوم محلياً بصيغة yyyy-MM-dd. */
 export function localToday(): string {
@@ -195,4 +195,56 @@ export function slotBlockDate(
     cur.setDate(cur.getDate() + 1);
   }
   return null;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ *  نقص الخطة عن الاشتراك — المصدر الوحيد لفحص «كم وجبة/سناك ناقصة».
+ *
+ *  ⚠️ لا يغيّر أي قيد قائم (السقف، الجدولة، تحديد الأيام) — فقط يحسب.
+ *  القاعدة (صارمة): كل يوم مضمَّن في الطلب يجب أن يحتوي بالضبط عدد وجبات
+ *  الاشتراك (mealsPerDay رئيسية + snacksPerDay سناك). لو أقل → نقص.
+ *  السقف الأعلى محكوم أصلاً في المنيو، فهنا نكتفي بفحص «الأقل».
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+export interface PlanShortfall {
+  mealsShort: number;   // إجمالي الوجبات الرئيسية الناقصة عبر كل الأيام
+  snacksShort: number;  // إجمالي السناكات الناقصة
+  incompleteDays: number;
+  worstDay: { week: number; day: string; mains: number; snacks: number } | null;
+}
+
+/** يحسب نقص الخطة عن الاشتراك. بلا عدد مضبوط (0/غير معرّف) ⇒ لا نقص (لا فحص). */
+export function planShortfall(
+  items: Array<{ week?: number | string; day?: string; category?: string; isOff?: boolean }>,
+  mealsPerDay: number,
+  snacksPerDay: number,
+): PlanShortfall {
+  const mpd = Number.isFinite(mealsPerDay) && mealsPerDay > 0 ? Math.floor(mealsPerDay) : 0;
+  const spd = Number.isFinite(snacksPerDay) && snacksPerDay > 0 ? Math.floor(snacksPerDay) : 0;
+  if (!mpd && !spd) return { mealsShort: 0, snacksShort: 0, incompleteDays: 0, worstDay: null };
+
+  const byDay = new Map<string, { week: number; day: string; mains: number; snacks: number }>();
+  for (const it of items) {
+    if (it?.isOff) continue;
+    const week = Number(it?.week); const day = String(it?.day || "").toLowerCase();
+    if (!week || !day) continue;
+    const k = `${week}:${day}`;
+    const rec = byDay.get(k) || { week, day, mains: 0, snacks: 0 };
+    // ⚠️ نفس تصنيف المنيو اليدوي بالضبط (PublicMenu): الرئيسية = isMainCategory،
+    //    السناك = isSnackCategory. الفئات غير المعروفة لا تُحسب في أيٍّ منهما،
+    //    كي لا تكون البوابة أصرم من المنيو فتمنع طلباً يعتبره المنيو مكتملاً.
+    if (isSnackCategory(it?.category)) rec.snacks++;
+    else if (isMainCategory(it?.category)) rec.mains++;
+    byDay.set(k, rec);
+  }
+
+  let mealsShort = 0, snacksShort = 0, incompleteDays = 0;
+  let worst: PlanShortfall["worstDay"] = null;
+  for (const rec of byDay.values()) {
+    const ms = Math.max(0, mpd - rec.mains);
+    const ss = Math.max(0, spd - rec.snacks);
+    if (ms || ss) { incompleteDays++; if (!worst) worst = rec; }
+    mealsShort += ms; snacksShort += ss;
+  }
+  return { mealsShort, snacksShort, incompleteDays, worstDay: worst };
 }

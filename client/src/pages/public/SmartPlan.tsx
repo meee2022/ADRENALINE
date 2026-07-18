@@ -13,7 +13,7 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
-import { subscriptionState, orderedSubscriptionSlots } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots, planShortfall } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
@@ -133,6 +133,24 @@ export default function SmartPlan() {
     customerPhone: currentCustomer?.phone || phone.trim() || "—",
     customerId: ((currentCustomer?.customerId as any) || (matchedCustomer?._id as any)) || undefined,
   });
+
+  const settings = useQuery(api.restaurantSettings.get);
+  /** 🔒 نفس بوابة مطابقة الاشتراك المستخدمة في المنيو اليدوي (المصدر الوحيد
+   *    planShortfall). لو الخطة أقل من عدد وجبات الاشتراك → نمنع الإرسال ونوجّه
+   *    للأخصائية. لا يغيّر أي قيد قائم. يُرجِع رسالة الخطأ أو "" لو مطابِقة/غير معروفة. */
+  const shortfallGuard = (items: Array<{ week?: number; day?: string; category?: string }>): string => {
+    const sf = planShortfall(items, Number(subMeals) || 0, subSnacks);
+    if (sf.mealsShort <= 0 && sf.snacksShort <= 0) return "";
+    const parts: string[] = [];
+    if (sf.mealsShort) parts.push(`${sf.mealsShort} ${t("وجبة رئيسية", "main meal(s)")}`);
+    if (sf.snacksShort) parts.push(`${sf.snacksShort} ${t("سناك", "snack(s)")}`);
+    const wa = (settings?.phone || "+97412345678").replace(/\D/g, "");
+    const link = `https://wa.me/${wa}`;
+    return t(
+      `خطتك ناقصة ${parts.join(" و ")} عن اشتراكك ولا يمكن إرسالها. تواصل مع الأخصائية: ${link}`,
+      `Your plan is short by ${parts.join(" and ")} versus your subscription and cannot be submitted. Contact the specialist: ${link}`,
+    );
+  };
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);   // خطة اليوم
   const [weekly, setWeekly] = useState<any>(null);    // خطة الأسبوع
@@ -192,6 +210,8 @@ export default function SmartPlan() {
         }
       }
       if (!items.length) { setError(t("لا توجد وجبات في الخطة.", "No meals in the plan.")); setOrdering(false); return; }
+      const sfMsg = shortfallGuard(items);
+      if (sfMsg) { setError(sfMsg); setOrdering(false); return; }
       // 🔒 نبعت IDs فقط — الأسعار والسعرات محسوبة على الخادم
       const idem = `sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
@@ -212,6 +232,8 @@ export default function SmartPlan() {
     try {
       const day = result?.meta?.day || WEEKDAYS[new Date().getDay()];
       const week = result?.meta?.rotationWeek || 1;
+      const sfMsg = shortfallGuard(result.picks.map((m: any) => ({ week, day, category: m.category })));
+      if (sfMsg) { setError(sfMsg); setOrdering(false); return; }
       // 🔒 نبعت IDs فقط
       const items = result.picks.map((m: any) => ({ mealId: m.id, week, day }));
       const idem = `sp_daily_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;

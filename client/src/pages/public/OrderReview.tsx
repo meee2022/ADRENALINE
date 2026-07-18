@@ -4,6 +4,8 @@ import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lu
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
+import { planShortfall } from "@/lib/subscription";
+import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
@@ -69,8 +71,32 @@ export default function OrderReview() {
     customerPhone ? { phone: customerPhone } : "skip"
   );
   const findCustomerByPhone = matchesByPhone?.[0] ?? null;
+  const settings = useQuery(api.restaurantSettings.get);
   const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 🔒 بوابة مطابقة الاشتراك — المصدر الوحيد (lib/subscription.planShortfall).
+  //    القاعدة (صارمة، طلب المستخدم 2026-07-18): كل يوم في الطلب = عدد وجبات
+  //    الاشتراك بالضبط. لو أقل → يُمنع الإرسال ويُعرض العدد الناقص + «تواصل مع
+  //    الأخصائية». لا يغيّر أي قيد قائم (السقف/الجدولة/تحديد الأيام) — فحص فقط.
+  const shortfall = planShortfall(
+    selectedMeals,
+    Number(findCustomerByPhone?.mealsPerDay) || 0,
+    Number(findCustomerByPhone?.snacksPerDay) || 0,
+  );
+  const isShort = shortfall.mealsShort > 0 || shortfall.snacksShort > 0;
+  const specialistPhone = (settings?.phone || "+97412345678").replace(/\D/g, "");
+  const specialistLink = () => {
+    const parts: string[] = [];
+    if (shortfall.mealsShort) parts.push(`${shortfall.mealsShort} ${t("وجبة رئيسية", "main meals")}`);
+    if (shortfall.snacksShort) parts.push(`${shortfall.snacksShort} ${t("سناك", "snacks")}`);
+    const who = findCustomerByPhone?.fullName || customerName || customerPhone;
+    const msg = t(
+      `مرحباً، معي اشتراك باسم ${who} والخطة التي اخترتها ناقصة ${parts.join(" و ")} عن اشتراكي. أرجو المساعدة في مطابقة الوجبات.`,
+      `Hi, my subscription is under ${who} and my selected plan is short by ${parts.join(" and ")} versus my subscription. Please help me match the meals.`,
+    );
+    return `https://wa.me/${specialistPhone}?text=${encodeURIComponent(msg)}`;
+  };
   
   // 🔒 لا نملأ الاسم تلقائياً — سرية: قد يكون جهازاً/رقماً مشتركاً بين عائلة،
   //    فإظهار اسم صاحب الحساب يكشف هويته لغيره. الرقم يكفي: الطلب يُربط بالحساب
@@ -109,6 +135,15 @@ export default function OrderReview() {
 
     if (selectedMeals.length === 0) {
       alert(t("يرجى اختيار وجبات أولاً", "Please select meals first"));
+      return;
+    }
+
+    // 🔒 مطابقة الاشتراك: لو الخطة أقل من عدد وجبات الاشتراك → امنع وحوّل للأخصائية.
+    if (isShort) {
+      alert(t(
+        "خطتك لا تطابق عدد وجبات اشتراكك بالضبط. يرجى التواصل مع الأخصائية لمطابقة الوجبات قبل الإرسال.",
+        "Your plan doesn't exactly match your subscription's meal count. Please contact the specialist to match your meals before submitting.",
+      ));
       return;
     }
 
@@ -398,9 +433,51 @@ export default function OrderReview() {
             </div>
           </div>
 
+          {/* 🔒 تنبيه نقص الاشتراك — يُعرض العدد الناقص ويمنع الإرسال + زر تواصل */}
+          {isShort && (
+            <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-bold text-amber-900 mb-1">
+                    {t("خطتك لا تطابق اشتراكك", "Your plan doesn't match your subscription")}
+                  </h3>
+                  <p className="text-sm text-amber-800 mb-2">
+                    {t(
+                      "عدد الوجبات المختارة أقل من عدد وجبات اشتراكك. يجب مطابقتها قبل الإرسال:",
+                      "You selected fewer meals than your subscription. They must match before submitting:",
+                    )}
+                  </p>
+                  <ul className="text-sm text-amber-900 font-semibold space-y-0.5 mb-3">
+                    {shortfall.mealsShort > 0 && (
+                      <li>• {t(`ناقص ${shortfall.mealsShort} وجبة رئيسية`, `${shortfall.mealsShort} main meal(s) short`)}</li>
+                    )}
+                    {shortfall.snacksShort > 0 && (
+                      <li>• {t(`ناقص ${shortfall.snacksShort} سناك`, `${shortfall.snacksShort} snack(s) short`)}</li>
+                    )}
+                    {shortfall.incompleteDays > 0 && (
+                      <li className="text-amber-700 font-normal">
+                        {t(`(${shortfall.incompleteDays} يوم غير مكتمل)`, `(${shortfall.incompleteDays} incomplete day(s))`)}
+                      </li>
+                    )}
+                  </ul>
+                  <a
+                    href={specialistLink()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg transition-all"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    {t("تواصل مع الأخصائية", "Contact the specialist")}
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !customerPhone || (!customerName && !findCustomerByPhone)}
+            disabled={isSubmitting || isShort || !customerPhone || (!customerName && !findCustomerByPhone)}
             className="w-full bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
