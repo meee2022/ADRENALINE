@@ -32,8 +32,17 @@ export function getUserError(error: unknown, language: "ar" | "en" = currentLang
       : "Your session expired or you do not have permission for this action.";
   }
 
-  const serverMessage = raw.match(/Server Error\s*\n?([\s\S]*?)(?:\n\s*at\s|\n\s*Called by client|$)/i)?.[1]?.trim();
-  if (serverMessage && !TECHNICAL_MARKERS.some((marker) => serverMessage.toLowerCase().includes(marker))) {
+  // ✅ رسائل الأعمال المرمية بـ `throw new Error("…")` تصل مغلّفة:
+  //    "… Server Error\nUncaught Error: <الرسالة>\n at …". نستخرج <الرسالة>
+  //    ونزيل بادئة "Uncaught Error:" قبل فحص العلامات التقنية — وإلا تحجبها كلمة
+  //    "uncaught" فتظهر رسالة عامة بلا سبب (مثال: «لا يمكن الحذف — للعميل طلبات»).
+  let serverMessage = raw
+    .match(/Server Error\s*\n?([\s\S]*?)(?:\n\s*at\s|\n\s*Called by client|$)/i)?.[1]
+    ?.trim();
+  if (serverMessage) {
+    serverMessage = serverMessage.replace(/^Uncaught\s+(?:Convex)?Error:\s*/i, "").trim();
+  }
+  if (serverMessage && !TECHNICAL_MARKERS.some((marker) => serverMessage!.toLowerCase().includes(marker))) {
     return serverMessage.slice(0, 240);
   }
 

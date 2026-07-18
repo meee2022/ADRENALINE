@@ -72,7 +72,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { confirmDialog } from "@/lib/dialogs";
+import { confirmDialog, alertDialog } from "@/lib/dialogs";
 
 /* =========================
    Date helpers - DD/MM/YYYY format
@@ -1669,7 +1669,21 @@ export default function Customers() {
                   confirmText: isRtl ? "حذف" : "Delete",
                 });
                 if (!ok) return;
-                await deleteCustomer.mutateAsync(id);
+                // ✅ كان الحذف بلا معالجة خطأ: لو رفض السيرفر (مرتبط بطلبات/خطط/حساب)
+                //    ما كانت تظهر أي رسالة، فلا يعرف المستخدم سبب عدم الحذف. الآن
+                //    نعرض سبب الرفض (رسالة السيرفر) أو تأكيد النجاح.
+                try {
+                  await deleteCustomer.mutateAsync(id);
+                  await alertDialog({
+                    title: isRtl ? "تم الحذف" : "Deleted",
+                    message: isRtl ? `تم حذف ${name}.` : `${name} has been deleted.`,
+                  });
+                } catch (e: any) {
+                  await alertDialog({
+                    title: isRtl ? "تعذّر الحذف" : "Couldn't delete",
+                    message: e?.message || (isRtl ? "حدث خطأ أثناء الحذف." : "An error occurred while deleting."),
+                  });
+                }
               }}
             />
           ))
