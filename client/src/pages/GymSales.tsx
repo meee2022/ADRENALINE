@@ -2136,6 +2136,21 @@ function OutletItemsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelect
   };
 
   const enabledCount = meals?.filter((m: any) => m.isEnabled).length || 0;
+
+  // وحدة السعر: أصناف الكافيه bulk بالجرام (3 خانات عشرية) وأصناف بالقطعة (خانتان).
+  const unitLabel = (u: string | null) => u === "gram" ? t("/جم", "/g") : u === "piece" ? t("/قطعة", "/pc") : "";
+  const fmtPrice = (m: any) => `${Number(m.outletPrice).toFixed(m.priceUnit === "gram" ? 3 : 2)} ${t("ر.ق", "QAR")}${unitLabel(m.priceUnit)}`;
+  // تجميع بالتصنيف الحقيقي للمنفذ (PROTEIN/SIDES…) بترتيب أول ظهور — عرض مرتّب.
+  const grouped = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const m of filtered) {
+      const k = m.outletCategory || (m.category ? String(m.category).toUpperCase() : "—");
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(m);
+    }
+    return [...map.entries()];
+  }, [filtered]);
+
   return (
     <div className="space-y-3">
       <Card className="rounded-lg border-slate-200"><CardContent className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-[minmax(220px,1fr)_minmax(220px,1.5fr)_auto]">
@@ -2160,12 +2175,20 @@ function OutletItemsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelect
         </div>
         <div className="max-h-[62vh] divide-y divide-slate-100 overflow-y-auto">
           {!meals && <div className="p-8 text-center text-slate-400">{t("جاري التحميل…","Loading…")}</div>}
-          {filtered.map((m: any) => <div key={m.id} className={cn("flex items-center gap-3 p-3", m.isEnabled ? "bg-emerald-50/30" : "bg-white")}>
-            <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border-2", m.isEnabled ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent")}><Check className="h-4 w-4" /></button>
-            <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{isRtl ? m.nameAr || m.nameEn : m.nameEn || m.nameAr}</p><p className="text-[10px] text-slate-400">{m.category} · {t("سعر المنيو","Menu")}: {m.menuPrice.toFixed(2)}</p></div>
-            <div className="text-end"><p className="text-sm font-black text-[#0E76AC]">{m.outletPrice.toFixed(2)} {t("ر.ق","QAR")}</p><p className="text-[10px] text-slate-400">{t("السعر محفوظ حتى عند الإيقاف","Price retained when disabled")}</p></div>
-            <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("h-8 min-w-[92px] rounded-lg px-3 text-xs font-bold", m.isEnabled ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700")}>{m.isEnabled ? t("إيقاف هنا","Disable here") : t("إعادة التفعيل","Re-enable")}</button>
-          </div>)}
+          {meals && filtered.length === 0 && <div className="p-8 text-center text-slate-400">{t("لا أصناف مطابقة","No matching items")}</div>}
+          {grouped.map(([catName, items]) => (
+            <div key={catName}>
+              <div className="sticky top-0 z-[1] flex items-center justify-between bg-[#0E2A4A] px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-white">
+                <span>{catName}</span><span className="opacity-70">{items.length}</span>
+              </div>
+              {items.map((m: any) => <div key={m.id} className={cn("flex items-center gap-3 p-3", m.isEnabled ? "bg-emerald-50/30" : "bg-white")}>
+                <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-lg border-2", m.isEnabled ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-300 bg-white text-transparent")}><Check className="h-4 w-4" /></button>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{isRtl ? m.nameAr || m.nameEn : m.nameEn || m.nameAr}</p><p className="text-[10px] text-slate-400">{m.outletCategory || m.category}{m.priceUnit === "gram" ? ` · ${t("بالوزن (جرام)","by weight (grams)")}` : m.priceUnit === "piece" ? ` · ${t("بالقطعة","per piece")}` : ""}</p></div>
+                <div className="text-end"><p className="text-sm font-black text-[#0E76AC]">{fmtPrice(m)}</p><p className="text-[10px] text-slate-400">{t("السعر محفوظ حتى عند الإيقاف","Price retained when disabled")}</p></div>
+                <button onClick={() => toggle(m)} disabled={savingId === m.id} className={cn("h-8 min-w-[92px] rounded-lg px-3 text-xs font-bold", m.isEnabled ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-700")}>{m.isEnabled ? t("إيقاف هنا","Disable here") : t("إعادة التفعيل","Re-enable")}</button>
+              </div>)}
+            </div>
+          ))}
         </div>
       </CardContent></Card>
     </div>

@@ -740,6 +740,11 @@ export default defineSchema({
     //    الأصناف الافتراضية = false (مش هتظهر في الجم).
     isGymItem: v.optional(v.boolean()),
     isGymOnly: v.optional(v.boolean()),
+    // ✅ تصنيف المنفذ الحقيقي (PROTEIN/SIDES/SAUCE/SANDWICHES/SWEETS…) — لأصناف
+    //    المنافذ التي لا تنتمي لتصنيفات المنيو الخمسة. يُستخدم للعرض والتجميع فقط.
+    outletCategory: v.optional(v.string()),
+    // ✅ وحدة السعر: "gram" (bulk بالجرام) أو "piece" (بالقطعة). للعرض وحساب الفاتورة.
+    priceUnit: v.optional(v.union(v.literal("gram"), v.literal("piece"))),
     // Created specifically for the online/delivery POS. Never expose on the subscriber menu.
     isOnlineOnly: v.optional(v.boolean()),
     isActive: v.boolean(),

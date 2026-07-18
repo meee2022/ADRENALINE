@@ -215,6 +215,7 @@ export const listMealsForGym = query({
         return {
           id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
           nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
+          outletCategory: m.outletCategory || null, priceUnit: m.priceUnit || null,
           listPrice, gymPrice: outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : null,
           effectivePrice, isCustom: hasCustom, sortOrder: outletRow?.sortOrder ?? m.sortOrder ?? 0,
           returnAfterDays: Number(m.gymReturnAfterDays || (m.category === "snack" ? 4 : 2)),
@@ -276,6 +277,8 @@ export const listOutletCatalogAdmin = query({
         nameAr: meal.gymNameAr || meal.nameAr || meal.nameEn || "",
         nameEn: meal.gymNameEn || meal.nameEn || meal.nameAr || "",
         category: meal.category,
+        outletCategory: meal.outletCategory || null,
+        priceUnit: meal.priceUnit || null,
         menuPrice: Number(meal.priceQAR || 0),
         outletPrice: row ? Number(row.price) : fallbackPrice,
         listPrice: Number(meal.priceQAR || 0),
@@ -388,6 +391,168 @@ export const createOutletMeal = mutation({
       createdAt: Date.now(),
     });
     return { id: String(mealId) };
+  },
+});
+
+/* ═══════════════════ زرع كتالوج Adrenaline Cafe (معزول) ═══════════════════
+ *
+ *   82 منتجاً من قائمة أسعار الكافيه: أصناف bulk بالجرام (بروتين/جوانب/صوصات…)
+ *   وأصناف بالقطعة (ساندويتش/حلويات/شوتس). كلها isGymOnly=true فلا تظهر أبداً
+ *   في المينو العام (الفلاتر في publicMeals.ts تستبعد isGymOnly)، ومربوطة بكتالوج
+ *   منفذ «adrenaline cafe» وحده. idempotent: يُعرّف كل صنف بـslug ثابت فيُحدَّث
+ *   عند إعادة التشغيل بدل التكرار.
+ *   ═════════════════════════════════════════════════════════════════════════ */
+const CAFE_ITEMS: Array<[number, string, string, number, "gram" | "piece"]> = [
+  [1, "PROTEIN", "HERB GRILLED CHICKEN", 0.086, "gram"],
+  [2, "PROTEIN", "CARDAMOM CHICKEN CURRY", 0.130, "gram"],
+  [3, "PROTEIN", "SESAME BEEF", 0.200, "gram"],
+  [4, "PROTEIN", "MEXICAN CHICKEN", 0.090, "gram"],
+  [5, "PROTEIN", "CAJUN SHRIMP", 0.110, "gram"],
+  [6, "PROTEIN", "MEATBALL", 0.140, "gram"],
+  [7, "SALSA", "HUMMUS", 0.030, "gram"],
+  [8, "SIDES", "ASPARAGUS", 0.252, "gram"],
+  [9, "SIDES", "CARROT", 0.018, "gram"],
+  [10, "SIDES", "MASHED POTATO", 0.024, "gram"],
+  [11, "SIDES", "GREEN BEANS", 0.030, "gram"],
+  [12, "SIDES", "SWEET MASHED POTATO", 0.050, "gram"],
+  [13, "SIDES", "SWEET POTATO CUBE", 0.050, "gram"],
+  [14, "SIDES", "BROCCOLI", 0.056, "gram"],
+  [15, "SIDES", "EDAMAME", 0.030, "gram"],
+  [16, "SIDES", "KIMCHI", 0.080, "gram"],
+  [17, "SIDES", "ROMAIN LETTUCE", 0.030, "gram"],
+  [18, "SIDES", "GRILLED BELL PEPPER", 0.014, "gram"],
+  [19, "SPRINKLES", "SPRING ONION CRISPY", 0.024, "gram"],
+  [20, "CARBS", "MIX SALAD", 0.034, "gram"],
+  [21, "SIDES", "MANGO", 0.120, "gram"],
+  [22, "SIDES", "POMEGRANATE", 0.034, "gram"],
+  [23, "SIDES", "AVOCADO", 0.060, "gram"],
+  [24, "SPRINKLES", "CHILLI AND GARLIC", 0.060, "gram"],
+  [25, "SALSA", "KING CHILLI RED", 0.060, "gram"],
+  [26, "SALSA", "PICKLE CUCUMBER", 0.008, "gram"],
+  [27, "SALSA", "JALAPENO", 0.022, "gram"],
+  [28, "SIDES", "CHERRY TOMATO", 0.060, "gram"],
+  [29, "SIDES", "CORN", 0.030, "gram"],
+  [30, "SPRINKLES", "CASHEW NUT", 0.090, "gram"],
+  [31, "SPRINKLES", "ALMOND SLICE", 0.100, "gram"],
+  [32, "SPRINKLES", "AVOCADO OIL", 0.162, "gram"],
+  [33, "SPRINKLES", "SUMAC POWDER", 0.032, "gram"],
+  [34, "SPRINKLES", "SESAMI WHITE", 0.026, "gram"],
+  [35, "CARBS", "PLAIN RICE", 0.026, "gram"],
+  [36, "CARBS", "SAFFRON RICE", 0.032, "gram"],
+  [37, "CARBS", "GREEN RICE", 0.032, "gram"],
+  [38, "CARBS", "BEETROOT RICE", 0.032, "gram"],
+  [39, "CARBS", "QUINOA", 0.072, "gram"],
+  [40, "SALSA", "PICA DE GALLO", 0.034, "gram"],
+  [41, "SALSA", "GUACAMOLE", 0.080, "gram"],
+  [42, "SAUCE", "FITNESS MAYO", 0.036, "gram"],
+  [43, "SAUCE", "DILL YOGURT", 0.046, "gram"],
+  [44, "SAUCE", "SRIRACHA YOGHURT", 0.048, "gram"],
+  [45, "SAUCE", "HONEY MUSTARD", 0.050, "gram"],
+  [46, "SAUCE", "RANCH SAUCE", 0.080, "gram"],
+  [47, "SAUCE", "GREEN SALAD SAUCE", 0.028, "gram"],
+  [48, "SAUCE", "AVOCADO LIME SAUCE", 0.050, "gram"],
+  [49, "SAUCE", "SPICY PANJA SAUCE", 0.040, "gram"],
+  [50, "SPRINKLES", "BABY SPINACH 1 PACK 125GRM", 0.110, "gram"],
+  [51, "SPRINKLES", "ROCKET LEAVES 1 PACK 125GRM", 0.110, "gram"],
+  [52, "CARBS", "BIRIYANI RICE", 0.032, "gram"],
+  [53, "SIDES", "WHITE PASTA SAUCE", 0.050, "gram"],
+  [54, "SIDES", "CUCUMBER YOGHURT", 0.046, "gram"],
+  [55, "CARBS", "AMERICAN RICE", 0.032, "gram"],
+  [56, "SIDES", "MUSHROOM", 0.060, "gram"],
+  [57, "SAUCE", "TOAMTO SAUCE", 0.026, "gram"],
+  [58, "CARBS", "PENNE PASTA", 0.040, "gram"],
+  [59, "CARBS", "POTATO WEDGES", 0.030, "gram"],
+  [60, "SAUCE", "CEASAR SAUCE", 0.040, "gram"],
+  [61, "SAUCE", "BIRIYANI SAUCE", 0.014, "gram"],
+  [62, "PROTEIN", "TERIYAKI CHICKEN", 0.090, "gram"],
+  [63, "PROTEIN", "BEEF MINCE", 0.100, "gram"],
+  [64, "PROTEIN", "BEEF ADOBO", 0.230, "gram"],
+  [65, "SANDWICHES", "HALLOUMI SANDWICH", 20.00, "piece"],
+  [66, "SANDWICHES", "CROISANT EGG SANDWICH", 22.00, "piece"],
+  [67, "SANDWICHES", "CHICKEN SHAWARMA SANDWICH", 22.00, "piece"],
+  [68, "SANDWICHES", "BEEF SHAWARMA SANDWICH", 28.00, "piece"],
+  [69, "SANDWICHES", "CROISANT ZAATAR SANDWICH", 18.00, "piece"],
+  [70, "SANDWICHES", "TURKEY CHEESE WRAP", 18.00, "piece"],
+  [71, "SANDWICHES", "CHICKEN AVACADO SANDWICH", 22.00, "piece"],
+  [72, "SANDWICHES", "EGG AVACADO TOAST", 18.00, "piece"],
+  [73, "SWEETS", "BASBOUSA COCONUT", 18.00, "piece"],
+  [74, "SWEETS", "BASBOUSA PISTACHIO", 21.00, "piece"],
+  [75, "SWEETS", "MATCHA CHEESE CAKE", 27.00, "piece"],
+  [76, "SWEETS", "PROTIEN BROWNIES", 18.00, "piece"],
+  [77, "SHOTS", "DETOX", 15.00, "piece"],
+  [78, "SWEETS", "BLUEBERRY MUFFIN", 20.00, "piece"],
+  [79, "SWEETS", "CHOCOLATE MUFFIN", 20.00, "piece"],
+  [80, "SHOTS", "GOLDEN", 16.00, "piece"],
+  [81, "SWEETS", "PROTEIN LAVA CAKE", 20.00, "piece"],
+  [82, "SWEETS", "CLASSIC FRENCH TOAST", 21.00, "piece"],
+];
+
+/** يربط تصنيف الكافيه بأحد تصنيفات المنيو الخمسة (المطلوبة في السكيمة). العرض يستخدم outletCategory. */
+const CAFE_CAT_MAP: Record<string, "breakfast" | "lunch" | "dinner" | "salad" | "snack"> = {
+  PROTEIN: "lunch", CARBS: "lunch", SIDES: "salad", SALSA: "salad",
+  SAUCE: "salad", SPRINKLES: "salad", SANDWICHES: "breakfast", SWEETS: "snack", SHOTS: "snack",
+};
+
+export const seedAdrenalineCafe = mutation({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const now = Date.now();
+
+    // 1) المنفذ — نبحث بالاسم أولاً (idempotent) وإلا ننشئه.
+    const all = await ctx.db.query("gymAccounts").collect();
+    let outlet = all.find((g) => g.name.trim().toLowerCase() === "adrenaline cafe");
+    let outletId = outlet?._id;
+    if (!outletId) {
+      outletId = await ctx.db.insert("gymAccounts", {
+        name: "Adrenaline Cafe",
+        outletType: "STORE",
+        discountPct: 0, // الأسعار هي أسعار الكافيه كما هي — لا خصم إضافي
+        isActive: true,
+        createdAt: now,
+      });
+    }
+
+    // 2) الأصناف — slug ثابت لكل صنف يضمن التحديث لا التكرار.
+    let created = 0, updated = 0;
+    for (const [sr, outletCategory, nameEn, price, priceUnit] of CAFE_ITEMS) {
+      const slug = `adrenaline-cafe-${sr}`;
+      const existing = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", slug)).first();
+      let mealId;
+      if (existing) {
+        await ctx.db.patch(existing._id, {
+          nameEn, nameAr: nameEn, priceQAR: price, category: CAFE_CAT_MAP[outletCategory],
+          outletCategory, priceUnit, isGymOnly: true, isGymItem: false, isOnlineOnly: false, isActive: true,
+        });
+        mealId = existing._id;
+        updated++;
+      } else {
+        mealId = await ctx.db.insert("publicMeals", {
+          nameAr: nameEn, nameEn, slug,
+          calories: 0, protein: 0, carbs: 0, fats: 0,
+          category: CAFE_CAT_MAP[outletCategory],
+          outletCategory, priceUnit,
+          tags: [], ingredients: [],
+          priceQAR: price,
+          isGymItem: false, isGymOnly: true, isOnlineOnly: false,
+          isActive: true, sortOrder: sr, createdAt: now,
+        });
+        created++;
+      }
+      // ربط الصنف بكتالوج المنفذ (idempotent).
+      const link = await ctx.db.query("outletCatalogItems")
+        .withIndex("by_outlet_meal", (q) => q.eq("outletId", outletId!).eq("mealId", mealId))
+        .first();
+      if (link) {
+        await ctx.db.patch(link._id, { price, isActive: true, sortOrder: sr });
+      } else {
+        await ctx.db.insert("outletCatalogItems", {
+          outletId: outletId!, mealId, price, isActive: true, sortOrder: sr, createdAt: now,
+        });
+      }
+    }
+
+    return { outletId: String(outletId), total: CAFE_ITEMS.length, created, updated };
   },
 });
 
