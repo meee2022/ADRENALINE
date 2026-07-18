@@ -3,9 +3,11 @@ import { useLocation } from "wouter";
 import { ChevronRight, Package, Pencil } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
-import { alertDialog } from "@/lib/dialogs";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionShortfall, orderedSubscriptionSlots, slotBlockDate } from "@/lib/subscription";
+import { mealScheduledFor } from "@/lib/mealSchedule";
+import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
 import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -56,6 +58,8 @@ export default function OrderReview() {
     getTotalCalories,
     getWeeks,
     clearCart,
+    addItem,
+    removeItem,
     preferredStartDate,
   } = useCartStore();
   
@@ -96,6 +100,42 @@ export default function OrderReview() {
   // تاريخ عرض اليوم (نفس ما يعرضه المنيو للعميل — slotBlockDate، مستقر ومرتّب).
   //    عرض فقط — لا يمسّ أي منطق.
   const dateForSlot = (week: number, day: string) => slotBlockDate(subStartDate, startRotForSub, week, day);
+
+  // 🔁 تبديل الوجبة في المكان (بدل الرجوع للمنيو) — نفس فكرة الخطة الذكية:
+  //    بدائل نفس (الصنف + اليوم + الدورة) فقط، بلا الممنوعات. استبدال 1↔1 يحافظ
+  //    على العدد فلا يمسّ أي قيد (السقف/الاكتمال/الفطار).
+  const allMeals = (useQuery(api.publicMeals.listMeals, {}) as any[]) || [];
+  const [swap, setSwap] = useState<any>(null); // {_id, week, day, category, nameAr,...}
+  const restrictWords = restrictionWords((findCustomerByPhone as any)?.avoid, (findCustomerByPhone as any)?.allergies);
+  const swapCandidates = (): any[] => {
+    if (!swap) return [];
+    return allMeals.filter((m: any) =>
+      mealScheduledFor(m, Number(swap.week), swap.day) &&
+      String(m.category) === String(swap.category) &&
+      String(m._id) !== String(swap._id) &&
+      !mealIsRestricted(m, restrictWords));
+  };
+  const applySwap = (m: any) => {
+    if (!swap) return;
+    removeItem(swap._id, swap.week, swap.day);
+    addItem({
+      _id: m._id, nameAr: m.nameAr, nameEn: m.nameEn || "", category: m.category,
+      calories: m.calories, protein: m.protein, carbs: m.carbs, fats: m.fats,
+      imageUrl: m.imageUrl, priceQAR: m.priceQAR || 0, week: swap.week, day: swap.day,
+    });
+    setSwap(null);
+  };
+  const cancelOrder = async () => {
+    const ok = await confirmDialog({
+      title: t("إلغاء الطلب", "Cancel order"),
+      message: t("سيتم مسح كل الوجبات التي اخترتها. متأكد؟", "This will clear all the meals you selected. Are you sure?"),
+      variant: "danger",
+      confirmText: t("نعم، امسح الكل", "Yes, clear all"),
+    });
+    if (!ok) return;
+    clearCart();
+    setLocation("/public/menu");
+  };
   const subSlots = orderedSubscriptionSlots(subStartDate, subEndDate, startRotForSub);
   const shortfall = subscriptionShortfall(
     selectedMeals,
@@ -294,9 +334,9 @@ export default function OrderReview() {
                                 <div style={{ padding: "7px 9px" }}>
                                   <div className="line-clamp-1" style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
                                   <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{catName(meal.category)} · {meal.calories} {t("سعرة", "kcal")}</div>
-                                  {/* تبديل — يرجّع للمنيو (نفس منطق التعديل الحالي) */}
+                                  {/* تبديل في المكان — بدائل نفس الصنف/اليوم بلا الرجوع للمنيو */}
                                   <button
-                                    onClick={() => setLocation("/public/menu")}
+                                    onClick={() => setSwap(meal)}
                                     style={{
                                       marginTop: 6, width: "100%", padding: "4px 8px", borderRadius: 8, cursor: "pointer",
                                       border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
@@ -487,12 +527,65 @@ export default function OrderReview() {
             )}
           </button>
 
+          {/* إلغاء الطلب — يمسح كل الوجبات ويرجّع للمنيو */}
+          <button
+            onClick={cancelOrder}
+            className="w-full mt-3 text-sm font-bold text-red-600 hover:bg-red-50 py-2.5 rounded-xl transition-colors"
+          >
+            {t("إلغاء الطلب ومسح الكل", "Cancel order & clear all")}
+          </button>
+
           <p className="text-xs text-slate-500 text-center mt-3">
             {t('بالضغط على "تأكيد"، أنت توافق على ', 'By clicking "Confirm", you agree to the ')}
             <button className="text-cyan-600 underline">{t("الشروط والأحكام", "Terms & Conditions")}</button>
           </p>
         </div>
       </div>
+
+      {/* 🔁 نافذة التبديل في المكان — بدائل نفس الصنف/اليوم/الدورة (نفس الخطة الذكية) */}
+      {swap && (
+        <div
+          onClick={() => setSwap(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.5)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 18, width: "100%", maxWidth: 680, maxHeight: "82vh", overflowY: "auto", padding: 20 }} dir={isRtl ? "rtl" : "ltr"}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, margin: 0 }}>
+                🔁 {t("تبديل:", "Swap:")} <span style={{ color: "#0E76AC" }}>{isRtl ? swap.nameAr : (swap.nameEn || swap.nameAr)}</span>
+              </h3>
+              <button onClick={() => setSwap(null)} style={{ border: "none", background: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer", lineHeight: 1 }}>×</button>
+            </div>
+            <p style={{ fontSize: 12.5, color: B.ink2, margin: "0 0 14px" }}>
+              📅 {t(
+                `بدائل ${catName(swap.category)} ${dayName(swap.day)} — أسبوع الدورة ${swap.week}`,
+                `${dayName(swap.day)} ${swap.category} alternatives — rotation week ${swap.week}`,
+              )}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,240px),1fr))", gap: 10 }}>
+              {swapCandidates().map((m: any) => (
+                <button
+                  key={m._id}
+                  onClick={() => applySwap(m)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: 10, cursor: "pointer", background: B.surf, border: `1px solid ${B.line}`, borderRadius: 12, textAlign: "start" }}
+                >
+                  {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} style={{ width: 52, height: 52, borderRadius: 10, objectFit: "cover", flexShrink: 0 }} />}
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: "block", fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, color: B.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {isRtl ? m.nameAr : (m.nameEn || m.nameAr)}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11, color: B.ink2, marginTop: 2 }}>{m.calories} {t("سعرة", "kcal")}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            {swapCandidates().length === 0 && (
+              <p style={{ textAlign: "center", color: "#94a3b8", padding: "24px 0", fontSize: 13.5 }}>
+                {t("لا توجد بدائل من نفس التصنيف مجدولة لهذا اليوم.", "No same-category alternatives scheduled for this day.")}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

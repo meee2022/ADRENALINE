@@ -13,6 +13,7 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
+import { confirmDialog } from "@/lib/dialogs";
 import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
@@ -764,6 +765,17 @@ export default function SmartPlan() {
                   <button onClick={placeWeeklyOrder} disabled={ordering} style={btnPrimary(ordering)}>
                     {ordering ? t("جارٍ الإرسال…", "Sending…") : t("📋 أرسل خطة الأسبوع لمراجعة الأخصائي", "📋 Send weekly plan for nutritionist review")}
                   </button>
+                  {/* إلغاء الخطة والبدء من جديد */}
+                  <button
+                    onClick={async () => {
+                      if (!(await confirmDialog({ title: t("إلغاء الخطة", "Discard plan"), message: t("سيتم مسح هذه الخطة والبدء من جديد. متأكد؟", "This plan will be cleared to start over. Sure?"), variant: "danger", confirmText: t("نعم، إلغاء", "Yes, discard") }))) return;
+                      setWeekly(null); setError("");
+                    }}
+                    disabled={ordering}
+                    style={{ display: "block", margin: "12px auto 0", background: "none", border: "none", color: "#C0392B", fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    🗑️ {t("إلغاء الخطة والبدء من جديد", "Discard plan & start over")}
+                  </button>
                   <p style={{ fontSize: 12, color: B.ink2, marginTop: 10 }}>
                     {t("يراجع أخصائي التغذية خطة الأسبوع كاملة للتأكد من ملاءمتها قبل التأكيد.", "The nutritionist reviews the full weekly plan to ensure it fits before confirming.")}
                   </p>
@@ -876,6 +888,17 @@ export default function SmartPlan() {
                 <>
                   <button onClick={placeOrder} disabled={ordering} style={btnPrimary(ordering)}>
                     {ordering ? t("جارٍ الإرسال…", "Sending…") : t("📋 أرسل الخطة لمراجعة الأخصائي", "📋 Send plan for nutritionist review")}
+                  </button>
+                  {/* إلغاء الخطة والبدء من جديد */}
+                  <button
+                    onClick={async () => {
+                      if (!(await confirmDialog({ title: t("إلغاء الخطة", "Discard plan"), message: t("سيتم مسح هذه الخطة والبدء من جديد. متأكد؟", "This plan will be cleared to start over. Sure?"), variant: "danger", confirmText: t("نعم، إلغاء", "Yes, discard") }))) return;
+                      setResult(null); setError("");
+                    }}
+                    disabled={ordering}
+                    style={{ display: "block", margin: "12px auto 0", background: "none", border: "none", color: "#C0392B", fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800, cursor: "pointer" }}
+                  >
+                    🗑️ {t("إلغاء الخطة والبدء من جديد", "Discard plan & start over")}
                   </button>
                   <p style={{ fontSize: 12, color: B.ink2, marginTop: 10 }}>
                     {t("لن يتم تأكيد الطلب مباشرة — يراجع أخصائي التغذية الخطة أولاً للتأكد من ملاءمتها لليوم.", "The order won't be confirmed instantly — the nutritionist reviews the plan first to ensure it fits the day.")}
