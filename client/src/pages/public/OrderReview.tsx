@@ -297,52 +297,53 @@ export default function OrderReview() {
                             <span className="font-semibold text-slate-700">{dayName(day)}</span>
                           </div>
 
-                          <div className="space-y-2">
+                          {/* 🎨 شبكة كروت مدمجة (نفس تصميم الخطة الذكية) — الشكل فقط، لا منطق */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                             {meals.map((meal) => (
                               <div
                                 key={meal._id}
-                                className="flex items-center gap-3 bg-white rounded-xl p-3 border"
+                                className="bg-white rounded-xl border overflow-hidden"
                               >
-                                {meal.imageUrl ? (
-                                  <img
-                                    src={meal.imageUrl}
-                                    alt={meal.nameAr}
-                                    className="w-12 h-12 rounded-lg object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-                                    <Package className="h-5 w-5 text-slate-400" />
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-slate-900 truncate">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
-                                  <div className="flex items-center gap-2 text-xs text-slate-500">
-                                    <span className="text-cyan-600 font-medium">
-                                      {catName(meal.category)}
-                                    </span>
+                                <div className="relative h-20 bg-gradient-to-br from-slate-100 to-slate-200">
+                                  {meal.imageUrl ? (
+                                    <img
+                                      src={meal.imageUrl}
+                                      alt={meal.nameAr}
+                                      className="w-full h-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full grid place-items-center">
+                                      <Package className="h-6 w-6 text-slate-400" />
+                                    </div>
+                                  )}
+                                  {/* حذف الوجبة — فوق الصورة */}
+                                  <button
+                                    onClick={() => removeItem(meal._id, meal.week, meal.day)}
+                                    title={t("حذف الوجبة", "Remove meal")}
+                                    className="absolute top-1.5 end-1.5 h-7 w-7 grid place-items-center rounded-lg bg-white/90 text-red-500 hover:bg-red-50 shadow-sm transition-colors"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                                <div className="p-2">
+                                  <div className="font-bold text-slate-900 text-[13px] leading-tight line-clamp-1">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
+                                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
+                                    <span className="text-cyan-600 font-medium">{catName(meal.category)}</span>
                                     <span>•</span>
                                     <span>{meal.calories} {t("سعرة", "kcal")}</span>
                                   </div>
                                 </div>
-                                {/* حذف/تغيير الوجبة */}
-                                <button
-                                  onClick={() => removeItem(meal._id, meal.week, meal.day)}
-                                  title={t("حذف الوجبة", "Remove meal")}
-                                  className="shrink-0 h-8 w-8 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 transition-colors"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
                               </div>
                             ))}
-                            {/* تغيير وجبات اليوم — يرجّع للمنيو على نفس اليوم */}
-                            <button
-                              onClick={() => setLocation("/public/menu")}
-                              className="w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] rounded-lg py-2 flex items-center justify-center gap-1.5 border border-dashed border-[#cfe4f3]"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              {t("تعديل / إضافة وجبات لهذا اليوم", "Edit / add meals for this day")}
-                            </button>
                           </div>
+                          {/* تغيير وجبات اليوم — يرجّع للمنيو على نفس اليوم */}
+                          <button
+                            onClick={() => setLocation("/public/menu")}
+                            className="mt-2.5 w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] rounded-lg py-2 flex items-center justify-center gap-1.5 border border-dashed border-[#cfe4f3]"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            {t("تعديل / إضافة وجبات لهذا اليوم", "Edit / add meals for this day")}
+                          </button>
                         </div>
                       ))}
                   </div>
