@@ -1149,6 +1149,14 @@ export default function PublicMenuPage() {
               >
                 {isRtl ? "تغيير" : "Switch"}
               </button>
+              {/* الرجوع للرئيسية */}
+              <button
+                onClick={() => setLocation("/")}
+                className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors flex items-center gap-1"
+                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+              >
+                🏠 {isRtl ? "الرئيسية" : "Home"}
+              </button>
             </div>
           </div>
         </div>
