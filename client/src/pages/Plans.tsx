@@ -19,6 +19,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
+import { confirmDialog } from "@/lib/dialogs";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -577,42 +578,107 @@ export default function PlansPage() {
     toast({ title: isRtl ? "✓ تم نسخ خطة الأمس" : "Copied" });
   };
 
-  // ✅ ملء الخانات الفارغة تلقائياً بوجبات اليوم من الجدول الأسبوعي (لا يستبدل المُختار)
-  //    🚫 يحترم ممنوعات/حساسية المشترك: يتخطّى أي وجبة تخالفها ويجرّب التالية.
-  //       نفس منطق الحجب في الذكي (lib/mealRestrictions ← يعكس ai.isBlocked).
-  const handleAutoFillDay = () => {
-    if (!currentPlan) return;
-    let filled = 0;
-    let blockedSkipped = 0;   // خانات وُجد لها وجبات لكن كلها ممنوعة
-    const isRestricted = (menuItemId: string) =>
-      mealIsRestricted(mealInfoByMenuItem.get(String(menuItemId)), restrictWords);
-    const items = (currentPlan.items as any[]).map((it: any) => {
+  /** يبني خانات يوم فارغة لعميلٍ من اشتراكه (وجبات/سناك) — نفس منطق الـuseEffect،
+   *  مُستخرَج ليستخدمه الملء الفردي والجماعي معاً. */
+  const buildEmptyItemsFor = (customer: any): any[] => {
+    const mealsPerDay = customer?.mealsPerDay ?? 0;
+    const snacksPerDay = customer?.snacksPerDay ?? 0;
+    const mainCategories = sortedCategories.filter((c: any) => !isSnackCategoryName(c.name));
+    const snackCategory = sortedCategories.find((c: any) => isSnackCategoryName(c.name));
+    const items: any[] = [];
+    if (mainCategories.length > 0 && mealsPerDay > 0) {
+      const slotsPerCat = Math.floor(mealsPerDay / mainCategories.length);
+      const remainder = mealsPerDay % mainCategories.length;
+      mainCategories.forEach((cat: any, idx: number) => {
+        const count = slotsPerCat + (idx < remainder ? 1 : 0);
+        for (let i = 0; i < count; i++) items.push({ id: makeId(), categoryId: cat._id, menuItemId: null, modifierIds: [], specialNotes: "", isOff: false, meta: { index: i + 1 } });
+      });
+    }
+    if (snackCategory && snacksPerDay > 0) {
+      for (let i = 0; i < snacksPerDay; i++) items.push({ id: makeId(), categoryId: snackCategory._id, menuItemId: null, modifierIds: [], specialNotes: "", isOff: false, meta: { index: i + 1 } });
+    }
+    return items;
+  };
+
+  /** يملأ الخانات الفارغة من جدول اليوم محترماً ممنوعات المشترك (words). المصدر
+   *  الوحيد للملء — يستخدمه الفردي والجماعي فلا يفترقا. */
+  const fillItemsWith = (items: any[], words: string[]): { items: any[]; filled: number; blocked: number } => {
+    let filled = 0, blocked = 0;
+    const isRestricted = (id: string) => mealIsRestricted(mealInfoByMenuItem.get(String(id)), words);
+    const out = items.map((it: any) => {
       if (it.isOff || it.menuItemId) return it;
       const candidates = scheduledByCategory[String(it.categoryId)] || [];
       if (!candidates.length) return it;
       const start = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
-      // ابدأ من الفهرس المعتاد ثم لُفّ حتى تجد وجبة غير ممنوعة
       let pick: string | null = null;
       for (let k = 0; k < candidates.length; k++) {
         const cand = candidates[(start + k) % candidates.length];
         if (!isRestricted(cand)) { pick = cand; break; }
       }
-      if (!pick) { blockedSkipped++; return it; } // كل وجبات الخانة ممنوعة — نتركها للأخصائية
+      if (!pick) { blocked++; return it; }
       filled++;
       return { ...it, menuItemId: pick };
     });
-    if (!filled && !blockedSkipped) {
+    return { items: out, filled, blocked };
+  };
+
+  // ✅ ملء الخانات الفارغة تلقائياً بوجبات اليوم (لا يستبدل المُختار، ويحترم الممنوعات)
+  const handleAutoFillDay = () => {
+    if (!currentPlan) return;
+    const { items, filled, blocked } = fillItemsWith(currentPlan.items as any[], restrictWords);
+    if (!filled && !blocked) {
       toast({ title: isRtl ? "لا توجد وجبات مجدولة لهذا اليوم" : "No scheduled meals for this day", variant: "destructive" });
       return;
     }
     setCurrentPlan({ ...currentPlan, items });
     toast({
       title: isRtl ? `✓ تم ملء ${filled} وجبة من منيو اليوم` : `Filled ${filled} meals from today's menu`,
-      description: blockedSkipped
+      description: blocked
         ? (isRtl
-            ? `⚠ تُركت ${blockedSkipped} خانة: كل وجباتها ضمن ممنوعات المشترك — اخترها يدوياً`
-            : `⚠ ${blockedSkipped} slot(s) left empty: all their meals are within the customer's restrictions`)
+            ? `⚠ تُركت ${blocked} خانة: كل وجباتها ضمن ممنوعات المشترك — اخترها يدوياً`
+            : `⚠ ${blocked} slot(s) left empty: all their meals are within the customer's restrictions`)
         : (restrictWords.length ? (isRtl ? "روعيت ممنوعات المشترك" : "Customer restrictions respected") : undefined),
+    });
+  };
+
+  // ✅ الملء الجماعي: ينشئ مسودّات لكل مشترك نشط بلا خطة لهذا اليوم — بنفس الفلتر
+  //    (يحترم الممنوعات وحدود اليوم). القرار يبقى للأخصائية (مسودّة لا اعتماد).
+  const [bulkFilling, setBulkFilling] = useState(false);
+  const handleFillAllPlanless = async () => {
+    const planned = new Set(dailyPlans.map((p: any) => String(p.customerId)));
+    const planless = activeCustomers.filter((c: any) => !planned.has(String(c._id)));
+    if (!planless.length) { toast({ title: isRtl ? "كل المشتركين لديهم خطة اليوم ✓" : "All customers already have a plan today" }); return; }
+    const ok = await confirmDialog({
+      title: isRtl ? "ملء كل من بلا خطة" : "Fill all without a plan",
+      message: isRtl
+        ? `سيتم إنشاء مسودّة خطة لـ${planless.length} مشترك بوجبات ${planDayName ? "اليوم" : "اليوم"} — محترمةً ممنوعاتهم وحدود اشتراكهم. تراجعها وتعتمدها بعدين. متابعة؟`
+        : `Draft plans will be created for ${planless.length} customers with today's meals — respecting their restrictions and limits. You review and confirm later. Continue?`,
+      confirmText: isRtl ? "نعم، املأ الكل" : "Yes, fill all",
+      cancelText: isRtl ? "إلغاء" : "Cancel",
+    });
+    if (!ok) return;
+    setBulkFilling(true);
+    let created = 0, empty = 0, failed = 0;
+    for (const c of planless) {
+      const words = restrictionWords((c as any).avoid, (c as any).allergies);
+      const { items, filled } = fillItemsWith(buildEmptyItemsFor(c), words);
+      if (!filled) { empty++; continue; } // بلا وجبات مجدولة مناسبة — نتركه للأخصائية
+      try {
+        await createPlanMutation.mutateAsync(stripSystemFields({
+          customerId: c._id, date: formattedDate,
+          deliveryTime: (c as any).deliveryTime || "MORNING",
+          items, notes: "", status: "DRAFT",
+        }) as any);
+        created++;
+      } catch { failed++; }
+    }
+    setBulkFilling(false);
+    toast({
+      title: isRtl ? `✓ أُنشئت ${created} مسودّة` : `✓ Created ${created} drafts`,
+      description: [
+        empty ? (isRtl ? `${empty} بلا وجبات مناسبة` : `${empty} had no suitable meals`) : "",
+        failed ? (isRtl ? `${failed} فشلوا` : `${failed} failed`) : "",
+      ].filter(Boolean).join(" · ") || (isRtl ? "روعيت الممنوعات وحدود الاشتراك" : "Restrictions and limits respected"),
     });
   };
 
@@ -967,6 +1033,21 @@ export default function PlansPage() {
                   </div>
                 </div>
               </div>
+
+              {/* ─── ملء جماعي: مسودّات لكل من بلا خطة (يحترم الممنوعات والحدود) ─── */}
+              {pendingCount > 0 && (
+                <button
+                  onClick={handleFillAllPlanless}
+                  disabled={bulkFilling}
+                  className="w-full rounded-2xl px-4 py-3 flex items-center justify-center gap-2 font-black text-white transition-all disabled:opacity-70 disabled:cursor-wait hover:brightness-110 active:scale-[0.99]"
+                  style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)", boxShadow: "0 4px 14px rgba(14,118,172,0.25)" }}
+                >
+                  <Sparkles className="h-4 w-4" />
+                  {bulkFilling
+                    ? (isRtl ? "يملأ المسودّات…" : "Creating drafts…")
+                    : (isRtl ? `املأ ${pendingCount} مشترك بلا خطة (مسودّات)` : `Fill ${pendingCount} without a plan (drafts)`)}
+                </button>
+              )}
 
               {/* ─── Search + Filters ─── */}
               <div className="bg-white rounded-2xl p-4 space-y-3"
