@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
-import { mealScheduledFor, localISO, customerCategoryLabel } from "@/lib/mealSchedule";
+import { mealScheduledFor, localISO, customerCategoryLabel, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
@@ -190,12 +190,13 @@ export default function SmartPlan() {
   const applySwap = (m: any) => {
     if (!swap) return;
     const pick = toPick(m);
+    // swap.add = وضع «إضافة وجبة ناقصة» → نُلحِق بدل الاستبدال
     if (swap.src === "weekly") {
       setWeekly((w: any) => {
         const days = w.days.slice();
         const d = { ...days[swap.di] };
         const picks = d.picks.slice();
-        picks[swap.i] = pick;
+        if (swap.add) picks.push(pick); else picks[swap.i] = pick;
         d.picks = picks;
         days[swap.di] = d;
         return { ...w, days };
@@ -203,11 +204,32 @@ export default function SmartPlan() {
     } else {
       setResult((r: any) => {
         const picks = r.picks.slice();
-        picks[swap.i] = pick;
+        if (swap.add) picks.push(pick); else picks[swap.i] = pick;
         return { ...r, picks };
       });
     }
     setSwap(null);
+  };
+
+  // 🔧 مرشّحو نافذة التبديل/الإضافة — نفس اليوم/الدورة. في وضع الإضافة: التصنيف
+  //    الناقص فقط، بلا تكرار، ومع احترام سقف الفطار (لا يمسّ أي قيد — يساعد على
+  //    إكمال ما ولّده الذكاء ناقصاً حتى تمرّ بوابة الاكتمال).
+  const pickerCandidates = (): any[] => {
+    if (!swap) return [];
+    const dayPicks: any[] = swap.src === "weekly" ? (weekly?.days?.[swap.di]?.picks || []) : (result?.picks || []);
+    const pickedIds = new Set(dayPicks.map((p: any) => String(p.id)));
+    const bfCount = dayPicks.filter((p: any) => isBreakfastCategory(p.category)).length;
+    return (allMeals || []).filter((m: any) => {
+      if (!mealAvailable(m, Number(swap.week), swap.day)) return false;
+      if (swap.add) {
+        if (pickedIds.has(String(m._id))) return false;
+        if (swap.need === "main" && !isMainCategory(m.category)) return false;
+        if (swap.need === "snack" && !isSnackCategory(m.category)) return false;
+        if (isBreakfastCategory(m.category) && bfCount >= BREAKFAST_MAX_PER_DAY) return false;
+        return true;
+      }
+      return String(m._id) !== String(swap.meal?.id) && String(m.category) === String(swap.meal?.category);
+    });
   };
 
   // إرسال خطة الأسبوع كاملة للمراجعة (كل الأيام في طلب واحد)
@@ -689,6 +711,34 @@ export default function SmartPlan() {
                       ))}
                     </div>
                   )}
+                  {/* ➕ إكمال يوم ناقص — يظهر فقط لو ولّد الذكاء أقل من الاشتراك.
+                      يحترم سقف الفطار ولا يتجاوز عدد الاشتراك (يختفي عند الاكتمال). */}
+                  {!orderNo && !d.empty && (() => {
+                    const mains = (d.picks || []).filter((p: any) => isMainCategory(p.category)).length;
+                    const snk = (d.picks || []).filter((p: any) => isSnackCategory(p.category)).length;
+                    const needM = (Number(subMeals) || 0) - mains;
+                    const needS = subSnacks - snk;
+                    if (needM <= 0 && needS <= 0) return null;
+                    const addBtn: React.CSSProperties = {
+                      flex: 1, minWidth: 130, padding: "8px 10px", borderRadius: 10, cursor: "pointer",
+                      border: "1px dashed #F4A93A", background: "#FEF6E7", color: "#B5730A",
+                      fontFamily: "'Cairo',sans-serif", fontSize: 12, fontWeight: 800,
+                    };
+                    return (
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 12px 12px" }}>
+                        {needM > 0 && (
+                          <button style={addBtn} onClick={() => setSwap({ src: "weekly", di, add: true, need: "main", week: d.rotationWeek || 1, day: d.day })}>
+                            ＋ {t(`أضف وجبة رئيسية (ناقص ${needM})`, `Add main meal (${needM} short)`)}
+                          </button>
+                        )}
+                        {needS > 0 && (
+                          <button style={addBtn} onClick={() => setSwap({ src: "weekly", di, add: true, need: "snack", week: d.rotationWeek || 1, day: d.day })}>
+                            ＋ {t(`أضف سناك (ناقص ${needS})`, `Add snack (${needS} short)`)}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
                 </div>
                 );
@@ -878,24 +928,27 @@ export default function SmartPlan() {
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, margin: 0 }}>
-                  🔁 {t("تبديل:", "Swap:")} <span style={{ color: "#0E76AC" }}>{isRtl ? swap.meal?.nameAr : (swap.meal?.nameEn || swap.meal?.nameAr)}</span>
+                  {swap.add
+                    ? <>➕ {t(swap.need === "snack" ? "أضف سناك" : "أضف وجبة رئيسية", swap.need === "snack" ? "Add snack" : "Add main meal")}</>
+                    : <>🔁 {t("تبديل:", "Swap:")} <span style={{ color: "#0E76AC" }}>{isRtl ? swap.meal?.nameAr : (swap.meal?.nameEn || swap.meal?.nameAr)}</span></>}
                 </h3>
                 <button onClick={() => setSwap(null)} style={{ border: "none", background: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer", lineHeight: 1 }}>×</button>
               </div>
               <p style={{ fontSize: 12.5, color: B.ink2, margin: "0 0 14px" }}>
-                📅 {t(
-                  `بدائل ${customerCategoryLabel(swap.meal?.category, true)} ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
-                  `${WEEKDAYS_EN[swap.day] || swap.day} ${swap.meal?.category || ""} alternatives — rotation week ${swap.week}`,
-                )}
+                📅 {swap.add
+                  ? t(
+                      `${swap.need === "snack" ? "سناكات" : "وجبات رئيسية"} مجدولة ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
+                      `${swap.need === "snack" ? "Snacks" : "Main meals"} scheduled for ${WEEKDAYS_EN[swap.day] || swap.day} — rotation week ${swap.week}`,
+                    )
+                  : t(
+                      `بدائل ${customerCategoryLabel(swap.meal?.category, true)} ${WEEKDAYS_AR[swap.day] || swap.day} — أسبوع الدورة ${swap.week}`,
+                      `${WEEKDAYS_EN[swap.day] || swap.day} ${swap.meal?.category || ""} alternatives — rotation week ${swap.week}`,
+                    )}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(min(100%,240px),1fr))", gap: 10 }}>
                 {/* ✅ نفس اليوم + نفس التصنيف فقط: فطور يُستبدل بفطور اليوم نفسه —
                     المطبخ لا يطبخ خارج منيو اليوم، ولا يصح وضع غداء مكان فطور */}
-                {allMeals
-                  .filter((m: any) =>
-                    mealAvailable(m, Number(swap.week), swap.day) &&
-                    String(m._id) !== String(swap.meal?.id) &&
-                    String(m.category) === String(swap.meal?.category))
+                {pickerCandidates()
                   .map((m: any) => (
                     <button
                       key={m._id}
@@ -917,12 +970,11 @@ export default function SmartPlan() {
                     </button>
                   ))}
               </div>
-              {allMeals.filter((m: any) =>
-                mealAvailable(m, Number(swap.week), swap.day) &&
-                String(m._id) !== String(swap.meal?.id) &&
-                String(m.category) === String(swap.meal?.category)).length === 0 && (
+              {pickerCandidates().length === 0 && (
                 <p style={{ textAlign: "center", color: "#94a3b8", padding: "24px 0", fontSize: 13.5 }}>
-                  {t("لا توجد بدائل من نفس التصنيف مجدولة لهذا اليوم.", "No same-category alternatives scheduled for this day.")}
+                  {swap.add
+                    ? t("لا توجد وجبات إضافية مجدولة لهذا اليوم.", "No more meals scheduled for this day.")
+                    : t("لا توجد بدائل من نفس التصنيف مجدولة لهذا اليوم.", "No same-category alternatives scheduled for this day.")}
                 </p>
               )}
             </div>
