@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lucide-react";
+import { ChevronRight, Package, Pencil } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog } from "@/lib/dialogs";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
-import { subscriptionShortfall, orderedSubscriptionSlots } from "@/lib/subscription";
+import { subscriptionShortfall, orderedSubscriptionSlots, slotBlockDate } from "@/lib/subscription";
 import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -34,6 +34,13 @@ const categoryNameEn: Record<string, string> = {
   breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack", salad: "Salad",
 };
 
+// 🎨 نفس لوحة ألوان الخطة الذكية (SmartPlan) — للتطابق البصري
+const B = {
+  brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A",
+  ink2: "#2D4A67", line: "#D9E6F1", surf: "#F7FBFE", bg2: "#EAF3FB",
+};
+const DAY_ORDER = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+
 export default function OrderReview() {
   const [, setLocation] = useLocation();
   const { language, dir } = useLanguage();
@@ -49,7 +56,6 @@ export default function OrderReview() {
     getTotalCalories,
     getWeeks,
     clearCart,
-    removeItem,
     preferredStartDate,
   } = useCartStore();
   
@@ -73,7 +79,6 @@ export default function OrderReview() {
   );
   const findCustomerByPhone = matchesByPhone?.[0] ?? null;
   const settings = useQuery(api.restaurantSettings.get);
-  const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 🔒 بوابة مطابقة الاشتراك — المصدر الوحيد (lib/subscription.subscriptionShortfall).
@@ -88,6 +93,9 @@ export default function OrderReview() {
     subStartDate ? { targetDate: subStartDate } : "skip",
   ) as any;
   const startRotForSub = Number(rotationInfo?.rotationWeek) || 1;
+  // تاريخ عرض اليوم (نفس ما يعرضه المنيو للعميل — slotBlockDate، مستقر ومرتّب).
+  //    عرض فقط — لا يمسّ أي منطق.
+  const dateForSlot = (week: number, day: string) => slotBlockDate(subStartDate, startRotForSub, week, day);
   const subSlots = orderedSubscriptionSlots(subStartDate, subEndDate, startRotForSub);
   const shortfall = subscriptionShortfall(
     selectedMeals,
@@ -126,12 +134,6 @@ export default function OrderReview() {
     acc[meal.week][meal.day].push(meal);
     return acc;
   }, {} as Record<number, Record<string, typeof selectedMeals>>);
-
-  const toggleWeek = (week: number) => {
-    setExpandedWeeks((prev) =>
-      prev.includes(week) ? prev.filter((w) => w !== week) : [...prev, week]
-    );
-  };
 
   const handleSubmit = async () => {
     if (!customerPhone) {
@@ -252,102 +254,73 @@ export default function OrderReview() {
           </div>
         </div>
 
-        {/* تفاصيل الوجبات المختارة حسب الأسابيع */}
+        {/* تفاصيل الوجبات — نفس تصميم الخطة الذكية (SmartPlan). الشكل فقط، لا منطق */}
         <div className="space-y-4">
           {Object.entries(organizedMeals)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([week, days]) => (
-              <div key={week} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                {/* عنوان الأسبوع */}
-                <button
-                  onClick={() => toggleWeek(Number(week))}
-                  className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-cyan-500 text-white flex items-center justify-center font-bold">
-                      {week}
-                    </div>
-                    <div className={isRtl ? "text-right" : "text-left"}>
-                      <div className="font-bold text-slate-900">{t("الأسبوع", "Week")} {week}</div>
-                      <div className="text-sm text-slate-500">
-                        {Object.keys(days).length} {t("أيام", "days")} • {Object.values(days).flat().length} {t("وجبات", "meals")}
-                      </div>
-                    </div>
-                  </div>
-                  {expandedWeeks.includes(Number(week)) ? (
-                    <ChevronDown className="h-5 w-5 text-slate-400" />
-                  ) : (
-                    <ChevronRight className="h-5 w-5 text-slate-400" />
-                  )}
-                </button>
-
-                {/* محتوى الأسبوع */}
-                {expandedWeeks.includes(Number(week)) && (
-                  <div className="border-t">
-                    {Object.entries(days)
-                      .sort(
-                        ([a], [b]) =>
-                          ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(a) -
-                          ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"].indexOf(b)
-                      )
-                      .map(([day, meals]) => (
-                        <div key={day} className="border-b last:border-b-0 p-4 bg-slate-50/50">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Calendar className="h-4 w-4 text-slate-400" />
-                            <span className="font-semibold text-slate-700">{dayName(day)}</span>
+              <div key={week}>
+                {/* بانر الدورة */}
+                <div style={{
+                  margin: "0 0 10px", padding: "8px 14px", borderRadius: 10,
+                  background: B.bg2, border: "1px solid #CFE4F3", color: B.ink, fontWeight: 900, fontSize: 14,
+                }}>
+                  {t(`الأسبوع (دورة ${week})`, `Week (rotation ${week})`)}
+                </div>
+                <div style={{ display: "grid", gap: 14 }}>
+                  {Object.entries(days)
+                    .sort(([a], [b]) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b))
+                    .map(([day, meals]) => {
+                      const date = dateForSlot(Number(week), day);
+                      return (
+                        <div key={day} style={{ background: "#fff", border: `1px solid ${B.line}`, borderRadius: 16, overflow: "hidden" }}>
+                          {/* ترويسة اليوم الغامقة */}
+                          <div style={{
+                            background: B.ink, color: "#fff", padding: "10px 16px",
+                            display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 6,
+                          }}>
+                            <span style={{ fontWeight: 800, fontSize: 15 }}>{dayName(day)}{date ? ` · ${date}` : ""}</span>
+                            <span style={{ fontSize: 12, opacity: 0.85 }}>{meals.length} {t("وجبة", "meals")}</span>
                           </div>
-
-                          {/* 🎨 شبكة كروت مدمجة (نفس تصميم الخطة الذكية) — الشكل فقط، لا منطق */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                          {/* شبكة الكروت */}
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, padding: 12 }}>
                             {meals.map((meal) => (
-                              <div
-                                key={meal._id}
-                                className="bg-white rounded-xl border overflow-hidden"
-                              >
-                                <div className="relative h-20 bg-gradient-to-br from-slate-100 to-slate-200">
-                                  {meal.imageUrl ? (
-                                    <img
-                                      src={meal.imageUrl}
-                                      alt={meal.nameAr}
-                                      className="w-full h-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full grid place-items-center">
-                                      <Package className="h-6 w-6 text-slate-400" />
-                                    </div>
-                                  )}
-                                  {/* حذف الوجبة — فوق الصورة */}
-                                  <button
-                                    onClick={() => removeItem(meal._id, meal.week, meal.day)}
-                                    title={t("حذف الوجبة", "Remove meal")}
-                                    className="absolute top-1.5 end-1.5 h-7 w-7 grid place-items-center rounded-lg bg-white/90 text-red-500 hover:bg-red-50 shadow-sm transition-colors"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </button>
+                              <div key={meal._id} style={{ border: `1px solid ${B.line}`, borderRadius: 12, overflow: "hidden", background: B.surf }}>
+                                <div style={{ height: 84, background: B.bg2, overflow: "hidden" }}>
+                                  {meal.imageUrl
+                                    ? <img src={meal.imageUrl} alt={meal.nameAr} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                    : <div style={{ width: "100%", height: "100%", display: "grid", placeItems: "center" }}><Package className="h-6 w-6 text-slate-400" /></div>}
                                 </div>
-                                <div className="p-2">
-                                  <div className="font-bold text-slate-900 text-[13px] leading-tight line-clamp-1">{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
-                                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-0.5">
-                                    <span className="text-cyan-600 font-medium">{catName(meal.category)}</span>
-                                    <span>•</span>
-                                    <span>{meal.calories} {t("سعرة", "kcal")}</span>
-                                  </div>
+                                <div style={{ padding: "7px 9px" }}>
+                                  <div className="line-clamp-1" style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
+                                  <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{catName(meal.category)} · {meal.calories} {t("سعرة", "kcal")}</div>
+                                  {/* تبديل — يرجّع للمنيو (نفس منطق التعديل الحالي) */}
+                                  <button
+                                    onClick={() => setLocation("/public/menu")}
+                                    style={{
+                                      marginTop: 6, width: "100%", padding: "4px 8px", borderRadius: 8, cursor: "pointer",
+                                      border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
+                                      fontFamily: "'Cairo',sans-serif", fontSize: 11, fontWeight: 800,
+                                    }}
+                                  >
+                                    🔁 {t("تبديل", "Swap")}
+                                  </button>
                                 </div>
                               </div>
                             ))}
                           </div>
-                          {/* تغيير وجبات اليوم — يرجّع للمنيو على نفس اليوم */}
+                          {/* إضافة / تعديل وجبات اليوم */}
                           <button
                             onClick={() => setLocation("/public/menu")}
-                            className="mt-2.5 w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] rounded-lg py-2 flex items-center justify-center gap-1.5 border border-dashed border-[#cfe4f3]"
+                            className="w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] flex items-center justify-center gap-1.5 border-t border-dashed border-[#cfe4f3] py-2.5"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                             {t("تعديل / إضافة وجبات لهذا اليوم", "Edit / add meals for this day")}
                           </button>
                         </div>
-                      ))}
-                  </div>
-                )}
+                      );
+                    })}
+                </div>
               </div>
             ))}
         </div>
