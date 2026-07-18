@@ -1422,12 +1422,17 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [selectedReturnOrderId, setSelectedReturnOrderId] = useState("");
+  // 🔎 بحث داخل أصناف الفاتورة — الفواتير الكبيرة يصعب التمرير فيها للوصول لوجبة.
+  const [lineSearch, setLineSearch] = useState("");
 
   useEffect(() => {
     if (selectedReturnOrderId && orders && !orders.some((order) => order.id === selectedReturnOrderId)) {
       setSelectedReturnOrderId("");
     }
   }, [orders, selectedReturnOrderId]);
+
+  // نمسح البحث عند تغيير الفاتورة المختارة حتى لا يبقى فلترٌ من فاتورة سابقة.
+  useEffect(() => { setLineSearch(""); }, [selectedReturnOrderId]);
 
   const selectedReturnOrder = (orders || []).find((order: any) => order.id === selectedReturnOrderId);
 
@@ -1602,6 +1607,31 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                       </span>
                     </div>
                   )}
+                  {/* 🔎 بحث داخل أصناف الفاتورة — يفلتر السطور بالاسم بدل التمرير */}
+                  {(() => {
+                    const qn = lineSearch.trim().toLowerCase();
+                    const visibleLines = qn
+                      ? o.lines.filter((l: any) =>
+                          String(l.mealNameAr || "").toLowerCase().includes(qn) ||
+                          String(l.mealNameEn || "").toLowerCase().includes(qn))
+                      : o.lines;
+                    return (
+                  <>
+                  <div className="relative mb-3">
+                    <Search className="absolute h-4 w-4 top-3 start-3 text-slate-400 pointer-events-none" />
+                    <Input
+                      value={lineSearch}
+                      onChange={(e) => setLineSearch(e.target.value)}
+                      placeholder={t("ابحث باسم الوجبة داخل الفاتورة…", "Search meal name in invoice…")}
+                      className="h-10 ps-9"
+                    />
+                    {lineSearch && (
+                      <button type="button" onClick={() => setLineSearch("")} className="absolute end-2 top-2 h-6 w-6 rounded-md bg-slate-100 text-slate-500" title={t("مسح", "Clear")}>
+                        <X className="mx-auto h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {qn && <div className="mb-2 text-xs font-bold text-slate-500">{t(`${visibleLines.length} صنف مطابق`, `${visibleLines.length} matching item(s)`)}</div>}
                   <div className="overflow-x-auto rounded-lg border border-slate-200">
                   <table className="min-w-[860px] w-full text-xs">
                     <thead className="bg-slate-100 text-slate-600">
@@ -1617,7 +1647,10 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                       </tr>
                     </thead>
                     <tbody>
-                      {o.lines.map((l: any) => {
+                      {visibleLines.length === 0 && (
+                        <tr><td colSpan={8} className="p-6 text-center text-slate-400 font-bold">{t("لا يوجد صنف بهذا الاسم في الفاتورة", "No item by that name in the invoice")}</td></tr>
+                      )}
+                      {visibleLines.map((l: any) => {
                         const draftVal = drafts[o.id]?.[l.id];
                         const showVal = draftVal !== undefined ? draftVal : "";
                         const rq = Number(showVal || 0);
@@ -1664,6 +1697,9 @@ function ReturnsTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGy
                     </tbody>
                   </table>
                   </div>
+                  </>
+                    );
+                  })()}
                   {!!o.batches?.length && <div className="mt-4">
                     <h4 className="mb-2 text-xs font-black uppercase text-slate-500">{t("دفعات المرتجع السابقة", "Previous return batches")}</h4>
                     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
