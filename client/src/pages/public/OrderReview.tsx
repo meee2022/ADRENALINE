@@ -56,6 +56,8 @@ export default function OrderReview() {
   //    localStorage مباشرةً، لكن المنيو يحفظه في sessionStorage (getVerifiedPhone)
   //    — نفس المفتاح، تخزين مختلف، فلم يُملأ. نقرأ من نفس المصدر الآن.
   const [customerPhone, setCustomerPhone] = useState<string>(() => getVerifiedPhone());
+  // الرقم المتحقق من المنيو (ثابت) — لو موجود يُعبّأ تلقائياً ولا يُطلب من العميل كتابته.
+  const verifiedPhone = getVerifiedPhone();
   const [customerEmail, setCustomerEmail] = useState("");
   
   // Convex Mutation & Query (بعد تعريف customerPhone)
@@ -328,13 +330,23 @@ export default function OrderReview() {
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                {t("رقم الجوال", "Phone number")} <span className="text-red-500">*</span>
+                {t("رقم الجوال", "Phone number")}
+                {verifiedPhone
+                  ? <span className="text-green-600 text-xs font-bold mr-1">{t("· معبّأ تلقائياً", "· auto-filled")}</span>
+                  : <span className="text-red-500">*</span>}
               </label>
               <input
                 type="tel"
                 value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
+                // 🔒 الرقم متحقّق من المنيو ويُعبّأ تلقائياً — لا يُطلب من العميل كتابته،
+                //    ويُقفل للقراءة فقط (تغييره على جهاز عائلي مشترك يكسر السرية).
+                onChange={(e) => { if (!verifiedPhone) setCustomerPhone(e.target.value); }}
+                readOnly={!!verifiedPhone}
+                className={`w-full px-4 py-3 rounded-xl border border-slate-200 outline-none transition-all ${
+                  verifiedPhone
+                    ? "bg-slate-50 text-slate-600 cursor-default"
+                    : "focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                }`}
                 placeholder={t("مثال: +974 1234 5678", "e.g. +974 1234 5678")}
                 required
               />
