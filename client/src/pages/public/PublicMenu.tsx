@@ -348,6 +348,67 @@ export default function PublicMenuPage() {
     return null;
   }, [startDate, subEndDate, rotationInfo]);
 
+  /**
+   * ✅ أيام الاشتراك **مرتّبة زمنياً** — نفس calendar-walk، بس نحتفظ بالترتيب.
+   *    دورات العميل قد تلفّ [2,3,4,1]، فالترتيب الزمني ليس رقم الدورة. عليه نبني
+   *    القفل التسلسلي: العميل يُكمل يوماً بيوم ولا يقفز لأسبوع بعده قبل إكماله.
+   */
+  const orderedSubSlots = useMemo((): { week: number; day: DayOfWeek }[] => {
+    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return [];
+    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return [];
+    const subStart = new Date(startDate + "T00:00:00");
+    const end = new Date(subEndDate + "T00:00:00");
+    if (end.getTime() < subStart.getTime()) return [];
+    const _now = new Date(); _now.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(_now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const effStart = subStart.getTime() > _now.getTime() ? subStart : tomorrow;
+    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
+    const out: { week: number; day: DayOfWeek }[] = [];
+    const cur = new Date(subStart);
+    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
+      const dow = cur.getDay();
+      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
+        const dayName = DAY_NAMES[dow];
+        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) out.push({ week: rotWeek, day: dayName as DayOfWeek });
+      }
+      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+  }, [startDate, subEndDate, rotationInfo]);
+
+  /** فهرس أول يوم لم يكتمل اختيار وجباته — حدّ التقدّم المسموح. */
+  const firstIncompleteIdx = useMemo(() => {
+    for (let i = 0; i < orderedSubSlots.length; i++) {
+      const { week, day } = orderedSubSlots[i];
+      const picked = items.filter((it: any) => it.week === week && it.day === day);
+      const meals = picked.filter((p: any) => isMainCategory(p.category)).length;
+      const snacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
+      // نفس شرط dayProgress.complete: بلا حدود مسجّلة لا يكتمل أبداً
+      const done = (hasMealLimit || hasSnackLimit)
+        && (!hasMealLimit || meals >= mealsPerDay) && (!hasSnackLimit || snacks >= snacksPerDay);
+      if (!done) return i;
+    }
+    return orderedSubSlots.length; // الكل مكتمل
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderedSubSlots, items, mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit]);
+
+  const slotChronoIdx = (week: number, day: string) =>
+    orderedSubSlots.findIndex((s) => s.week === week && s.day === day);
+
+  /** 🔒 هل يُسمح باختيار هذا اليوم؟ فقط حتى أول يوم ناقص (تسلسل إجباري). */
+  const isSlotAllowed = (week: number, day: string) => {
+    if (!orderedSubSlots.length) return true; // زائر بلا اشتراك → بلا قفل
+    const idx = slotChronoIdx(week, day);
+    return idx >= 0 && idx <= firstIncompleteIdx;
+  };
+  /** 🔒 هل يُسمح بفتح هذا الأسبوع؟ لو أول أيامه ضمن المسموح. */
+  const isWeekAllowed = (week: number) => {
+    if (!orderedSubSlots.length) return true;
+    const firstIdx = orderedSubSlots.findIndex((s) => s.week === week);
+    return firstIdx >= 0 && firstIdx <= firstIncompleteIdx;
+  };
+
   /** هل هذا اليوم من هذا الأسبوع داخل مدة الاشتراك؟ */
   const isSlotInSub = (week: number, day: string) => {
     if (!subscriptionSlots) return true; // لا حد → مسموح
@@ -1283,15 +1344,29 @@ export default function PublicMenuPage() {
                 return (
                 <button
                   key={week.value}
-                  onClick={() => { setSelectedWeek(week.value); setWeekTouched(true); }}
+                  onClick={() => {
+                    // 🔒 قفل تسلسلي: لا يقفز لأسبوع بعده قبل إكمال ما قبله
+                    if (!isWeekAllowed(week.value)) {
+                      toast({
+                        title: isRtl ? "أكمل أيامك بالترتيب أولاً" : "Complete your days in order first",
+                        description: isRtl ? "لازم تخلّص الأسبوع اللي قبله قبل ما تفتح ده." : "Finish the earlier week before opening this one.",
+                        variant: "destructive",
+                      });
+                      return;
+                    }
+                    setSelectedWeek(week.value); setWeekTouched(true);
+                  }}
                   className={cn(
                     "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-1.5",
                     selectedWeek === week.value
                       ? "bg-[#3CC4F0] text-white shadow-md scale-105"
-                      : "bg-white text-[#47759C] border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5"
+                      : isWeekAllowed(week.value)
+                        ? "bg-white text-[#47759C] border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5"
+                        : "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed" // 🔒 مقفول حتى يكمل ما قبله
                   )}
                 >
                   {week.label}
+                  {!isWeekAllowed(week.value) && selectedWeek !== week.value && <span className="text-[11px]">🔒</span>}
                   {/* علامة الأسبوع المطابق لتاريخ بدايتك */}
                   {isForYourStart && (
                     <span className={cn(
@@ -1323,7 +1398,18 @@ export default function PublicMenuPage() {
                   <button
                     key={day.value}
                     // يوم واحد مختار دائماً — إلغاء الاختيار كان يعيد العميل لرسالة "اختر اليوم أولاً"
-                    onClick={() => setSelectedDay(day.value)}
+                    onClick={() => {
+                      // 🔒 قفل تسلسلي: يسمح بالأيام المكتملة + أول يوم ناقص، لا أبعد
+                      if (!isSlotAllowed(selectedWeek, day.value)) {
+                        toast({
+                          title: isRtl ? "أكمل يومك الحالي أولاً" : "Complete your current day first",
+                          description: isRtl ? "اختر وجبات يومك بالترتيب قبل ما تقفز قدام." : "Fill your days in order before jumping ahead.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setSelectedDay(day.value);
+                    }}
                     className={cn(
                       "px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5",
                       isSel
