@@ -62,6 +62,7 @@ import type * as nameStyle from "../nameStyle.js";
 import type * as notifications from "../notifications.js";
 import type * as onlineOrders from "../onlineOrders.js";
 import type * as onlinePriceList from "../onlinePriceList.js";
+import type * as outletLabels from "../outletLabels.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as passwords from "../passwords.js";
 import type * as payroll from "../payroll.js";
@@ -157,6 +158,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   onlineOrders: typeof onlineOrders;
   onlinePriceList: typeof onlinePriceList;
+  outletLabels: typeof outletLabels;
   passwordReset: typeof passwordReset;
   passwords: typeof passwords;
   payroll: typeof payroll;

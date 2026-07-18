@@ -993,6 +993,25 @@ export default defineSchema({
     .index("by_outlet", ["outletId"])
     .index("by_outlet_meal", ["outletId", "mealId"]),
 
+  // Standalone thermal labels for outlet products. This catalogue is deliberately
+  // independent from subscriber plans and their kitchen sticker workflow.
+  outletProductLabels: defineTable({
+    sequence: v.number(),
+    barcode: v.string(),
+    nameEn: v.string(),
+    price: v.optional(v.number()),
+    calories: v.optional(v.number()),
+    carbs: v.optional(v.number()),
+    protein: v.optional(v.number()),
+    fats: v.optional(v.number()),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_sequence", ["sequence"])
+    .index("by_barcode", ["barcode"])
+    .index("by_active", ["isActive"]),
+
   // ✅ الجديد: طلبية جم يومية (رأس الفاتورة).
   // NOTE: gymOrders — idempotencyKey handled at app-level via unique constraint search.
   gymOrders: defineTable({

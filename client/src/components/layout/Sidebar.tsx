@@ -34,6 +34,7 @@ import {
   ChevronDown,
   Receipt,
   Activity,
+  Barcode,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -50,6 +51,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   publicMenu: UtensilsCrossed,
   banners: ImageIcon,
   stickers: Printer,
+  outletLabels: Barcode,
   payroll: Banknote,
   attendance: CalendarCheck,
   leaves: CalendarDays,
