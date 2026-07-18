@@ -51,9 +51,9 @@ export default function PublicMealsManagement() {
     costQAR: "",
     isActive: true,
     sortOrder: "999",
-    // NEW: Scheduling
-    weeks: [] as number[],
-    days: [] as string[],
+    // ✅ الجدولة الدقيقة: أزواج (دورة+يوم) — نفس ما يقرؤه المنيو الحي (schedule[]).
+    //    نخزّنها كمفاتيح "week:day" لسهولة التبديل، ونحوّلها عند الحفظ.
+    schedule: [] as string[],
     cutoffTime: "18:00",
   });
 
@@ -81,8 +81,7 @@ export default function PublicMealsManagement() {
       costQAR: "",
       isActive: true,
       sortOrder: "999",
-      weeks: [],
-      days: [],
+      schedule: [],
       cutoffTime: "18:00",
     });
     setIsDialogOpen(true);
@@ -110,8 +109,11 @@ export default function PublicMealsManagement() {
       costQAR: meal.costQAR != null ? String(meal.costQAR) : "",
       isActive: meal.isActive,
       sortOrder: meal.sortOrder.toString(),
-      weeks: meal.weeks || [],
-      days: meal.days || [],
+      // ✅ نحمّل الجدولة الدقيقة. لو الوجبة قديمة (weeks/days فقط) نحوّلها لأزواج.
+      schedule: Array.isArray(meal.schedule) && meal.schedule.length
+        ? meal.schedule.map((s: any) => `${s.week}:${String(s.day).toLowerCase()}`)
+        : ((meal.weeks || []) as number[]).flatMap((w: number) =>
+            ((meal.days || []) as string[]).map((d: string) => `${w}:${String(d).toLowerCase()}`)),
       cutoffTime: meal.cutoffTime || "18:00",
     });
     setIsDialogOpen(true);
@@ -164,8 +166,14 @@ export default function PublicMealsManagement() {
         costQAR: formData.costQAR ? parseFloat(formData.costQAR) : undefined,
         sortOrder: parseInt(formData.sortOrder) || 999,
         isActive: formData.isActive,
-        weeks: formData.weeks.length > 0 ? formData.weeks : undefined,
-        days: formData.days.length > 0 ? formData.days : undefined,
+        // ✅ نكتب الجدولة الدقيقة (schedule[]) — هي اللي المنيو الحي بيقرأها.
+        //    ونصفّر weeks/days القديمة كي لا تتعارض (schedule له الأولوية دائماً).
+        schedule: formData.schedule.map((k) => {
+          const [w, d] = k.split(":");
+          return { week: Number(w), day: d };
+        }),
+        weeks: [],
+        days: [],
         cutoffTime: formData.cutoffTime || undefined,
       };
 
@@ -507,60 +515,55 @@ export default function PublicMealsManagement() {
               <h3 className="text-lg font-bold text-[#0F1516] mb-4">🔷 {t("جدولة الوجبة", "Meal Scheduling")}</h3>
               
               <div className="space-y-4">
-                {/* Weeks */}
+                {/* ✅ شبكة دقيقة: اختر بالظبط في أي (دورة + يوم) تظهر الوجبة.
+                    كل خانة مؤشّرة = زوج (دورة+يوم) في المنيو الحي. الجمعة غير موجودة (لا توصيل). */}
                 <div>
-                  <Label className="text-sm font-bold mb-2 block">{t("اختر الأسابيع", "Select weeks")}</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[1, 2, 3, 4].map((week) => (
-                      <label key={week} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={formData.weeks.includes(week)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({ ...formData, weeks: [...formData.weeks, week] });
-                            } else {
-                              setFormData({ ...formData, weeks: formData.weeks.filter((w) => w !== week) });
-                            }
-                          }}
-                          className="h-4 w-4"
-                        />
-                        <span className="text-sm">{t("الأسبوع", "Week")} {week}</span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-bold">{t("متى تظهر الوجبة؟ (الدورة × اليوم)", "When does it show? (Cycle × Day)")}</Label>
+                    <span className="text-xs font-bold text-[#0E76AC]">{formData.schedule.length} {t("خانة", "slots")}</span>
                   </div>
-                </div>
-
-                {/* Days */}
-                <div>
-                  <Label className="text-sm font-bold mb-2 block">{t("اختر الأيام", "Select days")}</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "saturday", label: t("السبت", "Saturday") },
-                      { value: "sunday", label: t("الأحد", "Sunday") },
-                      { value: "monday", label: t("الإثنين", "Monday") },
-                      { value: "tuesday", label: t("الثلاثاء", "Tuesday") },
-                      { value: "wednesday", label: t("الأربعاء", "Wednesday") },
-                      { value: "thursday", label: t("الخميس", "Thursday") },
-                      { value: "friday", label: t("الجمعة", "Friday") },
-                    ].map((day) => (
-                      <label key={day.value} className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="checkbox"
-                          checked={formData.days.includes(day.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData({ ...formData, days: [...formData.days, day.value] });
-                            } else {
-                              setFormData({ ...formData, days: formData.days.filter((d) => d !== day.value) });
-                            }
-                          }}
-                          className="h-4 w-4"
-                        />
-                        <span className="text-sm">{day.label}</span>
-                      </label>
-                    ))}
+                  <div className="overflow-x-auto rounded-lg border border-slate-200">
+                    <table className="w-full min-w-[520px] text-center text-xs">
+                      <thead className="bg-slate-100 text-slate-600">
+                        <tr>
+                          <th className="p-2 text-start">{t("الدورة", "Cycle")}</th>
+                          {[
+                            { v: "saturday", l: t("السبت", "Sat") },
+                            { v: "sunday", l: t("الأحد", "Sun") },
+                            { v: "monday", l: t("الإثنين", "Mon") },
+                            { v: "tuesday", l: t("الثلاثاء", "Tue") },
+                            { v: "wednesday", l: t("الأربعاء", "Wed") },
+                            { v: "thursday", l: t("الخميس", "Thu") },
+                          ].map((d) => <th key={d.v} className="p-2">{d.l}</th>)}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[1, 2, 3, 4].map((wk) => (
+                          <tr key={wk} className="border-t border-slate-100">
+                            <td className="p-2 text-start font-bold text-slate-700">{t("دورة", "Cycle")} {wk}</td>
+                            {["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"].map((day) => {
+                              const key = `${wk}:${day}`;
+                              const on = formData.schedule.includes(key);
+                              return (
+                                <td key={day} className="p-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => setFormData((f) => ({
+                                      ...f,
+                                      schedule: on ? f.schedule.filter((k) => k !== key) : [...f.schedule, key],
+                                    }))}
+                                    className={`h-8 w-8 rounded-md border-2 font-black transition-colors ${on ? "border-emerald-500 bg-emerald-500 text-white" : "border-slate-200 bg-white text-transparent hover:border-emerald-300"}`}
+                                    aria-label={`${t("دورة", "Cycle")} ${wk} · ${day}`}
+                                  >✓</button>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
+                  <p className="mt-1 text-[11px] text-slate-400">{t("اضغط الخانة لتفعيل/إلغاء ظهور الوجبة في تلك الدورة واليوم.", "Tap a cell to toggle the meal on that cycle & day.")}</p>
                 </div>
 
                 {/* Cutoff Time */}
