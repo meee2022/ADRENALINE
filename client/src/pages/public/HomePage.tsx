@@ -399,9 +399,9 @@ export default function HomePage() {
                       style={{ fontFamily: "'Cairo',sans-serif" }}>
                       {isRtl ? m.nameAr : m.nameEn}
                     </div>
-                    <div className="flex items-center justify-between text-[11px]" style={{ color: "#47759C" }}>
+                    {/* بدون سعر — أسعار المشتركين غير معروضة هنا (كانت خطأ) */}
+                    <div className="flex items-center text-[11px]" style={{ color: "#47759C" }}>
                       <span>{m.calories} {isRtl ? "سعرة" : "kcal"}</span>
-                      <span className="font-bold" style={{ color: "#0E76AC" }}>{m.priceQAR} {isRtl ? "ر.ق" : "QAR"}</span>
                     </div>
                   </div>
                 </motion.a>
