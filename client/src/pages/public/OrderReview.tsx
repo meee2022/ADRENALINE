@@ -388,7 +388,7 @@ export default function OrderReview() {
 
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || !customerName || !customerPhone}
+            disabled={isSubmitting || !customerPhone || (!customerName && !findCustomerByPhone)}
             className="w-full bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
