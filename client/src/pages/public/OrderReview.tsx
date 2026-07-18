@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
+import { getVerifiedPhone } from "@/lib/customerIdentity";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 
@@ -51,9 +52,10 @@ export default function OrderReview() {
   
   // بيانات العميل — نملأ الرقم تلقائياً من الذي أدخله في المنيو
   const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState<string>(
-    () => (typeof window !== "undefined" ? (localStorage.getItem("menu_phone") || "") : "")
-  );
+  // ✅ الرقم يُملأ تلقائياً من الرقم الذي أكّده العميل في المنيو. كان يُقرأ من
+  //    localStorage مباشرةً، لكن المنيو يحفظه في sessionStorage (getVerifiedPhone)
+  //    — نفس المفتاح، تخزين مختلف، فلم يُملأ. نقرأ من نفس المصدر الآن.
+  const [customerPhone, setCustomerPhone] = useState<string>(() => getVerifiedPhone());
   const [customerEmail, setCustomerEmail] = useState("");
   
   // Convex Mutation & Query (بعد تعريف customerPhone)
@@ -68,13 +70,9 @@ export default function OrderReview() {
   const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // ✅ الربط التلقائي: عند إيجاد customer بنفس الرقم، نملأ البيانات تلقائياً
-  useEffect(() => {
-    if (findCustomerByPhone) {
-      setCustomerName(findCustomerByPhone.fullName);
-      // ملاحظة: جدول customers لا يحتوي على email (الإيميل في customerAccounts)
-    }
-  }, [findCustomerByPhone]);
+  // 🔒 لا نملأ الاسم تلقائياً — سرية: قد يكون جهازاً/رقماً مشتركاً بين عائلة،
+  //    فإظهار اسم صاحب الحساب يكشف هويته لغيره. الرقم يكفي: الطلب يُربط بالحساب
+  //    عبر customerId، والاسم يُرسَل للطاقم عند التأكيد (لا يظهر في شاشة العميل).
 
   // Computed values from cart
   const totalMeals = getTotalMeals();
@@ -97,8 +95,13 @@ export default function OrderReview() {
   };
 
   const handleSubmit = async () => {
-    if (!customerName || !customerPhone) {
-      alert(t("يرجى إدخال الاسم ورقم الجوال", "Please enter your name and phone number"));
+    if (!customerPhone) {
+      alert(t("يرجى إدخال رقم الجوال", "Please enter your phone number"));
+      return;
+    }
+    // الاسم مطلوب فقط لو لا حساب مربوط بالرقم؛ المربوط يكفيه customerId.
+    if (!customerName && !findCustomerByPhone) {
+      alert(t("يرجى إدخال الاسم", "Please enter your name"));
       return;
     }
 
@@ -113,7 +116,9 @@ export default function OrderReview() {
     try {
       // ✅ نبعت فقط IDs + الجدولة. الأسعار والسعرات وأسماء الوجبات تُحسب على الخادم من قاعدة البيانات.
       const result = await createOrder({
-        customerName,
+        // الاسم للطاقم فقط: لو تركه العميل فارغاً واسمه معروف بالحساب، نبعث اسم
+        // الحساب حتى يراه الطاقم — دون أن يظهر في شاشة العميل (سرية).
+        customerName: customerName || findCustomerByPhone?.fullName || "",
         customerPhone,
         customerEmail,
         customerId: findCustomerByPhone?._id,
@@ -304,15 +309,20 @@ export default function OrderReview() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                {t("الاسم الكامل", "Full name")} <span className="text-red-500">*</span>
+                {t("الاسم الكامل", "Full name")}{" "}
+                {findCustomerByPhone
+                  ? <span className="text-slate-400 text-xs">({t("اختياري", "optional")})</span>
+                  : <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 outline-none transition-all"
-                placeholder={t("أدخل اسمك الكامل", "Enter your full name")}
-                required
+                placeholder={findCustomerByPhone
+                  ? t("مربوط بحسابك — لا حاجة لكتابته", "Linked to your account — no need")
+                  : t("أدخل اسمك الكامل", "Enter your full name")}
+                required={!findCustomerByPhone}
               />
             </div>
 
