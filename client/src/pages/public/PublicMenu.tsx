@@ -377,12 +377,11 @@ export default function PublicMenuPage() {
 
   const handleAutoComplete = async () => {
     if (autoFilling) return;
+    // 🔓 يعمل بالرقم المتحقق (بلا تسجيل دخول)؛ الجلسة إن وُجدت تعطي حدّاً أوسع.
     const token = getSessionToken() || undefined;
-    if (!token) {
-      // 🔒 التوليد الأسبوعي يستلزم جلسة (يمنع استنزاف رصيد AI) — نفس حكم الخطة الذكية.
+    if (!token && !verifiedPhone) {
       toast({
-        title: isRtl ? "سجّل الدخول للإكمال التلقائي" : "Log in for auto-complete",
-        description: isRtl ? "الإكمال الذكي يحتاج حساب مسجَّل الدخول." : "Smart auto-complete needs a logged-in account.",
+        title: isRtl ? "أدخل رقمك أولاً" : "Enter your phone first",
         variant: "destructive",
       });
       return;

@@ -236,8 +236,10 @@ export default function SmartPlan() {
       // 🔒 التوليد الأسبوعي يستلزم جلسة (منع استنزاف رصيد AI من الزوار)
       const sessionToken = useStore.getState().sessionToken || undefined;
       if (mode === "week") {
-        if (!sessionToken) {
-          setError(t("يُرجى تسجيل الدخول أولاً لإنشاء خطة أسبوعية.", "Please log in to generate a weekly plan."));
+        // 🔓 يعمل بالرقم المتحقق أيضاً (الخادم يفرض حدّاً صارماً للزائر).
+        //    نطلب رقماً على الأقل حين لا توجد جلسة.
+        if (!sessionToken && !(source as any).phone && !(source as any).customerId) {
+          setError(t("أدخل رقمك أولاً لإنشاء خطة أسبوعية.", "Enter your phone to generate a weekly plan."));
           return;
         }
         // ✅ نقطة البداية = ماكس(بداية الاشتراك، بكرة):
@@ -271,7 +273,14 @@ export default function SmartPlan() {
         else setResult(res);
       }
     } catch (e: any) {
-      setError(t("حدث خطأ أثناء الإنشاء، يُرجى المحاولة مرة أخرى.", "An error occurred while generating, please try again."));
+      // ✅ نُظهر رسالة الخطأ الحقيقية (مثل «طلبات كثيرة — انتظر») بدل رسالة عامة
+      //    مضلّلة، فيفهم المستخدم السبب الفعلي. نقتطع بادئة Convex التقنية.
+      const raw = String(e?.message || e || "");
+      const clean = raw.replace(/^\[.*?\]\s*/g, "").replace(/^Uncaught\s+Error:\s*/i, "").trim();
+      const isArabic = /[؀-ۿ]/.test(clean);
+      setError(clean && (isArabic || !isRtl)
+        ? clean
+        : t("تعذّر إنشاء الخطة، يُرجى المحاولة بعد قليل.", "Could not generate the plan, please try again shortly."));
     } finally {
       setLoading(false);
     }

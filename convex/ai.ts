@@ -613,26 +613,40 @@ export const generateWeeklyPlan = action({
     // ✅ نهاية الاشتراك — لو مضبوطة، يقف التوليد عند هذا التاريخ
     //   حتى لو الأسبوع لم يكتمل (مثلاً اشتراك يخلص الاثنين → أحد+اثنين فقط).
     endDate: v.optional(v.string()),
-    // 🔒 sessionToken مطلوب — التوليد الأسبوعي مكلف (5-20 استدعاء AI لكل مرة)،
-    //    الزائر يعتمد على generateSmartPlan (يوم واحد) بحده الأضيق.
-    sessionToken: v.string(),
+    // 🔓 sessionToken اختياري: الموثّق (جلسة) بحدّ أوسع؛ والزائر بالرقم المتحقق
+    //    فقط مسموح لكن بحدّ صارم جداً لأن التوليد الشهري = عشرات نداءات AI.
+    sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<any> => {
     const weeksCount = Math.min(4, Math.max(1, Math.floor(args.weeks || 1)));
 
-    // 🔒 لازم جلسة صالحة — يمنع أي زائر من استنزاف رصيد Anthropic
-    const identity: any = await ctx.runQuery(api.ai._whoAmI, { sessionToken: args.sessionToken });
-    if (!identity) throw new Error("سجّل الدخول لتوليد خطة أسبوعية");
-    const identityKey = identity.userId ? `staff:${identity.userId}` : `cust:${identity.customerAccountId}`;
+    // 🔑 الهوية: جلسة موثّقة إن وُجدت، وإلا الرقم المتحقق (زائر). لا هذا ولا ذاك ⇒ رفض.
+    const identity: any = args.sessionToken
+      ? await ctx.runQuery(api.ai._whoAmI, { sessionToken: args.sessionToken })
+      : null;
+    let identityKey: string;
+    let visitor: boolean;
+    if (identity?.userId) { identityKey = `staff:${identity.userId}`; visitor = false; }
+    else if (identity?.customerAccountId) { identityKey = `cust:${identity.customerAccountId}`; visitor = false; }
+    else if (args.phone && args.phone.replace(/\D/g, "").length >= 6) {
+      identityKey = `phone:${args.phone.replace(/\D/g, "")}`; visitor = true;
+    } else {
+      throw new Error("أدخل رقمك المتحقق أو سجّل الدخول لتوليد خطة");
+    }
 
-    // 💸 حدّ معدّل: نستهلك وحدة لكل أسبوع.
+    // 💸 حدّ معدّل: الموثّق أوسع؛ الزائر (رقم فقط) صارم — توليدة واحدة كل 10 دقائق
+    //    لأن الخطة الشهرية = عشرات نداءات AI. نستهلك وحدة واحدة لكل توليدة.
+    const perId = visitor ? 1 : 6;
+    const globalCap = visitor ? 8 : 40;
     const rlKey = `ai:generateWeeklyPlan:${identityKey}`;
-    for (const [key, limit] of [[rlKey, 6], ["ai:generateWeeklyPlan:global", 40]] as const) {
-      for (let w = 0; w < weeksCount; w++) {
-        const gate = await ctx.runMutation(internal.rateLimit.consume, {
-          key, limit, windowMs: 10 * 60 * 1000,
-        });
-        if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+    for (const [key, limit] of [[rlKey, perId], ["ai:generateWeeklyPlan:global", globalCap]] as const) {
+      const gate = await ctx.runMutation(internal.rateLimit.consume, {
+        key, limit, windowMs: 10 * 60 * 1000,
+      });
+      if (!gate.ok) {
+        throw new Error(visitor
+          ? "ولّدت خطة للتو — انتظر بضع دقائق قبل توليد خطة أخرى."
+          : "طلبات كثيرة — جرّب بعد دقائق قليلة");
       }
     }
 
