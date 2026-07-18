@@ -248,3 +248,58 @@ export function planShortfall(
   }
   return { mealsShort, snacksShort, incompleteDays, worstDay: worst };
 }
+
+/**
+ * نقص الخطة عبر **كل أيام الاشتراك** (لا الأيام المختارة فقط) — البوابة الصارمة
+ * لتأكيد الطلب. العميل يجب أن يُكمل كل يوم توصيل في اشتراكه (mealsPerDay رئيسية +
+ * snacksPerDay سناك) قبل الإرسال؛ يومٌ ناقص أو غائب = نقص → «أكمل وجباتك».
+ *
+ * ⚠️ نفس مصدر المنيو: `slots` = `orderedSubscriptionSlots(...)` مُزال منها التكرار
+ *    بمفتاح week:day (كما يفعل المنيو بـ Set). التصنيف مطابق للمنيو. بلا عددٍ مضبوط
+ *    (0) أو بلا سلوتات ⇒ لا فحص (لا نمنع من لا نعرف اشتراكه).
+ */
+export function subscriptionShortfall(
+  items: Array<{ week?: number | string; day?: string; category?: string; isOff?: boolean }>,
+  slots: Array<{ week: number; day: string }>,
+  mealsPerDay: number,
+  snacksPerDay: number,
+): PlanShortfall {
+  const mpd = Number.isFinite(mealsPerDay) && mealsPerDay > 0 ? Math.floor(mealsPerDay) : 0;
+  const spd = Number.isFinite(snacksPerDay) && snacksPerDay > 0 ? Math.floor(snacksPerDay) : 0;
+  if ((!mpd && !spd) || !slots || slots.length === 0) {
+    return { mealsShort: 0, snacksShort: 0, incompleteDays: 0, worstDay: null };
+  }
+
+  // عدّ ما اختاره العميل لكل (أسبوع:يوم)
+  const counts = new Map<string, { mains: number; snacks: number }>();
+  for (const it of items) {
+    if (it?.isOff) continue;
+    const week = Number(it?.week); const day = String(it?.day || "").toLowerCase();
+    if (!week || !day) continue;
+    const k = `${week}:${day}`;
+    const rec = counts.get(k) || { mains: 0, snacks: 0 };
+    if (isSnackCategory(it?.category)) rec.snacks++;
+    else if (isMainCategory(it?.category)) rec.mains++;
+    counts.set(k, rec);
+  }
+
+  // كل سلوت اشتراك مطلوب (بلا تكرار) لازم يكتمل
+  const seen = new Set<string>();
+  let mealsShort = 0, snacksShort = 0, incompleteDays = 0;
+  let worst: PlanShortfall["worstDay"] = null;
+  for (const s of slots) {
+    const day = String(s.day || "").toLowerCase();
+    const k = `${Number(s.week)}:${day}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const rec = counts.get(k) || { mains: 0, snacks: 0 };
+    const ms = Math.max(0, mpd - rec.mains);
+    const ss = Math.max(0, spd - rec.snacks);
+    if (ms || ss) {
+      incompleteDays++;
+      if (!worst) worst = { week: Number(s.week), day, mains: rec.mains, snacks: rec.snacks };
+    }
+    mealsShort += ms; snacksShort += ss;
+  }
+  return { mealsShort, snacksShort, incompleteDays, worstDay: worst };
+}

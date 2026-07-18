@@ -4,7 +4,7 @@ import { ChevronRight, ChevronDown, Package, Calendar, Trash2, Pencil } from "lu
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
-import { planShortfall } from "@/lib/subscription";
+import { subscriptionShortfall, orderedSubscriptionSlots } from "@/lib/subscription";
 import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -75,12 +75,22 @@ export default function OrderReview() {
   const [expandedWeeks, setExpandedWeeks] = useState<number[]>([1]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 🔒 بوابة مطابقة الاشتراك — المصدر الوحيد (lib/subscription.planShortfall).
-  //    القاعدة (صارمة، طلب المستخدم 2026-07-18): كل يوم في الطلب = عدد وجبات
-  //    الاشتراك بالضبط. لو أقل → يُمنع الإرسال ويُعرض العدد الناقص + «تواصل مع
-  //    الأخصائية». لا يغيّر أي قيد قائم (السقف/الجدولة/تحديد الأيام) — فحص فقط.
-  const shortfall = planShortfall(
+  // 🔒 بوابة مطابقة الاشتراك — المصدر الوحيد (lib/subscription.subscriptionShortfall).
+  //    القاعدة (صارمة، طلب المستخدم): العميل يجب أن يُكمل **كل أيام اشتراكه** (كل يوم
+  //    = mealsPerDay رئيسية + snacksPerDay سناك) قبل الإرسال. يومٌ ناقص أو غائب → نقص
+  //    ويُمنع الإرسال مع «أكمل وجباتك». نفس سلوتات المنيو (orderedSubscriptionSlots +
+  //    نفس أسبوع الدورة من rotationWeekAt) فلا يفترقان. لا يغيّر أي قيد قائم — فحص فقط.
+  const subStartDate = (findCustomerByPhone as any)?.startDate as string | undefined;
+  const subEndDate = (findCustomerByPhone as any)?.endDate as string | undefined;
+  const rotationInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    subStartDate ? { targetDate: subStartDate } : "skip",
+  ) as any;
+  const startRotForSub = Number(rotationInfo?.rotationWeek) || 1;
+  const subSlots = orderedSubscriptionSlots(subStartDate, subEndDate, startRotForSub);
+  const shortfall = subscriptionShortfall(
     selectedMeals,
+    subSlots,
     Number(findCustomerByPhone?.mealsPerDay) || 0,
     Number(findCustomerByPhone?.snacksPerDay) || 0,
   );
@@ -138,11 +148,11 @@ export default function OrderReview() {
       return;
     }
 
-    // 🔒 مطابقة الاشتراك: لو الخطة أقل من عدد وجبات الاشتراك → امنع وحوّل للأخصائية.
+    // 🔒 مطابقة الاشتراك: لازم يُكمل كل أيام اشتراكه قبل الإرسال.
     if (isShort) {
       alert(t(
-        "خطتك لا تطابق عدد وجبات اشتراكك بالضبط. يرجى التواصل مع الأخصائية لمطابقة الوجبات قبل الإرسال.",
-        "Your plan doesn't exactly match your subscription's meal count. Please contact the specialist to match your meals before submitting.",
+        "خطتك غير مكتملة. أكمل باقي وجبات أيام اشتراكك أولاً لتأكيد الخطة وإرسالها.",
+        "Your plan is incomplete. Please complete the rest of your subscription days before confirming and sending.",
       ));
       return;
     }
@@ -433,19 +443,19 @@ export default function OrderReview() {
             </div>
           </div>
 
-          {/* 🔒 تنبيه نقص الاشتراك — يُعرض العدد الناقص ويمنع الإرسال + زر تواصل */}
+          {/* 🔒 تنبيه عدم اكتمال الخطة — يمنع الإرسال حتى يُكمل كل أيام اشتراكه */}
           {isShort && (
             <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <h3 className="font-bold text-amber-900 mb-1">
-                    {t("خطتك لا تطابق اشتراكك", "Your plan doesn't match your subscription")}
+                    {t("خطتك غير مكتملة", "Your plan is incomplete")}
                   </h3>
                   <p className="text-sm text-amber-800 mb-2">
                     {t(
-                      "عدد الوجبات المختارة أقل من عدد وجبات اشتراكك. يجب مطابقتها قبل الإرسال:",
-                      "You selected fewer meals than your subscription. They must match before submitting:",
+                      "أكمل باقي وجبات أيام اشتراكك لتأكيد الخطة وإرسالها. المتبقّي:",
+                      "Complete the rest of your subscription days to confirm and send. Remaining:",
                     )}
                   </p>
                   <ul className="text-sm text-amber-900 font-semibold space-y-0.5 mb-3">
@@ -461,15 +471,24 @@ export default function OrderReview() {
                       </li>
                     )}
                   </ul>
-                  <a
-                    href={specialistLink()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-lg transition-all"
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                    {t("تواصل مع الأخصائية", "Contact the specialist")}
-                  </a>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setLocation("/public/menu")}
+                      className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-lg transition-all"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                      {t("أكمل وجباتك", "Complete your meals")}
+                    </button>
+                    <a
+                      href={specialistLink()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 bg-white border border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-bold px-4 py-2.5 rounded-lg transition-all"
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      {t("تواصل مع الأخصائية", "Contact the specialist")}
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
