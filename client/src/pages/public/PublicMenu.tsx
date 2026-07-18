@@ -314,6 +314,40 @@ export default function PublicMenuPage() {
     return s;
   }, [subscriptionSlots]);
 
+  /**
+   * ✅ أول يوم في اشتراك العميل — (أسبوع الدورة + اليوم) لتاريخ بدايته الفعلي.
+   *    نمشي بنفس منطق subscriptionSlots (calendar-walk، يتخطّى الجمعة، دورة صحيحة)
+   *    ونلتقط أول slot. عليه يفتح المينو، لا على «أسبوع 1/يوم اليوم».
+   *
+   *    ⚠️ اشتراك 4 أسابيع يلفّ فيغطي الدورات كلها [1..4]، فأسبوع 1 قد يكون **آخر**
+   *       أسبوع للعميل لا أوله. الافتراض على أسبوع 1 كان يبدأ العميل من نهاية
+   *       اشتراكه — لخبطة مسند. البداية الحقيقية تُنهي ذلك.
+   */
+  const firstSubSlot = useMemo((): { week: number; day: DayOfWeek } | null => {
+    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return null;
+    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
+    const subStart = new Date(startDate + "T00:00:00");
+    const end = new Date(subEndDate + "T00:00:00");
+    if (end.getTime() < subStart.getTime()) return null;
+    const _now = new Date(); _now.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(_now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const effStart = subStart.getTime() > _now.getTime() ? subStart : tomorrow;
+    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
+    const cur = new Date(subStart);
+    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
+      const dow = cur.getDay();
+      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
+        const dayName = DAY_NAMES[dow];
+        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) {
+          return { week: rotWeek, day: dayName as DayOfWeek }; // أول slot فعلي
+        }
+      }
+      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return null;
+  }, [startDate, subEndDate, rotationInfo]);
+
   /** هل هذا اليوم من هذا الأسبوع داخل مدة الاشتراك؟ */
   const isSlotInSub = (week: number, day: string) => {
     if (!subscriptionSlots) return true; // لا حد → مسموح
@@ -560,12 +594,20 @@ export default function PublicMenuPage() {
   const meals = filteredMeals;
 
   // Countdown timer logic - DISABLED (always allow ordering)
-  // ✅ زامن الأسبوع الافتراضي مع دورة المطبخ في تاريخ البداية المختار
-  //    (ما لم يغيّره العميل يدوياً). فلو بدأ الأسبوع الجاي، يفتح على دورته الصحيحة.
+  // ✅ افتح المينو على أول يوم في اشتراك العميل (أسبوع + يوم البداية الحقيقيين)،
+  //    لا على «أسبوع 1/يوم اليوم». ما لم يتنقّل العميل يدوياً (weekTouched).
+  //    firstSubSlot يمشي على التقويم ويتخطّى الجمعة، فيطابق ما يراه العميل فعلاً.
   useEffect(() => {
+    if (weekTouched) return;
+    if (firstSubSlot) {
+      setSelectedWeek(firstSubSlot.week);
+      setSelectedDay(firstSubSlot.day);
+      return;
+    }
+    // لا اشتراك محدد (زائر) → نكتفي بمزامنة الأسبوع مع دورة تاريخ البداية.
     const w = Number(rotationInfo?.rotationWeek);
-    if (!weekTouched && w >= 1 && w <= 4) setSelectedWeek(w);
-  }, [rotationInfo, weekTouched]);
+    if (w >= 1 && w <= 4) setSelectedWeek(w);
+  }, [firstSubSlot, rotationInfo, weekTouched]);
 
   // ✅ املأ تاريخ البداية تلقائياً من اشتراك العميل المسجَّل (بعد تأكيد رقمه).
   //    الأخصائية سجّلت بدايته ونهايته، فلا يخمّن العميل — المينو يُبنى على اشتراكه.
