@@ -162,7 +162,9 @@ export default function OrderReview() {
       <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => setLocation("/menu")}
+            // 🔙 صفحة عميل — الرجوع للمنيو العام (/public/menu) لا لإدارة القائمة
+            //    (/menu) وهي شاشة طاقم. باقي روابط هذه الصفحة تستخدم /public/menu.
+            onClick={() => setLocation("/public/menu")}
             className="text-slate-600 hover:text-slate-900 flex items-center gap-2"
           >
             <ChevronRight className="h-5 w-5" />
