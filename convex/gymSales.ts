@@ -52,6 +52,7 @@ export const addGym = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const name = args.name.trim();
     if (!name) throw new Error("اسم الجم مطلوب");
@@ -84,6 +85,7 @@ export const updateGym = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const patch: any = { updatedAt: Date.now() };
     if (args.name !== undefined) patch.name = args.name.trim();
@@ -109,6 +111,7 @@ export const setMealGymPrice = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     await ctx.db.patch(args.mealId, {
       gymPrice: args.gymPrice != null && args.gymPrice >= 0 ? args.gymPrice : undefined,
@@ -126,6 +129,7 @@ export const setMealGymNames = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const meal: any = await ctx.db.get(args.mealId);
     if (!meal || !meal.isActive) {
@@ -158,6 +162,7 @@ export const createGymMeal = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const nameAr = args.nameAr.trim();
     const nameEn = args.nameEn.trim();
@@ -229,6 +234,7 @@ export const listMealsForGym = query({
 export const copyOnlineCatalogToOutlet = mutation({
   args: { outletId: v.id("gymAccounts"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet: any = await ctx.db.get(args.outletId);
     if (!outlet) throw new Error("المنفذ غير موجود");
@@ -303,6 +309,7 @@ export const setOutletCatalogItem = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet: any = await ctx.db.get(args.outletId);
     const meal: any = await ctx.db.get(args.mealId);
@@ -360,6 +367,7 @@ export const createOutletMeal = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet = await ctx.db.get(args.outletId);
     if (!outlet) throw new Error("اختر منفذًا صحيحًا");
@@ -578,6 +586,7 @@ export const listAllMealsForGymAdmin = query({
 export const setMealIsGymItem = mutation({
   args: { mealId: v.id("publicMeals"), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     await ctx.db.patch(args.mealId, { isGymItem: args.isGymItem } as any);
     return { ok: true };
@@ -587,6 +596,7 @@ export const setMealIsGymItem = mutation({
 export const setMealReturnWindow = mutation({
   args: { mealId: v.id("publicMeals"), days: v.number(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const days = Math.round(args.days);
     if (days < 1 || days > 14) throw new Error("مدة المرتجع يجب أن تكون بين يوم و14 يوماً");
@@ -609,6 +619,7 @@ export const applyGymPriceList = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const meals = await ctx.db.query("publicMeals").collect();
 
@@ -686,6 +697,7 @@ export const applyGymPricesByArName = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const meals = await ctx.db.query("publicMeals").collect();
     const norm = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
@@ -722,6 +734,7 @@ export const applyGymPricesByArName = mutation({
 export const bulkSetGymItems = mutation({
   args: { mealIds: v.array(v.id("publicMeals")), isGymItem: v.boolean(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     for (const id of args.mealIds) {
       await ctx.db.patch(id, { isGymItem: args.isGymItem } as any);
