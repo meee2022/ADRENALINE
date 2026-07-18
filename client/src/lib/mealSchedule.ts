@@ -34,6 +34,14 @@
 export const MAIN_CATEGORIES = ["breakfast", "lunch", "dinner"] as const;
 export const SNACK_CATEGORIES = ["snack", "salad"] as const;
 
+/**
+ * ⭐ حد الفطار اليومي — الفطار وجبة واحدة كحد أقصى لكل الاشتراكات (قاعدة ثابتة،
+ *    لا حقل لها في المشترك). الفطار **رئيسية** ويُحسب ضمن `mealsPerDay`، لكنه
+ *    مسقوف عند 1 داخل الرئيسية: بعد اختيار فطار يُقفَل الفطار، والباقي غداء/عشاء.
+ *    حدٌّ أعلى فقط (لا يُلزِم بفطار) — كي لا نمنع من لا يريد فطاراً.
+ */
+export const BREAKFAST_MAX_PER_DAY = 1;
+
 const norm = (c: any) => String(c || "").toLowerCase().trim();
 
 /** وجبة رئيسية؟ (فطور/غداء/عشاء) */
@@ -44,6 +52,11 @@ export function isMainCategory(category: any): boolean {
 /** سناك؟ (سناك أو سلطة) */
 export function isSnackCategory(category: any): boolean {
   return (SNACK_CATEGORIES as readonly string[]).includes(norm(category));
+}
+
+/** فطار؟ (المسقوف عند BREAKFAST_MAX_PER_DAY داخل الرئيسية) */
+export function isBreakfastCategory(category: any): boolean {
+  return norm(category) === "breakfast";
 }
 
 /**

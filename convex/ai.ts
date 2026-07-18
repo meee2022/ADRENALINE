@@ -392,12 +392,24 @@ function ruleBasedPlan(profile: any, candidates: any[]) {
   const byCat: Record<string, any[]> = { breakfast: [], lunch: [], dinner: [] };
   for (const m of mains) (byCat[m.category] ||= []).push(m); // mains مرتّبة بالبروتين أصلاً
   const ORDER = ["breakfast", "lunch", "dinner"];
+  // ⭐ سقف الفطار: فطار واحد/يوم كحد أقصى (نفس قاعدة المنيو اليدوي
+  //    BREAKFAST_MAX_PER_DAY). بعد أول فطار لا نأخذ فطاراً آخر ولو mealsPerDay
+  //    أكبر — الباقي غداء/عشاء. كي لا تختلف الخطة الذكية عن اليدوية.
+  let breakfastUsed = 0;
+  const NON_BREAKFAST = ["lunch", "dinner"];
   for (let i = 0; i < nMeals; i++) {
-    const cat = ORDER[i % ORDER.length];
-    // لو التصنيف خلص (أو لا وجبات فيه اليوم) نقع على أي رئيسية متبقية
-    const m = byCat[cat]?.shift()
-      || ORDER.map((c) => byCat[c]).find((arr) => arr?.length)?.shift();
+    let cat = ORDER[i % ORDER.length];
+    if (cat === "breakfast" && breakfastUsed >= 1) {
+      // تخطَّ الفطار المتكرّر إلى أول غداء/عشاء متاح
+      cat = NON_BREAKFAST.find((c) => byCat[c]?.length) || "";
+    }
+    // لو التصنيف خلص (أو لا وجبات فيه اليوم) نقع على أي رئيسية متبقية —
+    //    مع استبعاد الفطار لو استُهلك سقفه.
+    const fallbackOrder = breakfastUsed >= 1 ? NON_BREAKFAST : ORDER;
+    const m = (cat && byCat[cat]?.shift())
+      || fallbackOrder.map((c) => byCat[c]).find((arr) => arr?.length)?.shift();
     if (!m) break;
+    if (m.category === "breakfast") breakfastUsed++;
     picks.push({ id: m.id, reason: "وجبة غنية بالبروتين تناسب هدفك الغذائي" });
     kcal += m.calories || 0;
   }
@@ -435,7 +447,8 @@ ${menu}
 
 أعد ردك بصيغة JSON فقط بدون أي نص آخر، بهذا الشكل:
 {"picks":[{"id":"<id من القائمة>","reason":"سبب قصير بالعربي"}],"summary":"جملة موجزة عن الخطة"}
-اختر ما مجموعه ${profile.mealsPerDay} وجبات رئيسية و ${profile.snacksPerDay} سناك، قرّب من السعرات المستهدفة، ونوّع.`;
+اختر ما مجموعه ${profile.mealsPerDay} وجبات رئيسية و ${profile.snacksPerDay} سناك، قرّب من السعرات المستهدفة، ونوّع.
+⚠️ الفطار (breakfast) وجبة واحدة كحد أقصى — لا تختر أكثر من فطار واحد، وليكن الباقي غداءً أو عشاءً.`;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

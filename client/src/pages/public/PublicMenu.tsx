@@ -28,7 +28,7 @@ import { useQuery, useAction } from "convex/react";
 import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotBlockDate, localToday } from "@/lib/subscription";
-import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, customerCategoryLabel } from "@/lib/mealSchedule";
+import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -231,6 +231,7 @@ export default function PublicMenuPage() {
   );
   const mainMealsToday = selectedToday.filter((i: any) => isMainCategory(i.category)).length;
   const snacksToday = selectedToday.filter((i: any) => isSnackCategory(i.category)).length;
+  const breakfastToday = selectedToday.filter((i: any) => isBreakfastCategory(i.category)).length;
 
   /** كم وجبة/سناك اختار العميل ليوم معيّن في الأسبوع الحالي، وهل اكتمل؟ */
   const dayProgress = (dayValue: string) => {
@@ -392,7 +393,7 @@ export default function PublicMenuPage() {
     }
     setAutoFilling(true);
     // عدّادات محلية: items لا تتحدّث داخل الحلقة، فنتتبّع ما أضفناه يدوياً
-    const localCounts: Record<string, { meals: number; snacks: number }> = {};
+    const localCounts: Record<string, { meals: number; snacks: number; breakfast: number }> = {};
     const addedKeys = new Set<string>();
     try {
       const res: any = await generateWeeklyPlan({
@@ -411,16 +412,22 @@ export default function PublicMenuPage() {
           if (!orderedSubSlots.some((s) => s.week === week && s.day === day)) continue; // خارج الاشتراك
           for (const pick of (d.picks || [])) {
             const isSnack = isSnackCategory(pick.category);
+            const isBreakfast = isBreakfastCategory(pick.category);
             // عدّ ما في السلة لهذا اليوم بعد ما أضفنا
             const picked = items.concat([]).filter((it: any) => it.week === week && it.day === day);
             const curMeals = picked.filter((p: any) => isMainCategory(p.category)).length;
             const curSnacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
+            const curBreakfast = picked.filter((p: any) => isBreakfastCategory(p.category)).length;
             // ملاحظة: items لا تتحدّث فوراً داخل الحلقة، فنعتمد عدّاداً محلياً
             const key = `${week}:${day}`;
-            localCounts[key] = localCounts[key] || { meals: curMeals, snacks: curSnacks };
+            localCounts[key] = localCounts[key] || { meals: curMeals, snacks: curSnacks, breakfast: curBreakfast };
             const c = localCounts[key];
             if (isSnack) { if (hasSnackLimit && c.snacks >= snacksPerDay) continue; }
-            else { if (hasMealLimit && c.meals >= mealsPerDay) continue; }
+            else {
+              // ⭐ سقف الفطار داخل الملء التلقائي: فطار واحد/يوم كحد أقصى
+              if (isBreakfast && c.breakfast >= BREAKFAST_MAX_PER_DAY) continue;
+              if (hasMealLimit && c.meals >= mealsPerDay) continue;
+            }
             // موجودة مسبقاً؟ لا نكرّر
             const already = items.some((it: any) => it._id === pick.id && it.week === week && it.day === day)
               || addedKeys.has(`${pick.id}:${key}`);
@@ -432,7 +439,7 @@ export default function PublicMenuPage() {
               priceQAR: pick.priceQAR || 0, week, day,
             });
             addedKeys.add(`${pick.id}:${key}`);
-            if (isSnack) c.snacks++; else c.meals++;
+            if (isSnack) c.snacks++; else { c.meals++; if (isBreakfast) c.breakfast++; }
             added++;
           }
         }
@@ -609,6 +616,17 @@ export default function PublicMenuPage() {
         description: isRtl
           ? `اشتراكك ${snacksPerDay} سناك يوميًا. اختر يومًا آخر لإضافة المزيد.`
           : `Your plan allows ${snacksPerDay} snacks/day. Pick another day to add more.`,
+      });
+      return;
+    }
+    // ⭐ سقف الفطار: وجبة فطار واحدة/يوم. الفطار رئيسية ويُحسب ضمن الإجمالي،
+    //    لكن بعد اختيار فطار يُقفَل الفطار (الباقي غداء/عشاء). حدٌّ أعلى فقط.
+    if (isBreakfastCategory(meal.category) && breakfastToday >= BREAKFAST_MAX_PER_DAY) {
+      toast({
+        title: isRtl ? `اكتمل فطار ${dayLabelNow}` : `Breakfast is full for ${dayLabelNow}`,
+        description: isRtl
+          ? `الفطار وجبة واحدة يوميًا. اختر غداءً أو عشاءً لبقية وجباتك.`
+          : `Breakfast is one meal per day. Pick lunch or dinner for the rest.`,
       });
       return;
     }
