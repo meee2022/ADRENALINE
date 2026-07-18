@@ -18,6 +18,7 @@ import { DailyPlanItem } from "@/lib/types";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -486,6 +487,30 @@ export default function PlansPage() {
 
   const scheduledCount = useMemo(() => Object.values(scheduledByCategory).reduce((s, a) => s + a.length, 0), [scheduledByCategory]);
 
+  // 🔗 خريطة معلومات الحجب لكل menuItem: اسم + مكوّنات + وسوم من الوجبة العامة —
+  //    عشان الملء التلقائي يفحص ممنوعات المشترك بنفس منطق الخادم (مصدر واحد).
+  const mealInfoByMenuItem = useMemo(() => {
+    const pmById = new Map<string, any>();
+    (publicMeals as any[]).forEach((pm) => pmById.set(String(pm._id), pm));
+    const map = new Map<string, any>();
+    (menuItems as any[]).forEach((mi) => {
+      const pm = mi.publicMealId ? pmById.get(String(mi.publicMealId)) : null;
+      map.set(String(mi._id), {
+        nameAr: pm?.nameAr || mi.nameAr || mi.name,
+        nameEn: pm?.nameEn || mi.nameEn,
+        ingredients: pm?.ingredients || [],
+        tags: pm?.tags || [],
+      });
+    });
+    return map;
+  }, [menuItems, publicMeals]);
+
+  // ممنوعات/حساسية المشترك المختار — كلمات المنع (المصدر الوحيد lib/mealRestrictions).
+  const restrictWords = useMemo(
+    () => restrictionWords((selectedCustomer as any)?.avoid, (selectedCustomer as any)?.allergies),
+    [selectedCustomer],
+  );
+
   useEffect(() => {
     if (!selectedCustomerId || !formattedDate) { setCurrentPlan(null); return; }
 
@@ -553,23 +578,42 @@ export default function PlansPage() {
   };
 
   // ✅ ملء الخانات الفارغة تلقائياً بوجبات اليوم من الجدول الأسبوعي (لا يستبدل المُختار)
+  //    🚫 يحترم ممنوعات/حساسية المشترك: يتخطّى أي وجبة تخالفها ويجرّب التالية.
+  //       نفس منطق الحجب في الذكي (lib/mealRestrictions ← يعكس ai.isBlocked).
   const handleAutoFillDay = () => {
     if (!currentPlan) return;
     let filled = 0;
+    let blockedSkipped = 0;   // خانات وُجد لها وجبات لكن كلها ممنوعة
+    const isRestricted = (menuItemId: string) =>
+      mealIsRestricted(mealInfoByMenuItem.get(String(menuItemId)), restrictWords);
     const items = (currentPlan.items as any[]).map((it: any) => {
       if (it.isOff || it.menuItemId) return it;
       const candidates = scheduledByCategory[String(it.categoryId)] || [];
       if (!candidates.length) return it;
-      const idx = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
+      const start = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
+      // ابدأ من الفهرس المعتاد ثم لُفّ حتى تجد وجبة غير ممنوعة
+      let pick: string | null = null;
+      for (let k = 0; k < candidates.length; k++) {
+        const cand = candidates[(start + k) % candidates.length];
+        if (!isRestricted(cand)) { pick = cand; break; }
+      }
+      if (!pick) { blockedSkipped++; return it; } // كل وجبات الخانة ممنوعة — نتركها للأخصائية
       filled++;
-      return { ...it, menuItemId: candidates[idx] };
+      return { ...it, menuItemId: pick };
     });
-    if (!filled) {
+    if (!filled && !blockedSkipped) {
       toast({ title: isRtl ? "لا توجد وجبات مجدولة لهذا اليوم" : "No scheduled meals for this day", variant: "destructive" });
       return;
     }
     setCurrentPlan({ ...currentPlan, items });
-    toast({ title: isRtl ? `✓ تم ملء ${filled} وجبة من منيو اليوم` : `Filled ${filled} meals from today's menu` });
+    toast({
+      title: isRtl ? `✓ تم ملء ${filled} وجبة من منيو اليوم` : `Filled ${filled} meals from today's menu`,
+      description: blockedSkipped
+        ? (isRtl
+            ? `⚠ تُركت ${blockedSkipped} خانة: كل وجباتها ضمن ممنوعات المشترك — اخترها يدوياً`
+            : `⚠ ${blockedSkipped} slot(s) left empty: all their meals are within the customer's restrictions`)
+        : (restrictWords.length ? (isRtl ? "روعيت ممنوعات المشترك" : "Customer restrictions respected") : undefined),
+    });
   };
 
   const updateItemById = (itemId: string, updates: Partial<DailyPlanItem>) => {
