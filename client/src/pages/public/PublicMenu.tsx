@@ -26,7 +26,7 @@ import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
-import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotBlockDate, localToday } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
@@ -43,6 +43,9 @@ const DAY_LABEL_AR: Record<string, string> = {
   saturday: "السبت", sunday: "الأحد", monday: "الإثنين",
   tuesday: "الثلاثاء", wednesday: "الأربعاء", thursday: "الخميس",
 };
+
+/** أسماء الشهور بالعربية لعرض تاريخ اليوم جنب اسمه في المنيو. */
+const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
 type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
@@ -1349,9 +1352,28 @@ export default function PublicMenuPage() {
                 //    ينتهي يوم الثلاثاء من أسبوع 2، الأربعاء والخميس من نفس الأسبوع
                 //    لن يظهروا).
                 .filter((day) => isSlotInSub(selectedWeek, day.value))
+                // 🚫 نخفي أيام بلوك البداية اللي عدّى ميعاد تحضيرها (كسبت اليوم):
+                //    نقطة الانطلاق = ماكس(البداية، بكرة) لأن اليوم انقضى ميعاد طبخه.
+                //    اليوم الأسبق من ذلك لا توصيل له، فلا يُعرض بتاريخ بعيد مربك.
+                .filter((day) => {
+                  const iso = slotBlockDate(startDate, startRotForSub, selectedWeek, day.value);
+                  if (!iso) return true;
+                  const effStartISO = startDate > localToday()
+                    ? startDate
+                    : localISO(new Date(Date.now() + 86400000));
+                  return iso >= effStartISO;
+                })
                 .map((day) => {
                 const prog = dayProgress(day.value);
                 const isSel = selectedDay === day.value;
+                // 📅 التاريخ الطبيعي لهذا اليوم في بلوكه (نفس منطق المراجعة/الاعتماد)
+                const isoDate = slotBlockDate(startDate, startRotForSub, selectedWeek, day.value);
+                const dateLbl = isoDate
+                  ? (() => {
+                      const dt = new Date(isoDate + "T00:00:00");
+                      return `${dt.getDate()} ${AR_MONTHS[dt.getMonth()]}`;
+                    })()
+                  : null;
                 return (
                   <button
                     key={day.value}
@@ -1369,7 +1391,7 @@ export default function PublicMenuPage() {
                       setSelectedDay(day.value);
                     }}
                     className={cn(
-                      "px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all flex items-center gap-1.5",
+                      "px-5 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-all flex flex-col items-center leading-tight",
                       isSel
                         ? "bg-[#3CC4F0] text-white shadow-md"
                         : prog.complete
@@ -1377,20 +1399,31 @@ export default function PublicMenuPage() {
                           : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5",
                     )}
                   >
-                    {day.label}
-                    {/* ✓ لليوم المكتمل، أو عدّاد صغير لما اختار بعض الوجبات */}
-                    {prog.complete ? (
-                      <Check className={cn("h-3.5 w-3.5", isSel ? "text-white" : "text-emerald-600")} />
-                    ) : prog.count > 0 ? (
-                      <span
-                        className={cn(
-                          "text-[10px] font-black rounded-full px-1.5 leading-4",
-                          isSel ? "bg-white/25 text-white" : "bg-[#3CC4F0]/15 text-[#0E76AC]",
-                        )}
-                      >
-                        {prog.count}
+                    <span className="flex items-center gap-1.5">
+                      {day.label}
+                      {/* ✓ لليوم المكتمل، أو عدّاد صغير لما اختار بعض الوجبات */}
+                      {prog.complete ? (
+                        <Check className={cn("h-3.5 w-3.5", isSel ? "text-white" : "text-emerald-600")} />
+                      ) : prog.count > 0 ? (
+                        <span
+                          className={cn(
+                            "text-[10px] font-black rounded-full px-1.5 leading-4",
+                            isSel ? "bg-white/25 text-white" : "bg-[#3CC4F0]/15 text-[#0E76AC]",
+                          )}
+                        >
+                          {prog.count}
+                        </span>
+                      ) : null}
+                    </span>
+                    {/* 📅 التاريخ الفعلي لليوم — يوم التوصيل */}
+                    {dateLbl && (
+                      <span className={cn(
+                        "text-[10px] font-semibold mt-0.5",
+                        isSel ? "text-white/80" : "text-gray-400",
+                      )}>
+                        {dateLbl}
                       </span>
-                    ) : null}
+                    )}
                   </button>
                 );
               })}

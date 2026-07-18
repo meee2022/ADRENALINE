@@ -156,3 +156,43 @@ export function slotToDate(
   }
   return null;
 }
+
+/**
+ * تاريخ اليوم داخل بلوكه الطبيعي — أول ظهور لـ(دورة + يوم) بالمشي من بداية
+ * الاشتراك **بلا** قصّ عند «بكرة». يُستخدم لعرض التاريخ جنب اسم اليوم في المنيو.
+ *
+ * ⚠️ الفرق عن slotToDate: هذه لا تشترط أن يكون التاريخ ≥ بكرة. فيوم في بلوك
+ *    البداية عدّى ميعاده (كسبت اليوم) يُرجِع تاريخه الحقيقي (18 يوليو) بدل أن
+ *    يقفز 6 أسابيع لأول سبت‑دورة‑2 قادم. المنيو يخفيه لأنه ماضٍ، بدل أن يعرض
+ *    تاريخاً بعيداً مربكاً. أما slotToDate (للتوصيل/الاعتماد) فتقصّ عند بكرة عمداً.
+ */
+export function slotBlockDate(
+  startDate: string | null | undefined,
+  startRotationWeek: number,
+  week: number,
+  day: string,
+): string | null {
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
+  const target = String(day).toLowerCase();
+  const subStart = new Date(`${startDate}T00:00:00`);
+  let rotWeek = startRotationWeek >= 1 && startRotationWeek <= 4 ? startRotationWeek : 1;
+  // ⚠️ نبدأ المشي من سبت الأسبوع (حدّ الدورة) لا من يوم البداية نفسه: لو بدأ
+  //    العميل الاثنين، فسبت وأحد دورته (18/19) قبل بدايته لكنهما جزء من بلوكه.
+  //    نمشي منهما فيأخذان تاريخهما الحقيقي (الماضي) ويُخفَيان، بدل أن نقفز لأول
+  //    سبت‑دورة قادم بعد 4 أسابيع. لا جمعة بين سبت الأسبوع والبداية فالدورة ثابتة.
+  const cur = new Date(subStart);
+  while (cur.getDay() !== 6) cur.setDate(cur.getDate() - 1); // ارجع لأقرب سبت ≤ البداية
+  for (let guard = 0; guard < 400; guard++) {
+    const dow = cur.getDay();
+    if (dow !== 5) {
+      const name = DOW_NAME[dow];
+      if (name === target && rotWeek === Number(week)) {
+        const p = (n: number) => String(n).padStart(2, "0");
+        return `${cur.getFullYear()}-${p(cur.getMonth() + 1)}-${p(cur.getDate())}`;
+      }
+    }
+    if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return null;
+}
