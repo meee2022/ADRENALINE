@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import { ChevronRight, Package, Pencil } from "lucide-react";
+import { ChevronRight, Package } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
@@ -349,14 +349,6 @@ export default function OrderReview() {
                               </div>
                             ))}
                           </div>
-                          {/* إضافة / تعديل وجبات اليوم */}
-                          <button
-                            onClick={() => setLocation("/public/menu")}
-                            className="w-full text-xs font-bold text-[#0E76AC] hover:bg-[#f2fbff] flex items-center justify-center gap-1.5 border-t border-dashed border-[#cfe4f3] py-2.5"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            {t("تعديل / إضافة وجبات لهذا اليوم", "Edit / add meals for this day")}
-                          </button>
                         </div>
                       );
                     })}
