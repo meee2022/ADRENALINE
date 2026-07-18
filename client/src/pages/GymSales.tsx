@@ -618,7 +618,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   /** محتوى المستند. الفترة والمنفذ فلاتر مستقلة — أي مزيج شغّال
    *  (مثلاً: مرتجعات أسبوعية لمنفذ واحد، أو أعلى مبيعاً شهري لكل المنافذ). */
-  const [scope, setScope] = useState<"full" | "returns" | "top">("full");
+  const [scope, setScope] = useState<"full" | "returns" | "top" | "statement">("full");
   const selectedRange = useMemo(() => {
     if (period === "month") return { from: `${month}-01`, to: `${month}-31` };
     if (period === "custom") return { from: customFrom, to: customTo };
@@ -733,12 +733,44 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           كامل      : كل شيء
           المرتجعات : الهدر فقط + التوصيات + الخلاصة المالية (المستحق بعد الخصم)
           أعلى مبيعاً: الأصناف المُباعة فقط — بلا جداول هدر ولا توصيات إيقاف */
-    const showFin = scope !== "top";
+    const showStatement = scope === "statement"; // كشف حساب المنفذ — مستقل، لا يخلط بباقي الأقسام
+    const showFin = !showStatement && scope !== "top";
     const showDaily = scope === "full";
     const showLedger = scope === "full";
     const showReturns = scope === "full" || scope === "returns";
     const showTop = scope === "full" || scope === "top";
     const showActions = scope === "full" || scope === "returns";
+
+    // 💵 كشف الحساب: كمية/قيمة الإنتاج، كمية/قيمة المرتجع، ثم المبيعات − العمولة = المستحق.
+    //    نسبة العمولة = خصم المنفذ (discountPct، افتراضي 20). كل المنافذ ⇒ 20 افتراضياً.
+    const commissionRate = Number((gym as any)?.discountPct ?? 20);
+    const salesAmt = netRevenue; // = إجمالي الإنتاج − قيمة المرتجع
+    const commissionAmt = Math.round(salesAmt * commissionRate) / 100;
+    const receivable = Math.round((salesAmt - commissionAmt) * 100) / 100;
+    const statementHtml = !showStatement ? "" : `
+      <p class="stmt-intro">${t(`الأصناف الغذائية المورّدة خلال (${rangeLabel}):`, `Food items supplied during (${rangeLabel}):`)}</p>
+      <table><thead>
+        <tr>
+          <th>${t("التاريخ", "Date")}</th>
+          <th>${t("كمية الإنتاج", "Production Qty")}</th>
+          <th>${t("قيمة الإنتاج", "Production Amount")}</th>
+          <th>${t("كمية المرتجع", "Return Qty")}</th>
+          <th>${t("قيمة المرتجع", "Return Amount")}</th>
+        </tr></thead>
+        <tbody>
+          ${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td><td class="n">${d.returned || 0}</td><td class="n" style="color:${Number(d.waste) > 0 ? "#b91c1c" : "#94a3b8"}">${Number(d.waste || 0).toFixed(2)}</td></tr>`).join("")}
+          <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td><td class="n">${returnedQty}</td><td class="n">${wasteValue.toFixed(2)}</td></tr>
+        </tbody>
+      </table>
+      <div class="fin">
+        <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
+        <table>
+          <tr><td class="lbl">${t("المبيعات (الإنتاج − المرتجع)", "Sales (production − returns)")}</td><td class="val">${salesAmt.toFixed(2)}</td></tr>
+          <tr class="minus"><td class="lbl">${t("العمولة", "Commission")} (${commissionRate}%)</td><td class="val">− ${commissionAmt.toFixed(2)}</td></tr>
+          <tr class="net"><td class="lbl">${t("المستحق (Receivable)", "Receivable")}</td><td class="val">${receivable.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
+        </table>
+      </div>
+`;
 
     const finHtml = !showFin ? "" : `
       <div class="fin">
@@ -858,6 +890,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         .box{border:1px solid #cdd9e4;border-radius:8px;padding:8px 12px;text-align:center}
         .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 20px}
         .box .v{font-size:20px;font-weight:900;color:#0E76AC} .box .l{font-size:10px;color:#47759c}
+        .stmt-intro{font-size:12px;font-weight:700;color:#0E2A4A;margin:8px 0 2px}
         /* عنوان الجدول جوه thead — عشان يتكرر مع سطر العناوين لما الجدول
            يتقسم على صفحتين، فما يبقاش في جدول بلا هوية في الصفحة التانية. */
         tr.cap td{background:#0E2A4A;color:#fff;font-weight:900;font-size:13px;
@@ -911,7 +944,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <span class="rng">${rangeLabel}</span>
       </div>
       <div class="wrap">
-      ${kpiHtml}
+      ${showStatement ? "" : kpiHtml}
+      ${statementHtml}
       ${finHtml}
 
       ${dailyHtml}
@@ -941,9 +975,10 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
 
   /** عنوان المستند حسب محتواه — يظهر في شريط العنوان وفي اسم ملف الـPDF. */
   const scopeTitle = () =>
-    scope === "returns" ? t("تقرير المرتجعات والهالك", "Returns and waste report")
-      : scope === "top" ? t("تقرير الأصناف الأعلى مبيعاً", "Top selling items report")
-        : t("تقرير مبيعات المنافذ", "Outlet sales report");
+    scope === "statement" ? t("كشف حساب المنفذ", "Outlet statement")
+      : scope === "returns" ? t("تقرير المرتجعات والهالك", "Returns and waste report")
+        : scope === "top" ? t("تقرير الأصناف الأعلى مبيعاً", "Top selling items report")
+          : t("تقرير مبيعات المنافذ", "Outlet sales report");
 
   const reportFileName = () => {
     const gym = gyms.find((g: any) => g.id === gymId);
@@ -963,6 +998,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           <div>
             <Label className="text-xs font-bold text-slate-500">{t("محتوى التقرير", "Report content")}</Label>
             <select value={scope} onChange={(e) => setScope(e.target.value as any)} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold">
+              <option value="statement">{t("كشف حساب المنفذ (مبيعات · مرتجع · عمولة)", "Outlet statement (sales · returns · commission)")}</option>
               <option value="full">{t("تقرير كامل", "Full report")}</option>
               <option value="returns">{t("المرتجعات والهالك فقط", "Returns and waste only")}</option>
               <option value="top">{t("الأصناف الأعلى مبيعاً فقط", "Top selling items only")}</option>
