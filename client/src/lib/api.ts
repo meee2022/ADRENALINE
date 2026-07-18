@@ -154,6 +154,14 @@ export function useDeleteCustomer() {
   return { mutate: run, mutateAsync: run, isLoading: false };
 }
 
+/** حذف قسري: يمسح المشترك مع طلباته/خططه/حسابه (يقف لو فيه فواتير POS). */
+export function useForceDeleteCustomer() {
+  const mutation = useConvexMutation(api.customers.removeForce);
+  const sessionToken = useSessionToken();
+  const run = (id: string) => mutation({ id: id as any, sessionToken });
+  return { mutate: run, mutateAsync: run, isLoading: false };
+}
+
 /** ✅ Bulk import (upsert by phone) */
 export function useImportCustomers() {
   const mutation = useConvexMutation(api.customers.importMany);

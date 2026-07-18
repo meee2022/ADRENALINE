@@ -286,6 +286,44 @@ export const remove = mutation({
 });
 
 /**
+ * 🔒 حذف قسري (بعد رسالة التحذير + تأكيد صريح): يمسح المشترك **مع بياناته المرتبطة
+ *    بالوجبات** — الطلبات وبنودها + خطط التوصيل + حساب الموقع. لكنه **يقف لو للعميل
+ *    فواتير POS مالية** (لا نمسح سجلاً مالياً — يُعطَّل بدل الحذف). ADMIN فقط.
+ *    قرار المستخدم (2026-07-18): «يمسح الوجبات بس، ويوقف لو فيه فواتير».
+ */
+export const removeForce = mutation({
+  args: { id: v.id("customers"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { id, sessionToken }) => {
+    await requireAdmin(ctx, sessionToken);
+    // 🔒 حماية مالية: فواتير POS تمنع الحذف القسري
+    const posT = await ctx.db.query("posTickets").collect();
+    if (posT.some((t: any) => String(t.customerId) === String(id))) {
+      throw new Error("لا يمكن الحذف القسري — للعميل فواتير POS مالية. عطّل الاشتراك بدلاً من الحذف.");
+    }
+    let ordersDeleted = 0, itemsDeleted = 0, plansDeleted = 0, accountsDeleted = 0;
+    // الطلبات + بنودها
+    const orders = await ctx.db.query("customerOrders").collect();
+    for (const o of orders.filter((o) => String(o.customerId) === String(id))) {
+      const items = await ctx.db
+        .query("customerOrderItems")
+        .withIndex("by_orderId", (q) => q.eq("orderId", o._id))
+        .collect();
+      for (const it of items) { await ctx.db.delete(it._id); itemsDeleted++; }
+      await ctx.db.delete(o._id); ordersDeleted++;
+    }
+    // خطط التوصيل
+    const plans = await ctx.db.query("dailyPlans").withIndex("by_customerId", (q) => q.eq("customerId", id)).collect();
+    for (const p of plans) { await ctx.db.delete(p._id); plansDeleted++; }
+    // حساب الموقع
+    const accts = await ctx.db.query("customerAccounts").withIndex("by_customerId", (q) => q.eq("customerId", id)).collect();
+    for (const a of accts) { await ctx.db.delete(a._id); accountsDeleted++; }
+    // المشترك نفسه
+    await ctx.db.delete(id);
+    return { ok: true, ordersDeleted, itemsDeleted, plansDeleted, accountsDeleted };
+  },
+});
+
+/**
  * 🔒 خدمة ذاتية: تخطّي/إلغاء تخطّي يوم توصيل واحد.
  *   محرك موحد مع subscriptionPause.setSkippedDays: كلاهما يمدّ/يقصّر endDate
  *   ويحذف/يعيد خطة اليوم، فما يبقى فرق مالي بين "صفحة العميل" و"صفحة الأخصائية".

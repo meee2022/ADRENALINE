@@ -9,6 +9,7 @@ import {
   useUpdateCustomer,
   useImportCustomers,
   useDeleteCustomer,
+  useForceDeleteCustomer,
   type Customer,
   useModifiers,
   type Modifier,
@@ -73,6 +74,7 @@ import * as z from "zod";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
+import { getUserError } from "@/lib/userError";
 
 /* =========================
    Date helpers - DD/MM/YYYY format
@@ -274,6 +276,7 @@ export default function Customers() {
   const createCustomer = useCreateCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomer = useDeleteCustomer();
+  const forceDeleteCustomer = useForceDeleteCustomer();
 
   const importCustomers = useImportCustomers();
   const { data: modifiers = [] } = useModifiers();
@@ -1679,10 +1682,38 @@ export default function Customers() {
                     message: isRtl ? `تم حذف ${name}.` : `${name} has been deleted.`,
                   });
                 } catch (e: any) {
-                  await alertDialog({
-                    title: isRtl ? "تعذّر الحذف" : "Couldn't delete",
-                    message: e?.message || (isRtl ? "حدث خطأ أثناء الحذف." : "An error occurred while deleting."),
+                  // نص نظيف للعرض (بلا بادئات Convex التقنية)
+                  const reason = getUserError(e, isRtl ? "ar" : "en");
+                  // 🔒 لو الرفض بسبب ارتباط بيانات (لا مانع مالي/فني آخر) نعرض خيار
+                  //    حذف قسري صريح: يمسح الطلبات/الخطط/الحساب معه. فواتير POS تمنعه.
+                  const isLinkBlock = /لا يمكن الحذف — للعميل (خطط|طلبات|حساب)/.test(reason);
+                  if (!isLinkBlock) {
+                    await alertDialog({ title: isRtl ? "تعذّر الحذف" : "Couldn't delete", message: reason });
+                    return;
+                  }
+                  const force = await confirmDialog({
+                    title: isRtl ? "حذف نهائي؟" : "Permanent delete?",
+                    message: isRtl
+                      ? `${reason}\n\nهل تريد حذف ${name} نهائيًا مع كل طلباته وخططه وحسابه؟ (لا يشمل الفواتير المالية — لو له فواتير سيتوقف).`
+                      : `${reason}\n\nDelete ${name} permanently with all orders, plans and account? (Financial invoices are excluded — it will stop if any exist).`,
+                    variant: "danger",
+                    confirmText: isRtl ? "حذف نهائي" : "Delete permanently",
                   });
+                  if (!force) return;
+                  try {
+                    const res: any = await forceDeleteCustomer.mutateAsync(id);
+                    await alertDialog({
+                      title: isRtl ? "تم الحذف النهائي" : "Permanently deleted",
+                      message: isRtl
+                        ? `تم حذف ${name} مع ${res?.ordersDeleted ?? 0} طلب و${res?.plansDeleted ?? 0} خطة.`
+                        : `${name} deleted with ${res?.ordersDeleted ?? 0} orders and ${res?.plansDeleted ?? 0} plans.`,
+                    });
+                  } catch (e2: any) {
+                    await alertDialog({
+                      title: isRtl ? "تعذّر الحذف النهائي" : "Couldn't force-delete",
+                      message: getUserError(e2, isRtl ? "ar" : "en"),
+                    });
+                  }
                 }
               }}
             />
