@@ -3,7 +3,7 @@
  * @description مولّد الوجبات الذكي (المرحلة 1) — واجهة العميل
  *  مدخلان: مسجّل دخول (تلقائي) أو رقم تليفون (بدون تسجيل).
  */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
@@ -13,7 +13,7 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
-import { subscriptionState, orderedSubscriptionSlots, planShortfall } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 
@@ -101,13 +101,23 @@ export default function SmartPlan() {
   // القيم الفعّالة: ما اختارته الأخصائية، وإلا المشتقّ من تاريخ الاشتراك،
   // وإلا اقتراح المطبخ، وإلا 1. ✅ نحدد الحد الأعلى بأسابيع الاشتراك المتبقية.
   const rawEffWeeks = weeksSel || suggestions?.suggestedWeeks || 1;
-  const effWeeks = subWeeksRemaining ? Math.min(rawEffWeeks, subWeeksRemaining) : rawEffWeeks;
+  // 🔒 اكتمال صارم (قرار المستخدم): الخطة الذكية لمشترك معروف تُولَّد لكامل اشتراكه
+  //    المتبقّي دائماً (لا أسابيع جزئية) — كي يقدر يُكملها ويبعتها. لو لا اشتراك
+  //    معروف نرجع للاختيار العادي.
+  const effWeeks = subWeeksRemaining ?? rawEffWeeks;
   // 🔒 دورة البداية يحددها النظام من الاشتراك — لا يختارها العميل. لو له اشتراك
   //    معروف (startRotInfo)، دورته هي المرجع مهما ضغط العميل، فلا يبدأ من دورة
   //    خاطئة (نفس قاعدة المينو اليدوي: النظام يضعه على بدايته الصحيحة).
   const subLockedRot = startRotInfo?.rotationWeek || null;
   const effStartRot =
     subLockedRot || startRot || suggestions?.currentRotationWeek || 1;
+
+  // 🔒 اكتمال صارم: لمشترك معروف تُلغى «خطة اليوم» والأسابيع الجزئية — الخطة الذكية
+  //    تغطّي كامل الاشتراك (قرار المستخدم). نجبر وضع الأسبوع عند معرفة الاشتراك.
+  const subKnown = subWeeksRemaining != null;
+  useEffect(() => {
+    if (subKnown && mode !== "week") { setMode("week"); setResult(null); }
+  }, [subKnown]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** اسم المشترك للعرض — من الحساب أو من مطابقة الرقم. فارغ = زائر لم يعرّف نفسه. */
   const whoName: string = currentCustomer?.fullName || matchedCustomer?.fullName || "";
@@ -135,20 +145,27 @@ export default function SmartPlan() {
   });
 
   const settings = useQuery(api.restaurantSettings.get);
-  /** 🔒 نفس بوابة مطابقة الاشتراك المستخدمة في المنيو اليدوي (المصدر الوحيد
-   *    planShortfall). لو الخطة أقل من عدد وجبات الاشتراك → نمنع الإرسال ونوجّه
-   *    للأخصائية. لا يغيّر أي قيد قائم. يُرجِع رسالة الخطأ أو "" لو مطابِقة/غير معروفة. */
+  // 🔒 سلوتات الاشتراك كاملةً — نفس مصدر المنيو اليدوي (orderedSubscriptionSlots +
+  //    نفس أسبوع الدورة من rotationWeekAt) فلا يفترقان.
+  const subSlots = useMemo(
+    () => orderedSubscriptionSlots(subStartDate, subEndDate, startRotInfo?.rotationWeek || 1),
+    [subStartDate, subEndDate, startRotInfo],
+  );
+  /** 🔒 بوابة اكتمال الاشتراك — نفس اليدوي بالضبط (subscriptionShortfall على كل
+   *    سلوتات الاشتراك). العميل يجب أن يُكمل كل أيام اشتراكه قبل الإرسال. يُرجِع
+   *    رسالة الخطأ أو "" لو مكتملة/غير معروفة. لا يغيّر أي قيد قائم. */
   const shortfallGuard = (items: Array<{ week?: number; day?: string; category?: string }>): string => {
-    const sf = planShortfall(items, Number(subMeals) || 0, subSnacks);
+    const sf = subscriptionShortfall(items, subSlots, Number(subMeals) || 0, subSnacks);
     if (sf.mealsShort <= 0 && sf.snacksShort <= 0) return "";
     const parts: string[] = [];
     if (sf.mealsShort) parts.push(`${sf.mealsShort} ${t("وجبة رئيسية", "main meal(s)")}`);
     if (sf.snacksShort) parts.push(`${sf.snacksShort} ${t("سناك", "snack(s)")}`);
+    const daysTxt = sf.incompleteDays ? t(` (${sf.incompleteDays} يوم غير مكتمل)`, ` (${sf.incompleteDays} incomplete day(s))`) : "";
     const wa = (settings?.phone || "+97412345678").replace(/\D/g, "");
     const link = `https://wa.me/${wa}`;
     return t(
-      `خطتك ناقصة ${parts.join(" و ")} عن اشتراكك ولا يمكن إرسالها. تواصل مع الأخصائية: ${link}`,
-      `Your plan is short by ${parts.join(" and ")} versus your subscription and cannot be submitted. Contact the specialist: ${link}`,
+      `خطتك غير مكتملة: ناقص ${parts.join(" و ")}${daysTxt}. أكمل كل أيام اشتراكك قبل الإرسال، أو تواصل مع الأخصائية: ${link}`,
+      `Your plan is incomplete: short by ${parts.join(" and ")}${daysTxt}. Complete all your subscription days before sending, or contact the specialist: ${link}`,
     );
   };
   const [loading, setLoading] = useState(false);
@@ -434,18 +451,24 @@ export default function SmartPlan() {
             {([
               { k: "day", label: t("خطة اليوم", "Daily plan"), emoji: "📅 " },
               { k: "week", label: t("خطة الأسبوع", "Weekly plan"), emoji: "🗓️ " },
-            ] as const).map((m) => (
-              <button key={m.k} onClick={() => { setMode(m.k); setResult(null); setWeekly(null); setOrderNo(""); }}
+            ] as const).map((m) => {
+              // 🔒 لمشترك معروف: «خطة اليوم» معطّلة — الخطة الذكية تغطّي كامل الاشتراك.
+              const disabled = subKnown && m.k === "day";
+              return (
+              <button key={m.k} disabled={disabled}
+                onClick={() => { if (disabled) return; setMode(m.k); setResult(null); setWeekly(null); setOrderNo(""); }}
+                title={disabled ? t("خطتك الذكية تغطّي كامل اشتراكك", "Your smart plan covers your whole subscription") : ""}
                 style={{
-                  flex: 1, padding: "10px 12px", borderRadius: 12, cursor: "pointer",
-                  fontFamily: "'Cairo',sans-serif", fontSize: 14, fontWeight: 800,
+                  flex: 1, padding: "10px 12px", borderRadius: 12, cursor: disabled ? "not-allowed" : "pointer",
+                  fontFamily: "'Cairo',sans-serif", fontSize: 14, fontWeight: 800, opacity: disabled ? 0.4 : 1,
                   border: `1.5px solid ${mode === m.k ? B.accent : B.line}`,
                   background: mode === m.k ? B.accent : "#fff",
                   color: mode === m.k ? "#fff" : B.ink2,
                 }}>
                 {m.emoji}{m.label}
               </button>
-            ))}
+              );
+            })}
           </div>
 
           {/* ✅ ضبط التوليد المتعدد — يظهر في وضع الأسبوع فقط */}
@@ -467,10 +490,11 @@ export default function SmartPlan() {
                     الأزرار تسمح بالضغط ثم يضيء رقم آخر بلا تفسير. نعطّلها ونشرح. */}
                 <div style={{ display: "flex", gap: 6 }}>
                   {[1, 2, 3, 4].map((n) => {
-                    const blocked = subWeeksRemaining != null && n > subWeeksRemaining;
+                    // 🔒 اكتمال صارم: لمشترك معروف العدد مقفول على كامل اشتراكه فقط.
+                    const blocked = subWeeksRemaining != null && n !== subWeeksRemaining;
                     return (
                       <button key={n} onClick={() => !blocked && setWeeksSel(n)} disabled={blocked}
-                        title={blocked ? t("خارج مدة اشتراكك", "Beyond your subscription") : ""}
+                        title={blocked ? t("خطتك تغطّي كامل اشتراكك", "Your plan covers your whole subscription") : ""}
                         style={{
                           flex: 1, padding: "8px 0", borderRadius: 9, fontWeight: 900, fontSize: 14,
                           fontFamily: "'Cairo',sans-serif",
