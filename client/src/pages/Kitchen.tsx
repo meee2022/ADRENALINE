@@ -733,9 +733,12 @@ export default function Kitchen() {
         return `<tr><td class="pm">${esc(m)}</td><td class="pq${side ? " sq" : ""}">${side ? "" : "1"}</td></tr>`;
       }).join("")}</table></div>`;
     const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
+    // 📄 المخصّصون يبدأون في صفحة جديدة عند الطباعة — لا يلتصقون بآخر صفحة العاديين.
     const custHtml = customizedAll.length ? `
+      <div class="custpage">
       <h2 class="sec">Customized meals — one box per customer (${customizedAll.length})</h2>
-      ${colsTable(customizedAll, 3, personWeight, personBox)}` : "";
+      ${colsTable(customizedAll, 3, personWeight, personBox)}
+      </div>` : "";
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
@@ -771,6 +774,9 @@ export default function Kitchen() {
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
         .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
+        /* 📄 قسم المخصّصين يبدأ صفحة جديدة — لا يلتصق بآخر صفحة العاديين */
+        .custpage{break-before:page;page-break-before:always}
+        .custpage .sec{border-top:none;margin-top:0}
         .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid;font-size:10px}
         .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
         .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
