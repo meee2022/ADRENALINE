@@ -497,14 +497,31 @@ export default function OrderReviewDetail() {
                   const overrideKey = `${weekNum}-${day}`;
                   const overrideDate = dateOverrides[overrideKey];
 
-                  // احسب التاريخ التلقائي (لو كان فيه startDate)
+                  // احسب التاريخ التلقائي (لو كان فيه startDate).
+                  //
+                  // ⚠️ لا نجمع (weekNum-1)*6 على التقويم: الأسبوع 7 أيام تقويمية لا
+                  //    6، فالجمع المباشر يزحلق يوماً كل أسبوع فتقع تواريخ على الجمعة
+                  //    (بلا توصيل) — نفس باگ ×6 المُصلَّح في الاعتماد. نعدّ **أيام
+                  //    التوصيل** فنتخطّى الجمعة، فيطابق العرض ما يولّده السيرفر.
                   const dayOffsetMap: Record<string, number> = {
-                    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4,
+                    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5,
                   };
                   let autoDate: Date | null = null;
                   if (startDate) {
-                    autoDate = new Date(startDate);
-                    autoDate.setDate(autoDate.getDate() + (weekNum - 1) * 6 + (dayOffsetMap[day] ?? 0));
+                    // ⚠️ ترتيب الدورة بين الدورات المختارة، لا رقمها. لو اختار
+                    //    العميل دورة 2 و3، فأول دورة (2) تبدأ من startDate لا بعد
+                    //    12 يوماً — نفس منطق weekRank في الاعتماد بالضبط.
+                    const weekRank = weeks.indexOf(weekNum);
+                    const targetDeliveryDays = weekRank * 6 + (dayOffsetMap[day] ?? 0);
+                    const d = new Date(startDate);
+                    // ابدأ من أول يوم توصيل ≥ startDate (لو البداية جمعة انتقل للسبت)
+                    while (d.getDay() === 5) d.setDate(d.getDate() + 1);
+                    let counted = 0;
+                    while (counted < targetDeliveryDays) {
+                      d.setDate(d.getDate() + 1);
+                      if (d.getDay() !== 5) counted++; // الجمعة (5) ليست يوم توصيل
+                    }
+                    autoDate = d;
                   }
                   const effectiveDate = overrideDate || autoDate;
 
