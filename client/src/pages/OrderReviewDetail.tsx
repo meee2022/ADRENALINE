@@ -13,6 +13,8 @@ import { CalendarIcon, Printer, Share2 } from "lucide-react";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
+import { slotToDate } from "@/lib/subscription";
+import { localISO } from "@/lib/mealSchedule";
 import type { Id } from "@/../../convex/_generated/dataModel";
 
 const dayNameAr: Record<string, string> = {
@@ -73,7 +75,7 @@ export default function OrderReviewDetail() {
 
   // ✅ الأسبوع الذي يصادفه تاريخ البداية المختار في دورة المطبخ.
   //    يساعد الأخصائية: تحدد التاريخ فيعرف النظام هيصادف أي أسبوع دورة.
-  const startISO = startDate ? startDate.toISOString().split("T")[0] : undefined;
+  const startISO = startDate ? localISO(startDate) : undefined;
   const rotationInfo = useQuery(
     api.restaurantSettings.rotationWeekAt,
     startISO ? { targetDate: startISO } : "skip"
@@ -224,9 +226,24 @@ export default function OrderReviewDetail() {
     groupedByWeek[item.week][item.day].push(item);
   });
 
+  // 🔗 تاريخ كل صنف من **المصدر الوحيد** (lib/subscription.slotToDate) — نفس ما
+  //    يراه العميل في المنيو وما ينفّذه الاعتماد. يبدأ من أول يوم توصيل فعلي
+  //    (بكرة لو اليوم انقضى)، يتخطّى الجمعة، والاسم يطابق التاريخ.
+  const startISOForSlots = startDate ? localISO(startDate) : undefined;
+  const startRotForSlots = Number(rotationInfo?.rotationWeek) || 1;
+  const dateForSlot = (week: number, day: string): string | null =>
+    startISOForSlots ? slotToDate(startISOForSlots, startRotForSlots, week, day) : null;
+
+  // ⚠️ نرتّب الأسابيع **زمنياً** بأول تاريخ لكل أسبوع، لا برقم الدورة. دورات
+  //    العميل قد تلفّ [2,3,4,1]، فترتيبها الرقمي يعرض دورة 1 (آخر أسبوع للعميل)
+  //    أولاً — وهو ما جعل المراجعة تبدأ من السبت بينما المنيو من الأحد.
   const weeks = Object.keys(groupedByWeek)
     .map(Number)
-    .sort((a, b) => a - b);
+    .sort((a, b) => {
+      const da = Object.keys(groupedByWeek[a]).map((d) => dateForSlot(a, d)).filter(Boolean).sort()[0] || "9999";
+      const db = Object.keys(groupedByWeek[b]).map((d) => dateForSlot(b, d)).filter(Boolean).sort()[0] || "9999";
+      return da < db ? -1 : da > db ? 1 : a - b;
+    });
 
   // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الأربعاء)
   const dayOrder: Record<string, number> = {
@@ -248,7 +265,7 @@ export default function OrderReviewDetail() {
     // ✅ تحويل تواريخ الـ overrides لصيغة { "week-day": "YYYY-MM-DD" }
     const overridesPayload: Record<string, string> = {};
     Object.entries(dateOverrides).forEach(([key, d]) => {
-      if (d) overridesPayload[key] = d.toISOString().split("T")[0];
+      if (d) overridesPayload[key] = localISO(d);
     });
 
     // ✅ المنطق الجديد:
@@ -261,7 +278,7 @@ export default function OrderReviewDetail() {
 
     let effectiveStartDate: string | undefined;
     if (startDate) {
-      effectiveStartDate = startDate.toISOString().split("T")[0];
+      effectiveStartDate = localISO(startDate);
     } else if (firstDayOverride) {
       effectiveStartDate = firstDayOverride;
     }
@@ -535,30 +552,9 @@ export default function OrderReviewDetail() {
 
                   // احسب التاريخ التلقائي (لو كان فيه startDate).
                   //
-                  // ⚠️ لا نجمع (weekNum-1)*6 على التقويم: الأسبوع 7 أيام تقويمية لا
-                  //    6، فالجمع المباشر يزحلق يوماً كل أسبوع فتقع تواريخ على الجمعة
-                  //    (بلا توصيل) — نفس باگ ×6 المُصلَّح في الاعتماد. نعدّ **أيام
-                  //    التوصيل** فنتخطّى الجمعة، فيطابق العرض ما يولّده السيرفر.
-                  const dayOffsetMap: Record<string, number> = {
-                    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5,
-                  };
-                  let autoDate: Date | null = null;
-                  if (startDate) {
-                    // ⚠️ ترتيب الدورة بين الدورات المختارة، لا رقمها. لو اختار
-                    //    العميل دورة 2 و3، فأول دورة (2) تبدأ من startDate لا بعد
-                    //    12 يوماً — نفس منطق weekRank في الاعتماد بالضبط.
-                    const weekRank = weeks.indexOf(weekNum);
-                    const targetDeliveryDays = weekRank * 6 + (dayOffsetMap[day] ?? 0);
-                    const d = new Date(startDate);
-                    // ابدأ من أول يوم توصيل ≥ startDate (لو البداية جمعة انتقل للسبت)
-                    while (d.getDay() === 5) d.setDate(d.getDate() + 1);
-                    let counted = 0;
-                    while (counted < targetDeliveryDays) {
-                      d.setDate(d.getDate() + 1);
-                      if (d.getDay() !== 5) counted++; // الجمعة (5) ليست يوم توصيل
-                    }
-                    autoDate = d;
-                  }
+                  // 🔗 التاريخ من المصدر الوحيد (slotToDate) — يطابق المنيو والاعتماد.
+                  const autoISO = dateForSlot(weekNum, day);
+                  const autoDate = autoISO ? new Date(`${autoISO}T00:00:00`) : null;
                   const effectiveDate = overrideDate || autoDate;
 
                   return (

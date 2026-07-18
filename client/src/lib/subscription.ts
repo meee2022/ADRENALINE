@@ -117,3 +117,42 @@ export function firstSubscriptionSlot(
 ): SubSlot | null {
   return orderedSubscriptionSlots(startDate, endDate, startRotationWeek)[0] ?? null;
 }
+
+/**
+ * التاريخ الحقيقي لصنف يحمل (دورة + يوم) — نفس ما تفعله المراجعة والاعتماد.
+ * نمشي على التقويم من أول يوم توصيل (ماكس(البداية، بكرة))، نتخطّى الجمعة،
+ * ونلتقط أول تاريخ يومُه = day ودورتُه = week. الاسم يطابق التاريخ دائماً.
+ *
+ * ⚠️ نقطة الانطلاق = بكرة لو الاشتراك بدأ فعلاً (اليوم انقضى ميعاد تحضيره) —
+ *    نفس منطق المنيو، فلا يفترقان. بلا endDate نمشي أفقاً ثابتاً (يكفي أي طلب).
+ */
+export function slotToDate(
+  startDate: string | null | undefined,
+  startRotationWeek: number,
+  week: number,
+  day: string,
+): string | null {
+  if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
+  const target = String(day).toLowerCase();
+  const subStart = new Date(`${startDate}T00:00:00`);
+  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+  const effStart = subStart.getTime() > now.getTime() ? subStart : tomorrow;
+
+  // الدورة عند بداية الاشتراك؛ تتقدّم كل جمعة بين البداية والتاريخ الجاري.
+  let rotWeek = startRotationWeek >= 1 && startRotationWeek <= 4 ? startRotationWeek : 1;
+  const cur = new Date(subStart);
+  for (let guard = 0; guard < 400; guard++) {
+    const dow = cur.getDay();
+    if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
+      const name = DOW_NAME[dow];
+      if (name === target && rotWeek === Number(week)) {
+        const p = (n: number) => String(n).padStart(2, "0");
+        return `${cur.getFullYear()}-${p(cur.getMonth() + 1)}-${p(cur.getDate())}`;
+      }
+    }
+    if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return null;
+}
