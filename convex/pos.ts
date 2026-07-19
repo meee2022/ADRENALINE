@@ -38,6 +38,22 @@ function isAdmin(user: any): boolean {
   return String(user?.role || "").toUpperCase() === "ADMIN";
 }
 
+/** يحدّد فرع الكاشير: المُعيَّن عليه، وإلا الفرع الوحيد لو فيه فرع واحد فقط، وإلا undefined. */
+async function resolveBranchId(ctx: QueryCtx | MutationCtx, user: any): Promise<Id<"posBranches"> | undefined> {
+  if (user?.posBranchId) return user.posBranchId as Id<"posBranches">;
+  const active = await ctx.db.query("posBranches").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+  if (active.length === 1) return active[0]._id;
+  return undefined;
+}
+
+/** معلومات الفرع للعرض (الفاتورة/الوردية). */
+async function branchInfo(ctx: QueryCtx | MutationCtx, branchId: any) {
+  if (!branchId) return null;
+  const b: any = await ctx.db.get(branchId);
+  if (!b) return null;
+  return { id: String(b._id), name: b.name, code: b.code || null, phone: b.phone || null, address: b.address || null };
+}
+
 // حدود مسموحة للكاشير — تجاوزها يستلزم ADMIN
 const MAX_CASHIER_DISCOUNT_PCT = 20;                    // خصم أعلى من ده يحتاج مدير
 // النقدي/البطاقة/التحويل + منصّات التوصيل (المعروضة في واجهة الدفع)
@@ -96,9 +112,10 @@ export const loginWithPin = mutation({
       createdAt: Date.now(),
       expiresAt: Date.now() + 8 * 60 * 60 * 1000,
     });
+    const branch = await branchInfo(ctx, match.posBranchId);
     return {
       token,
-      cashier: { id: String(match._id), name: match.name, role: match.role },
+      cashier: { id: String(match._id), name: match.name, role: match.role, branchId: branch?.id || null, branchName: branch?.name || null },
     };
   },
 });
@@ -109,7 +126,8 @@ export const me = query({
     if (!token) return null;
     try {
       const { user } = await requireCashier(ctx, token);
-      return { id: String(user._id), name: user.name, role: user.role };
+      const branch = await branchInfo(ctx, user.posBranchId);
+      return { id: String(user._id), name: user.name, role: user.role, branchId: branch?.id || null, branchName: branch?.name || null };
     } catch { return null; }
   },
 });
@@ -203,9 +221,11 @@ export const currentShift = query({
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
     if (!s) return null;
+    const branch = await branchInfo(ctx, (s as any).branchId);
     return {
       id: String(s._id), openedAt: s.openedAt, openingCash: s.openingCash,
       totalSales: s.totalSales, ticketsCount: s.ticketsCount,
+      branchId: branch?.id || null, branchName: branch?.name || null,
     };
   },
 });
@@ -220,8 +240,14 @@ export const openShift = mutation({
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
     if (existing) return { id: String(existing._id), already: true };
+    // 🏢 فرع الوردية: فرع الكاشير المُعيَّن (أو الفرع الوحيد). لو فيه فروع متعددة وغير معيَّن → رفض.
+    const branchId = await resolveBranchId(ctx, user);
+    const branchesCount = (await ctx.db.query("posBranches").withIndex("by_active", (q) => q.eq("isActive", true)).collect()).length;
+    if (!branchId && branchesCount > 1) {
+      throw new Error("الكاشير غير مُعيَّن على فرع — كلّم المدير لتعيينك على فرع");
+    }
     const id = await ctx.db.insert("posShifts", {
-      cashierId: user._id, cashierName: user.name, openedAt: Date.now(),
+      cashierId: user._id, cashierName: user.name, branchId, openedAt: Date.now(),
       openingCash: Math.max(0, openingCash),
       totalSales: 0, ticketsCount: 0, status: "OPEN",
     });
@@ -569,7 +595,7 @@ export const createTicket = mutation({
     const num = await nextTicketNumber(ctx);
     const id = await ctx.db.insert("posTickets", {
       ticketNumber: num, cashierId: user._id, cashierName: user.name,
-      shiftId: shift._id, status: "OPEN", orderType: args.orderType,
+      branchId: (shift as any).branchId, shiftId: shift._id, status: "OPEN", orderType: args.orderType,
       subtotal: totals.subtotal, discount: 0, tax: 0, total: totals.total,
       customerName: args.customerName?.trim() || undefined,
       notes: args.notes?.trim() || undefined,
@@ -609,8 +635,10 @@ export const getTicket = query({
     const t: any = await ctx.db.get(ticketId);
     if (!t) return null;
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", ticketId)).collect();
+    const branch = await branchInfo(ctx, t.branchId);
     return {
       id: String(t._id), ticketNumber: t.ticketNumber, cashierName: t.cashierName,
+      branchName: branch?.name || null, branchPhone: branch?.phone || null, branchAddress: branch?.address || null,
       status: t.status, orderType: t.orderType || null,
       subtotal: t.subtotal, discount: t.discount, total: t.total,
       paymentMethod: t.paymentMethod || null,
@@ -786,7 +814,7 @@ export const quickSale = mutation({
     const num = await nextTicketNumber(ctx);
     const id = await ctx.db.insert("posTickets", {
       ticketNumber: num, cashierId: user._id, cashierName: user.name,
-      shiftId: shift._id, status: "PAID", orderType: args.orderType,
+      branchId: (shift as any).branchId, shiftId: shift._id, status: "PAID", orderType: args.orderType,
       subtotal: totals.subtotal, discount: totals.discount, tax: 0, total: totals.total,
       paymentMethod: method, payments: pay.payments,
       cashReceived: pay.cashReceived, changeAmount: change,

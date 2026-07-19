@@ -97,7 +97,9 @@ export default function PosShell() {
             <Languages className="h-4 w-4" /> {isAr ? "EN" : "عربي"}
           </button>
           <div className={`${isAr ? "text-left" : "text-right"} hidden sm:block leading-tight`}>
-            <div className="text-[10px] text-white/60 font-bold">{t("الكاشير", "CASHIER")}</div>
+            <div className="text-[10px] text-white/60 font-bold">
+              {t("الكاشير", "CASHIER")}{(me as any)?.branchName ? ` · ${(me as any).branchName}` : ""}
+            </div>
             <div className="text-sm font-black">{cashier?.name || "—"}</div>
           </div>
           <button

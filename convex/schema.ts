@@ -24,12 +24,26 @@ export default defineSchema({
     permissions: v.optional(v.array(v.string())),
     // ✅ PIN للكاشير (4-6 أرقام مشفّرة). يستخدم للدخول السريع على شل POS بدون كتابة إيميل/باسورد.
     pinHash: v.optional(v.string()),
+    // ✅ فرع الكاشير المُعيَّن عليه (POS متعدّد الفروع). الأدمن يقدر يغيّره لتغطية فرع آخر.
+    posBranchId: v.optional(v.id("posBranches")),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
+
+  // ===== POS: الفروع (متعدّد الفروع) =====
+  posBranches: defineTable({
+    name: v.string(),
+    code: v.optional(v.string()),        // اختصار قصير يظهر على الفاتورة (مثلاً "LUS")
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    isActive: v.boolean(),
+    sortOrder: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  }).index("by_active", ["isActive"]),
 
   // ===== POS: sessions (PIN-based, للكاشير على شل POS المنفصل) =====
   posSessions: defineTable({
@@ -73,6 +87,7 @@ export default defineSchema({
   posShifts: defineTable({
     cashierId: v.id("users"),
     cashierName: v.string(),
+    branchId: v.optional(v.id("posBranches")),   // فرع الوردية
     openedAt: v.number(),
     closedAt: v.optional(v.number()),
     openingCash: v.number(),
@@ -87,9 +102,10 @@ export default defineSchema({
 
   // ===== POS: الفواتير =====
   posTickets: defineTable({
-    ticketNumber: v.number(),                 // متسلسل
+    ticketNumber: v.number(),                 // متسلسل (عام لكل الفروع)
     cashierId: v.id("users"),
     cashierName: v.string(),
+    branchId: v.optional(v.id("posBranches")),   // فرع الفاتورة
     shiftId: v.optional(v.id("posShifts")),
     status: v.union(
       v.literal("OPEN"),                      // معلّقة (parked)
@@ -124,6 +140,7 @@ export default defineSchema({
     .index("by_shift", ["shiftId"])
     .index("by_paidAt", ["paidAt"])
     .index("by_cashier", ["cashierId"])
+    .index("by_branch", ["branchId"])
     .index("by_idem", ["idempotencyKey"]),
 
   // ===== POS: أسطر الفواتير =====

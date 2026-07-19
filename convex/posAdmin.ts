@@ -19,6 +19,8 @@ export const listCashiers = query({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const users = await ctx.db.query("users").collect();
+    const branches = await ctx.db.query("posBranches").collect();
+    const branchName = new Map(branches.map((b: any) => [String(b._id), b.name]));
     return users
       .filter((u: any) => u.role === "CASHIER")
       .map((u: any) => ({
@@ -28,6 +30,8 @@ export const listCashiers = query({
         phone: u.phone || null,
         isActive: u.isActive,
         hasPin: !!u.pinHash,
+        branchId: u.posBranchId ? String(u.posBranchId) : null,
+        branchName: u.posBranchId ? (branchName.get(String(u.posBranchId)) || null) : null,
       }));
   },
 });
@@ -38,6 +42,7 @@ export const createCashier = mutation({
     email: v.string(),
     phone: v.optional(v.string()),
     pin: v.string(),                   // 4-6 أرقام
+    posBranchId: v.optional(v.id("posBranches")),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -65,6 +70,7 @@ export const createCashier = mutation({
       phone: args.phone?.trim() || undefined,
       role: "CASHIER",
       pinHash,
+      posBranchId: args.posBranchId,
       isActive: true,
       createdAt: Date.now(),
     });
@@ -79,6 +85,7 @@ export const updateCashier = mutation({
     phone: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     pin: v.optional(v.string()),
+    posBranchId: v.optional(v.id("posBranches")),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -89,6 +96,7 @@ export const updateCashier = mutation({
     if (args.name !== undefined) patch.name = args.name.trim();
     if (args.phone !== undefined) patch.phone = args.phone.trim() || undefined;
     if (args.isActive !== undefined) patch.isActive = args.isActive;
+    if (args.posBranchId !== undefined) patch.posBranchId = args.posBranchId;
     if (args.pin !== undefined) {
       const clean = args.pin.trim();
       if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
@@ -348,17 +356,30 @@ export const applyOnlinePriceList = mutation({
 
 /** ملخص اليوم: مبيعات، عدد الفواتير، متوسط الفاتورة، وحسب طريقة الدفع. */
 export const dailySummary = query({
-  args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  args: { date: v.optional(v.string()), branchId: v.optional(v.id("posBranches")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const day = args.date || new Date().toISOString().slice(0, 10);
     const start = new Date(day + "T00:00:00").getTime();
     const end = new Date(day + "T23:59:59.999").getTime();
     // ✅ نطاق زمني عبر الفهرس بدل full-scan
-    const tickets: any[] = await ctx.db
+    let tickets: any[] = await ctx.db
       .query("posTickets")
       .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
       .collect();
+    // 🏢 تجميعة الفروع (قبل الفلترة) — للنظرة الإجمالية للأدمن
+    const branches = await ctx.db.query("posBranches").collect();
+    const branchNameById = new Map(branches.map((b: any) => [String(b._id), b.name]));
+    const byBranchAgg: Record<string, { name: string; count: number; total: number }> = {};
+    for (const t of tickets.filter((x) => x.status === "PAID" && !x.isNonRevenue)) {
+      const bid = t.branchId ? String(t.branchId) : "—";
+      const nm = t.branchId ? (branchNameById.get(bid) || "فرع") : "بدون فرع";
+      if (!byBranchAgg[bid]) byBranchAgg[bid] = { name: nm, count: 0, total: 0 };
+      byBranchAgg[bid].count += 1;
+      byBranchAgg[bid].total = Math.round((byBranchAgg[bid].total + t.total) * 100) / 100;
+    }
+    // 🏢 فلترة على فرع محدّد لو طُلب
+    if (args.branchId) tickets = tickets.filter((t) => String(t.branchId) === String(args.branchId));
     const paidAll = tickets.filter((t) => t.status === "PAID");
     const paid = paidAll.filter((t) => !t.isNonRevenue);
     const staffTix = paidAll.filter((t) => t.isNonRevenue);
@@ -385,6 +406,7 @@ export const dailySummary = query({
       avgTicket: paid.length ? Math.round((totalSales / paid.length) * 100) / 100 : 0,
       byMethod: Object.entries(byMethod).map(([k, v]) => ({ method: k, ...v })),
       byCashier: Object.values(byCashier),
+      byBranch: Object.values(byBranchAgg),
       staffMealsCount: staffTix.length,
       staffMealsValue: Math.round(staffValue * 100) / 100,
     };
@@ -393,13 +415,14 @@ export const dailySummary = query({
 
 /** أفضل الأصناف مبيعاً في مدى تاريخ. */
 export const topItems = query({
-  args: { from: v.string(), to: v.string(), sessionToken: v.optional(v.string()) },
+  args: { from: v.string(), to: v.string(), branchId: v.optional(v.id("posBranches")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const start = new Date(args.from + "T00:00:00").getTime();
     const end = new Date(args.to + "T23:59:59.999").getTime();
     const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
-    const paid = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID");
+    const paid = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID"
+      && (!args.branchId || String(t.branchId) === String(args.branchId)));
     const paidIds = new Set(paid.map((t) => String(t._id)));
     const allLines = await ctx.db.query("posTicketLines").collect();
     const byItem = new Map<string, { name: string; qty: number; revenue: number }>();
@@ -419,6 +442,7 @@ export const topItems = query({
 export const listReceipts = query({
   args: {
     from: v.string(), to: v.string(),
+    branchId: v.optional(v.id("posBranches")),
     // ✅ pagination: مع نمو الفواتير مافيش معنى نجيبها كلها. الافتراضي 200.
     limit: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
@@ -428,22 +452,27 @@ export const listReceipts = query({
     const start = new Date(args.from + "T00:00:00").getTime();
     const end = new Date(args.to + "T23:59:59.999").getTime();
     const cap = Math.min(1000, Math.max(1, args.limit ?? 200));
+    const branches = await ctx.db.query("posBranches").collect();
+    const branchNameById = new Map(branches.map((b: any) => [String(b._id), b.name]));
     // ✅ استعمل by_paidAt مباشرة: نطاق زمني عبر withIndex بدل full-scan + filter بالذاكرة
     const rows: any[] = await ctx.db
       .query("posTickets")
       .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
       .order("desc")
       .take(cap);
-    return rows.map((t) => ({
-      id: String(t._id),
-      ticketNumber: t.ticketNumber,
-      cashierName: t.cashierName,
-      status: t.status,
-      total: t.total,
-      paymentMethod: t.paymentMethod || null,
-      customerName: t.customerName || null,
-      paidAt: t.paidAt,
-    }));
+    return rows
+      .filter((t) => !args.branchId || String(t.branchId) === String(args.branchId))
+      .map((t) => ({
+        id: String(t._id),
+        ticketNumber: t.ticketNumber,
+        cashierName: t.cashierName,
+        branchName: t.branchId ? (branchNameById.get(String(t.branchId)) || null) : null,
+        status: t.status,
+        total: t.total,
+        paymentMethod: t.paymentMethod || null,
+        customerName: t.customerName || null,
+        paidAt: t.paidAt,
+      }));
   },
 });
 
@@ -640,18 +669,22 @@ export const refundTicket = mutation({
 
 /** الورديات (سجل). */
 export const listShifts = query({
-  args: { from: v.optional(v.string()), to: v.optional(v.string()), sessionToken: v.optional(v.string()) },
+  args: { from: v.optional(v.string()), to: v.optional(v.string()), branchId: v.optional(v.id("posBranches")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const start = args.from ? new Date(args.from + "T00:00:00").getTime() : 0;
     const end = args.to ? new Date(args.to + "T23:59:59.999").getTime() : Date.now();
     const rows = await ctx.db.query("posShifts").collect();
+    const branches = await ctx.db.query("posBranches").collect();
+    const branchNameById = new Map(branches.map((b: any) => [String(b._id), b.name]));
     return rows
       .filter((s) => s.openedAt >= start && s.openedAt <= end)
+      .filter((s: any) => !args.branchId || String(s.branchId) === String(args.branchId))
       .sort((a, b) => b.openedAt - a.openedAt)
-      .map((s) => ({
+      .map((s: any) => ({
         id: String(s._id),
         cashierName: s.cashierName,
+        branchName: s.branchId ? (branchNameById.get(String(s.branchId)) || null) : null,
         status: s.status,
         openedAt: s.openedAt,
         closedAt: s.closedAt || null,

@@ -14,11 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck } from "lucide-react";
+import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
-type Tab = "overview" | "cashiers" | "categories" | "items" | "reports" | "profit" | "audit" | "shifts";
+type Tab = "overview" | "branches" | "cashiers" | "categories" | "items" | "reports" | "profit" | "audit" | "shifts";
 
 export default function PosAdmin() {
   const { language, dir } = useLanguage();
@@ -49,9 +49,10 @@ export default function PosAdmin() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pb-10">
-        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+        <div className="mt-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-9 gap-2">
           {([
             ["overview",   BarChart3,    t("نظرة عامة", "Overview")],
+            ["branches",   Building2,    t("الفروع",     "Branches")],
             ["cashiers",   Users,        t("الكاشيرون",  "Cashiers")],
             ["categories", LayoutGrid,   t("الفئات",     "Categories")],
             ["items",      Palette,      t("الأصناف",    "Items")],
@@ -75,6 +76,7 @@ export default function PosAdmin() {
 
         <div className="mt-4">
           {tab === "overview"   && <OverviewTab   t={t} sessionToken={sessionToken} />}
+          {tab === "branches"   && <BranchesTab   t={t} sessionToken={sessionToken} toast={toast} />}
           {tab === "cashiers"   && <CashiersTab   t={t} sessionToken={sessionToken} toast={toast} isRtl={isRtl} />}
           {tab === "categories" && <CategoriesTab t={t} sessionToken={sessionToken} toast={toast} />}
           {tab === "items"      && <ItemsTab      t={t} sessionToken={sessionToken} toast={toast} isRtl={isRtl} />}
@@ -90,9 +92,99 @@ export default function PosAdmin() {
 
 /* ═══════════════════════════════ Overview ═══════════════════════════════ */
 
+function BranchesTab({ t, sessionToken, toast }: any) {
+  const rows = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
+  const create = useMutation(api.posBranches.create);
+  const update = useMutation(api.posBranches.update);
+  const [f, setF] = useState({ name: "", code: "", phone: "", address: "" });
+  const [busy, setBusy] = useState(false);
+
+  const add = async () => {
+    if (!f.name.trim()) { void alertDialog({ message: t("اسم الفرع مطلوب", "Branch name required") }); return; }
+    setBusy(true);
+    try {
+      await create({ name: f.name, code: f.code || undefined, phone: f.phone || undefined, address: f.address || undefined, sessionToken });
+      setF({ name: "", code: "", phone: "", address: "" });
+      toast({ title: t("تم إضافة الفرع", "Branch added") });
+    } catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="space-y-3">
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-1">{t("إضافة فرع", "Add Branch")}</h3>
+          <p className="text-xs text-slate-500 mb-3">{t("كل فرع له كاشيرون وورديات وفواتير منفصلة. الاسم والعنوان يظهران على الفاتورة.", "Each branch has its own cashiers, shifts and tickets. Name & address show on the receipt.")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div className="sm:col-span-2"><Label className="text-xs font-bold text-slate-500">{t("اسم الفرع", "Branch name")}</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={t("فرع لوسيل", "Lusail branch")} className="h-10" /></div>
+            <div><Label className="text-xs font-bold text-slate-500">{t("كود", "Code")}</Label><Input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} placeholder="LUS" className="h-10" /></div>
+            <div><Label className="text-xs font-bold text-slate-500">{t("هاتف", "Phone")}</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} className="h-10" dir="ltr" /></div>
+            <div className="flex items-end"><Button onClick={add} disabled={busy} className="w-full h-10 text-white font-bold" style={{ background: "#0E76AC" }}><Plus className="h-4 w-4 me-1" />{t("إضافة", "Add")}</Button></div>
+            <div className="sm:col-span-5"><Label className="text-xs font-bold text-slate-500">{t("العنوان (يظهر على الفاتورة)", "Address (on receipt)")}</Label><Input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} className="h-10" /></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-3">{t("الفروع", "Branches")}</h3>
+          {!rows ? <p className="text-sm text-slate-400 py-4 text-center">{t("جاري التحميل…", "Loading…")}</p>
+            : rows.length === 0 ? <p className="text-sm text-slate-500 py-4 text-center">{t("مفيش فروع بعد — أضف فرعين.", "No branches yet — add two.")}</p>
+            : (
+            <div className="space-y-2">
+              {rows.map((b: any) => (
+                <BranchRow key={b.id} b={b} t={t} update={update} sessionToken={sessionToken} toast={toast} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function BranchRow({ b, t, update, sessionToken, toast }: any) {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({ name: b.name, code: b.code || "", phone: b.phone || "", address: b.address || "" });
+  const save = async () => {
+    try { await update({ id: b.id as any, name: f.name, code: f.code, phone: f.phone, address: f.address, sessionToken }); setEdit(false); toast({ title: t("تم الحفظ", "Saved") }); }
+    catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
+  };
+  if (edit) {
+    return (
+      <div className="rounded-xl border-2 border-[#cfe7f3] p-3 grid grid-cols-1 sm:grid-cols-4 gap-2">
+        <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} placeholder={t("الاسم", "Name")} className="h-9" />
+        <Input value={f.code} onChange={(e) => setF({ ...f, code: e.target.value })} placeholder="Code" className="h-9" />
+        <Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} placeholder={t("هاتف", "Phone")} className="h-9" dir="ltr" />
+        <Input value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder={t("العنوان", "Address")} className="h-9" />
+        <div className="sm:col-span-4 flex gap-2 justify-end">
+          <Button variant="outline" onClick={() => setEdit(false)} className="h-9">{t("إلغاء", "Cancel")}</Button>
+          <Button onClick={save} className="h-9 text-white" style={{ background: "#0E76AC" }}>{t("حفظ", "Save")}</Button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+      <div className="flex-1 min-w-0">
+        <div className="font-black text-slate-800 truncate">{b.name} {b.code && <span className="text-[10px] font-bold text-[#0E76AC] bg-[#eef7fb] rounded px-1.5 py-0.5">{b.code}</span>}</div>
+        <div className="text-[11px] text-slate-400 truncate">{[b.phone, b.address].filter(Boolean).join(" · ") || "—"}</div>
+      </div>
+      <button onClick={() => update({ id: b.id as any, isActive: !b.isActive, sessionToken })}
+        className={cn("text-[10px] font-bold px-2 py-1 rounded-full", b.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+        {b.isActive ? t("نشط", "Active") : t("موقوف", "Off")}
+      </button>
+      <Button variant="outline" size="sm" onClick={() => setEdit(true)} className="h-8">{t("تعديل", "Edit")}</Button>
+    </div>
+  );
+}
+
 function OverviewTab({ t, sessionToken }: any) {
   const today = new Date().toISOString().slice(0, 10);
-  const daily = useQuery(api.posAdmin.dailySummary, { date: today, sessionToken }) as any;
+  const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
+  const [branchId, setBranchId] = useState<string>("");
+  const daily = useQuery(api.posAdmin.dailySummary, { date: today, ...(branchId ? { branchId: branchId as any } : {}), sessionToken }) as any;
   const cashiers = useQuery(api.posAdmin.listCashiers, { sessionToken }) as any[] | undefined;
   const cats = useQuery(api.posAdmin.listCategories, { sessionToken }) as any[] | undefined;
   const settings = useQuery(api.restaurantSettings.get, {}) as any;
@@ -125,11 +217,21 @@ function OverviewTab({ t, sessionToken }: any) {
     } catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
   };
 
+  const hasBranches = (branches?.length || 0) > 0;
   return (
     <div className="space-y-3">
+      {hasBranches && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-500">{t("الفرع:", "Branch:")}</span>
+          <button onClick={() => setBranchId("")} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", !branchId ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{t("الكل", "All")}</button>
+          {(branches || []).map((b: any) => (
+            <button key={b.id} onClick={() => setBranchId(b.id)} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", branchId === b.id ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{b.name}</button>
+          ))}
+        </div>
+      )}
       <Card className="rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 text-white border-0">
         <CardContent className="p-6">
-          <p className="text-cyan-100 text-sm font-bold uppercase">{t("مبيعات اليوم", "Today's Sales")}</p>
+          <p className="text-cyan-100 text-sm font-bold uppercase">{t("مبيعات اليوم", "Today's Sales")}{branchId ? ` · ${branches?.find((b: any) => b.id === branchId)?.name || ""}` : ""}</p>
           <p className="text-5xl font-black mt-1">{daily?.totalSales?.toFixed(2) ?? "—"}
             <span className="text-xl text-cyan-200 ms-2">QAR</span>
           </p>
@@ -159,6 +261,23 @@ function OverviewTab({ t, sessionToken }: any) {
                   <p className="text-xs uppercase font-bold text-slate-500">{m.method}</p>
                   <p className="text-xl font-black text-slate-900">{m.total.toFixed(2)}</p>
                   <p className="text-xs text-slate-400">{m.count} {t("فاتورة", "tickets")}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasBranches && daily?.byBranch?.length > 0 && !branchId && (
+        <Card className="rounded-2xl">
+          <CardContent className="p-4">
+            <h3 className="font-black mb-3">{t("مبيعات اليوم حسب الفرع", "Today by branch")}</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {daily.byBranch.map((b: any, i: number) => (
+                <div key={i} className="rounded-xl bg-[#eef7fb] p-3">
+                  <p className="text-xs font-bold text-[#0E76AC]">{b.name}</p>
+                  <p className="text-xl font-black text-slate-900">{b.total.toFixed(2)}</p>
+                  <p className="text-xs text-slate-400">{b.count} {t("فاتورة", "tickets")}</p>
                 </div>
               ))}
             </div>
@@ -243,19 +362,26 @@ function QuickCard({ title, value, color, icon: Icon }: any) {
 
 function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
   const rows = useQuery(api.posAdmin.listCashiers, { sessionToken }) as any[] | undefined;
+  const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
   const create = useMutation(api.posAdmin.createCashier);
   const update = useMutation(api.posAdmin.updateCashier);
   const [showForm, setShowForm] = useState(false);
-  const [f, setF] = useState({ name: "", email: "", phone: "", pin: "" });
+  const [f, setF] = useState({ name: "", email: "", phone: "", pin: "", branchId: "" });
   const [editing, setEditing] = useState<any | null>(null);
   const [newPin, setNewPin] = useState("");
+  const hasBranches = (branches?.length || 0) > 0;
 
   const submit = async () => {
     try {
-      await create({ ...f, sessionToken });
+      const { branchId, ...rest } = f;
+      await create({ ...rest, ...(branchId ? { posBranchId: branchId as any } : {}), sessionToken });
       toast({ title: t("تم إنشاء الكاشير ✓", "Cashier created ✓") });
-      setShowForm(false); setF({ name: "", email: "", phone: "", pin: "" });
+      setShowForm(false); setF({ name: "", email: "", phone: "", pin: "", branchId: "" });
     } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message?.replace(/^\[.*?\]\s*/, "") }); }
+  };
+  const reassign = async (id: string, branchId: string) => {
+    try { await update({ id: id as any, posBranchId: (branchId || undefined) as any, sessionToken }); toast({ title: t("تم تحديث الفرع ✓", "Branch updated ✓") }); }
+    catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
   };
   const changePin = async (id: string) => {
     if (!/^\d{4,6}$/.test(newPin)) return toast({ title: t("PIN لازم 4-6 أرقام", "PIN must be 4-6 digits") });
@@ -282,6 +408,15 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
             <div><Label>{t("الإيميل", "Email")}</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
             <div><Label>{t("الهاتف", "Phone")}</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
             <div><Label>{t("PIN (4-6 أرقام)", "PIN (4-6 digits)")}</Label><Input value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="1234" /></div>
+            {hasBranches && (
+              <div className="sm:col-span-2">
+                <Label>{t("الفرع", "Branch")}</Label>
+                <select value={f.branchId} onChange={(e) => setF({ ...f, branchId: e.target.value })} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                  <option value="">{t("— اختر الفرع —", "— select branch —")}</option>
+                  {(branches || []).map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </div>
+            )}
             <div className="sm:col-span-2 flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowForm(false)}>{t("إلغاء", "Cancel")}</Button>
               <Button onClick={submit} className="text-white" style={{ background: "#0E76AC" }}><Save className="h-4 w-4 me-1" />{t("حفظ", "Save")}</Button>
@@ -297,6 +432,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
               <tr>
                 <th className="text-start p-3">{t("الاسم", "Name")}</th>
                 <th className="text-start p-3">{t("الإيميل", "Email")}</th>
+                {hasBranches && <th className="text-start p-3">{t("الفرع", "Branch")}</th>}
                 <th className="text-center p-3">PIN</th>
                 <th className="text-center p-3">{t("نشط", "Active")}</th>
                 <th className="p-3" />
@@ -307,6 +443,14 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                 <tr key={c.id} className="border-t border-slate-100">
                   <td className="p-3 font-bold">{c.name}</td>
                   <td className="p-3 text-slate-600 text-xs">{c.email}</td>
+                  {hasBranches && (
+                    <td className="p-3">
+                      <select value={c.branchId || ""} onChange={(e) => reassign(c.id, e.target.value)} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold">
+                        <option value="">{t("— بدون —", "— none —")}</option>
+                        {(branches || []).map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </td>
+                  )}
                   <td className="p-3 text-center">
                     {editing?.id === c.id ? (
                       <div className="flex items-center justify-center gap-1">
@@ -330,7 +474,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                 </tr>
               ))}
               {rows && rows.length === 0 && (
-                <tr><td colSpan={5} className="text-center py-8 text-slate-400">{t("لسه ما ضفتش كاشير", "No cashiers yet")}</td></tr>
+                <tr><td colSpan={hasBranches ? 6 : 5} className="text-center py-8 text-slate-400">{t("لسه ما ضفتش كاشير", "No cashiers yet")}</td></tr>
               )}
             </tbody>
           </table>
@@ -643,12 +787,25 @@ function ReportsTab({ t, sessionToken }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [from, setFrom] = useState(today.slice(0, 7) + "-01");
   const [to, setTo] = useState(today);
-  const top = useQuery(api.posAdmin.topItems, { from, to, sessionToken }) as any[] | undefined;
-  const receipts = useQuery(api.posAdmin.listReceipts, { from, to, sessionToken }) as any[] | undefined;
+  const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
+  const [branchId, setBranchId] = useState<string>("");
+  const bArg = branchId ? { branchId: branchId as any } : {};
+  const top = useQuery(api.posAdmin.topItems, { from, to, ...bArg, sessionToken }) as any[] | undefined;
+  const receipts = useQuery(api.posAdmin.listReceipts, { from, to, ...bArg, sessionToken }) as any[] | undefined;
+  const hasBranches = (branches?.length || 0) > 0;
 
   return (
     <div className="space-y-3">
       <EmailReportCard t={t} sessionToken={sessionToken} />
+      {hasBranches && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-slate-500">{t("الفرع:", "Branch:")}</span>
+          <button onClick={() => setBranchId("")} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", !branchId ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{t("الكل", "All")}</button>
+          {(branches || []).map((b: any) => (
+            <button key={b.id} onClick={() => setBranchId(b.id)} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", branchId === b.id ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{b.name}</button>
+          ))}
+        </div>
+      )}
       <Card className="rounded-2xl">
         <CardContent className="p-4 grid grid-cols-2 gap-3">
           <div><Label>{t("من", "From")}</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" /></div>

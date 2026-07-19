@@ -81,6 +81,9 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
             <div className="bg-white p-4 rounded-lg shadow-sm font-mono text-sm">
               <div className="text-center border-b border-dashed border-slate-300 pb-2 mb-2">
                 <img src="/adrenaline-logo-full.png" alt="ADRENALINE" className="h-8 mx-auto object-contain" />
+                {t.branchName && <div className="text-[11px] font-black text-slate-800 mt-1">{t.branchName}</div>}
+                {t.branchAddress && <div className="text-[9px] text-slate-500">{t.branchAddress}</div>}
+                {t.branchPhone && <div className="text-[9px] text-slate-500" dir="ltr">{t.branchPhone}</div>}
               </div>
               <div className="text-[11px] text-slate-600 mb-2">
                 <div>Receipt: #{t.ticketNumber}</div>
@@ -187,6 +190,9 @@ function buildReceiptHtml(t: any): string {
       @media print{body{margin:0;padding:4mm 4mm 8mm}}
     </style></head><body>
     <img class="logo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
+    ${t.branchName ? `<div class="sub" style="font-weight:900;color:#000;font-size:12px">${escapeHtml(t.branchName)}</div>` : ""}
+    ${t.branchAddress ? `<div class="sub" style="margin-bottom:2px">${escapeHtml(t.branchAddress)}</div>` : ""}
+    ${t.branchPhone ? `<div class="sub" style="margin-bottom:6px">${escapeHtml(t.branchPhone)}</div>` : ""}
     <div class="info">
       Receipt: #${t.ticketNumber}<br>
       Cashier: ${escapeHtml(t.cashierName)}<br>
