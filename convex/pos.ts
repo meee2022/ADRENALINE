@@ -18,6 +18,7 @@ import { verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
 import { awardPointsForPosTicket, reversePointsForPosTicket } from "./loyalty";
 import { convertUnit } from "./units";
+import { autoPostPosTicket } from "./financePost";
 
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
 
@@ -766,6 +767,9 @@ export const chargeTicket = mutation({
     // 🔒 خصم المخزون تلقائياً (لا نمنع البيع لو الرسيبي ناقص)
     try { await deductInventoryForTicket(ctx, args.ticketId, t.ticketNumber, serverLines); } catch { /* لا نوقف الدفع */ }
 
+    // 💰 ترحيل محاسبي تلقائي (لا يوقف البيع أبداً)
+    try { await autoPostPosTicket(ctx, args.ticketId); } catch { /* لا نوقف الدفع */ }
+
     return { ok: true, total: totals.total, change };
   },
 });
@@ -853,6 +857,9 @@ export const quickSale = mutation({
     }
     // 🔒 خصم المخزون
     try { await deductInventoryForTicket(ctx, id, num, serverLines); } catch { /* لا نوقف البيع */ }
+
+    // 💰 ترحيل محاسبي تلقائي (لا يوقف البيع أبداً)
+    try { await autoPostPosTicket(ctx, id); } catch { /* لا نوقف البيع */ }
 
     return { id: String(id), ticketNumber: num, total: totals.total, change, loyaltyAwarded };
   },
