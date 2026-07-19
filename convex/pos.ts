@@ -494,10 +494,13 @@ async function deductInventoryForTicket(ctx: MutationCtx, ticketId: any, ticketN
   }
 }
 
-/** 🔒 يعكس خصم المخزون لفاتورة عند الـvoid (يرجع الكميات المخصومة بعلامة موجبة). */
-async function reverseInventoryForTicket(ctx: MutationCtx, ticketNumber: number) {
+/** 🔒 يعكس خصم المخزون لفاتورة عند الـvoid/refund (يرجع الكميات المخصومة بعلامة موجبة). */
+export async function reverseInventoryForTicket(ctx: MutationCtx, ticketNumber: number, tag = "void") {
   const movements = await ctx.db.query("inventoryMovements").collect();
   const target = movements.filter((m: any) => m.note === `POS #${ticketNumber}` && m.type === "consume");
+  // 🔒 حماية من العكس المزدوج: لو فيه عكس سابق لنفس الفاتورة، لا نعكس تاني
+  const alreadyReversed = movements.some((m: any) => typeof m.note === "string" && m.note.startsWith(`عكس POS #${ticketNumber}`));
+  if (alreadyReversed) return;
   const now = Date.now();
   for (const m of target) {
     const item: any = await ctx.db.get(m.itemId);
@@ -505,7 +508,7 @@ async function reverseInventoryForTicket(ctx: MutationCtx, ticketNumber: number)
     const back = Math.abs(m.quantity || 0);
     await ctx.db.insert("inventoryMovements", {
       itemId: item._id, type: "adjust", quantity: back,
-      note: `عكس POS #${ticketNumber} (void)`, createdAt: now,
+      note: `عكس POS #${ticketNumber} (${tag})`, createdAt: now,
     });
     await ctx.db.patch(item._id, { currentStock: item.currentStock + back, updatedAt: now });
   }
@@ -846,6 +849,42 @@ export const voidTicket = mutation({
     await writeAudit(ctx, { userId: String(user._id), name: user.name, role: user.role },
       "VOID_TICKET", "posTicket", String(ticketId),
       { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, reason: reason || null });
+    return { ok: true };
+  },
+});
+
+/** 🔒 استرجاع فاتورة مدفوعة من واجهة الكاشير — ADMIN فقط + سبب إلزامي.
+ *   يرجّع المخزون + يعكس نقاط الولاء + يخصم من مبيعات الوردية. */
+export const refundTicket = mutation({
+  args: { token: v.string(), ticketId: v.id("posTickets"), reason: v.optional(v.string()) },
+  handler: async (ctx, { token, ticketId, reason }) => {
+    const { user } = await requireCashier(ctx, token);
+    if (!isAdmin(user)) throw new Error("الاسترجاع يحتاج صلاحية مدير");
+    const t: any = await ctx.db.get(ticketId);
+    if (!t) throw new Error("الفاتورة غير موجودة");
+    if (t.status !== "PAID") throw new Error("الاسترجاع يكون للفواتير المدفوعة فقط");
+    const r = String(reason || "").trim();
+    if (r.length < 3) throw new Error("سبب الاسترجاع مطلوب (3 أحرف أو أكثر)");
+
+    await ctx.db.patch(ticketId, { status: "REFUNDED", updatedAt: Date.now() });
+    // خصم من مبيعات الوردية (لو مفتوحة وليست خارج الإيراد)
+    if (t.shiftId && !t.isNonRevenue) {
+      const shift: any = await ctx.db.get(t.shiftId);
+      if (shift && shift.status === "OPEN") {
+        await ctx.db.patch(t.shiftId, {
+          totalSales: Math.round((shift.totalSales - t.total) * 100) / 100,
+          ticketsCount: Math.max(0, shift.ticketsCount - 1),
+        });
+      }
+    }
+    // 🔒 إرجاع المخزون + عكس نقاط الولاء
+    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund"); } catch { /* لا نوقف */ }
+    if (t.customerId) {
+      try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
+    }
+    await writeAudit(ctx, { userId: String(user._id), name: user.name, role: user.role },
+      "REFUND_TICKET", "posTicket", String(ticketId),
+      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, paymentMethod: t.paymentMethod, reason: reason || null });
     return { ok: true };
   },
 });

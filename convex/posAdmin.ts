@@ -9,6 +9,8 @@ import { requireAdmin, requireStaff } from "./sessions";
 import { hashPassword, verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
 import { ONLINE_PRICE_LIST } from "./onlinePriceList";
+import { reverseInventoryForTicket } from "./pos";
+import { reversePointsForPosTicket } from "./loyalty";
 
 /* ═══════════════════════════════ الكاشيرون ═══════════════════════════════ */
 
@@ -621,6 +623,11 @@ export const refundTicket = mutation({
           ticketsCount: Math.max(0, shift.ticketsCount - 1),
         });
       }
+    }
+    // 🔒 إرجاع المخزون + عكس نقاط الولاء (كان ناقص — الاسترجاع كان بيغيّر الحالة فقط)
+    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund"); } catch { /* لا نوقف */ }
+    if (t.customerId) {
+      try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
     }
     const actor: any = id.userId ? await ctx.db.get(id.userId as any) : null;
     await writeAudit(ctx,

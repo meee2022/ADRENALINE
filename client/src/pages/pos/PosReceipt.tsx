@@ -2,11 +2,13 @@
  * @file client/src/pages/pos/PosReceipt.tsx
  * @description معاينة الإيصال بعد الدفع — قابلة للطباعة (58/80mm) أو التنزيل.
  */
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
-import { Printer, X, CheckCircle2, Tags } from "lucide-react";
+import { Printer, X, CheckCircle2, Tags, Undo2, Loader2 } from "lucide-react";
 import { openPrintDoc } from "@/lib/printDoc";
+import { alertDialog } from "@/lib/dialogs";
 
 type Props = { ticketId: string; onClose: () => void };
 
@@ -15,7 +17,27 @@ const STICKER_EXPIRY_DAYS = 2;
 
 export default function ReceiptModal({ ticketId, onClose }: Props) {
   const token = usePosStore((s) => s.token);
+  const cashier = usePosStore((s) => s.cashier);
   const t = useQuery(api.pos.getTicket, token ? { token, ticketId: ticketId as any } : "skip") as any;
+  const refundMut = useMutation(api.pos.refundTicket);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
+  const isAdmin = String(cashier?.role || "").toUpperCase() === "ADMIN";
+  const canRefund = isAdmin && t && t.status === "PAID";
+
+  const doRefund = async () => {
+    if (!token || !t) return;
+    if (refundReason.trim().length < 3) { void alertDialog({ message: "سبب الاسترجاع مطلوب (3 أحرف أو أكثر)" }); return; }
+    setRefundBusy(true);
+    try {
+      await refundMut({ token, ticketId: ticketId as any, reason: refundReason.trim() });
+      setRefundOpen(false);
+      void alertDialog({ message: `تم استرجاع الفاتورة #${t.ticketNumber} وإرجاع المخزون.` });
+    } catch (e: any) {
+      void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || "تعذّر الاسترجاع" });
+    } finally { setRefundBusy(false); }
+  };
 
   // الطباعة والحفظ كـPDF نفس المسار — شاشة الطباعة فيها الاتنين
   // (طابعة حرارية أو "حفظ كـPDF")، فلا داعي لتنزيل HTML منفصل.
@@ -94,6 +116,12 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
 
         {/* Actions */}
         <div className="p-3 bg-white border-t border-slate-200 space-y-2">
+          {t && t.status === "REFUNDED" && (
+            <div className="rounded-xl bg-red-50 border-2 border-red-200 text-red-700 font-black text-center py-2 text-sm">مسترجعة — REFUNDED</div>
+          )}
+          {t && t.status === "VOID" && (
+            <div className="rounded-xl bg-slate-100 border-2 border-slate-200 text-slate-500 font-black text-center py-2 text-sm">ملغاة — VOID</div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             {/* زر واحد: شاشة الطباعة نفسها فيها الطابعة الحرارية و"حفظ كـPDF" */}
             <button onClick={printReceipt} className="h-12 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm flex items-center justify-center gap-1">
@@ -103,6 +131,32 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
               <Tags className="h-4 w-4" /> استيكر المطبخ {labelCount > 0 ? `(${labelCount})` : ""}
             </button>
           </div>
+
+          {/* استرجاع — ADMIN فقط، فاتورة مدفوعة */}
+          {canRefund && !refundOpen && (
+            <button onClick={() => { setRefundOpen(true); setRefundReason(""); }} className="w-full h-11 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border-2 border-red-200 font-bold text-sm flex items-center justify-center gap-1">
+              <Undo2 className="h-4 w-4" /> استرجاع الفاتورة
+            </button>
+          )}
+          {canRefund && refundOpen && (
+            <div className="rounded-xl border-2 border-red-200 bg-red-50 p-3 space-y-2">
+              <div className="text-xs font-black text-red-700">سبب الاسترجاع (سيُرجَّع المخزون وتُعكس النقاط)</div>
+              <input
+                autoFocus
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="مثال: العميل غيّر رأيه / خطأ في الطلب"
+                className="w-full h-11 rounded-lg border-2 border-red-200 focus:border-red-400 focus:outline-none px-3 text-sm font-bold text-slate-900"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setRefundOpen(false)} disabled={refundBusy} className="h-11 rounded-lg bg-white border-2 border-slate-200 text-slate-700 font-bold text-sm">إلغاء</button>
+                <button onClick={doRefund} disabled={refundBusy || refundReason.trim().length < 3} className="h-11 rounded-lg bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white font-black text-sm flex items-center justify-center gap-1">
+                  {refundBusy && <Loader2 className="h-4 w-4 animate-spin" />} تأكيد الاسترجاع
+                </button>
+              </div>
+            </div>
+          )}
+
           <button onClick={onClose} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">
             New Sale
           </button>
