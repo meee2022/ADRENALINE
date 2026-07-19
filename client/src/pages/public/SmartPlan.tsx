@@ -212,18 +212,17 @@ export default function SmartPlan() {
     setSwap(null);
   };
 
-  // 🔧 مرشّحو نافذة التبديل/الإضافة — نفس اليوم/الدورة. في وضع الإضافة: التصنيف
-  //    الناقص فقط، بلا تكرار، ومع احترام سقف الفطار (لا يمسّ أي قيد — يساعد على
-  //    إكمال ما ولّده الذكاء ناقصاً حتى تمرّ بوابة الاكتمال).
+  // 🔧 مرشّحو نافذة التبديل/الإضافة — نفس اليوم/الدورة.
+  //    التوليد يبقى متنوّعاً (أصناف مختلفة)، لكن **أثناء المراجعة** يُسمح بالتكرار:
+  //    التبديل يسمح باختيار وجبة موجودة أصلاً، والإضافة كذلك (لا نستبعد المختار).
+  //    يبقى سقف الفطار محترَماً. لا يمسّ التوليد ولا بوابة الاكتمال.
   const pickerCandidates = (): any[] => {
     if (!swap) return [];
     const dayPicks: any[] = swap.src === "weekly" ? (weekly?.days?.[swap.di]?.picks || []) : (result?.picks || []);
-    const pickedIds = new Set(dayPicks.map((p: any) => String(p.id)));
     const bfCount = dayPicks.filter((p: any) => isBreakfastCategory(p.category)).length;
     return (allMeals || []).filter((m: any) => {
       if (!mealAvailable(m, Number(swap.week), swap.day)) return false;
       if (swap.add) {
-        if (pickedIds.has(String(m._id))) return false;
         if (swap.need === "main" && !isMainCategory(m.category)) return false;
         if (swap.need === "snack" && !isSnackCategory(m.category)) return false;
         if (isBreakfastCategory(m.category) && bfCount >= BREAKFAST_MAX_PER_DAY) return false;
