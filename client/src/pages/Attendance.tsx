@@ -152,18 +152,25 @@ export default function Attendance() {
   const setWorkHoursM = useMutation(api.attendance.setWorkHoursBulk);
   const recomputeM = useMutation(api.attendance.recomputeMonthOt);
   const [wHours, setWHours] = useState<Record<string, string>>({});
+  const [wRest, setWRest] = useState<Record<string, number[]>>({});
   const [wOtRate, setWOtRate] = useState("1.5");
   const [wBusy, setWBusy] = useState(false);
   const wLoaded = useRef(false);
   useEffect(() => {
     if (workCfg && !wLoaded.current) {
       wLoaded.current = true;
-      const init: Record<string, string> = {};
-      for (const e of workCfg.employees) init[e.name] = String(e.standardHours);
-      setWHours(init);
+      const initH: Record<string, string> = {};
+      const initR: Record<string, number[]> = {};
+      for (const e of workCfg.employees) { initH[e.name] = String(e.standardHours); initR[e.name] = e.restDays || []; }
+      setWHours(initH);
+      setWRest(initR);
       setWOtRate(String(workCfg.otRate));
     }
   }, [workCfg]);
+  const toggleRest = (name: string, day: number) => setWRest((prev) => {
+    const cur = prev[name] || [];
+    return { ...prev, [name]: cur.includes(day) ? cur.filter((d) => d !== day) : [...cur, day] };
+  });
   const setAllHours = (h: number) => setWHours((prev) => {
     const next: Record<string, string> = {}; for (const k of Object.keys(prev)) next[k] = String(h); return next;
   });
@@ -171,7 +178,7 @@ export default function Attendance() {
     setWBusy(true);
     try {
       const rows = Object.entries(wHours)
-        .map(([name, v]) => ({ name, standardHours: Number(v) }))
+        .map(([name, v]) => ({ name, standardHours: Number(v), restDays: wRest[name] || [] }))
         .filter((r) => Number.isFinite(r.standardHours) && r.standardHours > 0);
       await setWorkHoursM({ rows, otRate: Number(wOtRate) || undefined, sessionToken });
       if (recompute) {
@@ -849,23 +856,42 @@ export default function Attendance() {
               <p className="text-sm text-gray-400 py-6 text-center">{t("جاري التحميل…", "Loading…")}</p>
             ) : workCfg.employees.length === 0 ? (
               <p className="text-sm text-gray-500 py-6 text-center">{t("لا يوجد موظفون في كشف الرواتب.", "No employees in payroll.")}</p>
-            ) : workCfg.employees.map((e: any) => (
-              <div key={e.name} className="flex items-center gap-2 py-1.5 border-b border-gray-50">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}</div>
-                  {e.designation && <div className="text-[10px] text-gray-400 truncate">{e.designation}</div>}
+            ) : workCfg.employees.map((e: any) => {
+              const DOW = isRtl
+                ? ["أحد", "إثن", "ثلا", "أرب", "خمي", "جمع", "سبت"]
+                : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+              const rest = wRest[e.name] || [];
+              return (
+                <div key={e.name} className="py-2 border-b border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}</div>
+                      {e.designation && <div className="text-[10px] text-gray-400 truncate">{e.designation}</div>}
+                    </div>
+                    <div className="flex gap-1">
+                      {[8, 9, 11].map((h) => (
+                        <button key={h} onClick={() => setWHours((p) => ({ ...p, [e.name]: String(h) }))}
+                          className={cn("h-8 w-8 rounded-lg text-xs font-bold border", Number(wHours[e.name]) === h ? "bg-[#0E76AC] text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-500")}>{h}</button>
+                      ))}
+                    </div>
+                    <Input type="number" step="0.5" value={wHours[e.name] ?? ""} onChange={(ev) => setWHours((p) => ({ ...p, [e.name]: ev.target.value }))}
+                      className="h-8 w-16 text-sm text-center" dir="ltr" />
+                    <span className="text-[10px] text-gray-400 w-8">{t("ساعة", "hrs")}</span>
+                  </div>
+                  {/* أيام الإجازة الأسبوعية — الحضور فيها = كل الساعات أوفرتايم */}
+                  <div className="flex items-center gap-1 mt-1.5">
+                    <span className="text-[10px] font-bold text-gray-400 w-14 shrink-0">{t("الإجازة:", "Rest:")}</span>
+                    {DOW.map((lbl, d) => (
+                      <button key={d} onClick={() => toggleRest(e.name, d)}
+                        className={cn("h-6 px-1.5 rounded-md text-[10px] font-bold border transition-all",
+                          rest.includes(d) ? "bg-amber-500 text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-400")}>
+                        {lbl}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  {[8, 9, 11].map((h) => (
-                    <button key={h} onClick={() => setWHours((p) => ({ ...p, [e.name]: String(h) }))}
-                      className={cn("h-8 w-8 rounded-lg text-xs font-bold border", Number(wHours[e.name]) === h ? "bg-[#0E76AC] text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-500")}>{h}</button>
-                  ))}
-                </div>
-                <Input type="number" step="0.5" value={wHours[e.name] ?? ""} onChange={(ev) => setWHours((p) => ({ ...p, [e.name]: ev.target.value }))}
-                  className="h-8 w-16 text-sm text-center" dir="ltr" />
-                <span className="text-[10px] text-gray-400 w-8">{t("ساعة", "hrs")}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">

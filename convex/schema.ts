@@ -277,6 +277,8 @@ export default defineSchema({
   employeeWorkSettings: defineTable({
     name: v.string(),
     standardHours: v.number(),   // 8 / 9 / 11 ...
+    // أيام الإجازة الأسبوعية (0=الأحد ... 6=السبت). الحضور فيها = كل الساعات أوفرتايم.
+    restDays: v.optional(v.array(v.number())),
     updatedAt: v.number(),
   }).index("by_name", ["name"]),
 

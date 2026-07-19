@@ -13,17 +13,33 @@ const WORK_HOURS_PER_DAY = 9;   // الدوام القياسي الافتراض�
 const DAYS_PER_MONTH = 30;      // لحساب المعدّل الساعي (نفس منطق الرواتب)
 const DEFAULT_OT_RATE = 1.5;    // معامل الأوفرتايم في المطعم (ساعة ونص)
 
-/** يبني خريطة اسم→ساعات الدوام القياسية من employeeWorkSettings (الافتراضي 9). */
-async function buildStdHoursMap(ctx: any): Promise<Map<string, number>> {
+/** يبني خريطة اسم→{ساعات الدوام، أيام الإجازة} من employeeWorkSettings. */
+type WorkSetting = { std: number; rest: number[] };
+async function buildWorkSettingsMap(ctx: any): Promise<Map<string, WorkSetting>> {
   const rows = await ctx.db.query("employeeWorkSettings").collect();
-  const m = new Map<string, number>();
+  const m = new Map<string, WorkSetting>();
   for (const r of rows) {
     const h = Number(r.standardHours);
-    if (Number.isFinite(h) && h > 0) m.set(r.name, h);
+    m.set(r.name, {
+      std: Number.isFinite(h) && h > 0 ? h : WORK_HOURS_PER_DAY,
+      rest: Array.isArray(r.restDays) ? r.restDays.filter((d: any) => Number.isInteger(d) && d >= 0 && d <= 6) : [],
+    });
   }
   return m;
 }
-const stdFor = (m: Map<string, number>, name: string) => m.get(name) ?? WORK_HOURS_PER_DAY;
+const stdFor = (m: Map<string, WorkSetting>, name: string) => m.get(name)?.std ?? WORK_HOURS_PER_DAY;
+const restFor = (m: Map<string, WorkSetting>, name: string) => m.get(name)?.rest ?? [];
+
+/** يوم الأسبوع لتاريخ yyyy-MM-dd (0=الأحد ... 6=السبت). */
+function dowOf(date: string): number {
+  const [y, mo, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
+}
+/** هل هذا التاريخ يوم إجازة أسبوعية لهذا الموظف؟ */
+function isRestDay(m: Map<string, WorkSetting>, name: string, date: string): boolean {
+  const rest = restFor(m, name);
+  return rest.length > 0 && rest.includes(dowOf(date));
+}
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const monthOf = (date: string) => (date || "").slice(0, 7);
@@ -36,13 +52,18 @@ function timeToMin(t?: string): number | null {
 }
 
 /** يحسب ساعات العمل والأوفرتايم من وقت الدخول والخروج (يعالج الدوام العابر لمنتصف الليل). */
-export function computeHours(checkIn?: string, checkOut?: string, standardHours: number = WORK_HOURS_PER_DAY) {
+export function computeHours(
+  checkIn?: string,
+  checkOut?: string,
+  standardHours: number = WORK_HOURS_PER_DAY,
+  fullOt = false, // يوم إجازة → كل الساعات أوفرتايم
+) {
   const a = timeToMin(checkIn), b = timeToMin(checkOut);
   if (a == null || b == null) return { workedHours: undefined as number | undefined, otHours: undefined as number | undefined };
   let diff = b - a;
   if (diff < 0) diff += 24 * 60; // خروج بعد منتصف الليل
   const workedHours = r2(diff / 60);
-  const otHours = Math.max(0, r2(workedHours - standardHours));
+  const otHours = fullOt ? workedHours : Math.max(0, r2(workedHours - standardHours));
   return { workedHours, otHours };
 }
 
@@ -107,9 +128,9 @@ async function applyShifts(
     const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", date)).first();
     if (ex && ex.source === "biometric") await ctx.db.delete(ex._id);
   }
-  const stdMap = await buildStdHoursMap(ctx);
+  const wsMap = await buildWorkSettingsMap(ctx);
   for (const s of shifts) {
-    const { workedHours, otHours } = computeHours(s.checkIn, s.checkOut, stdFor(stdMap, s.name));
+    const { workedHours, otHours } = computeHours(s.checkIn, s.checkOut, stdFor(wsMap, s.name), isRestDay(wsMap, s.name, s.date));
     const doc = {
       name: s.name, date: s.date, month: monthOf(s.date), status: "present" as const,
       checkIn: s.checkIn, checkOut: s.checkOut, workedHours, otHours, source: "biometric" as const,
@@ -357,9 +378,12 @@ export const upsert = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    const stdRow = await ctx.db.query("employeeWorkSettings").withIndex("by_name", (q) => q.eq("name", args.name.trim())).first();
+    const name0 = args.name.trim();
+    const stdRow: any = await ctx.db.query("employeeWorkSettings").withIndex("by_name", (q) => q.eq("name", name0)).first();
     const std = stdRow?.standardHours ?? WORK_HOURS_PER_DAY;
-    const { workedHours, otHours } = computeHours(args.checkIn, args.checkOut, std);
+    const rest: number[] = Array.isArray(stdRow?.restDays) ? stdRow.restDays : [];
+    const fullOt = rest.length > 0 && rest.includes(dowOf(args.date));
+    const { workedHours, otHours } = computeHours(args.checkIn, args.checkOut, std, fullOt);
     const doc = {
       name: args.name.trim(),
       designation: args.designation,
@@ -406,12 +430,12 @@ export const bulkUpsert = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const month = monthOf(args.date);
-    const stdMap = await buildStdHoursMap(ctx);
+    const wsMap = await buildWorkSettingsMap(ctx);
     let n = 0;
     for (const row of args.rows) {
       const name = row.name.trim();
       if (!name) continue;
-      const { workedHours, otHours } = computeHours(row.checkIn, row.checkOut, stdFor(stdMap, name));
+      const { workedHours, otHours } = computeHours(row.checkIn, row.checkOut, stdFor(wsMap, name), isRestDay(wsMap, name, args.date));
       const doc = {
         name, designation: row.designation, date: args.date, month, status: row.status,
         checkIn: row.checkIn || undefined, checkOut: row.checkOut || undefined,
@@ -513,14 +537,18 @@ export const workHoursSettings = query({
     const seen = new Map<string, string>();
     for (const p of pay) if (!seen.has(p.name)) seen.set(p.name, p.designation || "");
     const settingsRows = await ctx.db.query("employeeWorkSettings").collect();
-    const stdByName = new Map(settingsRows.map((r) => [r.name, r.standardHours]));
+    const byName = new Map(settingsRows.map((r) => [r.name, r]));
     const restaurant: any = await ctx.db.query("restaurantSettings").first();
     const employees = Array.from(seen.entries())
-      .map(([name, designation]) => ({
-        name, designation,
-        standardHours: stdByName.get(name) ?? WORK_HOURS_PER_DAY,
-        custom: stdByName.has(name),
-      }))
+      .map(([name, designation]) => {
+        const row: any = byName.get(name);
+        return {
+          name, designation,
+          standardHours: row?.standardHours ?? WORK_HOURS_PER_DAY,
+          restDays: Array.isArray(row?.restDays) ? row.restDays : [],
+          custom: byName.has(name),
+        };
+      })
       .sort((a, b) => a.name.localeCompare(b.name));
     return { employees, otRate: restaurant?.attendanceOtRate ?? DEFAULT_OT_RATE, defaultHours: WORK_HOURS_PER_DAY };
   },
@@ -529,7 +557,11 @@ export const workHoursSettings = query({
 /** حفظ ساعات الدوام لموظفين + (اختياري) معامل الأوفرتايم العام. للمدير. */
 export const setWorkHoursBulk = mutation({
   args: {
-    rows: v.array(v.object({ name: v.string(), standardHours: v.number() })),
+    rows: v.array(v.object({
+      name: v.string(),
+      standardHours: v.number(),
+      restDays: v.optional(v.array(v.number())),
+    })),
     otRate: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
   },
@@ -540,9 +572,12 @@ export const setWorkHoursBulk = mutation({
       const name = row.name.trim();
       const h = Number(row.standardHours);
       if (!name || !Number.isFinite(h) || h <= 0 || h > 24) continue;
+      const rest = Array.isArray(row.restDays)
+        ? Array.from(new Set(row.restDays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)))
+        : [];
       const ex = await ctx.db.query("employeeWorkSettings").withIndex("by_name", (q) => q.eq("name", name)).first();
-      if (ex) await ctx.db.patch(ex._id, { standardHours: r2(h), updatedAt: Date.now() });
-      else await ctx.db.insert("employeeWorkSettings", { name, standardHours: r2(h), updatedAt: Date.now() });
+      if (ex) await ctx.db.patch(ex._id, { standardHours: r2(h), restDays: rest, updatedAt: Date.now() });
+      else await ctx.db.insert("employeeWorkSettings", { name, standardHours: r2(h), restDays: rest, updatedAt: Date.now() });
       saved++;
     }
     if (args.otRate != null && Number.isFinite(args.otRate) && args.otRate > 0) {
@@ -559,12 +594,12 @@ export const recomputeMonthOt = mutation({
   args: { month: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    const stdMap = await buildStdHoursMap(ctx);
+    const wsMap = await buildWorkSettingsMap(ctx);
     const rows = await ctx.db.query("attendance").withIndex("by_month", (q) => q.eq("month", args.month)).collect();
     let updated = 0;
     for (const r of rows) {
       if (!r.checkIn || !r.checkOut) continue;
-      const { workedHours, otHours } = computeHours(r.checkIn, r.checkOut, stdFor(stdMap, r.name));
+      const { workedHours, otHours } = computeHours(r.checkIn, r.checkOut, stdFor(wsMap, r.name), isRestDay(wsMap, r.name, r.date));
       if (workedHours !== r.workedHours || otHours !== r.otHours) {
         await ctx.db.patch(r._id, { workedHours, otHours, updatedAt: Date.now() });
         updated++;
@@ -586,7 +621,7 @@ export const syncToPayroll = mutation({
     await requireAdmin(ctx, args.sessionToken);
     const settings: any = await ctx.db.query("restaurantSettings").first();
     const rate = args.otRate ?? settings?.attendanceOtRate ?? DEFAULT_OT_RATE;
-    const stdMap = await buildStdHoursMap(ctx);
+    const wsMap = await buildWorkSettingsMap(ctx);
     const rows = await ctx.db.query("attendance").withIndex("by_month", (q) => q.eq("month", args.month)).collect();
     const byName: Record<string, { workedDays: number; otHours: number }> = {};
     for (const x of rows) {
@@ -607,7 +642,7 @@ export const syncToPayroll = mutation({
       const pay = payroll.find((p) => p.name === name);
       if (!pay) { unmatched.push(name); continue; }
       const pkg = (pay.basic || 0) + (pay.allowance || 0);
-      const hourly = pkg / (DAYS_PER_MONTH * stdFor(stdMap, name));
+      const hourly = pkg / (DAYS_PER_MONTH * stdFor(wsMap, name));
       const otHours = r2(approvedByName[name] ?? agg.otHours);
       const overtime = Math.round(otHours * hourly * rate);
       await ctx.db.patch(pay._id, {
