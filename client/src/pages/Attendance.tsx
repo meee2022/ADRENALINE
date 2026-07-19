@@ -281,6 +281,83 @@ export default function Attendance() {
     } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الترحيل", "Sync failed") }); }
   };
 
+  // ---- طباعة كشف حضور موظف واحد (A4) ----
+  const handlePrintEmployee = () => {
+    if (!detailName || detailRows.length === 0) {
+      void alertDialog({ message: t("لا حضور مسجّل لهذا الموظف في هذا الشهر", "No records for this employee this month") });
+      return;
+    }
+    const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
+    const designation = emps.find((e) => e.name === detailName)?.designation || "";
+    const cnt = { present: 0, absent: 0, leave: 0, half: 0, late: 0 };
+    let totHrs = 0, totOt = 0;
+    for (const r of detailRows) {
+      if (r.status === "present") cnt.present++;
+      else if (r.status === "absent") cnt.absent++;
+      else if (r.status === "leave") cnt.leave++;
+      else if (r.status === "half") cnt.half++;
+      if (r.late) cnt.late++;
+      totHrs += r.workedHours || 0;
+      totOt += r.otHours || 0;
+    }
+    const dowName = (d: string) => {
+      const days = isRtl ? ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const [y, m, dd] = d.split("-").map(Number);
+      return days[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()];
+    };
+    const statusLabel = (k: string) => { const s = stInfo(k); return isRtl ? s.ar : s.en; };
+    const rowsHtml = [...detailRows].sort((a, b) => a.date.localeCompare(b.date)).map((r) => {
+      const si = stInfo(r.status);
+      return `<tr>
+        <td class="c" dir="ltr">${esc(r.date)}</td>
+        <td class="c">${dowName(r.date)}</td>
+        <td class="c"><span class="pill" style="background:${si.dot}22;color:${si.dot}">${statusLabel(r.status)}${r.late ? " • " + t("متأخر", "Late") : ""}</span></td>
+        <td class="c" dir="ltr">${esc(r.checkIn || "—")}</td>
+        <td class="c" dir="ltr">${esc(r.checkOut || "—")}</td>
+        <td class="c b">${r.workedHours != null ? r.workedHours : "—"}</td>
+        <td class="c ot">${r.otHours ? Math.round(r.otHours * 10) / 10 : "—"}</td>
+        <td class="r note">${esc(r.note || "")}</td>
+      </tr>`;
+    }).join("");
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${t("كشف حضور", "Attendance")} ${esc(detailName)} ${esc(month)}</title>
+      <style>
+        *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+        body{margin:0;padding:18px;color:#0f1516}
+        h1{font-size:20px;margin:0} .sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
+        .kpis{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+        .kpi{flex:1;min-width:90px;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
+        .kpi .v{font-size:22px;font-weight:900} .kpi .l{font-size:11px;color:#47759c;font-weight:700}
+        table{width:100%;border-collapse:collapse;font-size:12.5px}
+        th{background:#0E76AC;color:#fff;padding:7px 5px;font-weight:800} td{padding:5px;border-bottom:1px solid #eef2f6}
+        tr:nth-child(even) td{background:#f7fbfe} .c{text-align:center} .r{text-align:right} .b{font-weight:900} .ot{color:#0E76AC;font-weight:800}
+        .pill{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;display:inline-block}
+        .note{color:#64748b;font-size:11px}
+        .foot{margin-top:24px;display:flex;justify-content:space-between;color:#47759c;font-size:12px;font-weight:700}
+        @page{size:A4;margin:12mm}
+      </style></head><body>
+      <h1>${t("كشف حضور موظف", "Employee Attendance Sheet")} — ADRENALINE</h1>
+      <div class="sub">${esc(detailName)}${designation ? " · " + esc(designation) : ""} · ${t("الشهر", "Month")}: ${esc(month)}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v" style="color:#10b981">${cnt.present}</div><div class="l">${t("أيام الحضور", "Present")}</div></div>
+        <div class="kpi"><div class="v" style="color:#ef4444">${cnt.absent}</div><div class="l">${t("أيام الغياب", "Absent")}</div></div>
+        <div class="kpi"><div class="v" style="color:#3cc4f0">${cnt.leave}</div><div class="l">${t("إجازة", "Leave")}</div></div>
+        <div class="kpi"><div class="v" style="color:#f59e0b">${cnt.late}</div><div class="l">${t("مرات التأخير", "Late")}</div></div>
+        <div class="kpi"><div class="v" style="color:#0f1516">${Math.round(totHrs * 10) / 10}</div><div class="l">${t("إجمالي الساعات", "Total hrs")}</div></div>
+        <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(totOt * 10) / 10}</div><div class="l">${t("الأوفرتايم (س)", "Overtime")}</div></div>
+      </div>
+      <table><thead><tr>
+        <th>${t("التاريخ", "Date")}</th><th>${t("اليوم", "Day")}</th><th>${t("الحالة", "Status")}</th>
+        <th>${t("دخول", "In")}</th><th>${t("خروج", "Out")}</th><th>${t("ساعات", "Hrs")}</th><th>${t("أوفر", "OT")}</th><th>${t("ملاحظة", "Note")}</th>
+      </tr></thead><tbody>${rowsHtml}</tbody></table>
+      <div class="foot"><span>${t("طُبع في", "Printed")}: ${new Date().toLocaleDateString()}</span><span>${t("التوقيع", "Signature")}: ____________</span></div>
+      </body></html>`;
+    openPrintDoc(html, {
+      fileName: `${t("كشف حضور", "Attendance")} - ${detailName} - ${month}`,
+      isRtl,
+      width: 900,
+    });
+  };
+
   // ---- طباعة تقرير شهري شامل (A4) ----
   const handlePrintMonthly = () => {
     const emps2 = (summary?.employees || []) as any[];
@@ -499,7 +576,13 @@ export default function Attendance() {
       <Dialog open={!!detailName} onOpenChange={(o) => !o && setDetailName(null)}>
         <DialogContent className="max-w-2xl" dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>{detailName} — {t(`أيام حضور شهر ${month}`, `${month} attendance`)}</DialogTitle>
+            <div className="flex items-center justify-between gap-2">
+              <DialogTitle>{detailName} — {t(`أيام حضور شهر ${month}`, `${month} attendance`)}</DialogTitle>
+              <Button onClick={handlePrintEmployee} variant="outline" size="sm"
+                className="h-9 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC] shrink-0 me-6">
+                <Printer className={cn("h-4 w-4", isRtl ? "ml-1.5" : "mr-1.5")} /> {t("طباعة الكشف", "Print sheet")}
+              </Button>
+            </div>
           </DialogHeader>
           {(() => {
             const present = detailRows.filter((r) => r.status === "present").length;
