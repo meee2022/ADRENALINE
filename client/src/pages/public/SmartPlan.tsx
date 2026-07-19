@@ -131,6 +131,9 @@ export default function SmartPlan() {
    *  وهما اللي الخادم يبني عليهما الخطة (profile.mealsPerDay/snacksPerDay). */
   const subMeals: number | null = (matchedCustomer as any)?.mealsPerDay ?? null;
   const subSnacks: number = Number((matchedCustomer as any)?.snacksPerDay || 0);
+  // ⛔ مشترك معروف بالرقم لكن بلا عدد وجبات محدّد — نمنع التوليد برسالة واضحة.
+  //    (المسجّل دخول يعالجه الخادم، فلا نطبّقه عليه.)
+  const noMealPlan = !!matchedCustomer && !(Number(subMeals) > 0) && !(subSnacks > 0);
   /** الممنوعات والحساسية — نفس ما يعرضه المنيو اليدوي في شريطه البارز. */
   const subAllergies: string = String((matchedCustomer as any)?.allergies || "").trim();
   const subAvoid: string = String((matchedCustomer as any)?.avoid || "").trim();
@@ -312,6 +315,14 @@ export default function SmartPlan() {
   const loggedInId = currentCustomer?.customerId;
 
   const run = async (useLogin: boolean) => {
+    // ⛔ مشترك بلا عدد وجبات محدّد — لا نولّد، نعرض رسالة واضحة.
+    if (!useLogin && noMealPlan) {
+      setError(t(
+        "لم يتم تحديد عدد وجباتك في اشتراكك بعد، فلا يمكن إنشاء خطة. تواصل مع الأخصائية لضبط اشتراكك أولاً.",
+        "Your subscription doesn't define a daily meal count yet, so a plan can't be created. Contact the specialist to set it up first.",
+      ));
+      return;
+    }
     setError(""); setResult(null); setWeekly(null); setOrderNo(""); setLoading(true);
     const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
     try {
@@ -630,8 +641,13 @@ export default function SmartPlan() {
                 {t("سنُنشئ الخطة للرقم:", "We'll build the plan for this number:")}{" "}
                 <span dir="ltr" style={{ fontWeight: 900, color: B.accent }}>{phone}</span>
               </p>
+              {noMealPlan && (
+                <p style={{ fontSize: 13, color: "#B5730A", fontWeight: 800, background: "#FEF6E7", border: "1px solid #F4A93A", borderRadius: 10, padding: "10px 12px", margin: "0 0 12px" }}>
+                  ⛔ {t("لم يتم تحديد عدد وجباتك في اشتراكك بعد. تواصل مع الأخصائية لضبطه قبل إنشاء الخطة.", "Your meal count isn't set yet. Contact the specialist before creating a plan.")}
+                </p>
+              )}
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                <button onClick={() => run(false)} disabled={loading} style={btnPrimary(loading)}>
+                <button onClick={() => run(false)} disabled={loading || noMealPlan} style={btnPrimary(loading || noMealPlan)}>
                   {loading ? t("جارٍ الإنشاء…", "Generating…") : t("أنشئ خطتي", "Generate my plan")}
                 </button>
                 <button

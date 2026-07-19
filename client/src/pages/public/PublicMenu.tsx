@@ -225,6 +225,9 @@ export default function PublicMenuPage() {
   const snacksPerDay = Number(verifiedCustomer?.snacksPerDay) || Infinity;
   const hasMealLimit = Number.isFinite(mealsPerDay);
   const hasSnackLimit = Number.isFinite(snacksPerDay);
+  // ⛔ اشتراك بلا عدد وجبات محدّد (لا رئيسية ولا سناك) — لا يقدر النظام تقدير
+  //    حصّته، فنمنع الاختيار برسالة واضحة بدل السماح بلا حدود. (يدوي وذكي.)
+  const noMealPlan = !!verifiedCustomer && !hasMealLimit && !hasSnackLimit;
 
   // Count what's selected for current day
   const selectedToday = items.filter(
@@ -598,6 +601,18 @@ export default function PublicMenuPage() {
   // Handle adding meal to cart
   const handleAddToCart = async (meal: any, e?: React.MouseEvent) => {
     e?.stopPropagation();
+
+    // ⛔ اشتراك بلا عدد وجبات محدّد — لا نسمح بالاختيار (النظام لا يعرف حصّته)
+    if (noMealPlan) {
+      toast({
+        title: isRtl ? "لم يتم تحديد عدد وجباتك" : "Your meal count isn't set",
+        description: isRtl
+          ? "اشتراكك لا يحدّد عدد الوجبات/السناكات اليومية بعد. تواصل مع الأخصائية لضبطه قبل الاختيار."
+          : "Your subscription doesn't define a daily meal/snack count yet. Contact the specialist to set it first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!selectedDay) {
       // لا يُفترض حدوثه (يوم مختار دائماً)، لكن نبقيه كشبكة أمان بلا alert مُعطِّل
@@ -1179,6 +1194,28 @@ export default function PublicMenuPage() {
               >
                 🏠 {isRtl ? "الرئيسية" : "Home"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ⛔ اشتراك بلا عدد وجبات محدّد — رسالة واضحة تمنع الاختيار */}
+      {noMealPlan && (
+        <div className="px-4 pt-3 -mt-1">
+          <div className="max-w-7xl mx-auto rounded-2xl p-4 flex items-start gap-3"
+            style={{ background: "linear-gradient(135deg,#fff7ed,#fffbeb)", border: "1.5px solid #fdba74" }}>
+            <div className="h-9 w-9 rounded-xl flex-shrink-0 grid place-items-center bg-orange-500">
+              <AlertTriangle className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-black text-orange-900">
+                {isRtl ? "لم يتم تحديد عدد وجباتك" : "Your meal count isn't set"}
+              </p>
+              <p className="text-xs text-orange-800 mt-0.5 leading-relaxed">
+                {isRtl
+                  ? "اشتراكك لا يحدّد عدد الوجبات والسناكات اليومية بعد، فلا يمكن الاختيار. تواصل مع الأخصائية لضبط اشتراكك أولاً."
+                  : "Your subscription doesn't define a daily meal/snack count yet, so selection is disabled. Contact the specialist to set up your subscription first."}
+              </p>
             </div>
           </div>
         </div>
@@ -1886,10 +1923,10 @@ export default function PublicMenuPage() {
                         <Button
                           size="sm"
                           onClick={(e) => handleAddToCart(meal, e)}
-                          disabled={!selectedDay || atLimit}
+                          disabled={!selectedDay || atLimit || noMealPlan}
                           className={cn(
                             "h-9 px-5 rounded-full font-bold transition-all",
-                            atLimit
+                            (atLimit || noMealPlan)
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : hasConflict
                                 ? "bg-orange-500 hover:bg-orange-600 text-white"
