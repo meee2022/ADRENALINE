@@ -1369,9 +1369,30 @@ export default function Customers() {
                     <div className="space-y-2">
                       <Label>{isRtl ? "الوجبات والسعر" : "Meals & price"}</Label>
                       {selectedPlan && planOptions.length === 0 ? (
-                        /* ✅ باقة مخصّصة بلا خيارات جاهزة — الأرقام تُدخل يدويًا بالأسفل */
-                        <div className="h-10 rounded-md border border-dashed border-[#3cc4f0] bg-[#eef7fb] px-3 flex items-center text-xs font-bold text-[#0E76AC]">
-                          {isRtl ? "باقة مخصّصة — حدّد الوجبات والسناك والسعر يدويًا بالأسفل" : "Custom plan — set meals, snacks & price manually below"}
+                        /* ✅ باقة مخصّصة: قائمتان لاختيار عدد الوجبات والسناك — يحدّدهم النظام للخطط اليومية */
+                        <div className="grid grid-cols-2 gap-2">
+                          <Select
+                            value={form.watch("mealsPerDay") != null ? String(form.watch("mealsPerDay")) : ""}
+                            onValueChange={(v) => form.setValue("mealsPerDay", Number(v), { shouldDirty: true })}
+                          >
+                            <SelectTrigger><SelectValue placeholder={isRtl ? "عدد الوجبات" : "Meals"} /></SelectTrigger>
+                            <SelectContent>
+                              {[1, 2, 3, 4, 5, 6].map((n) => (
+                                <SelectItem key={n} value={String(n)}>{isRtl ? `${n} وجبات` : `${n} meals`}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            value={form.watch("snacksPerDay") != null ? String(form.watch("snacksPerDay")) : ""}
+                            onValueChange={(v) => form.setValue("snacksPerDay", Number(v), { shouldDirty: true })}
+                          >
+                            <SelectTrigger><SelectValue placeholder={isRtl ? "عدد السناك" : "Snacks"} /></SelectTrigger>
+                            <SelectContent>
+                              {[0, 1, 2, 3, 4].map((n) => (
+                                <SelectItem key={n} value={String(n)}>{isRtl ? `${n} سناك` : `${n} snacks`}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
                       ) : (
                         <Select
