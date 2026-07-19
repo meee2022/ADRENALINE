@@ -1415,10 +1415,36 @@ export default function Customers() {
                     </div>
                   </div>
 
+                  {/* ✅ محدّد المدة — يحسب تاريخ النهاية تلقائيًا من البداية (مفيد للمخصّص) */}
+                  <div className="space-y-2">
+                    <Label>{isRtl ? "المدة (يحسب تاريخ النهاية تلقائيًا)" : "Duration (auto-sets end date)"}</Label>
+                    <Select
+                      value={(() => {
+                        const w = Number(form.watch("durationWeeks")) || computedWeeks || 0;
+                        return ({ 1: "week", 2: "two_weeks", 4: "month", 8: "two_months", 12: "three_months" } as any)[w] || "";
+                      })()}
+                      onValueChange={(v) => {
+                        const weeks = ({ week: 1, two_weeks: 2, month: 4, two_months: 8, three_months: 12 } as any)[v] || 4;
+                        form.setValue("durationWeeks", weeks, { shouldDirty: true });
+                        const start = form.getValues("startDate");
+                        if (start) form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={isRtl ? "اختر المدة" : "Pick duration"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[["week", "أسبوع", "1 week"], ["two_weeks", "أسبوعان", "2 weeks"], ["month", "شهر", "1 month"], ["two_months", "شهران", "2 months"], ["three_months", "3 شهور", "3 months"]].map(([k, ar, en]) => (
+                          <SelectItem key={k} value={k}>{isRtl ? ar : en}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <p className="text-[11px] text-muted-foreground">
                     {isRtl
-                      ? "اختيار الباقة يملأ الوجبات/السناك والسعر تلقائياً — ولو مشترك مخصّص بعدد مختلف، عدّل الأرقام والسعر يدويًا. القيود تتبع العدد اللي تكتبه."
-                      : "Picking a plan auto-fills meals/snacks/price — for a customized subscriber with a different count, edit the numbers and price manually. Constraints follow the numbers you enter."}
+                      ? "اختيار الباقة يملأ الوجبات/السناك والسعر تلقائياً — ولو مشترك مخصّص بعدد مختلف، عدّل الأرقام والسعر يدويًا. اختر المدة فوق فيتحسب تاريخ النهاية لوحده. القيود تتبع العدد اللي تكتبه."
+                      : "Picking a plan auto-fills meals/snacks/price — for a customized subscriber, edit the numbers/price and pick a duration to auto-set the end date. Constraints follow the numbers you enter."}
                   </p>
 
                   {/* قيم مخفيّة تُرسل مع النموذج */}
