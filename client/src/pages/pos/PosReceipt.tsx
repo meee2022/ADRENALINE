@@ -90,13 +90,20 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
                 <div>Cashier: {t.cashierName}</div>
                 <div>Date: {new Date(t.paidAt || t.createdAt).toLocaleString()}</div>
               </div>
-              <div className="border-t border-dashed border-slate-300 pt-2 space-y-1">
-                {t.lines.map((l: any, i: number) => (
-                  <div key={i} className="flex justify-between text-xs">
-                    <span className="flex-1 pr-2">{l.qty}× {l.name}</span>
-                    <span className="font-bold">{l.lineTotal.toFixed(2)}</span>
-                  </div>
-                ))}
+              <div className="border-t border-dashed border-slate-300 pt-2 space-y-1.5">
+                {t.lines.map((l: any, i: number) => {
+                  const ar = l.nameAr || null;
+                  const en = l.nameEn || l.name;
+                  return (
+                    <div key={i} className="flex justify-between text-xs gap-2">
+                      <span className="flex-1">
+                        <span className="font-bold">{l.qty}× {ar || en}</span>
+                        {ar && en && ar !== en && <span className="block text-[10px] text-slate-500" dir="ltr">{en}</span>}
+                      </span>
+                      <span className="font-black">{l.lineTotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })}
               </div>
               <div className="border-t border-dashed border-slate-300 mt-2 pt-2 space-y-0.5 text-xs">
                 <div className="flex justify-between"><span>Subtotal</span><span>{t.subtotal.toFixed(2)}</span></div>
@@ -169,48 +176,54 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
 }
 
 function buildReceiptHtml(t: any): string {
-  const lines = t.lines.map((l: any) => `
-    <tr><td>${l.qty}× ${escapeHtml(l.name)}</td><td class="r">${l.lineTotal.toFixed(2)}</td></tr>
-  `).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt #${t.ticketNumber}</title>
+  const lines = t.lines.map((l: any) => {
+    const ar = l.nameAr || "";
+    const en = l.nameEn || l.name || "";
+    const primary = ar || en;
+    const secondary = ar && en && ar !== en ? en : "";
+    return `<tr><td class="item"><span class="q">${l.qty}×</span> <b>${escapeHtml(primary)}</b>${secondary ? `<div class="en">${escapeHtml(secondary)}</div>` : ""}</td><td class="r">${l.lineTotal.toFixed(2)}</td></tr>`;
+  }).join("");
+  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>Receipt #${t.ticketNumber}</title>
     <style>
-      *{box-sizing:border-box;font-family:'Courier New',monospace}
-      body{margin:0;padding:8px;font-size:12px;color:#000;width:80mm}
-      h1{text-align:center;margin:0 0 4px;font-size:16px}
-      .logo{display:block;max-width:60mm;height:auto;margin:0 auto 8px}
-      .sub{text-align:center;font-size:10px;color:#555;margin-bottom:8px}
-      .info{font-size:11px;margin-bottom:6px}
-      .dash{border-top:1px dashed #999;margin:4px 0}
+      *{box-sizing:border-box;font-family:'Cairo','Tahoma','Arial',sans-serif}
+      body{margin:0;padding:8px;font-size:13px;font-weight:700;color:#000;width:80mm;line-height:1.35}
+      /* اللوجو أسود صريح عشان يبان على الطابعة الحرارية (كان سماوي فباهت) */
+      .logo{display:block;max-width:66mm;height:auto;margin:0 auto 6px;filter:grayscale(1) brightness(0)}
+      .brand{text-align:center;margin-bottom:6px}.brand .nm{font-size:8px;font-weight:800;letter-spacing:2px;color:#000}
+      .info{font-size:12px;margin-bottom:6px;font-weight:700}
+      .dash{border-top:1.5px dashed #000;margin:5px 0}
       table{width:100%;border-collapse:collapse}
-      td{padding:2px 0;font-size:11px}
-      .r{text-align:right;font-weight:bold}
-      .tot{font-size:14px;font-weight:900;padding-top:6px;border-top:1px dashed #999;margin-top:4px}
-      .center{text-align:center;font-size:10px;color:#555;margin-top:8px;padding-top:6px;border-top:1px dashed #999}
+      td{padding:3px 0;font-size:13px;font-weight:700;vertical-align:top}
+      td.item{text-align:right}.q{font-weight:900}
+      .en{font-size:10px;font-weight:600;color:#000;direction:ltr;text-align:left}
+      .r{text-align:left;font-weight:900;white-space:nowrap;padding-inline-start:6px}
+      .tot td{font-size:16px;font-weight:900;padding-top:6px;border-top:1.5px dashed #000}
+      .center{text-align:center;font-size:12px;font-weight:800;color:#000;margin-top:8px;padding-top:6px;border-top:1.5px dashed #000}
       @page{size:80mm auto;margin:0}
       @media print{body{margin:0;padding:4mm 4mm 8mm}}
     </style></head><body>
-    <img class="logo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
-    ${t.branchName ? `<div class="sub" style="font-weight:900;color:#000;font-size:12px">${escapeHtml(t.branchName)}</div>` : ""}
-    ${t.branchAddress ? `<div class="sub" style="margin-bottom:2px">${escapeHtml(t.branchAddress)}</div>` : ""}
-    ${t.branchPhone ? `<div class="sub" style="margin-bottom:6px">${escapeHtml(t.branchPhone)}</div>` : ""}
+    <img class="logo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE HEALTHY FOOD">
+    ${t.branchName ? `<div class="brand"><span class="nm" style="font-size:13px;font-weight:900">${escapeHtml(t.branchName)}</span></div>` : ""}
+    ${t.branchAddress ? `<div class="brand" style="margin-bottom:2px"><span class="nm">${escapeHtml(t.branchAddress)}</span></div>` : ""}
+    ${t.branchPhone ? `<div class="brand" style="margin-bottom:6px"><span class="nm" dir="ltr">${escapeHtml(t.branchPhone)}</span></div>` : ""}
     <div class="info">
-      Receipt: #${t.ticketNumber}<br>
-      Cashier: ${escapeHtml(t.cashierName)}<br>
-      Date: ${new Date(t.paidAt || t.createdAt).toLocaleString()}
+      فاتورة / Receipt: #${t.ticketNumber}<br>
+      كاشير / Cashier: ${escapeHtml(t.cashierName)}<br>
+      التاريخ / Date: ${new Date(t.paidAt || t.createdAt).toLocaleString()}
     </div>
     <div class="dash"></div>
     <table>${lines}</table>
     <div class="dash"></div>
     <table>
-      <tr><td>Subtotal</td><td class="r">${t.subtotal.toFixed(2)}</td></tr>
-      ${t.discount > 0 ? `<tr><td>Discount</td><td class="r">-${t.discount.toFixed(2)}</td></tr>` : ""}
-      <tr class="tot"><td>TOTAL</td><td class="r">${t.total.toFixed(2)} QAR</td></tr>
+      <tr><td>المجموع / Subtotal</td><td class="r">${t.subtotal.toFixed(2)}</td></tr>
+      ${t.discount > 0 ? `<tr><td>خصم / Discount</td><td class="r">-${t.discount.toFixed(2)}</td></tr>` : ""}
+      <tr class="tot"><td>الإجمالي / TOTAL</td><td class="r">${t.total.toFixed(2)} QAR</td></tr>
       ${Array.isArray((t as any).payments) && (t as any).payments.length
-        ? (t as any).payments.map((p: any) => `<tr><td>Paid (${escapeHtml(String(p.method))})</td><td class="r">${Number(p.amount).toFixed(2)}</td></tr>`).join("")
-        : (t.paymentMethod ? `<tr><td>Paid (${escapeHtml(t.paymentMethod)})</td><td class="r">${(t.cashReceived || t.total).toFixed(2)}</td></tr>` : "")}
-      ${t.changeAmount != null && t.changeAmount > 0 ? `<tr><td>Change</td><td class="r">${t.changeAmount.toFixed(2)}</td></tr>` : ""}
+        ? (t as any).payments.map((p: any) => `<tr><td>مدفوع / Paid (${escapeHtml(String(p.method))})</td><td class="r">${Number(p.amount).toFixed(2)}</td></tr>`).join("")
+        : (t.paymentMethod ? `<tr><td>مدفوع / Paid (${escapeHtml(t.paymentMethod)})</td><td class="r">${(t.cashReceived || t.total).toFixed(2)}</td></tr>` : "")}
+      ${t.changeAmount != null && t.changeAmount > 0 ? `<tr><td>الباقي / Change</td><td class="r">${t.changeAmount.toFixed(2)}</td></tr>` : ""}
     </table>
-    <div class="center">Thank you!</div>
+    <div class="center">شكراً لزيارتكم · Thank you!</div>
     </body></html>`;
 }
 

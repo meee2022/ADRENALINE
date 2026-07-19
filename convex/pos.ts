@@ -646,9 +646,17 @@ export const getTicket = query({
       cashReceived: t.cashReceived || null, changeAmount: t.changeAmount || null,
       customerName: t.customerName || null, notes: t.notes || null,
       paidAt: t.paidAt || null, createdAt: t.createdAt,
-      lines: lines.map((l: any) => ({
-        id: String(l._id), name: l.name, qty: l.qty, unitPrice: l.unitPrice,
-        lineTotal: l.lineTotal, notes: l.notes || null,
+      lines: await Promise.all(lines.map(async (l: any) => {
+        // اسم عربي + إنجليزي من الوجبة (لو مربوطة) — الفاتورة تعرض الاتنين
+        let nameAr: string | null = null, nameEn: string | null = null;
+        if (l.mealId) {
+          const meal: any = await ctx.db.get(l.mealId);
+          if (meal) { nameAr = meal.nameAr || null; nameEn = meal.nameEn || null; }
+        }
+        return {
+          id: String(l._id), name: l.name, nameAr, nameEn, qty: l.qty, unitPrice: l.unitPrice,
+          lineTotal: l.lineTotal, notes: l.notes || null,
+        };
       })),
     };
   },
