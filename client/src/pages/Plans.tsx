@@ -63,6 +63,7 @@ import {
   UtensilsCrossed,
   Sun,
   Moon,
+  X,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
@@ -503,6 +504,8 @@ export default function PlansPage() {
         nameEn: pm?.nameEn || mi.nameEn,
         ingredients: pm?.ingredients || [],
         tags: pm?.tags || [],
+        imageUrl: pm?.imageUrl || (mi as any).imageUrl || "",   // للعرض فقط
+        calories: pm?.calories ?? (mi as any).calories,          // للعرض فقط
       });
     });
     return map;
@@ -844,13 +847,16 @@ export default function PlansPage() {
               <PopoverTrigger asChild>
                 <button className="flex items-center gap-1.5 px-3 h-8 rounded-lg hover:bg-gray-50 transition-colors group">
                   <CalendarIcon className="h-3.5 w-3.5 text-[#3cc4f0]" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {isTomorrowDate
-                      ? (isRtl ? "توصيل بكرة" : "Tomorrow")
-                      : isToday
-                        ? (isRtl ? "اليوم" : "Today")
-                        : format(date, "d MMM", { locale: dateLocale })}
+                  {/* ✅ اسم اليوم + التاريخ واضحين (يعرف أي يوم يملأ) + شارة نسبية */}
+                  <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                    {format(date, "EEEE، d MMM", { locale: dateLocale })}
                   </span>
+                  {(isTomorrowDate || isToday) && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: "#eaf6fd", color: "#0E76AC" }}>
+                      {isTomorrowDate ? (isRtl ? "توصيل بكرة" : "Tomorrow") : (isRtl ? "اليوم" : "Today")}
+                    </span>
+                  )}
                   <ChevronDown className="h-3 w-3 text-gray-400 group-hover:text-gray-600" />
                 </button>
               </PopoverTrigger>
@@ -1777,6 +1783,24 @@ export default function PlansPage() {
                               {/* Body */}
                               {!item.isOff && (
                                 <div className="p-3 pt-1 space-y-2.5 flex-1 flex flex-col">
+                                  {/* 🖼️ صورة الوجبة المختارة (عرض فقط) — لتوضيح ما يُملأ */}
+                                  {(() => {
+                                    const info = item.menuItemId ? mealInfoByMenuItem.get(String(item.menuItemId)) : null;
+                                    return (
+                                      <div className="relative w-full h-24 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                        {info?.imageUrl ? (
+                                          <img src={info.imageUrl} alt={info.nameAr || ""} className="w-full h-full object-cover" />
+                                        ) : (
+                                          <span className="text-2xl opacity-40">{accent.icon}</span>
+                                        )}
+                                        {info?.calories != null && info?.imageUrl && (
+                                          <span className="absolute bottom-1.5 end-1.5 text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-black/45">
+                                            {info.calories} {isRtl ? "سعرة" : "kcal"}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
                                   {/* Meal picker */}
                                   <MealPicker
                                     value={item.menuItemId || null}
@@ -1887,13 +1911,32 @@ export default function PlansPage() {
                 {isRtl ? "تأكيد الخطة" : "Confirm Plan"}
               </button>
             </div>
-            <button
-              onClick={() => setLocation(`/plans-review/${formattedDate}`)}
-              className="w-full text-center text-xs font-medium text-gray-400 flex items-center justify-center gap-1.5 py-1 hover:text-[#3cc4f0] transition-colors"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              {isRtl ? "الانتقال للمراجعة النهائية" : "Go to Final Review"}
-            </button>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                onClick={async () => {
+                  const ok = await confirmDialog({
+                    title: isRtl ? "إلغاء" : "Cancel",
+                    message: isRtl ? "تجاهل التعديلات غير المحفوظة والرجوع لاختيار عميل؟" : "Discard unsaved changes and go back to customer selection?",
+                    variant: "danger",
+                    confirmText: isRtl ? "نعم، إلغاء" : "Yes, cancel",
+                  });
+                  if (!ok) return;
+                  setSelectedCustomerId(null);
+                  setCurrentPlan(null);
+                }}
+                className="text-xs font-bold text-red-500 flex items-center gap-1.5 py-1 hover:text-red-600 transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+                {isRtl ? "إلغاء" : "Cancel"}
+              </button>
+              <button
+                onClick={() => setLocation(`/plans-review/${formattedDate}`)}
+                className="text-xs font-medium text-gray-400 flex items-center gap-1.5 py-1 hover:text-[#3cc4f0] transition-colors"
+              >
+                <Eye className="h-3.5 w-3.5" />
+                {isRtl ? "الانتقال للمراجعة النهائية" : "Go to Final Review"}
+              </button>
+            </div>
           </div>
         </div>
       )}
