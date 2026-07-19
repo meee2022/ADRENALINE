@@ -68,6 +68,8 @@ import type * as passwords from "../passwords.js";
 import type * as payroll from "../payroll.js";
 import type * as pos from "../pos.js";
 import type * as posAdmin from "../posAdmin.js";
+import type * as posBranches from "../posBranches.js";
+import type * as posReports from "../posReports.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
@@ -159,6 +161,8 @@ declare const fullApi: ApiFromModules<{
   payroll: typeof payroll;
   pos: typeof pos;
   posAdmin: typeof posAdmin;
+  posBranches: typeof posBranches;
+  posReports: typeof posReports;
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
   purchaseOrders: typeof purchaseOrders;
