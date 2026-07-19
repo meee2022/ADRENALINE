@@ -11,6 +11,7 @@ import { useLanguage } from "@/lib/i18n";
 import { useSeo } from "@/lib/seo";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
+import { useLocation } from "wouter";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { confirmDialog } from "@/lib/dialogs";
@@ -43,6 +44,7 @@ export default function SmartPlan() {
   const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);
 
   const { currentCustomer } = useStore();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const generate = useAction(api.ai.generateSmartPlan);
   const generateWeekly = useAction((api.ai as any).generateWeeklyPlan);
@@ -376,6 +378,18 @@ export default function SmartPlan() {
         subtitleEn="Pick a daily or weekly plan — we choose from available meals by your goal and preferences."
       />
       <div dir={isRtl ? "rtl" : "ltr"} style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
+        {/* 🏠 الرجوع للرئيسية */}
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14,
+            padding: "7px 14px", borderRadius: 999, cursor: "pointer",
+            background: "#fff", border: `1px solid ${B.line}`, color: B.ink2,
+            fontFamily: "'Cairo',sans-serif", fontSize: 13, fontWeight: 800,
+          }}
+        >
+          🏠 {t("الرئيسية", "Home")}
+        </button>
         {/* Entry */}
         <div style={{
           background: "#fff", border: `1px solid ${B.line}`, borderRadius: 18,
