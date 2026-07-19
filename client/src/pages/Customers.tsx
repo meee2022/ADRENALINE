@@ -567,10 +567,19 @@ export default function Customers() {
       }
       return null;
     };
-    // اشتراك مدته 5 أسابيع مثلاً لا يطابق أي باقة بالضبط — نرجع للمطابقة بالوجبات وحدها
-    const match = (meals || snacks) ? (findMatch(true) ?? findMatch(false)) : null;
-    setPlanId(match?.[0] ?? "");
-    setOptionIdx(match?.[1] ?? "");
+    // ✅ المشترك المخصّص → افتح على «الباقة المخصّصة» مباشرة (لا نطابقه ببطاقة عادية بعدد وجباته)
+    const isCustomer = String(customer.program || customer.goals || "").toUpperCase().includes("CUSTOM")
+      || String(customer.packageLabel || "").includes("الباقة المخصّصة");
+    if (isCustomer) {
+      const customPlan = sitePlans.find((p: any) => !p.options || p.options.length === 0);
+      setPlanId(customPlan ? String(customPlan._id) : "");
+      setOptionIdx("");
+    } else {
+      // اشتراك مدته 5 أسابيع مثلاً لا يطابق أي باقة بالضبط — نرجع للمطابقة بالوجبات وحدها
+      const match = (meals || snacks) ? (findMatch(true) ?? findMatch(false)) : null;
+      setPlanId(match?.[0] ?? "");
+      setOptionIdx(match?.[1] ?? "");
+    }
 
 
     // ✅ تحميل القيم من strings إلى arrays
