@@ -310,7 +310,8 @@ export default function Kitchen() {
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
       const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
-      const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
+      // ✅ الباقة: من حقل program، وإلا نستنتجها من goals/packageLabel (لو الحقل فاضي) — أمان لعدم سقوط مشترك لـSTANDARD بالغلط
+      const program = (customer?.program || customer?.goals || customer?.packageLabel || plan.program || "STANDARD").toUpperCase();
 
       // ✅ المخصّصون لا يدخلون الإجمالي — لكل واحد بوكس باسمه (وجباته مختلفة تماماً)
       const isCustomPlan = program.includes("CUSTOM");
