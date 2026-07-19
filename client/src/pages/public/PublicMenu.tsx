@@ -649,6 +649,9 @@ export default function PublicMenuPage() {
       if (!ok) return;
     }
 
+    // 🔁 كم نسخة من هذه الوجبة موجودة لنفس اليوم قبل هذه الإضافة (لتنبيه التكرار).
+    const beforeCount = itemCount(meal._id);
+
     addItem({
       _id: meal._id,
       nameAr: meal.nameAr,
@@ -664,12 +667,23 @@ export default function PublicMenuPage() {
       day: selectedDay,
     });
 
-    // ✅ تأكيد فوري للإضافة
     const dayLbl = isRtl ? (DAY_LABEL_AR[selectedDay] || selectedDay) : selectedDay;
-    toast({
-      title: isRtl ? "✓ أُضيفت للخطة" : "✓ Added to plan",
-      description: `${isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)} — ${isRtl ? "أسبوع" : "Week"} ${selectedWeek} · ${dayLbl}`,
-    });
+    const mealLbl = isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr);
+    if (beforeCount >= 1) {
+      // ⚠️ تنبيه التكرار — العميل اختار نفس الوجبة أكثر من مرة لنفس اليوم
+      toast({
+        title: isRtl ? "🔁 وجبة مكرّرة" : "🔁 Repeated meal",
+        description: isRtl
+          ? `اخترت «${mealLbl}» ${beforeCount + 1} مرات لنفس اليوم (${dayLbl}). لو غير مقصود، اضغط «−».`
+          : `You picked "${mealLbl}" ${beforeCount + 1} times for the same day (${dayLbl}). Tap "−" if unintended.`,
+      });
+    } else {
+      // ✅ تأكيد فوري للإضافة
+      toast({
+        title: isRtl ? "✓ أُضيفت للخطة" : "✓ Added to plan",
+        description: `${mealLbl} — ${isRtl ? "أسبوع" : "Week"} ${selectedWeek} · ${dayLbl}`,
+      });
+    }
   };
   
   // ✅ زر الوجبة toggle: لو مضافة يشيلها (عشان يختار غيرها)، لو لأ يضيفها
