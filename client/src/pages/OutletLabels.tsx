@@ -45,7 +45,7 @@ function ThermalLabel({ item }: { item: LabelRow }) {
         <div className="outlet-brand-word"><b>ADRENALINE</b><span>HEALTHY FOOD</span></div>
         <img src="/heart-logo.png" alt="" />
       </div>
-      <div className="outlet-label-name">{item.nameEn}</div>
+      <div className="outlet-label-name"><span>{item.nameEn}</span></div>
       <div className="outlet-label-mid">
         <div className="outlet-label-facts">
           <div><b>QR.</b><strong>{item.price ?? "--"}</strong></div>
@@ -239,13 +239,13 @@ export default function OutletLabels() {
 
       <style>{`
         .outlet-label-page{background:linear-gradient(180deg,#e9f6fb 0,#f4f8fb 260px,#eef3f7 100%)}
-        .outlet-thermal-label{width:58mm;height:39mm;background:#fff;color:#050505;padding:2.4mm 3mm 2mm;box-sizing:border-box;display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
-        .outlet-label-brand{height:8.6mm;display:flex;align-items:center;justify-content:center;gap:2mm;border-bottom:.45mm solid #000;padding-bottom:1mm}
-        .outlet-label-brand img{width:8.2mm;height:8.2mm;object-fit:contain;filter:grayscale(1) brightness(0)}
-        .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5.8mm;font-weight:900;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.55mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm}
-        .outlet-label-name{height:6.6mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:3.7mm;line-height:1;overflow:hidden;padding-top:.6mm}
-        .outlet-label-mid{height:11.6mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.1mm;line-height:1.5}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts .cal{font-size:2.8mm;color:#222}.outlet-label-facts strong{font-size:4.4mm;font-weight:900}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}
-        .outlet-label-macros{margin-top:auto;margin-bottom:.8mm;border:.35mm solid #000;border-radius:1.4mm;padding:.9mm .6mm;display:flex;font-size:3.2mm;font-weight:800;white-space:nowrap}.outlet-label-macros span{flex:1;text-align:center}.outlet-label-macros span+span{border-left:.25mm solid #000}.outlet-label-macros b{font-size:4mm;font-weight:900}
+        .outlet-thermal-label{width:58mm;height:39mm;background:#fff;color:#050505;padding:2.2mm 3mm 1.6mm;box-sizing:border-box;display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+        .outlet-label-brand{height:8mm;display:flex;align-items:center;justify-content:center;gap:2mm;border-bottom:.45mm solid #000;padding-bottom:.8mm}
+        .outlet-label-brand img{width:7.8mm;height:7.8mm;object-fit:contain;filter:grayscale(1) brightness(0)}
+        .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5.6mm;font-weight:900;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.5mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm}
+        .outlet-label-name{height:7mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;line-height:1.02;overflow:hidden;padding-top:.3mm}.outlet-label-name span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:3.4mm}
+        .outlet-label-mid{height:10.8mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.1mm;line-height:1.5}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts .cal{font-size:2.8mm;color:#222}.outlet-label-facts strong{font-size:4.4mm;font-weight:900}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}
+        .outlet-label-macros{margin-top:1.6mm;border:.35mm solid #000;border-radius:1.4mm;padding:.9mm .6mm;display:flex;font-size:3.2mm;font-weight:800;white-space:nowrap}.outlet-label-macros span{flex:1;text-align:center}.outlet-label-macros span+span{border-left:.25mm solid #000}.outlet-label-macros b{font-size:4mm;font-weight:900}
         @media print{@page{size:58mm 39mm;margin:0}html,body{width:58mm!important;margin:0!important;background:#fff!important}.outlet-print-root{display:block!important}.outlet-print-sheet{width:58mm;height:39mm;break-before:page;page-break-before:always;break-inside:avoid;margin:0}.outlet-print-sheet:first-child{break-before:auto;page-break-before:auto}.outlet-thermal-label{border:0!important;margin:0!important}}
       `}</style>
     </div>
