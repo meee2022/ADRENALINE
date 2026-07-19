@@ -15,10 +15,12 @@ export const list = query({
 export const listByDuration = query({
   args: { duration: v.union(v.literal("week"), v.literal("two_weeks"), v.literal("month")) },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("publicPlans")
-      .filter((q) => q.eq(q.field("duration"), args.duration))
-      .collect();
+    const all = await ctx.db.query("publicPlans").collect();
+    // النشطة المطابقة للمدة + الباقات المخصّصة (بلا أسعار جاهزة) تظهر في كل التبويبات
+    return all.filter((p: any) =>
+      p.isActive !== false &&
+      (p.duration === args.duration || !p.options || p.options.length === 0)
+    );
   },
 });
 

@@ -57,6 +57,14 @@ export default function PublicPlansNew() {
     window.location.href = url;
   };
 
+  // ✅ باقة مخصّصة (بلا أسعار جاهزة): تواصل مع الأخصائية لتحديد الكميات والوجبات
+  const handleCustomContact = (planName: string) => {
+    const msg = isRtl
+      ? `مرحباً 👋\nأرغب في باقة *${planName}* المخصّصة.\nأرجو تحديد الكميات والوجبات المناسبة لي مع الأخصائية.`
+      : `Hello 👋\nI'm interested in the *${planName}* customized plan.\nPlease help me set the right meals and quantities with the nutritionist.`;
+    window.location.href = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
+  };
+
   const getBadgeLabel = (badge: string) => badgeConfig[badge as keyof typeof badgeConfig];
 
   return (
@@ -148,7 +156,7 @@ export default function PublicPlansNew() {
                       </div>
 
                       {/* Pricing options — each meal-count with its price */}
-                      {plan.options && plan.options.length > 0 && (
+                      {plan.options && plan.options.length > 0 ? (
                         <div className="space-y-1.5 py-1">
                           {plan.options.map((opt: any, oi: number) => (
                             <div key={oi}
@@ -164,6 +172,18 @@ export default function PublicPlansNew() {
                               </span>
                             </div>
                           ))}
+                        </div>
+                      ) : (
+                        /* ✅ باقة مخصّصة: بدل الأسعار الجاهزة — رسالة تواصل مع الأخصائية */
+                        <div className="py-2">
+                          <div className="px-3 py-3 rounded-xl text-center" style={{ background: "#3cc4f00d", border: "1px dashed #3cc4f04d" }}>
+                            <div className="text-sm font-black text-[#0E76AC] mb-1">{isRtl ? "باقة مخصّصة حسب هدفك" : "Tailored to your goal"}</div>
+                            <div className="text-xs font-bold text-[#47759C] leading-relaxed">
+                              {isRtl
+                                ? "الكميات والوجبات تُحدَّد مع الأخصائية حسب احتياجك — تواصل معنا لتفصيل باقتك وسعرها."
+                                : "Meals & quantities are set with our nutritionist based on your needs — contact us to tailor your plan & price."}
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -184,16 +204,21 @@ export default function PublicPlansNew() {
                       )}
 
                       {/* CTA Button */}
-                      <Button
-                        onClick={() => handleSubscribe(planName(plan), plan.options?.[0])}
-                        className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
-                          isFeatured
-                            ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
-                            : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
-                        }`}
-                      >
-                        {isRtl ? "اختر الباقة" : "Choose Plan"}
-                      </Button>
+                      {(() => {
+                        const isCustom = !plan.options || plan.options.length === 0;
+                        return (
+                          <Button
+                            onClick={() => isCustom ? handleCustomContact(planName(plan)) : handleSubscribe(planName(plan), plan.options?.[0])}
+                            className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
+                              isFeatured
+                                ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
+                                : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
+                            }`}
+                          >
+                            {isCustom ? (isRtl ? "تواصل مع الأخصائية" : "Talk to nutritionist") : (isRtl ? "اختر الباقة" : "Choose Plan")}
+                          </Button>
+                        );
+                      })()}
                     </div>
                   </div>
                 );
