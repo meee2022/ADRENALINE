@@ -1391,32 +1391,39 @@ export default function Customers() {
                     </div>
                   </div>
 
-                  {/* ملخّص محسوب — لا يُكتب يدوياً */}
+                  {/* ✅ الوجبات والسناك قابلة للتعديل يدويًا (للمخصّص/أي عدد) — الباقة تملأها كبداية وتقدر تغيّرها */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {[
-                      { l: isRtl ? "وجبات/يوم" : "Meals/day", v: form.watch("mealsPerDay") ?? "—" },
-                      { l: isRtl ? "سناك/يوم" : "Snacks/day", v: form.watch("snacksPerDay") ?? "—" },
-                      { l: isRtl ? "الإجمالي/يوم" : "Total/day", v: form.watch("totalMealsPerDay") ?? "—" },
-                      { l: isRtl ? "المدة (أسابيع)" : "Weeks", v: computedWeeks ?? "—" },
-                    ].map((k, i) => (
-                      <div key={i} className="rounded-lg bg-white border p-2 text-center">
-                        <div className="text-xl font-black text-[#0E76AC]">{String(k.v)}</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold">{k.l}</div>
-                      </div>
-                    ))}
+                    <div className="rounded-lg bg-white border p-2 text-center">
+                      <Input type="number" min="0" step="1"
+                        {...form.register("mealsPerDay")}
+                        className="text-xl font-black text-[#0E76AC] text-center h-9 border-0 p-0 focus-visible:ring-1" />
+                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "وجبات/يوم" : "Meals/day"}</div>
+                    </div>
+                    <div className="rounded-lg bg-white border p-2 text-center">
+                      <Input type="number" min="0" step="1"
+                        {...form.register("snacksPerDay")}
+                        className="text-xl font-black text-[#0E76AC] text-center h-9 border-0 p-0 focus-visible:ring-1" />
+                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "سناك/يوم" : "Snacks/day"}</div>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 border p-2 text-center">
+                      <div className="text-xl font-black text-[#0E76AC]">{(Number(form.watch("mealsPerDay")) || 0) + (Number(form.watch("snacksPerDay")) || 0) || "—"}</div>
+                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "الإجمالي/يوم" : "Total/day"}</div>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 border p-2 text-center">
+                      <div className="text-xl font-black text-[#0E76AC]">{computedWeeks ?? "—"}</div>
+                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "المدة (أسابيع)" : "Weeks"}</div>
+                    </div>
                   </div>
 
                   <p className="text-[11px] text-muted-foreground">
                     {isRtl
-                      ? "المدة تُحسب من تاريخَي البداية والنهاية فوق. اختيار الباقة يضبط تاريخ النهاية تلقائياً، وتقدر تعدّله."
-                      : "Weeks are computed from the start/end dates above. Picking a plan sets the end date; you can still change it."}
+                      ? "اختيار الباقة يملأ الوجبات/السناك والسعر تلقائياً — ولو مشترك مخصّص بعدد مختلف، عدّل الأرقام والسعر يدويًا. القيود تتبع العدد اللي تكتبه."
+                      : "Picking a plan auto-fills meals/snacks/price — for a customized subscriber with a different count, edit the numbers and price manually. Constraints follow the numbers you enter."}
                   </p>
 
                   {/* قيم مخفيّة تُرسل مع النموذج */}
                   <input type="hidden" {...form.register("packageLabel")} />
                   <input type="hidden" {...form.register("durationWeeks")} />
-                  <input type="hidden" {...form.register("mealsPerDay")} />
-                  <input type="hidden" {...form.register("snacksPerDay")} />
                   <input type="hidden" {...form.register("totalMealsPerDay")} />
                 </div>
 
