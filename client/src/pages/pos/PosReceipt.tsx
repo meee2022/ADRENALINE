@@ -5,10 +5,13 @@
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
-import { Printer, X, CheckCircle2 } from "lucide-react";
+import { Printer, X, CheckCircle2, Tags } from "lucide-react";
 import { openPrintDoc } from "@/lib/printDoc";
 
 type Props = { ticketId: string; onClose: () => void };
+
+// مدة صلاحية استيكر المطبخ (تاريخ الإنتاج + STICKER_EXPIRY_DAYS)
+const STICKER_EXPIRY_DAYS = 2;
 
 export default function ReceiptModal({ ticketId, onClose }: Props) {
   const token = usePosStore((s) => s.token);
@@ -25,6 +28,18 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
       height: 700,
     });
   };
+
+  // استيكرات المطبخ: استيكر لكل وحدة صنف
+  const printLabels = () => {
+    if (!t) return;
+    openPrintDoc(buildLabelsHtml(t), {
+      fileName: `ADRENALINE labels ${t.ticketNumber}`,
+      isRtl: false,
+      width: 400,
+      height: 700,
+    });
+  };
+  const labelCount = t ? t.lines.reduce((s: number, l: any) => s + Math.max(1, Math.round(l.qty)), 0) : 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4">
@@ -78,12 +93,17 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-2 p-3 bg-white border-t border-slate-200">
-          {/* زر واحد: شاشة الطباعة نفسها فيها الطابعة الحرارية و"حفظ كـPDF" */}
-          <button onClick={printReceipt} className="h-12 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm flex items-center justify-center gap-1">
-            <Printer className="h-4 w-4" /> Print / PDF
-          </button>
-          <button onClick={onClose} className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">
+        <div className="p-3 bg-white border-t border-slate-200 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            {/* زر واحد: شاشة الطباعة نفسها فيها الطابعة الحرارية و"حفظ كـPDF" */}
+            <button onClick={printReceipt} className="h-12 rounded-xl bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-sm flex items-center justify-center gap-1">
+              <Printer className="h-4 w-4" /> Print / PDF
+            </button>
+            <button onClick={printLabels} disabled={!t || labelCount === 0} className="h-12 rounded-xl bg-[#0E76AC] hover:bg-[#0c6698] disabled:opacity-40 text-white font-bold text-sm flex items-center justify-center gap-1">
+              <Tags className="h-4 w-4" /> استيكر المطبخ {labelCount > 0 ? `(${labelCount})` : ""}
+            </button>
+          </div>
+          <button onClick={onClose} className="w-full h-12 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm">
             New Sale
           </button>
         </div>
@@ -132,6 +152,50 @@ function buildReceiptHtml(t: any): string {
       ${t.changeAmount != null && t.changeAmount > 0 ? `<tr><td>Change</td><td class="r">${t.changeAmount.toFixed(2)}</td></tr>` : ""}
     </table>
     <div class="center">Thank you!</div>
+    </body></html>`;
+}
+
+/** استيكرات المطبخ — استيكر لكل وحدة صنف: اسم كبير + رقم الفاتورة + إنتاج + انتهاء. */
+function buildLabelsHtml(t: any): string {
+  const prod = new Date(t.paidAt || t.createdAt);
+  const exp = new Date(prod.getTime() + STICKER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+  const fmt = (d: Date) =>
+    `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  const orderType = t.orderType ? String(t.orderType).replace(/_/g, " ") : "";
+  const labels: string[] = [];
+  for (const l of t.lines) {
+    const units = Math.max(1, Math.round(l.qty));
+    for (let k = 0; k < units; k++) {
+      labels.push(`
+        <div class="lbl">
+          <div class="brand">ADRENALINE</div>
+          <div class="name">${escapeHtml(l.name)}</div>
+          ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ""}
+          <div class="meta">
+            <span>#${t.ticketNumber}${orderType ? " · " + escapeHtml(orderType) : ""}</span>
+            ${units > 1 ? `<span>${k + 1}/${units}</span>` : ""}
+          </div>
+          <div class="dates">
+            <span>إنتاج: ${fmt(prod)}</span>
+            <span>انتهاء: ${fmt(exp)}</span>
+          </div>
+        </div>`);
+    }
+  }
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Labels #${t.ticketNumber}</title>
+    <style>
+      *{box-sizing:border-box;font-family:'Segoe UI',Tahoma,Arial,sans-serif}
+      body{margin:0;padding:0;color:#000}
+      .lbl{width:80mm;padding:4mm 4mm 5mm;border-bottom:1px dashed #bbb;page-break-inside:avoid}
+      .brand{font-size:10px;letter-spacing:2px;color:#0E76AC;font-weight:800}
+      .name{font-size:20px;font-weight:900;margin:2px 0 4px;line-height:1.15}
+      .note{font-size:11px;color:#444;margin-bottom:3px}
+      .meta{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#222}
+      .dates{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-top:4px;border-top:1px solid #000;padding-top:3px}
+      @page{size:80mm auto;margin:0}
+      @media print{.lbl{page-break-after:always;border-bottom:none}}
+    </style></head><body>
+    ${labels.join("")}
     </body></html>`;
 }
 
