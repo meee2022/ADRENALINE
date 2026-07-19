@@ -41,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, UserPlus, Shield, Users as UsersIcon, ArrowUpCircle, ChefHat, Truck, HeartPulse, Package, UserCog } from "lucide-react";
+import { Plus, Edit, Trash2, UserPlus, Shield, Users as UsersIcon, ArrowUpCircle, ChefHat, Truck, HeartPulse, Package, UserCog, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { convex } from "@/lib/convex";
@@ -50,6 +50,35 @@ import type { Id } from "@/../../convex/_generated/dataModel";
 import { useQuery, useMutation } from "convex/react";
 import { Role } from "@/lib/types";
 import { ALL_PAGES, ALL_ROLES, ROLE_LABEL, defaultPermsForRole } from "@/lib/permissions";
+
+/** خانة كلمة مرور مع زر عين لإظهار/إخفاء القيمة. */
+function PasswordField({
+  id, value, onChange, placeholder = "••••••••",
+}: { id?: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        dir="ltr"
+        className="pe-10"
+      />
+      <button
+        type="button"
+        onClick={() => setShow((s) => !s)}
+        aria-label={show ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
+        className="absolute inset-y-0 end-0 flex items-center pe-3 text-slate-400 hover:text-slate-700"
+        tabIndex={-1}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
 
 interface UserFormData {
   name: string;
@@ -593,13 +622,10 @@ export default function Users() {
 
             <div className="space-y-2">
               <Label htmlFor="password">{t("users.password")}</Label>
-              <Input
+              <PasswordField
                 id="password"
-                type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                dir="ltr"
+                onChange={(v) => setFormData({ ...formData, password: v })}
               />
             </div>
 
@@ -647,13 +673,10 @@ export default function Users() {
 
             <div className="space-y-2">
               <Label htmlFor="edit-password">{t("users.password")}</Label>
-              <Input
+              <PasswordField
                 id="edit-password"
-                type="password"
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                dir="ltr"
+                onChange={(v) => setFormData({ ...formData, password: v })}
               />
               <p className="text-xs text-muted-foreground">{t("users.password_note")}</p>
             </div>
@@ -728,13 +751,10 @@ export default function Users() {
               {/* Password */}
               <div className="space-y-2">
                 <Label>{isRtl ? "كلمة المرور الجديدة (للدخول كموظف)" : "New password (for staff login)"}</Label>
-                <Input
-                  type="password"
+                <PasswordField
                   value={promotePassword}
-                  onChange={(e) => setPromotePassword(e.target.value)}
+                  onChange={(v) => setPromotePassword(v)}
                   placeholder={isRtl ? "4 أحرف على الأقل" : "At least 4 characters"}
-                  dir="ltr"
-                  className="text-left"
                 />
                 <p className="text-xs text-muted-foreground">
                   {isRtl ? "العميل سيستخدم نفس البريد الإلكتروني مع كلمة المرور دي لتسجيل الدخول كموظف." : "The customer will use the same email with this password to log in as staff."}
