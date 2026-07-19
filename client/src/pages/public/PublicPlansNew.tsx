@@ -60,8 +60,8 @@ export default function PublicPlansNew() {
   // ✅ باقة مخصّصة (بلا أسعار جاهزة): تواصل مع الأخصائية لتحديد الكميات والوجبات
   const handleCustomContact = (planName: string) => {
     const msg = isRtl
-      ? `مرحباً 👋\nأرغب في باقة *${planName}* المخصّصة.\nأرجو تحديد الكميات والوجبات المناسبة لي مع الأخصائية.`
-      : `Hello 👋\nI'm interested in the *${planName}* customized plan.\nPlease help me set the right meals and quantities with the nutritionist.`;
+      ? `السلام عليكم\nأرغب في الاشتراك في *${planName}*.\nأرجو التنسيق مع أخصائية التغذية لتحديد الوجبات والكميات المناسبة لي.\nوشكرًا.`
+      : `Hello,\nI'd like to subscribe to the *${planName}*.\nPlease coordinate with the nutritionist to set the meals and quantities that suit me.\nThank you.`;
     window.location.href = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
   };
 
@@ -177,11 +177,11 @@ export default function PublicPlansNew() {
                         /* ✅ باقة مخصّصة: بدل الأسعار الجاهزة — رسالة تواصل مع الأخصائية */
                         <div className="py-2">
                           <div className="px-3 py-3 rounded-xl text-center" style={{ background: "#3cc4f00d", border: "1px dashed #3cc4f04d" }}>
-                            <div className="text-sm font-black text-[#0E76AC] mb-1">{isRtl ? "باقتك على مزاجك 🌟" : "Your plan, your way 🌟"}</div>
+                            <div className="text-sm font-black text-[#0E76AC] mb-1">{isRtl ? "باقة مصمّمة وفق احتياجك" : "Designed around your needs"}</div>
                             <div className="text-xs font-bold text-[#47759C] leading-relaxed">
                               {isRtl
-                                ? "احكيلنا هدفك، وأخصائية التغذية تظبّطلك وجباتك وكمياتك والسعر اللي يناسبك بالظبط."
-                                : "Tell us your goal, and our nutritionist tailors your meals, portions and a price that fits you."}
+                                ? "تُحدَّد الوجبات والكميات والسعر بالتنسيق مع أخصائية التغذية بما يتناسب مع هدفك. تواصل معنا لتفصيل باقتك."
+                                : "Meals, quantities and price are set in coordination with our nutritionist to suit your goal. Contact us to tailor your plan."}
                             </div>
                           </div>
                         </div>
@@ -215,7 +215,7 @@ export default function PublicPlansNew() {
                                 : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
                             }`}
                           >
-                            {isCustom ? (isRtl ? "تواصل مع الأخصائية" : "Talk to nutritionist") : (isRtl ? "اختر الباقة" : "Choose Plan")}
+                            {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "اختر الباقة" : "Choose Plan")}
                           </Button>
                         );
                       })()}
