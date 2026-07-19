@@ -14,6 +14,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { Sparkles, AlertTriangle } from "lucide-react";
 import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
 import { confirmDialog } from "@/lib/dialogs";
+import { useToast } from "@/hooks/use-toast";
 import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
@@ -42,6 +43,7 @@ export default function SmartPlan() {
   const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);
 
   const { currentCustomer } = useStore();
+  const { toast } = useToast();
   const generate = useAction(api.ai.generateSmartPlan);
   const generateWeekly = useAction((api.ai as any).generateWeeklyPlan);
   const createOrder = useMutation(api.customerOrders.create);
@@ -191,6 +193,12 @@ export default function SmartPlan() {
   const applySwap = (m: any) => {
     if (!swap) return;
     const pick = toPick(m);
+    // 🔁 كم نسخة من الوجبة ستصير في اليوم بعد هذا التغيير (لتنبيه التكرار).
+    const dayPicks: any[] = swap.src === "weekly" ? (weekly?.days?.[swap.di]?.picks || []) : (result?.picks || []);
+    const resulting = swap.add
+      ? [...dayPicks, pick]
+      : dayPicks.map((p: any, i: number) => (i === swap.i ? pick : p));
+    const dupCount = resulting.filter((p: any) => String(p.id) === String(pick.id)).length;
     // swap.add = وضع «إضافة وجبة ناقصة» → نُلحِق بدل الاستبدال
     if (swap.src === "weekly") {
       setWeekly((w: any) => {
@@ -207,6 +215,17 @@ export default function SmartPlan() {
         const picks = r.picks.slice();
         if (swap.add) picks.push(pick); else picks[swap.i] = pick;
         return { ...r, picks };
+      });
+    }
+    const dayLbl = dayName(swap.day);
+    const mealLbl = isRtl ? (pick.nameAr) : (pick.nameEn || pick.nameAr);
+    if (dupCount >= 2) {
+      toast({
+        title: t("🔁 وجبة مكرّرة", "🔁 Repeated meal"),
+        description: t(
+          `اخترت «${mealLbl}» ${dupCount} مرات لنفس اليوم (${dayLbl}).`,
+          `You picked "${mealLbl}" ${dupCount} times for the same day (${dayLbl}).`,
+        ),
       });
     }
     setSwap(null);
