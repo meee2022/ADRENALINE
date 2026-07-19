@@ -183,7 +183,7 @@ function buildReceiptHtml(t: any): string {
     const secondary = ar && en && ar !== en ? en : "";
     return `<tr><td class="item"><span class="q">${l.qty}×</span> <b>${escapeHtml(primary)}</b>${secondary ? `<div class="en">${escapeHtml(secondary)}</div>` : ""}</td><td class="r">${l.lineTotal.toFixed(2)}</td></tr>`;
   }).join("");
-  return `<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>Receipt #${t.ticketNumber}</title>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Receipt #${t.ticketNumber}</title>
     <style>
       *{box-sizing:border-box;font-family:'Cairo','Tahoma','Arial',sans-serif}
       body{margin:0;padding:8px;font-size:13px;font-weight:700;color:#000;width:80mm;line-height:1.35}
@@ -194,9 +194,10 @@ function buildReceiptHtml(t: any): string {
       .dash{border-top:1.5px dashed #000;margin:5px 0}
       table{width:100%;border-collapse:collapse}
       td{padding:3px 0;font-size:13px;font-weight:700;vertical-align:top}
-      td.item{text-align:right}.q{font-weight:900}
+      /* التخطيط LTR: الاسم يسار والسعر يمين — عشان الأسعار ما تتقصّش من حافة الشمال */
+      td.item{text-align:left}.q{font-weight:900}
       .en{font-size:10px;font-weight:600;color:#000;direction:ltr;text-align:left}
-      .r{text-align:left;font-weight:900;white-space:nowrap;padding-inline-start:6px}
+      .r{text-align:right;font-weight:900;white-space:nowrap;padding-left:6px}
       .tot td{font-size:16px;font-weight:900;padding-top:6px;border-top:1.5px dashed #000}
       .center{text-align:center;font-size:12px;font-weight:800;color:#000;margin-top:8px;padding-top:6px;border-top:1.5px dashed #000}
       @page{size:80mm auto;margin:0}
