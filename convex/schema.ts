@@ -1036,6 +1036,8 @@ export default defineSchema({
     fats: v.optional(v.number()),
     // ✅ ربط بصنف المنيو الأونلاين (POS) — لتحديث السعر/السعرات عند إعادة الاستيراد بدون تكرار
     publicMealId: v.optional(v.id("publicMeals")),
+    // ✅ مصدر الصنف: "gym" (القائمة الأصلية) أو "online" (مستورد من POS). كتالوجان منفصلان.
+    source: v.optional(v.union(v.literal("gym"), v.literal("online"))),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),

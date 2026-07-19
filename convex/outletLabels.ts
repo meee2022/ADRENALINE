@@ -93,7 +93,7 @@ export const seed = mutation({
       const barcode = String(100000 + sequence);
       const [nameEn, price, calories, carbs, protein, fats] = LABELS[i];
       const existing = await ctx.db.query("outletProductLabels").withIndex("by_barcode", q => q.eq("barcode", barcode)).first();
-      const values = { sequence, barcode, nameEn, price, calories, carbs, protein, fats, isActive: true, updatedAt: now };
+      const values = { sequence, barcode, nameEn, price, calories, carbs, protein, fats, source: "gym" as const, isActive: true, updatedAt: now };
       if (existing) await ctx.db.patch(existing._id, values);
       else await ctx.db.insert("outletProductLabels", { ...values, createdAt: now });
     }
@@ -115,14 +115,12 @@ export const importFromPos = mutation({
     const priced = metas.filter((m: any) => m.posPrice != null && Number.isFinite(Number(m.posPrice)));
 
     const all = await ctx.db.query("outletProductLabels").collect();
+    // كتالوج الأونلاين منفصل عن الجم: نطابق فقط الصفوف المربوطة بوجبة (online). لا نلمس أصناف الجم.
     const byMeal = new Map<string, any>();
-    const byName = new Map<string, any>();
-    const nm = (s: string) => String(s || "").trim().toLowerCase();
     let maxSeq = 0;
     for (const r of all) {
       maxSeq = Math.max(maxSeq, Number(r.sequence) || 0);
       if (r.publicMealId) byMeal.set(String(r.publicMealId), r);
-      else byName.set(nm(r.nameEn), r);   // غير مربوط — قابل للتبنّي
     }
 
     let added = 0, updated = 0, skipped = 0;
@@ -139,13 +137,12 @@ export const importFromPos = mutation({
         protein: meal.protein != null ? Number(meal.protein) : undefined,
         fats: meal.fats != null ? Number(meal.fats) : undefined,
         publicMealId: meal._id,
+        source: "online" as const,
         isActive: true,
         updatedAt: now,
       };
       const linked = byMeal.get(String(meal._id));
       if (linked) { await ctx.db.patch(linked._id, data); updated++; continue; }
-      const adoptable = byName.get(nm(nameEn));
-      if (adoptable) { await ctx.db.patch(adoptable._id, data); byName.delete(nm(nameEn)); updated++; continue; }
       maxSeq += 1;
       await ctx.db.insert("outletProductLabels", { ...data, sequence: maxSeq, barcode: String(100000 + maxSeq), createdAt: now });
       added++;
@@ -191,6 +188,7 @@ export const create = mutation({
     carbs: v.number(),
     protein: v.number(),
     fats: v.number(),
+    source: v.optional(v.union(v.literal("gym"), v.literal("online"))),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -215,6 +213,7 @@ export const create = mutation({
       carbs: args.carbs,
       protein: args.protein,
       fats: args.fats,
+      source: args.source ?? "gym",
       isActive: true,
       createdAt: now,
     });

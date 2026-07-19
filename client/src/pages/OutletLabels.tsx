@@ -19,6 +19,8 @@ type LabelRow = {
   protein?: number;
   fats?: number;
   isActive: boolean;
+  source?: "gym" | "online";
+  publicMealId?: string;
 };
 
 function ProductBarcode({ value, compact = false }: { value: string; compact?: boolean }) {
@@ -79,6 +81,7 @@ export default function OutletLabels() {
   const remove = useMutation(api.outletLabels.remove);
   const importFromPos = useMutation(api.outletLabels.importFromPos);
   const [importing, setImporting] = useState(false);
+  const [tab, setTab] = useState<"online" | "gym">("gym");
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<LabelRow | null>(null);
@@ -90,6 +93,7 @@ export default function OutletLabels() {
     setImporting(true);
     try {
       const r: any = await importFromPos({ sessionToken });
+      setTab("online");
       void alertDialog({ message: isRtl
         ? `تم الاستيراد من الأونلاين ✓\nجديد: ${r.added} · مُحدَّث: ${r.updated}${r.skipped ? ` · متخطّى: ${r.skipped}` : ""} (إجمالي أصناف POS المسعّرة: ${r.total})`
         : `Imported from online ✓\nNew: ${r.added} · Updated: ${r.updated}${r.skipped ? ` · Skipped: ${r.skipped}` : ""} (priced POS items: ${r.total})` });
@@ -98,13 +102,19 @@ export default function OutletLabels() {
     } finally { setImporting(false); }
   };
 
+  // كتالوجان منفصلان: "online" (مستورد من POS، مربوط بوجبة) و "gym" (القائمة الأصلية)
+  const rowSource = (row: any): "online" | "gym" => row.source ?? (row.publicMealId ? "online" : "gym");
+  const gymRows = useMemo(() => rows.filter(r => rowSource(r) === "gym"), [rows]);
+  const onlineRows = useMemo(() => rows.filter(r => rowSource(r) === "online"), [rows]);
+  const tabRows = tab === "online" ? onlineRows : gymRows;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter(row => !q || row.nameEn.toLowerCase().includes(q) || row.barcode.includes(q));
-  }, [rows, search]);
+    return tabRows.filter(row => !q || row.nameEn.toLowerCase().includes(q) || row.barcode.includes(q));
+  }, [tabRows, search]);
   const queuedRows = useMemo(() => rows.filter(row => (queue[row._id] || 0) > 0), [rows, queue]);
   const totalCopies = queuedRows.reduce((sum, row) => sum + (queue[row._id] || 0), 0);
-  const incomplete = rows.filter(row => row.price == null || row.calories == null || row.carbs == null || row.protein == null || row.fats == null).length;
+  const incomplete = tabRows.filter(row => row.price == null || row.calories == null || row.carbs == null || row.protein == null || row.fats == null).length;
 
   const changeQty = (id: string, delta: number) => setQueue(current => {
     const next = Math.max(0, (current[id] || 0) + delta);
@@ -145,6 +155,7 @@ export default function OutletLabels() {
         carbs: Number(form.get("carbs")),
         protein: Number(form.get("protein")),
         fats: Number(form.get("fats")),
+        source: tab,
         sessionToken,
       });
       setCreating(false);
@@ -181,7 +192,7 @@ export default function OutletLabels() {
               <div><h1 className="text-2xl font-black">{isRtl ? "استيكرات أصناف المنافذ" : "Outlet Product Labels"}</h1><p className="text-sm text-cyan-100 mt-1">{isRtl ? "طباعة مستقلة عن الطلبات والفواتير" : "Print independently from orders and invoices"}</p></div>
             </div>
             <div className="flex gap-3 text-center">
-              <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{rows.length}</b><span className="text-[11px] text-cyan-100">{isRtl ? "صنف" : "Products"}</span></div>
+              <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{tabRows.length}</b><span className="text-[11px] text-cyan-100">{tab === "online" ? (isRtl ? "أونلاين" : "Online") : (isRtl ? "جم" : "Gym")}</span></div>
               <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{totalCopies}</b><span className="text-[11px] text-cyan-100">{isRtl ? "نسخة" : "Copies"}</span></div>
             </div>
           </div>
@@ -193,12 +204,29 @@ export default function OutletLabels() {
 
         <div className="grid xl:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
           <section className="rounded-lg border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,55,85,.08)] overflow-hidden">
+            {/* تابين منفصلين: الأونلاين (POS) · الجم */}
+            <div className="flex border-b border-slate-200">
+              {([["gym", isRtl ? "الجم" : "Gym", gymRows.length], ["online", isRtl ? "الأونلاين (POS)" : "Online (POS)", onlineRows.length]] as const).map(([k, label, count]) => (
+                <button key={k} onClick={() => setTab(k)}
+                  className={`flex-1 h-12 font-black text-sm flex items-center justify-center gap-2 border-b-2 transition-colors ${tab === k ? "border-[#0E76AC] text-[#0E76AC] bg-[#eef7fb]" : "border-transparent text-slate-500 hover:bg-slate-50"}`}>
+                  {label} <span className={`text-[11px] rounded-full px-2 py-0.5 ${tab === k ? "bg-[#0E76AC] text-white" : "bg-slate-200 text-slate-600"}`}>{count}</span>
+                </button>
+              ))}
+            </div>
             <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex flex-wrap items-center gap-3">
               <div className="relative flex-1"><Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isRtl ? "ابحث بالاسم أو رقم الباركود..." : "Search name or barcode..."} className="h-11 ps-10 bg-white" /></div>
-              <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>
+              {tab === "online" && <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>}
               <button onClick={() => setCreating(true)} className="h-11 px-4 rounded-md bg-[#0E76AC] text-white font-black flex items-center gap-2 shadow-sm"><Plus className="h-4 w-4" />{isRtl ? "صنف استيكر جديد" : "New label product"}</button>
             </div>
             <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
+              {filtered.length === 0 && (
+                <div className="py-16 text-center text-slate-400">
+                  <Barcode className="h-9 w-9 mx-auto mb-3 opacity-50" />
+                  <p className="font-bold">{tab === "online"
+                    ? (isRtl ? "لا أصناف أونلاين بعد — اضغط «استيراد من الأونلاين (POS)»" : "No online items yet — click Import from online (POS)")
+                    : (isRtl ? "لا أصناف في قائمة الجم" : "No gym items")}</p>
+                </div>
+              )}
               {filtered.map(item => {
                 const qty = queue[item._id] || 0;
                 const missing = item.price == null || item.calories == null || item.carbs == null || item.protein == null || item.fats == null;
