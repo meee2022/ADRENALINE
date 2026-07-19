@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles, UtensilsCrossed } from "lucide-react";
+import { Search, Flame, X, Clock, Lock, ShoppingCart, Plus, Minus, Check, Phone, AlertTriangle, MessageCircle, User, Sparkles, UtensilsCrossed } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { useSeo } from "@/lib/seo";
 import { cn } from "@/lib/utils";
@@ -692,6 +692,14 @@ export default function PublicMenuPage() {
     return items.some(
       (item) => item._id === mealId && item.week === selectedWeek && item.day === selectedDay
     );
+  };
+
+  // كم مرة اختار العميل هذه الوجبة لليوم الحالي (يدعم التكرار).
+  const itemCount = (mealId: string) => {
+    if (!selectedDay) return 0;
+    return items.filter(
+      (item) => item._id === mealId && item.week === selectedWeek && item.day === selectedDay
+    ).length;
   };
 
   // ⚠️ لا نمرّر التصنيف للخادم: كان category="snack" يرجّع السناكات فقط،
@@ -1840,29 +1848,41 @@ export default function PublicMenuPage() {
                           <MessageCircle className="h-3.5 w-3.5" />
                           {isRtl ? "اشترك" : "Subscribe"}
                         </Button>
+                      ) : itemCount(meal._id) > 0 ? (
+                        // ✅ عدّاد — يسمح باختيار نفس الوجبة أكثر من مرة (السقف زيّه)
+                        <div className="flex items-center gap-1.5 rounded-full bg-green-500 text-white px-1.5 h-9">
+                          <button
+                            onClick={(e) => { e?.stopPropagation(); removeItem(meal._id, selectedWeek, selectedDay!); }}
+                            title={isRtl ? "إنقاص" : "Remove one"}
+                            className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/25 transition-colors"
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="min-w-5 text-center text-sm font-black tabular-nums">{itemCount(meal._id)}</span>
+                          <button
+                            onClick={(e) => handleAddToCart(meal, e)}
+                            disabled={atLimit}
+                            title={atLimit ? (isRtl ? "اكتمل عدد اليوم" : "Day is full") : (isRtl ? "إضافة مرة أخرى" : "Add another")}
+                            className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
                       ) : (
                         <Button
                           size="sm"
-                          onClick={(e) => handleToggleCart(meal, e)}
-                          disabled={!selectedDay || (atLimit && !isInCart(meal._id))}
-                          title={isInCart(meal._id) ? (isRtl ? "اضغط للإزالة واختيار غيرها" : "Tap to remove") : undefined}
+                          onClick={(e) => handleAddToCart(meal, e)}
+                          disabled={!selectedDay || atLimit}
                           className={cn(
                             "h-9 px-5 rounded-full font-bold transition-all",
-                            isInCart(meal._id)
-                              ? "bg-green-500 hover:bg-green-600 text-white"
-                              : atLimit
-                                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                : hasConflict
-                                  ? "bg-orange-500 hover:bg-orange-600 text-white"
-                                  : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
+                            atLimit
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                              : hasConflict
+                                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                                : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
                           )}
                         >
-                          {isInCart(meal._id) ? (
-                            <>
-                              <Check className="h-4 w-4 mr-1" />
-                              {isRtl ? "مضافة" : "Added"}
-                            </>
-                          ) : atLimit ? (
+                          {atLimit ? (
                             <>{isRtl ? "ممتلئ" : "Full"}</>
                           ) : (
                             <>

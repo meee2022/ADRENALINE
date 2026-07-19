@@ -324,8 +324,8 @@ export default function OrderReview() {
                           </div>
                           {/* شبكة الكروت */}
                           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, padding: 12 }}>
-                            {meals.map((meal) => (
-                              <div key={meal._id} style={{ border: `1px solid ${B.line}`, borderRadius: 12, overflow: "hidden", background: B.surf }}>
+                            {meals.map((meal, mi) => (
+                              <div key={`${meal._id}-${mi}`} style={{ border: `1px solid ${B.line}`, borderRadius: 12, overflow: "hidden", background: B.surf }}>
                                 <div style={{ height: 84, background: B.bg2, overflow: "hidden" }}>
                                   {meal.imageUrl
                                     ? <img src={meal.imageUrl} alt={meal.nameAr} style={{ width: "100%", height: "100%", objectFit: "cover" }} />

@@ -56,32 +56,25 @@ export const useCartStore = create<CartState>()(
 
       setPreferredStartDate: (date) => set({ preferredStartDate: date }),
 
+      // ✅ يُسمح بتكرار نفس الوجبة في نفس اليوم (يختارها المشترك مرتين) — السقف
+      //    اليومي محسوب في المنيو (handleAddToCart) فلا يتجاوز عدد الاشتراك.
       addItem: (meal) =>
-        set((state) => {
-          // تحقق إذا كانت الوجبة موجودة بالفعل في نفس الأسبوع واليوم
-          const exists = state.items.some(
-            (item) =>
-              item._id === meal._id &&
-              item.week === meal.week &&
-              item.day === meal.day
-          );
-
-          if (exists) {
-            return state; // لا تضيف نفس الوجبة مرتين
-          }
-
-          return {
-            items: [...state.items, meal],
-          };
-        }),
-
-      removeItem: (mealId, week, day) =>
         set((state) => ({
-          items: state.items.filter(
-            (item) =>
-              !(item._id === mealId && item.week === week && item.day === day)
-          ),
+          items: [...state.items, meal],
         })),
+
+      // يزيل **نسخة واحدة** فقط (آخر نسخة مطابقة) — كي يعمل خفض العدد مع التكرار.
+      removeItem: (mealId, week, day) =>
+        set((state) => {
+          const idx = [...state.items]
+            .map((it, i) => ({ it, i }))
+            .reverse()
+            .find(({ it }) => it._id === mealId && it.week === week && it.day === day)?.i;
+          if (idx === undefined) return state;
+          const items = state.items.slice();
+          items.splice(idx, 1);
+          return { items };
+        }),
 
       clearCart: () =>
         set({
