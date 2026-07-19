@@ -240,6 +240,61 @@ export const employeeMonth = query({
   },
 });
 
+/** تقرير حضور لفترة مخصّصة (from..to شامل) — لكل الموظفين أو موظف واحد.
+ *  يرجّع تجميعة لكل موظف + (لو name محدّد) الأيام التفصيلية. للموظفين فقط.
+ *  ملاحظة: الأوفرتايم هنا = المحسوب اليومي (لا نطبّق اعتماد الشهر لأن الفترة قد تعبر أشهرًا). */
+export const rangeReport = query({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    name: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff") return null;
+    const from = args.from, to = args.to;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) return null;
+
+    // الفهرس على التاريخ (yyyy-MM-dd يرتّب زمنيًا) — مدى مباشر
+    let rows = await ctx.db
+      .query("attendance")
+      .withIndex("by_date", (q) => q.gte("date", from).lte("date", to))
+      .collect();
+    if (args.name) rows = rows.filter((r) => r.name === args.name);
+
+    // خريطة المسمّى الوظيفي من الرواتب
+    const pay = await ctx.db.query("payroll").collect();
+    const desig = new Map<string, string>();
+    for (const p of pay) if (!desig.has(p.name)) desig.set(p.name, p.designation || "");
+
+    const byName: Record<string, any> = {};
+    for (const x of rows) {
+      const b = (byName[x.name] ??= {
+        name: x.name, designation: desig.get(x.name) || "",
+        present: 0, absent: 0, leave: 0, half: 0, late: 0, otHours: 0, workedHours: 0,
+      });
+      if (x.status === "present") b.present++;
+      else if (x.status === "absent") b.absent++;
+      else if (x.status === "leave") b.leave++;
+      else if (x.status === "half") b.half++;
+      if (x.late) b.late++;
+      b.otHours = r2(b.otHours + (x.otHours || 0));
+      b.workedHours = r2(b.workedHours + (x.workedHours || 0));
+    }
+    const employees = Object.values(byName)
+      .map((b: any) => ({ ...b, workedDays: r2(b.present + b.half * 0.5) }))
+      .sort((a: any, b: any) => (b.workedDays || 0) - (a.workedDays || 0));
+
+    // الأيام التفصيلية لموظف واحد
+    const days = args.name
+      ? rows.slice().sort((a, b) => a.date.localeCompare(b.date))
+      : [];
+
+    return { from, to, employees, days };
+  },
+});
+
 /** عدّادات حضور اليوم للوحة التحكم (حاضر/غائب/إجازة/نصف يوم/متأخر). للموظفين فقط. */
 export const todayCounts = query({
   args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },

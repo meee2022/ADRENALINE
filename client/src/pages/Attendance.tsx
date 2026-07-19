@@ -125,6 +125,26 @@ export default function Attendance() {
     api.attendance.employeeMonth,
     detailName ? { name: detailName, month, sessionToken } : "skip",
   ) as any[] | undefined) || [];
+
+  // ---- تقارير مرنة (شهر / فترة مخصّصة · الكل / موظف واحد) ----
+  const [reportOpen, setReportOpen] = useState(false);
+  const [rScope, setRScope] = useState<"all" | "one">("all");
+  const [rName, setRName] = useState("");
+  const [rPeriod, setRPeriod] = useState<"month" | "range">("month");
+  const [rMonth, setRMonth] = useState(monthStr());
+  const [rFromD, setRFromD] = useState(monthStr() + "-01");
+  const [rToD, setRToD] = useState(todayStr());
+  const monthBounds = (m: string): [string, string] => {
+    const [y, mm] = m.split("-").map(Number);
+    const last = new Date(Date.UTC(y, mm, 0)).getUTCDate();
+    return [`${m}-01`, `${m}-${pad(last)}`];
+  };
+  const [effFrom, effTo] = rPeriod === "month" ? monthBounds(rMonth) : [rFromD, rToD];
+  const validRange = /^\d{4}-\d{2}-\d{2}$/.test(effFrom) && /^\d{4}-\d{2}-\d{2}$/.test(effTo) && effFrom <= effTo;
+  const reportData = useQuery(
+    api.attendance.rangeReport,
+    reportOpen && validRange ? { from: effFrom, to: effTo, name: rScope === "one" && rName ? rName : undefined, sessionToken } : "skip",
+  ) as any;
   const saveOtApproval = async (name: string, raw: string) => {
     const v = raw.trim() === "" ? undefined : Number(raw);
     if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { void alertDialog({ message: t("رقم غير صحيح", "Invalid number") }); return; }
@@ -358,52 +378,92 @@ export default function Attendance() {
     });
   };
 
-  // ---- طباعة تقرير شهري شامل (A4) ----
-  const handlePrintMonthly = () => {
-    const emps2 = (summary?.employees || []) as any[];
-    if (!emps2.length) { void alertDialog({ message: t("لا توجد بيانات لهذا الشهر", "No data for this month") }); return; }
+  // ---- طباعة التقرير المرن (فترة/شهر · الكل/موظف) ----
+  const handlePrintReport = () => {
+    if (!reportData || !reportData.employees?.length) {
+      void alertDialog({ message: t("لا توجد بيانات في هذه الفترة", "No data in this period") });
+      return;
+    }
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
-    const sorted = [...emps2].sort((a, b) => (b.workedDays || 0) - (a.workedDays || 0));
-    const tot = {
-      present: sorted.reduce((s, e) => s + (e.present || 0), 0),
-      absent: sorted.reduce((s, e) => s + (e.absent || 0), 0),
-      late: sorted.reduce((s, e) => s + (e.late || 0), 0),
-      ot: sorted.reduce((s, e) => s + (e.otHours || 0), 0),
+    const dowName = (d: string) => {
+      const days = isRtl ? ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const [y, m, dd] = d.split("-").map(Number); return days[new Date(Date.UTC(y, m - 1, dd)).getUTCDay()];
     };
-    const rows = sorted.map((e, i) => `<tr>
-      <td class="c">${i + 1}</td><td class="r">${esc(e.name)}</td>
-      <td class="c b">${e.workedDays ?? 0}</td><td class="c">${e.absent || 0}</td>
-      <td class="c">${e.late || 0}</td><td class="c ot">${Math.round((e.otHours || 0) * 10) / 10}</td>
-    </tr>`).join("");
-    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${t("تقرير الحضور", "Attendance Report")} ${esc(month)}</title>
-      <style>
+    const statusLabel = (k: string) => { const s = stInfo(k); return isRtl ? s.ar : s.en; };
+    const periodLabel = rPeriod === "month" ? month === rMonth ? rMonth : rMonth : `${effFrom} → ${effTo}`;
+    const css = `<style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
         body{margin:0;padding:18px;color:#0f1516}
         h1{font-size:20px;margin:0} .sub{color:#47759c;font-weight:700;font-size:13px;margin:2px 0 12px}
-        .kpis{display:flex;gap:10px;margin-bottom:14px}
-        .kpi{flex:1;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
+        .kpis{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+        .kpi{flex:1;min-width:90px;border:1px solid #e8eef4;border-radius:10px;padding:8px;text-align:center}
         .kpi .v{font-size:22px;font-weight:900} .kpi .l{font-size:11px;color:#47759c;font-weight:700}
-        table{width:100%;border-collapse:collapse;font-size:13px}
-        th{background:#0E76AC;color:#fff;padding:8px 6px;font-weight:800} td{padding:6px;border-bottom:1px solid #eef2f6}
-        tr:nth-child(even) td{background:#f7fbfe} .c{text-align:center} .r{text-align:right;font-weight:700}
-        .b{font-weight:900} .ot{color:#0E76AC;font-weight:800}
+        table{width:100%;border-collapse:collapse;font-size:12.5px}
+        th{background:#0E76AC;color:#fff;padding:7px 5px;font-weight:800} td{padding:5px;border-bottom:1px solid #eef2f6}
+        tr:nth-child(even) td{background:#f7fbfe} .c{text-align:center} .r{text-align:right;font-weight:700} .b{font-weight:900} .ot{color:#0E76AC;font-weight:800}
+        .pill{font-size:11px;font-weight:800;border-radius:999px;padding:2px 8px;display:inline-block}
+        .note{color:#64748b;font-size:11px}
+        .foot{margin-top:24px;display:flex;justify-content:space-between;color:#47759c;font-size:12px;font-weight:700}
         @page{size:A4;margin:12mm}
-      </style></head><body>
-      <h1>${t("تقرير الحضور الشهري", "Monthly Attendance Report")} — ADRENALINE</h1>
-      <div class="sub">${t("الشهر", "Month")}: ${esc(month)} · ${t("عدد الموظفين", "Employees")}: ${sorted.length}</div>
-      <div class="kpis">
-        <div class="kpi"><div class="v" style="color:#10b981">${tot.present}</div><div class="l">${t("إجمالي أيام الحضور", "Total present days")}</div></div>
-        <div class="kpi"><div class="v" style="color:#ef4444">${tot.absent}</div><div class="l">${t("إجمالي الغياب", "Total absences")}</div></div>
-        <div class="kpi"><div class="v" style="color:#f59e0b">${tot.late}</div><div class="l">${t("مرات التأخير", "Late count")}</div></div>
-        <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(tot.ot)}</div><div class="l">${t("إجمالي الأوفرتايم (ساعة)", "Total overtime (hrs)")}</div></div>
-      </div>
-      <table><thead><tr><th>#</th><th>${t("الموظف", "Employee")}</th><th>${t("أيام الحضور", "Present days")}</th><th>${t("الغياب", "Absence")}</th><th>${t("التأخير", "Late")}</th><th>${t("الأوفرتايم (س)", "Overtime (h)")}</th></tr></thead>
-      <tbody>${rows}</tbody></table>
+      </style>`;
+    let body = "";
+    if (rScope === "one") {
+      const emp = reportData.employees[0];
+      const days = reportData.days as any[];
+      const rowsHtml = days.map((r: any) => {
+        const si = stInfo(r.status);
+        return `<tr>
+          <td class="c" dir="ltr">${esc(r.date)}</td><td class="c">${dowName(r.date)}</td>
+          <td class="c"><span class="pill" style="background:${si.dot}22;color:${si.dot}">${statusLabel(r.status)}${r.late ? " • " + t("متأخر", "Late") : ""}</span></td>
+          <td class="c" dir="ltr">${esc(r.checkIn || "—")}</td><td class="c" dir="ltr">${esc(r.checkOut || "—")}</td>
+          <td class="c b">${r.workedHours != null ? r.workedHours : "—"}</td><td class="c ot">${r.otHours ? Math.round(r.otHours * 10) / 10 : "—"}</td>
+          <td class="r note">${esc(r.note || "")}</td>
+        </tr>`;
+      }).join("");
+      body = `<h1>${t("كشف حضور موظف", "Employee Attendance Sheet")} — ADRENALINE</h1>
+        <div class="sub">${esc(emp.name)}${emp.designation ? " · " + esc(emp.designation) : ""} · ${t("الفترة", "Period")}: ${esc(periodLabel)}</div>
+        <div class="kpis">
+          <div class="kpi"><div class="v" style="color:#10b981">${emp.present}</div><div class="l">${t("أيام الحضور", "Present")}</div></div>
+          <div class="kpi"><div class="v" style="color:#ef4444">${emp.absent}</div><div class="l">${t("أيام الغياب", "Absent")}</div></div>
+          <div class="kpi"><div class="v" style="color:#3cc4f0">${emp.leave}</div><div class="l">${t("إجازة", "Leave")}</div></div>
+          <div class="kpi"><div class="v" style="color:#f59e0b">${emp.late}</div><div class="l">${t("مرات التأخير", "Late")}</div></div>
+          <div class="kpi"><div class="v" style="color:#0f1516">${Math.round((emp.workedHours || 0) * 10) / 10}</div><div class="l">${t("إجمالي الساعات", "Total hrs")}</div></div>
+          <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round((emp.otHours || 0) * 10) / 10}</div><div class="l">${t("الأوفرتايم (س)", "Overtime")}</div></div>
+        </div>
+        <table><thead><tr>
+          <th>${t("التاريخ", "Date")}</th><th>${t("اليوم", "Day")}</th><th>${t("الحالة", "Status")}</th>
+          <th>${t("دخول", "In")}</th><th>${t("خروج", "Out")}</th><th>${t("ساعات", "Hrs")}</th><th>${t("أوفر", "OT")}</th><th>${t("ملاحظة", "Note")}</th>
+        </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+    } else {
+      const list = reportData.employees as any[];
+      const tot = {
+        present: list.reduce((s, e) => s + (e.present || 0), 0),
+        absent: list.reduce((s, e) => s + (e.absent || 0), 0),
+        late: list.reduce((s, e) => s + (e.late || 0), 0),
+        ot: list.reduce((s, e) => s + (e.otHours || 0), 0),
+      };
+      const rowsHtml = list.map((e, i) => `<tr>
+        <td class="c">${i + 1}</td><td class="r">${esc(e.name)}${e.designation ? `<div class="note">${esc(e.designation)}</div>` : ""}</td>
+        <td class="c b">${e.workedDays ?? 0}</td><td class="c">${e.absent || 0}</td><td class="c">${e.leave || 0}</td>
+        <td class="c">${e.late || 0}</td><td class="c ot">${Math.round((e.otHours || 0) * 10) / 10}</td>
+      </tr>`).join("");
+      body = `<h1>${t("تقرير الحضور", "Attendance Report")} — ADRENALINE</h1>
+        <div class="sub">${t("الفترة", "Period")}: ${esc(periodLabel)} · ${t("عدد الموظفين", "Employees")}: ${list.length}</div>
+        <div class="kpis">
+          <div class="kpi"><div class="v" style="color:#10b981">${tot.present}</div><div class="l">${t("إجمالي أيام الحضور", "Total present days")}</div></div>
+          <div class="kpi"><div class="v" style="color:#ef4444">${tot.absent}</div><div class="l">${t("إجمالي الغياب", "Total absences")}</div></div>
+          <div class="kpi"><div class="v" style="color:#f59e0b">${tot.late}</div><div class="l">${t("مرات التأخير", "Late count")}</div></div>
+          <div class="kpi"><div class="v" style="color:#0E76AC">${Math.round(tot.ot)}</div><div class="l">${t("إجمالي الأوفرتايم (ساعة)", "Total overtime (hrs)")}</div></div>
+        </div>
+        <table><thead><tr><th>#</th><th>${t("الموظف", "Employee")}</th><th>${t("أيام الحضور", "Present days")}</th><th>${t("الغياب", "Absence")}</th><th>${t("إجازة", "Leave")}</th><th>${t("التأخير", "Late")}</th><th>${t("الأوفرتايم (س)", "Overtime (h)")}</th></tr></thead>
+        <tbody>${rowsHtml}</tbody></table>`;
+    }
+    const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${t("تقرير الحضور", "Attendance")} ${esc(periodLabel)}</title>${css}</head><body>${body}
+      <div class="foot"><span>${t("طُبع في", "Printed")}: ${new Date().toLocaleDateString()}</span>${rScope === "one" ? `<span>${t("التوقيع", "Signature")}: ____________</span>` : ""}</div>
       </body></html>`;
     openPrintDoc(html, {
-      fileName: `${t("تقرير الحضور", "Attendance report")} - ADRENALINE - ${month}`,
-      isRtl,
-      width: 900,
+      fileName: `${t("تقرير الحضور", "Attendance")} - ${rScope === "one" ? rName : t("الكل", "All")} - ${periodLabel}`,
+      isRtl, width: 900,
     });
   };
 
@@ -447,8 +507,8 @@ export default function Attendance() {
           <Label className="text-xs text-gray-500">{t("شهر الملخّص", "Summary month")}</Label>
           <Input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className="h-10 w-full sm:w-[150px]" />
         </div>
-        <Button onClick={handlePrintMonthly} variant="outline" className="h-10 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]">
-          <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقرير شهري", "Monthly Report")}
+        <Button onClick={() => setReportOpen(true)} variant="outline" className="h-10 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]">
+          <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقارير وطباعة", "Reports & Print")}
         </Button>
         {isAdmin && (
           <Button onClick={runSync} className="h-10 rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
@@ -633,6 +693,81 @@ export default function Attendance() {
               </div>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Reports & Print dialog ===== */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent className="max-w-md" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Printer className="h-5 w-5 text-[#0E76AC]" /> {t("تقارير الحضور والطباعة", "Attendance Reports & Print")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            {/* النطاق */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500">{t("النطاق", "Scope")}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {([["all", t("كل الموظفين", "All employees")], ["one", t("موظف واحد", "One employee")]] as const).map(([k, lbl]) => (
+                  <button key={k} type="button" onClick={() => setRScope(k as any)}
+                    className={cn("h-10 rounded-xl text-sm font-bold border transition-all", rScope === k ? "bg-[#0E76AC] text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-600")}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {rScope === "one" && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">{t("اختر الموظف", "Choose employee")}</Label>
+                <Input list="report-emps" value={rName} onChange={(e) => setRName(e.target.value)} placeholder={t("اكتب أو اختر", "Type or pick")} />
+                <datalist id="report-emps">{emps.map((x) => <option key={x.name} value={x.name} />)}</datalist>
+              </div>
+            )}
+
+            {/* الفترة */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-gray-500">{t("الفترة", "Period")}</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {([["month", t("شهر كامل", "Full month")], ["range", t("فترة مخصّصة", "Custom range")]] as const).map(([k, lbl]) => (
+                  <button key={k} type="button" onClick={() => setRPeriod(k as any)}
+                    className={cn("h-10 rounded-xl text-sm font-bold border transition-all", rPeriod === k ? "bg-[#0E76AC] text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-600")}>
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {rPeriod === "month" ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-gray-500">{t("الشهر", "Month")}</Label>
+                <Input type="month" value={rMonth} onChange={(e) => setRMonth(e.target.value)} className="h-10" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5"><Label className="text-xs text-gray-500">{t("من", "From")}</Label><Input type="date" value={rFromD} onChange={(e) => setRFromD(e.target.value)} className="h-10" dir="ltr" /></div>
+                <div className="space-y-1.5"><Label className="text-xs text-gray-500">{t("إلى", "To")}</Label><Input type="date" value={rToD} onChange={(e) => setRToD(e.target.value)} className="h-10" dir="ltr" /></div>
+              </div>
+            )}
+
+            {/* معاينة */}
+            <div className="rounded-xl bg-[#f4f8fb] px-3 py-2.5 text-xs font-bold text-[#47759c]" style={{ border: "1px solid #e8eef4" }}>
+              {!validRange
+                ? <span className="text-red-500">{t("تأكّد أن «من» قبل «إلى»", "Ensure From is before To")}</span>
+                : reportData === undefined
+                  ? t("جاري التحميل…", "Loading…")
+                  : rScope === "one"
+                    ? (rName
+                        ? t(`${reportData?.days?.length || 0} يوم مسجّل لـ ${rName}`, `${reportData?.days?.length || 0} days for ${rName}`)
+                        : t("اختر موظفًا", "Pick an employee"))
+                    : t(`${reportData?.employees?.length || 0} موظف في الفترة`, `${reportData?.employees?.length || 0} employees in period`)}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={handlePrintReport}
+              disabled={!validRange || reportData === undefined || (rScope === "one" && !rName)}
+              className="rounded-xl font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("طباعة / PDF", "Print / PDF")}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
