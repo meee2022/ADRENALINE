@@ -177,11 +177,11 @@ export default function PublicPlansNew() {
                         /* ✅ باقة مخصّصة: بدل الأسعار الجاهزة — رسالة تواصل مع الأخصائية */
                         <div className="py-2">
                           <div className="px-3 py-3 rounded-xl text-center" style={{ background: "#3cc4f00d", border: "1px dashed #3cc4f04d" }}>
-                            <div className="text-sm font-black text-[#0E76AC] mb-1">{isRtl ? "باقة مخصّصة حسب هدفك" : "Tailored to your goal"}</div>
+                            <div className="text-sm font-black text-[#0E76AC] mb-1">{isRtl ? "باقتك على مزاجك 🌟" : "Your plan, your way 🌟"}</div>
                             <div className="text-xs font-bold text-[#47759C] leading-relaxed">
                               {isRtl
-                                ? "الكميات والوجبات تُحدَّد مع الأخصائية حسب احتياجك — تواصل معنا لتفصيل باقتك وسعرها."
-                                : "Meals & quantities are set with our nutritionist based on your needs — contact us to tailor your plan & price."}
+                                ? "احكيلنا هدفك، وأخصائية التغذية تظبّطلك وجباتك وكمياتك والسعر اللي يناسبك بالظبط."
+                                : "Tell us your goal, and our nutritionist tailors your meals, portions and a price that fits you."}
                             </div>
                           </div>
                         </div>
