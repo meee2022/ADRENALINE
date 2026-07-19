@@ -14,7 +14,7 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Save, UtensilsCrossed, Check, Copy } from "lucide-react";
+import { Search, Save, UtensilsCrossed, Check, Copy, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Slot = {
@@ -306,6 +306,25 @@ export default function Customized() {
       },
     }));
 
+  // ➕ إضافة خانة وجبة/سناك **زيادة** لهذا اليوم (فوق عدد الاشتراك) — للأخصائية.
+  const addSlot = (type: "MAIN" | "SNACK") =>
+    setWeekSlots((prev) => {
+      const cur = prev[activeWeek]?.[activeDay] || [];
+      const n = cur.filter((s) => s.type === type).length + 1;
+      const newSlot: Slot = type === "MAIN"
+        ? { key: `EXTRA-MEAL-${cur.length}`, label: `${t("وجبة زيادة", "Extra meal")} ${n}`, type: "MAIN", proteinG: 150, carbName: t("رز أبيض", "White rice"), carbG: 150 }
+        : { key: `EXTRA-SNACK-${cur.length}`, label: `${t("سناك زيادة", "Extra snack")} ${n}`, type: "SNACK" };
+      return { ...prev, [activeWeek]: { ...(prev[activeWeek] || {}), [activeDay]: [...cur, newSlot] } };
+    });
+  const removeSlot = (i: number) =>
+    setWeekSlots((prev) => ({
+      ...prev,
+      [activeWeek]: {
+        ...(prev[activeWeek] || {}),
+        [activeDay]: (prev[activeWeek]?.[activeDay] || []).filter((_, idx) => idx !== i),
+      },
+    }));
+
   // نسخ وجبات اليوم الحالي لكل أيام هذا الأسبوع (لعميل يأكل نفس الشيء كل يوم في الأسبوع)
   const applyToAllDays = async () => {
     if (!(await confirmDialog({ message: t("نسخ وجبات هذا اليوم لكل أيام هذا الأسبوع؟", "Copy this day's meals to all days of this week?") }))) return;
@@ -481,7 +500,7 @@ export default function Customized() {
                 <div key={s.key} className="rounded-2xl border border-slate-100 bg-white p-3.5">
                   <div className="flex items-center justify-between mb-2.5">
                     <span className="font-black text-[#0E2A4A]">{s.label}</span>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 items-center">
                       {(["MAIN", "SNACK", "OFF"] as const).map((tp) => (
                         <button key={tp} onClick={() => patchSlot(i, { type: tp })}
                           className={cn("text-[10px] font-black px-2 py-1 rounded-lg border",
@@ -489,6 +508,11 @@ export default function Customized() {
                           {tp === "MAIN" ? t("رئيسية", "Main") : tp === "SNACK" ? t("سناك", "Snack") : t("موقوفة", "Off")}
                         </button>
                       ))}
+                      {/* حذف الخانة (للزيادات أو أي خانة) */}
+                      <button onClick={() => removeSlot(i)} title={t("حذف الخانة", "Remove slot")}
+                        className="h-6 w-6 grid place-items-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
 
@@ -563,6 +587,18 @@ export default function Customized() {
                   )}
                 </div>
               ))}
+
+              {/* ➕ إضافة وجبة/سناك زيادة فوق عدد الاشتراك (لهذا اليوم) */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button onClick={() => addSlot("MAIN")}
+                  className="h-10 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 border-dashed border-[#0E76AC]/40 text-[#0E76AC] hover:bg-[#0E76AC]/5 transition-colors">
+                  <Plus className="h-4 w-4" /> {t("أضف وجبة زيادة", "Add extra meal")}
+                </button>
+                <button onClick={() => addSlot("SNACK")}
+                  className="h-10 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 border-2 border-dashed border-emerald-500/40 text-emerald-600 hover:bg-emerald-50 transition-colors">
+                  <Plus className="h-4 w-4" /> {t("أضف سناك زيادة", "Add extra snack")}
+                </button>
+              </div>
 
               {selected.snacksPerDay >= 0 && (
                 <p className="text-[11px] text-slate-400 text-center pt-1">
