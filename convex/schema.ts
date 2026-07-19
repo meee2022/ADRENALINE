@@ -1034,12 +1034,15 @@ export default defineSchema({
     carbs: v.optional(v.number()),
     protein: v.optional(v.number()),
     fats: v.optional(v.number()),
+    // ✅ ربط بصنف المنيو الأونلاين (POS) — لتحديث السعر/السعرات عند إعادة الاستيراد بدون تكرار
+    publicMealId: v.optional(v.id("publicMeals")),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   })
     .index("by_sequence", ["sequence"])
     .index("by_barcode", ["barcode"])
+    .index("by_publicMeal", ["publicMealId"])
     .index("by_active", ["isActive"]),
 
   // ✅ الجديد: طلبية جم يومية (رأس الفاتورة).

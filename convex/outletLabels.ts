@@ -101,6 +101,59 @@ export const seed = mutation({
   },
 });
 
+/** 🔗 استيراد أصناف الأونلاين (POS) للكتالوج: يجيب الأصناف المسعّرة في الكاشير
+ *   (posItems.posPrice) مع بيانات publicMeals (سعر/سعرات/ماكروز)، ويربطها بـpublicMealId.
+ *   - موجود مربوط → يحدّث السعر/السعرات/الاسم (الباركود يفضل ثابت).
+ *   - غير مربوط لكن نفس الاسم → يتبنّاه (يربطه) ويحدّثه بدل ما يعمل تكرار.
+ *   - جديد → باركود ثابت جديد. */
+export const importFromPos = mutation({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const now = Date.now();
+    const metas = await ctx.db.query("posItems").collect();
+    const priced = metas.filter((m: any) => m.posPrice != null && Number.isFinite(Number(m.posPrice)));
+
+    const all = await ctx.db.query("outletProductLabels").collect();
+    const byMeal = new Map<string, any>();
+    const byName = new Map<string, any>();
+    const nm = (s: string) => String(s || "").trim().toLowerCase();
+    let maxSeq = 0;
+    for (const r of all) {
+      maxSeq = Math.max(maxSeq, Number(r.sequence) || 0);
+      if (r.publicMealId) byMeal.set(String(r.publicMealId), r);
+      else byName.set(nm(r.nameEn), r);   // غير مربوط — قابل للتبنّي
+    }
+
+    let added = 0, updated = 0, skipped = 0;
+    for (const meta of priced) {
+      const meal: any = await ctx.db.get(meta.mealId);
+      if (!meal || !meal.isActive) { skipped++; continue; }
+      const nameEn = (meta.displayName || meal.nameEn || meal.nameAr || "").trim();
+      if (!nameEn) { skipped++; continue; }
+      const data = {
+        nameEn,
+        price: Number(meta.posPrice),
+        calories: meal.calories != null ? Number(meal.calories) : undefined,
+        carbs: meal.carbs != null ? Number(meal.carbs) : undefined,
+        protein: meal.protein != null ? Number(meal.protein) : undefined,
+        fats: meal.fats != null ? Number(meal.fats) : undefined,
+        publicMealId: meal._id,
+        isActive: true,
+        updatedAt: now,
+      };
+      const linked = byMeal.get(String(meal._id));
+      if (linked) { await ctx.db.patch(linked._id, data); updated++; continue; }
+      const adoptable = byName.get(nm(nameEn));
+      if (adoptable) { await ctx.db.patch(adoptable._id, data); byName.delete(nm(nameEn)); updated++; continue; }
+      maxSeq += 1;
+      await ctx.db.insert("outletProductLabels", { ...data, sequence: maxSeq, barcode: String(100000 + maxSeq), createdAt: now });
+      added++;
+    }
+    return { added, updated, skipped, total: priced.length };
+  },
+});
+
 export const update = mutation({
   args: {
     id: v.id("outletProductLabels"),

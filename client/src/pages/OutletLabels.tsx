@@ -6,7 +6,7 @@ import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Search, Printer, Plus, Minus, Trash2, Barcode, AlertTriangle, Pencil, X, Save } from "lucide-react";
-import { confirmDialog } from "@/lib/dialogs";
+import { confirmDialog, alertDialog } from "@/lib/dialogs";
 
 type LabelRow = {
   _id: string;
@@ -77,11 +77,26 @@ export default function OutletLabels() {
   const update = useMutation(api.outletLabels.update);
   const create = useMutation(api.outletLabels.create);
   const remove = useMutation(api.outletLabels.remove);
+  const importFromPos = useMutation(api.outletLabels.importFromPos);
+  const [importing, setImporting] = useState(false);
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<LabelRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const runImportOnline = async () => {
+    if (importing) return;
+    setImporting(true);
+    try {
+      const r: any = await importFromPos({ sessionToken });
+      void alertDialog({ message: isRtl
+        ? `تم الاستيراد من الأونلاين ✓\nجديد: ${r.added} · مُحدَّث: ${r.updated}${r.skipped ? ` · متخطّى: ${r.skipped}` : ""} (إجمالي أصناف POS المسعّرة: ${r.total})`
+        : `Imported from online ✓\nNew: ${r.added} · Updated: ${r.updated}${r.skipped ? ` · Skipped: ${r.skipped}` : ""} (priced POS items: ${r.total})` });
+    } catch (e: any) {
+      void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "فشل الاستيراد" : "Import failed") });
+    } finally { setImporting(false); }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -180,6 +195,7 @@ export default function OutletLabels() {
           <section className="rounded-lg border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,55,85,.08)] overflow-hidden">
             <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex flex-wrap items-center gap-3">
               <div className="relative flex-1"><Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isRtl ? "ابحث بالاسم أو رقم الباركود..." : "Search name or barcode..."} className="h-11 ps-10 bg-white" /></div>
+              <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>
               <button onClick={() => setCreating(true)} className="h-11 px-4 rounded-md bg-[#0E76AC] text-white font-black flex items-center gap-2 shadow-sm"><Plus className="h-4 w-4" />{isRtl ? "صنف استيكر جديد" : "New label product"}</button>
             </div>
             <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
