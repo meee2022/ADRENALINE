@@ -1331,9 +1331,16 @@ export default function Customers() {
                             const start = form.getValues("startDate");
                             if (start) form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
                             form.setValue("durationWeeks", weeks, { shouldDirty: true });
-                            // ✅ الهدف/البرنامج يُشتق من نوع الباقة (تنحيف/لياقة/تضخيم)
-                            const goal = planGoal(p);
-                            if (goal) form.setValue("goals", goal, { shouldDirty: true });
+                            // ✅ الباقة المخصّصة (بلا خيارات): الهدف مخصّص والأرقام تُدخل يدويًا
+                            const isCustomP = !p.options || p.options.length === 0;
+                            if (isCustomP) {
+                              form.setValue("goals", "CUSTOMIZED", { shouldDirty: true });
+                              form.setValue("packageLabel", "الباقة المخصّصة", { shouldDirty: true });
+                            } else {
+                              // ✅ الهدف/البرنامج يُشتق من نوع الباقة (تنحيف/لياقة/تضخيم)
+                              const goal = planGoal(p);
+                              if (goal) form.setValue("goals", goal, { shouldDirty: true });
+                            }
                           }
                           // لو الباقة لها خيار واحد، طبّقه فوراً (يملأ الوجبات والسعر أيضاً)
                           if (p?.options?.length === 1) {
@@ -1361,33 +1368,40 @@ export default function Customers() {
 
                     <div className="space-y-2">
                       <Label>{isRtl ? "الوجبات والسعر" : "Meals & price"}</Label>
-                      <Select
-                        value={optionIdx}
-                        disabled={!selectedPlan}
-                        onValueChange={(v) => {
-                          setOptionIdx(v);
-                          applyPlanOption(selectedPlan, Number(v));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue
-                            placeholder={
-                              selectedPlan
-                                ? isRtl ? "اختر عدد الوجبات" : "Pick meals"
-                                : isRtl ? "اختر الباقة أولاً" : "Pick a plan first"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {planOptions.map((o: any, i: number) => (
-                            <SelectItem key={i} value={String(i)}>
-                              {isRtl
-                                ? `${o.mealsCount} وجبات + ${o.snacksCount} سناك — ${o.priceQAR} ر.ق`
-                                : `${o.mealsCount} meals + ${o.snacksCount} snacks — ${o.priceQAR} QAR`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {selectedPlan && planOptions.length === 0 ? (
+                        /* ✅ باقة مخصّصة بلا خيارات جاهزة — الأرقام تُدخل يدويًا بالأسفل */
+                        <div className="h-10 rounded-md border border-dashed border-[#3cc4f0] bg-[#eef7fb] px-3 flex items-center text-xs font-bold text-[#0E76AC]">
+                          {isRtl ? "باقة مخصّصة — حدّد الوجبات والسناك والسعر يدويًا بالأسفل" : "Custom plan — set meals, snacks & price manually below"}
+                        </div>
+                      ) : (
+                        <Select
+                          value={optionIdx}
+                          disabled={!selectedPlan}
+                          onValueChange={(v) => {
+                            setOptionIdx(v);
+                            applyPlanOption(selectedPlan, Number(v));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                selectedPlan
+                                  ? isRtl ? "اختر عدد الوجبات" : "Pick meals"
+                                  : isRtl ? "اختر الباقة أولاً" : "Pick a plan first"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {planOptions.map((o: any, i: number) => (
+                              <SelectItem key={i} value={String(i)}>
+                                {isRtl
+                                  ? `${o.mealsCount} وجبات + ${o.snacksCount} سناك — ${o.priceQAR} ر.ق`
+                                  : `${o.mealsCount} meals + ${o.snacksCount} snacks — ${o.priceQAR} QAR`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                   </div>
 
