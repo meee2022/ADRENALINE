@@ -269,8 +269,8 @@ export default function Customers() {
   const [pauseSection, setPauseSection] = useState<"pause" | "skip">("pause");
   const [printTarget, setPrintTarget] = useState<any | null>(null);
 
-  // ✅ باقات الموقع — نفسها اللي بيشوفها العميل. الاختيار منها يملأ الوجبات والسعر والمدة.
-  const sitePlans = (useQuery(api.publicPlans.list, {}) as any[] | undefined) ?? [];
+  // ✅ باقات الموقع النشطة فقط — المعطّلة (باقات قديمة) لا تظهر في اختيار المشترك.
+  const sitePlans = ((useQuery(api.publicPlans.list, {}) as any[] | undefined) ?? []).filter((p: any) => p.isActive !== false);
   const [planId, setPlanId] = useState<string>("");
   const [optionIdx, setOptionIdx] = useState<string>("");
   const createCustomer = useCreateCustomer();

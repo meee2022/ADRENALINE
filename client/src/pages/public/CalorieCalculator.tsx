@@ -69,7 +69,7 @@ export default function CalorieCalculator() {
   const [activity, setActivity] = useState(1.55);
   const [goal, setGoal] = useState<Goal>("maintain");
   const [pace, setPace] = useState(0.5);
-  const restaurantPlans = useQuery(api.publicPlans.list) || [];
+  const restaurantPlans = (useQuery(api.publicPlans.list) || []).filter((p: any) => p.isActive !== false);
 
   const result = useMemo(() => {
     const safeAge = clamp(age || 0, 14, 90);
