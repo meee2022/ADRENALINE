@@ -272,6 +272,14 @@ export default defineSchema({
   })
     .index("by_month", ["month"]),
 
+  // ===== ساعات الدوام القياسية لكل موظف (يُحسب عليها الأوفرتايم) =====
+  //   الأوفرتايم اليومي = max(0, ساعات العمل − standardHours). الافتراضي 9 لو مفيش صف.
+  employeeWorkSettings: defineTable({
+    name: v.string(),
+    standardHours: v.number(),   // 8 / 9 / 11 ...
+    updatedAt: v.number(),
+  }).index("by_name", ["name"]),
+
   // ===== Password reset codes (OTP via email) =====
   passwordResetCodes: defineTable({
     email: v.string(),
@@ -1134,6 +1142,8 @@ export default defineSchema({
       inclusive: v.boolean(),
       label: v.optional(v.string()), // "VAT" أو "ضريبة"
     })),
+    // ✅ معامل الأوفرتايم في المطعم (ساعة الأوفرتايم = المعدّل الساعي × هذا المعامل). افتراضي 1.5
+    attendanceOtRate: v.optional(v.number()),
     // ✅ تقرير POS اليومي بالإيميل (Z-report): مفعّل + مستقبلين + وقت الإرسال (HH:MM بتوقيت قطر)
     posDailyReport: v.optional(v.object({
       enabled: v.boolean(),

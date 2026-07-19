@@ -3,7 +3,7 @@
  * @description الحضور اليومي للموظفين — يدوي + إدخال جماعي + استيراد جهاز البصمة + ترحيل للرواتب.
  * @convex convex/attendance.ts
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { ConvexHttpClient } from "convex/browser";
 import { makeFunctionReference } from "convex/server";
@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { CalendarCheck, Plus, Trash2, Users, Fingerprint, ArrowRightLeft, Clock, Upload, Printer } from "lucide-react";
+import { CalendarCheck, Plus, Trash2, Users, Fingerprint, ArrowRightLeft, Clock, Upload, Printer, Timer, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 // ✅ xlsx بيتحمّل lazy وقت الحاجة فقط (~870KB) — يُوفّر ~40% من التحميل الأولي
 
@@ -145,6 +145,45 @@ export default function Attendance() {
     api.attendance.rangeReport,
     reportOpen && validRange ? { from: effFrom, to: effTo, name: rScope === "one" && rName ? rName : undefined, sessionToken } : "skip",
   ) as any;
+
+  // ---- إعدادات ساعات الدوام لكل موظف + معامل الأوفرتايم ----
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const workCfg = useQuery(api.attendance.workHoursSettings, hoursOpen ? { sessionToken } : "skip") as any;
+  const setWorkHoursM = useMutation(api.attendance.setWorkHoursBulk);
+  const recomputeM = useMutation(api.attendance.recomputeMonthOt);
+  const [wHours, setWHours] = useState<Record<string, string>>({});
+  const [wOtRate, setWOtRate] = useState("1.5");
+  const [wBusy, setWBusy] = useState(false);
+  const wLoaded = useRef(false);
+  useEffect(() => {
+    if (workCfg && !wLoaded.current) {
+      wLoaded.current = true;
+      const init: Record<string, string> = {};
+      for (const e of workCfg.employees) init[e.name] = String(e.standardHours);
+      setWHours(init);
+      setWOtRate(String(workCfg.otRate));
+    }
+  }, [workCfg]);
+  const setAllHours = (h: number) => setWHours((prev) => {
+    const next: Record<string, string> = {}; for (const k of Object.keys(prev)) next[k] = String(h); return next;
+  });
+  const saveWorkHours = async (recompute: boolean) => {
+    setWBusy(true);
+    try {
+      const rows = Object.entries(wHours)
+        .map(([name, v]) => ({ name, standardHours: Number(v) }))
+        .filter((r) => Number.isFinite(r.standardHours) && r.standardHours > 0);
+      await setWorkHoursM({ rows, otRate: Number(wOtRate) || undefined, sessionToken });
+      if (recompute) {
+        const res: any = await recomputeM({ month, sessionToken });
+        void alertDialog({ message: t(`تم الحفظ وإعادة حساب ${res.updated} سجل في شهر ${month}`, `Saved & recomputed ${res.updated} records for ${month}`) });
+      } else {
+        void alertDialog({ message: t("تم حفظ ساعات الدوام. لتطبيقها على السجلات السابقة اضغط «حفظ + إعادة حساب».", "Work hours saved. Use 'Save + Recompute' to apply to existing records.") });
+      }
+      setHoursOpen(false); wLoaded.current = false;
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الحفظ", "Save failed") }); }
+    finally { setWBusy(false); }
+  };
   const saveOtApproval = async (name: string, raw: string) => {
     const v = raw.trim() === "" ? undefined : Number(raw);
     if (raw.trim() !== "" && (isNaN(v as number) || (v as number) < 0)) { void alertDialog({ message: t("رقم غير صحيح", "Invalid number") }); return; }
@@ -511,6 +550,11 @@ export default function Attendance() {
           <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("تقارير وطباعة", "Reports & Print")}
         </Button>
         {isAdmin && (
+          <Button onClick={() => { wLoaded.current = false; setHoursOpen(true); }} variant="outline" className="h-10 rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]">
+            <Timer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("ساعات الدوام", "Work Hours")}
+          </Button>
+        )}
+        {isAdmin && (
           <Button onClick={runSync} className="h-10 rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
             <ArrowRightLeft className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("ترحيل للرواتب", "Sync to Payroll")}
           </Button>
@@ -766,6 +810,70 @@ export default function Attendance() {
               disabled={!validRange || reportData === undefined || (rScope === "one" && !rName)}
               className="rounded-xl font-bold text-white disabled:opacity-40" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
               <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("طباعة / PDF", "Print / PDF")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== Work hours settings dialog ===== */}
+      <Dialog open={hoursOpen} onOpenChange={(o) => { setHoursOpen(o); if (!o) wLoaded.current = false; }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Timer className="h-5 w-5 text-[#0E76AC]" /> {t("ساعات الدوام والأوفرتايم", "Work Hours & Overtime")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            {t("حدّد ساعات الدوام القياسية لكل موظف — الأوفرتايم = ساعات العمل الفعلية ناقص ساعاته. ومعامل الأوفرتايم للمطعم كله (ساعة الأوفرتايم = المعدّل الساعي × المعامل).",
+               "Set each employee's standard hours — overtime = actual worked hours minus their standard. And the restaurant-wide overtime multiplier.")}
+          </p>
+
+          {/* معامل الأوفرتايم + تعيين سريع للكل */}
+          <div className="flex flex-wrap items-end gap-3 py-2 border-y border-gray-100">
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">{t("معامل الأوفرتايم (المطعم)", "OT multiplier")}</Label>
+              <Input type="number" step="0.25" value={wOtRate} onChange={(e) => setWOtRate(e.target.value)} className="h-9 w-24" dir="ltr" />
+            </div>
+            <div className="flex-1" />
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">{t("تعيين الكل على", "Set all to")}</Label>
+              <div className="flex gap-1">
+                {[8, 9, 11].map((h) => (
+                  <button key={h} onClick={() => setAllHours(h)} className="h-9 px-3 rounded-lg text-sm font-bold bg-[#e8f8fd] text-[#0E76AC] border border-[#cfe7f3] hover:bg-[#d7f0fa]">{h}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* قائمة الموظفين */}
+          <div className="overflow-y-auto flex-1 -mx-1 px-1 mt-1">
+            {!workCfg ? (
+              <p className="text-sm text-gray-400 py-6 text-center">{t("جاري التحميل…", "Loading…")}</p>
+            ) : workCfg.employees.length === 0 ? (
+              <p className="text-sm text-gray-500 py-6 text-center">{t("لا يوجد موظفون في كشف الرواتب.", "No employees in payroll.")}</p>
+            ) : workCfg.employees.map((e: any) => (
+              <div key={e.name} className="flex items-center gap-2 py-1.5 border-b border-gray-50">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-bold text-[#0f1516] truncate">{e.name}</div>
+                  {e.designation && <div className="text-[10px] text-gray-400 truncate">{e.designation}</div>}
+                </div>
+                <div className="flex gap-1">
+                  {[8, 9, 11].map((h) => (
+                    <button key={h} onClick={() => setWHours((p) => ({ ...p, [e.name]: String(h) }))}
+                      className={cn("h-8 w-8 rounded-lg text-xs font-bold border", Number(wHours[e.name]) === h ? "bg-[#0E76AC] text-white border-transparent" : "bg-gray-50 border-gray-200 text-gray-500")}>{h}</button>
+                  ))}
+                </div>
+                <Input type="number" step="0.5" value={wHours[e.name] ?? ""} onChange={(ev) => setWHours((p) => ({ ...p, [e.name]: ev.target.value }))}
+                  className="h-8 w-16 text-sm text-center" dir="ltr" />
+                <span className="text-[10px] text-gray-400 w-8">{t("ساعة", "hrs")}</span>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button onClick={() => saveWorkHours(false)} disabled={wBusy || !workCfg} variant="outline" className="rounded-xl font-bold border-[#3cc4f0] text-[#0E76AC]">
+              {t("حفظ", "Save")}
+            </Button>
+            <Button onClick={() => saveWorkHours(true)} disabled={wBusy || !workCfg} className="rounded-xl font-bold text-white" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
+              <RefreshCw className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2", wBusy && "animate-spin")} /> {t(`حفظ + إعادة حساب ${month}`, `Save + Recompute ${month}`)}
             </Button>
           </DialogFooter>
         </DialogContent>
