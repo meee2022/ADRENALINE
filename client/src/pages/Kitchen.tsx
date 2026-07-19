@@ -12,6 +12,7 @@ import {
   useMenuItems,
   useCategories,
   useModifiers,
+  useStickers,
 } from "@/lib/api";
 
 import { format } from "date-fns";
@@ -523,6 +524,18 @@ export default function Kitchen() {
     return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));
   }, [customizedByPerson, customized]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ✅ رقم البوكس = **نفس رقم استيكر البوكس بالضبط** (المصدر الوحيد convex/stickers)
+  //    حتى يطابق الكشفُ الستيكرَ الفيزيائي، فيعرف المطبخ بوكس كل مشترك. deliveryTime
+  //    "ALL" يرقّم كل عملاء اليوم أبجدياً 1..N (نفس ما تُطبع به الستيكرات للكل).
+  const stickerData = useStickers({ date: formattedDate, deliveryTime: "ALL", lang: isRtl ? "ar" : "en" }) as any;
+  const boxNoByCustomerId = useMemo(() => {
+    const m = new Map<string, number>();
+    (stickerData?.boxStickers || []).forEach((b: any) => {
+      if (b?.customerId) m.set(String(b.customerId), Number(b.slNo));
+    });
+    return m;
+  }, [stickerData]);
+
   /**
    * ✅ صفوف كشف المطبخ (مصفوفة زي الإكسيل): صف لكل عميل، وجباته في أعمدة
    *    (فطور/سناك1/غداء/سناك2/عشاء/وجبة4) حسب تصنيف كل صنف.
@@ -540,7 +553,8 @@ export default function Kitchen() {
     };
 
     const rows: KitchenPerson[] = [];
-    let no = 0;
+    // من ليس له رقم بوكس من الستيكرات (نادر: مخصّص/سجل قديم) يأخذ رقماً بعد آخر رقم بوكس.
+    let fallbackNo = boxNoByCustomerId.size;
 
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
@@ -570,7 +584,7 @@ export default function Kitchen() {
       const anyMeal = slots.breakfast.length + slots.snack.length + slots.lunch.length + slots.dinner.length + slots.other.length;
       if (!anyMeal) return;
 
-      no += 1;
+      const no = boxNoByCustomerId.get(String(plan.customerId)) ?? (++fallbackNo);
       rows.push({
         no,
         phone: customer?.phone || plan.customerPhone || "",
@@ -592,8 +606,10 @@ export default function Kitchen() {
       });
     });
 
+    // ترتيب الكشف حسب رقم البوكس (نفس ترتيب الستيكرات) — أوضح للمطبخ.
+    rows.sort((a, b) => a.no - b.no);
     return rows;
-  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl, boxNoByCustomerId]);
 
   const [exporting, setExporting] = useState<null | "xlsx" | "pdf">(null);
   const exportSheet = async (kind: "xlsx" | "pdf") => {
