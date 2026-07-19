@@ -3,7 +3,7 @@
  * @description Service Worker - دعم الـ offline والـ caching للأصول
  */
 
-const CACHE_VERSION = "adrenaline-v2";
+const CACHE_VERSION = "adrenaline-v3";
 const STATIC_ASSETS = [
   "/",
   "/heart-logo.png",
