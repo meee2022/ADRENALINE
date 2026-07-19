@@ -4,14 +4,15 @@
  *   Cash / Card / Talabat / Snoonu / Rafeeq / Keeta / Transfer / Staff (خارج الإيراد).
  */
 import { useState } from "react";
-import { Banknote, CreditCard, ArrowLeftRight, X, Loader2, UserCircle2 } from "lucide-react";
+import { Banknote, CreditCard, ArrowLeftRight, X, Loader2, UserCircle2, SplitSquareHorizontal, Plus, Trash2 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 
+type SplitEntry = { method: string; amount: number };
 type Props = {
   total: number;
   busy: boolean;
   onCancel: () => void;
-  onCharge: (paymentMethod: string, cashReceived?: number) => void;
+  onCharge: (paymentMethod: string, cashReceived?: number, payments?: SplitEntry[]) => void;
 };
 
 // طرق الدفع — كل واحدة أيقونة/لون. Cash فقط اللي محتاج شاشة كاش استلام.
@@ -37,11 +38,32 @@ export default function ChargeModal({ total, busy, onCancel, onCharge }: Props) 
   const [method, setMethod] = useState<string | null>(null);
   const [cashInput, setCashInput] = useState<string>("");
 
+  // ── دفع مقسوم ──
+  const [splitMode, setSplitMode] = useState(false);
+  const [splits, setSplits] = useState<SplitEntry[]>([]);
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const allocated = round2(splits.reduce((s, p) => s + (Number(p.amount) || 0), 0));
+  const remaining = round2(total - allocated);
+  const splitBalanced = Math.abs(remaining) < 0.01 && splits.length >= 2;
+  const SPLIT_METHODS = METHODS.filter((m) => m.key !== "staff");
+  const addSplit = (mkey: string) => {
+    setSplits((prev) => [...prev, { method: mkey, amount: remaining > 0 ? remaining : 0 }]);
+  };
+  const setSplitAmount = (i: number, val: string) => {
+    setSplits((prev) => prev.map((p, k) => (k === i ? { ...p, amount: Number(val) || 0 } : p)));
+  };
+  const removeSplit = (i: number) => setSplits((prev) => prev.filter((_, k) => k !== i));
+
   const cashReceived = Number(cashInput) || 0;
   const change = cashReceived - total;
   const canPayCash = cashReceived >= total;
 
   const submit = () => {
+    if (splitMode) {
+      if (!splitBalanced) return;
+      onCharge("mixed", undefined, splits.map((p) => ({ method: p.method, amount: round2(p.amount) })));
+      return;
+    }
     if (!method) return;
     if (method === "cash") onCharge("cash", cashReceived);
     else onCharge(method);
@@ -69,7 +91,7 @@ export default function ChargeModal({ total, busy, onCancel, onCharge }: Props) 
         </div>
 
         {/* Method grid — اختيار أول قبل ما نفتح خطوة تانية */}
-        {!method && (
+        {!method && !splitMode && (
           <div className="p-4">
             <div className="text-xs font-bold text-slate-500 uppercase mb-2">{t("اختر طريقة الدفع", "Select payment method")}</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -86,6 +108,74 @@ export default function ChargeModal({ total, busy, onCancel, onCharge }: Props) 
                 </button>
               ))}
             </div>
+            {/* دفع مقسوم */}
+            <button
+              onClick={() => { setSplitMode(true); setSplits([]); }}
+              className="mt-2 w-full rounded-xl p-4 flex items-center justify-center gap-2 font-black text-[#0E76AC] bg-[#eef7fb] border-2 border-[#cfe7f3] hover:bg-[#e0f0f8] transition-all active:scale-95"
+            >
+              <SplitSquareHorizontal className="h-5 w-5" />
+              {t("دفع مقسوم (أكثر من طريقة)", "Split payment (multiple methods)")}
+            </button>
+          </div>
+        )}
+
+        {/* Split payment panel */}
+        {splitMode && (
+          <div className="p-5 space-y-3">
+            <div className="flex items-center gap-2 text-xs font-bold text-[#0E76AC] uppercase">
+              <SplitSquareHorizontal className="h-4 w-4" /> {t("دفع مقسوم", "Split payment")}
+              <button onClick={() => { setSplitMode(false); setSplits([]); }} className="ms-auto text-slate-400 hover:text-slate-700 text-[11px] font-bold uppercase">{t("رجوع", "Back")}</button>
+            </div>
+
+            {/* الأجزاء المضافة */}
+            {splits.length > 0 && (
+              <div className="space-y-2">
+                {splits.map((p, i) => {
+                  const m = SPLIT_METHODS.find((x) => x.key === p.method);
+                  return (
+                    <div key={i} className="flex items-center gap-2 rounded-xl border-2 border-slate-200 p-2">
+                      <span className="w-24 text-sm font-black text-center rounded-lg py-2 text-white" style={{ background: m?.color || "#64748b", color: m?.textOnColor || "#fff" }}>{m?.label || p.method}</span>
+                      <input
+                        type="number"
+                        value={p.amount || ""}
+                        onChange={(e) => setSplitAmount(i, e.target.value)}
+                        placeholder="0.00"
+                        className="flex-1 h-12 rounded-lg border-2 border-slate-200 focus:border-cyan-500 focus:outline-none px-3 text-xl font-black text-slate-900"
+                      />
+                      <button onClick={() => removeSplit(i)} className="text-red-500 hover:bg-red-50 rounded-lg p-2"><Trash2 className="h-5 w-5" /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* أزرار إضافة طريقة */}
+            <div>
+              <div className="text-[11px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1"><Plus className="h-3 w-3" />{t("أضف طريقة", "Add method")}</div>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {SPLIT_METHODS.map((m) => (
+                  <button
+                    key={m.key}
+                    onClick={() => addSplit(m.key)}
+                    className="rounded-lg py-2 text-xs font-black text-white shadow active:scale-95"
+                    style={{ background: m.color, color: m.textOnColor || "#fff" }}
+                  >{m.label}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* المتبقّي */}
+            <div className={`rounded-xl p-4 flex justify-between items-center ${splitBalanced ? "bg-emerald-50 border-2 border-emerald-200" : "bg-amber-50 border-2 border-amber-200"}`}>
+              <span className={`font-bold ${splitBalanced ? "text-emerald-700" : "text-amber-700"}`}>
+                {remaining > 0.005 ? t("المتبقّي", "Remaining") : remaining < -0.005 ? t("زيادة", "Over") : t("مكتمل", "Balanced")}
+              </span>
+              <span className={`text-2xl font-black ${splitBalanced ? "text-emerald-700" : "text-amber-700"}`}>
+                {Math.abs(remaining).toFixed(2)} <span className="text-sm">QAR</span>
+              </span>
+            </div>
+            {splits.length < 2 && (
+              <p className="text-[11px] font-bold text-slate-400 text-center">{t("أضف طريقتين على الأقل للدفع المقسوم", "Add at least two methods for a split payment")}</p>
+            )}
           </div>
         )}
 
@@ -167,7 +257,7 @@ export default function ChargeModal({ total, busy, onCancel, onCharge }: Props) 
           </button>
           <button
             onClick={submit}
-            disabled={busy || !method || (method === "cash" && !canPayCash)}
+            disabled={busy || (splitMode ? !splitBalanced : (!method || (method === "cash" && !canPayCash)))}
             className="h-14 rounded-xl text-white font-black text-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center justify-center gap-2"
             style={{ background: method === "staff"
               ? "linear-gradient(135deg,#475569,#334155)"

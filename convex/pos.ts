@@ -233,8 +233,8 @@ export const closeShift = mutation({
       .withIndex("by_shift", (q) => q.eq("shiftId", shift._id))
       .collect();
     const cashSales = tickets
-      .filter((t) => t.status === "PAID" && t.paymentMethod === "cash" && !t.isNonRevenue)
-      .reduce((s, t) => s + t.total, 0);
+      .filter((t) => t.status === "PAID" && !t.isNonRevenue)
+      .reduce((s, t) => s + cashPortionOf(t), 0);
     const expectedCash = Math.round((shift.openingCash + cashSales) * 100) / 100;
     const diff = Math.round((closingCash - expectedCash) * 100) / 100;
     await ctx.db.patch(shift._id, {
@@ -362,6 +362,72 @@ function assertPaymentMethodAllowed(method: string, actorIsAdmin: boolean) {
   }
   if (!ALLOWED_PAYMENT_METHODS.has(m)) throw new Error("طريقة دفع غير مسموحة");
   return m;
+}
+
+type PaymentArg = { paymentMethod?: string; cashReceived?: number; payments?: { method: string; amount: number }[] };
+type ResolvedPayment = {
+  paymentMethod: string;
+  payments?: { method: string; amount: number }[];
+  cashReceived?: number;
+  changeAmount?: number;
+  isStaff: boolean;
+};
+
+/**
+ * 🔒 يحدّد طريقة/طرق الدفع مع الحفاظ على كل الضوابط القديمة:
+ *   - دفع واحد (السلوك القديم): cash يتحقق أن المستلم يغطي الإجمالي ويحسب الباقي.
+ *   - دفع مقسوم (payments بطولين+): مجموع المبالغ لازم يساوي الإجمالي بالضبط، staff ممنوع في المقسوم.
+ *   جزء الكاش من المقسوم يُخزَّن في cashReceived لحساب تقفيل الوردية.
+ */
+function resolvePayment(args: PaymentArg, total: number, actorIsAdmin: boolean): ResolvedPayment {
+  const split = Array.isArray(args.payments)
+    ? args.payments.filter((p) => Number(p.amount) > 0)
+    : [];
+  if (split.length >= 2) {
+    const norm = split.map((p) => ({
+      method: assertPaymentMethodAllowed(p.method, actorIsAdmin),
+      amount: Math.round(Number(p.amount) * 100) / 100,
+    }));
+    for (const p of norm) {
+      if (p.method === "staff") throw new Error('لا يمكن دمج فاتورة "staff" مع دفع مقسوم');
+    }
+    const sum = Math.round(norm.reduce((s, p) => s + p.amount, 0) * 100) / 100;
+    if (Math.abs(sum - total) > 0.01) {
+      throw new Error(`مجموع المدفوعات (${sum.toFixed(2)}) لازم يساوي الإجمالي (${total.toFixed(2)})`);
+    }
+    const cashPortion = Math.round(
+      norm.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0) * 100,
+    ) / 100;
+    return {
+      paymentMethod: "mixed",
+      payments: norm,
+      cashReceived: cashPortion || undefined,
+      changeAmount: 0,
+      isStaff: false,
+    };
+  }
+  // دفع واحد — نفس السلوك القديم
+  const method = assertPaymentMethodAllowed(args.paymentMethod || split[0]?.method || "", actorIsAdmin);
+  let change: number | undefined = undefined;
+  if (method === "cash") {
+    const cr = Number(args.cashReceived ?? 0);
+    if (!Number.isFinite(cr) || cr < total) throw new Error("النقد المستلم لازم يغطي الإجمالي");
+    change = Math.round((cr - total) * 100) / 100;
+  }
+  return { paymentMethod: method, cashReceived: args.cashReceived, changeAmount: change, isStaff: method === "staff" };
+}
+
+/** جزء الكاش من فاتورة (يدعم الدفع المقسوم) — لتقفيل الوردية. */
+function cashPortionOf(t: any): number {
+  if (t.isNonRevenue) return 0;
+  if (Array.isArray(t.payments) && t.payments.length) {
+    return Math.round(
+      t.payments
+        .filter((p: any) => String(p.method).toLowerCase() === "cash")
+        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0) * 100,
+    ) / 100;
+  }
+  return t.paymentMethod === "cash" ? Number(t.total || 0) : 0;
 }
 
 async function nextTicketNumber(ctx: MutationCtx): Promise<number> {
@@ -524,6 +590,7 @@ export const getTicket = query({
       status: t.status, orderType: t.orderType || null,
       subtotal: t.subtotal, discount: t.discount, total: t.total,
       paymentMethod: t.paymentMethod || null,
+      payments: Array.isArray(t.payments) ? t.payments.map((p: any) => ({ method: p.method, amount: p.amount })) : null,
       cashReceived: t.cashReceived || null, changeAmount: t.changeAmount || null,
       customerName: t.customerName || null, notes: t.notes || null,
       paidAt: t.paidAt || null, createdAt: t.createdAt,
@@ -588,6 +655,7 @@ export const chargeTicket = mutation({
     ticketId: v.id("posTickets"),
     paymentMethod: v.string(),
     cashReceived: v.optional(v.number()),
+    payments: v.optional(v.array(v.object({ method: v.string(), amount: v.number() }))),
     discount: v.optional(v.number()),
     orderType: v.optional(v.string()),
     customerName: v.optional(v.string()),
@@ -603,8 +671,6 @@ export const chargeTicket = mutation({
       throw new Error("مش مسموح تدفع فاتورة كاشير آخر");
     }
 
-    const method = assertPaymentMethodAllowed(args.paymentMethod, isAdmin(user));
-
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
     const serverLines: ServerLine[] = lines.map((l: any) => ({
       mealId: l.mealId, name: l.name, qty: l.qty, unitPrice: l.unitPrice,
@@ -614,19 +680,14 @@ export const chargeTicket = mutation({
     assertDiscountAllowed(subtotalPreview, rawDiscount, isAdmin(user));
     const totals = await computeTotals(ctx, serverLines, rawDiscount);
 
-    // 🔒 كاش لازم يغطي الإجمالي
-    let change: number | undefined = undefined;
-    if (method === "cash") {
-      const cr = Number(args.cashReceived ?? 0);
-      if (!Number.isFinite(cr) || cr < totals.total) {
-        throw new Error("النقد المستلم لازم يغطي الإجمالي");
-      }
-      change = Math.round((cr - totals.total) * 100) / 100;
-    }
-    const isStaff = method === "staff";
+    // 🔒 تحديد طريقة/طرق الدفع (يدعم الدفع المقسوم) + التحقق من الكاش
+    const pay = resolvePayment(args, totals.total, isAdmin(user));
+    const method = pay.paymentMethod;
+    const change = pay.changeAmount;
+    const isStaff = pay.isStaff;
     await ctx.db.patch(args.ticketId, {
-      status: "PAID", paymentMethod: method,
-      cashReceived: args.cashReceived, changeAmount: change,
+      status: "PAID", paymentMethod: method, payments: pay.payments,
+      cashReceived: pay.cashReceived, changeAmount: change,
       discount: totals.discount, subtotal: totals.subtotal, total: totals.total,
       orderType: args.orderType || t.orderType,
       customerName: args.customerName?.trim() || t.customerName,
@@ -656,6 +717,7 @@ export const quickSale = mutation({
     lines: v.array(ticketLineArg),
     paymentMethod: v.string(),
     cashReceived: v.optional(v.number()),
+    payments: v.optional(v.array(v.object({ method: v.string(), amount: v.number() }))),
     discount: v.optional(v.number()),
     orderType: v.optional(v.string()),
     customerName: v.optional(v.string()),
@@ -686,28 +748,24 @@ export const quickSale = mutation({
       .first();
     if (!shift) throw new Error("لازم تفتح وردية أولاً");
 
-    const method = assertPaymentMethodAllowed(args.paymentMethod, isAdmin(user));
-
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
     const subtotalPreview = serverLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     assertDiscountAllowed(subtotalPreview, rawDiscount, isAdmin(user));
     const totals = await computeTotals(ctx, serverLines, rawDiscount);
 
-    // 🔒 كاش لازم يغطي الإجمالي
-    let change: number | undefined = undefined;
-    if (method === "cash") {
-      const cr = Number(args.cashReceived ?? 0);
-      if (!Number.isFinite(cr) || cr < totals.total) throw new Error("النقد المستلم لازم يغطي الإجمالي");
-      change = Math.round((cr - totals.total) * 100) / 100;
-    }
-    const isStaff = method === "staff";
+    // 🔒 تحديد طريقة/طرق الدفع (يدعم الدفع المقسوم) + التحقق من الكاش
+    const pay = resolvePayment(args, totals.total, isAdmin(user));
+    const method = pay.paymentMethod;
+    const change = pay.changeAmount;
+    const isStaff = pay.isStaff;
     const num = await nextTicketNumber(ctx);
     const id = await ctx.db.insert("posTickets", {
       ticketNumber: num, cashierId: user._id, cashierName: user.name,
       shiftId: shift._id, status: "PAID", orderType: args.orderType,
       subtotal: totals.subtotal, discount: totals.discount, tax: 0, total: totals.total,
-      paymentMethod: method, cashReceived: args.cashReceived, changeAmount: change,
+      paymentMethod: method, payments: pay.payments,
+      cashReceived: pay.cashReceived, changeAmount: change,
       customerName: args.customerName?.trim() || undefined,
       customerId: args.customerId,
       notes: args.notes?.trim() || undefined,

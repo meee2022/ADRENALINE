@@ -102,7 +102,10 @@ export default defineSchema({
     discount: v.number(),
     tax: v.number(),
     total: v.number(),
-    paymentMethod: v.optional(v.string()),    // cash / card / talabat / snoonu / rafeeq / keeta / transfer / staff
+    paymentMethod: v.optional(v.string()),    // cash / card / talabat / snoonu / rafeeq / keeta / transfer / staff / mixed
+    // ✅ دفع مقسوم/مختلط: أكثر من طريقة على نفس الفاتورة (مثلاً 60 كارت + 40 كاش).
+    //    لو موجود، paymentMethod = "mixed" والمجموع يساوي total. الفواتير القديمة بدون الحقل.
+    payments: v.optional(v.array(v.object({ method: v.string(), amount: v.number() }))),
     cashReceived: v.optional(v.number()),
     changeAmount: v.optional(v.number()),
     customerId: v.optional(v.id("customers")),

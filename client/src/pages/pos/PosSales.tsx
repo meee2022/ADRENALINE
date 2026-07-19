@@ -103,7 +103,7 @@ export default function PosSales() {
   };
   const removeLine = (i: number) => setCart(cart.filter((_, k) => k !== i));
 
-  const doQuickCharge = async (paymentMethod: string, cashReceived?: number) => {
+  const doQuickCharge = async (paymentMethod: string, cashReceived?: number, payments?: { method: string; amount: number }[]) => {
     if (!token || cart.length === 0) return;
     setBusy(true);
     // ✅ Idempotency key: يمنع تكرار الدفع لو الزرار اتضغط مرتين أو الشبكة قطعت وأعادت المحاولة.
@@ -117,6 +117,7 @@ export default function PosSales() {
           name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
         })),
         paymentMethod, cashReceived,
+        ...(payments && payments.length ? { payments } : {}),
         orderType,
         customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined,
         customerId: linkedCustomer?.id as any,

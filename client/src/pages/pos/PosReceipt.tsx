@@ -63,7 +63,11 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
                 <div className="flex justify-between"><span>Subtotal</span><span>{t.subtotal.toFixed(2)}</span></div>
                 {t.discount > 0 && <div className="flex justify-between text-emerald-700"><span>Discount</span><span>-{t.discount.toFixed(2)}</span></div>}
                 <div className="flex justify-between font-black text-base pt-1"><span>TOTAL</span><span>{t.total.toFixed(2)} QAR</span></div>
-                {t.paymentMethod && <div className="flex justify-between pt-1 text-slate-600"><span>Paid ({t.paymentMethod})</span><span>{(t.cashReceived || t.total).toFixed(2)}</span></div>}
+                {Array.isArray((t as any).payments) && (t as any).payments.length
+                  ? (t as any).payments.map((p: any, i: number) => (
+                      <div key={i} className="flex justify-between pt-1 text-slate-600"><span>Paid ({p.method})</span><span>{Number(p.amount).toFixed(2)}</span></div>
+                    ))
+                  : t.paymentMethod && <div className="flex justify-between pt-1 text-slate-600"><span>Paid ({t.paymentMethod})</span><span>{(t.cashReceived || t.total).toFixed(2)}</span></div>}
                 {t.changeAmount != null && t.changeAmount > 0 && <div className="flex justify-between text-slate-600"><span>Change</span><span>{t.changeAmount.toFixed(2)}</span></div>}
               </div>
               <div className="text-center text-[10px] text-slate-500 mt-3 pt-2 border-t border-dashed border-slate-300">
@@ -122,7 +126,9 @@ function buildReceiptHtml(t: any): string {
       <tr><td>Subtotal</td><td class="r">${t.subtotal.toFixed(2)}</td></tr>
       ${t.discount > 0 ? `<tr><td>Discount</td><td class="r">-${t.discount.toFixed(2)}</td></tr>` : ""}
       <tr class="tot"><td>TOTAL</td><td class="r">${t.total.toFixed(2)} QAR</td></tr>
-      ${t.paymentMethod ? `<tr><td>Paid (${escapeHtml(t.paymentMethod)})</td><td class="r">${(t.cashReceived || t.total).toFixed(2)}</td></tr>` : ""}
+      ${Array.isArray((t as any).payments) && (t as any).payments.length
+        ? (t as any).payments.map((p: any) => `<tr><td>Paid (${escapeHtml(String(p.method))})</td><td class="r">${Number(p.amount).toFixed(2)}</td></tr>`).join("")
+        : (t.paymentMethod ? `<tr><td>Paid (${escapeHtml(t.paymentMethod)})</td><td class="r">${(t.cashReceived || t.total).toFixed(2)}</td></tr>` : "")}
       ${t.changeAmount != null && t.changeAmount > 0 ? `<tr><td>Change</td><td class="r">${t.changeAmount.toFixed(2)}</td></tr>` : ""}
     </table>
     <div class="center">Thank you!</div>
