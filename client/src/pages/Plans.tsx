@@ -1783,19 +1783,30 @@ export default function PlansPage() {
                               {/* Body */}
                               {!item.isOff && (
                                 <div className="p-3 pt-1 space-y-2.5 flex-1 flex flex-col">
-                                  {/* 🖼️ صورة الوجبة المختارة (عرض فقط) — لتوضيح ما يُملأ */}
+                                  {/* 🖼️ كارت الوجبة المختارة (صورة + اسم + سعرات) — زي منيو العميل،
+                                      ليرى الأخصائي ما اختاره بوضوح. عرض فقط — لا يمسّ أي منطق. */}
                                   {(() => {
                                     const info = item.menuItemId ? mealInfoByMenuItem.get(String(item.menuItemId)) : null;
                                     return (
-                                      <div className="relative w-full h-24 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                      <div className="relative w-full h-28 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                                         {info?.imageUrl ? (
                                           <img src={info.imageUrl} alt={info.nameAr || ""} className="w-full h-full object-cover" />
                                         ) : (
-                                          <span className="text-2xl opacity-40">{accent.icon}</span>
+                                          <span className="text-3xl opacity-40">{accent.icon}</span>
                                         )}
-                                        {info?.calories != null && info?.imageUrl && (
-                                          <span className="absolute bottom-1.5 end-1.5 text-[10px] font-bold text-white px-2 py-0.5 rounded-full bg-black/45">
-                                            {info.calories} {isRtl ? "سعرة" : "kcal"}
+                                        {info ? (
+                                          <div className="absolute inset-x-0 bottom-0 px-2.5 py-1.5"
+                                            style={{ background: "linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0))" }}>
+                                            <div className="text-[13px] font-black text-white leading-tight line-clamp-1">
+                                              {isRtl ? info.nameAr : (info.nameEn || info.nameAr)}
+                                            </div>
+                                            {info.calories != null && (
+                                              <div className="text-[10.5px] font-bold text-white/85 mt-0.5">{info.calories} {isRtl ? "سعرة" : "kcal"}</div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="absolute bottom-1.5 inset-x-0 text-center text-[11px] font-bold text-slate-400">
+                                            {isRtl ? "لم تُختَر وجبة بعد" : "No meal selected yet"}
                                           </span>
                                         )}
                                       </div>
