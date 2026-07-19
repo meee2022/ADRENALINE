@@ -218,7 +218,7 @@ export default function InventoryPage() {
           </div>
 
           {/* Quick links — full inventory cycle from one place */}
-          <div className="flex items-center gap-2 overflow-x-auto pt-3 mt-1">
+          <div className="mobile-action-strip mobile-action-grid flex items-center gap-2 overflow-x-auto pt-3 mt-1">
             <span className="text-xs text-gray-500 whitespace-nowrap">{isRtl ? "دورة المخزون:" : "Cycle:"}</span>
             <button onClick={() => setLocation("/inventory/setup")} className="flex items-center gap-1.5 text-xs font-bold text-white bg-[#0E76AC] hover:bg-[#095f8c] border border-[#0E76AC] rounded-lg px-3 py-1.5 whitespace-nowrap">⚙ {isRtl ? "بدء وإعداد المخزون" : "Setup & Opening Stock"}</button>
             <button onClick={() => setLocation("/inventory/receive")} className="flex items-center gap-1.5 text-xs font-bold text-cyan-700 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 rounded-lg px-3 py-1.5 whitespace-nowrap">📥 {isRtl ? "استلام بضاعة" : "Receive"}</button>
@@ -323,7 +323,7 @@ export default function InventoryPage() {
 
         {/* Category Filters */}
         <div className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}>
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          <div className="mobile-action-strip flex items-center gap-2 overflow-x-auto pb-2">
             {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
               <button
                 key={key}

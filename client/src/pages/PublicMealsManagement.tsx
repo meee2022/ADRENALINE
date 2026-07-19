@@ -228,7 +228,7 @@ export default function PublicMealsManagement() {
         </CardHeader>
         <CardContent>
           <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
-          <Table>
+          <Table className="mobile-card-table">
             <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
               <TableRow>
                 <TableHead>{t("الصورة", "Image")}</TableHead>
@@ -250,14 +250,14 @@ export default function PublicMealsManagement() {
               ) : (
                 meals.map((meal: any) => (
                   <TableRow key={meal._id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                    <TableCell>
+                    <TableCell data-mobile-label={t("الصورة", "Image")}>
                       <img
                         src={meal.imageUrl}
                         alt={meal.nameAr}
                         className="h-12 w-12 rounded-lg object-cover"
                       />
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell data-mobile-label={t("الاسم", "Name")} className="font-medium">
                       <div className="flex flex-col gap-1">
                         <span>{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</span>
                         {(() => {
@@ -278,17 +278,17 @@ export default function PublicMealsManagement() {
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-mobile-label={t("الفئة", "Category")}>
                       <Badge variant="outline">{getCategoryLabel(meal.category)}</Badge>
                     </TableCell>
-                    <TableCell>{meal.calories} Cal</TableCell>
-                    <TableCell>{meal.priceQAR} QAR</TableCell>
-                    <TableCell>
+                    <TableCell data-mobile-label={t("السعرات", "Calories")}>{meal.calories} Cal</TableCell>
+                    <TableCell data-mobile-label={t("السعر", "Price")}>{meal.priceQAR} QAR</TableCell>
+                    <TableCell data-mobile-label={t("الحالة", "Status")}>
                       <Badge className={`rounded-full ${meal.isActive ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>
                         {meal.isActive ? t("نشط", "Active") : t("غير نشط", "Inactive")}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell data-mobile-label={t("الإجراءات", "Actions")}>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"

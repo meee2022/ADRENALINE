@@ -117,7 +117,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <main className="relative flex-1 min-w-0 overflow-hidden" style={{ background: "#f1f5f9" }}>
             <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
 
-            <div className="h-full w-full overflow-y-auto overflow-x-auto pb-20">
+            <div className="app-mobile-content h-full w-full overflow-y-auto overflow-x-auto pb-20">
               <div className="w-full min-w-0 p-3 sm:p-4">{children}</div>
             </div>
           </main>

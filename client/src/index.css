@@ -274,23 +274,229 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    padding-bottom: 68px;
   }
   .pos-items-panel {
     order: 1;
     min-height: calc(100dvh - 54px);
   }
   .pos-ticket-panel {
-    order: 2;
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 72;
     width: 100% !important;
-    min-height: calc(100dvh - 54px);
+    max-height: min(82dvh, 720px);
+    min-height: 0;
     border-inline-start: 0;
     border-top: 1px solid #d8e6ec;
+    border-radius: 1rem 1rem 0 0;
+    transform: translateY(105%);
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -18px 50px rgba(15, 42, 74, 0.24);
+  }
+  .pos-ticket-panel.is-mobile-open {
+    transform: translateY(0);
   }
   .pos-items-grid {
     grid-template-columns: repeat(auto-fill, minmax(min(128px, 100%), 1fr));
   }
   .pos-item-card {
     aspect-ratio: 1.12 / 1;
+  }
+
+  .pos-sales-screen .pos-ticket-panel button,
+  .pos-sales-screen .pos-items-panel button {
+    min-height: 40px;
+  }
+
+  .pos-sales-screen .pos-ticket-panel button[class*="w-8"],
+  .pos-sales-screen .pos-ticket-panel button[class*="h-8"] {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
+
+.pos-mobile-cart-toggle,
+.pos-mobile-cart-backdrop,
+.pos-mobile-cart-close {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .pos-mobile-cart-toggle {
+    position: fixed;
+    inset-inline: 12px;
+    bottom: 10px;
+    z-index: 68;
+    display: flex;
+    min-height: 50px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 16px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #0e76ac, #3cc4f0);
+    color: white;
+    font-size: 14px;
+    font-weight: 800;
+    box-shadow: 0 10px 30px rgba(14, 118, 172, 0.34);
+  }
+
+  .pos-mobile-cart-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: block;
+    background: rgba(15, 42, 74, 0.38);
+  }
+
+  .pos-mobile-cart-close {
+    display: grid;
+    min-width: 40px;
+    min-height: 40px;
+    place-items: center;
+    border-radius: 12px;
+    background: #edf5f8;
+    color: #47759c;
+  }
+}
+
+/* Mobile operations: preserve every action while making dense controls discoverable and touch-safe. */
+@media (max-width: 640px) {
+  .app-mobile-content {
+    overscroll-behavior-x: none;
+  }
+
+  .app-mobile-content input:not([type="checkbox"]):not([type="radio"]),
+  .app-mobile-content select,
+  .app-mobile-content textarea {
+    font-size: 16px;
+  }
+
+  .public-site-shell button,
+  .public-site-shell a[role="button"] {
+    min-height: 40px;
+  }
+
+  .app-mobile-content .overflow-x-auto:has(> table) {
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: auto;
+    scrollbar-color: #789fb7 #e7eff4;
+    box-shadow: inset -10px 0 12px -14px rgba(14, 42, 74, 0.55), inset 10px 0 12px -14px rgba(14, 42, 74, 0.55);
+  }
+
+  .app-mobile-content .overflow-x-auto:has(> table) > table {
+    scroll-snap-align: start;
+  }
+
+  .mobile-action-strip {
+    margin-inline: -0.25rem;
+    padding-inline: 0.25rem 1rem;
+    scroll-padding-inline: 1rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: #9fb8ca transparent;
+  }
+
+  .mobile-action-strip > * {
+    min-height: 40px;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+
+  .mobile-action-strip::after {
+    content: "";
+    flex: 0 0 0.5rem;
+  }
+
+  .mobile-action-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
+    padding-inline: 0;
+    scroll-snap-type: none;
+  }
+
+  .mobile-action-grid > * {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .mobile-action-grid > span:first-child {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    text-align: start;
+  }
+
+  .mobile-action-grid::after {
+    display: none;
+  }
+
+  .mobile-card-table,
+  .mobile-card-table tbody,
+  .mobile-card-table tr,
+  .mobile-card-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .mobile-card-table thead {
+    display: none;
+  }
+
+  .mobile-card-table tbody {
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+    background: #edf4f8;
+  }
+
+  .mobile-card-table tbody tr {
+    overflow: hidden;
+    border: 1px solid #d8e5ec;
+    border-radius: 14px;
+    background: #fdfefe;
+    box-shadow: 0 5px 16px rgba(30, 64, 92, 0.07);
+  }
+
+  .mobile-card-table tbody td {
+    display: grid;
+    min-height: 44px;
+    grid-template-columns: minmax(88px, 0.42fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e8eef3;
+    text-align: start;
+  }
+
+  .mobile-card-table tbody td:last-child {
+    border-bottom: 0;
+  }
+
+  .mobile-card-table tbody td::before {
+    content: attr(data-mobile-label);
+    color: #607987;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  .mobile-card-table tbody td[colspan] {
+    display: block;
+  }
+
+  .mobile-card-table tbody td[colspan]::before {
+    content: none;
+  }
+
+  .mobile-card-table button {
+    min-width: 40px;
+    min-height: 40px;
   }
 }
 
@@ -498,6 +704,754 @@
 @media (max-width: 760px) {
   .pos-sales-screen .pos-ticket-panel {
     width: 100%;
+  }
+}
+
+/* Daily planning workspace: keep the scheduling rules untouched while clarifying the work surface. */
+.daily-plans-page {
+  min-height: 100%;
+  background:
+    linear-gradient(180deg, rgba(60, 196, 240, 0.07) 0, rgba(60, 196, 240, 0) 280px),
+    #edf3f7;
+}
+
+.plans-sticky-header {
+  padding-block: 0.75rem !important;
+  background: linear-gradient(105deg, rgba(12, 48, 74, 0.98), rgba(15, 79, 113, 0.97)) !important;
+  border-color: rgba(93, 207, 240, 0.35) !important;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 28px rgba(12, 48, 74, 0.2) !important;
+}
+
+.plans-header-inner {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  min-height: 44px;
+}
+
+.plans-header-title {
+  position: static !important;
+  transform: none !important;
+  justify-self: center;
+}
+
+.plans-header-inner > :last-child {
+  justify-self: end;
+}
+
+.plans-sticky-header h1,
+.plans-sticky-header .plans-header-inner button {
+  color: #ffffff !important;
+}
+
+.plans-sticky-header .plans-header-inner button > span {
+  color: #eaf8ff !important;
+}
+
+.plans-sticky-header .plans-date-label {
+  color: #ffffff !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+.plans-sticky-header .plans-header-inner button > .plans-date-badge {
+  color: #073b59 !important;
+  background: #7ce0fa !important;
+  border: 1px solid rgba(255, 255, 255, 0.42) !important;
+}
+
+.plans-sticky-header .plans-header-inner button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.plans-sticky-header .plans-header-inner svg {
+  color: #73d8f5 !important;
+}
+
+.plans-sticky-header .plans-header-title > span,
+.plans-sticky-header .plans-header-inner button span[style]:not(.plans-date-badge) {
+  color: #dff8ff !important;
+  background: rgba(60, 196, 240, 0.12) !important;
+  border-color: rgba(115, 216, 245, 0.35) !important;
+}
+
+[dir="rtl"] .plans-header-inner > :last-child {
+  justify-self: start;
+}
+
+.plans-overview {
+  padding: 1.25rem 1.5rem !important;
+  border: 1px solid rgba(60, 196, 240, 0.34);
+  border-radius: 1.25rem !important;
+  background: linear-gradient(120deg, #0e3658 0%, #0e76ac 72%, #28b9e6 100%) !important;
+  box-shadow: 0 14px 34px rgba(14, 54, 88, 0.18) !important;
+}
+
+.plans-overview h2 {
+  font-size: 1.25rem;
+  letter-spacing: 0;
+}
+
+.plans-overview > .relative > div:last-child > div {
+  min-width: 102px;
+}
+
+.plans-filter-panel,
+.selected-customer-summary,
+.plan-notes-card {
+  border: 1px solid #cddbe5 !important;
+  border-radius: 1rem !important;
+  background: #f9fcfd !important;
+  box-shadow: 0 5px 18px rgba(30, 64, 92, 0.07) !important;
+}
+
+.plans-filter-panel input {
+  background: #fff !important;
+  border-color: #bdceda !important;
+}
+
+.plans-filter-panel button {
+  min-height: 36px;
+}
+
+.plans-customer-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)) !important;
+  gap: 1rem !important;
+}
+
+.plan-customer-card {
+  min-height: 178px;
+  border: 1px solid #bed0dc !important;
+  border-radius: 0.875rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 7px 20px rgba(23, 61, 88, 0.09) !important;
+  opacity: 1 !important;
+}
+
+.plan-customer-card:hover {
+  border-color: #57c5e8 !important;
+  box-shadow: 0 14px 28px rgba(14, 87, 126, 0.17) !important;
+}
+
+.plan-customer-card.opacity-70 {
+  opacity: 1 !important;
+  background: #ffffff !important;
+  border-color: #9dd7be !important;
+}
+
+.plan-customer-status-strip {
+  height: 4px !important;
+}
+
+.plan-customer-identity {
+  min-height: 82px;
+  padding: 0.875rem 1rem !important;
+  background: linear-gradient(112deg, #103653 0%, #164f73 100%);
+}
+
+.plan-customer-name {
+  color: #ffffff !important;
+  letter-spacing: 0;
+}
+
+.plan-customer-phone {
+  color: #b9d5e3 !important;
+}
+
+.plan-customer-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 0.75rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 6px 16px rgba(5, 31, 48, 0.28) !important;
+}
+
+.plan-customer-identity span {
+  box-shadow: none !important;
+}
+
+.plan-customer-stats {
+  padding: 0 !important;
+  background: #ffffff;
+  border-bottom: 1px solid #dce6ec;
+}
+
+.plan-customer-stats > .grid {
+  gap: 0 !important;
+}
+
+.plan-customer-stat {
+  min-height: 52px;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.plan-customer-stat + .plan-customer-stat {
+  border-inline-start: 1px solid #dce6ec;
+}
+
+.plan-customer-footer {
+  min-height: 36px;
+  padding: 0.5rem 1rem !important;
+  background: #f4f8fa;
+  border-top: 0 !important;
+}
+
+.plan-customer-card.opacity-70 .plan-customer-identity {
+  background: linear-gradient(112deg, #10493d 0%, #13705a 100%);
+}
+
+.plan-customer-card > .absolute.top-3.left-3 {
+  top: 0.75rem !important;
+  left: 0.75rem !important;
+}
+
+.plan-customer-card > .absolute.top-3.left-3 > div {
+  width: 30px !important;
+  height: 30px !important;
+  box-shadow: 0 4px 12px rgba(4, 30, 24, 0.28) !important;
+}
+
+.selected-customer-summary > div:first-child {
+  background: #f2f7fa;
+}
+
+.plans-customer-toolbar {
+  border: 1px solid #b9ceda !important;
+  border-radius: 1rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 9px 24px rgba(17, 58, 84, 0.11) !important;
+}
+
+.plans-customer-toolbar-head {
+  min-height: 78px;
+  padding: 1rem 1.125rem !important;
+  background: linear-gradient(105deg, #0e2f4b 0%, #0e76ac 100%);
+}
+
+.plans-customer-toolbar-head > div:first-child {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 0.75rem !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.plans-selected-name {
+  color: #ffffff !important;
+  font-size: 1rem !important;
+}
+
+.plans-selected-phone {
+  color: #c6e5f2 !important;
+}
+
+.plans-change-customer {
+  color: #0e567f !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+}
+
+.plans-change-customer:hover {
+  background: #eaf8fd !important;
+}
+
+.plans-customer-toolbar-controls {
+  padding: 0.75rem !important;
+  background: #ffffff;
+  border-top: 1px solid #dce7ed;
+}
+
+.plans-customer-toolbar-controls > button:first-child {
+  border-style: solid !important;
+  border-color: #c7d8e2 !important;
+  background: #f5f9fb !important;
+  color: #365c73 !important;
+}
+
+.plans-customer-toolbar-controls > div {
+  margin-top: 0.5rem !important;
+  border-radius: 0.75rem !important;
+  background: #f0f8fc !important;
+  border-color: #b9dcea !important;
+}
+
+.daily-meal-card {
+  border-color: #c4d3de !important;
+  border-radius: 0.875rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(30, 64, 92, 0.08) !important;
+}
+
+.daily-meal-card:hover {
+  border-color: #8ed4ea !important;
+  box-shadow: 0 10px 24px rgba(14, 118, 172, 0.12) !important;
+}
+
+.daily-meals-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: start;
+}
+
+.daily-meal-card .meal-card-body {
+  padding: 0.75rem !important;
+}
+
+.daily-meal-card .meal-card-header {
+  padding-inline: 0.75rem !important;
+}
+
+.meal-card-header {
+  min-height: 50px;
+  background: linear-gradient(100deg, #103653, #164c70);
+  border-bottom: 1px solid #0e2f49;
+}
+
+.meal-card-header .meal-category-label {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+}
+
+.meal-card-header button {
+  color: rgba(255, 255, 255, 0.62) !important;
+}
+
+.meal-card-header button:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.meal-card-header span.bg-gray-100 {
+  color: rgba(255, 255, 255, 0.74) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.meal-card-visual {
+  border: 1px solid #dde7ed;
+  background:
+    linear-gradient(135deg, rgba(60, 196, 240, 0.08), transparent 55%),
+    #edf3f6 !important;
+}
+
+.meal-card-body {
+  background: #ffffff;
+}
+
+.meal-card-visual img {
+  transition: transform 240ms ease;
+}
+
+.daily-meal-card:hover .meal-card-visual img {
+  transform: scale(1.025);
+}
+
+.meal-picker-trigger,
+.meal-modifier-trigger {
+  box-shadow: none !important;
+}
+
+.meal-modifier-trigger {
+  background: #f7fafb !important;
+  border-style: dashed !important;
+  color: #4b6476 !important;
+  overflow: hidden;
+}
+
+.meal-modifier-trigger > div {
+  min-width: 0;
+  flex-wrap: nowrap !important;
+  overflow: hidden;
+}
+
+.meal-modifier-trigger > div > span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meal-modifier-trigger:hover {
+  background: #eef8fb !important;
+}
+
+.plan-safety-strip {
+  border: 1px solid #f0b7b7 !important;
+  border-inline-start: 4px solid #dc2626 !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 5px 14px rgba(127, 29, 29, 0.1) !important;
+}
+
+.add-meal-slot {
+  min-height: 40px;
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-style: solid !important;
+  border-color: #b8d6e4 !important;
+  color: #174d70 !important;
+}
+
+.add-meal-slot:hover {
+  background: #ffffff !important;
+  border-color: #3cc4f0 !important;
+  box-shadow: 0 5px 14px rgba(14, 118, 172, 0.12);
+}
+
+[dir="rtl"] .daily-meal-card button[role="switch"] [data-state="checked"] {
+  transform: translateX(-1rem) !important;
+}
+
+[dir="rtl"] .daily-meal-card button[role="switch"] [data-state="unchecked"] {
+  transform: translateX(0) !important;
+}
+
+.meal-picker-popover [cmdk-item] {
+  min-height: 48px;
+  border-radius: 0.5rem;
+  margin-inline: 0.25rem;
+}
+
+/* The selected customer context is one compact dashboard strip, not a stack of pale cards. */
+.selected-customer-summary {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.8fr) minmax(360px, 1.2fr);
+  align-items: stretch;
+  overflow: visible !important;
+}
+
+.selected-customer-summary,
+.plan-notes-card {
+  background: #ffffff !important;
+}
+
+.selected-customer-summary > div:first-child {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  grid-template-columns: 1fr !important;
+  border-inline-end: 1px solid #dce6ec;
+}
+
+[dir="rtl"] .selected-customer-summary > div:first-child {
+  border-inline-end: 0;
+  border-inline-start: 1px solid #dce6ec;
+}
+
+.selected-customer-summary > div:first-child > div {
+  padding: 0.875rem 1rem !important;
+}
+
+.selected-customer-summary > div:nth-child(2) {
+  grid-column: 2;
+  padding: 0.875rem 1rem 0.25rem !important;
+}
+
+.selected-customer-summary > div:last-child:not(:first-child) {
+  grid-column: 2;
+  margin: 0.5rem 1rem 1rem !important;
+}
+
+.selected-customer-summary > div:nth-child(2) .grid {
+  gap: 0.5rem !important;
+}
+
+.selected-customer-summary > div:nth-child(2) .grid > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem !important;
+  border-radius: 0.625rem !important;
+}
+
+.selected-customer-summary > div:nth-child(2) .grid > div p:first-child {
+  font-size: 1.125rem !important;
+}
+
+.plan-notes-card {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1rem !important;
+}
+
+.plan-notes-card > p {
+  margin: 0 !important;
+}
+
+.plan-notes-card textarea {
+  min-height: 46px !important;
+  height: 46px !important;
+  background: #fff;
+}
+
+.plans-action-bar {
+  padding-block: 0.625rem !important;
+  background: rgba(12, 48, 74, 0.97) !important;
+  border-top: 1px solid rgba(93, 207, 240, 0.45) !important;
+  box-shadow: 0 -10px 30px rgba(8, 35, 54, 0.22) !important;
+}
+
+.plans-action-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+}
+
+.plans-action-secondary {
+  min-width: 0;
+  display: grid !important;
+  grid-template-columns: 104px 164px;
+  gap: 0.5rem;
+}
+
+.plans-action-primary {
+  width: 440px;
+  gap: 0.5rem !important;
+}
+
+.plans-cancel-action {
+  color: #ffd8d8 !important;
+  background: rgba(220, 38, 38, 0.14);
+  border: 1px solid rgba(252, 165, 165, 0.38);
+}
+
+.plans-cancel-action:hover {
+  background: rgba(220, 38, 38, 0.25);
+}
+
+.plans-review-action {
+  color: #dff8ff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(191, 233, 248, 0.32);
+}
+
+.plans-review-action:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.plans-draft-action {
+  color: #173d58;
+  background: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+}
+
+.plans-draft-action:hover {
+  background: #eef6f9;
+  border-color: #7fa9bf;
+}
+
+.plans-confirm-action {
+  background: linear-gradient(135deg, #21b9e7, #0e76ac) !important;
+  box-shadow: 0 6px 16px rgba(14, 118, 172, 0.25) !important;
+}
+
+/* Fixed actions belong to the content pane, never underneath the 14rem desktop sidebar. */
+@media (min-width: 1180px) {
+  [dir="rtl"] .plans-action-bar {
+    right: auto !important;
+    left: 0 !important;
+    width: calc(100% - 14rem);
+  }
+
+  [dir="ltr"] .plans-action-bar {
+    left: 14rem !important;
+    right: 0 !important;
+    width: calc(100% - 14rem);
+  }
+}
+
+@media (max-width: 1279px) {
+  .daily-meals-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .daily-meals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem !important;
+  }
+
+  .daily-meal-card .meal-card-body,
+  .daily-meal-card .meal-card-header {
+    padding-inline: 0.625rem !important;
+  }
+
+  .plans-action-inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .plans-action-primary {
+    grid-row: 1;
+  }
+
+  .plans-action-secondary {
+    grid-row: 2;
+    display: grid !important;
+    grid-template-columns: 0.75fr 1.25fr;
+  }
+
+  .plans-action-primary {
+    width: 100%;
+  }
+
+  .plans-action-bar {
+    padding: 0.5rem 0.75rem !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .plans-sticky-header {
+    padding: 0.625rem 0.75rem !important;
+  }
+
+  .plans-header-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+  }
+
+  .plans-header-title {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: stretch;
+    justify-content: space-between;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dbe6ed;
+  }
+
+  .plans-header-inner > :first-child {
+    grid-column: 1;
+    grid-row: 2;
+    min-width: 0;
+  }
+
+  .plans-header-inner > :last-child {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+  }
+
+  [dir="rtl"] .plans-header-inner > :last-child {
+    justify-self: start;
+  }
+
+  .plans-header-inner > :first-child > button,
+  .plans-header-inner > :last-child > button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .plans-header-inner > :first-child > button:nth-child(2) {
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+
+  .plans-overview {
+    padding: 1rem !important;
+  }
+
+  .plans-overview > .relative {
+    align-items: stretch !important;
+  }
+
+  .plans-overview > .relative > div:first-child {
+    gap: 0.75rem;
+  }
+
+  .plans-overview > .relative > div:first-child > div:first-child {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .plans-overview > .relative > div:last-child {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .plans-overview > .relative > div:last-child > div {
+    min-width: 0;
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .plans-overview > .relative > div:last-child > div > div:first-child {
+    display: none;
+  }
+
+  .plans-filter-panel {
+    padding: 0.75rem !important;
+  }
+
+  .plans-filter-panel > div:not(:first-child) {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+    scrollbar-width: thin;
+  }
+
+  .plans-filter-panel > div:not(:first-child) > * {
+    flex: 0 0 auto;
+    min-height: 40px;
+  }
+
+  .plan-customer-card {
+    min-height: 0;
+  }
+
+  .selected-customer-summary > div:first-child {
+    grid-template-columns: 1fr;
+  }
+
+  .selected-customer-summary > div:first-child > div + div {
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .selected-customer-summary {
+    display: block;
+  }
+
+  .selected-customer-summary > div:first-child {
+    border-inline: 0 !important;
+  }
+
+  .selected-customer-summary > div:last-child:not(:first-child) {
+    margin: 0.5rem 0.75rem 0.75rem !important;
+  }
+
+  .plan-notes-card {
+    display: block;
+  }
+
+  .plan-notes-card > p {
+    margin-bottom: 0.5rem !important;
+  }
+
+  .meal-card-visual {
+    height: 76px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .daily-meals-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daily-meal-card .meal-card-visual {
+    height: 68px !important;
+  }
+
+  .daily-meal-card .meal-picker-trigger,
+  .daily-meal-card .meal-modifier-trigger {
+    padding-inline: 0.5rem !important;
+    font-size: 0.68rem !important;
   }
 }
 

@@ -31,7 +31,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   };
 
   return (
-    <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-white">
+    <div dir={isRtl ? "rtl" : "ltr"} className="public-site-shell min-h-screen bg-white">
       {/* Header/Navbar */}
       <header className="sticky top-0 z-50 bg-gradient-to-r from-cyan-50 to-blue-50 border-b-2 border-cyan-300 shadow-lg backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">

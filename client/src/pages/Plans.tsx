@@ -64,6 +64,7 @@ import {
   Sun,
   Moon,
   X,
+  SlidersHorizontal,
 } from "lucide-react";
 import { format, subDays, addDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
@@ -95,13 +96,15 @@ function stripSystemFields<T>(obj: T): T {
 
 /* ─── MealPicker ──────────────────────────────────────── */
 function MealPicker({
-  value, onChange, items, placeholder, isRtl, suggestedIds = [],
+  value, onChange, items, placeholder, isRtl, suggestedIds = [], infoById,
 }: {
   value: string | null; onChange: (id: string) => void;
   items: any[]; placeholder: string; isRtl: boolean; suggestedIds?: string[];
+  infoById?: Map<string, any>;
 }) {
   const [open, setOpen] = useState(false);
   const selected = items.find((m) => m._id === value);
+  const selectedInfo = selected ? infoById?.get(String(selected._id)) : null;
   const sugSet = new Set(suggestedIds);
   const suggested = items.filter((m) => sugSet.has(m._id));
   const rest = items.filter((m) => !sugSet.has(m._id));
@@ -113,15 +116,19 @@ function MealPicker({
           variant="outline"
           role="combobox"
           className={cn(
-            "w-full justify-between h-10 rounded-xl text-sm",
-            "border-gray-200 hover:border-[#3cc4f0] bg-white transition-colors",
+            "meal-picker-trigger w-full justify-between h-11 rounded-lg text-sm",
+            "border-slate-200 hover:border-[#3cc4f0] bg-white transition-colors",
             !selected && "text-gray-400"
           )}
         >
           <span className="truncate flex items-center gap-2">
             {selected ? (
               <>
-                <span className="text-base">🍽️</span>
+                {selectedInfo?.imageUrl ? (
+                  <img src={selectedInfo.imageUrl} alt="" className="h-7 w-7 rounded-md object-cover flex-shrink-0" />
+                ) : (
+                  <span className="meal-picker-fallback text-base">🍽️</span>
+                )}
                 <span className="text-gray-800 font-medium">{selected.name}</span>
               </>
             ) : (
@@ -131,7 +138,7 @@ function MealPicker({
           <ChevronsUpDown className="h-3.5 w-3.5 opacity-40 flex-shrink-0" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align={isRtl ? "end" : "start"}>
+      <PopoverContent className="meal-picker-popover w-[min(22rem,calc(100vw-2rem))] p-0" align={isRtl ? "end" : "start"}>
         <Command>
           <CommandInput placeholder={placeholder} className={isRtl ? "text-right" : "text-left"} />
           <CommandList>
@@ -145,7 +152,14 @@ function MealPicker({
                     onSelect={() => { onChange(m._id); setOpen(false); }}
                     className={cn("flex items-center justify-between", isRtl ? "flex-row-reverse" : "")}
                   >
-                    <span className="font-bold text-sm text-[#0E76AC]">{m.name}</span>
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      {infoById?.get(String(m._id))?.imageUrl ? (
+                        <img src={infoById.get(String(m._id)).imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <span className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">🍽️</span>
+                      )}
+                      <span className="font-bold text-sm text-[#0E76AC] truncate">{m.name}</span>
+                    </span>
                     {value === m._id && <Check className="h-4 w-4 text-[#3cc4f0]" />}
                   </CommandItem>
                 ))}
@@ -159,7 +173,14 @@ function MealPicker({
                   onSelect={() => { onChange(m._id); setOpen(false); }}
                   className={cn("flex items-center justify-between", isRtl ? "flex-row-reverse" : "")}
                 >
-                  <span className="font-medium text-sm">{m.name}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    {infoById?.get(String(m._id))?.imageUrl ? (
+                      <img src={infoById.get(String(m._id)).imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                    ) : (
+                      <span className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">🍽️</span>
+                    )}
+                    <span className="font-medium text-sm truncate">{m.name}</span>
+                  </span>
                   {value === m._id && <Check className="h-4 w-4 text-[#3cc4f0]" />}
                 </CommandItem>
               ))}
@@ -212,7 +233,7 @@ function ModifiersPicker({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-between h-auto min-h-[40px] rounded-xl border-gray-200 hover:border-[#3cc4f0] bg-white text-sm transition-colors"
+          className="meal-modifier-trigger w-full justify-between h-auto min-h-[40px] rounded-lg border-slate-200 hover:border-[#3cc4f0] bg-white text-sm transition-colors"
         >
           <div className="flex flex-wrap gap-1.5 items-center py-1">
             {selectedMods.length === 0 ? (
@@ -234,7 +255,7 @@ function ModifiersPicker({
               ))
             )}
           </div>
-          <Plus className="h-3.5 w-3.5 flex-shrink-0 opacity-40 ml-2" />
+          <SlidersHorizontal className="h-3.5 w-3.5 flex-shrink-0 opacity-50 ml-2" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align={isRtl ? "end" : "start"}>
@@ -820,6 +841,18 @@ export default function PlansPage() {
     return { color: "#47759c", bg: "#f8fafc", light: "#f1f5f9", icon: "🍴" };
   };
 
+  const getCategoryLabel = (category: any) => {
+    if (!isRtl) return category.name;
+    if (category.nameAr) return category.nameAr;
+    const name = String(category.name || "").toUpperCase();
+    if (name.includes("BREAKFAST")) return "فطور";
+    if (name.includes("LUNCH")) return "غداء";
+    if (name.includes("DINNER")) return "عشاء";
+    if (name.includes("SNACK")) return "سناك";
+    if (name.includes("OTHER")) return "أخرى";
+    return category.name;
+  };
+
   const isToday = formattedDate === format(new Date(), "yyyy-MM-dd");
   // «بكرة» هو الافتراضي — نسمّيه باسمه بدل تاريخ مجرّد، وإلا بدا الفتح عشوائياً
   const isTomorrowDate = formattedDate === format(addDays(new Date(), 1), "yyyy-MM-dd");
@@ -828,12 +861,12 @@ export default function PlansPage() {
      RENDER
   ═══════════════════════════════════════════ */
   return (
-    <div dir={isRtl ? "rtl" : "ltr"} className="pb-32">
+    <div dir={isRtl ? "rtl" : "ltr"} className="daily-plans-page pb-32">
 
       {/* ── Sticky Header ── */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3"
+      <div className="plans-sticky-header sticky top-0 z-30 bg-white border-b border-gray-100 px-4 py-3"
         style={{ boxShadow: "0 1px 12px rgba(0,0,0,0.07)" }}>
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+        <div className="plans-header-inner max-w-[1400px] mx-auto flex items-center justify-between gap-3">
 
           {/* Left: date navigation */}
           <div className="flex items-center gap-1">
@@ -848,11 +881,11 @@ export default function PlansPage() {
                 <button className="flex items-center gap-1.5 px-3 h-8 rounded-lg hover:bg-gray-50 transition-colors group">
                   <CalendarIcon className="h-3.5 w-3.5 text-[#3cc4f0]" />
                   {/* ✅ اسم اليوم + التاريخ واضحين (يعرف أي يوم يملأ) + شارة نسبية */}
-                  <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                  <span className="plans-date-label text-sm font-semibold whitespace-nowrap">
                     {format(date, "EEEE، d MMM", { locale: dateLocale })}
                   </span>
                   {(isTomorrowDate || isToday) && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
+                    <span className="plans-date-badge text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
                       style={{ background: "#eaf6fd", color: "#0E76AC" }}>
                       {isTomorrowDate ? (isRtl ? "توصيل بكرة" : "Tomorrow") : (isRtl ? "اليوم" : "Today")}
                     </span>
@@ -873,7 +906,7 @@ export default function PlansPage() {
           </div>
 
           {/* Center: title + rotation badge */}
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <div className="plans-header-title flex items-center gap-2">
             <h1 className="text-base font-bold text-gray-800">
               {isRtl ? "الخطط اليومية" : "Daily Plans"}
             </h1>
@@ -916,7 +949,7 @@ export default function PlansPage() {
       </div>
 
       {/* ── Content ── */}
-      <div className="max-w-6xl mx-auto px-4 py-5 space-y-4">
+      <div className={cn("mx-auto px-4 py-5 space-y-4", selectedCustomerId ? "max-w-[1400px]" : "max-w-6xl")}>
 
         {/* ── No customer selected: Premium empty state ── */}
         {!selectedCustomerId ? (() => {
@@ -978,7 +1011,7 @@ export default function PlansPage() {
             <div className="space-y-5">
               {/* ─── Hero gradient banner ─── */}
               <div
-                className="rounded-3xl overflow-hidden relative p-7"
+                className="plans-overview rounded-3xl overflow-hidden relative p-7"
                 style={{
                   background: "linear-gradient(135deg,#0E2A4A 0%,#0E76AC 55%,#3AC7F4 100%)",
                   boxShadow: "0 8px 32px rgba(14,42,74,0.25)",
@@ -1066,7 +1099,7 @@ export default function PlansPage() {
               )}
 
               {/* ─── Search + Filters ─── */}
-              <div className="bg-white rounded-2xl p-4 space-y-3"
+              <div className="plans-filter-panel bg-white rounded-2xl p-4 space-y-3"
                 style={{ boxShadow: "0 2px 14px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.05)" }}>
                 {/* Search bar */}
                 <div className="relative">
@@ -1247,7 +1280,7 @@ export default function PlansPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}>
+                <div className="plans-customer-grid grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}>
                   {filtered.map((customer: any) => {
                     const hasPlan = customersWithPlans.has(String(customer._id));
                     const meals = customer.mealsPerDay ?? 0;
@@ -1263,7 +1296,7 @@ export default function PlansPage() {
                         key={customer._id}
                         onClick={() => setSelectedCustomerId(customer._id)}
                         className={cn(
-                          "group rounded-2xl overflow-hidden text-right transition-all hover:-translate-y-1 active:scale-[0.98] relative",
+                          "plan-customer-card group rounded-2xl overflow-hidden text-right transition-all hover:-translate-y-1 active:scale-[0.98] relative",
                           hasPlan ? "opacity-70 hover:opacity-100" : ""
                         )}
                         style={{
@@ -1295,7 +1328,7 @@ export default function PlansPage() {
 
                         {/* Status indicator strip */}
                         <div
-                          className="h-1.5"
+                          className="plan-customer-status-strip h-1.5"
                           style={{
                             background: hasPlan
                               ? "linear-gradient(90deg, #10b981, #34d399)"
@@ -1304,7 +1337,7 @@ export default function PlansPage() {
                         />
 
                         {/* Top section: avatar + name + status */}
-                        <div className="p-4 flex items-start gap-3">
+                        <div className="plan-customer-identity p-4 flex items-start gap-3">
                           <div className="flex-1 min-w-0 text-right">
                             <div className="flex items-center gap-1.5 justify-end mb-1 flex-wrap">
                               {hasAllergy && (
@@ -1328,13 +1361,13 @@ export default function PlansPage() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm font-bold text-gray-900 truncate">{customer.fullName}</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5" dir="ltr">{customer.phone}</p>
+                            <p className="plan-customer-name text-sm font-bold truncate">{customer.fullName}</p>
+                            <p className="plan-customer-phone text-[11px] mt-0.5" dir="ltr">{customer.phone}</p>
                           </div>
 
                           {/* Avatar */}
                           <div
-                            className="h-12 w-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-base font-black text-white shadow-md transition-transform duration-200 group-hover:scale-105"
+                            className="plan-customer-avatar h-12 w-12 rounded-2xl flex-shrink-0 flex items-center justify-center text-base font-black text-white shadow-md transition-transform duration-200 group-hover:scale-105"
                             style={{ background: getAvatarGradient(customer.fullName) }}
                           >
                             {customer.fullName?.charAt(0).toUpperCase()}
@@ -1342,9 +1375,9 @@ export default function PlansPage() {
                         </div>
 
                         {/* Stats row */}
-                        <div className="px-4 pb-3">
+                        <div className="plan-customer-stats px-4 pb-3">
                           <div className="grid grid-cols-3 gap-1.5 text-center">
-                            <div className="rounded-lg py-1.5"
+                            <div className="plan-customer-stat rounded-lg py-1.5"
                               style={{ background: isMorn ? "linear-gradient(135deg, #fffbeb, #fef9c3)" : "linear-gradient(135deg, #eff6ff, #e0e7ff)" }}>
                               <div className="flex items-center justify-center gap-1">
                                 {isMorn ? <Sun className="h-3 w-3 text-amber-500" /> : <Moon className="h-3 w-3 text-indigo-500" />}
@@ -1353,12 +1386,12 @@ export default function PlansPage() {
                                 </p>
                               </div>
                             </div>
-                            <div className="rounded-lg py-1.5"
+                            <div className="plan-customer-stat rounded-lg py-1.5"
                               style={{ background: "linear-gradient(135deg, #ecfeff, #cffafe)" }}>
                               <p className="text-sm font-black text-cyan-700 tabular-nums leading-none">{meals}</p>
                               <p className="text-[9px] text-cyan-600 font-semibold mt-0.5">{isRtl ? "وجبات" : "Meals"}</p>
                             </div>
-                            <div className="rounded-lg py-1.5"
+                            <div className="plan-customer-stat rounded-lg py-1.5"
                               style={{ background: "linear-gradient(135deg, #f0fdf4, #d1fae5)" }}>
                               <p className="text-sm font-black text-emerald-700 tabular-nums leading-none">{snacks}</p>
                               <p className="text-[9px] text-emerald-600 font-semibold mt-0.5">{isRtl ? "سناك" : "Snack"}</p>
@@ -1367,7 +1400,7 @@ export default function PlansPage() {
                         </div>
 
                         {/* Bottom row: program + days left */}
-                        <div className="px-4 pb-3 pt-2 border-t border-gray-50 flex items-center justify-between">
+                        <div className="plan-customer-footer px-4 pb-3 pt-2 border-t border-gray-50 flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             {daysLeft !== null && (
                               <span className={cn(
@@ -1415,20 +1448,20 @@ export default function PlansPage() {
             </button>
 
             {/* ── Customer selector bar ── */}
-            <div className="bg-white rounded-2xl overflow-hidden"
+            <div className="plans-customer-toolbar bg-white rounded-2xl overflow-hidden"
               style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.06)" }}>
-              <div className="flex items-center gap-3 p-4">
+              <div className="plans-customer-toolbar-head flex items-center gap-3 p-4">
                 <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-bold text-white"
                   style={{ background: "linear-gradient(135deg, #3cc4f0, #47759c)" }}>
                   {(selectedCustomer as any)?.fullName?.charAt(0).toUpperCase() || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-gray-900 truncate">{(selectedCustomer as any)?.fullName}</p>
-                  <p className="text-xs text-gray-400" dir="ltr">{(selectedCustomer as any)?.phone}</p>
+                  <p className="plans-selected-name text-sm font-bold truncate">{(selectedCustomer as any)?.fullName}</p>
+                  <p className="plans-selected-phone text-xs" dir="ltr">{(selectedCustomer as any)?.phone}</p>
                 </div>
                 <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>
                   <PopoverTrigger asChild>
-                    <button className="text-xs font-semibold px-3 h-8 rounded-lg transition-colors flex-shrink-0"
+                    <button className="plans-change-customer text-xs font-semibold px-3 h-8 rounded-lg transition-colors flex-shrink-0"
                       style={{ background: "#3cc4f010", color: "#3cc4f0" }}>
                       {isRtl ? "تغيير" : "Change"}
                     </button>
@@ -1465,7 +1498,7 @@ export default function PlansPage() {
               </div>
 
               {/* Copy yesterday */}
-              <div className="px-4 pb-4">
+              <div className="plans-customer-toolbar-controls px-4 pb-4">
                 <button
                   onClick={handleCopyYesterday}
                   className="w-full h-9 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-all hover:opacity-80"
@@ -1515,7 +1548,7 @@ export default function PlansPage() {
               const totalMeals = c.totalMealsPerDay ?? (mealsCount + snacksCount);
 
               return (
-                <div className="bg-white rounded-2xl overflow-hidden"
+                <div className="selected-customer-summary bg-white rounded-2xl overflow-hidden"
                   style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.06)" }}>
 
                   {/* Top row: delivery + program */}
@@ -1624,7 +1657,7 @@ export default function PlansPage() {
               <div className="space-y-3">
 
                 {/* Plan notes */}
-                <div className="bg-white rounded-2xl p-4"
+                <div className="plan-notes-card bg-white rounded-2xl p-4"
                   style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.06)" }}>
                   <p className="text-xs font-semibold text-gray-500 mb-2.5 flex items-center gap-1.5">
                     <StickyNote className="h-3.5 w-3.5" />
@@ -1674,7 +1707,7 @@ export default function PlansPage() {
                       {/* ✅ شريط تحذير واحد ثابت — بدل تكراره داخل كل بطاقة وجبة.
                           يفضل ظاهر أثناء التمرير فالأخصائية بتشوفه وهي بتختار. */}
                       {(cust?.allergies || cust?.avoid) && (
-                        <div className="sticky top-[57px] z-20 mb-3 rounded-xl overflow-hidden"
+                        <div className="plan-safety-strip sticky top-[57px] z-20 mb-3 rounded-xl overflow-hidden"
                           style={{
                             border: cust?.allergies ? "1.5px solid #fca5a5" : "1px solid #d6dee7",
                             boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
@@ -1708,10 +1741,7 @@ export default function PlansPage() {
                         </div>
                       )}
 
-                      <div
-                        className="grid gap-3"
-                        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 260px), 1fr))" }}
-                      >
+                      <div className="daily-meals-grid grid gap-4">
                         {orderedItems.map((item: any) => {
                           const category = sortedCategories.find((c: any) => c._id === item.categoryId);
                           if (!category) return null;
@@ -1726,16 +1756,11 @@ export default function PlansPage() {
                           );
                           const showIndex = (catCounts[item.categoryId] || 0) > 1;
                           const canRemove = (catCounts[item.categoryId] || 0) > 1;
-                          const hasMods = (item.modifierIds || []).length > 0;
-                          const activeMods = (item.modifierIds || []).map((id: string) =>
-                            modifiers.find((m: any) => m._id === id)
-                          ).filter(Boolean);
-
                           return (
                             <div
                               key={item.id}
                               className={cn(
-                                "bg-white rounded-2xl overflow-hidden transition-all flex flex-col group",
+                                "daily-meal-card bg-white rounded-2xl overflow-hidden transition-all flex flex-col group",
                                 item.isOff ? "opacity-50" : "hover:-translate-y-0.5"
                               )}
                               style={{
@@ -1745,11 +1770,8 @@ export default function PlansPage() {
                                 border: "1px solid rgba(0,0,0,0.06)",
                               }}
                             >
-                              {/* Top accent line — brand cyan */}
-                              <div className="h-1" style={{ background: item.isOff ? "#e5e7eb" : accent.color }} />
-
                               {/* Card header */}
-                              <div className="flex items-center justify-between px-3 pt-3 pb-2">
+                              <div className="meal-card-header flex items-center justify-between px-4 py-3">
                                 <div className="flex items-center gap-1">
                                   <Switch
                                     checked={!item.isOff}
@@ -1772,23 +1794,23 @@ export default function PlansPage() {
                                       #{item?.meta?.index ?? 1}
                                     </span>
                                   )}
-                                  <span className="text-[11px] font-bold px-2 h-6 rounded-full flex items-center gap-1.5"
-                                    style={{ color: accent.color, background: accent.color + "12" }}>
+                                  <span className="meal-category-label text-[11px] font-bold px-2 h-6 rounded-md flex items-center gap-1.5"
+                                    style={{ color: accent.color, background: accent.color + "12", borderInlineStart: `3px solid ${accent.color}` }}>
                                     <span className="text-sm leading-none">{accent.icon}</span>
-                                    {isRtl ? (category as any).nameAr || category.name : category.name}
+                                    {getCategoryLabel(category)}
                                   </span>
                                 </div>
                               </div>
 
                               {/* Body */}
                               {!item.isOff && (
-                                <div className="p-3 pt-1 space-y-2.5 flex-1 flex flex-col">
+                                <div className="meal-card-body p-4 pt-3 space-y-3 flex-1 flex flex-col">
                                   {/* 🖼️ كارت الوجبة المختارة (صورة + اسم + سعرات) — زي منيو العميل،
                                       ليرى الأخصائي ما اختاره بوضوح. عرض فقط — لا يمسّ أي منطق. */}
                                   {(() => {
                                     const info = item.menuItemId ? mealInfoByMenuItem.get(String(item.menuItemId)) : null;
                                     return (
-                                      <div className="relative w-full h-28 rounded-xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                                      <div className="meal-card-visual relative w-full h-24 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
                                         {info?.imageUrl ? (
                                           <img src={info.imageUrl} alt={info.nameAr || ""} className="w-full h-full object-cover" />
                                         ) : (
@@ -1820,6 +1842,7 @@ export default function PlansPage() {
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}
                                     suggestedIds={slotSuggestedIds}
+                                    infoById={mealInfoByMenuItem}
                                   />
 
                                   {/* ℹ️ تحذيرات العميل (حساسية/ممنوعات) لم تعد تتكرّر في كل بطاقة —
@@ -1832,27 +1855,6 @@ export default function PlansPage() {
                                     modifiers={modifiers || []}
                                     isRtl={isRtl}
                                   />
-
-                                  {/* Active modifiers preview — ألوان الهوية */}
-                                  {hasMods && (
-                                    <div className="flex flex-wrap gap-1">
-                                      {activeMods.map((mod: any) => {
-                                        const tone =
-                                          mod.group === "AVOID" ? { fg: "#0E2A4A", bg: "#f2f5f8", bd: "#d6dee7" }
-                                          : mod.group === "PREF" ? { fg: "#0E76AC", bg: "#f2fbfe", bd: "#bfe9f8" }
-                                          : { fg: "#47759c", bg: "#f6f8fa", bd: "#dde5ec" };
-                                        return (
-                                          <span
-                                            key={mod._id}
-                                            className="text-[9.5px] font-semibold px-1.5 py-0.5 rounded-md border"
-                                            style={{ color: tone.fg, background: tone.bg, borderColor: tone.bd }}
-                                          >
-                                            {mod.name}
-                                          </span>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
 
                                   <Input
                                     placeholder={isRtl ? "ملاحظة..." : "Note..."}
@@ -1878,7 +1880,7 @@ export default function PlansPage() {
                             <button
                               key={cat._id}
                               onClick={() => addCategorySlot(cat._id)}
-                              className="h-9 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all hover:bg-white"
+                              className="add-meal-slot h-9 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all"
                               style={{
                                 border: `1.5px dashed ${accent.color}40`,
                                 color: accent.color,
@@ -1887,7 +1889,7 @@ export default function PlansPage() {
                             >
                               <Plus className="h-3 w-3" />
                               <span>{accent.icon}</span>
-                              {isRtl ? `إضافة ${cat.nameAr || cat.name}` : `Add ${cat.name}`}
+                              {isRtl ? `إضافة ${getCategoryLabel(cat)}` : `Add ${cat.name}`}
                             </button>
                           );
                         })}
@@ -1903,26 +1905,10 @@ export default function PlansPage() {
 
       {/* ── Fixed bottom actions ── */}
       {selectedCustomerId && currentPlan && (
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 py-3"
+        <div className="plans-action-bar fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-100 px-4 py-3"
           style={{ boxShadow: "0 -4px 20px rgba(0,0,0,0.08)" }}>
-          <div className="max-w-6xl mx-auto space-y-2.5">
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => handleSave("DRAFT")}
-                className="h-11 rounded-xl text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-              >
-                {isRtl ? "حفظ مسودة" : "Save Draft"}
-              </button>
-              <button
-                onClick={() => handleSave("CONFIRMED")}
-                className="h-11 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
-                style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
-              >
-                <Check className="h-4 w-4" />
-                {isRtl ? "تأكيد الخطة" : "Confirm Plan"}
-              </button>
-            </div>
-            <div className="flex items-center justify-between gap-3">
+          <div className="plans-action-inner max-w-[1400px] mx-auto">
+            <div className="plans-action-secondary flex items-center gap-2">
               <button
                 onClick={async () => {
                   const ok = await confirmDialog({
@@ -1935,17 +1921,33 @@ export default function PlansPage() {
                   setSelectedCustomerId(null);
                   setCurrentPlan(null);
                 }}
-                className="text-xs font-bold text-red-500 flex items-center gap-1.5 py-1 hover:text-red-600 transition-colors"
+                className="plans-cancel-action h-10 px-3 rounded-lg text-xs font-bold text-red-600 flex items-center justify-center gap-1.5 transition-colors"
               >
                 <X className="h-3.5 w-3.5" />
                 {isRtl ? "إلغاء" : "Cancel"}
               </button>
               <button
                 onClick={() => setLocation(`/plans-review/${formattedDate}`)}
-                className="text-xs font-medium text-gray-400 flex items-center gap-1.5 py-1 hover:text-[#3cc4f0] transition-colors"
+                className="plans-review-action h-10 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Eye className="h-3.5 w-3.5" />
-                {isRtl ? "الانتقال للمراجعة النهائية" : "Go to Final Review"}
+                {isRtl ? "المراجعة النهائية" : "Final Review"}
+              </button>
+            </div>
+            <div className="plans-action-primary grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => handleSave("DRAFT")}
+                className="plans-draft-action h-11 rounded-lg text-sm font-semibold transition-colors"
+              >
+                {isRtl ? "حفظ مسودة" : "Save Draft"}
+              </button>
+              <button
+                onClick={() => handleSave("CONFIRMED")}
+                className="plans-confirm-action h-11 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
+              >
+                <Check className="h-4 w-4" />
+                {isRtl ? "تأكيد الخطة" : "Confirm Plan"}
               </button>
             </div>
           </div>

@@ -97,8 +97,8 @@ export default function Stickers() {
       <div className="print:hidden space-y-4">
 
         {/* Page header */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">
               {isRtl ? "طباعة الستيكرات" : "Stickers Print"}
             </h1>
@@ -106,9 +106,9 @@ export default function Stickers() {
               {isRtl ? "معاينة وطباعة ستيكرات الوجبات والبوكس" : "Preview and print meal & box stickers"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
             {/* Printer mode toggle */}
-            <div className="flex rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex min-h-11 flex-1 rounded-xl border border-gray-200 overflow-hidden sm:flex-none">
               {([
                 { key: "label", ar: "طابعة استيكرات", en: "Label Printer" },
                 { key: "sheet", ar: "ورقة A4", en: "A4 Sheet" },
@@ -117,7 +117,7 @@ export default function Stickers() {
                   key={m.key}
                   onClick={() => setPrinterMode(m.key)}
                   className={cn(
-                    "h-10 px-3 text-xs font-bold transition-colors",
+                    "min-h-11 flex-1 px-3 text-xs font-bold transition-colors sm:flex-none",
                     printerMode === m.key ? "text-white" : "bg-white text-gray-500 hover:bg-gray-50"
                   )}
                   style={printerMode === m.key ? { background: "#0E76AC" } : {}}
@@ -128,7 +128,7 @@ export default function Stickers() {
             </div>
             <button
               onClick={() => setPendingPrint("all")}
-              className="h-10 px-5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95"
+              className="min-h-11 flex-1 px-5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 sm:flex-none"
               style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
             >
               <Printer className="h-4 w-4" />

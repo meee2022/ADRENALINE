@@ -95,16 +95,16 @@ export function MobileBottomNav() {
       className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white to-cyan-50 border-t-2 border-cyan-300 shadow-[0_-4px_20px_rgba(6,182,212,0.15)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <nav className="flex items-center justify-around h-16 px-2 max-w-screen-xl mx-auto">
+      <nav className="flex items-stretch justify-around min-h-16 px-1 max-w-screen-xl mx-auto">
         {filteredItems.map((item) => {
           const isActive = location === item.href;
           const Icon = item.icon;
 
           return (
-            <Link key={item.href} href={item.href}>
+            <Link key={item.href} href={item.href} className="flex min-w-0 flex-1 sm:flex-none">
               <button
                 className={cn(
-                  "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 min-w-[60px]",
+                  "flex min-h-16 min-w-0 w-full flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-xl transition-all duration-300 sm:min-w-[60px] sm:gap-1 sm:px-3 sm:py-2",
                   isActive
                     ? "text-cyan-600 scale-110"
                     : "text-gray-500 hover:text-cyan-500"
@@ -112,7 +112,7 @@ export function MobileBottomNav() {
               >
                 <div
                   className={cn(
-                    "relative p-2 rounded-xl transition-all duration-300",
+                    "relative p-1.5 rounded-xl transition-all duration-300 sm:p-2",
                     isActive
                       ? "bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-lg shadow-cyan-500/50"
                       : "bg-transparent"
@@ -130,7 +130,7 @@ export function MobileBottomNav() {
                 </div>
                 <span
                   className={cn(
-                    "text-[10px] font-semibold transition-all truncate max-w-full",
+                    "w-full truncate text-center text-[11px] font-semibold leading-tight transition-all",
                     isActive ? "text-cyan-600" : "text-gray-600"
                   )}
                 >
