@@ -49,7 +49,7 @@ function ThermalLabel({ item }: { item: LabelRow }) {
       <div className="outlet-label-mid">
         <div className="outlet-label-facts">
           <div><b>QR.</b><strong>{item.price ?? "--"}</strong></div>
-          <div>Calories :<strong>{item.calories ?? "--"}</strong></div>
+          <div><span className="cal">Calories</span><strong>{item.calories ?? "--"}</strong><span className="cal">kcal</span></div>
         </div>
         <div className="outlet-label-barcode"><ProductBarcode value={item.barcode} compact /><span>{item.barcode}</span></div>
       </div>
@@ -224,12 +224,12 @@ export default function OutletLabels() {
       <style>{`
         .outlet-label-page{background:linear-gradient(180deg,#e9f6fb 0,#f4f8fb 260px,#eef3f7 100%)}
         .outlet-thermal-label{width:58mm;height:39mm;background:#fff;color:#050505;padding:2.4mm 3mm 2mm;box-sizing:border-box;display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
-        .outlet-label-brand{height:8mm;display:flex;align-items:center;justify-content:center;gap:2.5mm;border-bottom:.35mm solid #111;padding-bottom:1mm}
-        .outlet-label-brand img{width:7mm;height:7mm;object-fit:contain;filter:grayscale(1) contrast(2)}
-        .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5mm;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.45mm;font-weight:700;letter-spacing:1mm;margin-top:1mm}
-        .outlet-label-name{height:7mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:3.6mm;line-height:1;overflow:hidden;padding-top:.8mm}
-        .outlet-label-mid{height:12.2mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.2mm;line-height:1.55}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts strong{font-size:4mm}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}
-        .outlet-label-macros{margin-top:auto;border-top:.25mm solid #111;padding-top:.8mm;display:flex;justify-content:space-between;font-size:3.4mm;font-weight:700;white-space:nowrap}.outlet-label-macros b{font-size:4mm}
+        .outlet-label-brand{height:8.6mm;display:flex;align-items:center;justify-content:center;gap:2mm;border-bottom:.45mm solid #000;padding-bottom:1mm}
+        .outlet-label-brand img{width:8.2mm;height:8.2mm;object-fit:contain;filter:grayscale(1) brightness(0)}
+        .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5.8mm;font-weight:900;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.55mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm}
+        .outlet-label-name{height:6.6mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;font-size:3.7mm;line-height:1;overflow:hidden;padding-top:.6mm}
+        .outlet-label-mid{height:11.6mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.1mm;line-height:1.5}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts .cal{font-size:2.8mm;color:#222}.outlet-label-facts strong{font-size:4.4mm;font-weight:900}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}
+        .outlet-label-macros{margin-top:auto;margin-bottom:.8mm;border:.35mm solid #000;border-radius:1.4mm;padding:.9mm .6mm;display:flex;font-size:3.2mm;font-weight:800;white-space:nowrap}.outlet-label-macros span{flex:1;text-align:center}.outlet-label-macros span+span{border-left:.25mm solid #000}.outlet-label-macros b{font-size:4mm;font-weight:900}
         @media print{@page{size:58mm 39mm;margin:0}html,body{width:58mm!important;margin:0!important;background:#fff!important}.outlet-print-root{display:block!important}.outlet-print-sheet{width:58mm;height:39mm;break-before:page;page-break-before:always;break-inside:avoid;margin:0}.outlet-print-sheet:first-child{break-before:auto;page-break-before:auto}.outlet-thermal-label{border:0!important;margin:0!important}}
       `}</style>
     </div>
