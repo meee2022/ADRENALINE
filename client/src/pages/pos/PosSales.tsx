@@ -37,6 +37,8 @@ export default function PosSales() {
   const items = useQuery(api.pos.listItems, { token: token || undefined }) as any[] | undefined;
   const posCats = useQuery(api.pos.listCategories, { token: token || undefined }) as any[] | undefined;
   const shift = useQuery(api.pos.currentShift, token ? { token } : "skip") as any;
+  const posCfg = useQuery(api.pos.posSettings, { token: token || undefined }) as any;
+  const deliveryFee = Number(posCfg?.deliveryFee ?? 10);
   const quickSale = useMutation(api.pos.quickSale);
 
   const [q, setQ] = useState("");
@@ -114,6 +116,7 @@ export default function PosSales() {
         token,
         lines: cart.map((l: any) => ({
           ...(l.mealId ? { mealId: l.mealId as any } : {}),
+          ...(l.kind ? { kind: l.kind } : {}),
           name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
         })),
         paymentMethod, cashReceived,
@@ -285,11 +288,11 @@ export default function PosSales() {
             {cart.length > 0 && (
               <div className="p-3 grid grid-cols-2 gap-2">
                 <button
-                  onClick={() => setCart([...cart, { mealId: null, name: tt("توصيل", "Delivery"), qty: 1, unitPrice: 10 }])}
+                  onClick={() => setCart([...cart, { mealId: null, kind: "delivery", name: tt("توصيل", "Delivery"), qty: 1, unitPrice: deliveryFee }])}
                   className="h-9 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 text-orange-300 hover:bg-orange-500/10 transition-colors"
                   style={{ border: "1px solid #3d2818" }}
                 >
-                  <Truck className="h-3.5 w-3.5" /> + {tt("توصيل", "Delivery")} 10
+                  <Truck className="h-3.5 w-3.5" /> + {tt("توصيل", "Delivery")} {deliveryFee}
                 </button>
                 <button
                   onClick={() => {

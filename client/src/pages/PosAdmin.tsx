@@ -97,9 +97,11 @@ function OverviewTab({ t, sessionToken }: any) {
   const cats = useQuery(api.posAdmin.listCategories, { sessionToken }) as any[] | undefined;
   const settings = useQuery(api.restaurantSettings.get, {}) as any;
   const setPosTax = useMutation(api.restaurantSettings.setPosTax);
+  const setDeliveryFee = useMutation(api.restaurantSettings.setPosDeliveryFee);
   const [taxPct, setTaxPct] = useState<string>("");
   const [taxIncl, setTaxIncl] = useState(true);
   const [taxLabel, setTaxLabel] = useState("VAT");
+  const [delFee, setDelFee] = useState<string>("");
   useMemo(() => {
     if (settings?.posTax) {
       setTaxPct(String(settings.posTax.pct));
@@ -107,10 +109,19 @@ function OverviewTab({ t, sessionToken }: any) {
       setTaxLabel(settings.posTax.label || "VAT");
     }
   }, [settings?.posTax]);
+  useMemo(() => {
+    if (settings) setDelFee(String(settings.posDeliveryFee ?? 10));
+  }, [settings?.posDeliveryFee]);
   const saveTax = async () => {
     try {
       await setPosTax({ pct: Number(taxPct) || 0, inclusive: taxIncl, label: taxLabel, sessionToken });
       void alertDialog({ message: t("تم حفظ إعدادات الضريبة", "Tax settings saved") });
+    } catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
+  };
+  const saveDelFee = async () => {
+    try {
+      await setDeliveryFee({ fee: Number(delFee) || 0, sessionToken });
+      void alertDialog({ message: t("تم حفظ رسوم التوصيل", "Delivery fee saved") });
     } catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
   };
 
@@ -188,6 +199,24 @@ function OverviewTab({ t, sessionToken }: any) {
               {settings.posTax.inclusive ? t(" شامل", " inclusive") : t(" إضافي", " on top")}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <h3 className="font-black mb-1">{t("رسوم التوصيل (طلب مباشر)", "Delivery Fee (direct order)")}</h3>
+          <p className="text-xs text-slate-500 mb-3">{t("تُستخدم مع زر «+توصيل» في شاشة البيع للطلبات المباشرة. طلبات المنصّات لا تُضاف لها رسوم (المنصّة تحصّلها).", "Used by the '+Delivery' button for direct orders. Platform orders should NOT add it (the platform collects it).")}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs font-bold text-slate-500">{t("الرسوم (ر.ق)", "Fee (QAR)")}</Label>
+              <Input type="number" step="0.5" value={delFee} onChange={(e) => setDelFee(e.target.value)} placeholder="10" className="h-10" />
+            </div>
+            <div className="flex items-end">
+              <Button onClick={saveDelFee} className="w-full h-10 text-white font-bold" style={{ background: "#0E76AC" }}>
+                <Save className="h-4 w-4 me-1" /> {t("حفظ", "Save")}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

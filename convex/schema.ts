@@ -1146,6 +1146,8 @@ export default defineSchema({
     })),
     // ✅ معامل الأوفرتايم في المطعم (ساعة الأوفرتايم = المعدّل الساعي × هذا المعامل). افتراضي 1.5
     attendanceOtRate: v.optional(v.number()),
+    // ✅ رسوم التوصيل الثابتة للطلبات المباشرة (سائق المطعم). افتراضي 10. للمنصّات لا تُضاف.
+    posDeliveryFee: v.optional(v.number()),
     // ✅ تقرير POS اليومي بالإيميل (Z-report): مفعّل + مستقبلين + وقت الإرسال (HH:MM بتوقيت قطر)
     posDailyReport: v.optional(v.object({
       enabled: v.boolean(),

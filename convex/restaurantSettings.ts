@@ -60,6 +60,18 @@ export const setPosTax = mutation({
   },
 });
 
+/** رسوم التوصيل الثابتة للطلبات المباشرة (سائق المطعم). للمنصّات لا تُضاف. */
+export const setPosDeliveryFee = mutation({
+  args: { fee: v.number(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const existing = await ctx.db.query("restaurantSettings").first();
+    const fee = Math.max(0, Number(args.fee) || 0);
+    if (existing) await ctx.db.patch(existing._id, { posDeliveryFee: fee } as any);
+    return { ok: true, fee };
+  },
+});
+
 export const setProgramPortions = mutation({
   args: {
     portions: v.any(), // { DIET:{carb,protein,calFactor}, FITNESS:{...}, BULK:{...} }

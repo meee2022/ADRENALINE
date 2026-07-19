@@ -125,6 +125,16 @@ export const logout = mutation({
 
 /* ═══════════════════════════════ Categories & Items ═══════════════════════════════ */
 
+/** إعدادات عامة للـPOS يحتاجها الكاشير (رسوم التوصيل الحالية). */
+export const posSettings = query({
+  args: { token: v.optional(v.string()) },
+  handler: async (ctx, { token }) => {
+    if (token) await requireCashier(ctx, token);
+    const s: any = await ctx.db.query("restaurantSettings").first();
+    return { deliveryFee: Number(s?.posDeliveryFee ?? 10) };
+  },
+});
+
 export const listCategories = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, { token }) => {
@@ -257,6 +267,8 @@ type ClientLineInput = {
   // ⚠️ name/unitPrice من العميل — يُقبل فقط للـcustom (بدون mealId) ومع ADMIN
   name?: string;
   unitPrice?: number;
+  // "delivery" = سطر رسوم توصيل يسعّره الخادم (posDeliveryFee) — مسموح للكاشير
+  kind?: string;
 };
 
 type ServerLine = {
@@ -278,11 +290,18 @@ async function buildServerLines(
   clientLines: ClientLineInput[],
   actorIsAdmin: boolean,
 ): Promise<ServerLine[]> {
+  // رسوم التوصيل الثابتة من الإعدادات (يسعّرها الخادم — الكاشير مش بيحدد المبلغ)
+  const settingsForFee: any = await ctx.db.query("restaurantSettings").first();
+  const deliveryFee = Number(settingsForFee?.posDeliveryFee ?? 10);
   const out: ServerLine[] = [];
   for (const l of clientLines) {
     const qty = Number(l.qty);
     if (!Number.isFinite(qty) || qty <= 0) throw new Error("الكمية لازم تكون أكبر من صفر");
-    if (l.mealId) {
+    if (!l.mealId && l.kind === "delivery") {
+      // 🚚 سطر توصيل — يسعّره الخادم، مسموح للكاشير (مش صنف مخصّص حر)
+      if (!Number.isFinite(deliveryFee) || deliveryFee < 0) throw new Error("رسوم التوصيل غير مضبوطة");
+      out.push({ mealId: undefined, name: "توصيل", qty, unitPrice: deliveryFee, notes: l.notes?.trim() || undefined });
+    } else if (l.mealId) {
       const meal: any = await ctx.db.get(l.mealId as Id<"publicMeals">);
       if (!meal || !meal.isActive) throw new Error("الوجبة غير متوفرة");
       const meta = await ctx.db
@@ -523,6 +542,7 @@ const ticketLineArg = v.object({
   notes: v.optional(v.string()),
   name: v.optional(v.string()),        // يُتجاهل لو mealId موجود
   unitPrice: v.optional(v.number()),   // يُتجاهل لو mealId موجود
+  kind: v.optional(v.string()),        // "delivery" = رسوم توصيل يسعّرها الخادم
 });
 
 /** إنشاء فاتورة مفتوحة (parked). 🔒 يشترط وردية مفتوحة. */
