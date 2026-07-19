@@ -653,6 +653,9 @@ export default function Kitchen() {
     const pp: any = programPortions;
     const MAIN_KEYS = ["CRISPY CHICKEN", "BEEF STROGANOF", "BEEF LASAGNA", "SOUTHWEST", "IRANIAN CHICKEN", "GRILLED CHICKEN", "GRILLED STEAK", "GRILLED SALMON", "GRILLED SHRIMP", "DYNAMITE SHRIMP", "CHICKEN CURRY", "GARLIC BUTTER", "CHICKEN FAJITA", "LEMON CHICKEN", "SHISHTAWOOK", "STEAK SANDWICH", "CHICKEN CUTLETS", "SHAWARMA"];
     const isMain = (nm: string) => { const u = nm.toUpperCase(); return MAIN_KEYS.some((k) => u.includes(k)); };
+    // ✅ الطبق الرئيسي (رز+بروتين) = تصنيفه غداء/عشاء — تلقائي بدل الاعتماد على قائمة أسماء ثابتة
+    //    تُطبّق أعمدة RICE/PROTIEN لكل باقة. (عرض الكشف فقط — لا يمسّ أي منطق/قيود مشتركين.)
+    const isMainCat = (cat: string) => { const u = String(cat || "").toUpperCase(); return u.includes("LUNCH") || u.includes("غداء") || u.includes("DINNER") || u.includes("عشاء") || u.includes("MAIN") || u.includes("رئيس"); };
     const progOf = (p: string) => {
       const u = String(p || "").toUpperCase();
       if (u.includes("DIET")) return "DIET";
@@ -668,7 +671,7 @@ export default function Kitchen() {
       d.specialNotes && `${d.specialNotes}`,
     ].filter(Boolean).join(" · ");
     const dishTable = (m: any) => {
-      const main = isMain(m.name) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
+      const main = (isMain(m.name) || isMainCat(m.category)) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
       const order = main ? ["DIET", "FITNESS", "BULK", "STANDARD"] : ["STANDARD"];
       // تجميع تفاصيل الطبق: بكت لكل برنامج { عادي + تعديلات مجمّعة بعدّاد }
       const buckets: Record<string, { plain: number; mods: Map<string, { label: string; count: number; names: string[] }> }> = {};
