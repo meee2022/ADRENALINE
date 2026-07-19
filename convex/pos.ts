@@ -40,7 +40,8 @@ function isAdmin(user: any): boolean {
 
 // حدود مسموحة للكاشير — تجاوزها يستلزم ADMIN
 const MAX_CASHIER_DISCOUNT_PCT = 20;                    // خصم أعلى من ده يحتاج مدير
-const ALLOWED_PAYMENT_METHODS = new Set(["cash", "card", "transfer", "other"]);
+// النقدي/البطاقة/التحويل + منصّات التوصيل (المعروضة في واجهة الدفع)
+const ALLOWED_PAYMENT_METHODS = new Set(["cash", "card", "transfer", "other", "talabat", "snoonu", "rafeeq", "keeta"]);
 const ADMIN_ONLY_PAYMENT_METHODS = new Set(["staff"]);  // فاتورة موظف = خارج الإيراد
 
 function newToken(): string {
