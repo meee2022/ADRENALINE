@@ -1009,18 +1009,18 @@ export default function PlansPage() {
 
           return (
             <div className="space-y-5">
-              {/* ─── Hero gradient banner ─── */}
+              {/* ─── Hero banner — أخفّ وأنظف (زي صفحة المخصّصة) ─── */}
               <div
                 className="plans-overview rounded-3xl overflow-hidden relative p-7"
                 style={{
-                  background: "linear-gradient(135deg,#0E2A4A 0%,#0E76AC 55%,#3AC7F4 100%)",
-                  boxShadow: "0 8px 32px rgba(14,42,74,0.25)",
+                  background: "linear-gradient(135deg,#0E76AC 0%,#3AC7F4 100%)",
+                  boxShadow: "0 10px 30px -14px rgba(14,118,172,0.35)",
                 }}
               >
-                {/* Decorative glow */}
-                <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-30"
+                {/* Decorative glow — أخف */}
+                <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-20"
                   style={{ background: "radial-gradient(circle, #ffffff60, transparent 70%)" }} />
-                <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-20"
+                <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full opacity-15"
                   style={{ background: "radial-gradient(circle, #ffffff80, transparent 70%)" }} />
 
                 <div className="relative flex items-center justify-between flex-wrap gap-4">
