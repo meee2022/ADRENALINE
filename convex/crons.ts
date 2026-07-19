@@ -19,4 +19,15 @@ crons.weekly(
   internal.restaurantSettings.advanceCookingWeek,
 );
 
+/**
+ * تقرير POS اليومي (Z-report) بالإيميل. يعمل كل ساعة، ويرسل مرة واحدة يومياً
+ * حين تتجاوز ساعة قطر ساعة الإرسال المضبوطة (posDailyReport.sendTime).
+ * محمي ضد التكرار عبر lastSentDate. لا يرسل شيئاً إن كان معطّلاً أو بلا مفتاح Resend.
+ */
+crons.hourly(
+  "pos daily report",
+  { minuteUTC: 5 },
+  internal.posReports.runDailyReportCron,
+);
+
 export default crons;

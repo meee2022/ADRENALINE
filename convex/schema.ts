@@ -1134,6 +1134,13 @@ export default defineSchema({
       inclusive: v.boolean(),
       label: v.optional(v.string()), // "VAT" أو "ضريبة"
     })),
+    // ✅ تقرير POS اليومي بالإيميل (Z-report): مفعّل + مستقبلين + وقت الإرسال (HH:MM بتوقيت قطر)
+    posDailyReport: v.optional(v.object({
+      enabled: v.boolean(),
+      recipients: v.array(v.string()),
+      sendTime: v.optional(v.string()),   // "HH:MM" — الكرون يرسل عند تطابق الساعة/الدقيقة (قطر)
+      lastSentDate: v.optional(v.string()), // yyyy-MM-dd — يمنع الإرسال مرتين في نفس اليوم
+    })),
     // Contact Information
     phone: v.string(),
     email: v.string(),

@@ -3,8 +3,8 @@
  * @description إدارة POS (للأدمن): الكاشيرون، الفئات، ألوان الأصناف، التقارير، الورديات.
  * @convex convex/posAdmin.ts
  */
-import { useMemo, useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -533,6 +533,83 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
 
 /* ═══════════════════════════════ Reports ═══════════════════════════════ */
 
+function EmailReportCard({ t, sessionToken }: any) {
+  const cfg = useQuery(api.posReports.getReportSettings, { sessionToken }) as any;
+  const save = useMutation(api.posReports.saveReportSettings);
+  const sendNow = useAction(api.posReports.sendDailyReport);
+  const [enabled, setEnabled] = useState(false);
+  const [emails, setEmails] = useState("");
+  const [sendTime, setSendTime] = useState("23:00");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const loaded = useRef(false);
+
+  useEffect(() => {
+    if (cfg && !loaded.current) {
+      loaded.current = true;
+      setEnabled(!!cfg.enabled);
+      setEmails((cfg.recipients || []).join(", "));
+      setSendTime(cfg.sendTime || "23:00");
+    }
+  }, [cfg]);
+
+  const parseEmails = () => emails.split(/[,\n;]+/).map((e) => e.trim()).filter(Boolean);
+
+  const doSave = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r = await save({ sessionToken, enabled, recipients: parseEmails(), sendTime });
+      setEmails((r.recipients || []).join(", "));
+      setMsg(t("تم الحفظ ✓", "Saved ✓"));
+    } catch (e: any) {
+      setMsg(e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || t("خطأ", "Error"));
+    } finally { setBusy(false); }
+  };
+
+  const doTest = async () => {
+    setBusy(true); setMsg(null);
+    try {
+      const r: any = await sendNow({ sessionToken, recipientsOverride: parseEmails() });
+      if (r.sent) setMsg(t("تم إرسال تقرير تجريبي ✓", "Test report sent ✓"));
+      else if (r.reason === "no_provider") setMsg(t("مفتاح Resend غير مضبوط بعد (RESEND_API_KEY) — التقرير جاهز وسيعمل فور إضافته.", "Resend key not set yet (RESEND_API_KEY) — ready once added."));
+      else if (r.reason === "no_recipients") setMsg(t("أضف بريداً واحداً على الأقل.", "Add at least one recipient."));
+      else setMsg(t("تعذّر الإرسال — راجع مزوّد البريد.", "Send failed — check email provider."));
+    } catch (e: any) {
+      setMsg(e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || t("خطأ", "Error"));
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <Card className="rounded-2xl border-[#cfe7f3]">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-black text-[#0E2A4A]">📧 {t("تقرير يومي بالإيميل (Z-report)", "Daily email report (Z-report)")}</h3>
+          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="w-4 h-4 accent-[#0E76AC]" />
+            {t("مُفعّل", "Enabled")}
+          </label>
+        </div>
+        <div>
+          <Label>{t("مستقبلو التقرير (افصل بفاصلة)", "Recipients (comma-separated)")}</Label>
+          <Input value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="owner@example.com, manager@example.com" className="h-10" />
+        </div>
+        <div className="grid grid-cols-2 gap-3 items-end">
+          <div>
+            <Label>{t("وقت الإرسال (توقيت قطر)", "Send time (Qatar)")}</Label>
+            <Input type="time" value={sendTime} onChange={(e) => setSendTime(e.target.value)} className="h-10" />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={doSave} disabled={busy} className="h-10 bg-[#0E76AC] hover:bg-[#0c6698]">{t("حفظ", "Save")}</Button>
+            <Button onClick={doTest} disabled={busy} variant="outline" className="h-10">{t("إرسال تجريبي", "Test send")}</Button>
+          </div>
+        </div>
+        {msg && <p className="text-xs font-bold text-[#0E76AC] bg-[#eef7fb] rounded-lg p-2">{msg}</p>}
+        {cfg?.lastSentDate && <p className="text-[11px] text-slate-400">{t("آخر إرسال:", "Last sent:")} {cfg.lastSentDate}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 function ReportsTab({ t, sessionToken }: any) {
   const today = new Date().toISOString().slice(0, 10);
   const [from, setFrom] = useState(today.slice(0, 7) + "-01");
@@ -542,6 +619,7 @@ function ReportsTab({ t, sessionToken }: any) {
 
   return (
     <div className="space-y-3">
+      <EmailReportCard t={t} sessionToken={sessionToken} />
       <Card className="rounded-2xl">
         <CardContent className="p-4 grid grid-cols-2 gap-3">
           <div><Label>{t("من", "From")}</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" /></div>
