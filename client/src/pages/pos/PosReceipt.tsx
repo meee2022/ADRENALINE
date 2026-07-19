@@ -80,8 +80,7 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
           ) : (
             <div className="bg-white p-4 rounded-lg shadow-sm font-mono text-sm">
               <div className="text-center border-b border-dashed border-slate-300 pb-2 mb-2">
-                <div className="font-black text-slate-900">ADRENALINE</div>
-                <div className="text-[10px] text-slate-500">Healthy Food</div>
+                <img src="/adrenaline-logo-full.png" alt="ADRENALINE" className="h-8 mx-auto object-contain" />
               </div>
               <div className="text-[11px] text-slate-600 mb-2">
                 <div>Receipt: #{t.ticketNumber}</div>
@@ -175,6 +174,7 @@ function buildReceiptHtml(t: any): string {
       *{box-sizing:border-box;font-family:'Courier New',monospace}
       body{margin:0;padding:8px;font-size:12px;color:#000;width:80mm}
       h1{text-align:center;margin:0 0 4px;font-size:16px}
+      .logo{display:block;max-width:60mm;height:auto;margin:0 auto 8px}
       .sub{text-align:center;font-size:10px;color:#555;margin-bottom:8px}
       .info{font-size:11px;margin-bottom:6px}
       .dash{border-top:1px dashed #999;margin:4px 0}
@@ -186,8 +186,7 @@ function buildReceiptHtml(t: any): string {
       @page{size:80mm auto;margin:0}
       @media print{body{margin:0;padding:4mm 4mm 8mm}}
     </style></head><body>
-    <h1>ADRENALINE</h1>
-    <div class="sub">Healthy Food</div>
+    <img class="logo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
     <div class="info">
       Receipt: #${t.ticketNumber}<br>
       Cashier: ${escapeHtml(t.cashierName)}<br>
@@ -222,7 +221,7 @@ function buildLabelsHtml(t: any): string {
     for (let k = 0; k < units; k++) {
       labels.push(`
         <div class="lbl">
-          <div class="brand">ADRENALINE</div>
+          <img class="brandlogo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
           <div class="name">${escapeHtml(l.name)}</div>
           ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ""}
           <div class="meta">
@@ -242,6 +241,7 @@ function buildLabelsHtml(t: any): string {
       body{margin:0;padding:0;color:#000}
       .lbl{width:80mm;padding:4mm 4mm 5mm;border-bottom:1px dashed #bbb;page-break-inside:avoid}
       .brand{font-size:10px;letter-spacing:2px;color:#0E76AC;font-weight:800}
+      .brandlogo{height:22px;width:auto;object-fit:contain}
       .name{font-size:20px;font-weight:900;margin:2px 0 4px;line-height:1.15}
       .note{font-size:11px;color:#444;margin-bottom:3px}
       .meta{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#222}
