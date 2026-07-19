@@ -383,6 +383,11 @@ export default defineSchema({
     avoid: v.optional(v.string()), // الممنوعات: "بدون بصل، بدون مايونيز"
     preferences: v.optional(v.string()), // التفضيلات: "كثير صوص، خفيف ملح"
     portions: v.optional(v.string()), // الكميات: "نصف حصة أرز، حصة كبيرة بروتين"
+    // ✅ تخصيص كميات/سعرات المشترك للوجبات الرئيسية (اختياري) — يُطبَّق فقط لمن حُدِّد له.
+    //    فارغ = يستخدم الافتراضي حسب الباقة (programPortions). لا يحوّله لمخصّص.
+    carbGrams: v.optional(v.number()),         // جرامات الكارب (رز) — تتجاوز افتراضي الباقة
+    proteinGrams: v.optional(v.number()),      // جرامات البروتين — تتجاوز افتراضي الباقة
+    mainMealCalories: v.optional(v.number()),  // سعرات الوجبة الرئيسية اليدوية — تُطبع على الستيكر
 
     isActive: v.boolean(),
 

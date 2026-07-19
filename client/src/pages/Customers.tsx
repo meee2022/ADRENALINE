@@ -245,6 +245,10 @@ const customerSchema = z.object({
   avoid: z.string().optional(),
   preferences: z.string().optional(),
   portions: z.string().optional(),
+  // ✅ تخصيص كميات/سعرات الوجبة الرئيسية (اختياري — لمن حُدِّد له فقط)
+  carbGrams: z.coerce.number().optional(),
+  proteinGrams: z.coerce.number().optional(),
+  mainMealCalories: z.coerce.number().optional(),
 
   packageLabel: z.string().optional(),
   durationWeeks: z.coerce.number().optional(),
@@ -612,6 +616,10 @@ export default function Customers() {
       goals: customer.goals || customer.program || "",
       allergies: customer.allergies || "",
       notes: customer.notes || "",
+
+      carbGrams: customer.carbGrams ?? undefined,
+      proteinGrams: customer.proteinGrams ?? undefined,
+      mainMealCalories: customer.mainMealCalories ?? undefined,
 
       packageLabel: customer.packageLabel || "",
       durationWeeks: customer.durationWeeks,
@@ -1314,10 +1322,36 @@ export default function Customers() {
                       </PopoverContent>
                     </Popover>
                     <p className="text-xs text-gray-500">
-                      {isRtl 
+                      {isRtl
                         ? "تعديل الكميات حسب الحاجة"
                         : "Adjust portions as needed"}
                     </p>
+                  </div>
+                </div>
+
+                {/* ===== تخصيص الوجبة الرئيسية (اختياري) — لمن حُدِّد له فقط ===== */}
+                <div className="rounded-xl border border-amber-300 bg-amber-50/60 p-4 space-y-3">
+                  <Label className="text-amber-700 font-bold flex items-center gap-2">
+                    ⚖️ {isRtl ? "تخصيص الوجبة الرئيسية (اختياري)" : "Main-meal customization (optional)"}
+                  </Label>
+                  <p className="text-xs text-amber-700/80">
+                    {isRtl
+                      ? "لو المشترك عايز كمية/سعرات مختلفة للوجبة الرئيسية — املأ الخانات. لو فاضية، يستخدم الافتراضي حسب باقته."
+                      : "If this subscriber wants different main-meal grams/calories, fill these. Empty = program default."}
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">{isRtl ? "كارب (جم)" : "Carb (g)"}</Label>
+                      <Input type="number" min="0" step="1" placeholder={isRtl ? "افتراضي" : "default"} {...form.register("carbGrams")} dir="ltr" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">{isRtl ? "بروتين (جم)" : "Protein (g)"}</Label>
+                      <Input type="number" min="0" step="1" placeholder={isRtl ? "افتراضي" : "default"} {...form.register("proteinGrams")} dir="ltr" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-600">{isRtl ? "سعرات الوجبة" : "Calories"}</Label>
+                      <Input type="number" min="0" step="1" placeholder={isRtl ? "افتراضي" : "default"} {...form.register("mainMealCalories")} dir="ltr" />
+                    </div>
                   </div>
                 </div>
 

@@ -268,6 +268,9 @@ export default function Kitchen() {
         deliveryTime: string;
         categoryName: string;
         program: string;       // ✅ البرنامج
+        carbGrams?: number;    // ✅ جرامات كارب مخصّصة
+        proteinGrams?: number; // ✅ جرامات بروتين مخصّصة
+        mainMealCalories?: number;
         allergies?: string;    // ✅ حساسية العميل
         avoid?: string;
         preferences?: string;
@@ -419,6 +422,9 @@ export default function Kitchen() {
             deliveryTime: plan.deliveryTime,
             categoryName,
             program: customer?.program || "Standard",
+            carbGrams: (customer as any)?.carbGrams,
+            proteinGrams: (customer as any)?.proteinGrams,
+            mainMealCalories: (customer as any)?.mainMealCalories,
             allergies: joinUniq([customer?.allergies]),
             avoid: joinUniq([item.avoid, custAvoidForMeal, ...av, ...nameMods.map((m: string) => m.replace(/^NO\s+/i, ""))]),
             preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
@@ -674,10 +680,24 @@ export default function Kitchen() {
     const dishTable = (m: any) => {
       const main = (isMain(m.name) || isMainCat(m.category)) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
       const order = main ? ["DIET", "FITNESS", "BULK", "STANDARD"] : ["STANDARD"];
+      // مشترك عنده جرامات مخصّصة للوجبة الرئيسية (كارب/بروتين) — يُفصل في سطر خاص بأرقامه.
+      const hasCustomG = (d: any) => main && (Number(d.carbGrams) > 0 || Number(d.proteinGrams) > 0);
       // تجميع تفاصيل الطبق: بكت لكل برنامج { عادي + تعديلات مجمّعة بعدّاد }
       const buckets: Record<string, { plain: number; mods: Map<string, { label: string; count: number; names: string[] }> }> = {};
+      // المخصّصون: مجمّعون حسب (البرنامج + كارب + بروتين) — نفس الأرقام تتجمّع بأسماء متعددة
+      const customG = new Map<string, { pg: string; carb: any; protein: any; count: number; names: string[] }>();
       (m.details || []).forEach((d: any) => {
         const pg = main ? progOf(d.program) : "STANDARD";
+        if (hasCustomG(d)) {
+          const carb = Number(d.carbGrams) > 0 ? Number(d.carbGrams) : (pp[pg]?.carb ?? "");
+          const protein = Number(d.proteinGrams) > 0 ? Number(d.proteinGrams) : (pp[pg]?.protein ?? "");
+          const lbl = modLabel(d);
+          const key = `${pg}|${carb}|${protein}|${lbl.toUpperCase()}`;
+          if (!customG.has(key)) customG.set(key, { pg, carb, protein, count: 0, names: [] });
+          const cg = customG.get(key)!; cg.count += 1;
+          cg.names.push(d.customerName + (lbl ? ` ${lbl}` : ""));
+          return; // لا يُحسب ضمن سطر البرنامج القياسي
+        }
         if (!buckets[pg]) buckets[pg] = { plain: 0, mods: new Map() };
         const b = buckets[pg];
         if (d.isPlain) { b.plain += 1; return; }
@@ -698,6 +718,10 @@ export default function Kitchen() {
         [...b.mods.values()].sort((a, b2) => b2.count - a.count).forEach((g) => {
           rows += `<tr><td class="lb"><b>${pg}</b> ${esc(g.label)}<div class="cst">${esc(g.names.join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td>${gcells(pg)}</tr>`;
         });
+      });
+      // أسطر المخصّصين — أرقام كارب/بروتين خاصة بهم (مميّزة بلون)
+      [...customG.values()].forEach((cg) => {
+        rows += `<tr class="cg"><td class="lb"><b>${cg.pg}</b> ⚖️ <span style="color:#b45309">${isRtl ? "جرامات خاصة" : "CUSTOM GRAMS"}</span><div class="cst">${esc(cg.names.join(isRtl ? "، " : ", "))}</div></td><td class="ct">${cg.count}</td><td class="gc" style="color:#b45309;font-weight:800">${cg.carb}</td><td class="gc" style="color:#b45309;font-weight:800">${cg.protein}</td></tr>`;
       });
       return `
       <div class="dishbox"><table class="dish">

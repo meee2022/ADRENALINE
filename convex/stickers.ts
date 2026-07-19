@@ -341,7 +341,10 @@ export const get = query({
         const protein  = Math.round(baseProtein * f);
         const carbs    = Math.round(baseCarbs * f);
         const fats     = Math.round(baseFats * f);
-        const calories = Math.round(baseCalories * f);
+        // ✅ تخصيص المشترك للوجبة الرئيسية: لو محدد سعرات يدوية (mainMealCalories) تُطبع بدل المحسوبة.
+        //    يُطبَّق فقط على الأطباق الرئيسية ولمن حُدِّد له رقم — الباقي كما هو.
+        const custCal = isMainCourse(category) ? Number((c as any).mainMealCalories) : 0;
+        const calories = custCal > 0 ? Math.round(custCal) : Math.round(baseCalories * f);
 
         const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 
@@ -353,7 +356,14 @@ export const get = query({
 
         // ✅ الكمية النصّية من الخطط المستوردة (مثال: 200 جم لمون تشيكن + 180 جم رز)
         const portionsText = String(it.portions || "").trim();
-        const extraParts = [special, portionsText, modText].filter(Boolean);
+        // ✅ جرامات مخصّصة للوجبة الرئيسية (كارب/بروتين) تُطبع على الاستيكر لمن حُدِّد له
+        const cCarb = isMainCourse(category) ? Number((c as any).carbGrams) : 0;
+        const cProt = isMainCourse(category) ? Number((c as any).proteinGrams) : 0;
+        const customGText = [
+          cCarb > 0 ? (args.lang === "en" ? `Carb ${cCarb}g` : `كارب ${cCarb}جم`) : "",
+          cProt > 0 ? (args.lang === "en" ? `Protein ${cProt}g` : `بروتين ${cProt}جم`) : "",
+        ].filter(Boolean).join(" + ");
+        const extraParts = [special, portionsText, customGText, modText].filter(Boolean);
         const mealTitle = extraParts.length
           ? `${mealName} — ${extraParts.join(" | ")}`
           : mealName;

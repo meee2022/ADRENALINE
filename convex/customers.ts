@@ -158,6 +158,10 @@ export const create = mutation({
     avoid: v.optional(v.string()),
     preferences: v.optional(v.string()),
     portions: v.optional(v.string()),
+    // ✅ تخصيص كميات/سعرات المشترك للوجبات الرئيسية (اختياري)
+    carbGrams: v.optional(v.number()),
+    proteinGrams: v.optional(v.number()),
+    mainMealCalories: v.optional(v.number()),
 
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
@@ -220,6 +224,9 @@ export const update = mutation({
     avoid: v.optional(v.string()),
     preferences: v.optional(v.string()),
     portions: v.optional(v.string()),
+    carbGrams: v.optional(v.number()),
+    proteinGrams: v.optional(v.number()),
+    mainMealCalories: v.optional(v.number()),
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
     durationWeeks: v.optional(v.number()),
