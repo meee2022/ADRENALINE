@@ -227,6 +227,24 @@ export default function Customized() {
   const restSettings = useQuery(api.restaurantSettings.get) as any;
   const currentWeek = Math.min(4, Math.max(1, Number(restSettings?.currentCookingWeek) || 1));
 
+  // ✅ التاريخ الفعلي لأي (أسبوع دورة + يوم) — يطابق منطق convex/stickers.forDate تمامًا
+  //    (يوم قطر +3، وعدّ الجُمَع). فالأخصائية تعرف إنها بتملّي لأي تاريخ فعليًا وما تغلطش اليوم.
+  const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const dateForWeekDay = (week: number, dayKey: string): Date | null => {
+    const todayISO = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+    for (let i = 0; i < 28; i++) {
+      const d = new Date(todayISO + "T00:00:00Z");
+      d.setUTCDate(d.getUTCDate() + i);
+      let fridays = 0;
+      const cc = new Date(todayISO + "T00:00:00Z");
+      for (let j = 0; j < i; j++) { cc.setUTCDate(cc.getUTCDate() + 1); if (cc.getUTCDay() === 5) fridays++; }
+      const rot = ((currentWeek - 1 + fridays) % 4) + 1;
+      if (rot === week && DOW_KEYS[d.getUTCDay()] === dayKey) return d;
+    }
+    return null;
+  };
+  const fmtDM = (d: Date | null) => d ? `${d.getUTCDate()}/${d.getUTCMonth() + 1}` : "";
+
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string>("");
   const template = useQuery(
@@ -476,20 +494,46 @@ export default function Customized() {
                   📅 {t("أسبوع", "Week")} {activeWeek}
                 </span>
                 <div className="flex gap-1 flex-wrap flex-1">
-                  {DAYS.map((d) => (
+                  {DAYS.map((d) => {
+                    const dm = fmtDM(dateForWeekDay(activeWeek, d.key));
+                    return (
                     <button key={d.key} onClick={() => setActiveDay(d.key)}
-                      className={cn("px-3 py-1.5 rounded-lg text-xs font-black border transition-colors relative",
+                      className={cn("px-3 py-1 rounded-lg text-xs font-black border transition-colors relative flex flex-col items-center leading-tight",
                         activeDay === d.key ? "bg-[#0E76AC] text-white border-[#0E76AC]" : "bg-white text-slate-600 border-slate-200 hover:border-[#0E76AC]")}>
-                      {isRtl ? d.ar : d.en}
+                      <span>{isRtl ? d.ar : d.en}</span>
+                      {dm && <span className={cn("text-[9px] font-bold tabular-nums", activeDay === d.key ? "text-sky-100" : "text-slate-400")} dir="ltr">{dm}</span>}
                       {dayFilled(d.key) && <span className={cn("absolute -top-1 -end-1 h-2.5 w-2.5 rounded-full", activeDay === d.key ? "bg-emerald-300" : "bg-emerald-500")} />}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
                 <button onClick={applyToAllDays}
                   className="px-3 py-1.5 rounded-lg text-xs font-black text-[#0E76AC] border border-dashed border-[#0E76AC]/40 hover:bg-[#f2fbff] flex items-center gap-1">
                   <Copy className="h-3.5 w-3.5" /> {t("طبّق هذا اليوم على أيام الأسبوع", "Apply day to week")}
                 </button>
               </div>
+
+              {/* ✅ بانر واضح: بتملّي وجبات أي يوم فعليًا (يمنع غلط ملء اليوم الخطأ) */}
+              {(() => {
+                const dObj = dateForWeekDay(activeWeek, activeDay);
+                const dayLabel = (DAYS.find((x) => x.key === activeDay) || {}) as any;
+                return (
+                  <div className="rounded-2xl border-2 border-[#0E76AC]/25 bg-gradient-to-l from-[#e8f8fd] to-white px-4 py-2.5 flex items-center gap-2.5 flex-wrap">
+                    <span className="text-lg">📌</span>
+                    <span className="text-[13px] font-black text-[#0E2A4A]">
+                      {isRtl ? "بتملّي وجبات:" : "You are filling meals for:"}
+                    </span>
+                    <span className="text-[13px] font-black text-[#0E76AC]">
+                      {isRtl ? dayLabel.ar : dayLabel.en} · {t("أسبوع", "Week")} {activeWeek}
+                    </span>
+                    {dObj && (
+                      <span className="text-[12px] font-black text-white bg-[#0E76AC] rounded-lg px-2.5 py-1 tabular-nums" dir="ltr">
+                        {dObj.getUTCDate()}/{dObj.getUTCMonth() + 1}/{dObj.getUTCFullYear()}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* قوائم اقتراحات قابلة للكتابة (تقدر تختار أو تكتب نوع جديد مثل «دجاج مشوي») */}
               <datalist id="cz-proteins">{PROTEIN_OPTIONS.map((p) => <option key={p.en} value={isRtl ? p.ar : p.en} />)}</datalist>
