@@ -3,7 +3,7 @@
  * @description نظام عرض المطبخ (KDS) - تصميم احترافي للشيف
  * @convex convex/dailyPlans.ts, convex/customers.ts, convex/menuItems.ts, convex/mealCategories.ts, convex/modifiers.ts
  */
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   useDailyPlans,
   useUpdateDailyPlan,
@@ -163,6 +163,13 @@ export default function Kitchen() {
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
+  // ✅ فتح الكشف يجمّد أرقام البوكس لليوم كمان — فالكشف والستيكر يبقوا مطابقين وثابتين
+  //    مهما فُتح أيّهما أولاً (نفس مصدر الترقيم convex/stickers).
+  const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
+  useEffect(() => {
+    if (!formattedDate || !sessionTok) return;
+    ensureBoxNumbers({ date: formattedDate, sessionToken: sessionTok }).catch(() => { /* لا نُعطّل الكشف */ });
+  }, [formattedDate, sessionTok, ensureBoxNumbers]);
   const todayIngredients = useQuery(api.dailyPlans.todayIngredients, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
   // ✅ وجبات العملاء المخصّصين لهذا اليوم (من قوالبهم) — منفصلة لأنها لكل شخص بكمياته
   const customized = useQuery(api.customizedPlans.forDate, { date: formattedDate, sessionToken: sessionTok }) as any[] | undefined;
