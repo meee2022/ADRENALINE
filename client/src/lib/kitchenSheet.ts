@@ -186,16 +186,9 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .c{text-align:center} .nm{font-weight:800} .sm{font-size:8px;color:#47759c}
       .al{color:#b45309;font-size:8px;font-weight:700}
       .foot{margin:6px 16px 12px;font-size:9px;color:#94a3b8;text-align:center}
-      /* ✅ ترقيم الصفحات — يظهر أسفل كل ورقة عند الطباعة (Chrome/Edge/Firefox).
-             counter(page)/counter(pages) مدعوم في CSS Paged Media. */
-      @page{
-        size:A4 landscape;margin:6mm 6mm 12mm 6mm;
-        @bottom-center{
-          content:"${lang === "ar" ? "صفحة" : "Page"} " counter(page) " ${lang === "ar" ? "من" : "of"} " counter(pages);
-          font-family:'Cairo','Segoe UI',Tahoma,sans-serif;
-          font-size:9px;color:#94a3b8;
-        }
-      }
+      /* ✅ ترقيم الصفحات يُحقن مركزياً من openPrintDoc («صفحة N») — counter(pages)
+             «من N» غير مدعوم بثبات في كروم وكان يُبطل الترقيم كله. */
+      @page{ size:A4 landscape; margin:6mm 6mm 12mm 6mm; }
       /* fallback للمتصفحات اللي مش بتدعم @page counters — سطر ثابت في الفوتر */
       @media print{
         /* ✅ الجدول الكبير يتدفّق عبر الصفحات بدءاً من الصفحة الأولى مباشرة —

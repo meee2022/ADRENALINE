@@ -32,14 +32,27 @@ export type PrintDocOptions = {
   width?: number;
   height?: number;
   isRtl?: boolean;
+  /** ترقيم صفحات «صفحة N» أسفل كل ورقة (افتراضي: مفعّل). */
+  pageNumbers?: boolean;
 };
+
+/**
+ * ✅ ترقيم موحّد لكل التقارير عبر صندوق هامش @page (كروم 131+).
+ *    نستخدم counter(page) فقط — counter(pages) «من N» غير مدعوم بثبات في كروم،
+ *    ووجوده داخل content يُبطل السطر كله فلا يظهر أي ترقيم (سبب الشكوى الأصلي).
+ */
+function pageNumberStyle(isRtl: boolean): string {
+  const label = isRtl ? "صفحة" : "Page";
+  return `<style>@page{@bottom-center{content:"${label} " counter(page);` +
+    `font-family:'Tajawal','Cairo','Segoe UI',Tahoma,sans-serif;font-size:10px;font-weight:700;color:#64748b;}}</style>`;
+}
 
 /**
  * يفتح المستند في نافذة ويشغّل الطباعة → المستخدم يختار "حفظ كـPDF".
  * يرجّع false لو الـpop-up اتمنع (المُنادي يقدر يتصرّف).
  */
 export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean {
-  const { fileName, autoPrint = true, width = 1000, height = 900, isRtl = true } = opts;
+  const { fileName, autoPrint = true, width = 1000, height = 900, isRtl = true, pageNumbers = true } = opts;
 
   const w = window.open("", "_blank", `width=${width},height=${height}`);
   if (!w) {
@@ -59,6 +72,12 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
     doc = /<title>[\s\S]*?<\/title>/i.test(doc)
       ? doc.replace(/<title>[\s\S]*?<\/title>/i, `<title>${esc}</title>`)
       : doc.replace(/<head>/i, `<head><title>${esc}</title>`);
+  }
+
+  // ✅ ترقيم الصفحات — يُحقن آخر <head> فيتغلّب على أي @bottom-center سابق في المستند.
+  if (pageNumbers) {
+    const st = pageNumberStyle(isRtl);
+    doc = /<\/head>/i.test(doc) ? doc.replace(/<\/head>/i, `${st}</head>`) : st + doc;
   }
 
   w.document.write(doc);
