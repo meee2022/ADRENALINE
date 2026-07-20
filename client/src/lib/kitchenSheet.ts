@@ -198,7 +198,12 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       }
       /* fallback للمتصفحات اللي مش بتدعم @page counters — سطر ثابت في الفوتر */
       @media print{
-        .sec{break-inside:avoid}
+        /* ✅ الجدول الكبير يتدفّق عبر الصفحات بدءاً من الصفحة الأولى مباشرة —
+           break-inside:avoid على القسم كله كان يزقّه لصفحة جديدة ويترك الأولى فاضية.
+           نمنع الكسر داخل الصف الواحد فقط، والرأس يتكرر أعلى كل صفحة تلقائياً. */
+        .sec{break-inside:auto}
+        .sec-t{break-after:avoid;break-inside:avoid}
+        tr{break-inside:avoid}
         thead{display:table-header-group}
         .page-num{display:block}
       }
