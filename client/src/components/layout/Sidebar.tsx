@@ -35,6 +35,7 @@ import {
   Receipt,
   Activity,
   Barcode,
+  Landmark,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -76,6 +77,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   reports: FileText,
   analytics: BarChart3,
   coupons: Tag,
+  finance: Landmark,
   ratings: Star,
 };
 

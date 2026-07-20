@@ -190,6 +190,7 @@ export interface MenuItemDef {
     | "payroll"
     | "leaves"
     | "attendance"
+    | "finance"
     | "ratings";
   labelAr: string;
   labelEn: string;
@@ -300,6 +301,14 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "NUTRITIONIST"] },
       { href: "/reports", iconKey: "reports", labelAr: "التقارير", labelEn: "Reports",
         roles: ["ADMIN", "NUTRITIONIST"] },
+    ],
+  },
+  {
+    titleAr: "المالية والمحاسبة",
+    titleEn: "Finance & Accounting",
+    items: [
+      { href: "/finance", iconKey: "finance", labelAr: "المالية والمحاسبة", labelEn: "Finance & Accounting",
+        roles: ["ADMIN", "ACCOUNTANT", "FINANCE_MANAGER"] },
     ],
   },
   {
