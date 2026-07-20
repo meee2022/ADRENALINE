@@ -807,12 +807,18 @@ export default function Kitchen() {
     // ✅ زي الإكسيل: وجبات المخصّص بالجرامات جنبها "1"، والسلطات/السناكات القياسية خانتها فاضية
     //    (مظلّلة) لأنها محسوبة فوق في الإجمالي بكمياتها العادية.
     const personBox = (p: any) => `
-      <div class="person"><div class="ph"><b>${esc(p.name)}</b><span>${p.deliveryTime === "MORNING" ? "Morning ☀" : "Evening 🌙"}</span></div>
-      ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-      <table class="pt">${p.meals.map((m: string) => {
-        const side = isStdSideName(m);
-        return `<tr><td class="pm">${esc(m)}</td><td class="pq${side ? " sq" : ""}">${side ? "" : "1"}</td></tr>`;
-      }).join("")}</table></div>`;
+      <div class="person">
+        <div class="ph">
+          <b class="pn">${esc(p.name)}</b>
+          <span class="pdt">${p.deliveryTime === "MORNING" ? "☀ Morning" : "🌙 Evening"}</span>
+        </div>
+        ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
+        <table class="pt">${p.meals.map((m: string, i: number) => {
+          const side = isStdSideName(m);
+          const notset = /NOT SET|لم تُحدَّد/i.test(m);
+          return `<tr class="${notset ? "nsrow" : ""}"><td class="pmn">${i + 1}</td><td class="pm">${esc(m)}</td><td class="pq${side ? " sq" : ""}">${side ? "•" : "1"}</td></tr>`;
+        }).join("")}</table>
+      </div>`;
     const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
     // 📄 المخصّصون يبدأون في صفحة جديدة عند الطباعة — لا يلتصقون بآخر صفحة العاديين.
     const custHtml = customizedAll.length ? `
@@ -858,10 +864,21 @@ export default function Kitchen() {
         /* 📄 قسم المخصّصين يبدأ صفحة جديدة — لا يلتصق بآخر صفحة العاديين */
         .custpage{break-before:page;page-break-before:always}
         .custpage .sec{border-top:none;margin-top:0}
-        .person{border:1px solid #cdd9e4;border-radius:8px;padding:5px 7px;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid;font-size:10px}
-        .ph{display:flex;justify-content:space-between;border-bottom:1px solid #e3ebf2;padding-bottom:2px;margin-bottom:2px;font-size:10.5px}
-        .person ul{margin:0;padding-inline-start:12px} .person li{font-size:9.5px;margin:1px 0;line-height:1.35}
-        .alg{color:#b91c1c;font-size:8.5px;font-weight:700;margin:1px 0 2px}
+        /* ✅ بطاقة المخصّص — رأس ملوّن بالهوية، تحذير حساسية واضح، وجبات مرقّمة نظيفة */
+        .person{border:1px solid #d5e0ea;border-radius:10px;overflow:hidden;margin:0 0 8px;break-inside:avoid;page-break-inside:avoid;font-size:10px;box-shadow:0 1px 2px rgba(14,42,74,.05)}
+        .ph{display:flex;justify-content:space-between;align-items:center;gap:6px;background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:4px 8px}
+        .pn{font-size:11px;font-weight:900;letter-spacing:.2px}
+        .pdt{font-size:8px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
+        .alg{color:#b91c1c;background:#fef2f2;font-size:8.5px;font-weight:800;padding:3px 8px;border-bottom:1px solid #fee2e2;line-height:1.35}
+        .pt{width:100%;border-collapse:collapse}
+        .pt td{padding:3px 6px;font-size:9.5px;font-weight:700;line-height:1.3;border-top:1px solid #eef3f7;vertical-align:middle}
+        .pt tr:first-child td{border-top:none}
+        .pt tr:nth-child(even) td{background:#f7fafd}
+        .pmn{width:16px;text-align:center;color:#9db4c9;font-weight:900;font-size:8.5px}
+        .pm{color:#0f2438}
+        .pq{width:24px;text-align:center;font-weight:900;color:#0E76AC}
+        .sq{color:#b45309}
+        .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
         @page{size:A4;margin:8mm}
       </style></head><body>
