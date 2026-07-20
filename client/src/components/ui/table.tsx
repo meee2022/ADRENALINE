@@ -5,13 +5,15 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-x-auto rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(15,21,22,.03),0_10px_24px_-14px_rgba(14,42,74,.12)]">
+  <div className="relative w-full overflow-x-auto rounded-xl">
     <table
       ref={ref}
       className={cn(
         "w-full caption-bottom text-sm",
         // العمود الأول = المعرّف الأساسي (الاسم غالبًا) → أبرز وأغمق
         "[&_tbody_td:first-child]:font-bold [&_tbody_td:first-child]:text-[#0f1516]",
+        // تلوين متبادل خفيف للصفوف (zebra) — الصفوف تبان
+        "[&_tbody_tr:nth-child(even)]:bg-slate-50/70",
         className,
       )}
       {...props}
@@ -27,8 +29,8 @@ const TableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      // هوية موحّدة: رأس بلون سماوي واضح + حد سماوي صريح أسفله
-      "bg-gradient-to-b from-[#e6f4fc] to-[#cfe9f7] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]",
+      // هوية موحّدة: رأس رمادي-أزرق هادئ + خط سماوي رفيع (توقيع الهوية) أسفله
+      "bg-gradient-to-b from-[#eef3f8] to-[#e3ebf3] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]",
       className,
     )}
     {...props}
@@ -70,7 +72,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-slate-100/90 transition-colors hover:bg-[#3CC4F0]/[0.055] data-[state=selected]:bg-[#3CC4F0]/10",
+      "border-b border-slate-100 transition-colors hover:!bg-[#e6f5fd] data-[state=selected]:!bg-[#d6eefb]",
       className,
     )}
     {...props}
