@@ -5,19 +5,22 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-x-auto rounded-xl">
-    <table
-      ref={ref}
-      className={cn(
-        "w-full caption-bottom text-sm",
-        // العمود الأول = المعرّف الأساسي (الاسم غالبًا) → أبرز وأغمق
-        "[&_tbody_td:first-child]:font-bold [&_tbody_td:first-child]:text-[#0f1516]",
-        // تلوين متبادل خفيف للصفوف (zebra) — الصفوف تبان
-        "[&_tbody_tr:nth-child(even)]:bg-slate-50/70",
-        className,
-      )}
-      {...props}
-    />
+  // بطاقة جدول مكتملة: حواف مدوّرة + ظل ناعم + رأس غامق يلمس الحواف (بلا إطار مزدوج).
+  <div className="relative w-full rounded-2xl overflow-hidden border border-slate-200/70 bg-white shadow-[0_1px_2px_rgba(15,21,22,.04),0_16px_34px_-18px_rgba(14,42,74,.20)]">
+    <div className="w-full overflow-x-auto">
+      <table
+        ref={ref}
+        className={cn(
+          "w-full caption-bottom text-sm",
+          // العمود الأول = المعرّف الأساسي (الاسم غالبًا) → أبرز وأغمق
+          "[&_tbody_td:first-child]:font-bold [&_tbody_td:first-child]:text-[#0f1516]",
+          // تلوين متبادل خفيف للصفوف (zebra) — الصفوف تتنفّس وتبان
+          "[&_tbody_tr:nth-child(even)]:bg-[#f7fafc]",
+          className,
+        )}
+        {...props}
+      />
+    </div>
   </div>
 ));
 Table.displayName = "Table";
@@ -29,8 +32,8 @@ const TableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      // هوية موحّدة: رأس رمادي-أزرق هادئ + خط سماوي رفيع (توقيع الهوية) أسفله
-      "bg-gradient-to-b from-[#eef3f8] to-[#e3ebf3] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]",
+      // رأس غامق صريح بهوية أدرينالين (أزرق عميق) + خط سماوي رفيع كتوقيع + نص أبيض
+      "bg-gradient-to-b from-[#137bb0] to-[#0c5f88] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]",
       className,
     )}
     {...props}
@@ -72,7 +75,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-slate-100 transition-colors hover:!bg-[#e6f5fd] data-[state=selected]:!bg-[#d6eefb]",
+      "border-b border-slate-100 transition-colors hover:!bg-[#e9f6fd] data-[state=selected]:!bg-[#d6eefb]",
       className,
     )}
     {...props}
@@ -89,7 +92,7 @@ const TableHead = React.forwardRef<
     className={cn(
       // ✅ بدل text-left خليه text-start (يتغير تلقائي RTL/LTR)
       // ✅ بدل pr-0 خليه pr-0 و pl-0 حسب الاتجاه باستخدام :dir()
-      "h-11 px-3 text-start align-middle text-[11px] font-extrabold uppercase tracking-wider text-[#2f6088] whitespace-nowrap",
+      "h-12 px-4 text-start align-middle text-[12.5px] font-bold text-white whitespace-nowrap",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",
@@ -108,7 +111,7 @@ const TableCell = React.forwardRef<
     ref={ref}
     className={cn(
       // ✅ خليها text-start عشان الأعمدة تبقى RTL طبيعي
-      "px-3 py-2.5 align-middle text-start text-[13px] text-slate-700",
+      "px-4 py-3.5 align-middle text-start text-[13.5px] text-slate-700",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",
