@@ -223,6 +223,7 @@ export default function Customized() {
   const customers = (useQuery(api.customizedPlans.listCustomized, { sessionToken }) as any[] | undefined) || [];
   const meals = (useQuery(api.publicMeals.listMeals, {}) as any[] | undefined) || [];
   const saveTemplate = useMutation(api.customizedPlans.saveTemplate);
+  const saveTemplateDay = useMutation(api.customizedPlans.saveTemplateDay);
   // ✅ دورة المطبخ الحالية — البحث يعرض وجبات يوم التبويب في هذه الدورة
   const restSettings = useQuery(api.restaurantSettings.get) as any;
   const currentWeek = Math.min(4, Math.max(1, Number(restSettings?.currentCookingWeek) || 1));
@@ -379,6 +380,21 @@ export default function Customized() {
     !search.trim() || String(c.fullName).includes(search) || String(c.phone || "").includes(search),
   );
 
+  // ✅ حفظ اليوم الحالي فقط — لا يمسّ باقي أيام الأسبوع
+  const [savingDay, setSavingDay] = useState(false);
+  const [savedDay, setSavedDay] = useState(false);
+  const handleSaveDay = async () => {
+    if (!selectedId) return;
+    setSavingDay(true); setSavedDay(false);
+    try {
+      const daySlots = (weekSlots[activeWeek]?.[activeDay] || []).map((s) => ({ ...s, text: composeText(s, isRtl) }));
+      await saveTemplateDay({ customerId: selectedId as any, week: activeWeek, day: activeDay, slots: daySlots, sessionToken });
+      setSavedDay(true); setTimeout(() => setSavedDay(false), 2500);
+    } catch (e: any) {
+      void alertDialog({ message: t("تعذّر حفظ اليوم: ", "Day save failed: ") + String(e?.message || e) });
+    } finally { setSavingDay(false); }
+  };
+
   const handleSave = async () => {
     if (!selectedId) return;
     setSaving(true); setSaved(false);
@@ -456,10 +472,17 @@ export default function Customized() {
                     <p className="text-[11px] text-amber-200 mt-1">⚠ {[selected.allergies, selected.avoid].filter(Boolean).join(" · ")}</p>
                   )}
                 </div>
-                <Button onClick={handleSave} disabled={saving}
-                  className="bg-white text-[#0E76AC] hover:bg-cyan-50 font-black rounded-xl">
-                  {saved ? <><Check className="h-4 w-4 ml-1" /> {t("اتحفظ", "Saved")}</> : <><Save className="h-4 w-4 ml-1" /> {saving ? t("جارٍ الحفظ…", "Saving…") : t("حفظ القالب", "Save template")}</>}
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* ✅ حفظ اليوم الحالي فقط — لا يمسّ باقي الأسبوع */}
+                  <Button onClick={handleSaveDay} disabled={savingDay || saving} variant="outline"
+                    className="bg-white/10 text-white border-white/40 hover:bg-white/20 font-black rounded-xl backdrop-blur-sm">
+                    {savedDay ? <><Check className="h-4 w-4 ml-1" /> {t("اتحفظ اليوم", "Day saved")}</> : <><Save className="h-4 w-4 ml-1" /> {savingDay ? t("جارٍ…", "Saving…") : t("حفظ اليوم فقط", "Save this day")}</>}
+                  </Button>
+                  <Button onClick={handleSave} disabled={saving || savingDay}
+                    className="bg-white text-[#0E76AC] hover:bg-cyan-50 font-black rounded-xl">
+                    {saved ? <><Check className="h-4 w-4 ml-1" /> {t("اتحفظ", "Saved")}</> : <><Save className="h-4 w-4 ml-1" /> {saving ? t("جارٍ الحفظ…", "Saving…") : t("حفظ القالب كامل", "Save full template")}</>}
+                  </Button>
+                </div>
               </div>
 
               {/* منتقي أسبوع الدورة (1–4) — كل أسبوع وجباته المستقلة */}

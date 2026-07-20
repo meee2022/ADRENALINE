@@ -248,3 +248,43 @@ export const saveTemplate = mutation({
     return { id: newId, updated: false };
   },
 });
+
+/**
+ * ✅ حفظ يوم واحد فقط — يحدّث weeks[week].days[day] بدون المساس بباقي الأيام/الأسابيع.
+ *    للأخصائية اللي عايزة تحفظ اليوم اللي شغّالة عليه فقط دون تأثير على باقي الأسبوع.
+ */
+export const saveTemplateDay = mutation({
+  args: {
+    customerId: v.id("customers"),
+    week: v.number(),
+    day: v.string(),
+    slots: v.any(),          // مصفوفة خانات اليوم فقط
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const id = await requireStaff(ctx, args.sessionToken);
+    const who = (id as any)?.user?.name || (id as any)?.user?.username || undefined;
+    const existing = await ctx.db
+      .query("customizedTemplates")
+      .withIndex("by_customer", (q) => q.eq("customerId", args.customerId))
+      .first();
+    const wkKey = String(args.week);
+    if (existing) {
+      const sl: any = existing.slots || {};
+      if (!sl.weeks) sl.weeks = {};
+      // ندعم المفتاح رقماً أو نصاً (نكتب على الموجود إن وُجد، وإلا نصّاً)
+      const key = sl.weeks[args.week] ? args.week : (sl.weeks[wkKey] ? wkKey : wkKey);
+      if (!sl.weeks[key]) sl.weeks[key] = { days: {} };
+      if (!sl.weeks[key].days) sl.weeks[key].days = {};
+      sl.weeks[key].days[args.day] = args.slots;
+      await ctx.db.patch(existing._id, { slots: sl, updatedAt: Date.now(), updatedBy: who });
+      return { id: existing._id, updated: true, day: args.day, week: args.week };
+    }
+    // قالب جديد: ننشئه بهذا اليوم فقط
+    const slots = { weeks: { [wkKey]: { days: { [args.day]: args.slots } } } };
+    const newId = await ctx.db.insert("customizedTemplates", {
+      customerId: args.customerId, slots, updatedAt: Date.now(), updatedBy: who,
+    });
+    return { id: newId, updated: false, day: args.day, week: args.week };
+  },
+});
