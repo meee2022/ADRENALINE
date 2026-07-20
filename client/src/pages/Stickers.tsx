@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers } from "lucide-react";
+import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers, Search } from "lucide-react";
 import { useStickers } from "@/lib/api";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
@@ -86,8 +86,24 @@ export default function Stickers() {
 
   // ✅ تعديل لحظي للسعرات وقت الطباعة (لا يُحفظ) — مفتاحه فهرس الاستيكر
   const [calOverride, setCalOverride] = useState<Record<number, number>>({});
-  // امسح التحديد والتعديلات لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
-  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); setCalOverride({}); }, [activeTab, date, deliveryTime]);
+  // ✅ بحث بالاسم/الرقم للوصول السريع لستيكر شخص معيّن (بدل تصفّح المئات)
+  const [search, setSearch] = useState("");
+  // امسح التحديد والتعديلات والبحث لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
+  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); setCalOverride({}); setSearch(""); }, [activeTab, date, deliveryTime]);
+
+  // الستيكرات الظاهرة: مفلترة بالبحث لكن بأرقامها الأصلية (للتعديل والطباعة).
+  //    وقت الطباعة نتجاهل الفلتر تمامًا حتى تُطبع كل الستيكرات.
+  const searchQ = pendingPrint ? "" : search.trim().toLowerCase();
+  const visibleStickers = useMemo(
+    () => activeStickers
+      .map((s0: any, idx: number) => ({ s0, idx }))
+      .filter(({ s0 }: any) => {
+        if (!searchQ) return true;
+        const hay = `${s0.customerName || ""} ${s0.customerNumber || ""} ${s0.customerNo ?? ""}`.toLowerCase();
+        return hay.includes(searchQ);
+      }),
+    [activeStickers, searchQ],
+  );
 
   useEffect(() => {
     if (!pendingPrint) return;
@@ -329,6 +345,31 @@ export default function Stickers() {
         )}
       </div>
 
+      {/* ── بحث سريع بالاسم/الرقم (لا يظهر في الطباعة) ── */}
+      {activeStickers.length > 0 && (
+        <div className="print:hidden mt-4 flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[220px] max-w-md">
+            <Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={isRtl ? "ابحث باسم الشخص أو رقمه…" : "Search by name or number…"}
+              className="w-full h-10 ps-9 pe-8 rounded-xl text-sm bg-white border border-slate-200 focus:border-[#3CC4F0] focus:outline-none focus:ring-2 focus:ring-[#3CC4F0]/20 text-slate-700"
+            />
+            {search && (
+              <button onClick={() => setSearch("")} className="absolute top-1/2 -translate-y-1/2 end-2.5 text-slate-400 hover:text-slate-600" aria-label={isRtl ? "مسح" : "Clear"}>
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {search && (
+            <span className="text-xs font-bold text-[#0E76AC] bg-[#e9f6fd] rounded-lg px-3 py-1.5">
+              {isRtl ? `${visibleStickers.length} نتيجة` : `${visibleStickers.length} result(s)`}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* ── Sticker grid (visible on screen + print) ── */}
       {activeStickers.length === 0 ? (
         <div className="print:hidden flex flex-col items-center justify-center py-16 gap-3">
@@ -343,9 +384,19 @@ export default function Stickers() {
             {isRtl ? "تأكد من وجود خطط مؤكدة للتاريخ المختار" : "Make sure there are confirmed plans for the selected date"}
           </p>
         </div>
+      ) : visibleStickers.length === 0 ? (
+        <div className="print:hidden flex flex-col items-center justify-center py-16 gap-2">
+          <Search className="h-8 w-8 text-slate-300" />
+          <p className="text-sm font-semibold text-gray-400">
+            {isRtl ? `لا يوجد ستيكر مطابق لـ «${search}»` : `No sticker matches "${search}"`}
+          </p>
+          <button onClick={() => setSearch("")} className="text-xs font-bold text-[#0E76AC] hover:underline">
+            {isRtl ? "مسح البحث" : "Clear search"}
+          </button>
+        </div>
       ) : (
         <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
-          {activeStickers.map((s0: any, idx: number) => {
+          {visibleStickers.map(({ s0, idx }: any) => {
             const isSel = selected.has(idx);
             // التعديل لحظي لهذه الطباعة فقط: السعرات والماكروز تتغير بنسبة واحدة.
             const ov = calOverride[idx];
