@@ -36,6 +36,8 @@ import {
   Activity,
   Barcode,
   Landmark,
+  Search as SearchIcon,
+  X,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -101,35 +103,34 @@ export function Sidebar() {
     }))
     .filter((section) => section.items.length > 0);
 
-  // ✅ أقسام قابلة للطي — القايمة تقصر ولا يتوه المستخدم. المفتاح titleEn (ثابت مع اللغة).
-  //    الافتراضي: يُفتح القسم الذي يحوي الصفحة الحالية فقط (وإلا الأول).
+  // ✅ أكورديون: قسم واحد فقط مفتوح في أي لحظة — القائمة تظل قصيرة بلا scroll.
+  //    المفتاح titleEn (ثابت مع اللغة). الافتراضي: قسم الصفحة الحالية.
   const activeSectionKey = useMemo(() => {
     const s = visibleSections.find((sec) => sec.items.some((i) => i.href === location));
     return (s || visibleSections[0])?.titleEn || null;
   }, [location, visibleSections]);
 
-  const [openMap, setOpenMap] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("sidebarSections") || "null");
-      if (saved && typeof saved === "object") return saved;
-    } catch { /* ignore */ }
-    return {};
-  });
+  // "__none__" = كل الأقسام مطوية. null = اتبع القسم النشط.
+  const [openKey, setOpenKey] = useState<string | null>(null);
 
-  // اضمن أن القسم النشط مفتوح (عند التنقّل لصفحة في قسم مطويّ)
-  useEffect(() => {
-    if (activeSectionKey) {
-      setOpenMap((m) => (m[activeSectionKey] ? m : { ...m, [activeSectionKey]: true }));
-    }
-  }, [activeSectionKey]);
+  // عند التنقّل لصفحة جديدة: افتح قسمها واقفل الباقي (سلوك أكورديون طبيعي)
+  useEffect(() => { setOpenKey(null); }, [location]);
 
-  const isOpen = (key: string) => (key in openMap ? openMap[key] : key === activeSectionKey);
-  const toggleSection = (key: string) =>
-    setOpenMap((m) => {
-      const next = { ...m, [key]: !isOpen(key) };
-      try { localStorage.setItem("sidebarSections", JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
-    });
+  const effectiveOpen = openKey ?? activeSectionKey;
+  const isOpen = (key: string) => key === effectiveOpen;
+  const toggleSection = (key: string) => setOpenKey(isOpen(key) ? "__none__" : key);
+
+  // ✅ بحث سريع: يكتب حرفين فيلاقي أي صفحة فورًا (بالعربي أو الإنجليزي)
+  const [q, setQ] = useState("");
+  const searchResults = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return null;
+    return visibleSections.flatMap((sec) =>
+      sec.items.filter((i) =>
+        i.labelAr.toLowerCase().includes(needle) || i.labelEn.toLowerCase().includes(needle),
+      ),
+    );
+  }, [q, visibleSections]);
 
   return (
     <div
@@ -180,8 +181,68 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Nav — Sectioned */}
+      {/* ✅ بحث سريع — اكتب حرفين توصل لأي صفحة بدون scroll */}
+      <div className="px-4 pb-2">
+        <div className="relative">
+          <SearchIcon className="absolute top-1/2 -translate-y-1/2 start-2.5 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={isRtl ? "ابحث عن صفحة…" : "Find a page…"}
+            className="w-full h-8 ps-8 pe-7 rounded-lg text-[12.5px] bg-slate-100/80 border border-transparent
+                       focus:bg-white focus:border-[#3CC4F0]/60 focus:outline-none placeholder:text-slate-400 text-slate-700"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              className="absolute top-1/2 -translate-y-1/2 end-2 text-slate-400 hover:text-slate-600"
+              aria-label={isRtl ? "مسح" : "Clear"}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Nav — نتائج البحث (مسطّحة) أو الأقسام (أكورديون) */}
       <nav className="flex-1 px-3 sm:px-4 overflow-y-auto overflow-x-hidden min-w-0 pb-3">
+        {searchResults ? (
+          <div className="space-y-0.5 mt-1">
+            {searchResults.length === 0 && (
+              <p className="text-[12px] text-slate-400 text-center py-6">
+                {isRtl ? "لا توجد صفحة بهذا الاسم" : "No matching page"}
+              </p>
+            )}
+            {searchResults.map((item) => {
+              const isActive = location === item.href;
+              const Icon = ICON_MAP[item.iconKey];
+              const label = isRtl ? item.labelAr : item.labelEn;
+              return (
+                <Link key={item.href} href={item.href}>
+                  <div
+                    onClick={() => setQ("")}
+                    className={cn(
+                      "group px-3 py-2 rounded-lg text-[13px] transition-all duration-200 cursor-pointer",
+                      "flex items-center gap-2.5 min-w-0 relative",
+                      isActive
+                        ? "bg-gradient-to-l from-[#3CC4F0] to-[#0E9ED6] text-white font-bold shadow-[0_6px_16px_-6px_rgba(60,196,240,0.55)]"
+                        : "text-slate-600 font-semibold hover:bg-[#3CC4F0]/10 hover:text-[#0E76AC]",
+                    )}
+                  >
+                    <span className={cn(
+                      "h-7 w-7 rounded-md grid place-items-center shrink-0",
+                      isActive ? "bg-white/20" : "bg-slate-100/80 group-hover:bg-[#3CC4F0]/15",
+                    )}>
+                      <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-white" : "text-[#0E76AC]/70")} />
+                    </span>
+                    <span className="truncate min-w-0">{label}</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+        <>
         {visibleSections.map((section, sIdx) => {
           const key = section.titleEn;
           const open = isOpen(key);
@@ -251,6 +312,8 @@ export function Sidebar() {
           </div>
           );
         })}
+        </>
+        )}
       </nav>
 
       {/* Footer */}
