@@ -388,6 +388,12 @@ export default defineSchema({
     carbGrams: v.optional(v.number()),         // جرامات الكارب (رز) — تتجاوز افتراضي الباقة
     proteinGrams: v.optional(v.number()),      // جرامات البروتين — تتجاوز افتراضي الباقة
     mainMealCalories: v.optional(v.number()),  // سعرات الوجبة الرئيسية اليدوية — تُطبع على الستيكر
+    // ✅ سعرات مخصّصة لوجبات معيّنة بذاتها (لهذا المشترك فقط) — أعلى أولوية على الستيكر.
+    //    المطابقة بالاسم؛ لو الوجبة لها رقم هنا يُطبع كما هو (بلا مُعامل برنامج).
+    mealCalorieOverrides: v.optional(v.array(v.object({
+      meal: v.string(),        // اسم الوجبة (كما يظهر)
+      calories: v.number(),    // السعرات المطلوب طباعتها
+    }))),
 
     isActive: v.boolean(),
 

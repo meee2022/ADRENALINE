@@ -162,6 +162,7 @@ export const create = mutation({
     carbGrams: v.optional(v.number()),
     proteinGrams: v.optional(v.number()),
     mainMealCalories: v.optional(v.number()),
+    mealCalorieOverrides: v.optional(v.array(v.object({ meal: v.string(), calories: v.number() }))),
 
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
@@ -227,6 +228,7 @@ export const update = mutation({
     carbGrams: v.optional(v.number()),
     proteinGrams: v.optional(v.number()),
     mainMealCalories: v.optional(v.number()),
+    mealCalorieOverrides: v.optional(v.array(v.object({ meal: v.string(), calories: v.number() }))),
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
     durationWeeks: v.optional(v.number()),

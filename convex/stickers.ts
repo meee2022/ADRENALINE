@@ -341,10 +341,18 @@ export const get = query({
         const protein  = Math.round(baseProtein * f);
         const carbs    = Math.round(baseCarbs * f);
         const fats     = Math.round(baseFats * f);
-        // ✅ تخصيص المشترك للوجبة الرئيسية: لو محدد سعرات يدوية (mainMealCalories) تُطبع بدل المحسوبة.
-        //    يُطبَّق فقط على الأطباق الرئيسية ولمن حُدِّد له رقم — الباقي كما هو.
+        // ✅ أولوية السعرات على الستيكر:
+        //   1) سعرات مخصّصة لهذه الوجبة بالذات لهذا المشترك (mealCalorieOverrides) — أعلى أولوية، تُطبع كما هي.
+        //   2) سعرات الوجبة الرئيسية اليدوية (mainMealCalories) — للأطباق الرئيسية فقط.
+        //   3) المحسوبة × مُعامل البرنامج.
+        const normName = (s: any) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+        const ovr = Array.isArray((c as any).mealCalorieOverrides) ? (c as any).mealCalorieOverrides : [];
+        const names = [lookupName, mealName, (menu as any)?.nameAr, (menu as any)?.nameEn, it.mealNameAr, it.mealNameEn].map(normName).filter(Boolean);
+        const perMeal = ovr.find((o: any) => names.includes(normName(o.meal)) && Number(o.calories) > 0);
         const custCal = isMainCourse(category) ? Number((c as any).mainMealCalories) : 0;
-        const calories = custCal > 0 ? Math.round(custCal) : Math.round(baseCalories * f);
+        const calories = perMeal ? Math.round(Number(perMeal.calories))
+          : custCal > 0 ? Math.round(custCal)
+          : Math.round(baseCalories * f);
 
         const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 

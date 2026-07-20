@@ -60,8 +60,10 @@ export default function Stickers() {
   // طباعة مؤجّلة: نضبط النطاق قبل ما نفتح مربّع الطباعة
   const [pendingPrint, setPendingPrint] = useState<null | "all" | "selected">(null);
 
-  // امسح التحديد لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
-  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); }, [activeTab, date, deliveryTime]);
+  // ✅ تعديل لحظي للسعرات وقت الطباعة (لا يُحفظ) — مفتاحه فهرس الاستيكر
+  const [calOverride, setCalOverride] = useState<Record<number, number>>({});
+  // امسح التحديد والتعديلات لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
+  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); setCalOverride({}); }, [activeTab, date, deliveryTime]);
 
   useEffect(() => {
     if (!pendingPrint) return;
@@ -319,18 +321,50 @@ export default function Stickers() {
         </div>
       ) : (
         <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
-          {activeStickers.map((s: any, idx: number) => {
+          {activeStickers.map((s0: any, idx: number) => {
             const isSel = selected.has(idx);
+            // تطبيق التعديل اللحظي على السعرات لو موجود
+            const ov = calOverride[idx];
+            const s = (activeTab === "MEALS" && ov != null)
+              ? { ...s0, calories: ov, caloriesText: `${ov} CAL` }
+              : s0;
             return (
               <div key={idx} className={cn("st-item", !isSel && "st-not-selected")}>
-                {/* رأس التحديد — على الشاشة فقط، يختفي في الطباعة */}
-                <label className={cn(
-                  "print:hidden flex items-center gap-1.5 mb-1 cursor-pointer select-none text-[11px] font-black rounded-md px-1.5 py-0.5 w-fit",
-                  isSel ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-500",
-                )}>
-                  <input type="checkbox" checked={isSel} onChange={() => toggleOne(idx)} className="h-3 w-3" />
-                  #{idx + 1}
-                </label>
+                {/* رأس التحديد + تعديل السعرات — على الشاشة فقط، يختفي في الطباعة */}
+                <div className="print:hidden flex items-center gap-1.5 mb-1">
+                  <label className={cn(
+                    "flex items-center gap-1.5 cursor-pointer select-none text-[11px] font-black rounded-md px-1.5 py-0.5 w-fit",
+                    isSel ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-500",
+                  )}>
+                    <input type="checkbox" checked={isSel} onChange={() => toggleOne(idx)} className="h-3 w-3" />
+                    #{idx + 1}
+                  </label>
+                  {activeTab === "MEALS" && (
+                    <div className={cn("flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5",
+                      ov != null ? "bg-amber-100 text-amber-700 font-bold" : "bg-slate-50 text-slate-400")}>
+                      <span>cal</span>
+                      <input
+                        type="number" min={0} dir="ltr"
+                        className="w-14 h-5 text-center rounded border border-slate-200 bg-white text-slate-700"
+                        value={ov != null ? String(ov) : (s0.calories ?? "")}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setCalOverride((prev) => {
+                            const next = { ...prev };
+                            if (v === "" ) { delete next[idx]; return next; }
+                            next[idx] = Number(v);
+                            return next;
+                          });
+                        }}
+                        title={isRtl ? "عدّل السعرات لهذه الطباعة فقط" : "Edit calories for this print only"}
+                      />
+                      {ov != null && (
+                        <button type="button" onClick={() => setCalOverride((p) => { const n = { ...p }; delete n[idx]; return n; })}
+                          className="text-amber-600 hover:text-amber-800" title={isRtl ? "رجوع للأصلي" : "Reset"}>↺</button>
+                      )}
+                    </div>
+                  )}
+                </div>
                 {activeTab === "MEALS" ? <MealSticker s={s} /> : <BoxSticker s={s} />}
               </div>
             );

@@ -61,11 +61,12 @@ import {
   X,
   Users,
   PauseCircle,
+  Trash2,
 } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { format, parseISO } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { LocationPicker } from "@/components/LocationPicker";
@@ -249,6 +250,7 @@ const customerSchema = z.object({
   carbGrams: z.coerce.number().optional(),
   proteinGrams: z.coerce.number().optional(),
   mainMealCalories: z.coerce.number().optional(),
+  mealCalorieOverrides: z.array(z.object({ meal: z.string(), calories: z.coerce.number() })).optional(),
 
   packageLabel: z.string().optional(),
   durationWeeks: z.coerce.number().optional(),
@@ -354,8 +356,19 @@ export default function Customers() {
       finalPrice: undefined,
       birthdayDate: "",
       status: "",
+      mealCalorieOverrides: [],
     },
   });
+
+  // ✅ تجاوزات سعرات الوجبات (لكل وجبة بذاتها) — قائمة ديناميكية
+  const mealOvrArray = useFieldArray({ control: form.control, name: "mealCalorieOverrides" });
+  // أسماء الوجبات للاقتراح (datalist)
+  const mealsForPicker = (useQuery(api.publicMeals.list, {}) as any[] | undefined) ?? [];
+  const mealNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const m of mealsForPicker) { if (m?.nameAr) set.add(String(m.nameAr)); if (m?.nameEn) set.add(String(m.nameEn)); }
+    return [...set].sort();
+  }, [mealsForPicker]);
 
   // ✅ حساب عدد كل برنامج
   // ✅ المشتركون المجمّدون (سفر) — pausedFrom موجود = مجمّد
@@ -526,6 +539,10 @@ export default function Customers() {
         avoid: selectedAvoid.join(", "),
         preferences: selectedPref.join(", "),
         portions: selectedPortions.join(", "),
+        // ✅ تجاوزات سعرات الوجبات — نُبقي فقط الصفوف المكتملة (اسم + رقم > 0)
+        mealCalorieOverrides: (data.mealCalorieOverrides ?? [])
+          .map((o) => ({ meal: String(o.meal || "").trim(), calories: Number(o.calories) || 0 }))
+          .filter((o) => o.meal && o.calories > 0),
       };
 
       if (payload.price !== undefined && payload.price !== null) {
@@ -620,6 +637,7 @@ export default function Customers() {
       carbGrams: customer.carbGrams ?? undefined,
       proteinGrams: customer.proteinGrams ?? undefined,
       mainMealCalories: customer.mainMealCalories ?? undefined,
+      mealCalorieOverrides: customer.mealCalorieOverrides ?? [],
 
       packageLabel: customer.packageLabel || "",
       durationWeeks: customer.durationWeeks,
@@ -1352,6 +1370,44 @@ export default function Customers() {
                       <Label className="text-xs text-gray-600">{isRtl ? "سعرات الوجبة" : "Calories"}</Label>
                       <Input type="number" min="0" step="1" placeholder={isRtl ? "افتراضي" : "default"} {...form.register("mainMealCalories")} dir="ltr" />
                     </div>
+                  </div>
+
+                  {/* سعرات مخصّصة لوجبات معيّنة بذاتها — أعلى أولوية على الستيكر */}
+                  <div className="pt-3 border-t border-amber-200 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-amber-700">
+                        🎯 {isRtl ? "سعرات وجبات معيّنة (تُطبع كما هي على الستيكر)" : "Per-meal calories (printed as-is)"}
+                      </Label>
+                      <Button type="button" variant="outline" size="sm" className="h-7 gap-1 text-xs"
+                        onClick={() => mealOvrArray.append({ meal: "", calories: 0 } as any)}>
+                        <Plus className="h-3 w-3" />{isRtl ? "وجبة" : "Meal"}
+                      </Button>
+                    </div>
+                    <p className="text-[11px] text-amber-700/70">
+                      {isRtl
+                        ? "اختر وجبة واكتب سعراتها — تُطبع بالرقم ده لهذا المشترك فقط وفي هذه الوجبة تحديدًا (تتجاوز كل الحسابات)."
+                        : "Pick a meal and set its calories — printed exactly for this subscriber, this meal only."}
+                    </p>
+                    <datalist id="mealNamesList">
+                      {mealNames.map((n) => <option key={n} value={n} />)}
+                    </datalist>
+                    {mealOvrArray.fields.length === 0 && (
+                      <p className="text-[11px] text-gray-400">{isRtl ? "لا توجد وجبات مخصّصة" : "No per-meal overrides"}</p>
+                    )}
+                    {mealOvrArray.fields.map((field, i) => (
+                      <div key={field.id} className="flex gap-2 items-center">
+                        <Input list="mealNamesList" className="flex-1 h-8 text-sm"
+                          placeholder={isRtl ? "اسم الوجبة" : "Meal name"}
+                          {...form.register(`mealCalorieOverrides.${i}.meal` as const)} />
+                        <Input type="number" min="0" step="1" className="w-24 h-8 text-sm" dir="ltr"
+                          placeholder={isRtl ? "سعرات" : "cal"}
+                          {...form.register(`mealCalorieOverrides.${i}.calories` as const)} />
+                        <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0"
+                          onClick={() => mealOvrArray.remove(i)}>
+                          <Trash2 className="h-4 w-4 text-gray-400" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
