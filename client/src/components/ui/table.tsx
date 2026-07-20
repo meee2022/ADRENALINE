@@ -5,7 +5,7 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  <div className="relative w-full overflow-x-auto rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(15,21,22,.03),0_10px_24px_-14px_rgba(14,42,74,.12)]">
     <table
       ref={ref}
       className={cn("w-full caption-bottom text-sm", className)}
@@ -19,7 +19,15 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn(
+      // هوية موحّدة: رأس متدرّج خفيف + حد سماوي مميّز أسفله
+      "bg-gradient-to-b from-[#f4f8fb] to-[#eaf3f9] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]/35",
+      className,
+    )}
+    {...props}
+  />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -57,7 +65,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b border-slate-100/90 transition-colors hover:bg-[#3CC4F0]/[0.055] data-[state=selected]:bg-[#3CC4F0]/10",
       className,
     )}
     {...props}
@@ -74,7 +82,7 @@ const TableHead = React.forwardRef<
     className={cn(
       // ✅ بدل text-left خليه text-start (يتغير تلقائي RTL/LTR)
       // ✅ بدل pr-0 خليه pr-0 و pl-0 حسب الاتجاه باستخدام :dir()
-      "h-10 px-2 text-start align-middle font-medium text-muted-foreground",
+      "h-11 px-3 text-start align-middle text-[11px] font-bold uppercase tracking-wider text-[#47759c] whitespace-nowrap",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",
@@ -93,7 +101,7 @@ const TableCell = React.forwardRef<
     ref={ref}
     className={cn(
       // ✅ خليها text-start عشان الأعمدة تبقى RTL طبيعي
-      "p-2 align-middle text-start",
+      "px-3 py-2.5 align-middle text-start text-[13px] text-slate-700",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",
