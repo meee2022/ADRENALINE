@@ -1,5 +1,5 @@
 // convex/stickers.ts
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { normalizePhone } from "./lib/phone";
 import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
@@ -57,6 +57,83 @@ function buildModifierText(
 
   return lines.join(" | ");
 }
+
+/**
+ * ✅ روستر اليوم مرتّباً أبجدياً (معرّفات المشتركين) — مصدر واحد للترقيم،
+ *    يستخدمه الاستعلام (ترقيم حي احتياطي) والحفظ (ensureBoxNumbers) معاً
+ *    حتى لا يختلف المنطق بينهما. يشمل عملاء الخطط العادية + المخصّصين لكل الأوقات.
+ */
+async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<string[]> {
+  const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const dayKey = DOW[new Date(date + "T00:00:00Z").getUTCDay()];
+  const settings = await ctx.db.query("restaurantSettings").first();
+  const curWk = Number((settings as any)?.currentCookingWeek) || 1;
+  let fridays = 0;
+  {
+    const todayISO0 = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const cc0 = new Date(todayISO0 + "T00:00:00Z");
+    const endD0 = new Date(String(date).slice(0, 10) + "T00:00:00Z");
+    for (let i = 0; i < 400 && cc0 < endD0; i++) { cc0.setUTCDate(cc0.getUTCDate() + 1); if (cc0.getUTCDay() === 5) fridays++; }
+  }
+  const rotWeek = ((curWk - 1 + fridays) % 4) + 1;
+  const activeSlots = (tpl: any): any[] => {
+    const sl: any = tpl.slots;
+    const weekDays = sl?.weeks ? (sl.weeks[rotWeek] || sl.weeks[String(rotWeek)])?.days : null;
+    const days = weekDays || sl?.days;
+    const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
+    return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
+  };
+  const plansAll = await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect();
+  const templates = await ctx.db.query("customizedTemplates").collect();
+  const tplIds = new Set(templates.map((t: any) => String(t.customerId)));
+  const rosterIds = new Set<string>();
+  for (const p of plansAll as any[]) {
+    if (!isPrintableStatus(p.status)) continue;
+    if (!p.customerId || tplIds.has(String(p.customerId))) continue;
+    rosterIds.add(String(p.customerId));
+  }
+  for (const tpl of templates as any[]) {
+    const cid = String(tpl.customerId);
+    if (rosterIds.has(cid)) continue;
+    const c: any = await ctx.db.get(tpl.customerId);
+    if (!c || !c.isActive) continue;
+    if (activeSlots(tpl).length) rosterIds.add(cid);
+  }
+  const rosterCustomers = (await Promise.all(
+    Array.from(rosterIds).map((id) => ctx.db.get(id as any)),
+  )).filter(Boolean);
+  rosterCustomers.sort((a: any, b: any) =>
+    String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar"));
+  return rosterCustomers.map((c: any) => String(c._id));
+}
+
+/**
+ * ✅ تجميد أرقام البوكس ليوم معيّن — تُستدعى من صفحة الستيكرات عند فتح اليوم.
+ *    أول مرة: تُسنِد 1..N أبجدياً. بعدها: أي مشترك جديد ياخد رقماً مُلحقاً فقط،
+ *    والأرقام القائمة لا تتحرك أبداً — فالكشف والستيكرات لا يختلفان خلال اليوم.
+ */
+export const ensureBoxNumbers = mutation({
+  args: { date: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const orderedIds = await computeDayRosterOrderedIds(ctx, args.date);
+    const existing = await ctx.db
+      .query("stickerBoxNumbers")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .collect();
+    const assigned = new Set(existing.map((e: any) => String(e.customerId)));
+    let maxNo = existing.reduce((m: number, e: any) => Math.max(m, e.boxNo || 0), 0);
+    const now = Date.now();
+    let created = 0;
+    for (const id of orderedIds) {
+      if (assigned.has(id)) continue;
+      maxNo += 1;
+      await ctx.db.insert("stickerBoxNumbers", { date: args.date, customerId: id as any, boxNo: maxNo, createdAt: now });
+      created += 1;
+    }
+    return { total: orderedIds.length, created, frozen: existing.length + created };
+  },
+});
 
 /**
  * ✅ IMPORTANT:
@@ -134,28 +211,17 @@ export const get = query({
       const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
       return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
     };
-    // روستر اليوم = (أ) عملاء الخطط العادية لكل الأوقات + (ب) عملاء القوالب الذين يُطبع لهم اليوم لكل الأوقات
-    const rosterIds = new Set<string>();
-    for (const p of plansAll as any[]) {
-      if (!isPrintableStatus(p.status)) continue;
-      if (!p.customerId || tplCustomerIds.has(String(p.customerId))) continue;
-      rosterIds.add(String(p.customerId));
-    }
+    // روستر اليوم المرتّب (دالة مشتركة) — ترقيم حي احتياطي ثم نُفضّل الأرقام المجمّدة.
     const allTemplates = await ctx.db.query("customizedTemplates").collect();
-    for (const tpl of allTemplates) {
-      const cid = String(tpl.customerId);
-      if (rosterIds.has(cid)) continue;
-      const c: any = await ctx.db.get(tpl.customerId);
-      if (!c || !c.isActive) continue;
-      if (tplActiveSlots(tpl).length) rosterIds.add(cid);
-    }
-    const rosterCustomers = (await Promise.all(
-      Array.from(rosterIds).map((id) => ctx.db.get(id as any)),
-    )).filter(Boolean);
-    rosterCustomers.sort((a: any, b: any) =>
-      String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar"));
+    const orderedIds = await computeDayRosterOrderedIds(ctx, args.date);
     const customerNoById = new Map<string, number>();
-    rosterCustomers.forEach((c: any, idx: number) => customerNoById.set(String(c._id), idx + 1));
+    orderedIds.forEach((id, idx) => customerNoById.set(id, idx + 1)); // احتياطي قبل التجميد
+    // ✅ لو اليوم مُجمّد (ensureBoxNumbers)، نستخدم الأرقام المخزّنة — تمنع أي تغيير خلال اليوم
+    const frozenRows = await ctx.db
+      .query("stickerBoxNumbers")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .collect();
+    for (const f of frozenRows as any[]) customerNoById.set(String(f.customerId), f.boxNo);
 
     // 3) Collect menuItemIds from plans
     const menuItemIds = new Set<string>();

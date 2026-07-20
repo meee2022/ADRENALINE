@@ -6,6 +6,9 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers, Search } from "lucide-react";
 import { useStickers } from "@/lib/api";
+import { useMutation } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX";
@@ -90,6 +93,15 @@ export default function Stickers() {
   const [search, setSearch] = useState("");
   // امسح التحديد والتعديلات والبحث لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
   useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); setCalOverride({}); setSearch(""); }, [activeTab, date, deliveryTime]);
+
+  // ✅ تجميد أرقام البوكس لهذا اليوم عند فتحه — فيبقى رقم كل مشترك ثابتاً طوال اليوم
+  //    حتى لو أُضيف/عُدّل مشتركون بعد الطباعة (الجديد ياخد رقماً مُلحقاً فقط).
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
+  useEffect(() => {
+    if (!date || !sessionToken) return;
+    ensureBoxNumbers({ date, sessionToken }).catch(() => { /* لا نُعطّل العرض */ });
+  }, [date, sessionToken, ensureBoxNumbers]);
 
   // الستيكرات الظاهرة: مفلترة بالبحث لكن بأرقامها الأصلية (للتعديل والطباعة).
   //    وقت الطباعة نتجاهل الفلتر تمامًا حتى تُطبع كل الستيكرات.

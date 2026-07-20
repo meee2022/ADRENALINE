@@ -1384,6 +1384,18 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_event", ["eventType"]),
 
+  // ✅ أرقام بوكس مجمّدة لكل مشترك في يوم معيّن — تمنع تغيّر الرقم خلال اليوم.
+  //    يُسنَد الرقم مرة واحدة (أبجدياً 1..N)؛ أي مشترك يُضاف بعدها ياخد رقماً مُلحقاً
+  //    دون تحريك الآخرين. كل يوم له ترقيمه المستقل.
+  stickerBoxNumbers: defineTable({
+    date: v.string(),                 // yyyy-MM-dd
+    customerId: v.id("customers"),
+    boxNo: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_date_customer", ["date", "customerId"]),
+
   // عدّادات أرقام المستندات المالية (قيود/سندات).
   finCounters: defineTable({
     key: v.string(),                           // "journal" | "receipt" | "payment"
