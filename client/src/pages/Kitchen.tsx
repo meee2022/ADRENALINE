@@ -236,20 +236,27 @@ export default function Kitchen() {
     return String(item?.mealNameEn || item?.mealNameAr || "Unspecified meal").trim();
   };
   // ✅ تركيب سطر الوجبة المخصّصة — إنجليزي دائماً للمطبخ (أساس nameEn + بروتين/كارب مترجَمان + جرامات g)
+  const NOT_SET = isRtl ? "⚠ لم تُحدَّد الوجبة" : "⚠ MEAL NOT SET";
   const composeCustItem = (it: any): string => {
     const gUnit = "g";
     const m: any = it.baseMealId ? mealById.get(String(it.baseMealId)) : null;
     const base = m ? String(m.nameEn || m.nameAr || m.name).trim() : String(it.baseName || "").trim();
-    const bits: string[] = [];
-    if (base) bits.push(base);
     if (it.type === "MAIN") {
+      const protName = trName(it.proteinName || "", PROTEIN_TR, false); // فاضي = غير محدّد
+      // ✅ خانة رئيسية غير محدّدة (لا اسم وجبة ولا نوع بروتين) = يوم لم يُملأ.
+      //    لا نضع أكلاً وهمياً (Protein 150g) يلخبط الشيف — نعلن أنها غير محدّدة.
+      if (!base && !protName) return NOT_SET;
+      const bits: string[] = [];
+      if (base) bits.push(base);
       const inner: string[] = [];
-      if (it.proteinG) inner.push(`${trName(it.proteinName || "", PROTEIN_TR, false) || "Protein"} ${it.proteinG}${gUnit}`);
+      if (protName && it.proteinG) inner.push(`${protName} ${it.proteinG}${gUnit}`);
       const carbTr = trName(it.carbName || "", CARB_TR, false);
       if (it.carbName && carbTr !== "None" && it.carbG) inner.push(`${carbTr} ${it.carbG}${gUnit}`);
       if (inner.length) bits.push(bits.length ? `— ${inner.join(" + ")}` : inner.join(" + "));
+      return bits.join(" ").trim() || NOT_SET;
     }
-    return bits.join(" ").trim() || String(it.text || it.baseName || "—").trim();
+    // غير رئيسية (سناك/سلطة): الاسم كما هو
+    return base || String(it.text || it.baseName || "—").trim();
   };
 
   const getCategoryLabel = (categoryName: string) => {

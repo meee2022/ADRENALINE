@@ -532,15 +532,20 @@ export const get = query({
       };
       const en = (n: any) => AR2EN[String(n || "").trim()] || String(n || "").trim();
       const engText = (s: any): string => {
+        const baseName = String(s.baseName || "").trim();
+        const protName = String(s.proteinName || "").trim();
+        // ✅ خانة رئيسية غير محدّدة (لا اسم وجبة ولا نوع بروتين) = يوم لم يُملأ →
+        //    لا نطبع أكلاً وهمياً (Protein 150g) على الستيكر يلخبط الشيف.
+        if (s.type === "MAIN" && !baseName && !protName) return "⚠ NOT SET";
         const parts: string[] = [];
-        if (s.baseName) parts.push(en(String(s.baseName).trim()));
+        if (baseName) parts.push(en(baseName));
         if (s.type === "MAIN") {
           const inner: string[] = [];
-          if (s.proteinG) inner.push(`${en(s.proteinName) || "Protein"} ${s.proteinG}g`);
+          if (protName && s.proteinG) inner.push(`${en(protName)} ${s.proteinG}g`);
           if (s.carbG && String(s.carbName || "").trim() && !/^none|بدون/i.test(String(s.carbName))) inner.push(`${en(s.carbName)} ${s.carbG}g`);
           if (inner.length) parts.push(parts.length ? `+ ${inner.join(" + ")}` : inner.join(" + "));
         }
-        return (parts.join(" ").trim() || String(s.text || s.baseName || "").trim());
+        return (parts.join(" ").trim() || String(s.text || baseName || "").trim());
       };
 
       const stickered = new Set(mealStickers.map((s) => String(s.customerId)));
