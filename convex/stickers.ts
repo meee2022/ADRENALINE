@@ -111,17 +111,51 @@ export const get = query({
       .filter(Boolean)
       .forEach((c: any) => customerMap.set(String(c._id), c));
 
-    // 0) الترقيم اليومي التسلسلي: فقط عملاء هذه الجلسة مرتبين أبجدياً
-    // الشيف يرى أرقاماً من 1 لـ N كل يوم — بسيط ومنطقي للمطبخ
-    const sessionCustomers = Array.from(customerMap.values())
-      .sort((a, b) =>
-        String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar")
-      );
-
+    // 0) ✅ ترقيم بوكس ثابت لليوم كامله (صباحي + مسائي) — لا يتغيّر بفلتر التوصيل.
+    //    يُحسب مرة واحدة على كل مشتركي اليوم مرتّبين أبجدياً، فرقم كل مشترك ثابت
+    //    سواء عرضت «صباحي» أو «مسائي» أو «الكل»، ويطابق كشف اليوم.
+    const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
+    const settings = await ctx.db.query("restaurantSettings").first();
+    const curWk = Number((settings as any)?.currentCookingWeek) || 1;
+    let fridaysToDate = 0;
+    {
+      const todayISO0 = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const cc0 = new Date(todayISO0 + "T00:00:00Z");
+      const endD0 = new Date(String(args.date).slice(0, 10) + "T00:00:00Z");
+      for (let i = 0; i < 400 && cc0 < endD0; i++) { cc0.setUTCDate(cc0.getUTCDate() + 1); if (cc0.getUTCDay() === 5) fridaysToDate++; }
+    }
+    const rotWeek = ((curWk - 1 + fridaysToDate) % 4) + 1;
+    // دالة: خانات القالب الفعّالة في هذا اليوم (بغض النظر عن وقت التوصيل)
+    const tplActiveSlots = (tpl: any): any[] => {
+      const sl: any = tpl.slots;
+      const weekDays = sl?.weeks ? (sl.weeks[rotWeek] || sl.weeks[String(rotWeek)])?.days : null;
+      const days = weekDays || sl?.days;
+      const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
+      return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
+    };
+    // روستر اليوم = (أ) عملاء الخطط العادية لكل الأوقات + (ب) عملاء القوالب الذين يُطبع لهم اليوم لكل الأوقات
+    const rosterIds = new Set<string>();
+    for (const p of plansAll as any[]) {
+      if (!isPrintableStatus(p.status)) continue;
+      if (!p.customerId || tplCustomerIds.has(String(p.customerId))) continue;
+      rosterIds.add(String(p.customerId));
+    }
+    const allTemplates = await ctx.db.query("customizedTemplates").collect();
+    for (const tpl of allTemplates) {
+      const cid = String(tpl.customerId);
+      if (rosterIds.has(cid)) continue;
+      const c: any = await ctx.db.get(tpl.customerId);
+      if (!c || !c.isActive) continue;
+      if (tplActiveSlots(tpl).length) rosterIds.add(cid);
+    }
+    const rosterCustomers = (await Promise.all(
+      Array.from(rosterIds).map((id) => ctx.db.get(id as any)),
+    )).filter(Boolean);
+    rosterCustomers.sort((a: any, b: any) =>
+      String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar"));
     const customerNoById = new Map<string, number>();
-    sessionCustomers.forEach((c, idx) => {
-      customerNoById.set(String(c._id), idx + 1);
-    });
+    rosterCustomers.forEach((c: any, idx: number) => customerNoById.set(String(c._id), idx + 1));
 
     // 3) Collect menuItemIds from plans
     const menuItemIds = new Set<string>();
@@ -443,36 +477,18 @@ export const get = query({
         return (parts.join(" ").trim() || String(s.text || s.baseName || "").trim());
       };
 
-      // أسبوع الدورة + يوم الأسبوع لهذا التاريخ (نفس منطق forDate)
-      const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-      const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
-      const settings = await ctx.db.query("restaurantSettings").first();
-      const curWk = Number((settings as any)?.currentCookingWeek) || 1;
-      const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      let fridays = 0;
-      const cc = new Date(todayISO + "T00:00:00Z");
-      const endD = new Date(String(args.date).slice(0, 10) + "T00:00:00Z");
-      for (let i = 0; i < 400 && cc < endD; i++) { cc.setUTCDate(cc.getUTCDate() + 1); if (cc.getUTCDay() === 5) fridays++; }
-      const rotWeek = ((curWk - 1 + fridays) % 4) + 1;
-
       const stickered = new Set(mealStickers.map((s) => String(s.customerId)));
-      let custNo = mealStickers.length ? Math.max(...mealStickers.map((s) => Number(s.customerNo) || 0)) : 0;
-      const templates = await ctx.db.query("customizedTemplates").collect();
-      for (const tpl of templates) {
+      for (const tpl of allTemplates) {
         const c: any = await ctx.db.get(tpl.customerId);
         if (!c || !c.isActive) continue;
         if (stickered.has(String(c._id))) continue; // تجنّب تكرار من عنده dailyPlans
         const cTime = String(c.deliveryTime || "MORNING");
         if (args.deliveryTime !== "ALL" && cTime !== args.deliveryTime) continue;
 
-        const sl: any = tpl.slots;
-        const weekDays = sl?.weeks ? (sl.weeks[rotWeek] || sl.weeks[String(rotWeek)])?.days : null;
-        const days = weekDays || sl?.days;
-        const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
-        const active = slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
+        const active = tplActiveSlots(tpl);
         if (!active.length) continue;
 
-        custNo++;
+        const customerNo = customerNoById.get(String(c._id)) ?? 0; // ✅ رقم ثابت من روستر اليوم
         const warnings = [String(c.allergies || "").trim(), String(c.avoid || "").trim()].filter(Boolean).join(" • ");
         let mIdx = 1;
         for (const s of active) {
@@ -481,7 +497,7 @@ export const get = query({
           const cal = estimateCalories(mealName) || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
           mealStickers.push({
             customerId: String(c._id),
-            customerNo: custNo,
+            customerNo,
             customerName: c.fullName || "",
             customerNumber: normalizePhone(c.phone) || "",
             goal: "CUSTOMIZED",
