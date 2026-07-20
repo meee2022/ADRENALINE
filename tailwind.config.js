@@ -65,8 +65,8 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Cairo', 'sans-serif'],
-        heading: ['Cairo', 'sans-serif']
+        sans: ['Tajawal', 'Cairo', 'sans-serif'],
+        heading: ['Tajawal', 'Cairo', 'sans-serif']
       }
     }
   },
