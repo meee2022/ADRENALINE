@@ -4,6 +4,27 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { convertUnit } from "./units";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
+import { autoPostInventoryMovement, autoPostInventoryReceipt } from "./financePost";
+
+async function fifoValue(ctx: any, itemId: Id<"inventoryItems">, quantity: number) {
+  const batches = await ctx.db.query("inventoryBatches")
+    .withIndex("by_itemId", (q: any) => q.eq("itemId", itemId)).collect();
+  batches.sort((a: any, b: any) => a.receivedAt.localeCompare(b.receivedAt));
+  let remaining = Math.abs(quantity);
+  let value = 0;
+  for (const batch of batches) {
+    if (remaining <= 0) break;
+    const used = Math.min(Number(batch.quantityRemaining || 0), remaining);
+    value += used * Number(batch.unitCost || 0);
+    remaining -= used;
+  }
+  if (remaining > 0) {
+    const priced = batches.filter((batch: any) => Number(batch.unitCost || 0) > 0);
+    const fallback = priced.length ? Number(priced[priced.length - 1].unitCost) : 0;
+    value += remaining * fallback;
+  }
+  return Math.round(value * 100) / 100;
+}
 
 // 🔒 صلاحيات المخزون — منفصلة عن staff العام
 const INV_MANAGE_ROLES = ["INVENTORY_MANAGER"];   // استلام/استهلاك/تسوية/هالك (ADMIN تلقائي)
@@ -489,8 +510,9 @@ export const consumeStock = mutation({
 
     const now = Date.now();
 
+    const movementValue = await fifoValue(ctx, args.itemId, args.quantity);
     // Create movement
-    await ctx.db.insert("inventoryMovements", {
+    const movementId = await ctx.db.insert("inventoryMovements", {
       itemId: args.itemId,
       type: "consume",
       quantity: -args.quantity,
@@ -527,6 +549,15 @@ export const consumeStock = mutation({
       remaining -= toDeduct;
     }
 
+    await autoPostInventoryMovement(ctx, {
+      movementId,
+      date: new Date(now).toISOString().slice(0, 10),
+      amount: movementValue,
+      kind: "consume",
+      quantity: -args.quantity,
+      itemId: args.itemId,
+    });
+
     return { success: true };
   },
 });
@@ -557,8 +588,9 @@ export const adjustStock = mutation({
     const difference = args.newQuantity - item.currentStock;
     const now = Date.now();
 
+    const movementValue = await fifoValue(ctx, args.itemId, Math.abs(difference));
     // Create movement
-    await ctx.db.insert("inventoryMovements", {
+    const movementId = await ctx.db.insert("inventoryMovements", {
       itemId: args.itemId,
       type: "adjust",
       quantity: difference,
@@ -570,6 +602,15 @@ export const adjustStock = mutation({
     await ctx.db.patch(args.itemId, {
       currentStock: args.newQuantity,
       updatedAt: now,
+    });
+
+    await autoPostInventoryMovement(ctx, {
+      movementId,
+      date: new Date(now).toISOString().slice(0, 10),
+      amount: movementValue,
+      kind: "adjust",
+      quantity: difference,
+      itemId: args.itemId,
     });
 
     return { success: true };
@@ -635,7 +676,8 @@ export const recordWaste = mutation({
     }
     const now = Date.now();
     const newStock = item.currentStock - args.quantity; // معروف إنه ≥ 0 بعد التحقق أعلاه
-    await ctx.db.insert("inventoryMovements", {
+    const movementValue = await fifoValue(ctx, args.itemId, args.quantity);
+    const movementId = await ctx.db.insert("inventoryMovements", {
       itemId: args.itemId,
       type: "consume",
       quantity: -args.quantity,
@@ -659,6 +701,14 @@ export const recordWaste = mutation({
       await ctx.db.patch(b._id, { quantityRemaining: b.quantityRemaining - d });
       remaining -= d;
     }
+    await autoPostInventoryMovement(ctx, {
+      movementId,
+      date: new Date(now).toISOString().slice(0, 10),
+      amount: movementValue,
+      kind: "waste",
+      quantity: -args.quantity,
+      itemId: args.itemId,
+    });
     return { success: true, newStock };
   },
 });
@@ -748,7 +798,7 @@ export const receiveMany = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken); // 🔒 استلام جماعي = فاتورة مالية → ADMIN
+    const actor = await requireAdmin(ctx, args.sessionToken); // 🔒 استلام جماعي = فاتورة مالية → ADMIN
     const now = Date.now();
     const note = args.invoiceNo ? `فاتورة: ${args.invoiceNo}` : "استلام بضاعة";
     let count = 0, totalQty = 0, totalCost = 0;
@@ -803,7 +853,16 @@ export const receiveMany = mutation({
       await resolveLowStock(ctx, itemId, item.currentStock + qty);
       count++; totalQty += qty; totalCost += line.quantity * line.unitCost;
     }
-    return { count, totalQty, totalCost: Math.round(totalCost * 100) / 100 };
+    const roundedCost = Math.round(totalCost * 100) / 100;
+    await autoPostInventoryReceipt(ctx, {
+      sourceId: `${now}-${args.invoiceNo || "receipt"}`,
+      date: args.receivedAt,
+      amount: roundedCost,
+      supplierId: args.supplierId ? String(args.supplierId) : undefined,
+      invoiceNo: args.invoiceNo,
+      createdBy: actor.userId as any,
+    });
+    return { count, totalQty, totalCost: roundedCost };
   },
 });
 

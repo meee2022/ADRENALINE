@@ -18,6 +18,30 @@ function toSafeNumber(v: any) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function scaleStickerMacros(sticker: any, calories: number) {
+  const originalCalories = toSafeNumber(sticker?.calories);
+  const protein = toSafeNumber(sticker?.protein);
+  const carbs = toSafeNumber(sticker?.carbs);
+  const fats = toSafeNumber(sticker?.fats);
+  const hasMacros = protein > 0 || carbs > 0 || fats > 0;
+  const baseCalories = originalCalories > 0 ? originalCalories : protein * 4 + carbs * 4 + fats * 9;
+  if (!hasMacros || baseCalories <= 0 || calories < 0) {
+    return { ...sticker, calories, caloriesText: `${calories} CAL` };
+  }
+
+  const factor = calories / baseCalories;
+  const scaled = (value: number) => Math.round(value * factor * 10) / 10;
+  return {
+    ...sticker,
+    calories,
+    caloriesText: `${calories} CAL`,
+    macros: undefined,
+    protein: protein > 0 ? scaled(protein) : sticker.protein,
+    carbs: carbs > 0 ? scaled(carbs) : sticker.carbs,
+    fats: fats > 0 ? scaled(fats) : sticker.fats,
+  };
+}
+
 export default function Stickers() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
@@ -323,11 +347,12 @@ export default function Stickers() {
         <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
           {activeStickers.map((s0: any, idx: number) => {
             const isSel = selected.has(idx);
-            // تطبيق التعديل اللحظي على السعرات لو موجود
+            // التعديل لحظي لهذه الطباعة فقط: السعرات والماكروز تتغير بنسبة واحدة.
             const ov = calOverride[idx];
             const s = (activeTab === "MEALS" && ov != null)
-              ? { ...s0, calories: ov, caloriesText: `${ov} CAL` }
+              ? scaleStickerMacros(s0, ov)
               : s0;
+            const hasBaseMacros = toSafeNumber(s0.protein) > 0 || toSafeNumber(s0.carbs) > 0 || toSafeNumber(s0.fats) > 0;
             return (
               <div key={idx} className={cn("st-item", !isSel && "st-not-selected")}>
                 {/* رأس التحديد + تعديل السعرات — على الشاشة فقط، يختفي في الطباعة */}
@@ -344,7 +369,7 @@ export default function Stickers() {
                       ov != null ? "bg-amber-100 text-amber-700 font-bold" : "bg-slate-50 text-slate-400")}>
                       <span>cal</span>
                       <input
-                        type="number" min={0} dir="ltr"
+                        type="number" min={0} step={1} dir="ltr"
                         className="w-14 h-5 text-center rounded border border-slate-200 bg-white text-slate-700"
                         value={ov != null ? String(ov) : (s0.calories ?? "")}
                         onChange={(e) => {
@@ -352,12 +377,20 @@ export default function Stickers() {
                           setCalOverride((prev) => {
                             const next = { ...prev };
                             if (v === "" ) { delete next[idx]; return next; }
-                            next[idx] = Number(v);
+                            next[idx] = Math.max(0, Number(v));
                             return next;
                           });
                         }}
                         title={isRtl ? "عدّل السعرات لهذه الطباعة فقط" : "Edit calories for this print only"}
                       />
+                      {ov != null && (
+                        <span className={cn("whitespace-nowrap text-[9px] font-black", hasBaseMacros ? "text-emerald-700" : "text-rose-600")}
+                          title={hasBaseMacros
+                            ? (isRtl ? "تم تحديث البروتين والكربوهيدرات والدهون بنفس النسبة" : "Protein, carbs and fats were scaled proportionally")
+                            : (isRtl ? "لا توجد ماكروز أصلية لإعادة حسابها" : "No base macros available to recalculate")}>
+                          {hasBaseMacros ? "P/C/F ✓" : (isRtl ? "بلا ماكروز" : "No macros")}
+                        </span>
+                      )}
                       {ov != null && (
                         <button type="button" onClick={() => setCalOverride((p) => { const n = { ...p }; delete n[idx]; return n; })}
                           className="text-amber-600 hover:text-amber-800" title={isRtl ? "رجوع للأصلي" : "Reset"}>↺</button>

@@ -207,9 +207,25 @@ export default function Kitchen() {
     [...(publicMealsList || []), ...(menuItems || [])].forEach((x: any) => { if (x?._id) m.set(String(x._id), x); });
     return m;
   }, [publicMealsList, menuItems]);
+  const publicMealById = useMemo(() => {
+    const map = new Map<string, any>();
+    (publicMealsList || []).forEach((meal: any) => {
+      if (meal?._id) map.set(String(meal._id), meal);
+    });
+    return map;
+  }, [publicMealsList]);
+  const resolvePlanMeal = (item: any): { meal: any | null; legacyMenu: any | null } => {
+    const legacyMenu = item?.menuItemId ? getMenuItem(item.menuItemId) : null;
+    const canonicalId = item?.publicMealId || item?.mealId || (legacyMenu as any)?.publicMealId;
+    const canonical = canonicalId ? publicMealById.get(String(canonicalId)) : null;
+    // Legacy manual plans must keep the exact menuItem name used when they
+    // were approved. Canonical data is only the fallback for new plan rows.
+    return { meal: legacyMenu || canonical || null, legacyMenu };
+  };
   const mealNameInLang = (mealId: any, item?: any): string => {
-    const meal: any = (mealId && (getMenuItem(mealId) || mealById.get(String(mealId)))) || null;
-    if (meal) return String(meal.nameEn || meal.name || meal.nameAr).trim();
+    const { meal } = item ? resolvePlanMeal(item) : { meal: null };
+    const resolved: any = meal || (mealId && (getMenuItem(mealId) || mealById.get(String(mealId)))) || null;
+    if (resolved) return String(resolved.nameEn || resolved.name || resolved.nameAr).trim();
     return String(item?.mealNameEn || item?.mealNameAr || "Unspecified meal").trim();
   };
   // ✅ تركيب سطر الوجبة المخصّصة — إنجليزي دائماً للمطبخ (أساس nameEn + بروتين/كارب مترجَمان + جرامات g)
@@ -323,8 +339,11 @@ export default function Kitchen() {
       (plan.items || [])
         .filter((item: any) => !item.isOff)
         .forEach((item: any) => {
-          const mealId = item.menuItemId || item.mealId;
-          const meal: any = getMenuItem(mealId) || (mealId ? pubById.get(String(mealId)) : null);
+          const mealId = item.publicMealId || item.mealId || item.menuItemId;
+          const legacyMenu: any = item.menuItemId ? getMenuItem(item.menuItemId) : null;
+          const meal: any = legacyMenu
+            || (mealId ? pubById.get(String(mealId)) : null)
+            || (legacyMenu?.publicMealId ? pubById.get(String(legacyMenu.publicMealId)) : null);
           // ✅ إنجليزي دائماً — كشف/إجمالي المطبخ للطاقم الإنجليزي
           const rawMealName = String(
             meal
@@ -493,7 +512,7 @@ export default function Kitchen() {
         items: [],
       };
       (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
-        const mealName = mealNameInLang(item.menuItemId || item.mealId, item);
+        const mealName = mealNameInLang(item.publicMealId || item.mealId || item.menuItemId, item);
         const note = String(item.specialNotes || "").trim(); // ملاحظة خاصة بالوجبة فقط
         byPerson[key].items.push({ meal: mealName, note });
       });
@@ -569,12 +588,15 @@ export default function Kitchen() {
       const slots = { breakfast: [] as string[], snack: [] as string[], lunch: [] as string[], dinner: [] as string[], other: [] as string[] };
 
       (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
-        const meal: any = getMenuItem(item.menuItemId || item.mealId);
-        const mealName = meal
+        const { meal, legacyMenu } = resolvePlanMeal(item);
+        const snapshotName = isRtl
+          ? (item.mealNameAr || item.mealNameEn)
+          : (item.mealNameEn || item.mealNameAr);
+        const mealName = snapshotName || (meal
           ? (isRtl ? (meal.nameAr || meal.name || meal.nameEn) : (meal.nameEn || meal.name || meal.nameAr))
-          : ((isRtl ? (item.mealNameAr || item.mealNameEn) : (item.mealNameEn || item.mealNameAr)) || "—");
-        const cat: any = item.menuItemId ? getCategory(meal?.categoryId) : null;
-        const label = getCategoryLabel(cat?.name || item.category || "");
+          : "—");
+        const cat: any = legacyMenu?.categoryId ? getCategory(legacyMenu.categoryId) : null;
+        const label = getCategoryLabel(meal?.category || cat?.name || item.category || "");
         // ملاحظة خاصة بهذه الوجبة فقط — لا نكرّر ممنوعات/برنامج العميل العام
         // (فهي ظاهرة أصلاً في عمودَي Allergies و Remarks).
         const notes = String(item.specialNotes || "").trim();
@@ -1426,7 +1448,7 @@ export default function Kitchen() {
                       })()
                         .map((item: any, idx: number) => {
                           // ✅ دعم كلا النوعين: menuItemId (خطط يدوية) و mealId (طلبات عملاء)
-                          const mealId = item.menuItemId || item.mealId;
+                          const mealId = item.publicMealId || item.mealId || item.menuItemId;
                           const category = getCategory(item.categoryId);
 
                           // ✅ اسم الوجبة بلغة الواجهة (منيو عام + داخلي، إنجليزي في الوضع الإنجليزي)

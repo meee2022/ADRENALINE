@@ -51,6 +51,11 @@ import { useQuery, useMutation } from "convex/react";
 import { Role } from "@/lib/types";
 import { ALL_PAGES, ALL_ROLES, ROLE_LABEL, defaultPermsForRole } from "@/lib/permissions";
 
+function userInitials(name?: string) {
+  const parts = String(name || "?").trim().split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
 /** خانة كلمة مرور مع زر عين لإظهار/إخفاء القيمة. */
 function PasswordField({
   id, value, onChange, placeholder = "••••••••",
@@ -438,10 +443,15 @@ export default function Users() {
             </TableHeader>
             <TableBody>
               {users.map((user: any) => (
-                <TableRow key={user.id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell className="text-left" dir="ltr">
-                    {user.email}
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div className="flex min-w-[180px] items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#3cc4f0]/25 bg-[#e8f8fd] text-xs font-black text-[#12698c] shadow-sm">{userInitials(user.name)}</span>
+                      <div className="min-w-0"><p className="truncate font-extrabold text-[#0f2738]">{user.name}</p><p className="mt-0.5 text-[10px] font-semibold text-slate-400">#{String(user.id).slice(-6)}</p></div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-start" dir="ltr">
+                    <span className="font-medium text-slate-600">{user.email}</span>
                   </TableCell>
                   <TableCell>
                     <Badge className={getRoleBadgeColor(user.role)} variant="outline">
@@ -473,6 +483,7 @@ export default function Users() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEdit(user)}
+                        className="h-9 w-9 rounded-xl text-slate-500 hover:bg-[#e8f8fd] hover:text-[#12698c]"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -480,7 +491,7 @@ export default function Users() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(user.id)}
-                        className="text-destructive hover:text-destructive"
+                        className="h-9 w-9 rounded-xl text-destructive hover:bg-rose-50 hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -528,8 +539,10 @@ export default function Users() {
                   customers.map((customer: any) => {
                     const alreadyStaff = users.some((u: any) => u.email === customer.email);
                     return (
-                      <TableRow key={customer.id} className="border-t border-gray-100 hover:bg-[#f7fbfe]">
-                        <TableCell className="font-medium">{customer.fullName}</TableCell>
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          <div className="flex min-w-[180px] items-center gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#3cc4f0]/25 bg-[#e8f8fd] text-xs font-black text-[#12698c] shadow-sm">{userInitials(customer.fullName)}</span><div className="min-w-0"><p className="truncate font-extrabold text-[#0f2738]">{customer.fullName}</p><p className="mt-0.5 text-[10px] text-slate-400" dir="ltr">{customer.phone}</p></div></div>
+                        </TableCell>
                         <TableCell>{customer.email}</TableCell>
                         <TableCell>{customer.phone}</TableCell>
                         <TableCell>

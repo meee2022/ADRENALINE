@@ -69,8 +69,8 @@
   --brand-dark: #0f1516;
   --brand-gray: #bcbebf;
 
-  --font-sans: 'Tajawal', 'Cairo', sans-serif;
-  --font-heading: 'Tajawal', 'Cairo', sans-serif;
+  --font-sans: 'Cairo', 'Tajawal', 'Segoe UI', sans-serif;
+  --font-heading: 'Cairo', 'Tajawal', 'Segoe UI', sans-serif;
 }
 
 .dark {
@@ -120,6 +120,12 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     /* ✅ توهّجان خفيفان بلون البراند في الأركان (identity design system) —
        يكسران تسطيح الخلفية دون أن يلفتا النظر */
     background-image:
@@ -135,6 +141,13 @@
   h5,
   h6 {
     @apply font-heading tracking-tight;
+    font-family: var(--font-heading);
+    letter-spacing: 0;
+  }
+
+  :where(button, input, textarea, select, option) {
+    font-family: var(--font-sans);
+    letter-spacing: 0;
   }
 
   /* =========================
@@ -1454,6 +1467,75 @@
   .daily-meal-card .meal-modifier-trigger {
     padding-inline: 0.5rem !important;
     font-size: 0.68rem !important;
+  }
+}
+
+/* Shared administration table language. Add table-plain to opt out for a specialized canvas. */
+@media screen {
+  .admin-data-tables table:not(.table-plain) {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    color: #334155;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .admin-data-tables table:not(.table-plain) > thead {
+    background: linear-gradient(180deg, #137bb0 0%, #0c628c 100%);
+  }
+
+  .admin-data-tables table:not(.table-plain) > thead > tr > th {
+    height: 48px;
+    padding: 0 16px;
+    border-bottom: 2px solid #3cc4f0;
+    color: #f8fcfe !important;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+    text-align: start;
+    white-space: nowrap;
+    letter-spacing: 0;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr {
+    background: rgba(255, 255, 255, 0.96);
+    transition: background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr:nth-child(even) {
+    background: #f8fbfd;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr:hover {
+    background: #eaf7fd !important;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr > td {
+    min-height: 48px;
+    padding: 13px 16px;
+    border-bottom: 1px solid #e8eef3;
+    color: #475569;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: start;
+    vertical-align: middle;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr > td:first-child {
+    color: #0f2738;
+    font-weight: 750;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tbody > tr:last-child > td {
+    border-bottom: 0;
+  }
+
+  .admin-data-tables table:not(.table-plain) > tfoot > tr > td {
+    padding: 13px 16px;
+    border-top: 1px solid rgba(60, 196, 240, 0.28);
+    background: #ecfeff;
+    color: #123f5c;
+    font-weight: 800;
   }
 }
 

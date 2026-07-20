@@ -158,8 +158,10 @@ export const get = query({
 
     // ✅ تحميل publicMeals كمصدر إضافي للماكروز (مطابقة بالاسم)
     const publicMealsAll = await ctx.db.query("publicMeals").collect();
+    const publicMealsById = new Map<string, any>();
     const publicMealsByName = new Map<string, any>();
     publicMealsAll.forEach((pm: any) => {
+      publicMealsById.set(String(pm._id), pm);
       // مفاتيح متعددة للمطابقة (عربي + إنجليزي + lowercase)
       if (pm.nameAr) publicMealsByName.set(String(pm.nameAr).trim().toLowerCase(), pm);
       if (pm.nameEn) publicMealsByName.set(String(pm.nameEn).trim().toLowerCase(), pm);
@@ -291,7 +293,9 @@ export const get = query({
 
       // ✅ لا نشترط menuItemId — الخطط المستوردة/اليدوية تحمل الاسم نصاً (mealNameEn)
       const items = (p.items || [])
-        .filter((it: any) => it && !it.isOff && (it.menuItemId || it.mealNameEn || it.mealNameAr))
+        .filter((it: any) => it && !it.isOff && (
+          it.publicMealId || it.mealId || it.menuItemId || it.mealNameEn || it.mealNameAr
+        ))
         .slice();
 
       // ترتيب حسب meta.index لو موجود
@@ -313,13 +317,16 @@ export const get = query({
         );
 
         // ✅ مطابقة بـ publicMeals بالاسم للحصول على ماكروز كاملة
-        const pmLookup = publicMealsByName.get(String(lookupName).trim().toLowerCase())
+        const exactPublicMealId = it.publicMealId || it.mealId || (menu as any)?.publicMealId;
+        const pmLookup = publicMealsById.get(String(exactPublicMealId || ""))
+          || publicMealsByName.get(String(lookupName).trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameAr || "").trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameEn || "").trim().toLowerCase());
 
         // ✅ اسم العرض بلغة الواجهة: إنجليزي من (لقطة الطلب / publicMeals) وإلا العربي
+        const legacyMenuName = (menu as any)?.nameEn || (menu as any)?.name || (menu as any)?.nameAr;
         const mealName = args.lang === "en"
-          ? (it.mealNameEn || (pmLookup as any)?.nameEn || (menu as any)?.nameEn || lookupName)
+          ? (it.mealNameEn || (it.menuItemId ? legacyMenuName : null) || (pmLookup as any)?.nameEn || lookupName)
           : lookupName;
 
         // ترتيب الأولوية: 1) item نفسه، 2) publicMeals، 3) menuItem

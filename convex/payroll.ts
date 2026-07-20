@@ -53,6 +53,14 @@ function derive(e: any) {
   return { ...e, package: pkg, salary, total, balance };
 }
 
+async function assertPayrollMonthOpen(ctx: any, month?: string) {
+  if (!month) return;
+  const entries = await ctx.db.query("finJournalEntries")
+    .withIndex("by_source", (q: any) => q.eq("sourceType", "payrollMonth").eq("sourceId", month)).collect();
+  const posted = entries.some((entry: any) => entry.postingStatus === "posted" && !entry.reversalEntryId);
+  if (posted) throw new Error("تم اعتماد وترحيل رواتب هذا الشهر؛ اعكس القيد المالي أولًا قبل التعديل");
+}
+
 /** قائمة رواتب شهر (افتراضي أحدث شهر). للموظفين فقط — غير المصرّح يحصل على قائمة فارغة. */
 export const list = query({
   args: { month: v.optional(v.string()), sessionToken: v.optional(v.string()) },
@@ -122,6 +130,7 @@ export const create = mutation({
     await requireAdmin(ctx, args.sessionToken);
     const { sessionToken, sortOrder, ...data } = args;
     validatePayrollFields(data); // 🔒 يرفض القيم السالبة والغير معقولة
+    await assertPayrollMonthOpen(ctx, data.month);
     const existing = await ctx.db.query("payroll").withIndex("by_month", (q) => q.eq("month", data.month)).collect();
     const nextOrder = sortOrder ?? (existing.reduce((m, x) => Math.max(m, x.sortOrder ?? 0), 0) + 1);
     return await ctx.db.insert("payroll", { ...data, sortOrder: nextOrder, createdAt: Date.now() });
@@ -150,6 +159,7 @@ export const update = mutation({
     const { id, sessionToken, ...rest } = args as any;
     validatePayrollFields(rest); // 🔒
     const existing: any = await ctx.db.get(id);
+    await assertPayrollMonthOpen(ctx, rest.month || existing?.month);
     if (existing?.isVoid) throw new Error("مش مسموح تعدّل سجل ملغى");
     const updates: any = { updatedAt: Date.now() };
     for (const [k, val] of Object.entries(rest)) if (val !== undefined) updates[k] = val;
@@ -170,6 +180,7 @@ export const remove = mutation({
     const existing: any = await ctx.db.get(args.id);
     if (!existing) throw new Error("السجل غير موجود");
     if (existing.isVoid) return { success: true, alreadyVoid: true };
+    await assertPayrollMonthOpen(ctx, existing.month);
     const reason = String(args.reason || "").trim();
     if (reason.length < 3) throw new Error("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
     const actor = id?.userId ? (await ctx.db.get(id.userId as any) as any)?.name : undefined;

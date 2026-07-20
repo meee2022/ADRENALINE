@@ -11,6 +11,7 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRoleOrPermission } from "./sessions";
+import { autoPostGymOrder, autoPostGymReturn, autoReverseGymOrder } from "./financePost";
 
 const GYM_FINANCE_ROLES = ["ACCOUNTANT", "FINANCE_MANAGER"];
 // صلاحية الصفحة تغطي البيع والمرتجعات وإدارة حسابات الجيم وأصنافه وأسعاره.
@@ -895,7 +896,7 @@ export const createOrder = mutation({
   },
   handler: async (ctx, args) => {
     const sess: any = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
-    const who = sess?.userId ? undefined : undefined;
+    const who = sess?.userId as any;
     const gym: any = await ctx.db.get(args.gymId);
     if (!gym) throw new Error("الجم غير موجود");
 
@@ -918,6 +919,7 @@ export const createOrder = mutation({
         unitPrice: l.unitPrice, lineTotal: l.lineTotal,
       });
     }
+    await autoPostGymOrder(ctx, orderId, who);
     return {
       id: String(orderId), subtotal: built.subtotal,
       discountAmount: built.discountAmount,
@@ -946,7 +948,7 @@ export const updateOrder = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const actor = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const existing: any = await ctx.db.get(args.orderId);
     if (!existing) throw new Error("الطلبية غير موجودة");
     if (existing.isVoid) throw new Error("مش مسموح تعدّل طلبية ملغاة");
@@ -954,6 +956,7 @@ export const updateOrder = mutation({
     if (!gym) throw new Error("الجم غير موجود");
 
     const built = await buildGymOrderLines(ctx, gym, args.lines);
+    await autoReverseGymOrder(ctx, args.orderId, "تعديل فاتورة المنفذ", actor.userId as any);
 
     const oldLines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", args.orderId)).collect();
     const returnedByMeal = new Map(oldLines.map((line: any) => [String(line.mealId), Number(line.returnedQty || 0)]));
@@ -993,6 +996,7 @@ export const updateOrder = mutation({
         returnedQty: returnedByMeal.get(String(l.mealId)) || undefined,
       });
     }
+    await autoPostGymOrder(ctx, args.orderId, actor.userId as any);
     return {
       success: true, subtotal: built.subtotal,
       discountAmount: built.discountAmount,
@@ -1025,6 +1029,7 @@ export const deleteOrder = mutation({
       voidedBy: actorName || undefined, voidReason: reason,
       updatedAt: Date.now(),
     });
+    await autoReverseGymOrder(ctx, args.orderId, reason, id.userId as any);
     return { success: true };
   },
 });
@@ -1121,6 +1126,7 @@ export const recordOrderReturns = mutation({
       returnedTotal, wasteValue, netTotal,
       updatedAt: Date.now(),
     });
+    await autoPostGymReturn(ctx, returnId, (actor as any).userId as any);
     return { returnId: String(returnId), batchQty, batchWaste, returnedTotal, wasteValue, netTotal };
   },
 });

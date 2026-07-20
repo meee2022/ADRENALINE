@@ -202,6 +202,7 @@ export const create = mutation({
     costQAR: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    isOnlineOnly: v.optional(v.boolean()),
     // NEW: Scheduling
     weeks: v.optional(v.array(v.number())),
     days: v.optional(v.array(v.string())),
@@ -236,6 +237,7 @@ export const create = mutation({
       priceQAR: args.priceQAR || 0,
       sortOrder: args.sortOrder || 999,
       isActive: args.isActive ?? true,
+      isOnlineOnly: args.isOnlineOnly ?? false,
       weeks: args.weeks,
       days: args.days,
       schedule: args.schedule,
@@ -274,6 +276,7 @@ export const update = mutation({
     costQAR: v.optional(v.number()),
     sortOrder: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
+    isOnlineOnly: v.optional(v.boolean()),
     // NEW: Scheduling
     weeks: v.optional(v.array(v.number())),
     days: v.optional(v.array(v.string())),

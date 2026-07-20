@@ -72,7 +72,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </aside>
 
           {/* Main Content */}
-          <main className="relative h-full flex-1 min-w-0 overflow-hidden flex flex-col print:h-auto print:overflow-visible print:block" style={{ background: "#f1f5f9" }}>
+          <main className="admin-data-tables relative h-full flex-1 min-w-0 overflow-hidden flex flex-col print:h-auto print:overflow-visible print:block" style={{ background: "#f1f5f9" }}>
             <div className="flex-1 h-full w-full overflow-y-auto overflow-x-auto print:overflow-visible print:h-auto">
               <div className="w-full min-w-0 p-4 md:p-8 print:p-0">{children}</div>
             </div>
@@ -114,7 +114,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             />
           </div>
 
-          <main className="relative flex-1 min-w-0 overflow-hidden" style={{ background: "#f1f5f9" }}>
+          <main className="admin-data-tables relative flex-1 min-w-0 overflow-hidden" style={{ background: "#f1f5f9" }}>
             <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
 
             <div className="app-mobile-content h-full w-full overflow-y-auto overflow-x-auto pb-20">

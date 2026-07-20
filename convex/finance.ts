@@ -1,5 +1,10 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireRole, requireRoleOrPermission } from "./sessions";
+
+const requireFinance = (ctx: any, token?: string) => requireRoleOrPermission(ctx, token, {
+  roles: ["ACCOUNTANT", "FINANCE_MANAGER"], permissions: ["/finance"],
+});
 
 // ==================================================================
 // المالية — المرحلة 1: شجرة الحسابات + عدّاد + استعلامات أساسية
@@ -95,8 +100,9 @@ const normalFor = (t: string): "debit" | "credit" =>
 
 // زرع/تحديث شجرة الحسابات (idempotent — يكرّر بأمان، يحدّث الموجود بالكود).
 export const seedChartOfAccounts = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const now = Date.now();
     const byCode = new Map<string, any>();
     for (const a of await ctx.db.query("finAccounts").collect()) byCode.set(a.code, a);
@@ -143,8 +149,9 @@ export const seedChartOfAccounts = mutation({
 
 // شجرة الحسابات كاملة (للعرض الهرمي).
 export const listAccounts = query({
-  args: { activeOnly: v.optional(v.boolean()) },
+  args: { activeOnly: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     let accs = await ctx.db.query("finAccounts").collect();
     if (args.activeOnly) accs = accs.filter((a) => a.isActive);
     return accs.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -153,8 +160,9 @@ export const listAccounts = query({
 
 // تشخيص سريع لحالة الموديول المالي.
 export const financeStatus = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const accounts = await ctx.db.query("finAccounts").collect();
     const entries = await ctx.db.query("finJournalEntries").collect();
     const periods = await ctx.db.query("finPeriods").collect();
@@ -165,5 +173,46 @@ export const financeStatus = query({
       postedEntries: entries.filter((e) => e.postingStatus === "posted").length,
       periods: periods.length,
     };
+  },
+});
+
+export const listPeriods = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
+    return await ctx.db.query("finPeriods").withIndex("by_dates").order("desc").collect();
+  },
+});
+
+export const setPeriodStatus = mutation({
+  args: {
+    periodId: v.id("finPeriods"),
+    status: v.union(v.literal("open"), v.literal("locked"), v.literal("closed")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actor = await requireRole(ctx, args.sessionToken, ["FINANCE_MANAGER"]);
+    const period: any = await ctx.db.get(args.periodId);
+    if (!period) throw new Error("الفترة المالية غير موجودة");
+    if (period.status === "closed" && args.status !== "closed") {
+      throw new Error("الفترة المقفلة نهائيًا لا يعاد فتحها إلا بقيد افتتاحي في فترة جديدة");
+    }
+    await ctx.db.patch(args.periodId, {
+      status: args.status,
+      closedAt: args.status === "closed" ? Date.now() : undefined,
+      closedBy: args.status === "closed" ? actor.userId as any : undefined,
+    });
+    const user: any = actor.userId ? await ctx.db.get(actor.userId as any) : null;
+    await ctx.db.insert("auditLog", {
+      actorUserId: actor.userId as any,
+      actorName: user?.name,
+      actorRole: actor.role,
+      action: "FINANCE_PERIOD_STATUS_CHANGED",
+      entityType: "finPeriod",
+      entityId: String(args.periodId),
+      details: JSON.stringify({ period: period.name, from: period.status, to: args.status }),
+      createdAt: Date.now(),
+    });
+    return { success: true };
   },
 });

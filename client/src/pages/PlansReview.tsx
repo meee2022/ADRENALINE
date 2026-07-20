@@ -3,6 +3,9 @@
  * @description المراجعة النهائية والاعتماد - مراجعة جميع الخطط قبل الإرسال للمطبخ
  */
 import { useState, useMemo } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/../../convex/_generated/api";
+import { useStore } from "@/lib/store";
 import { useLocation, useRoute } from "wouter";
 import {
   useCustomers,
@@ -49,6 +52,12 @@ export default function PlansReviewPage() {
   const { data: menuItems = [] } = useMenuItems();
   const { data: modifiers = [] } = useModifiers();
   const { data: dailyPlans = [] } = useDailyPlans(dateStr);
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const publicMeals = (useQuery(api.publicMeals.list, { sessionToken }) as any[] | undefined) || [];
+
+  const hasMeal = (item: any) => !item?.isOff && !!(
+    item?.publicMealId || item?.mealId || item?.menuItemId || item?.mealNameAr || item?.mealNameEn
+  );
 
   const dateLocale = isRtl ? ar : enUS;
 
@@ -72,7 +81,7 @@ export default function PlansReviewPage() {
 
     // Count total meals
     const totalMeals = dailyPlans.reduce((sum: number, p: any) => {
-      return sum + (p.items || []).filter((i: any) => !i.isOff && i.menuItemId).length;
+      return sum + (p.items || []).filter(hasMeal).length;
     }, 0);
 
     return {
@@ -116,15 +125,17 @@ export default function PlansReviewPage() {
   /** طباعة/PDF: كل عميل معتمد في هذا اليوم كمجموعة مستقلة */
   const handlePrintDay = () => {
     const menuMap = new Map((menuItems as any[]).map((m: any) => [String(m._id), m]));
+    const publicMap = new Map((publicMeals as any[]).map((m: any) => [String(m._id), m]));
     const catMap = new Map((categories as any[]).map((c: any) => [String(c._id), c.name]));
     const modMap = new Map((modifiers as any[]).map((m: any) => [String(m._id), m.name]));
 
     const groups = plansList.map((plan: any) => {
       const c = plan.customer;
       const rows = (plan.items || [])
-        .filter((it: any) => !it.isOff && (it.menuItemId || it.mealNameAr || it.mealNameEn))
+        .filter(hasMeal)
         .map((it: any, i: number) => {
           const menu = it.menuItemId ? menuMap.get(String(it.menuItemId)) : null;
+          const canonical = publicMap.get(String(it.publicMealId || it.mealId || menu?.publicMealId || ""));
           const mods = (it.modifierIds || []).map((id: any) => modMap.get(String(id))).filter(Boolean);
           const notes = [
             ...mods,
@@ -137,8 +148,15 @@ export default function PlansReviewPage() {
             .join(" • ");
           return {
             label: String(i + 1),
-            category: menu ? catMap.get(String(menu.categoryId)) || "" : "",
-            meal: (isRtl ? (menu?.name || it.mealNameAr || it.mealNameEn) : (it.mealNameEn || it.mealNameAr || menu?.name)) || (isRtl ? "غير محدد" : "Unspecified"),
+            category: canonical?.category || (menu ? catMap.get(String(menu.categoryId)) || "" : it.category || ""),
+            // Existing order plans keep their approved snapshot. Legacy menuItem
+            // plans use the canonical linked name, eliminating old spellings.
+            meal: (it.menuItemId
+              ? (isRtl ? (menu?.nameAr || menu?.name || menu?.nameEn) : (menu?.nameEn || menu?.name || menu?.nameAr))
+              : it.mealId
+              ? (isRtl ? (it.mealNameAr || canonical?.nameAr || it.mealNameEn) : (it.mealNameEn || canonical?.nameEn || it.mealNameAr))
+              : (isRtl ? (canonical?.nameAr || menu?.name || it.mealNameAr) : (canonical?.nameEn || menu?.name || it.mealNameEn)))
+              || (isRtl ? "غير محدد" : "Unspecified"),
             notes,
           };
         });
@@ -178,7 +196,7 @@ export default function PlansReviewPage() {
     if (plan.notes) icons.hasNotes = true;
 
     (plan.items || []).forEach((item: any) => {
-      if (!item.isOff && !item.menuItemId) {
+      if (!item.isOff && !hasMeal(item)) {
         icons.allMealsSelected = false;
       }
       if (item.modifierIds && item.modifierIds.length > 0) {
@@ -281,7 +299,7 @@ export default function PlansReviewPage() {
             plansList.map((plan: any, index: number) => {
               const icons = getPlanIcons(plan);
               const mealsCount = (plan.items || []).filter(
-                (i: any) => !i.isOff && i.menuItemId
+                hasMeal
               ).length;
 
               // Get initials for avatar

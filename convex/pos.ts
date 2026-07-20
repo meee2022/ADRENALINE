@@ -18,7 +18,7 @@ import { verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
 import { awardPointsForPosTicket, reversePointsForPosTicket } from "./loyalty";
 import { convertUnit } from "./units";
-import { autoPostPosTicket } from "./financePost";
+import { autoPostPosTicket, autoReversePosTicket } from "./financePost";
 
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
 
@@ -904,6 +904,7 @@ export const voidTicket = mutation({
       // 🔒 عكس خصم المخزون لو الفاتورة كانت مدفوعة وخصمت مخزون
       if (wasPaid) {
         try { await reverseInventoryForTicket(ctx, t.ticketNumber); } catch { /* لا نوقف */ }
+        try { await autoReversePosTicket(ctx, ticketId, reason || "إلغاء الفاتورة", user._id); } catch { /* لا نوقف */ }
         // 🔒 عكس نقاط الولاء لو مُنِحت (idempotent)
         if (t.customerId) {
           try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
@@ -943,6 +944,7 @@ export const refundTicket = mutation({
     }
     // 🔒 إرجاع المخزون + عكس نقاط الولاء
     try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund"); } catch { /* لا نوقف */ }
+    try { await autoReversePosTicket(ctx, ticketId, r, user._id); } catch { /* لا نوقف */ }
     if (t.customerId) {
       try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
     }

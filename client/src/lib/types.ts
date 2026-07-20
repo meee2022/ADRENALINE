@@ -55,9 +55,23 @@ export interface Addon {
 export interface DailyPlanItem {
   id: string;
   categoryId: string;
-  menuItemId?: string | null; // Nullable if OFF
+  /** Canonical meal identity for all newly-created subscriber plans. */
+  publicMealId?: string | null;
+  /** Compatibility alias used by order-created plans and existing kitchen flows. */
+  mealId?: string | null;
+  /** Legacy plan identity. Kept readable while old plans are still active. */
+  menuItemId?: string | null;
+  mealNameAr?: string;
+  mealNameEn?: string;
+  category?: string;
+  imageUrl?: string;
+  calories?: number;
+  protein?: number;
+  carbs?: number;
+  fats?: number;
   isOff: boolean;
-  addonIds: string[];
+  addonIds?: string[];
+  modifierIds?: string[];
   specialNotes?: string;
 }
 

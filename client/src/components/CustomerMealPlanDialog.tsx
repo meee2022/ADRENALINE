@@ -46,6 +46,7 @@ export function CustomerMealPlanDialog({
   const { data: menuItems = [] } = useMenuItems();
   const { data: categories = [] } = useCategories();
   const { data: modifiers = [] } = useModifiers();
+  const publicMeals = (useQuery(api.publicMeals.list, { sessionToken }) as any[] | undefined) || [];
 
   const mealCount = useMemo(
     () =>
@@ -60,6 +61,7 @@ export function CustomerMealPlanDialog({
   const handlePrint = async () => {
     if (!customer || !plans?.length || downloading) return;
     const menuMap = new Map((menuItems as any[]).map((m: any) => [String(m._id), m]));
+    const publicMap = new Map((publicMeals as any[]).map((m: any) => [String(m._id), m]));
     const catMap = new Map((categories as any[]).map((c: any) => [String(c._id), c.name]));
     const modMap = new Map((modifiers as any[]).map((m: any) => [String(m._id), m.name]));
 
@@ -74,18 +76,24 @@ export function CustomerMealPlanDialog({
 
     const groups = plans.map((plan: any) => {
       const rows = (plan.items || [])
-        .filter((it: any) => !it.isOff && (it.menuItemId || it.mealNameAr || it.mealNameEn))
+        .filter((it: any) => !it.isOff && (it.publicMealId || it.mealId || it.menuItemId || it.mealNameAr || it.mealNameEn))
         .map((it: any, i: number) => {
           const menu = it.menuItemId ? menuMap.get(String(it.menuItemId)) : null;
+          const canonical = publicMap.get(String(it.publicMealId || it.mealId || menu?.publicMealId || ""));
           const mods = (it.modifierIds || []).map((id: any) => modMap.get(String(id))).filter(Boolean);
           return {
             label: String(i + 1),
-            category: menu ? catMap.get(String(menu.categoryId)) || "" : (it.category || ""),
-            meal: menu?.name || it.mealNameAr || it.mealNameEn || (isRtl ? "غير محدد" : "Unspecified"),
+            category: canonical?.category || (menu ? catMap.get(String(menu.categoryId)) || "" : (it.category || "")),
+            meal: (it.menuItemId
+              ? (isRtl ? (menu?.nameAr || menu?.name || menu?.nameEn) : (menu?.nameEn || menu?.name || menu?.nameAr))
+              : it.mealId
+              ? (isRtl ? (it.mealNameAr || canonical?.nameAr || it.mealNameEn) : (it.mealNameEn || canonical?.nameEn || it.mealNameAr))
+              : (isRtl ? (canonical?.nameAr || menu?.name || it.mealNameAr) : (canonical?.nameEn || menu?.name || it.mealNameEn)))
+              || (isRtl ? "غير محدد" : "Unspecified"),
             notes: [...mods, it.avoid, it.preferences, it.portions].filter(Boolean).join(" • "),
-            imageUrl: it.imageUrl || menu?.imageUrl || undefined,
-            calories: it.calories ?? menu?.calories ?? "",
-            protein: it.protein ?? menu?.protein ?? "",
+            imageUrl: it.imageUrl || canonical?.imageUrl || menu?.imageUrl || undefined,
+            calories: it.calories ?? canonical?.calories ?? menu?.calories ?? "",
+            protein: it.protein ?? canonical?.protein ?? menu?.protein ?? "",
           };
         });
       return {

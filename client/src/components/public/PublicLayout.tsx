@@ -33,59 +33,58 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="public-site-shell min-h-screen bg-white">
       {/* Header/Navbar */}
-      <header className="sticky top-0 z-50 bg-gradient-to-r from-cyan-50 to-blue-50 border-b-2 border-cyan-300 shadow-lg backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-[#3CC4F0]/35 bg-white/95 shadow-[0_8px_28px_rgba(15,39,56,0.08)] backdrop-blur-xl">
+        <div className="mx-auto max-w-[1720px] px-4 sm:px-6 xl:px-8">
+          <div className="flex min-h-[72px] items-center justify-between gap-5">
             {/* Logo */}
-            <a href="/" className="flex items-center">
+            <a href="/" className="flex shrink-0 items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]">
               <img
                 src="/adrenaline-logo.png"
                 alt="Adrenaline"
-                className="h-10"
+                className="h-8 w-auto xl:h-9"
               />
             </a>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-3 lg:gap-5">
-              <a href="/" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 xl:flex">
+              <a href="/" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "الرئيسية" : "Home"}
               </a>
-              <a href="/public/plans" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+              <a href="/public/plans" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "الخطط" : "Plans"}
               </a>
-              <a href="/public/menu" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+              <a href="/public/menu" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "المنيو" : "Menu"}
               </a>
-              <a href="/public/calorie-calculator" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap flex items-center gap-1.5">
+              <a href="/public/calorie-calculator" className="flex whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC] items-center gap-1.5">
                 <Calculator className="h-3.5 w-3.5" />
                 {isRtl ? "حاسبة السعرات" : "Calorie Calculator"}
               </a>
               <a href="/customer/smart-plan"
-                className="text-[15px] font-bold px-3 py-1.5 rounded-full text-[#0E76AC] hover:text-white hover:bg-[#0E76AC] transition-colors whitespace-nowrap flex items-center gap-1"
-                style={{ background: "#3AC7F415", border: "1px solid #3AC7F440" }}>
+                className="mx-1 flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-[#3CC4F0]/45 bg-[#EAF8FD] px-3 py-2 text-[14px] font-bold text-[#0E76AC] transition-colors hover:border-[#0E76AC] hover:bg-[#0E76AC] hover:text-white">
                 <Sparkles className="h-3.5 w-3.5" />
                 {isRtl ? "خطتي الذكية" : "Smart Plan"}
               </a>
-              <a href="/public/how-to-subscribe" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+              <a href="/public/how-to-subscribe" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "كيف تشترك" : "Subscribe"}
               </a>
-              <a href="/public/about" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+              <a href="/public/about" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "من نحن" : "About"}
               </a>
-              <a href="/public/contact" className="text-[15px] font-medium text-[#0F1516] hover:text-[#0E76AC] transition-colors whitespace-nowrap">
+              <a href="/public/contact" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "تواصل" : "Contact"}
               </a>
             </nav>
 
             {/* Actions */}
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-1.5 xl:border-s xl:border-slate-200 xl:ps-4">
               {/* Dashboard Button - Show only for logged in admin users */}
               {currentUser && (
                 <>
                   <Button
                     onClick={() => window.location.href = "/dashboard"}
                     variant="outline"
-                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold items-center gap-2"
+                    className="hidden h-10 items-center gap-2 rounded-xl border border-[#0E76AC]/45 bg-white px-4 font-bold text-[#0E76AC] shadow-sm hover:border-[#0E76AC] hover:bg-[#EAF8FD] xl:flex"
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     {isRtl ? "لوحة التحكم" : "Dashboard"}
@@ -99,7 +98,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                       window.location.href = "/";
                     }}
                     variant="outline"
-                    className="hidden md:flex h-10 px-4 rounded-full border-2 border-red-500 text-red-600 hover:bg-red-50"
+                    className="hidden size-10 rounded-xl border border-slate-200 bg-white p-0 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 xl:flex"
                     aria-label={isRtl ? "تسجيل الخروج" : "Logout"}
                   >
                     <LogOut className="h-4 w-4" />
@@ -112,7 +111,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 onClick={toggleLanguage}
                 variant="ghost"
                 size="sm"
-                className="hidden md:flex items-center gap-2 h-10 px-4 rounded-full hover:bg-[#3CC4F0]/10"
+                className="hidden h-10 items-center gap-1.5 rounded-xl px-3 text-[#0E76AC] hover:bg-[#EAF8FD] xl:flex"
               >
                 <Globe className="h-4 w-4 text-[#0E76AC]" />
                 <span className="font-bold text-[#0E76AC]">
@@ -125,7 +124,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 <Button
                   onClick={() => window.location.href = "/login"}
                   variant="outline"
-                  className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold"
+                  className="hidden h-10 rounded-xl border border-[#0E76AC]/45 bg-white px-4 font-bold text-[#0E76AC] hover:bg-[#EAF8FD] xl:flex"
                 >
                   {isRtl ? "تسجيل دخول" : "Login"}
                 </Button>
@@ -135,7 +134,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               {currentCustomer && (
                 <>
                   {/* Customer Name */}
-                  <span className="hidden md:block text-sm font-medium text-[#0F1516]">
+                  <span className="hidden text-sm font-medium text-[#0F1516] xl:block">
                     {isRtl ? "مرحباً، " : "Hi, "}
                     {currentCustomer.fullName.split(" ")[0]}
                   </span>
@@ -143,7 +142,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   <Button
                     onClick={() => window.location.href = "/customer/profile"}
                     variant="outline"
-                    className="hidden md:flex h-10 px-6 rounded-full border-2 border-[#0E76AC] text-[#0E76AC] hover:bg-[#0E76AC] hover:text-white font-bold items-center gap-2"
+                    className="hidden h-10 items-center gap-2 rounded-xl border border-[#0E76AC]/45 bg-white px-4 font-bold text-[#0E76AC] hover:bg-[#EAF8FD] xl:flex"
                   >
                     <User className="h-4 w-4" />
                     {isRtl ? "حسابي" : "My Profile"}
@@ -159,7 +158,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                     window.location.href = "/";
                   }}
                   variant="ghost"
-                  className="hidden md:flex h-10 px-4 rounded-full hover:bg-red-50 hover:text-red-600"
+                  className="hidden size-10 rounded-xl p-0 hover:bg-red-50 hover:text-red-600 xl:flex"
                   aria-label={isRtl ? "تسجيل الخروج" : "Logout"}
                 >
                   <LogOut className="h-4 w-4" />
@@ -167,8 +166,8 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               )}
 
               {/* Subscribe Button — يفتح صفحة الخطط لاختيار باقة */}
-              <a href="/public/plans" className="hidden md:block">
-                <Button className="h-10 px-6 rounded-full bg-[#0E76AC] hover:bg-[#47759C] text-white font-bold">
+              <a href="/public/plans" className="hidden xl:block">
+                <Button className="h-10 rounded-xl bg-[#0E76AC] px-5 font-bold text-white shadow-[0_6px_16px_rgba(14,118,172,0.2)] hover:bg-[#095F8B]">
                   {isRtl ? "اشترك الآن" : "Subscribe"}
                 </Button>
               </a>
@@ -178,7 +177,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 variant="ghost"
                 size="icon"
                 aria-label={isRtl ? "فتح القائمة" : "Open menu"}
-                className="md:hidden"
+                className="size-10 rounded-xl border border-slate-200 text-[#163A52] hover:bg-[#EAF8FD] xl:hidden"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 <Menu className="h-6 w-6" />
@@ -188,7 +187,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="md:hidden mt-4 pb-4 space-y-2"
+            <div className="mt-2 space-y-1 border-t border-slate-200 pb-4 pt-3 xl:hidden"
               onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMobileMenuOpen(false); }}>
               {/* Dashboard Link - Show only for logged in admin users */}
               {currentUser && (

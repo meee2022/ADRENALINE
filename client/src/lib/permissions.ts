@@ -89,12 +89,14 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
   ACCOUNTANT: [
     "/",
     "/reports",
+    "/finance",
     "/payroll",
   ],
 
   FINANCE_MANAGER: [
     "/",
     "/reports",
+    "/finance",
     "/analytics",
     "/payroll",
   ],

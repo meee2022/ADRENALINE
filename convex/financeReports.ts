@@ -1,5 +1,10 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { requireRoleOrPermission } from "./sessions";
+
+const requireFinance = (ctx: any, token?: string) => requireRoleOrPermission(ctx, token, {
+  roles: ["ACCOUNTANT", "FINANCE_MANAGER"], permissions: ["/finance"],
+});
 
 // ==================================================================
 // المالية — المرحلة 4: التقارير المالية (كلها لحظية من دفتر الأستاذ)
@@ -33,8 +38,9 @@ async function accountBalances(ctx: Ctx, fromDate?: string, toDate?: string) {
 
 // ميزان المراجعة — كل حساب بمدينه ودائنه ورصيده الصافي.
 export const trialBalance = query({
-  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()) },
+  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const bal = await accountBalances(ctx, args.fromDate, args.toDate);
     const accounts = await ctx.db.query("finAccounts").collect();
     const rows = accounts
@@ -62,8 +68,9 @@ export const trialBalance = query({
 
 // قائمة الدخل (P&L) — الإيرادات ناقص المصروفات = صافي الربح.
 export const incomeStatement = query({
-  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()) },
+  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const bal = await accountBalances(ctx, args.fromDate, args.toDate);
     const accounts = await ctx.db.query("finAccounts").collect();
     const line = (a: any) => {
@@ -92,8 +99,9 @@ export const incomeStatement = query({
 
 // الميزانية العمومية — الأصول = الخصوم + حقوق الملكية + صافي الربح.
 export const balanceSheet = query({
-  args: { asOfDate: v.optional(v.string()) },
+  args: { asOfDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const bal = await accountBalances(ctx, undefined, args.asOfDate);
     const accounts = await ctx.db.query("finAccounts").collect();
     const val = (a: any) => {
@@ -131,8 +139,9 @@ export const balanceSheet = query({
 
 // دفتر أستاذ حساب معيّن — الحركات + الرصيد الجاري.
 export const generalLedger = query({
-  args: { accountId: v.id("finAccounts"), fromDate: v.optional(v.string()), toDate: v.optional(v.string()) },
+  args: { accountId: v.id("finAccounts"), fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const acc: any = await ctx.db.get(args.accountId);
     if (!acc) return null;
     const allLines = await ctx.db.query("finJournalLines").withIndex("by_account", (q) => q.eq("accountId", args.accountId)).collect();
@@ -156,8 +165,9 @@ export const generalLedger = query({
 
 // أعمار الديون (ذمم مدينة/دائنة) حسب الطرف.
 export const agedParties = query({
-  args: { partyType: v.string() },
+  args: { partyType: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const lines = await ctx.db.query("finJournalLines").collect();
     const map = new Map<string, { debit: number; credit: number }>();
     for (const l of lines) {
@@ -176,8 +186,9 @@ export const agedParties = query({
 
 // لوحة مالية مختصرة (KPIs) — للصفحة الرئيسية للمالية.
 export const financeDashboard = query({
-  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()) },
+  args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
     const bal = await accountBalances(ctx, args.fromDate, args.toDate);
     const accounts = await ctx.db.query("finAccounts").collect();
     let revenue = 0, expense = 0, cogs = 0, cash = 0, receivable = 0, payable = 0;
@@ -199,5 +210,130 @@ export const financeDashboard = query({
       cashOnHand: cash, receivable, payable,
       netMarginPct: revenue ? ((revenue - expense) / revenue) * 100 : 0,
     };
+  },
+});
+
+/** Cash and bank movement with opening/closing balances and source breakdown. */
+export const cashFlow = query({
+  args: { fromDate: v.string(), toDate: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
+    const accounts = (await ctx.db.query("finAccounts").collect()).filter((a: any) => a.isPostable && ["cash", "bank"].includes(a.operationalType));
+    const ids = new Set(accounts.map((a: any) => String(a._id)));
+    const entries = await ctx.db.query("finJournalEntries").collect();
+    const entryMap = new Map(entries.map((e: any) => [String(e._id), e]));
+    const lines = await ctx.db.query("finJournalLines").collect();
+    let opening = 0, inflows = 0, outflows = 0;
+    const bySource = new Map<string, { inflow: number; outflow: number }>();
+    for (const line of lines as any[]) {
+      if (!ids.has(String(line.accountId))) continue;
+      const entry: any = entryMap.get(String(line.entryId));
+      if (!entry || entry.postingStatus !== "posted" || entry.entryDate > args.toDate) continue;
+      const net = Number(line.debit || 0) - Number(line.credit || 0);
+      if (entry.entryDate < args.fromDate) { opening += net; continue; }
+      if (net >= 0) inflows += net; else outflows += -net;
+      const key = String(entry.sourceType || entry.journalType || "manual");
+      const row = bySource.get(key) || { inflow: 0, outflow: 0 };
+      if (net >= 0) row.inflow += net; else row.outflow += -net;
+      bySource.set(key, row);
+    }
+    const round = (n: number) => Math.round(n * 100) / 100;
+    return {
+      openingBalance: round(opening), inflows: round(inflows), outflows: round(outflows),
+      netChange: round(inflows - outflows), closingBalance: round(opening + inflows - outflows),
+      bySource: [...bySource.entries()].map(([source, values]) => ({ source, inflow: round(values.inflow), outflow: round(values.outflow), net: round(values.inflow - values.outflow) })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net)),
+    };
+  },
+});
+
+/** Operational profitability by sales channel, based only on posted accounting entries. */
+export const channelProfitability = query({
+  args: { fromDate: v.string(), toDate: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
+    const entries = (await ctx.db.query("finJournalEntries").collect()).filter((e: any) => e.postingStatus === "posted" && e.entryDate >= args.fromDate && e.entryDate <= args.toDate);
+    const rows = new Map<string, { channel: string; revenue: number; returns: number; expenses: number; transactions: number }>();
+    const accounts = await ctx.db.query("finAccounts").collect();
+    const accountMap = new Map(accounts.map((a: any) => [String(a._id), a]));
+    for (const entry of entries as any[]) {
+      const channel = entry.sourceType === "posTicket" ? "pos" : entry.sourceType === "gymOrder" || entry.sourceType === "gymReturn" ? "outlets" : entry.sourceType === "inventoryReceipt" ? "purchases" : "other";
+      const row = rows.get(channel) || { channel, revenue: 0, returns: 0, expenses: 0, transactions: 0 };
+      const lines = await ctx.db.query("finJournalLines").withIndex("by_entry", (q: any) => q.eq("entryId", entry._id)).collect();
+      for (const line of lines as any[]) {
+        const account: any = accountMap.get(String(line.accountId));
+        if (!account) continue;
+        const amount = Number(line.credit || 0) - Number(line.debit || 0);
+        if (account.accountSubType === "contra_revenue") row.returns += -amount;
+        else if (account.accountType === "revenue") row.revenue += amount;
+        else if (account.accountType === "expense") row.expenses += -amount;
+      }
+      row.transactions += 1;
+      rows.set(channel, row);
+    }
+    return [...rows.values()].map((r) => ({ ...r, net: r.revenue - r.returns - r.expenses })).sort((a, b) => b.net - a.net);
+  },
+});
+
+/** Item and raw-material performance for kitchen purchasing and menu decisions. */
+export const itemAndMaterialPerformance = query({
+  args: { fromDate: v.string(), toDate: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireFinance(ctx, args.sessionToken);
+    const startMs = new Date(`${args.fromDate}T00:00:00`).getTime();
+    const endMs = new Date(`${args.toDate}T23:59:59.999`).getTime();
+    const meals = await ctx.db.query("publicMeals").collect();
+    const mealMap = new Map(meals.map((m: any) => [String(m._id), m]));
+    const itemMap = new Map<string, any>();
+    const add = (key: string, nameAr: string, nameEn: string, qty: number, revenue: number, returned: number, estimatedCost: number, hasCost: boolean) => {
+      const row = itemMap.get(key) || { key, nameAr, nameEn, soldQty: 0, returnedQty: 0, revenue: 0, estimatedCost: 0, missingCost: false };
+      row.soldQty += qty; row.returnedQty += returned; row.revenue += revenue; row.estimatedCost += estimatedCost;
+      if (!hasCost) row.missingCost = true;
+      itemMap.set(key, row);
+    };
+    const tickets = await ctx.db.query("posTickets").collect();
+    for (const ticket of tickets as any[]) {
+      const at = Number(ticket.paidAt || ticket.createdAt || 0);
+      if (ticket.status !== "PAID" || ticket.isNonRevenue || at < startMs || at > endMs) continue;
+      const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q: any) => q.eq("ticketId", ticket._id)).collect();
+      for (const line of lines as any[]) {
+        const meal: any = line.mealId ? mealMap.get(String(line.mealId)) : null;
+        add(String(line.mealId || line.name), meal?.nameAr || line.name, meal?.nameEn || line.name, Number(line.qty), Number(line.lineTotal), 0, Number(meal?.costQAR || 0) * Number(line.qty), meal?.costQAR != null);
+      }
+    }
+    const gymOrders = await ctx.db.query("gymOrders").collect();
+    const validOrders = new Set(gymOrders.filter((o: any) => !o.isVoid && o.date >= args.fromDate && o.date <= args.toDate).map((o: any) => String(o._id)));
+    const gymLines = await ctx.db.query("gymOrderLines").collect();
+    for (const line of gymLines as any[]) {
+      if (!validOrders.has(String(line.orderId))) continue;
+      const meal: any = line.mealId ? mealMap.get(String(line.mealId)) : null;
+      const returned = Number(line.returnedQty || 0);
+      const sold = Math.max(0, Number(line.qty) - returned);
+      add(String(line.mealId || line.mealNameEn), line.mealNameAr || meal?.nameAr || "", line.mealNameEn || meal?.nameEn || "", sold, sold * Number(line.unitPrice || 0), returned, Number(meal?.costQAR || 0) * Number(line.qty), meal?.costQAR != null);
+    }
+    const menuItems = [...itemMap.values()].map((r: any) => ({
+      ...r, grossProfit: r.revenue - r.estimatedCost,
+      marginPct: r.missingCost || !r.revenue ? null : Math.round(((r.revenue - r.estimatedCost) / r.revenue) * 1000) / 10,
+      returnRate: r.soldQty + r.returnedQty ? Math.round((r.returnedQty / (r.soldQty + r.returnedQty)) * 1000) / 10 : 0,
+    })).sort((a: any, b: any) => b.revenue - a.revenue);
+
+    const inventoryItems = await ctx.db.query("inventoryItems").collect();
+    const invMap = new Map(inventoryItems.map((i: any) => [String(i._id), i]));
+    const materialMap = new Map<string, any>();
+    const movements = await ctx.db.query("inventoryMovements").collect();
+    for (const mv of movements as any[]) {
+      if (mv.createdAt < startMs || mv.createdAt > endMs || mv.type === "receive") continue;
+      const item: any = invMap.get(String(mv.itemId));
+      if (!item) continue;
+      const key = String(mv.itemId);
+      const row = materialMap.get(key) || { itemId: key, nameAr: item.nameAr, nameEn: item.nameEn, unit: item.unit, consumedQty: 0, wasteQty: 0, consumedValue: 0, wasteValue: 0 };
+      const qty = Math.abs(Number(mv.quantity || 0));
+      const value = qty * Number(mv.unitCost || 0);
+      const isWaste = /waste|expired|spoil|هدر|تالف|منتهي/i.test(String(mv.note || ""));
+      if (isWaste) { row.wasteQty += qty; row.wasteValue += value; }
+      else { row.consumedQty += qty; row.consumedValue += value; }
+      materialMap.set(key, row);
+    }
+    const materials = [...materialMap.values()].map((r: any) => ({ ...r, wasteRate: r.consumedQty + r.wasteQty ? Math.round((r.wasteQty / (r.consumedQty + r.wasteQty)) * 1000) / 10 : 0 })).sort((a: any, b: any) => b.wasteValue - a.wasteValue);
+    return { menuItems, materials };
   },
 });

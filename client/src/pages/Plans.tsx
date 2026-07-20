@@ -380,6 +380,10 @@ export default function PlansPage() {
   // ✅ منيو العميل (مصدر الجدول الأسبوعي الوحيد) — للتعبئة التلقائية واقتراحات اليوم
   const sessionToken = useStore((s: any) => s.sessionToken) || undefined;
   const publicMeals = (useQuery(api.publicMeals.list, { sessionToken }) as any[] | undefined) || [];
+  const subscriberMeals = useMemo(
+    () => (publicMeals as any[]).filter((meal: any) => meal.isActive !== false && !meal.isGymOnly && !meal.isOnlineOnly),
+    [publicMeals],
+  );
   const [weekOverride, setWeekOverride] = useState<number | null>(null);
 
   const formattedDate = format(date, "yyyy-MM-dd");
@@ -483,32 +487,20 @@ export default function PlansPage() {
     return map;
   }, [categories]);
 
-  // ✅ خريطة وجبات اليوم: mealCategoryId → [menuItemId]
-  //
-  // 🔗 الربط بالـID المخزَّن (menuItems.publicMealId)، لا بمطابقة الاسم.
-  //    المطابقة بالاسم كانت تُسقِط 15 وجبة مجدولة من 139 **بصمت**: أي فرق
-  //    إملائي (BEEF SHAWERMA / Beef Shawarma) يترك الخانة فاضية بلا خطأ،
-  //    فتظن الأخصائية أن لا وجبة مقرّرة. والأسوأ: كل تصحيح إملائي لاحق
-  //    يكسر المزيد. الرابط يُحسم مرة واحدة في convex/menuLink.ts.
+  // Canonical schedule: category slot -> publicMeal IDs. The specialist now
+  // selects from the exact same scheduled catalogue that subscribers see.
   const scheduledByCategory = useMemo(() => {
-    const miByMeal = new Map<string, any>();
-    (menuItems as any[]).forEach((m) => {
-      if (m.publicMealId && !miByMeal.has(String(m.publicMealId))) miByMeal.set(String(m.publicMealId), m);
-    });
     const map: Record<string, string[]> = {};
-    (publicMeals as any[]).forEach((pm) => {
+    (subscriberMeals as any[]).forEach((pm) => {
       if (!Array.isArray(pm.schedule)) return;
       if (!pm.schedule.some((x: any) => x.week === rotationWeek && x.day === planDayName)) return;
-      const mi = miByMeal.get(String(pm._id));
-      if (!mi) return;
-      // 🔑 الخانة تُشتقّ من تصنيف المنيو العام، لا من menuItem.categoryId
       for (const slotId of slotIdsForPublicCat[String(pm.category)] || []) {
         (map[slotId] ||= []);
-        if (!map[slotId].includes(mi._id)) map[slotId].push(mi._id);
+        if (!map[slotId].includes(String(pm._id))) map[slotId].push(String(pm._id));
       }
     });
     return map;
-  }, [publicMeals, menuItems, rotationWeek, planDayName, slotIdsForPublicCat]);
+  }, [subscriberMeals, rotationWeek, planDayName, slotIdsForPublicCat]);
 
   const scheduledCount = useMemo(() => Object.values(scheduledByCategory).reduce((s, a) => s + a.length, 0), [scheduledByCategory]);
 
@@ -516,8 +508,9 @@ export default function PlansPage() {
   //    عشان الملء التلقائي يفحص ممنوعات المشترك بنفس منطق الخادم (مصدر واحد).
   const mealInfoByMenuItem = useMemo(() => {
     const pmById = new Map<string, any>();
-    (publicMeals as any[]).forEach((pm) => pmById.set(String(pm._id), pm));
+    (subscriberMeals as any[]).forEach((pm) => pmById.set(String(pm._id), pm));
     const map = new Map<string, any>();
+    (subscriberMeals as any[]).forEach((pm) => map.set(String(pm._id), pm));
     (menuItems as any[]).forEach((mi) => {
       const pm = mi.publicMealId ? pmById.get(String(mi.publicMealId)) : null;
       map.set(String(mi._id), {
@@ -530,7 +523,43 @@ export default function PlansPage() {
       });
     });
     return map;
-  }, [menuItems, publicMeals]);
+  }, [menuItems, subscriberMeals]);
+
+  const selectedMealId = (item: any): string | null =>
+    item?.publicMealId || item?.mealId || item?.menuItemId || null;
+
+  const canonicalMealForItem = (item: any): any | null => {
+    const directId = item?.publicMealId || item?.mealId;
+    if (directId) return (subscriberMeals as any[]).find((meal: any) => String(meal._id) === String(directId)) || null;
+    if (item?.menuItemId) {
+      const legacy = (menuItems as any[]).find((meal: any) => String(meal._id) === String(item.menuItemId));
+      if (legacy?.publicMealId) return (subscriberMeals as any[]).find((meal: any) => String(meal._id) === String(legacy.publicMealId)) || null;
+    }
+    return null;
+  };
+
+  const enrichPlanItems = (items: any[]) => items.map((item: any) => {
+    if (item?.isOff) return item;
+    // Never migrate an approved legacy manual selection merely because the
+    // specialist opened and saved its plan. Only new canonical selections get
+    // snapshots; old menuItemId rows keep their original identity and name.
+    if (item?.menuItemId && !item?.publicMealId && !item?.mealId) return item;
+    const meal = canonicalMealForItem(item);
+    if (!meal) return item;
+    return {
+      ...item,
+      publicMealId: meal._id,
+      mealId: meal._id,
+      mealNameAr: meal.nameAr || meal.nameEn || "",
+      mealNameEn: meal.nameEn || meal.nameAr || "",
+      category: meal.category,
+      imageUrl: meal.imageUrl || "",
+      calories: Number(meal.calories || 0),
+      protein: Number(meal.protein || 0),
+      carbs: Number(meal.carbs || 0),
+      fats: Number(meal.fats || 0),
+    };
+  });
 
   // ممنوعات/حساسية المشترك المختار — كلمات المنع (المصدر الوحيد lib/mealRestrictions).
   const restrictWords = useMemo(
@@ -632,7 +661,7 @@ export default function PlansPage() {
     let filled = 0, blocked = 0;
     const isRestricted = (id: string) => mealIsRestricted(mealInfoByMenuItem.get(String(id)), words);
     const out = items.map((it: any) => {
-      if (it.isOff || it.menuItemId) return it;
+      if (it.isOff || selectedMealId(it)) return it;
       const candidates = scheduledByCategory[String(it.categoryId)] || [];
       if (!candidates.length) return it;
       const start = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
@@ -643,7 +672,7 @@ export default function PlansPage() {
       }
       if (!pick) { blocked++; return it; }
       filled++;
-      return { ...it, menuItemId: pick };
+      return { ...it, publicMealId: pick, mealId: pick, menuItemId: null };
     });
     return { items: out, filled, blocked };
   };
@@ -693,7 +722,7 @@ export default function PlansPage() {
         await createPlanMutation.mutateAsync(stripSystemFields({
           customerId: c._id, date: formattedDate,
           deliveryTime: (c as any).deliveryTime || "MORNING",
-          items, notes: "", status: "DRAFT",
+          items: enrichPlanItems(items), notes: "", status: "DRAFT",
         }) as any);
         created++;
       } catch { failed++; }
@@ -736,7 +765,7 @@ export default function PlansPage() {
   const handleSave = async (status: "DRAFT" | "CONFIRMED") => {
     if (!currentPlan || !selectedCustomerId) return;
     if (status === "CONFIRMED") {
-      const hasMeal = (currentPlan.items as any[])?.some((i: any) => !i.isOff && i.menuItemId);
+      const hasMeal = (currentPlan.items as any[])?.some((i: any) => !i.isOff && selectedMealId(i));
       if (!hasMeal) {
         toast({ title: isRtl ? "يجب اختيار وجبة واحدة على الأقل" : "Select at least one meal", variant: "destructive" });
         return;
@@ -745,7 +774,7 @@ export default function PlansPage() {
 
     // تنظيف أي تحذيرات قديمة كانت محقونة في specialNotes (لو خطة قديمة)
     // الـ Kitchen صار يقرأ بيانات العميل مباشرة فمش محتاجين الحقن
-    const cleanedItems = (currentPlan.items as any[] || []).map((it: any) => {
+    const cleanedItems = enrichPlanItems((currentPlan.items as any[] || []).map((it: any) => {
       const original = String(it.specialNotes || "").trim();
       const cleaned = original
         .replace(/\[(?:⚠|✕|⚖|★)[^\]]*\]/g, "")
@@ -754,7 +783,7 @@ export default function PlansPage() {
         .replace(/\s*\|\s*\|/g, " | ")
         .trim();
       return { ...it, specialNotes: cleaned };
-    });
+    }));
 
     const payload = stripSystemFields({
       ...currentPlan,
@@ -808,8 +837,9 @@ export default function PlansPage() {
       for (const category of sortedCategories) {
         const items = (plan.items || []).filter((i: any) => i.categoryId === category._id);
         rowData.push(items.map((item: any) => {
-          if (!item?.menuItemId) return item?.isOff ? "OFF" : "Not Selected";
-          const meal = menuItems.find((m: any) => m._id === item.menuItemId);
+          const id = selectedMealId(item);
+          if (!id) return item?.isOff ? "OFF" : "Not Selected";
+          const meal = mealInfoByMenuItem.get(String(id));
           const mods = (item.modifierIds || []).map((mid: string) => modifiers.find((m: any) => m._id === mid)?.name).filter(Boolean);
           return [meal?.name, mods.length ? `(${mods.join(", ")})` : ""].filter(Boolean).join(" ");
         }).join(" | "));
@@ -1751,9 +1781,20 @@ export default function PlansPage() {
                           //    menuItem.categoryId قديم/محذوف لكثير من الأصناف.
                           const slotSuggestedIds = scheduledByCategory[String(item.categoryId)] || [];
                           const slotSugSet = new Set(slotSuggestedIds);
-                          const categoryItems = menuItems.filter(
-                            (m: any) => m.isActive && (m.categoryId === category._id || slotSugSet.has(m._id))
-                          );
+                          const categoryItems = (subscriberMeals as any[])
+                            .filter((meal: any) => slotSugSet.has(String(meal._id)))
+                            .map((meal: any) => ({
+                              ...meal,
+                              name: isRtl ? (meal.nameAr || meal.nameEn) : (meal.nameEn || meal.nameAr),
+                            }));
+                          const currentSelectedId = selectedMealId(item);
+                          if (currentSelectedId && !categoryItems.some((meal: any) => String(meal._id) === String(currentSelectedId))) {
+                            const legacyInfo = mealInfoByMenuItem.get(String(currentSelectedId));
+                            if (legacyInfo) categoryItems.push({
+                              _id: currentSelectedId,
+                              name: isRtl ? (legacyInfo.nameAr || legacyInfo.nameEn) : (legacyInfo.nameEn || legacyInfo.nameAr),
+                            });
+                          }
                           const showIndex = (catCounts[item.categoryId] || 0) > 1;
                           const canRemove = (catCounts[item.categoryId] || 0) > 1;
                           return (
@@ -1776,7 +1817,9 @@ export default function PlansPage() {
                                   <Switch
                                     checked={!item.isOff}
                                     onCheckedChange={(checked) =>
-                                      updateItemById(item.id, { isOff: !checked, menuItemId: checked ? item.menuItemId : null })
+                                      updateItemById(item.id, checked
+                                        ? { isOff: false }
+                                        : { isOff: true, publicMealId: null, mealId: null, menuItemId: null })
                                     }
                                   />
                                   {canRemove && (
@@ -1808,7 +1851,8 @@ export default function PlansPage() {
                                   {/* 🖼️ كارت الوجبة المختارة (صورة + اسم + سعرات) — زي منيو العميل،
                                       ليرى الأخصائي ما اختاره بوضوح. عرض فقط — لا يمسّ أي منطق. */}
                                   {(() => {
-                                    const info = item.menuItemId ? mealInfoByMenuItem.get(String(item.menuItemId)) : null;
+                                    const id = selectedMealId(item);
+                                    const info = id ? mealInfoByMenuItem.get(String(id)) : null;
                                     return (
                                       <div className="meal-card-visual relative w-full h-24 rounded-xl overflow-hidden bg-slate-100 flex items-center justify-center">
                                         {info?.imageUrl ? (
@@ -1836,8 +1880,8 @@ export default function PlansPage() {
                                   })()}
                                   {/* Meal picker */}
                                   <MealPicker
-                                    value={item.menuItemId || null}
-                                    onChange={(val) => updateItemById(item.id, { menuItemId: val })}
+                                    value={currentSelectedId}
+                                    onChange={(val) => updateItemById(item.id, { publicMealId: val, mealId: val, menuItemId: null })}
                                     items={categoryItems}
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}

@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Banknote, Plus, Pencil, Trash2, Printer, Clock4 } from "lucide-react";
+import { Banknote, Plus, Pencil, Trash2, Printer, Clock4, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const money = (n: number) => (n || 0).toLocaleString("en-US");
@@ -33,7 +33,9 @@ export default function Payroll() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
-  const isAdmin = useStore((s) => s.currentUser?.role) === "ADMIN";
+  const currentRole = useStore((s) => s.currentUser?.role);
+  const isAdmin = currentRole === "ADMIN";
+  const canApprove = isAdmin || currentRole === "FINANCE_MANAGER";
 
   const months = (useQuery(api.payroll.months, { sessionToken }) as string[] | undefined) || [];
   const [month, setMonth] = useState<string>("");
@@ -45,6 +47,19 @@ export default function Payroll() {
   const createM = useMutation(api.payroll.create);
   const updateM = useMutation(api.payroll.update);
   const removeM = useMutation(api.payroll.remove);
+  const postMonthM = useMutation(api.financePost.postPayrollMonth);
+
+  const approveMonth = async () => {
+    if (!(await confirmDialog({
+      title: t("اعتماد وترحيل الرواتب", "Approve & post payroll"),
+      message: t("بعد الترحيل لن يمكن تعديل هذا الشهر إلا بعد عكس القيد المالي. هل تريد المتابعة؟", "After posting, this month cannot be edited until the journal entry is reversed. Continue?"),
+      confirmText: t("اعتماد وترحيل", "Approve & post"),
+    }))) return;
+    try {
+      const result: any = await postMonthM({ month: activeMonth, sessionToken });
+      void alertDialog({ message: t(`تم ترحيل ${result.employees} موظف بإجمالي ${money(result.total)} ر.ق`, `Posted ${result.employees} employees, total QAR ${money(result.total)}`) });
+    } catch (e: any) { void alertDialog({ message: e?.message || t("فشل الترحيل", "Posting failed") }); }
+  };
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -166,6 +181,12 @@ export default function Payroll() {
           ] : undefined}
           actions={
             <>
+              {canApprove && (
+                <Button onClick={approveMonth} className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
+                  style={{ background: "rgba(16,185,129,.82)", border: "1px solid rgba(255,255,255,.35)" }}>
+                  <BadgeCheck className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("اعتماد وترحيل", "Approve & Post")}
+                </Button>
+              )}
               <Button onClick={() => window.print()} className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
                 style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}>
                 <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("طباعة", "Print")}

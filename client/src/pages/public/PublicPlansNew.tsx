@@ -46,6 +46,21 @@ export default function PublicPlansNew() {
   const headerImage = (meals.find((m: any) => m.imageUrl)?.imageUrl) || undefined;
   const comparisonPlans = plans.filter(p => p.showInComparison);
 
+  const fallbackPlanImage = (plan: any) => {
+    const key = `${plan.slug || ""} ${plan.nameEn || ""}`.toLowerCase();
+    if (key.includes("diet") || key.includes("tanshif")) return "/plan-tanshif-real.png";
+    if (key.includes("fitness") || key.includes("liyaqa")) return "/plan-liyaqa-real.png";
+    if (key.includes("bulk") || key.includes("tadkhim")) return "/plan-tadkhim-real.jpg";
+    return "/adrenaline-logo-full.png";
+  };
+
+  const planImage = (plan: any) => {
+    const source = String(plan.imageUrl || "").trim();
+    // Old Convex Storage URLs in the current plan records return 404. Known
+    // packages use the bundled brand assets; external/custom images stay intact.
+    return !source || source.includes(".convex.cloud/api/storage/") ? fallbackPlanImage(plan) : source;
+  };
+
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
 
   const handleSubscribe = (planName: string, option: any) => {
@@ -138,9 +153,13 @@ export default function PublicPlansNew() {
                     {/* Image - uniform 4:3, fills the frame */}
                     <div className="w-full aspect-[4/3] overflow-hidden relative bg-[#EAF3FB]">
                       <img
-                        src={plan.imageUrl}
+                        src={planImage(plan)}
                         alt={plan.nameAr}
                         className="w-full h-full object-cover"
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = fallbackPlanImage(plan);
+                        }}
                       />
                     </div>
 
