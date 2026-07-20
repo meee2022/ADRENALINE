@@ -111,7 +111,7 @@ const TableCell = React.forwardRef<
     ref={ref}
     className={cn(
       // ✅ خليها text-start عشان الأعمدة تبقى RTL طبيعي
-      "px-4 py-3.5 align-middle text-start text-[13.5px] text-slate-700",
+      "px-4 py-3.5 align-middle text-start text-[13.5px] text-slate-700 [font-variant-numeric:tabular-nums]",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",
