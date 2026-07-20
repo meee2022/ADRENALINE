@@ -8,7 +8,12 @@ const Table = React.forwardRef<
   <div className="relative w-full overflow-x-auto rounded-xl border border-slate-100 bg-white shadow-[0_1px_2px_rgba(15,21,22,.03),0_10px_24px_-14px_rgba(14,42,74,.12)]">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn(
+        "w-full caption-bottom text-sm",
+        // العمود الأول = المعرّف الأساسي (الاسم غالبًا) → أبرز وأغمق
+        "[&_tbody_td:first-child]:font-bold [&_tbody_td:first-child]:text-[#0f1516]",
+        className,
+      )}
       {...props}
     />
   </div>
@@ -22,8 +27,8 @@ const TableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      // هوية موحّدة: رأس متدرّج خفيف + حد سماوي مميّز أسفله
-      "bg-gradient-to-b from-[#f4f8fb] to-[#eaf3f9] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]/35",
+      // هوية موحّدة: رأس بلون سماوي واضح + حد سماوي صريح أسفله
+      "bg-gradient-to-b from-[#e6f4fc] to-[#cfe9f7] [&_tr]:border-b-2 [&_tr]:border-[#3CC4F0]",
       className,
     )}
     {...props}
@@ -82,7 +87,7 @@ const TableHead = React.forwardRef<
     className={cn(
       // ✅ بدل text-left خليه text-start (يتغير تلقائي RTL/LTR)
       // ✅ بدل pr-0 خليه pr-0 و pl-0 حسب الاتجاه باستخدام :dir()
-      "h-11 px-3 text-start align-middle text-[11px] font-bold uppercase tracking-wider text-[#47759c] whitespace-nowrap",
+      "h-11 px-3 text-start align-middle text-[11px] font-extrabold uppercase tracking-wider text-[#2f6088] whitespace-nowrap",
       "[&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       "rtl:[&:has([role=checkbox])]:pr-2 rtl:[&:has([role=checkbox])]:pl-0",
       "ltr:[&:has([role=checkbox])]:pl-2 ltr:[&:has([role=checkbox])]:pr-0",

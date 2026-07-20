@@ -428,7 +428,7 @@ export default function Users() {
           <CardContent>
           <div className="rounded-2xl overflow-hidden border border-[#e8eef4] overflow-x-auto">
           <Table>
-            <TableHeader className="bg-[#f4f8fb] [&_th]:text-[#47759c] [&_th]:font-bold [&_th]:text-xs [&_th]:uppercase">
+            <TableHeader>
               <TableRow>
                 <TableHead>{t("users.name")}</TableHead>
                 <TableHead>{t("users.email")}</TableHead>
