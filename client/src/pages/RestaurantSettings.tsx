@@ -64,8 +64,8 @@ export default function RestaurantSettings() {
   const setProgramPortions = useMutation(api.restaurantSettings.setProgramPortions);
   const [portions, setPortions] = useState<any>({
     DIET: { carb: 100, protein: "80-90", calFactor: 1 },
-    FITNESS: { carb: 150, protein: "100-110", calFactor: 1.25 },
-    BULK: { carb: 170, protein: "150-160", calFactor: 1.5 },
+    FITNESS: { carb: 150, protein: "100-110", calFactor: 1.08 },
+    BULK: { carb: 170, protein: "150-160", calFactor: 1.15 },
   });
   const [isSavingPortions, setIsSavingPortions] = useState(false);
   useEffect(() => {

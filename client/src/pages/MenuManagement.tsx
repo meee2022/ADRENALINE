@@ -36,7 +36,9 @@ export default function MenuManagement() {
     name: "",
     categoryId: "",
     calories: "",
-    macros: "",
+    protein: "",
+    carbs: "",
+    fats: "",
     tags: "",
     isActive: true,
   });
@@ -71,7 +73,7 @@ export default function MenuManagement() {
 
   const handleAdd = () => {
     setSelectedMeal(null);
-    setFormData({ name: "", categoryId: "", calories: "", macros: "", tags: "", isActive: true });
+    setFormData({ name: "", categoryId: "", calories: "", protein: "", carbs: "", fats: "", tags: "", isActive: true });
     setIsDialogOpen(true);
   };
 
@@ -81,7 +83,9 @@ export default function MenuManagement() {
       name: meal.name,
       categoryId: meal.categoryId,
       calories: meal.calories?.toString() || "",
-      macros: meal.macros || "",
+      protein: meal.protein?.toString() || "",
+      carbs: meal.carbs?.toString() || "",
+      fats: meal.fats?.toString() || "",
       tags: meal.tags?.join(", ") || "",
       isActive: meal.isActive,
     });
@@ -117,11 +121,20 @@ export default function MenuManagement() {
     }
 
     try {
+      const protein = Number(formData.protein) || 0;
+      const carbs = Number(formData.carbs) || 0;
+      const fats = Number(formData.fats) || 0;
+      const calculatedCalories = protein > 0 || carbs > 0 || fats > 0
+        ? Math.round(protein * 4 + carbs * 4 + fats * 9)
+        : (formData.calories ? parseInt(formData.calories) : undefined);
       const data = {
         name: formData.name,
         categoryId: formData.categoryId as Id<"mealCategories">,
-        calories: formData.calories ? parseInt(formData.calories) : undefined,
-        macros: formData.macros || undefined,
+        calories: calculatedCalories,
+        protein: protein || undefined,
+        carbs: carbs || undefined,
+        fats: fats || undefined,
+        macros: protein > 0 || carbs > 0 || fats > 0 ? `P:${protein}g C:${carbs}g F:${fats}g` : undefined,
         tags: formData.tags ? formData.tags.split(",").map((t) => t.trim()) : undefined,
         isActive: formData.isActive,
       };
@@ -281,14 +294,25 @@ export default function MenuManagement() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>{t("menu_management.macros")}</Label>
-              <Input
-                value={formData.macros}
-                onChange={(e) => setFormData({ ...formData, macros: e.target.value })}
-                placeholder="P:35g C:40g F:15g"
-              />
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label>{isRtl ? "البروتين P" : "Protein P"}</Label>
+                <Input type="number" min="0" step="1" value={formData.protein} onChange={(e) => setFormData({ ...formData, protein: e.target.value })} placeholder="40" dir="ltr" />
+              </div>
+              <div className="space-y-2">
+                <Label>{isRtl ? "الكربوهيدرات C" : "Carbs C"}</Label>
+                <Input type="number" min="0" step="1" value={formData.carbs} onChange={(e) => setFormData({ ...formData, carbs: e.target.value })} placeholder="45" dir="ltr" />
+              </div>
+              <div className="space-y-2">
+                <Label>{isRtl ? "الدهون F" : "Fat F"}</Label>
+                <Input type="number" min="0" step="1" value={formData.fats} onChange={(e) => setFormData({ ...formData, fats: e.target.value })} placeholder="15" dir="ltr" />
+              </div>
             </div>
+            {(Number(formData.protein) > 0 || Number(formData.carbs) > 0 || Number(formData.fats) > 0) && (
+              <p className="rounded-md bg-cyan-50 px-3 py-2 text-xs font-bold text-cyan-800" dir="ltr">
+                {`P ${Number(formData.protein) || 0}g · C ${Number(formData.carbs) || 0}g · F ${Number(formData.fats) || 0}g = ${Math.round((Number(formData.protein) || 0) * 4 + (Number(formData.carbs) || 0) * 4 + (Number(formData.fats) || 0) * 9)} kcal`}
+              </p>
+            )}
 
             <div className="space-y-2">
               <Label>{t("menu_management.tags")}</Label>

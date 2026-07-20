@@ -294,8 +294,8 @@ export const get = query({
     // fallback = قيم كشف المطبخ 7-7-2026 — تعمل حتى قبل أول حفظ من الإعدادات
     const pp = restSettings?.programPortions || {
       DIET: { calFactor: 1 },
-      FITNESS: { calFactor: 1.25 },
-      BULK: { calFactor: 1.5 },
+      FITNESS: { calFactor: 1.08 },
+      BULK: { calFactor: 1.15 },
     };
     const factorFor = (program: string): number => {
       if (!pp) return 1;
@@ -429,16 +429,18 @@ export const get = query({
           ? (it.mealNameEn || (it.menuItemId ? legacyMenuName : null) || (pmLookup as any)?.nameEn || lookupName)
           : lookupName;
 
-        // ترتيب الأولوية: 1) item نفسه، 2) publicMeals، 3) menuItem
+        // خطط الأخصائية مبنية على menuItems: قيم الوجبة الحالية أولاً، ثم لقطة
+        // الخطة القديمة، والمنيو العام احتياطي فقط. هذا يبقي استيكر الأربعاء
+        // متزامناً مع تصحيح التغذية من دون تغيير اختيار الوجبة المحفوظ.
         const itemProtein = Number((it as any).protein ?? 0) || 0;
         const itemCarbs   = Number((it as any).carbs   ?? 0) || 0;
         const itemFats    = Number((it as any).fats    ?? 0) || 0;
         const itemCalories = Number((it as any).calories ?? 0) || 0;
 
-        const baseProtein = itemProtein || Number(pmLookup?.protein ?? 0) || 0;
-        const baseCarbs   = itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
-        const baseFats    = itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
-        const baseCalories = itemCalories || Number(pmLookup?.calories ?? 0) || Number(menu?.calories ?? 0) || 0;
+        const baseProtein = Number((menu as any)?.protein ?? 0) || itemProtein || Number(pmLookup?.protein ?? 0) || 0;
+        const baseCarbs   = Number((menu as any)?.carbs   ?? 0) || itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
+        const baseFats    = Number((menu as any)?.fats    ?? 0) || itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
+        const baseCalories = Number(menu?.calories ?? 0) || itemCalories || Number(pmLookup?.calories ?? 0) || 0;
 
         // ✅ غداء/عشاء: القيم تُضرب في مُعامل برنامج العميل (الحصة أكبر/أصغر
         //    حسب الهدف). الماكروز تُضرب بنفس النسبة حتى يبقى الاستيكر متسقاً

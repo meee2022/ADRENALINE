@@ -202,8 +202,8 @@ export default function PublicMenuPage() {
     // fallback = قيم كشف المطبخ — تعمل حتى قبل أول حفظ من إعدادات المطعم
     const pp = (settings as any)?.programPortions || {
       DIET: { calFactor: 1 },
-      FITNESS: { calFactor: 1.25 },
-      BULK: { calFactor: 1.5 },
+      FITNESS: { calFactor: 1.08 },
+      BULK: { calFactor: 1.15 },
     };
     if (!prog) return 1;
     if (prog.includes("DIET")) return Number(pp.DIET?.calFactor) || 1;
