@@ -239,7 +239,7 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { href: "/menu", iconKey: "menu", labelAr: "قائمة الطعام", labelEn: "Menu",
         roles: ["ADMIN", "NUTRITIONIST"] },
-      { href: "/menu-management", iconKey: "menuManagement", labelAr: "إدارة القائمة", labelEn: "Menu Management",
+      { href: "/menu-management", iconKey: "menuManagement", labelAr: "المنيو والوصفات", labelEn: "Menu & Recipes",
         roles: ["ADMIN"] },
       { href: "/public-meals-management", iconKey: "publicMenu", labelAr: "منيو الموقع العام", labelEn: "Public Menu",
         roles: ["ADMIN"] },

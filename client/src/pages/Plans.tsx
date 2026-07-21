@@ -7,7 +7,6 @@ import { useLocation } from "wouter";
 import {
   useCustomers,
   useCategories,
-  useMenuItems,
   useModifiers,
   useDailyPlans,
   useCreateDailyPlan,
@@ -376,7 +375,6 @@ export default function PlansPage() {
 
   const { data: customers = EMPTY } = useCustomers();
   const { data: categories = EMPTY } = useCategories();
-  const { data: menuItems = [] } = useMenuItems();
   const { data: modifiers = [] } = useModifiers();
   // ✅ منيو العميل (مصدر الجدول الأسبوعي الوحيد) — للتعبئة التلقائية واقتراحات اليوم
   const sessionToken = useStore((s: any) => s.sessionToken) || undefined;
@@ -505,46 +503,24 @@ export default function PlansPage() {
 
   const scheduledCount = useMemo(() => Object.values(scheduledByCategory).reduce((s, a) => s + a.length, 0), [scheduledByCategory]);
 
-  // 🔗 خريطة معلومات الحجب لكل menuItem: اسم + مكوّنات + وسوم من الوجبة العامة —
-  //    عشان الملء التلقائي يفحص ممنوعات المشترك بنفس منطق الخادم (مصدر واحد).
+  // Canonical meal details used by planning, restrictions, images and nutrition.
   const mealInfoByMenuItem = useMemo(() => {
-    const pmById = new Map<string, any>();
-    (subscriberMeals as any[]).forEach((pm) => pmById.set(String(pm._id), pm));
     const map = new Map<string, any>();
     (subscriberMeals as any[]).forEach((pm) => map.set(String(pm._id), pm));
-    (menuItems as any[]).forEach((mi) => {
-      const pm = mi.publicMealId ? pmById.get(String(mi.publicMealId)) : null;
-      map.set(String(mi._id), {
-        nameAr: pm?.nameAr || mi.nameAr || mi.name,
-        nameEn: pm?.nameEn || mi.nameEn,
-        ingredients: pm?.ingredients || [],
-        tags: pm?.tags || [],
-        imageUrl: pm?.imageUrl || (mi as any).imageUrl || "",   // للعرض فقط
-        calories: pm?.calories ?? (mi as any).calories,          // للعرض فقط
-      });
-    });
     return map;
-  }, [menuItems, subscriberMeals]);
+  }, [subscriberMeals]);
 
   const selectedMealId = (item: any): string | null =>
-    item?.publicMealId || item?.mealId || item?.menuItemId || null;
+    item?.publicMealId || item?.mealId || null;
 
   const canonicalMealForItem = (item: any): any | null => {
     const directId = item?.publicMealId || item?.mealId;
     if (directId) return (subscriberMeals as any[]).find((meal: any) => String(meal._id) === String(directId)) || null;
-    if (item?.menuItemId) {
-      const legacy = (menuItems as any[]).find((meal: any) => String(meal._id) === String(item.menuItemId));
-      if (legacy?.publicMealId) return (subscriberMeals as any[]).find((meal: any) => String(meal._id) === String(legacy.publicMealId)) || null;
-    }
     return null;
   };
 
   const enrichPlanItems = (items: any[]) => items.map((item: any) => {
     if (item?.isOff) return item;
-    // Never migrate an approved legacy manual selection merely because the
-    // specialist opened and saved its plan. Only new canonical selections get
-    // snapshots; old menuItemId rows keep their original identity and name.
-    if (item?.menuItemId && !item?.publicMealId && !item?.mealId) return item;
     const meal = canonicalMealForItem(item);
     if (!meal) return item;
     return {

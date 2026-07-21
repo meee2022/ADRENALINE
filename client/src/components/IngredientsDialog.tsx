@@ -19,17 +19,24 @@ export function IngredientsDialog({
   meal,
   open,
   onClose,
+  catalog = "legacy",
 }: {
   meal: any;
   open: boolean;
   onClose: () => void;
+  catalog?: "public" | "legacy";
 }) {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (a: string, e: string) => (isRtl ? a : e);
-  const ingredients = useQuery(api.mealIngredients.listByMeal, { menuItemId: meal._id, sessionToken }) || [];
+  const ingredients = useQuery(
+    api.mealIngredients.listByMeal,
+    catalog === "public"
+      ? { publicMealId: meal._id, sessionToken }
+      : { menuItemId: meal._id, sessionToken },
+  ) || [];
   const inventoryItems = useQuery(api.inventory.listItems, {}) || [];
 
   const createMutation = useMutation(api.mealIngredients.create);
@@ -48,7 +55,7 @@ export function IngredientsDialog({
     try {
       await createMutation({
         sessionToken,
-        menuItemId: meal._id,
+        ...(catalog === "public" ? { publicMealId: meal._id } : { menuItemId: meal._id }),
         inventoryItemId: selectedItemId as any,
         quantityPerServing: parseFloat(quantity),
         unit: unit || item?.unit || "",
@@ -74,7 +81,7 @@ export function IngredientsDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Boxes className="h-5 w-5 text-amber-600" />
-            {t("مكوّنات:", "Ingredients:")} {meal.name}
+            {t("مكوّنات:", "Ingredients:")} {isRtl ? (meal.nameAr || meal.name) : (meal.nameEn || meal.nameAr || meal.name)}
           </DialogTitle>
           <p className="text-xs text-muted-foreground">
             {t('هذه المكوّنات تُخصم تلقائياً من المخزون عند تعليم الوجبة كـ "جاهزة للتوصيل"', 'These ingredients are automatically deducted from inventory when the meal is marked "ready for delivery"')}

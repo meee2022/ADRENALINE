@@ -968,12 +968,12 @@ export const prepareAndConsume = mutation({
     const items: any[] = Array.isArray(plan.items) ? plan.items : [];
     for (const it of items) {
       if (it?.isOff) continue;
-      const menuItemId = it.menuItemId || it.mealId;
-      if (!menuItemId) continue;
-      const recipe = await ctx.db
-        .query("mealIngredients")
-        .withIndex("by_menuItem", (q) => q.eq("menuItemId", menuItemId as Id<"menuItems">))
-        .collect();
+      const publicMealId = it.publicMealId || (!it.menuItemId ? it.mealId : null);
+      const recipe = publicMealId
+        ? await ctx.db.query("mealIngredients").withIndex("by_publicMeal", (q: any) => q.eq("publicMealId", publicMealId)).collect()
+        : it.menuItemId
+          ? await ctx.db.query("mealIngredients").withIndex("by_menuItem", (q: any) => q.eq("menuItemId", it.menuItemId)).collect()
+          : [];
       for (const ing of recipe) {
         const key = String(ing.inventoryItemId);
         const invItem: any = await ctx.db.get(ing.inventoryItemId);

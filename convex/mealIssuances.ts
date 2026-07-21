@@ -22,12 +22,12 @@ const categoryU = v.union(
 );
 
 /** خصم مكوّنات وجبة من المخزون (لو ليها وصفة) — نفس منطق المطبخ. idempotent عبر ختم. */
-async function consumeInventory(ctx: any, menuItemId: any, qty: number, label: string) {
-  if (!menuItemId) return;
-  const ingredients = await ctx.db
-    .query("mealIngredients")
-    .withIndex("by_menuItem", (q: any) => q.eq("menuItemId", menuItemId))
-    .collect();
+async function consumeInventory(ctx: any, publicMealId: any, menuItemId: any, qty: number, label: string) {
+  const ingredients = publicMealId
+    ? await ctx.db.query("mealIngredients").withIndex("by_publicMeal", (q: any) => q.eq("publicMealId", publicMealId)).collect()
+    : menuItemId
+      ? await ctx.db.query("mealIngredients").withIndex("by_menuItem", (q: any) => q.eq("menuItemId", menuItemId)).collect()
+      : [];
   for (const ing of ingredients) {
     const inv: any = await ctx.db.get(ing.inventoryItemId);
     if (!inv) continue;
@@ -64,18 +64,9 @@ export const log = mutation({
     if (!name) throw new Error("اسم الوجبة مطلوب");
     const qty = Math.max(1, Math.round(args.quantity || 1));
 
-    // حاول تلاقي menuItemId من الاسم لو مش متمرّر (عشان الخصم لو فيه وصفة)
-    let menuItemId = args.menuItemId;
-    if (!menuItemId) {
-      const nm = name.toLowerCase();
-      const items = await ctx.db.query("menuItems").collect();
-      const hit = items.find((m: any) => String(m.name || "").toLowerCase() === nm);
-      if (hit) menuItemId = hit._id;
-    }
-
     let inventoryConsumedAt: number | undefined;
     try {
-      await consumeInventory(ctx, menuItemId, qty, `${name} ×${qty} (${args.category})`);
+      await consumeInventory(ctx, args.publicMealId, args.menuItemId, qty, `${name} ×${qty} (${args.category})`);
       inventoryConsumedAt = Date.now();
     } catch { /* لو مفيش وصفة أو خطأ، نسجّل الحصر بس */ }
 
@@ -84,7 +75,7 @@ export const log = mutation({
       month: monthOf(args.date),
       mealName: name,
       publicMealId: args.publicMealId,
-      menuItemId,
+      menuItemId: args.menuItemId,
       quantity: qty,
       category: args.category,
       recipient: args.recipient?.trim() || undefined,

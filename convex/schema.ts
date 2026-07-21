@@ -933,12 +933,16 @@ export default defineSchema({
 
   // ===== Recipe Ingredients (ربط الوجبة بمكوّنات المخزون) =====
   mealIngredients: defineTable({
-    menuItemId: v.id("menuItems"),
+    // publicMeals is the canonical meal catalogue. menuItemId remains optional
+    // only so legacy recipes can be migrated without breaking historical data.
+    publicMealId: v.optional(v.id("publicMeals")),
+    menuItemId: v.optional(v.id("menuItems")),
     inventoryItemId: v.id("inventoryItems"),
     quantityPerServing: v.number(),  // الكمية المستهلكة لكل حصة
     unit: v.string(),                // الوحدة (kg, piece, etc.)
     createdAt: v.number(),
   })
+    .index("by_publicMeal", ["publicMealId"])
     .index("by_menuItem", ["menuItemId"])
     .index("by_inventoryItem", ["inventoryItemId"]),
 

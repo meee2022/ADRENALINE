@@ -40,6 +40,13 @@ function normalizeToISODate(input: any): string | undefined {
   return undefined;
 }
 
+function normalizeCustomerName(input: any): string {
+  return String(input || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleUpperCase("en");
+}
+
 
 /* =========================
    Queries
@@ -208,6 +215,15 @@ export const create = mutation({
     // ⚠️ sessionToken لا يُخزَّن — نستبعده قبل الـinsert (الـhandler يعمل ...args)
     const { sessionToken: _t, ...fields } = args;
     const phone = normalizePhone(args.phone);
+    const samePhone = await ctx.db
+      .query("customers")
+      .withIndex("by_phone", (q) => q.eq("phone", phone))
+      .collect();
+    if (samePhone.some((c: any) =>
+      normalizeCustomerName(c.fullName) === normalizeCustomerName(args.fullName)
+    )) {
+      throw new Error("يوجد مشترك بنفس الاسم ورقم الهاتف بالفعل / Customer already exists");
+    }
     // ✅ يشتق program من الباقة/الهدف لو ماجاش صريح — يمنع ظهور المشترك STANDARD بالغلط
     const program = args.program || deriveProgram(args.goals, args.packageLabel);
 
@@ -272,6 +288,8 @@ export const update = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...raw } = args as any;
+    const current: any = await ctx.db.get(id);
+    if (!current) throw new Error("المشترك غير موجود / Customer not found");
     // 🔒 حدود منطقية على الأرقام
     if (raw.price !== undefined && (raw.price < 0 || raw.price > 1_000_000)) throw new Error("سعر غير صالح");
     if (raw.discount !== undefined && (raw.discount < 0 || raw.discount > 1_000_000)) throw new Error("خصم غير صالح");
@@ -291,6 +309,19 @@ export const update = mutation({
     if (patch.startDate) patch.startDate = normalizeToISODate(patch.startDate) ?? patch.startDate;
     if (patch.endDate) patch.endDate = normalizeToISODate(patch.endDate) ?? patch.endDate;
     if (patch.birthdayDate) patch.birthdayDate = normalizeToISODate(patch.birthdayDate) ?? patch.birthdayDate;
+
+    const finalPhone = patch.phone || current.phone;
+    const finalName = patch.fullName || current.fullName;
+    const samePhone = await ctx.db
+      .query("customers")
+      .withIndex("by_phone", (q) => q.eq("phone", finalPhone))
+      .collect();
+    if (samePhone.some((c: any) =>
+      String(c._id) !== String(id) &&
+      normalizeCustomerName(c.fullName) === normalizeCustomerName(finalName)
+    )) {
+      throw new Error("يوجد مشترك آخر بنفس الاسم ورقم الهاتف / Duplicate customer");
+    }
 
     await ctx.db.patch(id, patch);
     return true;
@@ -619,11 +650,14 @@ export const importMany = mutation({
         birthdayDate: normalizeToISODate(row.birthdayDate) ?? row.birthdayDate,
       };
 
-      // upsert بالهاتف
-      const existing = await ctx.db
+      // Match the same person by phone and normalized full name; families may share a phone.
+      const samePhone = await ctx.db
         .query("customers")
         .withIndex("by_phone", (q) => q.eq("phone", phone))
-        .first();
+        .collect();
+      const existing = samePhone.find(
+        (c: any) => normalizeCustomerName(c.fullName) === normalizeCustomerName(row.fullName),
+      );
       if (existing) {
         await ctx.db.patch(existing._id, { ...payload, updatedAt: Date.now() });
         updated++;

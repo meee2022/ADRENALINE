@@ -485,25 +485,21 @@ async function nextTicketNumber(ctx: MutationCtx): Promise<number> {
   return next;
 }
 
-/** 🔒 يخصم مكوّنات كل سطر من المخزون حسب mealIngredients لـmenuItem المرتبط. */
+/** Deduct each POS line from the canonical publicMeals recipe. */
 async function deductInventoryForTicket(ctx: MutationCtx, ticketId: any, ticketNumber: number, serverLines: ServerLine[]) {
   const now = Date.now();
-  // نلمّ الاحتياج لكل مخزون: publicMeals → nameEn match → menuItems → mealIngredients
   const need = new Map<string, number>();
   for (const l of serverLines) {
     if (!l.mealId) continue;
-    const meal: any = await ctx.db.get(l.mealId);
-    if (!meal) continue;
-    // نحاول نلاقي menuItem بنفس الاسم (شرط الرسيبي مربوط بـmenuItems)
-    const nameKey = String(meal.nameEn || meal.nameAr || "").trim().toLowerCase();
-    if (!nameKey) continue;
-    const menuItems = await ctx.db.query("menuItems").collect();
-    const mi = menuItems.find((x: any) => String(x.name || "").trim().toLowerCase() === nameKey);
-    if (!mi) continue;
-    const recipe = await ctx.db
+    let recipe = await ctx.db
       .query("mealIngredients")
-      .withIndex("by_menuItem", (q) => q.eq("menuItemId", mi._id))
+      .withIndex("by_publicMeal", (q) => q.eq("publicMealId", l.mealId))
       .collect();
+    // Compatibility fallback until all legacy recipes have been migrated.
+    if (!recipe.length) {
+      const legacy = await ctx.db.query("menuItems").withIndex("by_publicMeal", (q) => q.eq("publicMealId", l.mealId)).first();
+      if (legacy) recipe = await ctx.db.query("mealIngredients").withIndex("by_menuItem", (q) => q.eq("menuItemId", legacy._id)).collect();
+    }
     for (const ing of recipe) {
       const invItem: any = await ctx.db.get(ing.inventoryItemId);
       if (!invItem) continue;

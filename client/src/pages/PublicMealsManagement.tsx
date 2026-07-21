@@ -17,10 +17,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, UtensilsCrossed, Image, UsersRound, ShoppingBag, Store, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, UtensilsCrossed, Image, UsersRound, ShoppingBag, Store, Search, SlidersHorizontal, Boxes } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useLanguage } from "@/lib/i18n";
+import { IngredientsDialog } from "@/components/IngredientsDialog";
 
 export default function PublicMealsManagement() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
@@ -31,6 +32,7 @@ export default function PublicMealsManagement() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<any>(null);
+  const [recipeMeal, setRecipeMeal] = useState<any>(null);
   const [catalogFilter, setCatalogFilter] = useState("all");
   const [mealSearch, setMealSearch] = useState("");
   const [formData, setFormData] = useState({
@@ -436,6 +438,15 @@ export default function PublicMealsManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setRecipeMeal(meal)}
+                          title={t("وصفة المخزون", "Inventory recipe")}
+                          className="text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                        >
+                          <Boxes className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleEdit(meal)}
                         >
                           <Edit className="h-4 w-4" />
@@ -458,6 +469,15 @@ export default function PublicMealsManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {recipeMeal && (
+        <IngredientsDialog
+          meal={recipeMeal}
+          catalog="public"
+          open={!!recipeMeal}
+          onClose={() => setRecipeMeal(null)}
+        />
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

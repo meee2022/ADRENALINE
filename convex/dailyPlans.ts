@@ -72,6 +72,23 @@ function stripSystemFields(obj: any) {
   return safe;
 }
 
+async function recipeForPlanItem(ctx: any, item: any) {
+  const publicMealId = item?.publicMealId || (!item?.menuItemId ? item?.mealId : null);
+  if (publicMealId) {
+    return await ctx.db
+      .query("mealIngredients")
+      .withIndex("by_publicMeal", (q: any) => q.eq("publicMealId", publicMealId))
+      .collect();
+  }
+  if (item?.menuItemId) {
+    return await ctx.db
+      .query("mealIngredients")
+      .withIndex("by_menuItem", (q: any) => q.eq("menuItemId", item.menuItemId))
+      .collect();
+  }
+  return [];
+}
+
 export const list = query({
   args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { date, sessionToken }) => {
@@ -239,12 +256,7 @@ export const update = mutation({
             const items = Array.isArray(plan?.items) ? plan.items : [];
             for (const it of items) {
               if (it?.isOff) continue;
-              const menuItemId = it?.menuItemId || it?.mealId;
-              if (!menuItemId) continue;
-              const ingredients = await ctx.db
-                .query("mealIngredients")
-                .withIndex("by_menuItem", (q) => q.eq("menuItemId", menuItemId))
-                .collect();
+              const ingredients = await recipeForPlanItem(ctx, it);
 
               for (const ing of ingredients) {
                 const invItem: any = await ctx.db.get(ing.inventoryItemId);
@@ -403,24 +415,23 @@ export const todayIngredients = query({
       await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect()
     ).filter((p: any) => p.status === "CONFIRMED" || p.status === "PREPARED");
 
-    // menuItemId → عدد الحصص المطلوبة اليوم
-    const servings = new Map<string, number>();
+    // Canonical publicMealId → servings required today.
+    const servings = new Map<string, { count: number; item: any }>();
     for (const p of plans as any[]) {
       for (const it of (Array.isArray(p.items) ? p.items : [])) {
         if (it?.isOff) continue;
-        const mid = it?.menuItemId || it?.mealId;
+        const mid = it?.publicMealId || it?.mealId || it?.menuItemId;
         if (!mid) continue;
-        servings.set(String(mid), (servings.get(String(mid)) || 0) + 1);
+        const key = `${it?.publicMealId || (!it?.menuItemId ? it?.mealId : "")}|${it?.menuItemId || ""}`;
+        const current = servings.get(key);
+        servings.set(key, { count: (current?.count || 0) + 1, item: it });
       }
     }
 
     // اجمع المكوّنات عبر كل الأطباق
     const agg = new Map<string, { name: string; unit: string; qty: number; low: boolean }>();
-    for (const [mid, count] of servings) {
-      const ings = await ctx.db
-        .query("mealIngredients")
-        .withIndex("by_menuItem", (q) => q.eq("menuItemId", mid as any))
-        .collect();
+    for (const { count, item } of servings.values()) {
+      const ings = await recipeForPlanItem(ctx, item);
       for (const ing of ings) {
         const inv: any = await ctx.db.get(ing.inventoryItemId);
         if (!inv) continue;
