@@ -14,7 +14,6 @@ const Dashboard = lazy(() => import("@/pages/DashboardNew1"));
 const Customers = lazy(() => import("@/pages/Customers"));
 const Users = lazy(() => import("@/pages/Users"));
 const Menu = lazy(() => import("@/pages/Menu"));
-const MenuManagement = lazy(() => import("@/pages/MenuManagement"));
 const PublicMealsManagement = lazy(() => import("@/pages/PublicMealsManagement"));
 const BannersManagement = lazy(() => import("@/pages/BannersManagement"));
 const PlansManagement = lazy(() => import("@/pages/PlansManagement"));
@@ -62,6 +61,8 @@ const Finance = lazy(() => import("@/pages/Finance"));
 const HomePage = lazy(() => import("@/pages/public/HomePage"));
 const PublicPlans = lazy(() => import("@/pages/public/PublicPlansNew"));
 const PublicMenu = lazy(() => import("@/pages/public/PublicMenu"));
+// 🧪 نموذج تجريبي غير مربوط — يُحذف لو لم يُعتمد
+const MenuV2Demo = lazy(() => import("@/pages/public/MenuV2Demo"));
 const MealDetails = lazy(() => import("@/pages/public/MealDetails"));
 const CustomerAuth = lazy(() => import("@/pages/public/CustomerAuth"));
 const CustomerProfile = lazy(() => import("@/pages/public/CustomerProfile"));
@@ -158,6 +159,7 @@ function Router() {
       <Route path="/" component={HomePage} />
       <Route path="/public/plans" component={PublicPlans} />
       <Route path="/public/menu" component={PublicMenu} />
+      <Route path="/public/menu-v2" component={MenuV2Demo} />
       <Route path="/public/meal/:slug" component={MealDetails} />
       <Route path="/public/order-review" component={OrderReview} />
       <Route path="/public/about" component={AboutPage} />
@@ -191,7 +193,7 @@ function Router() {
         <ProtectedRoute component={Menu} />
       </Route>
       <Route path="/menu-management">
-        <ProtectedRoute component={MenuManagement} />
+        <ProtectedRoute component={PublicMealsManagement} />
       </Route>
       <Route path="/public-meals-management">
         <ProtectedRoute component={PublicMealsManagement} />
