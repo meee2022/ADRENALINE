@@ -972,7 +972,9 @@ export default function Kitchen() {
         .sq{color:#b45309}
         .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
-        @page{size:A4;margin:8mm}
+        /* هامش سفلي أوسع (13مم) ليتّسع لصندوق ترقيم الصفحات @bottom-center المحقون من
+           openPrintDoc — الهامش 8مم كان يقصّه في كروم فلا يظهر أي رقم (سبب الشكوى). */
+        @page{size:A4;margin:8mm 8mm 13mm 8mm}
       </style></head><body>
       <h1>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} — ADRENALINE</h1><div class="date">${isRtl ? "تاريخ" : "Date"}: ${esc(formattedDate)} · ${isRtl ? "الأرقام تشمل المشتركين المخصّصين" : "totals include customized subscribers"}</div>
       <div class="kpis">
