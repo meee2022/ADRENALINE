@@ -1272,6 +1272,27 @@ export default function PublicMenuPage() {
                 🏠 {isRtl ? "الرئيسية" : "Home"}
               </button>
             </div>
+
+            {/* 🧭 مؤشّر «تختار الآن» — داخل الشريط اللاصق فيظل ظاهراً أثناء تصفّح الأكل،
+                فلا يتوه العميل عن الخانة واليوم الحاليين (طلب المستخدم). */}
+            {pathMode && selectedDay && !todayProgress?.complete && (() => {
+              const num = pathKind === "snack" ? snacksToday + 1 : mainMealsToday + 1;
+              const slotName = pathKind === "snack" ? `${isRtl ? "سناك" : "Snack"} ${num}` : `${isRtl ? "وجبة" : "Meal"} ${num}`;
+              const dayLbl = isRtl ? (DAY_LABEL_AR[selectedDay] || selectedDay) : selectedDay;
+              return (
+                <div className="w-full flex items-center justify-between gap-2 rounded-xl px-3 py-2 mt-1"
+                  style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.28)" }}>
+                  <span className="font-black text-[13px] text-white flex items-center gap-1.5">
+                    <span>{pathKind === "snack" ? "🍎" : "🍽️"}</span>
+                    {isRtl ? `تختار الآن: ${slotName}` : `Picking: ${slotName}`}
+                    <span className="opacity-85 font-bold">· {dayLbl}</span>
+                  </span>
+                  <span className="text-[11px] font-black text-white rounded-full px-2.5 py-0.5 whitespace-nowrap" style={{ background: "rgba(255,255,255,0.22)" }}>
+                    {mainMealsToday}/{mealsPerDay} · {snacksToday}/{snacksPerDay}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -1473,8 +1494,17 @@ export default function PublicMenuPage() {
             />
           )}
 
-          {/* ✅ بطاقة اشتراكك — تظهر لو رقمك مرتبط باشتراك مسجَّل عند الأخصائية */}
-          {(verifiedCustomer as any)?.startDate && (
+          {/* بانر الاكتمال في مسار الأيام (الصندوق التفصيلي مخفي هناك لتقليل الزحمة) */}
+          {pathMode && subscriptionComplete && (
+            <div className="mb-4 rounded-xl bg-emerald-500 text-white px-4 py-3 flex items-center gap-2 font-black text-sm">
+              <Check className="h-4 w-4" />
+              {isRtl ? "تم اختيار الوجبات حتى نهاية اشتراكك ✓" : "Meals selected through end of subscription ✓"}
+            </div>
+          )}
+
+          {/* ✅ بطاقة اشتراكك — الواجهة الكلاسيكية فقط. مسار الأيام يعرض التقدم في الهيرو
+              فالصندوق تكرار يزحم أعلى الصفحة (طلب المستخدم: «الكلام فوق كتير»). */}
+          {(verifiedCustomer as any)?.startDate && !pathMode && (
             <div className="mb-4 rounded-2xl border border-[#3CC4F0]/30 bg-[#3CC4F0]/5 p-4">
               <h3 className="text-sm font-black text-[#0E2A4A] mb-2 flex items-center gap-1.5">
                 <User className="h-4 w-4 text-[#3CC4F0]" />
@@ -1952,9 +1982,9 @@ export default function PublicMenuPage() {
 
       {/* Search & Filters */}
       <section className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className={cn("max-w-6xl mx-auto px-4", pathMode ? "py-3" : "py-6")}>
           {/* Search Bar */}
-          <div className="relative mb-6">
+          <div className={cn("relative", pathMode ? "mb-0" : "mb-6")}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#47759C]" />
             <Input
               type="text"
