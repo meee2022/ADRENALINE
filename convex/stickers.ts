@@ -437,10 +437,10 @@ export const get = query({
         const itemFats    = Number((it as any).fats    ?? 0) || 0;
         const itemCalories = Number((it as any).calories ?? 0) || 0;
 
-        const baseProtein = Number((menu as any)?.protein ?? 0) || itemProtein || Number(pmLookup?.protein ?? 0) || 0;
-        const baseCarbs   = Number((menu as any)?.carbs   ?? 0) || itemCarbs   || Number(pmLookup?.carbs   ?? 0) || 0;
-        const baseFats    = Number((menu as any)?.fats    ?? 0) || itemFats    || Number(pmLookup?.fats    ?? 0) || 0;
-        const baseCalories = Number(menu?.calories ?? 0) || itemCalories || Number(pmLookup?.calories ?? 0) || 0;
+        const baseProtein = Number(pmLookup?.protein ?? 0) || Number((menu as any)?.protein ?? 0) || itemProtein || 0;
+        const baseCarbs   = Number(pmLookup?.carbs   ?? 0) || Number((menu as any)?.carbs   ?? 0) || itemCarbs   || 0;
+        const baseFats    = Number(pmLookup?.fats    ?? 0) || Number((menu as any)?.fats    ?? 0) || itemFats    || 0;
+        const baseCalories = Number(pmLookup?.calories ?? 0) || Number(menu?.calories ?? 0) || itemCalories || 0;
 
         // ✅ غداء/عشاء: القيم تُضرب في مُعامل برنامج العميل (الحصة أكبر/أصغر
         //    حسب الهدف). الماكروز تُضرب بنفس النسبة حتى يبقى الاستيكر متسقاً

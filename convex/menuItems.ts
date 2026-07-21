@@ -6,18 +6,74 @@ import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
+function canonicalMenuItem(menuItem: any, publicMeal: any | null) {
+  if (!publicMeal) return menuItem;
+  const protein = Number(publicMeal.protein ?? 0) || 0;
+  const carbs = Number(publicMeal.carbs ?? 0) || 0;
+  const fats = Number(publicMeal.fats ?? 0) || 0;
+  return {
+    ...menuItem,
+    name: String(publicMeal.nameEn || publicMeal.nameAr || menuItem.name),
+    calories: Number(publicMeal.calories ?? 0) || menuItem.calories,
+    protein,
+    carbs,
+    fats,
+    macros: protein || carbs || fats ? `P:${protein}g C:${carbs}g F:${fats}g` : menuItem.macros,
+    tags: publicMeal.tags || menuItem.tags,
+    canonicalNameAr: publicMeal.nameAr,
+    canonicalNameEn: publicMeal.nameEn,
+    canonicalImageUrl: publicMeal.imageUrl,
+  };
+}
+
+function publicCategoryFor(categoryName: string, mealName: string) {
+  const category = String(categoryName || "").toLowerCase();
+  const name = String(mealName || "").toLowerCase();
+  if (category.includes("breakfast")) return "breakfast" as const;
+  if (category.includes("dinner")) return "dinner" as const;
+  if (category.includes("snack")) return "snack" as const;
+  if (category.includes("salad") || name.includes("salad")) return "salad" as const;
+  if (category.includes("lunch")) return "lunch" as const;
+  if (/cookie|cake|brownie|muffin|ball|dessert|sweet|snack|soup/.test(name)) return "snack" as const;
+  if (/egg|omelet|omelette|breakfast|pancake|oat|croissant/.test(name)) return "breakfast" as const;
+  return "lunch" as const;
+}
+
+async function uniqueSlug(ctx: any, name: string) {
+  const base = String(name || "meal")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "meal";
+  let slug = base.length >= 2 ? base : `meal-${base}`;
+  let suffix = 2;
+  while (await ctx.db.query("publicMeals").withIndex("by_slug", (q: any) => q.eq("slug", slug)).first()) {
+    slug = `${base.slice(0, 70)}-${suffix++}`;
+  }
+  return slug;
+}
+
 export const list = query({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    return await ctx.db.query("menuItems").collect();
+    const [items, publicMeals] = await Promise.all([
+      ctx.db.query("menuItems").collect(),
+      ctx.db.query("publicMeals").collect(),
+    ]);
+    const publicById = new Map(publicMeals.map((meal) => [String(meal._id), meal]));
+    return items.map((item) => canonicalMenuItem(item, publicById.get(String(item.publicMealId || "")) || null));
   },
 });
 
 export const getById = query({
   args: { id: v.id("menuItems") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const item = await ctx.db.get(args.id);
+    if (!item) return null;
+    const publicMeal = item.publicMealId ? await ctx.db.get(item.publicMealId) : null;
+    return canonicalMenuItem(item, publicMeal);
   },
 });
 
@@ -36,6 +92,28 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    const category = await ctx.db.get(args.categoryId);
+    const protein = Number(args.protein ?? 0) || 0;
+    const carbs = Number(args.carbs ?? 0) || 0;
+    const fats = Number(args.fats ?? 0) || 0;
+    const publicMealId = await ctx.db.insert("publicMeals", {
+      nameAr: args.name,
+      nameEn: /^[\x00-\x7F]+$/.test(args.name) ? args.name : undefined,
+      slug: await uniqueSlug(ctx, args.name),
+      calories: Number(args.calories ?? 0) || Math.round(protein * 4 + carbs * 4 + fats * 9),
+      protein,
+      carbs,
+      fats,
+      tags: args.tags || [],
+      ingredients: [],
+      category: publicCategoryFor(category?.name || "", args.name),
+      priceQAR: 0,
+      sortOrder: 999,
+      // New legacy-catalog entries require image/channel/schedule review before public exposure.
+      isActive: false,
+      isOnlineOnly: false,
+      createdAt: Date.now(),
+    });
     const menuItemId = await ctx.db.insert("menuItems", {
       name: args.name,
       categoryId: args.categoryId,
@@ -46,6 +124,7 @@ export const create = mutation({
       macros: args.macros,
       tags: args.tags,
       isActive: args.isActive ?? true,
+      publicMealId,
     });
     return menuItemId;
   },
@@ -68,7 +147,24 @@ export const update = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...updates } = args;
+    const current = await ctx.db.get(id);
+    if (!current) throw new Error("Menu item not found");
     await ctx.db.patch(id, updates);
+    if (current.publicMealId) {
+      const publicUpdates: any = {};
+      if (updates.name !== undefined) {
+        if (/^[\x00-\x7F]+$/.test(updates.name)) publicUpdates.nameEn = updates.name;
+        else publicUpdates.nameAr = updates.name;
+      }
+      for (const field of ["calories", "protein", "carbs", "fats", "tags", "isActive"] as const) {
+        if (updates[field] !== undefined) publicUpdates[field] = updates[field];
+      }
+      if (updates.categoryId !== undefined) {
+        const category = await ctx.db.get(updates.categoryId);
+        publicUpdates.category = publicCategoryFor(category?.name || "", updates.name || current.name);
+      }
+      await ctx.db.patch(current.publicMealId, publicUpdates);
+    }
     return id;
   },
 });
@@ -77,7 +173,12 @@ export const remove = mutation({
   args: { id: v.id("menuItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    await ctx.db.delete(args.id);
+    const item = await ctx.db.get(args.id);
+    if (!item) return { success: true };
+    // Preserve historical daily-plan and recipe references. Canonical deletion is
+    // managed from publicMeals, which performs full reference checks.
+    await ctx.db.patch(args.id, { isActive: false });
+    if (item.publicMealId) await ctx.db.patch(item.publicMealId, { isActive: false });
     return { success: true };
   },
 });
@@ -139,15 +240,25 @@ export const syncFromPublicMeals = mutation({
     let createdCount = 0;
     let skippedCount = 0;
 
-    for (const pm of publicMeals) {
+    for (const pm of publicMeals.filter((meal: any) => !meal.isOnlineOnly && !meal.isGymOnly)) {
       const mealName = String((pm as any).nameAr || (pm as any).nameEn || "").trim();
       if (!mealName) {
         skippedCount++;
         continue;
       }
 
-      // تجاهل لو الوجبة موجودة بنفس الاسم
-      if (menuItemsByNameLower.has(mealName.toLowerCase())) {
+      const existing = menuItemsByNameLower.get(mealName.toLowerCase());
+      if (existing) {
+        if (!existing.publicMealId) {
+          await ctx.db.patch(existing._id, {
+            publicMealId: pm._id,
+            calories: pm.calories,
+            protein: pm.protein,
+            carbs: pm.carbs,
+            fats: pm.fats,
+            macros: `P:${pm.protein}g C:${pm.carbs}g F:${pm.fats}g`,
+          });
+        }
         skippedCount++;
         continue;
       }
@@ -181,7 +292,7 @@ export const syncFromPublicMeals = mutation({
         fats: f || undefined,
         macros: macrosStr,
         publicMealId: pm._id,
-        isActive: true,
+        isActive: pm.isActive,
       });
       createdCount++;
     }

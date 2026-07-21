@@ -9,6 +9,26 @@ import { v } from "convex/values";
 // 🔒 صلاحيات المنيو — إدارة الوجبات لأدوار التغذية والمنيو، مش لأي staff
 const MENU_MANAGE_ROLES = ["NUTRITIONIST"]; // ADMIN تلقائي
 
+const LEGACY_CATEGORY_NAMES: Record<string, string> = {
+  breakfast: "Breakfast",
+  lunch: "Lunch",
+  dinner: "Dinner",
+  salad: "Snacks",
+  snack: "Snacks",
+};
+
+async function legacyCategoryId(ctx: any, category: string) {
+  const categories = await ctx.db.query("mealCategories").collect();
+  const expected = LEGACY_CATEGORY_NAMES[category] || "Lunch";
+  const existing = categories.find((item: any) =>
+    String(item.name || "").trim().toLowerCase() === expected.toLowerCase());
+  if (existing) return existing._id;
+  return await ctx.db.insert("mealCategories", {
+    name: expected,
+    sortOrder: category === "breakfast" ? 3 : category === "lunch" ? 1 : category === "dinner" ? 2 : 4,
+  });
+}
+
 /**
  * 🔒 DTO عام — بدون costQAR (تكلفة داخلية) ولا gymPrice/isGymItem (أسعار الجم).
  *    يُظهر النشط فقط. schedule/weeks/days مسموح — العميل يحتاجها في SmartPlan
@@ -244,6 +264,23 @@ export const create = mutation({
       cutoffTime: args.cutoffTime,
       createdAt: Date.now(),
     });
+    // General meals keep a compatibility row for recipes and historical daily plans.
+    // Online-only meals never enter the subscriber-planning catalog.
+    if (!(args.isOnlineOnly ?? false)) {
+      const categoryId = await legacyCategoryId(ctx, args.category);
+      await ctx.db.insert("menuItems", {
+        name: args.nameEn || args.nameAr,
+        categoryId,
+        calories: args.calories,
+        protein: args.protein,
+        carbs: args.carbs,
+        fats: args.fats,
+        macros: `P:${args.protein}g C:${args.carbs}g F:${args.fats}g`,
+        tags: args.tags,
+        isActive: args.isActive ?? true,
+        publicMealId: mealId,
+      });
+    }
     return mealId;
   },
 });
@@ -293,6 +330,45 @@ export const update = mutation({
       if (dup && String(dup._id) !== String(id)) throw new Error("slug مكرر");
     }
     await ctx.db.patch(id, updates);
+    const linkedItems = await ctx.db
+      .query("menuItems")
+      .withIndex("by_publicMeal", (q) => q.eq("publicMealId", id))
+      .collect();
+    const current = await ctx.db.get(id);
+    if (!linkedItems.length && updates.isOnlineOnly === false && !current?.isGymOnly) {
+      const categoryId = await legacyCategoryId(ctx, current?.category || "lunch");
+      await ctx.db.insert("menuItems", {
+        name: current?.nameEn || current?.nameAr || "Meal",
+        categoryId,
+        calories: current?.calories,
+        protein: current?.protein,
+        carbs: current?.carbs,
+        fats: current?.fats,
+        macros: `P:${current?.protein || 0}g C:${current?.carbs || 0}g F:${current?.fats || 0}g`,
+        tags: current?.tags || [],
+        isActive: current?.isActive ?? true,
+        publicMealId: id,
+      });
+    }
+    if (linkedItems.length) {
+      const legacyUpdates: any = {};
+      if (updates.nameEn !== undefined || updates.nameAr !== undefined) {
+        legacyUpdates.name = updates.nameEn || updates.nameAr || current?.nameEn || current?.nameAr;
+      }
+      for (const field of ["calories", "protein", "carbs", "fats", "tags", "isActive"] as const) {
+        if (updates[field] !== undefined) legacyUpdates[field] = updates[field];
+      }
+      if (updates.protein !== undefined || updates.carbs !== undefined || updates.fats !== undefined) {
+        const protein = Number(current?.protein ?? 0) || 0;
+        const carbs = Number(current?.carbs ?? 0) || 0;
+        const fats = Number(current?.fats ?? 0) || 0;
+        legacyUpdates.macros = `P:${protein}g C:${carbs}g F:${fats}g`;
+      }
+      if (updates.category !== undefined) legacyUpdates.categoryId = await legacyCategoryId(ctx, updates.category);
+      if (Object.keys(legacyUpdates).length) {
+        for (const item of linkedItems) await ctx.db.patch(item._id, legacyUpdates);
+      }
+    }
     return id;
   },
 });
