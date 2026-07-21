@@ -5,7 +5,7 @@ import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
-import { subscriptionShortfall, orderedSubscriptionSlots, slotBlockDate } from "@/lib/subscription";
+import { subscriptionShortfall, orderedSubscriptionSlots, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor } from "@/lib/mealSchedule";
 import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
 import { AlertTriangle, MessageCircle } from "lucide-react";
@@ -18,11 +18,13 @@ const dayNameAr: Record<string, string> = {
   monday: "الإثنين",
   tuesday: "الثلاثاء",
   wednesday: "الأربعاء",
-  // ⚠️ الخميس والجمعة: أيام إجازة
+  // ✅ الخميس يوم توصيل عادي (الجمعة وحدها الإجازة) — كان ناقصاً فيظهر
+  //    «thursday» بالإنجليزي في المراجعة العربية (شكوى سلطان).
+  thursday: "الخميس",
 };
 const dayNameEn: Record<string, string> = {
   saturday: "Saturday", sunday: "Sunday", monday: "Monday",
-  tuesday: "Tuesday", wednesday: "Wednesday",
+  tuesday: "Tuesday", wednesday: "Wednesday", thursday: "Thursday",
 };
 
 const categoryNameAr: Record<string, string> = {
@@ -97,9 +99,11 @@ export default function OrderReview() {
     subStartDate ? { targetDate: subStartDate } : "skip",
   ) as any;
   const startRotForSub = Number(rotationInfo?.rotationWeek) || 1;
-  // تاريخ عرض اليوم (نفس ما يعرضه المنيو للعميل — slotBlockDate، مستقر ومرتّب).
-  //    عرض فقط — لا يمسّ أي منطق.
-  const dateForSlot = (week: number, day: string) => slotBlockDate(subStartDate, startRotForSub, week, day);
+  // تاريخ عرض اليوم — **تاريخ التوصيل الفعلي** (slotToDate: أقرب ظهور ≥ بكرة)،
+  //    نفس مصدر المنيو والاعتماد. عرض فقط — لا يمسّ أي منطق.
+  //    ⚠️ slotBlockDate (أول ظهور مطلق) كان يرجع تواريخ **ماضية** لأسبوع دورة
+  //       يتكرّر داخل الاشتراك (27-06 بدل 25-07 عند سلطان) — لخبطة أمام العميل.
+  const dateForSlot = (week: number, day: string) => slotToDate(subStartDate, startRotForSub, week, day);
 
   // 🔁 تبديل الوجبة في المكان (بدل الرجوع للمنيو) — نفس فكرة الخطة الذكية:
   //    بدائل نفس (الصنف + اليوم + الدورة) فقط، بلا الممنوعات. استبدال 1↔1 يحافظ
@@ -297,7 +301,13 @@ export default function OrderReview() {
         {/* تفاصيل الوجبات — نفس تصميم الخطة الذكية (SmartPlan). الشكل فقط، لا منطق */}
         <div className="space-y-4">
           {Object.entries(organizedMeals)
-            .sort(([a], [b]) => Number(a) - Number(b))
+            // ✅ ترتيب الأسابيع **زمنياً** بأول تاريخ توصيل فعلي — الترتيب الرقمي يعرض
+            //    دورة 1 أولاً حتى لو كانت آخر أسبوع للعميل (الدورات تلفّ 3→4→1→2).
+            .sort(([a, da], [b, db]) => {
+              const fa = Object.keys(da).map((d) => dateForSlot(Number(a), d)).filter(Boolean).sort()[0] || "9999";
+              const fb = Object.keys(db).map((d) => dateForSlot(Number(b), d)).filter(Boolean).sort()[0] || "9999";
+              return fa < fb ? -1 : fa > fb ? 1 : Number(a) - Number(b);
+            })
             .map(([week, days]) => (
               <div key={week}>
                 {/* بانر الدورة */}
