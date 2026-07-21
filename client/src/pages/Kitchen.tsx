@@ -610,6 +610,12 @@ export default function Kitchen() {
     (stickerData?.boxStickers || []).forEach((b: any) => {
       if (b?.customerId) m.set(String(b.customerId), Number(b.slNo));
     });
+    // ✅ المخصّصون ليس لهم box stickers (فقط meal stickers) — نأخذ رقمهم الثابت من هناك
+    //    وإلا كانوا يأخذون رقماً احتياطياً متغيّراً حسب فلتر التوصيل (صباحي/مسائي).
+    (stickerData?.mealStickers || []).forEach((b: any) => {
+      const id = b?.customerId ? String(b.customerId) : "";
+      if (id && !m.has(id) && Number(b.customerNo) > 0) m.set(id, Number(b.customerNo));
+    });
     return m;
   }, [stickerData]);
 
