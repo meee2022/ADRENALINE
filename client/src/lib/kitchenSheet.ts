@@ -186,9 +186,11 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .c{text-align:center} .nm{font-weight:800} .sm{font-size:8px;color:#47759c}
       .al{color:#b45309;font-size:8px;font-weight:700}
       .foot{margin:6px 16px 12px;font-size:9px;color:#94a3b8;text-align:center}
-      /* ✅ ترقيم الصفحات يُحقن مركزياً من openPrintDoc («صفحة N») — counter(pages)
-             «من N» غير مدعوم بثبات في كروم وكان يُبطل الترقيم كله. */
-      @page{ size:A4 landscape; margin:6mm 6mm 12mm 6mm; }
+      /* ✅ ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
+             فالاعتماد على حقن openPrintDoc (قاعدة ثانية) كان يُتجاهَل فلا يظهر رقم. */
+      @page{ size:A4 landscape; margin:6mm 6mm 12mm 6mm;
+        @bottom-center{content:"${lang === "ar" ? "صفحة" : "Page"} " counter(page);
+          font-family:'Cairo','Segoe UI',Tahoma,sans-serif;font-size:9px;font-weight:700;color:#64748b;} }
       /* fallback للمتصفحات اللي مش بتدعم @page counters — سطر ثابت في الفوتر */
       @media print{
         /* ✅ الجدول الكبير يتدفّق عبر الصفحات بدءاً من الصفحة الأولى مباشرة —
@@ -223,5 +225,7 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
     isRtl: lang === "ar",
     width: 1100,
     height: 800,
+    // الترقيم مُعرّف داخل @page الخاصة بالكشف — نوقف الحقن كي لا تتضارب قاعدتا @page
+    pageNumbers: false,
   });
 }

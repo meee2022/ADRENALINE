@@ -973,9 +973,12 @@ export default function Kitchen() {
         .sq{color:#b45309}
         .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
-        /* هامش سفلي أوسع (13مم) ليتّسع لصندوق ترقيم الصفحات @bottom-center المحقون من
-           openPrintDoc — الهامش 8مم كان يقصّه في كروم فلا يظهر أي رقم (سبب الشكوى). */
-        @page{size:A4;margin:8mm 8mm 13mm 8mm}
+        /* ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
+           فلو تركنا الترقيم لِـopenPrintDoc (قاعدة ثانية) يُتجاهَل ولا يظهر رقم.
+           الهامش السفلي 13مم ليتّسع لصندوق @bottom-center. */
+        @page{size:A4;margin:8mm 8mm 13mm 8mm;
+          @bottom-center{content:"${isRtl ? "صفحة" : "Page"} " counter(page);
+            font-family:'Cairo','Segoe UI',Tahoma,sans-serif;font-size:10px;font-weight:700;color:#64748b;}}
       </style></head><body>
       <h1>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} — ADRENALINE</h1><div class="date">${isRtl ? "تاريخ" : "Date"}: ${esc(formattedDate)} · ${isRtl ? "الأرقام تشمل المشتركين المخصّصين" : "totals include customized subscribers"}</div>
       <div class="kpis">
@@ -991,6 +994,8 @@ export default function Kitchen() {
     openPrintDoc(html, {
       fileName: `${isRtl ? "كشف المطبخ" : "Kitchen sheet"} - ADRENALINE - ${formattedDate}`,
       isRtl,
+      // الترقيم مُعرّف داخل @page الخاصة بالكشف — نوقف حقن openPrintDoc كي لا تتضارب قاعدتا @page
+      pageNumbers: false,
     });
   };
 
