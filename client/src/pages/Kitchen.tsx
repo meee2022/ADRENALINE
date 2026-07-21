@@ -924,7 +924,7 @@ export default function Kitchen() {
     const custHtml = customizedAll.length ? `
       <div class="custpage">
       <h2 class="sec">Customized meals — one box per customer (${customizedAll.length})</h2>
-      ${colsTable(customizedAll, 3, personWeight, personBox)}
+      ${colsTable(customizedAll, 2, personWeight, personBox)}
       </div>` : "";
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
@@ -967,18 +967,19 @@ export default function Kitchen() {
         .custpage{break-before:page;page-break-before:always}
         .custpage .sec{border-top:none;margin-top:0}
         /* ✅ بطاقة المخصّص — رأس ملوّن بالهوية، تحذير حساسية واضح، وجبات مرقّمة نظيفة */
-        .person{border:1px solid #d5e0ea;border-radius:10px;overflow:hidden;margin:0 0 8px;break-inside:avoid;page-break-inside:avoid;font-size:10px;box-shadow:0 1px 2px rgba(14,42,74,.05)}
-        .ph{display:flex;justify-content:space-between;align-items:center;gap:6px;background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:4px 8px}
-        .pn{font-size:11px;font-weight:900;letter-spacing:.2px}
-        .pdt{font-size:8px;font-weight:800;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
-        .alg{color:#b91c1c;background:#fef2f2;font-size:8.5px;font-weight:800;padding:3px 8px;border-bottom:1px solid #fee2e2;line-height:1.35}
+        /* جدولان جنب بعض (بدل 3) → عرض أوسع، فنكبّر الخط والمسافات ليقرأها الشيف بوضوح */
+        .person{border:1.5px solid #cdd9e6;border-radius:12px;overflow:hidden;margin:0 0 11px;break-inside:avoid;page-break-inside:avoid;font-size:13px;box-shadow:0 1px 3px rgba(14,42,74,.07)}
+        .ph{display:flex;justify-content:space-between;align-items:center;gap:6px;background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:7px 12px}
+        .pn{font-size:15px;font-weight:900;letter-spacing:.2px}
+        .pdt{font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
+        .alg{color:#b91c1c;background:#fef2f2;font-size:11px;font-weight:800;padding:5px 12px;border-bottom:1px solid #fee2e2;line-height:1.4}
         .pt{width:100%;border-collapse:collapse}
-        .pt td{padding:3px 6px;font-size:9.5px;font-weight:700;line-height:1.3;border-top:1px solid #eef3f7;vertical-align:middle}
+        .pt td{padding:6px 11px;font-size:13px;font-weight:700;line-height:1.35;border-top:1px solid #eef3f7;vertical-align:middle}
         .pt tr:first-child td{border-top:none}
         .pt tr:nth-child(even) td{background:#f7fafd}
-        .pmn{width:16px;text-align:center;color:#9db4c9;font-weight:900;font-size:8.5px}
+        .pmn{width:22px;text-align:center;color:#9db4c9;font-weight:900;font-size:11px}
         .pm{color:#0f2438}
-        .pq{width:24px;text-align:center;font-weight:900;color:#0E76AC}
+        .pq{width:30px;text-align:center;font-weight:900;font-size:14px;color:#0E76AC}
         .sq{color:#b45309}
         .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
