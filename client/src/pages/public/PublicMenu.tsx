@@ -2006,7 +2006,7 @@ export default function PublicMenuPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {meals.map((meal: any) => {
                 const hasConflict = mealHasAvoidConflict(meal);
                 // السلطة سناك ⇒ تُقاس بحد السناكات. كانت تُقاس بحد الوجبات
@@ -2019,7 +2019,7 @@ export default function PublicMenuPage() {
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group flex flex-col transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-3xl shadow-sm",
+                    "group flex flex-col transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-2xl sm:rounded-3xl shadow-sm",
                     hasConflict
                       ? "border border-red-200 hover:border-red-400 hover:shadow-lg"
                       : "border border-gray-100 hover:border-[#3CC4F0]/50 hover:shadow-xl hover:-translate-y-1"
@@ -2027,7 +2027,7 @@ export default function PublicMenuPage() {
                   onClick={() => setSelectedMeal(meal)}
                 >
                   {/* Meal Image */}
-                  <div className="relative h-52 overflow-hidden">
+                  <div className="relative h-28 sm:h-44 lg:h-52 overflow-hidden">
                     {/* الشبكة قد تعرض عشرات الوجبات — لا تُحمَّل صورة قبل ظهورها */}
                     <img
                       src={meal.imageUrl}
@@ -2075,43 +2075,43 @@ export default function PublicMenuPage() {
                     </div>
                   </div>
 
-                  <CardContent className="p-5 flex flex-col flex-1">
+                  <CardContent className="p-3 sm:p-5 flex flex-col flex-1">
                     {/* Meal Name */}
-                    <h3 className="text-lg font-black text-[#0F1516] mb-1 line-clamp-1 leading-tight">
+                    <h3 className="text-sm sm:text-lg font-black text-[#0F1516] mb-1 line-clamp-2 sm:line-clamp-1 leading-tight">
                       {isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
                     </h3>
 
-                    {/* Subtitle (English under Arabic) */}
+                    {/* Subtitle (English under Arabic) — يُخفى على الموبايل لتوفير المساحة */}
                     {meal.nameEn && isRtl && (
-                      <p className="text-xs text-[#8AA6BD] mb-2 line-clamp-1">{meal.nameEn}</p>
+                      <p className="hidden sm:block text-xs text-[#8AA6BD] mb-2 line-clamp-1">{meal.nameEn}</p>
                     )}
 
-                    {/* Description */}
+                    {/* Description — يُخفى على الموبايل (البطاقة مدمجة) */}
                     {(isRtl ? meal.descriptionAr : meal.descriptionEn) && (
-                      <p className="text-sm text-[#47759C] mb-4 line-clamp-2 leading-relaxed">
+                      <p className="hidden sm:block text-sm text-[#47759C] mb-4 line-clamp-2 leading-relaxed">
                         {isRtl ? meal.descriptionAr : meal.descriptionEn}
                       </p>
                     )}
 
                     {/* Macros — neat 3-column stat row */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="rounded-xl py-2 text-center" style={{ background: "#fef2f2" }}>
-                        <div className="text-sm font-black text-red-600 tabular-nums leading-none">{meal.protein}<span className="text-[10px]">g</span></div>
-                        <div className="text-[10px] font-bold text-red-400 mt-1">{isRtl ? "بروتين" : "Protein"}</div>
+                    <div className="grid grid-cols-3 gap-1 sm:gap-2 mb-3 sm:mb-4">
+                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fef2f2" }}>
+                        <div className="text-xs sm:text-sm font-black text-red-600 tabular-nums leading-none">{meal.protein}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-[9px] sm:text-[10px] font-bold text-red-400 mt-0.5 sm:mt-1">{isRtl ? "بروتين" : "Protein"}</div>
                       </div>
-                      <div className="rounded-xl py-2 text-center" style={{ background: "#fefce8" }}>
-                        <div className="text-sm font-black text-yellow-600 tabular-nums leading-none">{meal.carbs}<span className="text-[10px]">g</span></div>
-                        <div className="text-[10px] font-bold text-yellow-500 mt-1">{isRtl ? "كارب" : "Carbs"}</div>
+                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fefce8" }}>
+                        <div className="text-xs sm:text-sm font-black text-yellow-600 tabular-nums leading-none">{meal.carbs}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-[9px] sm:text-[10px] font-bold text-yellow-500 mt-0.5 sm:mt-1">{isRtl ? "كارب" : "Carbs"}</div>
                       </div>
-                      <div className="rounded-xl py-2 text-center" style={{ background: "#eff6ff" }}>
-                        <div className="text-sm font-black text-blue-600 tabular-nums leading-none">{meal.fats}<span className="text-[10px]">g</span></div>
-                        <div className="text-[10px] font-bold text-blue-400 mt-1">{isRtl ? "دهون" : "Fats"}</div>
+                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#eff6ff" }}>
+                        <div className="text-xs sm:text-sm font-black text-blue-600 tabular-nums leading-none">{meal.fats}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-[9px] sm:text-[10px] font-bold text-blue-400 mt-0.5 sm:mt-1">{isRtl ? "دهون" : "Fats"}</div>
                       </div>
                     </div>
 
-                    {/* Tags */}
+                    {/* Tags — تُخفى على الموبايل (البطاقة مدمجة) */}
                     {meal.tags && meal.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
+                      <div className="hidden sm:flex flex-wrap gap-1.5 mb-4">
                         {meal.tags.slice(0, 3).map((tag: string, idx: number) => (
                           <Badge
                             key={idx}
@@ -2125,8 +2125,9 @@ export default function PublicMenuPage() {
                     )}
 
                     {/* Footer — button (no price, included in subscription) */}
-                    <div className="flex items-center justify-between pt-4 mt-auto border-t border-gray-100">
-                      <span className="text-xs font-semibold text-[#8AA6BD]">
+                    <div className="flex items-center justify-between pt-2.5 sm:pt-4 mt-auto border-t border-gray-100">
+                      {/* «ضمن اشتراكك» يُخفى على الموبايل لإفساح مكان للزر */}
+                      <span className="hidden sm:inline text-xs font-semibold text-[#8AA6BD]">
                         {isRtl ? "ضمن اشتراكك" : "In your plan"}
                       </span>
                       {browseMode && !isPhoneVerified ? (
@@ -2148,7 +2149,7 @@ export default function PublicMenuPage() {
                         </Button>
                       ) : itemCount(meal._id) > 0 ? (
                         // ✅ عدّاد — يسمح باختيار نفس الوجبة أكثر من مرة (السقف زيّه)
-                        <div className="flex items-center gap-1.5 rounded-full bg-green-500 text-white px-1.5 h-9">
+                        <div className="flex items-center justify-between sm:justify-center gap-1.5 rounded-full bg-green-500 text-white px-1.5 h-9 w-full sm:w-auto">
                           <button
                             onClick={(e) => { e?.stopPropagation(); removeItem(meal._id, selectedWeek, selectedDay!); }}
                             title={isRtl ? "إنقاص" : "Remove one"}
@@ -2172,7 +2173,7 @@ export default function PublicMenuPage() {
                           onClick={(e) => handleAddToCart(meal, e)}
                           disabled={!selectedDay || atLimit || noMealPlan}
                           className={cn(
-                            "h-9 px-5 rounded-full font-bold transition-all",
+                            "h-9 px-5 rounded-full font-bold transition-all w-full sm:w-auto",
                             (atLimit || noMealPlan)
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : hasConflict
