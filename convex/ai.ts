@@ -189,7 +189,9 @@ export const getSmartPlanData = query({
       }
       return false; // بدون جدولة → لا نُدرجها (نلتزم بمنيو اليوم)
     };
-    const available = day ? all.filter(matchesToday) : [];
+    const available = day
+      ? all.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly && matchesToday(meal))
+      : [];
 
     // 4) استبعاد الممنوعات (حساسية + avoid)
     const blockWords = `${profile.allergies} ${profile.avoid}`
@@ -308,14 +310,14 @@ export const chat = action({
     if (!gate.ok) {
       return { ok: false, reply: isEn
         ? "The assistant is busy right now. Please try again in a few minutes."
-        : "المساعد مشغول حالياً. جرّب بعد دقائق قليلة." };
+        : "المساعد مشغول حاليًا. حاول مجددًا بعد بضع دقائق." };
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return { ok: false, reply: isEn
         ? "The smart assistant is currently unavailable. Contact us on WhatsApp and we'll help right away 🌿"
-        : "خدمة المساعد الذكي غير مفعّلة حالياً. تواصل معنا عبر واتساب وسنساعدك فوراً 🌿" };
+        : "خدمة المساعد الذكي غير مفعّلة حاليًا. تواصل معنا عبر واتساب وسنقدّم لك المساعدة فورًا 🌿" };
     }
 
     const ctxData = await ctx.runQuery(api.ai.getChatContext, {});
@@ -357,7 +359,7 @@ export const chat = action({
       });
       if (!res.ok) throw new Error(`Anthropic ${res.status}`);
       const data = await res.json();
-      return { ok: true, reply: data?.content?.[0]?.text || "عذراً، لم أفهم. ممكن توضّح أكثر؟" };
+      return { ok: true, reply: data?.content?.[0]?.text || "عذرًا، لم أفهم طلبك. هل يمكنك توضيحه أكثر؟" };
     } catch (e) {
       return { ok: false, reply: "حصل خطأ مؤقت. حاول تاني أو تواصل معنا عبر واتساب 🌿" };
     }
@@ -502,7 +504,7 @@ export const generateSmartPlan = action({
       const gate = await ctx.runMutation(internal.rateLimit.consume, {
         key, limit, windowMs: 10 * 60 * 1000,
       });
-      if (!gate.ok) throw new Error("طلبات كثيرة — جرّب بعد دقائق قليلة");
+      if (!gate.ok) throw new Error("عدد الطلبات مرتفع حاليًا. حاول مجددًا بعد بضع دقائق");
     }
 
     // ✅ اسم اليوم + التاريخ — نفضّل targetDate من العميل (بالتوقيت المحلي)
@@ -529,7 +531,7 @@ export const generateSmartPlan = action({
     if (!candidates || candidates.length === 0) {
       return {
         ok: false,
-        error: "لا توجد وجبات مجدولة لهذا اليوم في منيو المطعم.",
+        error: "لا توجد وجبات مجدولة لهذا اليوم في قائمة وجبات المطعم.",
         profile, meta, picks: [],
       };
     }
@@ -659,7 +661,7 @@ export const generateWeeklyPlan = action({
       if (!gate.ok) {
         throw new Error(visitor
           ? "ولّدت خطة للتو — انتظر بضع دقائق قبل توليد خطة أخرى."
-          : "طلبات كثيرة — جرّب بعد دقائق قليلة");
+          : "عدد الطلبات مرتفع حاليًا. حاول مجددًا بعد بضع دقائق");
       }
     }
 

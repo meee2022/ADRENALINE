@@ -33,7 +33,7 @@ export default function PosReceipts() {
 
         <div className="bg-white rounded-2xl shadow-md overflow-hidden">
           {!rows && <div role="status" aria-live="polite" className="p-8 text-center text-slate-500">{t("جاري التحميل…", "Loading…")}</div>}
-          {rows && rows.length === 0 && <div className="p-8 text-center text-slate-500 font-bold">{t("مفيش إيصالات اليوم بعد", "No receipts yet today")}</div>}
+          {rows && rows.length === 0 && <div className="p-8 text-center text-slate-500 font-bold">{t("لا توجد إيصالات مسجّلة اليوم حتى الآن", "No receipts yet today")}</div>}
           <div className="divide-y divide-slate-100">
             {rows?.map((r: any) => (
               <button

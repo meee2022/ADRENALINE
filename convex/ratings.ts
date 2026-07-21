@@ -47,9 +47,9 @@ export const create = mutation({
     sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    if (args.stars < 1 || args.stars > 5) throw new Error("النجوم لازم تكون 1..5");
+    if (args.stars < 1 || args.stars > 5) throw new Error("يجب أن يكون التقييم بين نجمة واحدة و5 نجوم");
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id) throw new Error("غير مصرّح — سجّل دخولك عشان تقيّم");
+    if (!id) throw new Error("غير مصرح. سجّل الدخول لإضافة تقييمك");
 
     // 🔒 نستخرج customerId + customerName من الجلسة، مش من args
     let customerId: any = undefined;

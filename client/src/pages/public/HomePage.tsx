@@ -21,7 +21,7 @@ import { cn } from "@/lib/utils";
 
 export default function HomePage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "أدرينالين للوجبات الصحية | وجبات دايت وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل لباب بيتك في قطر. اشترك في باقتك الآن.", path: "/" });
+  useSeo({ title: "أدرينالين للوجبات الصحية | وجبات صحية وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يوميًا بإشراف أخصائيي تغذية وتصل إلى باب منزلك في قطر. اشترك في باقتك الآن.", path: "/" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
 
@@ -69,7 +69,7 @@ export default function HomePage() {
         images={heroImages}
         titleAr="طعام صحي بمذاق لا يُقاوم"
         titleEn="Healthy Food That Tastes Amazing"
-        subtitleAr="وجبات طازجة محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية — وتوصَّل لباب بيتك في قطر."
+        subtitleAr="وجبات طازجة محسوبة السعرات تُحضَّر يوميًا بإشراف أخصائيي تغذية، وتصل إلى باب منزلك في قطر."
         subtitleEn="Fresh, calorie-counted meals prepared daily by nutritionists — delivered to your door in Qatar."
         onSubscribeClick={handleGeneralInquiry}
         onMenuClick={() => setLocation("/public/menu")}
@@ -446,7 +446,7 @@ export default function HomePage() {
             {[
               {
                 q: isRtl ? "كيف أبدأ الاشتراك؟" : "How do I start?",
-                a: isRtl ? "اختر الخطة المناسبة واضغط على زر الاشتراك عبر واتساب، وفريقنا هيتواصل معاك فوراً." : "Choose your plan and click the WhatsApp subscribe button. We'll contact you immediately.",
+                a: isRtl ? "اختر الخطة المناسبة واضغط على زر الاشتراك عبر واتساب، وسيتواصل معك فريقنا فورًا." : "Choose your plan and click the WhatsApp subscribe button. We'll contact you immediately.",
               },
               {
                 q: isRtl ? "هل التوصيل مجاني؟" : "Is delivery free?",
@@ -454,7 +454,7 @@ export default function HomePage() {
               },
               {
                 q: isRtl ? "هل أقدر أغير وجباتي؟" : "Can I customize meals?",
-                a: isRtl ? "أكيد! تقدر تختار وجباتك من القائمة وتطلب تعديلات حسب تفضيلاتك." : "Of course! Pick meals from our menu and request modifications.",
+                a: isRtl ? "بالتأكيد. يمكنك اختيار وجباتك من القائمة وطلب التعديلات وفق تفضيلاتك." : "Of course! Pick meals from our menu and request modifications.",
               },
             ].map((item, i) => (
               <motion.div

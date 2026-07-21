@@ -1354,7 +1354,7 @@ export default function Customers() {
                   </Label>
                   <p className="text-xs text-amber-700/80">
                     {isRtl
-                      ? "لو المشترك عايز كمية/سعرات مختلفة للوجبة الرئيسية — املأ الخانات. لو فاضية، يستخدم الافتراضي حسب باقته."
+                      ? "إذا احتاج المشترك إلى كمية أو سعرات مختلفة للوجبة الرئيسية، فأدخل القيم هنا. وعند ترك الحقول فارغة، تُستخدم القيم الافتراضية لباقته."
                       : "If this subscriber wants different main-meal grams/calories, fill these. Empty = program default."}
                   </p>
                   <div className="grid grid-cols-3 gap-3">
@@ -1385,7 +1385,7 @@ export default function Customers() {
                     </div>
                     <p className="text-[11px] text-amber-700/70">
                       {isRtl
-                        ? "اختر وجبة واكتب سعراتها — تُطبع بالرقم ده لهذا المشترك فقط وفي هذه الوجبة تحديدًا (تتجاوز كل الحسابات)."
+                        ? "اختر وجبة وأدخل سعراتها. ستُطبع هذه القيمة لهذا المشترك وهذه الوجبة فقط، وستتجاوز الحسابات التلقائية."
                         : "Pick a meal and set its calories — printed exactly for this subscriber, this meal only."}
                     </p>
                     <datalist id="mealNamesList">
@@ -1577,7 +1577,7 @@ export default function Customers() {
 
                   <p className="text-[11px] text-muted-foreground">
                     {isRtl
-                      ? "اختيار الباقة يملأ الوجبات/السناك والسعر تلقائياً — ولو مشترك مخصّص بعدد مختلف، عدّل الأرقام والسعر يدويًا. اختر المدة فوق فيتحسب تاريخ النهاية لوحده. القيود تتبع العدد اللي تكتبه."
+                      ? "يؤدي اختيار الباقة إلى تعبئة عدد الوجبات والوجبات الخفيفة والسعر تلقائيًا. وللاشتراك المخصّص، عدّل الأعداد والسعر يدويًا. اختر المدة أعلاه ليُحتسب تاريخ النهاية تلقائيًا؛ وتُطبّق القيود وفق الأعداد التي تدخلها."
                       : "Picking a plan auto-fills meals/snacks/price — for a customized subscriber, edit the numbers/price and pick a duration to auto-set the end date. Constraints follow the numbers you enter."}
                   </p>
 

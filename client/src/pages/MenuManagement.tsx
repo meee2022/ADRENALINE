@@ -47,7 +47,7 @@ export default function MenuManagement() {
   const syncFromPublicMutation = useMutation(api.menuItems.syncFromPublicMeals);
 
   const handleSyncFromPublic = async () => {
-    if (!(await confirmDialog({ message: isRtl ? "هل تريد نسخ كل الوجبات من منيو الموقع العام؟\nسيتم تجاهل الوجبات الموجودة مسبقاً بنفس الاسم." : "Copy all meals from the public website menu?\nMeals already existing with the same name will be skipped." }))) {
+    if (!(await confirmDialog({ message: isRtl ? "هل تريد نسخ جميع الوجبات من قائمة الوجبات العامة للموقع؟\nسيتم تجاهل الوجبات الموجودة مسبقًا بالاسم نفسه." : "Copy all meals from the public website menu?\nMeals already existing with the same name will be skipped." }))) {
       return;
     }
     setIsSyncing(true);
@@ -177,7 +177,7 @@ export default function MenuManagement() {
               className="h-11 rounded-xl font-bold gap-2 bg-white/10 border-white/40 text-white hover:bg-white/20 text-sm"
             >
               {isSyncing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-              {isRtl ? "استيراد من منيو الموقع" : "Import from website menu"}
+              {isRtl ? "استيراد من قائمة وجبات الموقع" : "Import from website menu"}
             </Button>
             <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
               <Plus className="h-5 w-5" />

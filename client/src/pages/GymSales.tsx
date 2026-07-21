@@ -1441,7 +1441,7 @@ function ReportPreview({ html, fileName, isRtl, t, onClose }: any) {
         <div className="min-w-0">
           <div className="truncate text-sm font-black">{t("معاينة التقرير", "Report preview")}</div>
           <div className="truncate text-[11px] font-bold text-white/60">
-            {t("ده اللي هيطلع في الـPDF بالظبط", "This is exactly what the PDF will contain")}
+            {t("هذا هو المحتوى الذي سيظهر في ملف PDF", "This is exactly what the PDF will contain")}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -1965,7 +1965,7 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
             <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
               <tr>
                 <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
-                <th className="text-end p-2">{t("سعر المنيو", "Menu price")}</th>
+                <th className="text-end p-2">{t("سعر القائمة", "Menu price")}</th>
                 <th className="text-end p-2">{t("سعر المنفذ النافذ", "Effective outlet price")}</th>
                 <th className="text-end p-2">{t("سعر مؤقت", "Custom price")}</th>
                 <th className="text-center p-2">{t("الحالة", "Status")}</th>
@@ -2417,7 +2417,7 @@ function ItemsTab({ isRtl, t, sessionToken, toast }: any) {
                   <p className={cn("font-bold text-sm truncate", m.isGymItem ? "text-emerald-900" : "text-slate-800")}>
                     {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
                   </p>
-                  <p className="text-[10.5px] text-slate-400">{m.category} · {t("سعر المنيو", "menu")}: {m.listPrice.toFixed(2)} {m.gymPrice != null && <>· {t("سعر المنفذ", "outlet")}: {m.gymPrice.toFixed(2)}</>}</p>
+                  <p className="text-[10.5px] text-slate-400">{m.category} · {t("سعر القائمة", "menu")}: {m.listPrice.toFixed(2)} {m.gymPrice != null && <>· {t("سعر المنفذ", "outlet")}: {m.gymPrice.toFixed(2)}</>}</p>
                 </div>
                 <span className={cn("shrink-0 text-[10px] font-black uppercase px-2 py-0.5 rounded-full",
                   m.isGymItem ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-400"

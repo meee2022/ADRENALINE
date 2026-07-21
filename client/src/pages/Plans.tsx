@@ -686,7 +686,7 @@ export default function PlansPage() {
     const ok = await confirmDialog({
       title: isRtl ? "ملء كل من بلا خطة" : "Fill all without a plan",
       message: isRtl
-        ? `سيتم إنشاء مسودّة خطة لـ${planless.length} مشترك بوجبات ${planDayName ? "اليوم" : "اليوم"} — محترمةً ممنوعاتهم وحدود اشتراكهم. تراجعها وتعتمدها بعدين. متابعة؟`
+        ? `سيتم إنشاء مسودّة خطة لـ${planless.length} مشترك بوجبات ${planDayName ? "اليوم" : "اليوم"}، مع مراعاة الممنوعات وحدود الاشتراك. يمكنك مراجعتها واعتمادها لاحقًا. هل تريد المتابعة؟`
         : `Draft plans will be created for ${planless.length} customers with today's meals — respecting their restrictions and limits. You review and confirm later. Continue?`,
       confirmText: isRtl ? "نعم، املأ الكل" : "Yes, fill all",
       cancelText: isRtl ? "إلغاء" : "Cancel",
@@ -897,7 +897,7 @@ export default function PlansPage() {
                   {(isTomorrowDate || isToday) && (
                     <span className="plans-date-badge text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
                       style={{ background: "#eaf6fd", color: "#0E76AC" }}>
-                      {isTomorrowDate ? (isRtl ? "توصيل بكرة" : "Tomorrow") : (isRtl ? "اليوم" : "Today")}
+                      {isTomorrowDate ? (isRtl ? "توصيل غدًا" : "Tomorrow") : (isRtl ? "اليوم" : "Today")}
                     </span>
                   )}
                   <ChevronDown className="h-3 w-3 text-gray-400 group-hover:text-gray-600" />

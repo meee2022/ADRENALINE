@@ -869,7 +869,7 @@ async function buildGymOrderLines(
       lineTotal: Math.round(qty * unitPrice * 100) / 100,
     });
   }
-  if (out.length === 0) throw new Error("لازم تضيف وجبة واحدة على الأقل");
+  if (out.length === 0) throw new Error("يجب إضافة وجبة واحدة على الأقل");
   subtotal = Math.round(subtotal * 100) / 100;
   total = Math.round(total * 100) / 100;
   const discountAmount = Math.round((subtotal - total) * 100) / 100;
@@ -951,7 +951,7 @@ export const updateOrder = mutation({
     const actor = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const existing: any = await ctx.db.get(args.orderId);
     if (!existing) throw new Error("الطلبية غير موجودة");
-    if (existing.isVoid) throw new Error("مش مسموح تعدّل طلبية ملغاة");
+    if (existing.isVoid) throw new Error("لا يُسمح بتعديل طلبية ملغاة");
     const gym: any = await ctx.db.get(args.gymId);
     if (!gym) throw new Error("الجم غير موجود");
 
@@ -1053,7 +1053,7 @@ export const recordOrderReturns = mutation({
     if (!/^\d{4}-\d{2}-\d{2}$/.test(args.returnDate)) throw new Error("تاريخ المرتجع غير صالح");
     const order: any = await ctx.db.get(args.orderId);
     if (!order) throw new Error("الطلبية غير موجودة");
-    if (order.isVoid) throw new Error("مش مسموح على طلبية ملغاة");
+    if (order.isVoid) throw new Error("لا يمكن تسجيل مرتجع لطلبية ملغاة");
     if (args.returnDate < order.date) throw new Error("تاريخ المرتجع لا يمكن أن يسبق تاريخ الفاتورة");
 
     const lines = await ctx.db

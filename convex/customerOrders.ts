@@ -7,6 +7,7 @@ import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
 import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { loyaltyConfig } from "./loyalty";
+import { qatarTodayISO, validateCustomerOrderSelection } from "./lib/customerOrderRules";
 
 // Helper: Generate unique order number
 function generateOrderNumber(): string {
@@ -61,7 +62,7 @@ export const create = mutation({
     const now = Date.now();
 
     // 🔒 التحقق: على الأقل وجبة واحدة، حد أقصى معقول (يمنع abuse)
-    if (args.items.length === 0) throw new Error("لازم تختار وجبة واحدة على الأقل");
+    if (args.items.length === 0) throw new Error("يجب اختيار وجبة واحدة على الأقل");
     if (args.items.length > 500) throw new Error("عدد الوجبات كبير جداً");
     if (!args.customerName.trim() || !args.customerPhone.trim()) {
       throw new Error("الاسم ورقم الهاتف مطلوبان");
@@ -97,10 +98,46 @@ export const create = mutation({
       if (mealCache.has(key)) continue;
       const meal: any = await ctx.db.get(it.mealId);
       if (!meal || !meal.isActive) {
-        throw new Error(`وجبة غير متاحة — قد تكون حُذفت من المنيو`);
+        throw new Error("الوجبة غير متاحة، وربما أُزيلت من قائمة الوجبات");
       }
       mealCache.set(key, meal);
     }
+
+    // Server-side mirror of the manual/smart-plan guards. This only rejects an
+    // invalid new request; approval dates and existing kitchen plans are untouched.
+    const normalizedPhone = (value: unknown) => String(value || "").replace(/\D/g, "");
+    let subscriptionCustomer: any = null;
+    if (args.customerId) {
+      subscriptionCustomer = await ctx.db.get(args.customerId);
+      if (!subscriptionCustomer || normalizedPhone(subscriptionCustomer.phone) !== normalizedPhone(phone)) {
+        throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
+      }
+    } else {
+      subscriptionCustomer = await ctx.db
+        .query("customers")
+        .withIndex("by_phone", (q) => q.eq("phone", phone))
+        .first();
+    }
+
+    const todayISO = qatarTodayISO(now);
+    let startRotationWeek = 1;
+    if (subscriptionCustomer?.startDate) {
+      const settings: any = await ctx.db.query("restaurantSettings").first();
+      const currentWeek = Number(settings?.currentCookingWeek) || 1;
+      const advancedOn = String(settings?.cookingWeekAdvancedOn || "");
+      const anchorISO = /^\d{4}-\d{2}-\d{2}$/.test(advancedOn) ? advancedOn : todayISO;
+      startRotationWeek = rotationWeekAtDate(currentWeek, anchorISO, String(subscriptionCustomer.startDate));
+    }
+
+    validateCustomerOrderSelection({
+      items: args.items.map((item) => ({
+        ...item,
+        meal: mealCache.get(String(item.mealId)),
+      })),
+      customer: subscriptionCustomer,
+      startRotationWeek,
+      todayISO,
+    });
 
     // 🔒 نحسب الإجماليات من بيانات الخادم فقط
     let totalCalories = 0;
@@ -176,7 +213,7 @@ export const create = mutation({
       type: "NEW_ORDER",
       title: "طلب جديد للمراجعة",
       message: `${args.customerName} - ${serverItems.length} وجبة (${orderNumber})`,
-      link: `/orders/${orderId}`,
+      link: `/orders/review/${orderId}`,
       relatedId: orderId,
       isRead: false,
       createdAt: now,
@@ -186,7 +223,7 @@ export const create = mutation({
       type: "NEW_ORDER",
       title: "طلب جديد على الموقع",
       message: `${args.customerName} - ${args.customerPhone}`,
-      link: `/orders/${orderId}`,
+      link: `/orders/review/${orderId}`,
       relatedId: orderId,
       isRead: false,
       createdAt: now,

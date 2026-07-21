@@ -192,7 +192,7 @@ export default function ManagerLive() {
                 <span className="text-2xl font-black text-[#0E76AC]">{activeCashiers}</span>
               </div>
               {activeCashiers === 0 ? (
-                <p className="text-sm text-slate-400 text-center py-8 font-bold">{t("مفيش ورديات مفتوحة الآن", "No open shifts")}</p>
+                <p className="text-sm text-slate-400 text-center py-8 font-bold">{t("لا توجد ورديات مفتوحة حاليًا", "No open shifts")}</p>
               ) : (
                 <div className="space-y-2">
                   {snap.openShifts.map((s: any) => (

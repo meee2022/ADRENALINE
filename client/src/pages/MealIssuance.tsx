@@ -101,7 +101,7 @@ export default function MealIssuance() {
   };
 
   const del = async (id: string) => {
-    if (!(await confirmDialog({ message: t("حذف السجل ده؟", "Delete this entry?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
+    if (!(await confirmDialog({ message: t("هل تريد حذف هذا السجل؟", "Delete this entry?"), variant: "danger", confirmText: isRtl ? "حذف" : "Delete" }))) return;
     try { await removeM({ id: id as any, sessionToken }); } catch (e: any) { void alertDialog({ message: e?.message || "err" }); }
   };
 
@@ -143,7 +143,7 @@ export default function MealIssuance() {
       <DashboardHeader
         icon={<ClipboardList className="h-6 w-6 sm:h-7 sm:w-7" />}
         titleAr="حصر الصادر" titleEn="Meal Issuance"
-        subtitleAr="حصر الوجبات اللي بتطلع من المطبخ (مدير/موظفين/تجربة/ضيافة/هدر)"
+        subtitleAr="حصر الوجبات الصادرة من المطبخ (إدارة، موظفون، تجربة، ضيافة، هدر)"
         subtitleEn="Track meals issued from the kitchen (manager/staff/tasting/guest/waste)"
         kpis={summary ? [
           { value: dayTotal, labelAr: "صادر اليوم", labelEn: "Today" },
@@ -216,7 +216,7 @@ export default function MealIssuance() {
       <div>
         <h3 className="text-sm font-bold text-[#47759c] mb-2">{t(`صادر ${date}`, `Issued ${date}`)} ({rows.length})</h3>
         {rows.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 text-center text-gray-400" style={{ border: "1px solid #e8eef4" }}>{t("لسه مفيش صادر مسجّل اليوم", "Nothing issued today yet")}</div>
+          <div className="bg-white rounded-2xl p-6 text-center text-gray-400" style={{ border: "1px solid #e8eef4" }}>{t("لا توجد عمليات صرف مسجّلة اليوم حتى الآن", "Nothing issued today yet")}</div>
         ) : (
           <div className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #e8eef4" }}>
             {rows.map((r: any) => {

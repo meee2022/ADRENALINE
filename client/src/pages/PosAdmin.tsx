@@ -130,7 +130,7 @@ function BranchesTab({ t, sessionToken, toast }: any) {
         <CardContent className="p-4">
           <h3 className="font-black mb-3">{t("الفروع", "Branches")}</h3>
           {!rows ? <p className="text-sm text-slate-400 py-4 text-center">{t("جاري التحميل…", "Loading…")}</p>
-            : rows.length === 0 ? <p className="text-sm text-slate-500 py-4 text-center">{t("مفيش فروع بعد — أضف فرعين.", "No branches yet — add two.")}</p>
+            : rows.length === 0 ? <p className="text-sm text-slate-500 py-4 text-center">{t("لا توجد فروع حتى الآن. أضف فرعين للبدء.", "No branches yet — add two.")}</p>
             : (
             <div className="space-y-2">
               {rows.map((b: any) => (
@@ -384,7 +384,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
     catch (e: any) { void alertDialog({ message: e?.message || "خطأ" }); }
   };
   const changePin = async (id: string) => {
-    if (!/^\d{4,6}$/.test(newPin)) return toast({ title: t("PIN لازم 4-6 أرقام", "PIN must be 4-6 digits") });
+    if (!/^\d{4,6}$/.test(newPin)) return toast({ title: t("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام", "PIN must be 4-6 digits") });
     try {
       await update({ id: id as any, pin: newPin, sessionToken });
       toast({ title: t("تم تغيير الـPIN ✓", "PIN updated ✓") });
@@ -405,7 +405,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
         <Card className="rounded-2xl border-2 border-[#0E76AC]/30">
           <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><Label>{t("الاسم", "Name")}</Label><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></div>
-            <div><Label>{t("الإيميل", "Email")}</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
+            <div><Label>{t("البريد الإلكتروني", "Email")}</Label><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></div>
             <div><Label>{t("الهاتف", "Phone")}</Label><Input value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></div>
             <div><Label>{t("PIN (4-6 أرقام)", "PIN (4-6 digits)")}</Label><Input value={f.pin} onChange={(e) => setF({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="1234" /></div>
             {hasBranches && (
@@ -431,7 +431,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
             <thead className="bg-slate-50 text-xs text-slate-600">
               <tr>
                 <th className="text-start p-3">{t("الاسم", "Name")}</th>
-                <th className="text-start p-3">{t("الإيميل", "Email")}</th>
+                <th className="text-start p-3">{t("البريد الإلكتروني", "Email")}</th>
                 {hasBranches && <th className="text-start p-3">{t("الفرع", "Branch")}</th>}
                 <th className="text-center p-3">PIN</th>
                 <th className="text-center p-3">{t("نشط", "Active")}</th>
@@ -474,7 +474,7 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                 </tr>
               ))}
               {rows && rows.length === 0 && (
-                <tr><td colSpan={hasBranches ? 6 : 5} className="text-center py-8 text-slate-400">{t("لسه ما ضفتش كاشير", "No cashiers yet")}</td></tr>
+                <tr><td colSpan={hasBranches ? 6 : 5} className="text-center py-8 text-slate-400">{t("لم تتم إضافة أي موظف صندوق حتى الآن", "No cashiers yet")}</td></tr>
               )}
             </tbody>
           </table>
@@ -507,7 +507,7 @@ function CategoriesTab({ t, sessionToken, toast }: any) {
     <div className="space-y-3">
       <Card className="rounded-2xl border-2 border-dashed border-slate-200">
         <CardContent className="p-4">
-          <p className="text-xs font-bold text-slate-500 mb-2">{t("لو ما ضفتش فئات، النظام يستخدم تصنيفات المنيو تلقائياً", "If empty, POS falls back to menu categories")}</p>
+          <p className="text-xs font-bold text-slate-500 mb-2">{t("إذا لم تضف فئات، فسيستخدم النظام تصنيفات قائمة الوجبات تلقائيًا", "If empty, POS falls back to menu categories")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-1">
               <Label>{t("اسم الفئة", "Category name")}</Label>
@@ -547,7 +547,7 @@ function CategoriesTab({ t, sessionToken, toast }: any) {
               </div>
             </div>
           ))}
-          {rows && rows.length === 0 && <p className="col-span-full text-center text-slate-400 py-8 text-sm font-bold">{t("مفيش فئات مضافة", "No categories yet")}</p>}
+          {rows && rows.length === 0 && <p className="col-span-full text-center text-slate-400 py-8 text-sm font-bold">{t("لا توجد فئات مضافة", "No categories yet")}</p>}
         </CardContent>
       </Card>
     </div>
@@ -756,7 +756,7 @@ function EmailReportCard({ t, sessionToken }: any) {
     <Card className="rounded-2xl border-[#cfe7f3]">
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-black text-[#0E2A4A]">📧 {t("تقرير يومي بالإيميل (Z-report)", "Daily email report (Z-report)")}</h3>
+          <h3 className="font-black text-[#0E2A4A]">📧 {t("تقرير يومي عبر البريد الإلكتروني (Z-report)", "Daily email report (Z-report)")}</h3>
           <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
             <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="w-4 h-4 accent-[#0E76AC]" />
             {t("مُفعّل", "Enabled")}
@@ -830,7 +830,7 @@ function ReportsTab({ t, sessionToken }: any) {
                   <td className="p-2 text-end font-black text-[#0E76AC]">{r.revenue.toFixed(2)}</td>
                 </tr>
               ))}
-              {top && top.length === 0 && <tr><td colSpan={3} className="text-center text-slate-400 py-6">{t("مفيش مبيعات", "No sales")}</td></tr>}
+              {top && top.length === 0 && <tr><td colSpan={3} className="text-center text-slate-400 py-6">{t("لا توجد مبيعات", "No sales")}</td></tr>}
             </tbody>
           </table>
         </CardContent>
@@ -858,7 +858,7 @@ function ReportsTab({ t, sessionToken }: any) {
                     <td className={cn("p-2 text-end font-black", r.status === "REFUNDED" ? "text-red-500 line-through" : "text-[#0E76AC]")}>{r.total.toFixed(2)}</td>
                   </tr>
                 ))}
-                {receipts && receipts.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-6">{t("مفيش فواتير", "No receipts")}</td></tr>}
+                {receipts && receipts.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-6">{t("لا توجد فواتير", "No receipts")}</td></tr>}
               </tbody>
             </table>
           </div>
@@ -907,7 +907,7 @@ function ShiftsTab({ t, sessionToken }: any) {
                   </td>
                 </tr>
               ))}
-              {rows && rows.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-8">{t("مفيش ورديات", "No shifts")}</td></tr>}
+              {rows && rows.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-8">{t("لا توجد ورديات", "No shifts")}</td></tr>}
             </tbody>
           </table>
         </CardContent>
@@ -919,11 +919,11 @@ function ShiftsTab({ t, sessionToken }: any) {
 /* ═══════════════════════════════ Profitability + Menu Engineering ═══════════════════════════════ */
 
 const CAT_META: Record<string, { label: string; color: string; emoji: string; desc: string }> = {
-  star:      { label: "Star",       color: "#16a34a", emoji: "⭐", desc: "بيع عالي + هامش عالي — روّج له"       },
-  puzzle:    { label: "Puzzle",     color: "#7c3aed", emoji: "🧩", desc: "هامش عالي بس بيع ضعيف — سوّق ليه"    },
-  plowhorse: { label: "Plowhorse",  color: "#f59e0b", emoji: "🐴", desc: "بيع عالي بس هامش منخفض — ارفع السعر"  },
-  dog:       { label: "Dog",        color: "#dc2626", emoji: "🐕", desc: "بيع منخفض + هامش منخفض — اشطبه"       },
-  "no-cost": { label: "No cost",    color: "#94a3b8", emoji: "❓", desc: "التكلفة مش مدخّلة — املاها الأول"     },
+  star:      { label: "Star",       color: "#16a34a", emoji: "⭐", desc: "مبيعات مرتفعة وهامش مرتفع — عزّز الترويج له"       },
+  puzzle:    { label: "Puzzle",     color: "#7c3aed", emoji: "🧩", desc: "هامش مرتفع ومبيعات منخفضة — حسّن تسويقه"    },
+  plowhorse: { label: "Plowhorse",  color: "#f59e0b", emoji: "🐴", desc: "مبيعات مرتفعة وهامش منخفض — راجع السعر"  },
+  dog:       { label: "Dog",        color: "#dc2626", emoji: "🐕", desc: "مبيعات منخفضة وهامش منخفض — راجع جدوى استمراره"       },
+  "no-cost": { label: "No cost",    color: "#94a3b8", emoji: "❓", desc: "لم تُدخل التكلفة — أدخلها أولًا"     },
 };
 
 function ProfitTab({ t, sessionToken, isRtl }: any) {
@@ -1022,7 +1022,7 @@ function ProfitTab({ t, sessionToken, isRtl }: any) {
             </div>
             {report.totals.itemsWithoutCost > 0 && (
               <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold">
-                ⚠ {report.totals.itemsWithoutCost} {t("صنف بدون تكلفة مُدخَلة — التصنيف مش دقيق. أضف التكلفة من", "items without cost — categorization is inaccurate. Add cost via")} <b>{t("إدارة القائمة → تعديل الوجبة", "Menu → edit meal")}</b>.
+                ⚠ {report.totals.itemsWithoutCost} {t("صنف من دون تكلفة مُدخلة، ولذلك قد يكون التصنيف غير دقيق. أضف التكلفة من", "items without cost — categorization is inaccurate. Add cost via")} <b>{t("إدارة القائمة → تعديل الوجبة", "Menu → edit meal")}</b>.
               </div>
             )}
           </CardContent>

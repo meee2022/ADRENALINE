@@ -326,7 +326,7 @@ export function PremiumTestimonials() {
         nameEn: "Ahmed Al-Maliki",
         roleAr: "رياضي محترف",
         roleEn: "Pro Athlete",
-        textAr: "أفضل خطة وجبات صحية جربتها! الطعام لذيذ والتوصيل دايماً في الميعاد. ساعدتني أوصل لأهدافي بسهولة.",
+        textAr: "أفضل خطة وجبات صحية جرّبتها. الطعام لذيذ، والتوصيل يصل دائمًا في الموعد، وقد ساعدتني على تحقيق أهدافي بسهولة.",
         textEn: "The best meal plan I've tried! Delicious food, always on time. Helped me reach my goals easily.",
         stars: 5
       },
@@ -344,7 +344,7 @@ export function PremiumTestimonials() {
         nameEn: "Mohammed Al-Kuwari",
         roleAr: "رجل أعمال",
         roleEn: "Businessman",
-        textAr: "حياتي اتغيرت 100%. الوجبات جاهزة وصحية ومحسوبة، توفرلي وقت كتير وطاقتي زادت.",
+        textAr: "تغيّر نمط حياتي بالكامل. الوجبات جاهزة وصحية ومحسوبة، وتوفّر لي الكثير من الوقت وتمنحني طاقة أكبر.",
         textEn: "My life changed 100%. Meals are ready, healthy, calculated — saved tons of time, energy boosted.",
         stars: 5
       }

@@ -92,7 +92,7 @@ export const loginWithPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, { pin }) => {
     const clean = pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     await checkAndRecordFailure(ctx, "global", false);
     const cashiers = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "CASHIER")).collect();
     const admins = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "ADMIN")).collect();
@@ -245,7 +245,7 @@ export const openShift = mutation({
     const branchId = await resolveBranchId(ctx, user);
     const branchesCount = (await ctx.db.query("posBranches").withIndex("by_active", (q) => q.eq("isActive", true)).collect()).length;
     if (!branchId && branchesCount > 1) {
-      throw new Error("الكاشير غير مُعيَّن على فرع — كلّم المدير لتعيينك على فرع");
+      throw new Error("لم يُعيَّن موظف الصندوق على فرع. تواصل مع المدير لإتمام التعيين");
     }
     const id = await ctx.db.insert("posShifts", {
       cashierId: user._id, cashierName: user.name, branchId, openedAt: Date.now(),
@@ -265,7 +265,7 @@ export const closeShift = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("مفيش وردية مفتوحة");
+    if (!shift) throw new Error("لا توجد وردية مفتوحة");
     const tickets = await ctx.db
       .query("posTickets")
       .withIndex("by_shift", (q) => q.eq("shiftId", shift._id))
@@ -323,7 +323,7 @@ async function buildServerLines(
   const out: ServerLine[] = [];
   for (const l of clientLines) {
     const qty = Number(l.qty);
-    if (!Number.isFinite(qty) || qty <= 0) throw new Error("الكمية لازم تكون أكبر من صفر");
+    if (!Number.isFinite(qty) || qty <= 0) throw new Error("يجب أن تكون الكمية أكبر من صفر");
     if (!l.mealId && l.kind === "delivery") {
       // 🚚 سطر توصيل — يسعّره الخادم، مسموح للكاشير (مش صنف مخصّص حر)
       if (!Number.isFinite(deliveryFee) || deliveryFee < 0) throw new Error("رسوم التوصيل غير مضبوطة");
@@ -356,7 +356,7 @@ async function buildServerLines(
       });
     }
   }
-  if (out.length === 0) throw new Error("لازم تضيف صنف واحد على الأقل");
+  if (out.length === 0) throw new Error("يجب إضافة صنف واحد على الأقل");
   return out;
 }
 
@@ -440,7 +440,7 @@ function resolvePayment(args: PaymentArg, total: number, actorIsAdmin: boolean):
     }
     const sum = Math.round(norm.reduce((s, p) => s + p.amount, 0) * 100) / 100;
     if (Math.abs(sum - total) > 0.01) {
-      throw new Error(`مجموع المدفوعات (${sum.toFixed(2)}) لازم يساوي الإجمالي (${total.toFixed(2)})`);
+      throw new Error(`يجب أن يساوي مجموع المدفوعات (${sum.toFixed(2)}) الإجمالي (${total.toFixed(2)})`);
     }
     const cashPortion = Math.round(
       norm.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0) * 100,
@@ -458,7 +458,7 @@ function resolvePayment(args: PaymentArg, total: number, actorIsAdmin: boolean):
   let change: number | undefined = undefined;
   if (method === "cash") {
     const cr = Number(args.cashReceived ?? 0);
-    if (!Number.isFinite(cr) || cr < total) throw new Error("النقد المستلم لازم يغطي الإجمالي");
+    if (!Number.isFinite(cr) || cr < total) throw new Error("يجب أن يغطي النقد المستلم قيمة الإجمالي");
     change = Math.round((cr - total) * 100) / 100;
   }
   return { paymentMethod: method, cashReceived: args.cashReceived, changeAmount: change, isStaff: method === "staff" };
@@ -585,7 +585,7 @@ export const createTicket = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("لازم تفتح وردية أولاً");
+    if (!shift) throw new Error("يجب فتح وردية أولًا");
 
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const totals = await computeTotals(ctx, serverLines, 0);
@@ -676,7 +676,7 @@ export const updateTicketLines = mutation({
     if (!t || t.status !== "OPEN") throw new Error("الفاتورة غير قابلة للتعديل");
     // 🔒 ownership
     if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-      throw new Error("مش مسموح تعدّل فاتورة كاشير آخر");
+      throw new Error("لا يُسمح بتعديل فاتورة موظف صندوق آخر");
     }
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
@@ -725,7 +725,7 @@ export const chargeTicket = mutation({
     if (t.status !== "OPEN") throw new Error("الفاتورة مدفوعة بالفعل");
     // 🔒 ownership
     if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-      throw new Error("مش مسموح تدفع فاتورة كاشير آخر");
+      throw new Error("لا يُسمح بتحصيل فاتورة موظف صندوق آخر");
     }
 
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
@@ -806,7 +806,7 @@ export const quickSale = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("لازم تفتح وردية أولاً");
+    if (!shift) throw new Error("يجب فتح وردية أولًا");
 
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
@@ -878,7 +878,7 @@ export const voidTicket = mutation({
     } else {
       // parked → صاحبها أو ADMIN
       if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-        throw new Error("مش مسموح تلغي فاتورة كاشير آخر");
+        throw new Error("لا يُسمح بإلغاء فاتورة موظف صندوق آخر");
       }
     }
 

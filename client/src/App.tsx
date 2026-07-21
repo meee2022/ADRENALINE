@@ -294,6 +294,10 @@ function Router() {
       <Route path="/orders/review/:orderId">
         <ProtectedRoute component={OrderReviewDetail} />
       </Route>
+      {/* توافق مع روابط إشعارات الطلبات القديمة */}
+      <Route path="/orders/:orderId">
+        {(params) => <Redirect to={`/orders/review/${params.orderId}`} />}
+      </Route>
       <Route path="/settings/restaurant">
         <ProtectedRoute component={RestaurantSettings} />
       </Route>

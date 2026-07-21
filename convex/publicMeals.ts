@@ -216,7 +216,7 @@ export const create = mutation({
     validateMealFields(args);
     // 🔒 slug فريد
     const dupSlug = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", args.slug)).first();
-    if (dupSlug) throw new Error("slug مكرر — اختر واحد مختلف");
+    if (dupSlug) throw new Error("المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر");
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: args.nameAr,
       nameEn: args.nameEn,
@@ -318,28 +318,28 @@ export const remove = mutation({
     const has = (rows: any[], key: string) => rows.some((r: any) => String(r[key] ?? "") === id);
 
     const orderItems = await ctx.db.query("customerOrderItems").withIndex("by_mealId", (q) => q.eq("mealId", args.id)).take(1);
-    if (orderItems.length) throw new Error("الوجبة مستخدمة في طلبات — عطّلها بدل الحذف");
+    if (orderItems.length) throw new Error("الوجبة مستخدمة في طلبات. عطّلها بدلًا من حذفها");
 
     if (has(await ctx.db.query("posTicketLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في فواتير POS — عطّلها بدل الحذف");
+      throw new Error("الوجبة مستخدمة في فواتير نقطة البيع. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("gymOrderLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في طلبات المنافذ — عطّلها بدل الحذف");
+      throw new Error("الوجبة مستخدمة في طلبات المنافذ. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("gymReturnBatchLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في مرتجعات المنافذ — عطّلها بدل الحذف");
+      throw new Error("الوجبة مستخدمة في مرتجعات المنافذ. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("outletCatalogItems").collect(), "mealId")) {
-      throw new Error("الوجبة موجودة في كتالوج المنافذ — احذفها منه أولاً");
+      throw new Error("الوجبة موجودة في قائمة أحد المنافذ. أزلها من القائمة أولًا");
     }
     if (has(await ctx.db.query("posItems").collect(), "mealId")) {
-      throw new Error("الوجبة موجودة في أصناف نقطة البيع — احذفها منها أولاً");
+      throw new Error("الوجبة موجودة ضمن أصناف نقطة البيع. أزلها منها أولًا");
     }
     if (has(await ctx.db.query("mealIssuances").collect(), "publicMealId")) {
-      throw new Error("الوجبة مستخدمة في حصر الصادر — عطّلها بدل الحذف");
+      throw new Error("الوجبة مستخدمة في حصر الصادر. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("ratings").collect(), "publicMealId")) {
-      throw new Error("الوجبة عليها تقييمات عملاء — عطّلها بدل الحذف");
+      throw new Error("للوجبة تقييمات من العملاء. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("mealIngredients").collect(), "publicMealId")) {
       throw new Error("الوجبة مرتبطة بوصفة مخزون — احذف الوصفة أو عطّل الوجبة بدلاً من حذفها");
@@ -351,7 +351,7 @@ export const remove = mutation({
     const inPlan = (plans as any[]).some((p) =>
       (Array.isArray(p.items) ? p.items : []).some((it: any) => String(it?.mealId ?? "") === id));
     if (inPlan) {
-      throw new Error("الوجبة مستعملة في خطط يومية — عطّلها بدل الحذف");
+      throw new Error("الوجبة مستخدمة في خطط يومية. عطّلها بدلًا من حذفها");
     }
 
     // احذف الصورة من التخزين لو موجودة
@@ -372,7 +372,7 @@ function validateMealFields(m: any) {
   if (m.costQAR !== undefined && (m.costQAR < 0 || m.costQAR > 10000)) throw new Error("تكلفة غير صالحة");
   if (m.gymPrice !== undefined && m.gymPrice !== null && (m.gymPrice < 0 || m.gymPrice > 10000)) throw new Error("سعر جم غير صالح");
   if (m.weeks) {
-    for (const w of m.weeks) if (!Number.isInteger(w) || w < 1 || w > 4) throw new Error("weeks لازم 1..4");
+    for (const w of m.weeks) if (!Number.isInteger(w) || w < 1 || w > 4) throw new Error("يجب أن تكون أرقام الأسابيع بين 1 و4");
   }
   const VALID_DAYS = new Set(["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]);
   if (m.days) {

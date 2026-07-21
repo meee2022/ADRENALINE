@@ -24,7 +24,7 @@ export default function PosOpenTickets() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900">{t("فواتير مفتوحة", "Open Tickets")}</h1>
-            <p className="text-slate-500 text-sm font-bold">{t("فواتير معلّقة لسه ما اتدفعتش", "Parked tickets — not yet paid")}</p>
+            <p className="text-slate-500 text-sm font-bold">{t("فواتير معلّقة لم تُدفع بعد", "Parked tickets — not yet paid")}</p>
           </div>
         </div>
 
@@ -33,7 +33,7 @@ export default function PosOpenTickets() {
           {rows && rows.length === 0 && (
             <div className="p-12 text-center">
               <ClipboardList className="h-12 w-12 text-slate-300 mx-auto mb-2" />
-              <p className="text-slate-500 font-bold">{t("مفيش فواتير معلّقة", "No parked tickets")}</p>
+              <p className="text-slate-500 font-bold">{t("لا توجد فواتير معلّقة", "No parked tickets")}</p>
               <p className="text-slate-400 text-sm mt-1">{t("الميزة هتبقى متاحة كاملة قريباً", "Full feature coming soon")}</p>
             </div>
           )}

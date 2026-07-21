@@ -693,7 +693,7 @@ export default function RestaurantSettings() {
                       id="heroCta2TextAr"
                       value={formData.heroCta2TextAr}
                       onChange={(e) => handleChange("heroCta2TextAr", e.target.value)}
-                      placeholder={t("المنيو","Menu")}
+                      placeholder={t("قائمة الوجبات","Menu")}
                     />
                   </div>
                   <div>
@@ -731,7 +731,7 @@ export default function RestaurantSettings() {
             </CardTitle>
             <p className="text-xs text-muted-foreground">
               {t(
-                "تُستخدم في ملخّص المطبخ لحساب كميات الكارب والبروتين، ومُعامل السعرات يضبط سعرات المنيو حسب هدف العميل.",
+                "تُستخدم في ملخّص المطبخ لحساب كميات الكربوهيدرات والبروتين، ويضبط معامل السعرات قيمة السعرات في قائمة الوجبات وفق هدف العميل.",
                 "Used by the kitchen summary to compute carb/protein quantities; the calorie factor adjusts menu calories per customer goal."
               )}
             </p>

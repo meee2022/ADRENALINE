@@ -190,7 +190,7 @@ export default function PublicMealsManagement() {
     if (!formData.subscriberEnabled && !formData.onlineEnabled && !isExistingOutletOnly) {
       toast({
         title: t("اختر قناة ظهور", "Choose a channel"),
-        description: t("فعّل منيو المشتركين أو الأونلاين على الأقل.", "Enable at least the subscriber menu or online POS."),
+        description: t("فعّل قائمة وجبات المشتركين أو قناة الطلبات الإلكترونية على الأقل.", "Enable at least the subscriber menu or online POS."),
         variant: "destructive",
       });
       return;
@@ -286,7 +286,7 @@ export default function PublicMealsManagement() {
       {/* Header */}
       <DashboardHeader
         icon={<UtensilsCrossed className="h-6 w-6 sm:h-7 sm:w-7" />}
-        titleAr="إدارة المنيو العام" titleEn="Public Menu"
+        titleAr="إدارة قائمة الوجبات العامة" titleEn="Public Menu"
         subtitleAr="إدارة الوجبات الظاهرة في الموقع العام للعملاء" subtitleEn="Manage meals shown on the public site"
         actions={
           <Button onClick={handleAdd} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
@@ -324,7 +324,7 @@ export default function PublicMealsManagement() {
                 aria-label={t("تصفية حسب القناة أو المنفذ", "Filter by channel or outlet")}
               >
                 <option value="all">{t("كل الوجبات وكل القنوات", "All meals and channels")}</option>
-                <option value="subscribers">{t("منيو المشتركين", "Subscriber menu")}</option>
+                <option value="subscribers">{t("قائمة وجبات المشتركين", "Subscriber menu")}</option>
                 <option value="online">{t("الأونلاين والتوصيل", "Online and delivery")}</option>
                 {(outlets as any[]).length > 0 && (
                   <optgroup label={t("المنافذ", "Outlets")}>
@@ -697,7 +697,7 @@ export default function PublicMealsManagement() {
             <div className="mt-6 space-y-3 border-t border-gray-200 pt-6">
               <div>
                 <h3 className="text-lg font-bold text-[#0F1516]">{t("قنوات ظهور الوجبة", "Meal channels")}</h3>
-                <p className="mt-1 text-xs text-slate-500">{t("اختيار الأونلاين لا يضيف الوجبة إلى دورة المشتركين، وسعره مستقل عن سعر المنيو العام.", "Online availability does not add the meal to the subscriber rotation, and its price is independent from the public menu price.")}</p>
+                <p className="mt-1 text-xs text-slate-500">{t("إتاحة الوجبة للطلبات الإلكترونية لا تضيفها إلى دورة المشتركين، كما أن سعرها مستقل عن سعر قائمة الوجبات العامة.", "Online availability does not add the meal to the subscriber rotation, and its price is independent from the public menu price.")}</p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -707,7 +707,7 @@ export default function PublicMealsManagement() {
                   className={`flex min-h-[86px] items-center gap-3 rounded-xl border p-4 text-start transition-colors ${formData.subscriberEnabled ? "border-cyan-400 bg-cyan-50" : "border-slate-200 bg-white hover:border-slate-300"}`}
                 >
                   <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${formData.subscriberEnabled ? "bg-cyan-500 text-white" : "bg-slate-100 text-slate-500"}`}><UsersRound className="h-5 w-5" /></span>
-                  <span><strong className="block text-sm text-slate-900">{t("منيو المشتركين", "Subscriber menu")}</strong><small className="mt-1 block text-xs text-slate-500">{t("تدخل في دورة الأيام والأسابيع المحددة بالأسفل", "Uses the day and cycle schedule below")}</small></span>
+                  <span><strong className="block text-sm text-slate-900">{t("قائمة وجبات المشتركين", "Subscriber menu")}</strong><small className="mt-1 block text-xs text-slate-500">{t("تدخل في دورة الأيام والأسابيع المحددة أدناه", "Uses the day and cycle schedule below")}</small></span>
                 </button>
 
                 <button

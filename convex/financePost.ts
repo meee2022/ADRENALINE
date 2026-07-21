@@ -60,7 +60,7 @@ async function ensurePeriod(ctx: Ctx, dateISO: string): Promise<Id<"finPeriods">
 async function assertPeriodOpen(ctx: Ctx, periodId: Id<"finPeriods">) {
   const p = await ctx.db.get(periodId);
   if (p && p.status !== "open") {
-    throw new Error(`الفترة ${p.name} مقفولة — لا يمكن الترحيل عليها`);
+    throw new Error(`الفترة ${p.name} مغلقة، ولا يمكن الترحيل إليها`);
   }
 }
 

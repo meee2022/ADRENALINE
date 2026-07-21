@@ -76,7 +76,7 @@ function nextDeliveryDateISO(): string {
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "المنيو | أدرينالين للوجبات الصحية", description: "تصفّح منيو أدرينالين: وجبات صحية متنوعة بسعرات وماكروز واضحة — فطور وغداء وعشاء وسناكات.", path: "/public/menu" });
+  useSeo({ title: "قائمة الوجبات | أدرينالين للوجبات الصحية", description: "تصفّح قائمة وجبات أدرينالين الصحية مع عرض واضح للسعرات والمغذيات الكبرى، بما يشمل الفطور والغداء والعشاء والوجبات الخفيفة.", path: "/public/menu" });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [, setLocation] = useLocation();
   
@@ -219,6 +219,24 @@ export default function PublicMenuPage() {
     const cat = String(category || "").toLowerCase();
     if (!SCALED_CATS.has(cat)) return Math.round(Number(c));
     return Math.round(Number(c) * calFactor);
+  };
+  // Keep the nutrition panel mathematically aligned with the goal-adjusted
+  // calories shown for lunch/dinner. Stored catalog snapshots remain unscaled;
+  // the kitchen and sticker pipeline applies the customer program once.
+  const macroFor = (value: any, category?: any) => {
+    if (value == null || value === "") return value;
+    const cat = String(category || "").toLowerCase();
+    return Math.round(Number(value) * (SCALED_CATS.has(cat) ? calFactor : 1));
+  };
+  const nutritionFor = (meal: any) => {
+    const protein = Number(macroFor(meal?.protein, meal?.category)) || 0;
+    const carbs = Number(macroFor(meal?.carbs, meal?.category)) || 0;
+    const fats = Number(macroFor(meal?.fats, meal?.category)) || 0;
+    const scaled = SCALED_CATS.has(String(meal?.category || "").toLowerCase());
+    const calories = scaled && (protein || carbs || fats)
+      ? protein * 4 + carbs * 4 + fats * 9
+      : calFor(meal?.calories, meal?.category);
+    return { calories, protein, carbs, fats };
   };
 
   const mealsPerDay = Number(verifiedCustomer?.mealsPerDay) || Infinity;
@@ -644,8 +662,8 @@ export default function PublicMenuPage() {
       if (nxt.week !== selectedWeek) { setSelectedWeek(nxt.week); setWeekTouched(true); }
       setSelectedDay(nxt.day);
       toast({
-        title: isRtl ? `✓ اكتمل يومك — نقلناك إلى ${lbl}` : `✓ Day complete — moved you to ${lbl}`,
-        description: isRtl ? "كمّل اختيار وجبات اليوم ده بنفس الطريقة." : "Pick this day's meals the same way.",
+        title: isRtl ? `✓ اكتملت اختيارات هذا اليوم — تم الانتقال إلى ${lbl}` : `✓ Day complete — moved you to ${lbl}`,
+        description: isRtl ? "أكمل اختيار وجبات هذا اليوم بالطريقة نفسها." : "Pick this day's meals the same way.",
       });
     }, 900);
     return () => clearTimeout(tmr);
@@ -740,15 +758,18 @@ export default function PublicMenuPage() {
     // 🔁 كم نسخة من هذه الوجبة موجودة لنفس اليوم قبل هذه الإضافة (لتنبيه التكرار).
     const beforeCount = itemCount(meal._id);
 
+    const nutrition = nutritionFor(meal);
     addItem({
       _id: meal._id,
       nameAr: meal.nameAr,
       nameEn: meal.nameEn || "",
       category: meal.category,
-      calories: meal.calories,
-      protein: meal.protein,
-      carbs: meal.carbs,
-      fats: meal.fats,
+      // Cart/review show the same effective nutrition as the meal card. The
+      // mutation still receives IDs only and rebuilds catalog snapshots safely.
+      calories: nutrition.calories,
+      protein: nutrition.protein,
+      carbs: nutrition.carbs,
+      fats: nutrition.fats,
       imageUrl: meal.imageUrl,
       priceQAR: meal.priceQAR || 0,
       week: selectedWeek,
@@ -781,7 +802,7 @@ export default function PublicMenuPage() {
       removeItem(meal._id, selectedWeek, selectedDay);
       toast({
         title: isRtl ? "أُزيلت من الخطة" : "Removed from plan",
-        description: isRtl ? `${meal.nameAr} — تقدر تختار غيرها` : `${meal.nameEn || meal.nameAr} — pick another`,
+        description: isRtl ? `${meal.nameAr} — يمكنك اختيار وجبة أخرى` : `${meal.nameEn || meal.nameAr} — pick another`,
       });
       return;
     }
@@ -1043,7 +1064,7 @@ export default function PublicMenuPage() {
                       className="w-full mt-3 h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
                       style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
                     >
-                      {isRtl ? "تصفح المنيو فقط" : "Just Browse Menu"}
+                      {isRtl ? "تصفّح قائمة الوجبات فقط" : "Just Browse Menu"}
                     </button>
 
                     <div className="mt-5 pt-5 border-t border-gray-100 text-center">
@@ -1107,7 +1128,7 @@ export default function PublicMenuPage() {
                       className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
                       style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
                     >
-                      {isRtl ? "تصفح المنيو فقط" : "Just Browse Menu"}
+                      {isRtl ? "تصفّح قائمة الوجبات فقط" : "Just Browse Menu"}
                     </button>
                     <button
                       onClick={handleResetPhone}
@@ -1385,7 +1406,7 @@ export default function PublicMenuPage() {
               </div>
               <div className="min-w-0">
                 <div className="font-black text-[#0E2A4A]">{isRtl ? "خطة ذكية ✨" : "Smart Plan ✨"}</div>
-                <div className="text-xs text-[#47759C]">{isRtl ? "سيبها علينا — الذكاء الاصطناعي يختار (يوم أو أسبوع)" : "Let AI pick for you (day or week)"}</div>
+                <div className="text-xs text-[#47759C]">{isRtl ? "دع الاختيار لنا — تقترح الخطة الذكية وجبات يوم أو أسبوع" : "Let AI pick for you (day or week)"}</div>
               </div>
             </button>
           </div>
@@ -1477,7 +1498,7 @@ export default function PublicMenuPage() {
               <span className="text-sm leading-none mt-0.5">💡</span>
               <p className="text-[11.5px] font-bold text-[#47759C] leading-snug">
                 {isRtl
-                  ? "لتبديل وجبة: اضغط على الوجبة الخضراء (مضافة) لإزالتها، ثم اختر غيرها. تقدر تراجع كل اختياراتك من زر «مراجعة الطلب» بالأسفل."
+                  ? "لتبديل وجبة، اضغط على الوجبة الخضراء المضافة لإزالتها، ثم اختر وجبة أخرى. يمكنك مراجعة جميع اختياراتك من زر «مراجعة الطلب» أدناه."
                   : "To swap a meal: tap the green (added) meal to remove it, then pick another. Review everything from the “Review Order” button below."}
               </p>
             </div>
@@ -1536,7 +1557,7 @@ export default function PublicMenuPage() {
               </div>
               <p className="text-[11px] text-[#47759C] mt-2">
                 {isRtl
-                  ? "يُضبط المنيو تلقائياً على بداية اشتراكك — ولا تُعرض سوى الأيام والأسابيع الواقعة ضمن مدته."
+                  ? "تُضبط قائمة الوجبات تلقائيًا وفق بداية اشتراكك، ولا تُعرض سوى الأيام والأسابيع الواقعة ضمن مدته."
                   : "The menu is auto-aligned to your subscription — only days/weeks inside your subscription window are shown."}
               </p>
               {/* ✅ بانر اكتمال — يظهر لو خلّص العميل كل يوم توصيل داخل اشتراكه */}
@@ -1595,7 +1616,7 @@ export default function PublicMenuPage() {
             >
               <Sparkles className="h-5 w-5" />
               {autoFilling
-                ? (isRtl ? "يكمّل الخطة…" : "Completing…")
+                ? (isRtl ? "جارٍ إكمال الخطة…" : "Completing…")
                 : (isRtl
                     ? `أكمل باقي الوجبات بالخطة الذكية (${remainingSlotsCount} يوم)`
                     : `Auto-complete remaining days with AI (${remainingSlotsCount})`)}
@@ -1749,7 +1770,7 @@ export default function PublicMenuPage() {
                     if (!isWeekAllowed(week.value)) {
                       toast({
                         title: isRtl ? "أكمل أيامك بالترتيب أولاً" : "Complete your days in order first",
-                        description: isRtl ? "لازم تخلّص الأسبوع اللي قبله قبل ما تفتح ده." : "Finish the earlier week before opening this one.",
+                        description: isRtl ? "يجب إكمال الأسبوع السابق قبل فتح هذا الأسبوع." : "Finish the earlier week before opening this one.",
                         variant: "destructive",
                       });
                       return;
@@ -1844,7 +1865,7 @@ export default function PublicMenuPage() {
                       if (!isSlotAllowed(selectedWeek, day.value)) {
                         toast({
                           title: isRtl ? "أكمل يومك الحالي أولاً" : "Complete your current day first",
-                          description: isRtl ? "اختر وجبات يومك بالترتيب قبل ما تقفز قدام." : "Fill your days in order before jumping ahead.",
+                          description: isRtl ? "اختر وجبات الأيام بالترتيب قبل الانتقال إلى يوم لاحق." : "Fill your days in order before jumping ahead.",
                           variant: "destructive",
                         });
                         return;
@@ -2082,7 +2103,7 @@ export default function PublicMenuPage() {
                       <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md">
                         <Flame className="h-4 w-4 text-orange-500" />
                         <span className="text-sm font-black text-[#0F1516] tabular-nums">
-                          {calFor(meal.calories, meal.category)}
+                          {nutritionFor(meal).calories}
                         </span>
                         <span className="text-[10px] font-bold text-gray-400">{isRtl ? "سعرة" : "kcal"}</span>
                       </div>
@@ -2126,15 +2147,15 @@ export default function PublicMenuPage() {
                     {/* Macros — neat 3-column stat row */}
                     <div className="grid grid-cols-3 gap-1 sm:gap-2 mb-3 sm:mb-4">
                       <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fef2f2" }}>
-                        <div className="text-xs sm:text-sm font-black text-red-600 tabular-nums leading-none">{meal.protein}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-xs sm:text-sm font-black text-red-600 tabular-nums leading-none">{nutritionFor(meal).protein}<span className="text-[9px] sm:text-[10px]">g</span></div>
                         <div className="text-[9px] sm:text-[10px] font-bold text-red-400 mt-0.5 sm:mt-1">{isRtl ? "بروتين" : "Protein"}</div>
                       </div>
                       <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fefce8" }}>
-                        <div className="text-xs sm:text-sm font-black text-yellow-600 tabular-nums leading-none">{meal.carbs}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-xs sm:text-sm font-black text-yellow-600 tabular-nums leading-none">{nutritionFor(meal).carbs}<span className="text-[9px] sm:text-[10px]">g</span></div>
                         <div className="text-[9px] sm:text-[10px] font-bold text-yellow-500 mt-0.5 sm:mt-1">{isRtl ? "كارب" : "Carbs"}</div>
                       </div>
                       <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#eff6ff" }}>
-                        <div className="text-xs sm:text-sm font-black text-blue-600 tabular-nums leading-none">{meal.fats}<span className="text-[9px] sm:text-[10px]">g</span></div>
+                        <div className="text-xs sm:text-sm font-black text-blue-600 tabular-nums leading-none">{nutritionFor(meal).fats}<span className="text-[9px] sm:text-[10px]">g</span></div>
                         <div className="text-[9px] sm:text-[10px] font-bold text-blue-400 mt-0.5 sm:mt-1">{isRtl ? "دهون" : "Fats"}</div>
                       </div>
                     </div>
@@ -2255,7 +2276,7 @@ export default function PublicMenuPage() {
                 />
                 <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1">
                   <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-bold">{calFor(selectedMeal.calories, selectedMeal.category)}</span>
+                  <span className="text-sm font-bold">{nutritionFor(selectedMeal).calories}</span>
                 </div>
               </div>
 
@@ -2309,22 +2330,22 @@ export default function PublicMenuPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-orange-50 rounded-lg p-4 text-center">
                     <Flame className="h-6 w-6 text-orange-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{calFor(selectedMeal.calories, selectedMeal.category)}</p>
+                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).calories}</p>
                     <p className="text-xs text-[#47759C]">{isRtl ? "سعرة" : "Calories"}</p>
                   </div>
                   <div className="bg-red-50 rounded-lg p-4 text-center">
                     <div className="h-6 w-6 rounded-full bg-red-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{selectedMeal.protein}g</p>
+                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).protein}g</p>
                     <p className="text-xs text-[#47759C]">{isRtl ? "بروتين" : "Protein"}</p>
                   </div>
                   <div className="bg-yellow-50 rounded-lg p-4 text-center">
                     <div className="h-6 w-6 rounded-full bg-yellow-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{selectedMeal.carbs}g</p>
+                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).carbs}g</p>
                     <p className="text-xs text-[#47759C]">{isRtl ? "كربوهيدرات" : "Carbs"}</p>
                   </div>
                   <div className="bg-blue-50 rounded-lg p-4 text-center">
                     <div className="h-6 w-6 rounded-full bg-blue-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{selectedMeal.fats}g</p>
+                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).fats}g</p>
                     <p className="text-xs text-[#47759C]">{isRtl ? "دهون" : "Fats"}</p>
                   </div>
                 </div>
@@ -2352,7 +2373,7 @@ export default function PublicMenuPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold px-3 py-1.5 rounded-full"
                     style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
-                    {calFor(selectedMeal.calories, selectedMeal.category)} {isRtl ? "كالوري" : "kcal"}
+                    {nutritionFor(selectedMeal).calories} {isRtl ? "كالوري" : "kcal"}
                   </span>
                   <span className="text-xs font-semibold text-[#47759C]">
                     {isRtl ? "ضمن اشتراكك" : "Included in your plan"}

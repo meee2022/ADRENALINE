@@ -81,7 +81,7 @@ export default function ContactPage() {
         icon={<MessageCircle className="w-3.5 h-3.5" style={{ color: "#3AC7F4" }} />}
         eyebrowAr="تواصل معنا" eyebrowEn="GET IN TOUCH"
         titleAr="نحن هنا لخدمتك" titleEn="We're Here For You"
-        subtitleAr="عندك سؤال؟ تحتاج مساعدة في اختيار خطتك؟ فريقنا جاهز للرد عليك في أي وقت"
+        subtitleAr="هل لديك سؤال أو تحتاج إلى مساعدة في اختيار خطتك؟ فريقنا مستعد للإجابة في أي وقت"
         subtitleEn="Have a question? Need help choosing a plan? Our team is ready to assist you anytime"
       />
 
@@ -180,10 +180,10 @@ export default function ContactPage() {
               </div>
 
               <h2 className="text-2xl md:text-3xl font-black text-[#0F1516] mb-2 leading-tight">
-                {isRtl ? "خبرنا كيف نقدر نساعدك" : "Tell us how we can help"}
+                {isRtl ? "أخبرنا كيف يمكننا مساعدتك" : "Tell us how we can help"}
               </h2>
               <p className="text-sm md:text-base mb-6" style={{ color: "#47759C" }}>
-                {isRtl ? "املأ النموذج وراح نتواصل معاك على واتساب فوراً" : "Fill the form and we'll reach you on WhatsApp instantly"}
+                {isRtl ? "املأ النموذج وسنتواصل معك فورًا عبر واتساب" : "Fill the form and we'll reach you on WhatsApp instantly"}
               </p>
 
               <form onSubmit={(e) => { e.preventDefault(); handleWhatsApp(); }} className="space-y-4">

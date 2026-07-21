@@ -239,9 +239,9 @@ export const MENU_SECTIONS: MenuSection[] = [
     items: [
       { href: "/menu", iconKey: "menu", labelAr: "قائمة الطعام", labelEn: "Menu",
         roles: ["ADMIN", "NUTRITIONIST"] },
-      { href: "/menu-management", iconKey: "menuManagement", labelAr: "المنيو والوصفات", labelEn: "Menu & Recipes",
+      { href: "/menu-management", iconKey: "menuManagement", labelAr: "قائمة الوجبات والوصفات", labelEn: "Menu & Recipes",
         roles: ["ADMIN"] },
-      { href: "/public-meals-management", iconKey: "publicMenu", labelAr: "منيو الموقع العام", labelEn: "Public Menu",
+      { href: "/public-meals-management", iconKey: "publicMenu", labelAr: "قائمة وجبات الموقع", labelEn: "Public Menu",
         roles: ["ADMIN"] },
     ],
   },

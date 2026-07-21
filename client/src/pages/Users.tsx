@@ -143,7 +143,7 @@ export default function Users() {
             ))}
           </SelectContent>
         </Select>
-        <p className="text-[11px] text-gray-400">{isRtl ? "الدور بيعبّي الصفحات الافتراضية — عدّلها تحت زي ما تحب" : "Role sets default pages — customize below"}</p>
+        <p className="text-[11px] text-gray-400">{isRtl ? "يحدّد الدور الصفحات الافتراضية، ويمكنك تخصيصها أدناه" : "Role sets default pages — customize below"}</p>
       </div>
       {formData.role === "ADMIN" ? (
         <p className="text-xs font-bold text-emerald-600">{isRtl ? "المسؤول (ADMIN) عنده كل الصلاحيات تلقائيًا." : "Admin has full access automatically."}</p>
@@ -766,7 +766,7 @@ export default function Users() {
                   placeholder={isRtl ? "4 أحرف على الأقل" : "At least 4 characters"}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {isRtl ? "العميل سيستخدم نفس البريد الإلكتروني مع كلمة المرور دي لتسجيل الدخول كموظف." : "The customer will use the same email with this password to log in as staff."}
+                  {isRtl ? "سيستخدم العميل البريد الإلكتروني نفسه مع كلمة المرور هذه لتسجيل الدخول بصفته موظفًا." : "The customer will use the same email with this password to log in as staff."}
                 </p>
               </div>
             </div>

@@ -133,7 +133,7 @@ export class ErrorBoundary extends Component<Props, State> {
               {tr("عذراً، حدث خطأ غير متوقع", "Sorry, an unexpected error occurred")}
             </h1>
             <p className="text-sm text-slate-600 mb-4">
-              {tr("تم تسجيل المشكلة. جرّب مجدداً أو حدّث الصفحة. لو استمر الخطأ، أرسل الرقم المرجعي لفريق الدعم.", "The issue has been logged. Try again or refresh the page. If it persists, send the reference code to support.")}
+              {tr("تم تسجيل المشكلة. حاول مجددًا أو حدّث الصفحة. إذا استمر الخطأ، فأرسل الرقم المرجعي إلى فريق الدعم.", "The issue has been logged. Try again or refresh the page. If it persists, send the reference code to support.")}
             </p>
             {/* 🔒 لا نعرض error.message للمستخدم النهائي (قد يحتوي أسماء دوال داخلية).
                 نعرض رقماً مرجعياً مختصراً يقرأه الدعم لربطه بالسجل. */}

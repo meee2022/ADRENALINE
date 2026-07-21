@@ -48,16 +48,16 @@ export const createCashier = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const clean = args.pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     const emailLower = args.email.trim().toLowerCase();
     const existing = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", emailLower)).first();
-    if (existing) throw new Error("الإيميل مستخدم بالفعل");
+    if (existing) throw new Error("البريد الإلكتروني مستخدم بالفعل");
     // نشوف كمان PIN مش متكرر (عشان الدخول لا يلتبس)
     const allUsers = await ctx.db.query("users").collect();
     
     for (const u of allUsers) {
       if (u.pinHash && (u.role === "CASHIER" || u.role === "ADMIN")) {
-        if (await verifyPassword(clean, u.pinHash)) throw new Error("الـPIN ده مستخدم بالفعل — اختار غيره");
+        if (await verifyPassword(clean, u.pinHash)) throw new Error("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
       }
     }
     const pinHash = await hashPassword(clean);
@@ -99,13 +99,13 @@ export const updateCashier = mutation({
     if (args.posBranchId !== undefined) patch.posBranchId = args.posBranchId;
     if (args.pin !== undefined) {
       const clean = args.pin.trim();
-      if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
+      if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
       
       const allUsers = await ctx.db.query("users").collect();
       for (const other of allUsers) {
         if (String(other._id) === String(args.id)) continue;
         if (other.pinHash && (other.role === "CASHIER" || other.role === "ADMIN")) {
-          if (await verifyPassword(clean, other.pinHash)) throw new Error("الـPIN ده مستخدم بالفعل");
+          if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
         }
       }
       patch.pinHash = await hashPassword(clean);
@@ -121,13 +121,13 @@ export const setUserPin = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const clean = args.pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("PIN لازم يكون 4-6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     
     const allUsers = await ctx.db.query("users").collect();
     for (const other of allUsers) {
       if (String(other._id) === String(args.userId)) continue;
       if (other.pinHash && (other.role === "CASHIER" || other.role === "ADMIN")) {
-        if (await verifyPassword(clean, other.pinHash)) throw new Error("الـPIN ده مستخدم بالفعل");
+        if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
       }
     }
     await ctx.db.patch(args.userId, { pinHash: await hashPassword(clean), updatedAt: Date.now() } as any);
@@ -641,7 +641,7 @@ export const refundTicket = mutation({
   handler: async (ctx, args) => {
     const id = await requireStaff(ctx, args.sessionToken);
     const t: any = await ctx.db.get(args.ticketId);
-    if (!t) throw new Error("مش موجودة");
+    if (!t) throw new Error("الفاتورة غير موجودة");
     if (t.status === "REFUNDED" || t.status === "VOID") return { ok: true };
     await ctx.db.patch(args.ticketId, { status: "REFUNDED", updatedAt: Date.now() });
     if (t.shiftId && !t.isNonRevenue) {

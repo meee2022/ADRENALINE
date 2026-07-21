@@ -304,7 +304,7 @@ export default function Attendance() {
         setImportText(lines.join("\n"));
       }
     } catch (e: any) {
-      void alertDialog({ message: t("تعذّر قراءة الملف — جرّب تصديره كـ CSV", "Couldn't read file — try exporting as CSV") });
+      void alertDialog({ message: t("تعذّرت قراءة الملف. حاول تصديره بصيغة CSV.", "Couldn't read file — try exporting as CSV") });
     }
   };
   const [importing, setImporting] = useState(false);
@@ -314,7 +314,7 @@ export default function Attendance() {
     // ✅ حماية: لو عدد ضخم غير منطقي، أكّد قبل ما نكمّل
     const empCount = new Set(parsed.map((p) => p.name)).size;
     if (empCount > 400 && !(await confirmDialog({ message: t(
-      `تم التعرّف على ${empCount} "موظف" — ده رقم كبير وقد يعني إن الملف اتقرأ غلط. تكمّل؟`,
+      `تم التعرّف على ${empCount} موظف، وهو عدد كبير قد يشير إلى قراءة الملف بصورة غير صحيحة. هل تريد المتابعة؟`,
       `Detected ${empCount} "employees" — that's unusually high and may mean the file was misread. Continue?`) }))) return;
     setImporting(true); setImportProgress(0);
     try {

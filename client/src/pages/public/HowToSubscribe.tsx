@@ -20,7 +20,7 @@ const B = { brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A", ink2: "#2D4A67"
 export default function HowToSubscribe() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
-  useSeo({ title: isRtl ? "طريقة الاشتراك | أدرينالين للوجبات الصحية" : "How to Subscribe | Adrenaline Healthy Meals", description: isRtl ? "اعرف إزاي تشترك في وجبات أدرينالين الصحية خطوة بخطوة — اختيار الباقة، الدفع، والتوصيل اليومي في قطر." : "Learn how to subscribe to Adrenaline healthy meals step by step — choosing a plan, payment, and daily delivery in Qatar.", path: "/public/how-to-subscribe" });
+  useSeo({ title: isRtl ? "طريقة الاشتراك | أدرينالين للوجبات الصحية" : "How to Subscribe | Adrenaline Healthy Meals", description: isRtl ? "تعرّف إلى خطوات الاشتراك في وجبات أدرينالين الصحية، بدءًا من اختيار الباقة والدفع وحتى التوصيل اليومي في قطر." : "Learn how to subscribe to Adrenaline healthy meals step by step — choosing a plan, payment, and daily delivery in Qatar.", path: "/public/how-to-subscribe" });
   const [, setLocation] = useLocation();
   const settings = useQuery(api.restaurantSettings.get);
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
@@ -43,7 +43,7 @@ export default function HowToSubscribe() {
       dEn: "Our nutritionist reviews and tunes your meals to fit your daily needs before confirming." },
     { icon: Truck, color: "#F4A93A",
       ar: "توصيل يومي", en: "Daily Delivery",
-      dAr: "تستلم وجباتك الطازجة يومياً لباب بيتك في الموعد، أو اطلب عبر تطبيقات التوصيل.",
+      dAr: "تتسلّم وجباتك الطازجة يوميًا عند باب منزلك في الموعد، أو تطلبها عبر تطبيقات التوصيل.",
       dEn: "Receive fresh meals daily at your door on time, or order via delivery apps." },
   ];
 
@@ -65,7 +65,7 @@ export default function HowToSubscribe() {
       <PageHeader
         eyebrowAr="ابدأ رحلتك" eyebrowEn="GET STARTED"
         titleAr="كيف تشترك؟" titleEn="How to Subscribe"
-        subtitleAr="أربع خطوات بسيطة تفصلك عن وجبات صحية محسوبة توصل لباب بيتك يومياً."
+        subtitleAr="أربع خطوات بسيطة تفصلك عن وجبات صحية محسوبة تصل إلى باب منزلك يوميًا."
         subtitleEn="Just four simple steps to healthy, calorie-counted meals delivered to your door daily."
       />
 

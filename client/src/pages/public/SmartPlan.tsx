@@ -185,7 +185,7 @@ export default function SmartPlan() {
     const wa = (settings?.phone || "+97412345678").replace(/\D/g, "");
     const link = `https://wa.me/${wa}`;
     return t(
-      `خطتك غير مكتملة: ناقص ${parts.join(" و ")}${daysTxt}. أكمل كل أيام اشتراكك قبل الإرسال، أو تواصل مع الأخصائية: ${link}`,
+      `خطتك غير مكتملة: يتبقى ${parts.join(" و ")}${daysTxt}. أكمل جميع أيام الاشتراك قبل الإرسال، أو تواصل مع أخصائي التغذية: ${link}`,
       `Your plan is incomplete: short by ${parts.join(" and ")}${daysTxt}. Complete all your subscription days before sending, or contact the specialist: ${link}`,
     );
   };
@@ -514,7 +514,7 @@ export default function SmartPlan() {
             <ol style={{ margin: 0, padding: "0 34px 14px", fontSize: 12.5, color: B.ink2, lineHeight: 2, fontWeight: 600 }}>
               <li>{t("نطّلع على ملفك الغذائي: هدفك والسعرات المناسبة له.", "We read your profile: your goal and its calorie target.")}</li>
               <li>{t("نستبعد ما لديك من حساسية والأصناف التي لا تفضّلها.", "We exclude your allergies and the items you don't prefer.")}</li>
-              <li>{t("نختار من وجبات المطبخ المقرّرة في دورة اشتراكك لذلك اليوم — لا من المنيو كاملاً.", "We select from the kitchen's scheduled meals for your rotation on that day — not from the entire menu.")}</li>
+              <li>{t("نختار من وجبات المطبخ المقرّرة في دورة اشتراكك لذلك اليوم، وليس من قائمة الوجبات كاملة.", "We select from the kitchen's scheduled meals for your rotation on that day — not from the entire menu.")}</li>
               <li>{t("يراجع أخصائي التغذية الخطة قبل اعتمادها.", "The nutritionist reviews the plan before approving it.")}</li>
             </ol>
           </details>
@@ -790,12 +790,12 @@ export default function SmartPlan() {
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 12px 12px" }}>
                         {needM > 0 && (
                           <button style={addBtn} onClick={() => setSwap({ src: "weekly", di, add: true, need: "main", week: d.rotationWeek || 1, day: d.day })}>
-                            ＋ {t(`أضف وجبة رئيسية (ناقص ${needM})`, `Add main meal (${needM} short)`)}
+                            ＋ {t(`أضف وجبة رئيسية (المتبقي ${needM})`, `Add main meal (${needM} short)`)}
                           </button>
                         )}
                         {needS > 0 && (
                           <button style={addBtn} onClick={() => setSwap({ src: "weekly", di, add: true, need: "snack", week: d.rotationWeek || 1, day: d.day })}>
-                            ＋ {t(`أضف سناك (ناقص ${needS})`, `Add snack (${needS} short)`)}
+                            ＋ {t(`أضف وجبة خفيفة (المتبقي ${needS})`, `Add snack (${needS} short)`)}
                           </button>
                         )}
                       </div>

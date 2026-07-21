@@ -249,7 +249,7 @@ export default function OrderReview() {
             onClick={() => setLocation("/public/menu")}
             className="px-6 py-3 bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold rounded-xl transition-all"
           >
-            {t("تصفح المنيو", "Browse Menu")}
+            {t("تصفّح قائمة الوجبات", "Browse Menu")}
           </button>
         </div>
       </div>
@@ -478,10 +478,10 @@ export default function OrderReview() {
                   </p>
                   <ul className="text-sm text-amber-900 font-semibold space-y-0.5 mb-3">
                     {shortfall.mealsShort > 0 && (
-                      <li>• {t(`ناقص ${shortfall.mealsShort} وجبة رئيسية`, `${shortfall.mealsShort} main meal(s) short`)}</li>
+                      <li>• {t(`المتبقي ${shortfall.mealsShort} وجبة رئيسية`, `${shortfall.mealsShort} main meal(s) short`)}</li>
                     )}
                     {shortfall.snacksShort > 0 && (
-                      <li>• {t(`ناقص ${shortfall.snacksShort} سناك`, `${shortfall.snacksShort} snack(s) short`)}</li>
+                      <li>• {t(`المتبقي ${shortfall.snacksShort} وجبة خفيفة`, `${shortfall.snacksShort} snack(s) short`)}</li>
                     )}
                     {shortfall.incompleteDays > 0 && (
                       <li className="text-amber-700 font-normal">

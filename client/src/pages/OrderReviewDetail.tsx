@@ -813,11 +813,11 @@ export default function OrderReviewDetail() {
               </div>
             )}
             <p className="mt-2 text-xs text-gray-500 leading-relaxed">
-              💡 <b>{t("طريقة سهلة:","Easy way:")}</b> {t("سيب الحقل ده فاضي وحدد بس تاريخ أول يوم تحت — هيمشي بالترتيب تلقائياً.","Leave this empty and just set the first day's date below — it flows in order automatically.")}
+              💡 <b>{t("طريقة مبسّطة:","Easy way:")}</b> {t("اترك هذا الحقل فارغًا وحدّد تاريخ اليوم الأول أدناه، وستُرتّب بقية الأيام تلقائيًا.","Leave this empty and just set the first day's date below — it flows in order automatically.")}
               <br />
               💡 <b>{t("أو:","Or:")}</b> {t("حدد التاريخ هنا ليكون نقطة بداية للأيام بدون تاريخ يدوي.","Set the date here as the starting point for days without a manual date.")}
               <br />
-              💡 {t("الأيام اللي حددت ليها تاريخ يدوي تحت بتبقى","Days you set a manual date for below stay")} <b>{t("مستقلة تماماً","fully independent")}</b>.
+              💡 {t("تظل الأيام التي تحدّد لها تاريخًا يدويًا أدناه","Days you set a manual date for below stay")} <b>{t("مستقلة تمامًا","fully independent")}</b>.
             </p>
           </div>
 

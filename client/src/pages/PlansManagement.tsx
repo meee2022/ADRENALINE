@@ -549,7 +549,7 @@ export default function PlansManagement() {
                   className="h-4 w-4"
                 />
                 <Label htmlFor="isFeatured" className="font-normal">
-                  {isRtl ? "إبراز هذه الخطة (تكبير الكارت وإبرازه في الواجهة)" : "Feature this plan (enlarge and highlight its card on the storefront)"}
+                  {isRtl ? "إبراز هذه الخطة (تكبير البطاقة وتمييزها في الواجهة)" : "Feature this plan (enlarge and highlight its card on the storefront)"}
                 </Label>
               </div>
 

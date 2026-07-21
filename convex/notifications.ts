@@ -111,14 +111,14 @@ export const markAsRead = mutation({
     if (identity.accountType === "staff") {
       const role = roleFromIdentity(identity);
       if (role !== "ADMIN") {
-        if (notif.targetRole && notif.targetRole !== role) throw new Error("مش إشعارك");
+        if (notif.targetRole && notif.targetRole !== role) throw new Error("لا تملك صلاحية الوصول إلى هذا الإشعار");
       }
     } else {
       // عميل — لا يعلّم إلا إشعاراته
       if (!identity.customerAccountId) throw new Error(AUTH_ERR);
       const acct: any = await ctx.db.get(identity.customerAccountId as any);
       if (!acct?.customerId || String(notif.targetCustomerId) !== String(acct.customerId)) {
-        throw new Error("مش إشعارك");
+        throw new Error("لا تملك صلاحية الوصول إلى هذا الإشعار");
       }
     }
     await ctx.db.patch(args.id, { isRead: true, readAt: Date.now() });

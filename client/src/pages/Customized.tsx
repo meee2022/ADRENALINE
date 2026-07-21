@@ -155,11 +155,11 @@ function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filter
               {filterWeek && filterDay && (
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10.5px] font-bold text-[#47759c]">
-                    {showAll ? (isRtl ? "كل المنيو" : "Full menu") : (isRtl ? `وجبات اليوم · دورة ${filterWeek}` : `Today's meals · cycle ${filterWeek}`)}
+                    {showAll ? (isRtl ? "قائمة الوجبات كاملة" : "Full menu") : (isRtl ? `وجبات اليوم · دورة ${filterWeek}` : `Today's meals · cycle ${filterWeek}`)}
                   </span>
                   <button type="button" onClick={() => setShowAll((v) => !v)}
                     className="text-[10.5px] font-black text-[#0E76AC] underline">
-                    {showAll ? (isRtl ? "اعرض وجبات اليوم فقط" : "Show today only") : (isRtl ? "اعرض كل المنيو" : "Show full menu")}
+                    {showAll ? (isRtl ? "اعرض وجبات اليوم فقط" : "Show today only") : (isRtl ? "اعرض قائمة الوجبات كاملة" : "Show full menu")}
                   </button>
                 </div>
               )}
@@ -192,7 +192,7 @@ function MealPicker({ meals, value, valueName, isRtl, onPick, filterWeek, filter
                       {p.count > 1 && <span className="ms-auto text-[10px] text-emerald-500 shrink-0">×{p.count}</span>}
                     </button>
                   ))}
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wide">{isRtl ? "المنيو" : "Menu"}</p>
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wide">{isRtl ? "قائمة الوجبات" : "Menu"}</p>
                 </>
               )}
               {results.map((m) => (
@@ -421,7 +421,7 @@ export default function Customized() {
       <DashboardHeader
         icon={<UtensilsCrossed />}
         titleAr="الوجبات المخصّصة" titleEn="Customized Meals"
-        subtitleAr="قالب وجبات لكل عميل مخصّص — لكل يوم وجباته وكمياته (أطباق المنيو أو مخصّصة)"
+        subtitleAr="قالب وجبات لكل عميل مخصّص، بحيث يتضمن كل يوم وجباته وكمياته من قائمة الوجبات أو من وجبات مخصّصة"
         subtitleEn="Per-customer customized plan — each day's meals and quantities (menu or custom dishes)"
       />
 

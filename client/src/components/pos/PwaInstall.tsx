@@ -127,7 +127,7 @@ export function InstallButton({ className = "" }: { className?: string }) {
               </li>
               <li className="flex items-start gap-3">
                 <span className="h-6 w-6 shrink-0 rounded-full bg-cyan-100 text-[#0E76AC] font-black grid place-items-center text-xs">2</span>
-                <span>اختار <b>«إضافة إلى الشاشة الرئيسية»</b> (Add to Home Screen)</span>
+                <span>اختر <b>«إضافة إلى الشاشة الرئيسية»</b> (Add to Home Screen)</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="h-6 w-6 shrink-0 rounded-full bg-cyan-100 text-[#0E76AC] font-black grid place-items-center text-xs">3</span>

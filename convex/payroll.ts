@@ -160,7 +160,7 @@ export const update = mutation({
     validatePayrollFields(rest); // 🔒
     const existing: any = await ctx.db.get(id);
     await assertPayrollMonthOpen(ctx, rest.month || existing?.month);
-    if (existing?.isVoid) throw new Error("مش مسموح تعدّل سجل ملغى");
+    if (existing?.isVoid) throw new Error("لا يُسمح بتعديل سجل ملغى");
     const updates: any = { updatedAt: Date.now() };
     for (const [k, val] of Object.entries(rest)) if (val !== undefined) updates[k] = val;
     await ctx.db.patch(id, updates);

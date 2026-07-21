@@ -41,7 +41,7 @@ export default function PurchaseOrders() {
       toast(
         res?.count > 0
           ? { title: isRtl ? `تم إنشاء ${res.count} أمر شراء` : `${res.count} purchase orders created`, description: isRtl ? "من الأصناف الناقصة، مجمّعة حسب المورّد" : "From low-stock items, grouped by supplier" }
-          : { title: isRtl ? "لا توجد نواقص" : "Nothing to reorder", description: isRtl ? "كل الأصناف فوق الحد الأدنى" : "All items above minimum" }
+          : { title: isRtl ? "لا توجد أصناف ناقصة" : "Nothing to reorder", description: isRtl ? "جميع الأصناف أعلى من الحد الأدنى" : "All items above minimum" }
       );
     } catch (e: any) {
       toast({ title: isRtl ? "خطأ" : "Error", description: e?.message, variant: "destructive" });

@@ -86,7 +86,7 @@ export const create = mutation({
     await requireRole(ctx, args.sessionToken, PO_MANAGE_ROLES); // 🔒
     // 🔒 التحقق من صحة الكميات والتكاليف
     for (const it of args.items) {
-      if (it.quantity <= 0) throw new Error("الكمية لازم تكون أكبر من صفر");
+      if (it.quantity <= 0) throw new Error("يجب أن تكون الكمية أكبر من صفر");
       if (it.estUnitCost < 0) throw new Error("التكلفة لا يمكن أن تكون سالبة");
     }
     const totalEst = (args.items || []).reduce((s, i) => s + Number(i.estLineCost || 0), 0);

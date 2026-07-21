@@ -12,6 +12,17 @@ import { useStore } from "@/lib/store";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX";
+type MealCategoryFilter = "ALL" | "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+
+function stickerCategory(value: unknown): Exclude<MealCategoryFilter, "ALL"> | "OTHER" {
+  const category = String(value || "").trim().toUpperCase();
+  if (category.includes("BREAKFAST")) return "BREAKFAST";
+  if (category.includes("LUNCH")) return "LUNCH";
+  if (category.includes("DINNER")) return "DINNER";
+  // Salads use the subscriber snack allowance, so they belong under the same filter.
+  if (category.includes("SNACK") || category.includes("SALAD")) return "SNACK";
+  return "OTHER";
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -91,8 +102,16 @@ export default function Stickers() {
   const [calOverride, setCalOverride] = useState<Record<number, number>>({});
   // ✅ بحث بالاسم/الرقم للوصول السريع لستيكر شخص معيّن (بدل تصفّح المئات)
   const [search, setSearch] = useState("");
+  const [mealCategory, setMealCategory] = useState<MealCategoryFilter>("ALL");
   // امسح التحديد والتعديلات والبحث لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
-  useEffect(() => { setSelected(new Set()); setRangeFrom(""); setRangeTo(""); setCalOverride({}); setSearch(""); }, [activeTab, date, deliveryTime]);
+  useEffect(() => {
+    setSelected(new Set());
+    setRangeFrom("");
+    setRangeTo("");
+    setCalOverride({});
+    setSearch("");
+    setMealCategory("ALL");
+  }, [activeTab, date, deliveryTime]);
 
   // ✅ تجميد أرقام البوكس لهذا اليوم عند فتحه — فيبقى رقم كل مشترك ثابتاً طوال اليوم
   //    حتى لو أُضيف/عُدّل مشتركون بعد الطباعة (الجديد ياخد رقماً مُلحقاً فقط).
@@ -106,15 +125,40 @@ export default function Stickers() {
   // الستيكرات الظاهرة: مفلترة بالبحث لكن بأرقامها الأصلية (للتعديل والطباعة).
   //    وقت الطباعة نتجاهل الفلتر تمامًا حتى تُطبع كل الستيكرات.
   const searchQ = pendingPrint ? "" : search.trim().toLowerCase();
+  const categoryQ: MealCategoryFilter = pendingPrint ? "ALL" : mealCategory;
+  const categoryCounts = useMemo(() => {
+    const counts: Record<MealCategoryFilter, number> = {
+      ALL: mealStickers.length,
+      BREAKFAST: 0,
+      LUNCH: 0,
+      DINNER: 0,
+      SNACK: 0,
+    };
+    mealStickers.forEach((sticker: any) => {
+      const category = stickerCategory(sticker.category);
+      if (category !== "OTHER") counts[category] += 1;
+    });
+    return counts;
+  }, [mealStickers]);
   const visibleStickers = useMemo(
     () => activeStickers
       .map((s0: any, idx: number) => ({ s0, idx }))
       .filter(({ s0 }: any) => {
+        if (activeTab === "MEALS" && categoryQ !== "ALL" && stickerCategory(s0.category) !== categoryQ) {
+          return false;
+        }
         if (!searchQ) return true;
-        const hay = `${s0.customerName || ""} ${s0.customerNumber || ""} ${s0.customerNo ?? ""}`.toLowerCase();
+        const hay = [
+          s0.customerName,
+          s0.customerNumber,
+          s0.customerNo,
+          s0.mealName,
+          s0.mealTitle,
+          s0.category,
+        ].filter(Boolean).join(" ").toLowerCase();
         return hay.includes(searchQ);
       }),
-    [activeStickers, searchQ],
+    [activeStickers, activeTab, categoryQ, searchQ],
   );
 
   useEffect(() => {
@@ -350,7 +394,7 @@ export default function Stickers() {
             </button>
             <p className="text-[11px] text-[#47759c] w-full">
               {isRtl
-                ? "💡 لو الطابعة وقفت، اكتب من رقم الاستيكر اللي وقف لآخر رقم، «حدّد النطاق»، ثم «طباعة المحدَّد» — يطبع المتبقّي بس."
+                ? "إذا توقفت الطابعة، فأدخل نطاق أرقام الملصقات بدءًا من الرقم الذي توقفت عنده، ثم اختر «تحديد النطاق» و«طباعة المحدد» لطباعة الملصقات المتبقية فقط."
                 : "💡 If the printer stopped, enter the range from where it stopped, Select range, then Print selected — reprints only those."}
             </p>
           </div>
@@ -359,25 +403,63 @@ export default function Stickers() {
 
       {/* ── بحث سريع بالاسم/الرقم (لا يظهر في الطباعة) ── */}
       {activeStickers.length > 0 && (
-        <div className="print:hidden mt-4 flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[220px] max-w-md">
-            <Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400 pointer-events-none" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={isRtl ? "ابحث باسم الشخص أو رقمه…" : "Search by name or number…"}
-              className="w-full h-10 ps-9 pe-8 rounded-xl text-sm bg-white border border-slate-200 focus:border-[#3CC4F0] focus:outline-none focus:ring-2 focus:ring-[#3CC4F0]/20 text-slate-700"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute top-1/2 -translate-y-1/2 end-2.5 text-slate-400 hover:text-slate-600" aria-label={isRtl ? "مسح" : "Clear"}>
-                <RotateCcw className="h-4 w-4" />
-              </button>
+        <div className="print:hidden mt-4 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[220px] flex-1">
+              <Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={isRtl ? "ابحث باسم المشترك، رقمه أو الوجبة…" : "Search customer, number or meal…"}
+                className="w-full h-11 ps-9 pe-8 rounded-xl text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#3CC4F0] focus:outline-none focus:ring-2 focus:ring-[#3CC4F0]/20 text-slate-700"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="absolute top-1/2 -translate-y-1/2 end-2.5 text-slate-400 hover:text-slate-600" aria-label={isRtl ? "مسح" : "Clear"}>
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            {(search || mealCategory !== "ALL") && (
+              <span className="text-xs font-black text-[#0E76AC] bg-[#e9f6fd] rounded-lg px-3 py-2">
+                {isRtl ? `${visibleStickers.length} نتيجة` : `${visibleStickers.length} result(s)`}
+              </span>
             )}
           </div>
-          {search && (
-            <span className="text-xs font-bold text-[#0E76AC] bg-[#e9f6fd] rounded-lg px-3 py-1.5">
-              {isRtl ? `${visibleStickers.length} نتيجة` : `${visibleStickers.length} result(s)`}
-            </span>
+
+          {activeTab === "MEALS" && (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={isRtl ? "تصفية الاستيكرات حسب نوع الوجبة" : "Filter stickers by meal category"}>
+              {([
+                { key: "ALL", ar: "الكل", en: "All" },
+                { key: "BREAKFAST", ar: "فطور", en: "Breakfast" },
+                { key: "LUNCH", ar: "غداء", en: "Lunch" },
+                { key: "DINNER", ar: "عشاء", en: "Dinner" },
+                { key: "SNACK", ar: "سناك", en: "Snack" },
+              ] as const).map(({ key, ar, en }) => {
+                const active = mealCategory === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setMealCategory(key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "h-10 shrink-0 rounded-xl border px-3.5 text-xs font-black transition-all",
+                      active
+                        ? "border-[#0E76AC] bg-[#0E76AC] text-white shadow-sm"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-[#3CC4F0] hover:text-[#0E76AC]",
+                    )}
+                  >
+                    {isRtl ? ar : en}
+                    <span className={cn(
+                      "ms-2 inline-flex min-w-5 justify-center rounded-md px-1.5 py-0.5 tabular-nums",
+                      active ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500",
+                    )}>
+                      {categoryCounts[key]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
@@ -400,10 +482,10 @@ export default function Stickers() {
         <div className="print:hidden flex flex-col items-center justify-center py-16 gap-2">
           <Search className="h-8 w-8 text-slate-300" />
           <p className="text-sm font-semibold text-gray-400">
-            {isRtl ? `لا يوجد ستيكر مطابق لـ «${search}»` : `No sticker matches "${search}"`}
+            {isRtl ? "لا توجد استيكرات مطابقة للبحث أو التصفية" : "No stickers match the search or filter"}
           </p>
-          <button onClick={() => setSearch("")} className="text-xs font-bold text-[#0E76AC] hover:underline">
-            {isRtl ? "مسح البحث" : "Clear search"}
+          <button onClick={() => { setSearch(""); setMealCategory("ALL"); }} className="text-xs font-bold text-[#0E76AC] hover:underline">
+            {isRtl ? "مسح البحث والتصفية" : "Clear search and filter"}
           </button>
         </div>
       ) : (
