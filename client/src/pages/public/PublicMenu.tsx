@@ -1517,6 +1517,13 @@ export default function PublicMenuPage() {
                       return;
                     }
                     setSelectedWeek(week.value); setWeekTouched(true);
+                    // ✅ عند فتح أسبوع: نضع العميل على **أول يوم ناقص فيه** (السبت عادةً)
+                    //    بدل إبقاء اليوم المنقول من الأسبوع السابق (كالخميس) — كان يتخطى
+                    //    قفل الترتيب ويُدخِله على آخر الأسبوع فيلتبس (شكوى المستخدم).
+                    const firstDay = DELIVERY_DAYS.find((d) =>
+                      isSlotInSub(week.value, d) && !dayCompleteInWeek(week.value, d),
+                    ) || DELIVERY_DAYS.find((d) => isSlotInSub(week.value, d)) || null;
+                    if (firstDay) setSelectedDay(firstDay);
                   }}
                   className={cn(
                     "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-1.5",
