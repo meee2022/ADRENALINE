@@ -103,12 +103,17 @@ export const rotationWeekAt = query({
     const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // قطر
     const target = String(args.targetDate).slice(0, 10);
 
-    // ✅ عدّ الجُمَع **بإشارة** (ماضٍ ومستقبل) عبر المصدر الموحّد rotationWeekAtDate —
-    //    العدّ للأمام فقط كان يقصّ التواريخ الماضية إلى currentCookingWeek، فبداية
-    //    اشتراك في الماضي تُعطي دورة خاطئة والمنيو يفتح على أسبوع دورة غلط (بفرق أسبوع
-    //    عن دورة المطبخ الفعلية التي يحسبها ai.ts). المرجع: «دليل/منطق-الخطط-والجدولة».
-    const fridays = fridaysBetween(todayISO, target);
-    const week = rotationWeekAtDate(cur, todayISO, target);
+    // ✅ المرساة = آخر جمعة ضُبط/تقدّم فيها الرقم (cookingWeekAdvancedOn) لا «اليوم».
+    //    currentCookingWeek هو دورة تلك الجمعة (يكتبها الكرون والضبط اليدوي معاً)، فالحساب
+    //    من هذه المرساة:
+    //      • يشفي نفسه لو الكرون فوّت جمعة (يعدّها بدل ما يجمّد على رقم قديم).
+    //      • يمحو أثر أي تغيير يدوي خاطئ ثم مصحَّح (الضبط الأخير يكتب مرساة نظيفة).
+    //    والعدّ **بإشارة** (ماضٍ+مستقبل) عبر rotationWeekAtDate — العدّ للأمام فقط كان
+    //    يقصّ بدايات الاشتراك الماضية فيفتح المنيو على دورة غلط. مرجع: «دليل/منطق-الخطط-والجدولة».
+    const advancedOn = String((settings as any)?.cookingWeekAdvancedOn || "");
+    const anchorISO = /^\d{4}-\d{2}-\d{2}$/.test(advancedOn) ? advancedOn : todayISO;
+    const week = rotationWeekAtDate(cur, anchorISO, target);
+    const fridays = fridaysBetween(todayISO, target); // للإعلام فقط: كم جمعة من اليوم للهدف
     return { rotationWeek: week, currentCookingWeek: cur, fridaysAhead: fridays };
   },
 });
