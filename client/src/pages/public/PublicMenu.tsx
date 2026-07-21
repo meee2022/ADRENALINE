@@ -1500,8 +1500,9 @@ export default function PublicMenuPage() {
                 // ✅ لو للعميل اشتراك محدد، نعرض فقط الأسابيع الفعلية للاشتراك
                 .filter((week) => !subscriptionWeeks || subscriptionWeeks.has(week.value))
                 .map((week) => {
-                // الأسبوع المطابق لتاريخ بدايتك — مختار تلقائياً
-                const isForYourStart = Number(rotationInfo?.rotationWeek) === week.value;
+                // ✅ نعلّم الأسبوع المطابق لـ**دورة المطبخ الآن** (لا «أسبوع بدايتك» — كان
+                //    يلخبط: الدورة تلفّ فيظهر رقم بداية أعلى من الأسبوع المفتوح فعلاً).
+                const isCurrentCookWeek = Number(rotationInfo?.currentCookingWeek) === week.value;
                 return (
                 <button
                   key={week.value}
@@ -1528,13 +1529,14 @@ export default function PublicMenuPage() {
                 >
                   {week.label}
                   {!isWeekAllowed(week.value) && selectedWeek !== week.value && <span className="text-[11px]">🔒</span>}
-                  {/* علامة الأسبوع المطابق لتاريخ بدايتك */}
-                  {isForYourStart && (
+                  {/* علامة الأسبوع المطابق لدورة المطبخ الحالية — يوضّح للعميل إن رقم
+                      الأسبوع ده هو اللي المطبخ بيطبخه دلوقتي */}
+                  {isCurrentCookWeek && (
                     <span className={cn(
                       "text-[9px] font-black px-1.5 py-0.5 rounded-full",
                       selectedWeek === week.value ? "bg-white/25 text-white" : "bg-emerald-100 text-emerald-700",
                     )}>
-                      {isRtl ? "بدايتك" : "yours"}
+                      {isRtl ? "المطبخ الآن" : "cooking now"}
                     </span>
                   )}
                 </button>
