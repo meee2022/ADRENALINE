@@ -1392,7 +1392,9 @@ export default function PublicMenuPage() {
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
 
-          {/* ✅ شريط الخطوات — يشرح للعميل الجديد ماذا يفعل، بالترتيب */}
+          {/* ✅ شريط الخطوات — للواجهة الكلاسيكية فقط: مسار الأيام واضح بذاته
+              (اليوم والتقدم في الهيرو) فالشريط تكرار محيّر يذكر «الأسبوع» (أُلغي بطلب المستخدم) */}
+          {!pathMode && (
           <div className="mb-5 rounded-2xl border border-[#3CC4F0]/30 bg-[#F2FBFF] p-3 sm:p-4">
             <p className="text-xs font-black text-[#0E2A4A] mb-2.5">
               {isRtl ? "كيف تختار وجباتك؟" : "How to pick your meals"}
@@ -1459,6 +1461,7 @@ export default function PublicMenuPage() {
               </p>
             </div>
           </div>
+          )}
 
           {/* ⛔ اشتراك منتهٍ ⇒ إشعار التجديد فوق كل شيء */}
           {subExpired && subState.status === "expired" && (
