@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { requireStaff } from "./sessions";
+import { rotationWeekAtDate, fridaysBetween } from "./lib/dates";
 
 // ===== GET SETTINGS (Single) =====
 export const get = query({
@@ -102,15 +103,12 @@ export const rotationWeekAt = query({
     const todayISO = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10); // قطر
     const target = String(args.targetDate).slice(0, 10);
 
-    // عدّ الجُمَع في المدى (اليوم، الهدف] — كل جمعة = تقدّم دورة.
-    let fridays = 0;
-    const c = new Date(todayISO + "T00:00:00Z");
-    const end = new Date(target + "T00:00:00Z");
-    for (let i = 0; i < 400 && c < end; i++) {
-      c.setUTCDate(c.getUTCDate() + 1);
-      if (c.getUTCDay() === 5) fridays++;
-    }
-    const week = ((cur - 1 + fridays) % 4) + 1;
+    // ✅ عدّ الجُمَع **بإشارة** (ماضٍ ومستقبل) عبر المصدر الموحّد rotationWeekAtDate —
+    //    العدّ للأمام فقط كان يقصّ التواريخ الماضية إلى currentCookingWeek، فبداية
+    //    اشتراك في الماضي تُعطي دورة خاطئة والمنيو يفتح على أسبوع دورة غلط (بفرق أسبوع
+    //    عن دورة المطبخ الفعلية التي يحسبها ai.ts). المرجع: «دليل/منطق-الخطط-والجدولة».
+    const fridays = fridaysBetween(todayISO, target);
+    const week = rotationWeekAtDate(cur, todayISO, target);
     return { rotationWeek: week, currentCookingWeek: cur, fridaysAhead: fridays };
   },
 });
