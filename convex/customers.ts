@@ -138,6 +138,27 @@ export const list = query({
    Mutations (CRUD)
 ========================= */
 
+/**
+ * ✅ يشتق برنامج المشترك (DIET/FITNESS/BULK/CUSTOMIZED) من الهدف/اسم الباقة.
+ *    السبب: الفورم كان يحفظ goals فقط (بلا program)، فكل مشترك جديد كان يظهر
+ *    STANDARD رغم أن باقته تنحيف/تضخيم/لياقة. نشتقّه هنا حتى يعمل لأي مسار إدخال.
+ *    يرجّع undefined لو تعذّر التصنيف (يبقى STANDARD) بدل تخمين خاطئ.
+ */
+function deriveProgram(goals?: string, packageLabel?: string): string | undefined {
+  const s = `${goals || ""} ${packageLabel || ""}`.toLowerCase();
+  if (!s.trim()) return undefined;
+  if (s.includes("custom") || s.includes("مخصّص") || s.includes("مخصص")) return "CUSTOMIZED";
+  if (s.includes("diet") || s.includes("تنحيف") || s.includes("تخسيس")) return "DIET";
+  if (s.includes("fitness") || s.includes("لياقة") || s.includes("فتنس")) return "FITNESS";
+  if (s.includes("bulk") || s.includes("تضخيم") || s.includes("ضخامة")) return "BULK";
+  // لو goals نفسه مكتوب صريح كبرنامج
+  const u = s.toUpperCase();
+  if (u.includes("DIET")) return "DIET";
+  if (u.includes("FITNESS")) return "FITNESS";
+  if (u.includes("BULK")) return "BULK";
+  return undefined;
+}
+
 export const create = mutation({
   args: {
     fullName: v.string(),
@@ -187,9 +208,12 @@ export const create = mutation({
     // ⚠️ sessionToken لا يُخزَّن — نستبعده قبل الـinsert (الـhandler يعمل ...args)
     const { sessionToken: _t, ...fields } = args;
     const phone = normalizePhone(args.phone);
+    // ✅ يشتق program من الباقة/الهدف لو ماجاش صريح — يمنع ظهور المشترك STANDARD بالغلط
+    const program = args.program || deriveProgram(args.goals, args.packageLabel);
 
     return await ctx.db.insert("customers", {
       ...fields,
+      program,
       phone,
       // نخزن ISO نظيف
       startDate: normalizeToISODate(args.startDate) ?? args.startDate,
@@ -258,6 +282,11 @@ export const update = mutation({
 
     const patch: any = { updatedAt: Date.now() };
     for (const [k, v2] of Object.entries(raw)) if (v2 !== undefined) patch[k] = v2;
+    // ✅ لو الهدف/الباقة اتغيّروا وماجاش program صريح — نشتقّه (تنحيف→DIET…)
+    if (patch.program === undefined && (patch.goals !== undefined || patch.packageLabel !== undefined)) {
+      const derived = deriveProgram(patch.goals, patch.packageLabel);
+      if (derived) patch.program = derived;
+    }
     if (patch.phone) patch.phone = normalizePhone(patch.phone);
     if (patch.startDate) patch.startDate = normalizeToISODate(patch.startDate) ?? patch.startDate;
     if (patch.endDate) patch.endDate = normalizeToISODate(patch.endDate) ?? patch.endDate;
