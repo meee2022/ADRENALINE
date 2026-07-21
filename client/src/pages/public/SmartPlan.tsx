@@ -94,6 +94,14 @@ export default function SmartPlan() {
     subStartDate ? { targetDate: subStartDate } : "skip",
   ) as { rotationWeek: number; currentCookingWeek: number } | undefined;
 
+  // ✅ دورة **بكرة** — نقطة انطلاق التوليد الفعلية لمشترك بدأ اشتراكه فعلاً.
+  //    (زوج التوليد لازم يكون متسقاً: التاريخ ودورته معاً — انظر effStartRot)
+  const _tomorrow = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + 1); return localISO(d); }, []);
+  const tomorrowRotInfo = useQuery(
+    api.restaurantSettings.rotationWeekAt,
+    { targetDate: _tomorrow },
+  ) as { rotationWeek: number; currentCookingWeek: number } | undefined;
+
   // ✅ أسابيع الاشتراك المتبقية — من **المصدر الوحيد** (lib/subscription)، نفس ما
   //    يستخدمه المنيو اليدوي. أيام التوصيل الفعلية ÷ 6 (يتخطّى الجمعة)، بحد أقصى 4.
   const subWeeksRemaining = useMemo(() => {
@@ -110,10 +118,15 @@ export default function SmartPlan() {
   //    المتبقّي دائماً (لا أسابيع جزئية) — كي يقدر يُكملها ويبعتها. لو لا اشتراك
   //    معروف نرجع للاختيار العادي.
   const effWeeks = subWeeksRemaining ?? rawEffWeeks;
-  // 🔒 دورة البداية يحددها النظام من الاشتراك — لا يختارها العميل. لو له اشتراك
-  //    معروف (startRotInfo)، دورته هي المرجع مهما ضغط العميل، فلا يبدأ من دورة
-  //    خاطئة (نفس قاعدة المينو اليدوي: النظام يضعه على بدايته الصحيحة).
-  const subLockedRot = startRotInfo?.rotationWeek || null;
+  // 🔒 دورة البداية يحددها النظام — لا يختارها العميل. ولازم تطابق **تاريخ بداية
+  //    التوليد الفعلي** (effStartDate): لو الاشتراك في المستقبل → دورة تاريخ بدايته؛
+  //    لو بدأ فعلاً → التوليد يبدأ من بكرة فالدورة = دورة بكرة.
+  //    ⚠️ كان يمرَّر زوج غير متسق (تاريخ بكرة + دورة بداية ماضية) فيولّد لمشترك قديم
+  //       وجبات دورة مزحزحة أسبوعاً — نفس عائلة لخبطة سلطان.
+  const subStarted = !!subStartDate && subStartDate <= localISO(new Date());
+  const subLockedRot = subStarted
+    ? (tomorrowRotInfo?.rotationWeek || null)
+    : (startRotInfo?.rotationWeek || null);
   const effStartRot =
     subLockedRot || startRot || suggestions?.currentRotationWeek || 1;
 
