@@ -524,6 +524,34 @@ export default function PublicMenuPage() {
     const okSnacks = !hasSnackLimit || snacks >= snacksPerDay;
     return okMeals && okSnacks;
   };
+
+  /** 🧭 كتل الاشتراك: مجموعات متتالية زمنياً من نفس أسبوع الدورة. تبويب الدورة
+   *  الواحد قد يغطي فترتين (أيام يوليو + ذيل أغسطس بعد لفّة الدورة) — نعرض
+   *  للعميل **كتلة واحدة فقط** كل مرة فلا تظهر أيام الذيل البعيدة وسط أيامه
+   *  الحالية وتلخبطه (طلب المستخدم: «امشِ بالترتيب وشيل أيام أغسطس»). */
+  const weekBlocks = useMemo(() => {
+    const blocks: { week: number; slots: { week: number; day: DayOfWeek }[] }[] = [];
+    for (const s of orderedSubSlots) {
+      const last = blocks[blocks.length - 1];
+      if (last && last.week === s.week) last.slots.push(s as any);
+      else blocks.push({ week: s.week, slots: [s as any] });
+    }
+    return blocks;
+  }, [orderedSubSlots]);
+
+  /** الكتلة المعروضة لتبويب أسبوع: التي فيها أول يوم ناقص **مسموح** (دوره جاي)؛
+   *  وإلا أقرب كتلة أيامها مسموحة (مكتملة — ليراجع اختياراته). فذيل أغسطس لا
+   *  يظهر إلا لما يوصل له فعلاً بعد إكمال كل ما قبله. */
+  const visibleBlockForWeek = (w: number) => {
+    const mine = weekBlocks.filter((b) => b.week === w);
+    if (!mine.length) return null;
+    return (
+      mine.find((b) => b.slots.some((s) => !dayCompleteInWeek(w, s.day) && isSlotAllowed(w, s.day)))
+      || mine.find((b) => b.slots.some((s) => isSlotAllowed(w, s.day)))
+      || mine[0]
+    );
+  };
+
   const nextIncompleteDay = (): { day: DayOfWeek; week: number } | null => {
     // 🔒 يعتبر السلوت "مقبول" فقط لو (أ) داخل الاشتراك، (ب) ناقص وجباته.
     const isCandidate = (wk: number, d: DayOfWeek) =>
@@ -578,6 +606,34 @@ export default function PublicMenuPage() {
     }
     return true;
   }, [subscriptionSlots, items, mealsPerDay, snacksPerDay, hasSnackLimit]);
+
+  // ✨ انتقال تلقائي واضح: أول ما يكتمل اليوم (وجباته + سناكاته) ننقل العميل
+  //    لليوم التالي بعد لحظة قصيرة مع توست يشرح — زر «التالي» الصغير وحده كان
+  //    ممكن ما يتشافش فيحس العميل إنه تاه (طلب المستخدم: سهّلها عليه).
+  //    ننتقل فقط عند التحوّل ناقص→مكتمل على نفس اليوم — لا عند مجرد فتح يوم مكتمل.
+  const prevCompleteRef = useRef<{ key: string; complete: boolean } | null>(null);
+  useEffect(() => {
+    if (!selectedDay) return;
+    const key = `${selectedWeek}:${selectedDay}`;
+    const complete = !!todayProgress?.complete;
+    const prev = prevCompleteRef.current;
+    prevCompleteRef.current = { key, complete };
+    if (!prev || prev.key !== key) return;   // تنقّل بين الأيام — ليس اكتمالاً جديداً
+    if (prev.complete || !complete) return;   // لم يتحوّل الآن من ناقص لمكتمل
+    const nxt = nextIncompleteDay();
+    if (!nxt) return;                         // خلّص اشتراكه كله — رسالة الاكتمال تظهر
+    const lbl = isRtl ? (DAY_LABEL_AR[nxt.day] || nxt.day) : nxt.day;
+    const tmr = setTimeout(() => {
+      if (nxt.week !== selectedWeek) { setSelectedWeek(nxt.week); setWeekTouched(true); }
+      setSelectedDay(nxt.day);
+      toast({
+        title: isRtl ? `✓ اكتمل يومك — نقلناك إلى ${lbl}` : `✓ Day complete — moved you to ${lbl}`,
+        description: isRtl ? "كمّل اختيار وجبات اليوم ده بنفس الطريقة." : "Pick this day's meals the same way.",
+      });
+    }, 900);
+    return () => clearTimeout(tmr);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWeek, selectedDay, todayProgress?.complete]);
 
   // Avoid keywords from customer (lowercase tokens)
   const avoidTokens = useMemo(() => {
@@ -1526,10 +1582,10 @@ export default function PublicMenuPage() {
                     //       (تبويب الدورة قد يضم أيام ذيل الاشتراك البعيدة — كانت
                     //       auto-select تتخطى القفل وتفتحها للإضافة، شكوى المستخدم).
                     //       لو كل أيامه المسموحة مكتملة → أول يوم مكتمل ليراجع اختياراته.
-                    const nxtSlot =
-                      orderedSubSlots.find((s) => s.week === week.value && !dayCompleteInWeek(week.value, s.day) && isSlotAllowed(week.value, s.day))
-                      || orderedSubSlots.find((s) => s.week === week.value && isSlotAllowed(week.value, s.day))
-                      || null;
+                    const blk = visibleBlockForWeek(week.value);
+                    const nxtSlot = blk
+                      ? (blk.slots.find((s) => !dayCompleteInWeek(week.value, s.day) && isSlotAllowed(week.value, s.day)) || blk.slots[0])
+                      : null;
                     if (nxtSlot) setSelectedDay(nxtSlot.day);
                   }}
                   className={cn(
@@ -1570,14 +1626,20 @@ export default function PublicMenuPage() {
                 //    ⚠️ الفلتر القديم كان يستخدم slotBlockDate (أول ظهور للـ«أسبوع+يوم»)
                 //       فلأسبوع دورة يتكرّر داخل الاشتراك يرجّع تاريخ البلوك الأول (ماضٍ)
                 //       ويُخفي كل أيامه بالغلط — باگ اختفاء أيام الأسبوع 3 عند سلطان.
-                .filter((day) => isSlotInSub(selectedWeek, day.value))
-                // ✅ ترتيب الشرائح **بتاريخ التوصيل الفعلي** — تبويب الدورة قد يجمع
-                //    فترتين (أربعاء/خميس يوليو + سبت/أحد أغسطس)، وترتيب أيام الأسبوع
-                //    كان يعرض السبت البعيد أولاً فيوهم العميل أنه أول أيامه.
+                // ✅ نعرض **كتلة الأسبوع الحالية فقط** (زمنية الترتيب) — لا أيام ذيل
+                //    الاشتراك البعيدة (أغسطس) وسط أيامه الحالية. للزائر بلا اشتراك
+                //    نرجع لكل أيام الأسبوع كما كانت.
+                .filter((day) => {
+                  const blk = visibleBlockForWeek(selectedWeek);
+                  if (!blk) return isSlotInSub(selectedWeek, day.value);
+                  return blk.slots.some((s) => s.day === day.value);
+                })
                 .sort((a, b) => {
-                  const da = slotToDate(startDate, startRotForSub, selectedWeek, a.value) || "9999";
-                  const db = slotToDate(startDate, startRotForSub, selectedWeek, b.value) || "9999";
-                  return da.localeCompare(db);
+                  const blk = visibleBlockForWeek(selectedWeek);
+                  if (!blk) return 0;
+                  const ia = blk.slots.findIndex((s) => s.day === a.value);
+                  const ib = blk.slots.findIndex((s) => s.day === b.value);
+                  return ia - ib;
                 })
                 .map((day) => {
                 const prog = dayProgress(day.value);
