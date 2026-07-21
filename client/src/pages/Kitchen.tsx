@@ -468,6 +468,33 @@ export default function Kitchen() {
         });
     });
 
+    // ✅ أصناف المخصّصين غير الرئيسية (سناك/سلطة/شوربة) — تُطبخ عادي بكمية 1 لكل العملاء،
+    //    فتُضاف للإجمالي فوق مثل الوجبات العادية. (المخصّص بقالب ليس له خطة يومية، فلا تكرار.)
+    const emptySummary = (category: string) => ({
+      count: 0, plainCount: 0, modifiedCount: 0, dietCount: 0, fitnessCount: 0, bulkCount: 0,
+      customizedCount: 0, standardCount: 0, category, locations: [] as any[], preparedCount: 0, details: [] as any[],
+    });
+    (customized || []).forEach((c: any) => {
+      (c.items || []).forEach((it: any) => {
+        if (it?.isOff) return;
+        if (String(it?.type || "").toUpperCase() === "MAIN") return; // الرئيسي يبقى في بوكس الشخص
+        const raw = String(it?.baseName || it?.text || "").trim();
+        if (!raw || raw.length < 3 || /NOT SET|لم تُحدَّد/i.test(raw)) return;
+        // طابق مفتاحاً موجوداً بلا حساسية حالة، وإلا أنشئ جديداً (لدمج العدّ مع نفس الطبق العادي)
+        const key = Object.keys(summary).find((k) => k.toLowerCase() === raw.toLowerCase()) || raw;
+        const catName = /salad|سلط/i.test(raw) ? "Salad" : (/soup|شور/i.test(raw) ? "Soup" : "Snack");
+        if (!summary[key]) summary[key] = emptySummary(catName);
+        summary[key].count += 1;
+        summary[key].plainCount += 1;
+        summary[key].standardCount += 1;
+        summary[key].details.push({
+          customerName: c.customerName || (isRtl ? "مخصّص" : "Customized"),
+          deliveryTime: c.deliveryTime || "MORNING",
+          categoryName: summary[key].category, program: "STANDARD", isPlain: true,
+        });
+      });
+    });
+
     // ✅ ترتيب الطبخ حسب نوع الوجبة (فطور → غدا → عشا → سلطة → سناك) زي كشف الأخصائية
     const catRank = (c: string): number => {
       const s = String(c || "").toLowerCase();
@@ -502,7 +529,7 @@ export default function Kitchen() {
     return Object.entries(summary)
       .map(([name, data]) => ({ name, ...data, catRank: catRank(data.category), modGroups: buildModGroups(data.details) }))
       .sort((a, b) => (a.catRank - b.catRank) || (b.count - a.count));
-  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, categories, modifiers, isRtl]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, categories, modifiers, isRtl, customized]);
 
   // ✅ المشتركون المخصّصون مجمّعون باسم كل عميل (بوكس كامل للشخص) — زي كشف الأخصائية
   const customizedByPerson = useMemo(() => {

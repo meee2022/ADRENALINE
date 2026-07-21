@@ -231,6 +231,9 @@ export default function Customized() {
   // ✅ التاريخ الفعلي لأي (أسبوع دورة + يوم) — يطابق منطق convex/stickers.forDate تمامًا
   //    (يوم قطر +3، وعدّ الجُمَع). فالأخصائية تعرف إنها بتملّي لأي تاريخ فعليًا وما تغلطش اليوم.
   const DOW_KEYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  // ✅ اليوم الافتراضي = يوم النهاردة (بتوقيت قطر) لو موجود في أيام العمل، وإلا السبت.
+  const todayDayKey = DOW_KEYS[new Date(Date.now() + 3 * 3600 * 1000).getUTCDay()];
+  const defaultDay = DAYS.some((d) => d.key === todayDayKey) ? todayDayKey : "saturday";
   const dateForWeekDay = (week: number, dayKey: string): Date | null => {
     const todayISO = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
     for (let i = 0; i < 28; i++) {
@@ -265,7 +268,7 @@ export default function Customized() {
   // ✅ قالب بالأسابيع×الأيام: 4 أسابيع دورة، كل أسبوع له أيامه، كل يوم خاناته
   const [weekSlots, setWeekSlots] = useState<Record<number, Record<string, Slot[]>>>({});
   const [activeWeek, setActiveWeek] = useState<number>(1);
-  const [activeDay, setActiveDay] = useState<string>("saturday");
+  const [activeDay, setActiveDay] = useState<string>(defaultDay);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -312,7 +315,7 @@ export default function Customized() {
     }
     setWeekSlots(ws);
     setActiveWeek(currentWeek);
-    setActiveDay("saturday");
+    setActiveDay(defaultDay);
   }, [selectedId, template]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const slots = weekSlots[activeWeek]?.[activeDay] || [];
