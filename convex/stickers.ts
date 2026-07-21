@@ -447,9 +447,9 @@ export const get = query({
         //    (السعرات = مجموع الماكروز). باقي التصنيفات حصتها ثابتة.
         // برنامج العميل قد يكون في program أو goalType أو goals (بيانات قديمة)
         const f = isMainCourse(category) ? factorFor(String(c.program || (c as any).goalType || (c as any).goals || "")) : 1;
-        const protein  = Math.round(baseProtein * f);
-        const carbs    = Math.round(baseCarbs * f);
-        const fats     = Math.round(baseFats * f);
+        let protein  = Math.round(baseProtein * f);
+        let carbs    = Math.round(baseCarbs * f);
+        let fats     = Math.round(baseFats * f);
         // ✅ أولوية السعرات على الستيكر:
         //   1) سعرات مخصّصة لهذه الوجبة بالذات لهذا المشترك (mealCalorieOverrides) — أعلى أولوية، تُطبع كما هي.
         //   2) سعرات الوجبة الرئيسية اليدوية (mainMealCalories) — للأطباق الرئيسية فقط.
@@ -459,9 +459,26 @@ export const get = query({
         const names = [lookupName, mealName, (menu as any)?.nameAr, (menu as any)?.nameEn, it.mealNameAr, it.mealNameEn].map(normName).filter(Boolean);
         const perMeal = ovr.find((o: any) => names.includes(normName(o.meal)) && Number(o.calories) > 0);
         const custCal = isMainCourse(category) ? Number((c as any).mainMealCalories) : 0;
-        const calories = perMeal ? Math.round(Number(perMeal.calories))
-          : custCal > 0 ? Math.round(custCal)
-          : Math.round(baseCalories * f);
+        const explicitCalories = perMeal ? Math.round(Number(perMeal.calories))
+          : custCal > 0 ? Math.round(custCal) : 0;
+        const programCode = String(c.program || (c as any).goalType || (c as any).goals || "").toUpperCase();
+        const automaticCap = isMainCourse(category)
+          ? (programCode.includes("BULK") ? 490 : programCode.includes("FITNESS") ? 470 : programCode.includes("DIET") ? 445 : 490)
+          : String(category || "").toUpperCase().includes("BREAKFAST") ? 310 : Number.POSITIVE_INFINITY;
+        const macroCalories = protein * 4 + carbs * 4 + fats * 9;
+        const automaticCalories = macroCalories > 0 ? macroCalories : Math.round(baseCalories * f);
+        const targetCalories = explicitCalories > 0 ? explicitCalories : Math.min(automaticCalories, automaticCap);
+
+        // Keep every printed override/cap nutritionally consistent: P*4 + C*4 + F*9.
+        if (macroCalories > 0 && (explicitCalories > 0 || macroCalories > automaticCap)) {
+          const ratio = targetCalories / macroCalories;
+          protein = Math.max(0, Math.round(protein * ratio));
+          carbs = Math.max(0, Math.round(carbs * ratio));
+          fats = Math.max(0, Math.round(fats * ratio));
+        }
+        const calories = protein || carbs || fats
+          ? protein * 4 + carbs * 4 + fats * 9
+          : targetCalories;
 
         const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 
@@ -536,6 +553,7 @@ export const get = query({
       const engText = (s: any): string => {
         const baseName = String(s.baseName || "").trim();
         const protName = String(s.proteinName || "").trim();
+        const baseHasGramPortions = /\d+(?:\.\d+)?\s*(?:g\b|gm\b|جم|جرام)/i.test(baseName);
         // ✅ خانة رئيسية غير محدّدة (لا اسم وجبة ولا نوع بروتين) = يوم لم يُملأ →
         //    لا نطبع أكلاً وهمياً (Protein 150g) على الستيكر يلخبط الشيف.
         if (s.type === "MAIN" && !baseName && !protName) return "⚠ NOT SET";
@@ -543,8 +561,8 @@ export const get = query({
         if (baseName) parts.push(en(baseName));
         if (s.type === "MAIN") {
           const inner: string[] = [];
-          if (protName && s.proteinG) inner.push(`${en(protName)} ${s.proteinG}g`);
-          if (s.carbG && String(s.carbName || "").trim() && !/^none|بدون/i.test(String(s.carbName))) inner.push(`${en(s.carbName)} ${s.carbG}g`);
+          if (!baseHasGramPortions && protName && s.proteinG) inner.push(`${en(protName)} ${s.proteinG}g`);
+          if (!baseHasGramPortions && s.carbG && String(s.carbName || "").trim() && !/^none|بدون/i.test(String(s.carbName))) inner.push(`${en(s.carbName)} ${s.carbG}g`);
           if (inner.length) parts.push(parts.length ? `+ ${inner.join(" + ")}` : inner.join(" + "));
         }
         return (parts.join(" ").trim() || String(s.text || baseName || "").trim());
@@ -567,7 +585,11 @@ export const get = query({
         for (const s of active) {
           const mealName = engText(s);
           if (!mealName) continue;
-          const cal = estimateCalories(mealName) || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
+          const rawCal = estimateCalories(mealName) || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
+          // Preserve differences between custom portions without printing extreme estimates.
+          const cal = s.type === "MAIN" && rawCal > 450
+            ? Math.min(490, 450 + Math.round((rawCal - 450) * 0.1))
+            : rawCal;
           mealStickers.push({
             customerId: String(c._id),
             customerNo,
