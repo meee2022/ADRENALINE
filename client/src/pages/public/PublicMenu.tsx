@@ -360,6 +360,23 @@ export default function PublicMenuPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderedSubSlots, items, mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit]);
 
+  /* 🧪 «مسار الأيام» — الواجهة الجديدة للمشترك المسجَّل (قرار المستخدم بعد الديمو).
+   *  نفس المنطق والقيود والسلة والمعالجات حرفياً — تغيير عرض فقط. الكلاسيكية
+   *  باقية كاملة كباك أب ويُرجَع لها بزر «الواجهة الكلاسيكية» (محفوظ محلياً). */
+  const [uiClassic, setUiClassic] = useState<boolean>(() => {
+    try { return localStorage.getItem("menuUiClassic") === "1"; } catch { return false; }
+  });
+  const setUiMode = (classic: boolean) => {
+    setUiClassic(classic);
+    try { localStorage.setItem("menuUiClassic", classic ? "1" : "0"); } catch { /* لا شيء */ }
+  };
+  const pathMode = !uiClassic && orderedSubSlots.length > 0;
+  // نوع الخانة النشطة في المسار: رئيسية أولاً، وبعد اكتمالها سناك — مع تبديل يدوي
+  const [pathKindSel, setPathKindSel] = useState<"main" | "snack" | null>(null);
+  useEffect(() => { setPathKindSel(null); }, [selectedWeek, selectedDay]);
+  const pathKind: "main" | "snack" = pathKindSel
+    ?? ((hasMealLimit && mainMealsToday >= mealsPerDay && hasSnackLimit && snacksToday < snacksPerDay) ? "snack" : "main");
+
   /* ═══ إكمال باقي الوجبات بالخطة الذكية ═══
    *  144 وجبة يدوياً كثيرة. الزر يستدعي نفس محرّك الذكية (generateWeeklyPlan)
    *  الذي يطبّق كل القيود (حساسية/ممنوعات/تفضيلات) ويتقدّم بالدورة كل جمعة،
@@ -796,8 +813,12 @@ export default function PublicMenuPage() {
 
   // Filter meals by selected week and day using exact schedule pairs
   const filteredMeals = allMeals.filter((meal: any) => {
-    // فلترة التبويب — "سناكس" يشمل السلطة
-    if (activeCategory !== "all") {
+    // 🧪 مسار الأيام: نفلتر بنوع الخانة النشطة (رئيسية/سناك) بدل تبويبات التصنيف —
+    //    نفس المصنّف (isSnackCategory) ونفس القيود، عرض فقط.
+    if (pathMode) {
+      const snack = isSnackCategory(meal.category);
+      if (pathKind === "snack" ? !snack : snack) return false;
+    } else if (activeCategory !== "all") {
       const ok = activeCategory === "snack"
         ? isSnackCategory(meal.category)
         : String(meal.category || "").toLowerCase() === activeCategory;
@@ -1548,6 +1569,134 @@ export default function PublicMenuPage() {
             </button>
           )}
 
+          {/* 🧪 مسار الأيام (الواجهة الجديدة) — نفس المنطق والقيود، عرض مختلف فقط.
+              الكلاسيكية كاملة في الفرع الثاني كباك أب. */}
+          {pathMode ? (() => {
+            const slots = orderedSubSlots;
+            const total = slots.length;
+            const doneCount = slots.filter((s) => dayCompleteInWeek(s.week, s.day)).length;
+            const curIdx = slots.findIndex((s) => s.week === selectedWeek && s.day === selectedDay);
+            const dateLblOf = (w: number, d: string) => {
+              const iso = slotToDate(startDate, startRotForSub, w, d);
+              if (!iso) return "";
+              const dt = new Date(iso + "T00:00:00");
+              return `${dt.getDate()} ${AR_MONTHS[dt.getMonth()]}`;
+            };
+            const dayItems = items.filter((it: any) => it.week === selectedWeek && it.day === selectedDay);
+            const dayMains = dayItems.filter((it: any) => !isSnackCategory(it.category));
+            const daySnacks = dayItems.filter((it: any) => isSnackCategory(it.category));
+            const slotChips: { kind: "main" | "snack"; label: string; item: any | null }[] = [];
+            if (hasMealLimit) for (let i = 0; i < mealsPerDay; i++) slotChips.push({ kind: "main", label: `${isRtl ? "وجبة" : "Meal"} ${i + 1}`, item: dayMains[i] || null });
+            if (hasSnackLimit) for (let i = 0; i < snacksPerDay; i++) slotChips.push({ kind: "snack", label: `${isRtl ? "سناك" : "Snack"} ${i + 1}`, item: daySnacks[i] || null });
+            const curLbl = selectedDay ? (isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay) : "";
+            return (
+              <div className="space-y-4">
+                {/* هيرو اليوم + التقدم الكلي */}
+                <div className="rounded-2xl p-4 text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#3CC4F0)" }}>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <p className="text-[11px] font-bold opacity-85">{isRtl ? "خطة وجباتك" : "Your meal plan"}</p>
+                      <p className="text-xl font-black">
+                        {isRtl ? `اليوم ${Math.max(1, curIdx + 1)} من ${total}` : `Day ${Math.max(1, curIdx + 1)} of ${total}`}
+                        {selectedDay && ` — ${curLbl} ${dateLblOf(selectedWeek, selectedDay)}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-xl px-3 py-1.5 text-sm font-black" style={{ background: "rgba(255,255,255,.2)" }}>
+                        {doneCount}/{total} {isRtl ? "يوم مكتمل" : "days done"}
+                      </span>
+                      <button onClick={() => setUiMode(true)}
+                        className="text-[10px] font-bold underline opacity-80 hover:opacity-100">
+                        {isRtl ? "الواجهة الكلاسيكية" : "Classic view"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-3 h-2 rounded-full" style={{ background: "rgba(255,255,255,.28)" }}>
+                    <div className="h-full rounded-full bg-white transition-all" style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }} />
+                  </div>
+                </div>
+
+                {/* خط الأيام — كل أيام الاشتراك بالترتيب الزمني */}
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {slots.map((s, i) => {
+                    const done = dayCompleteInWeek(s.week, s.day);
+                    const cur = i === curIdx;
+                    const allowed = isSlotAllowed(s.week, s.day);
+                    const lbl = isRtl ? DAY_LABEL_AR[s.day] || s.day : s.day;
+                    return (
+                      <button key={`${s.week}:${s.day}:${i}`}
+                        onClick={() => {
+                          if (!allowed) {
+                            toast({ title: isRtl ? "أكمل يومك الحالي أولاً" : "Complete your current day first", variant: "destructive" });
+                            return;
+                          }
+                          if (s.week !== selectedWeek) { setSelectedWeek(s.week); setWeekTouched(true); }
+                          setSelectedDay(s.day);
+                        }}
+                        className={cn(
+                          "shrink-0 min-w-[84px] rounded-2xl px-3 py-2 text-center text-xs font-black transition-all border",
+                          cur ? "bg-[#0E76AC] text-white border-[#0E76AC] shadow-md"
+                            : done ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                            : allowed ? "bg-white text-gray-700 border-gray-200 hover:border-[#3CC4F0]"
+                            : "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed",
+                        )}>
+                        <div>{lbl} {done ? "✓" : !allowed ? "🔒" : ""}</div>
+                        <div className={cn("text-[10px] mt-0.5 font-semibold", cur ? "text-white/80" : "text-gray-400")}>{dateLblOf(s.week, s.day)}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* خانات اليوم — املأها بالترتيب؛ اضغط خانة مملوءة لإزالتها وتبديلها */}
+                {selectedDay && (
+                  <div className="flex gap-2 flex-wrap">
+                    {slotChips.map((sc, i) => {
+                      const active = !sc.item && sc.kind === pathKind && slotChips.findIndex((x) => !x.item && x.kind === sc.kind) === i;
+                      return (
+                        <button key={i}
+                          onClick={() => {
+                            if (sc.item) {
+                              removeItem(sc.item._id, selectedWeek, selectedDay);
+                              toast({ title: isRtl ? "أُزيلت — اختر بديلاً" : "Removed — pick another", description: isRtl ? sc.item.nameAr : (sc.item.nameEn || sc.item.nameAr) });
+                              setPathKindSel(sc.kind);
+                            } else setPathKindSel(sc.kind);
+                          }}
+                          className={cn(
+                            "flex-1 min-w-[110px] rounded-2xl border-2 p-2.5 text-start transition-all",
+                            active ? "border-[#3CC4F0] bg-[#eefafe] shadow-sm"
+                              : sc.item ? "border-emerald-200 bg-emerald-50/60"
+                              : "border-gray-200 bg-white",
+                          )}>
+                          <p className={cn("text-[10px] font-black", sc.item ? "text-emerald-600" : "text-gray-500")}>
+                            {sc.kind === "main" ? "🍽️" : "🍎"} {sc.label} {sc.item && <Check className="inline h-3 w-3" />}
+                          </p>
+                          <p className={cn("text-[12px] font-black mt-0.5 leading-tight", sc.item ? "text-[#0E2A4A]" : "text-gray-300")}>
+                            {sc.item ? (isRtl ? sc.item.nameAr : (sc.item.nameEn || sc.item.nameAr)) : (isRtl ? "اضغط للاختيار" : "Tap to pick")}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* حالة اليوم + إرشاد الاختيار */}
+                {selectedDay && (
+                  <div className="flex items-center justify-between flex-wrap gap-2 text-[12px] font-bold text-[#47759C]">
+                    <span>
+                      {isRtl
+                        ? `اختر ${pathKind === "snack" ? "سناك" : "وجبة"} ${curLbl} من القائمة بالأسفل — ${mainMealsToday}${hasMealLimit ? `/${mealsPerDay}` : ""} وجبة · ${snacksToday}${hasSnackLimit ? `/${snacksPerDay}` : ""} سناك`
+                        : `Pick a ${pathKind === "snack" ? "snack" : "meal"} below — ${mainMealsToday}/${mealsPerDay} meals · ${snacksToday}/${snacksPerDay} snacks`}
+                    </span>
+                    {todayProgress?.complete && (
+                      <span className="text-[11px] font-black px-3 py-1.5 rounded-full bg-emerald-500 text-white flex items-center gap-1">
+                        <Check className="h-3 w-3" /> {isRtl ? "اليوم مكتمل — ننقلك للتالي" : "Day complete"}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })() : (<>
           {/* Week Tabs */}
           <div className="mb-4">
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
@@ -1794,6 +1943,7 @@ export default function PublicMenuPage() {
               </div>
             </div>
           )}
+          </>)}
         </div>
       </section>
 
@@ -1812,7 +1962,8 @@ export default function PublicMenuPage() {
             />
           </div>
 
-          {/* Category Filters */}
+          {/* Category Filters — مخفية في مسار الأيام (الفلترة هناك بنوع الخانة النشطة) */}
+          {!pathMode && (
           <div className="flex flex-wrap justify-center gap-3">
             {categories.map((cat) => (
               <button
@@ -1829,6 +1980,16 @@ export default function PublicMenuPage() {
               </button>
             ))}
           </div>
+          )}
+          {/* زر العودة للواجهة الجديدة — يظهر في الكلاسيكية فقط ولمشترك له اشتراك مؤرَّخ */}
+          {uiClassic && orderedSubSlots.length > 0 && (
+            <div className="text-center mt-3">
+              <button onClick={() => setUiMode(false)}
+                className="text-xs font-black text-[#0E76AC] underline hover:opacity-80">
+                ✨ {isRtl ? "جرّب الواجهة الجديدة (مسار الأيام)" : "Try the new day-path view"}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
