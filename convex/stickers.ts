@@ -86,25 +86,30 @@ async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<strin
   const plansAll = await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect();
   const templates = await ctx.db.query("customizedTemplates").collect();
   const tplIds = new Set(templates.map((t: any) => String(t.customerId)));
-  const rosterIds = new Set<string>();
+  // (أ) العاديون (خطط يومية، غير مخصّصين) و(ب) المخصّصون (قوالب) — منفصلان.
+  const regularIds = new Set<string>();
   for (const p of plansAll as any[]) {
     if (!isPrintableStatus(p.status)) continue;
     if (!p.customerId || tplIds.has(String(p.customerId))) continue;
-    rosterIds.add(String(p.customerId));
+    regularIds.add(String(p.customerId));
   }
+  const customizedIds = new Set<string>();
   for (const tpl of templates as any[]) {
     const cid = String(tpl.customerId);
-    if (rosterIds.has(cid)) continue;
+    if (regularIds.has(cid)) continue;
     const c: any = await ctx.db.get(tpl.customerId);
     if (!c || !c.isActive) continue;
-    if (activeSlots(tpl).length) rosterIds.add(cid);
+    if (activeSlots(tpl).length) customizedIds.add(cid);
   }
-  const rosterCustomers = (await Promise.all(
-    Array.from(rosterIds).map((id) => ctx.db.get(id as any)),
-  )).filter(Boolean);
-  rosterCustomers.sort((a: any, b: any) =>
-    String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar"));
-  return rosterCustomers.map((c: any) => String(c._id));
+  // ترتيب كل مجموعة أبجدياً، ثم: العاديون 1..R، والمخصّصون يكمّلون R+1..N.
+  const loadSorted = async (ids: Set<string>): Promise<string[]> => {
+    const cs = (await Promise.all(Array.from(ids).map((id) => ctx.db.get(id as any)))).filter(Boolean);
+    cs.sort((a: any, b: any) => String(a.fullName || "").localeCompare(String(b.fullName || ""), "ar"));
+    return cs.map((c: any) => String(c._id));
+  };
+  const regularOrdered = await loadSorted(regularIds);
+  const customizedOrdered = await loadSorted(customizedIds);
+  return [...regularOrdered, ...customizedOrdered];
 }
 
 /**
@@ -462,15 +467,26 @@ export const get = query({
         const explicitCalories = perMeal ? Math.round(Number(perMeal.calories))
           : custCal > 0 ? Math.round(custCal) : 0;
         const programCode = String(c.program || (c as any).goalType || (c as any).goals || "").toUpperCase();
-        const automaticCap = isMainCourse(category)
-          ? (programCode.includes("BULK") ? 490 : programCode.includes("FITNESS") ? 470 : programCode.includes("DIET") ? 445 : 490)
-          : String(category || "").toUpperCase().includes("BREAKFAST") ? 310 : Number.POSITIVE_INFINITY;
+        const automaticRange = isMainCourse(category)
+          ? programCode.includes("CUSTOM")
+            ? { min: 500, max: 560 }
+            : programCode.includes("BULK")
+            ? { min: 490, max: 550 }
+            : programCode.includes("FITNESS")
+              ? { min: 390, max: 470 }
+              : programCode.includes("DIET")
+                ? { min: 300, max: 380 }
+                : { min: 330, max: 490 }
+          : String(category || "").toUpperCase().includes("BREAKFAST")
+            ? { min: 0, max: 310 }
+            : { min: 0, max: Number.POSITIVE_INFINITY };
         const macroCalories = protein * 4 + carbs * 4 + fats * 9;
         const automaticCalories = macroCalories > 0 ? macroCalories : Math.round(baseCalories * f);
-        const targetCalories = explicitCalories > 0 ? explicitCalories : Math.min(automaticCalories, automaticCap);
+        const boundedCalories = Math.max(automaticRange.min, Math.min(automaticCalories, automaticRange.max));
+        const targetCalories = explicitCalories > 0 ? explicitCalories : boundedCalories;
 
-        // Keep every printed override/cap nutritionally consistent: P*4 + C*4 + F*9.
-        if (macroCalories > 0 && (explicitCalories > 0 || macroCalories > automaticCap)) {
+        // Keep every printed override/range adjustment consistent: P*4 + C*4 + F*9.
+        if (macroCalories > 0 && targetCalories !== macroCalories) {
           const ratio = targetCalories / macroCalories;
           protein = Math.max(0, Math.round(protein * ratio));
           carbs = Math.max(0, Math.round(carbs * ratio));
@@ -596,9 +612,10 @@ export const get = query({
             : Number(canonicalSnack?.calories || 0)
               || estimateCalories(mealName)
               || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
-          // Preserve differences between custom portions without printing extreme estimates.
-          const cal = s.type === "MAIN" && rawCal > 450
-            ? Math.min(490, 450 + Math.round((rawCal - 450) * 0.1))
+          // Customized main meals use the larger portion band requested by operations.
+          // Preserve differences between portions while avoiding extreme printed estimates.
+          const cal = s.type === "MAIN"
+            ? Math.min(560, 500 + Math.round(Math.max(0, rawCal - 500) * 0.1))
             : rawCal;
           mealStickers.push({
             customerId: String(c._id),
