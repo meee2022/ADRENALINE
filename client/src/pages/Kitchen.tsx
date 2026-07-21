@@ -697,17 +697,66 @@ export default function Kitchen() {
     return rows;
   }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl, boxNoByCustomerId]);
 
+  /**
+   * ✅ صفوف المخصّصين للكشف اليومي المُصدَّر (Excel/PDF).
+   *    المخصّصون مصدرهم القالب لا الخطة اليومية، فلا يظهرون في kitchenPeople أعلاه.
+   *    نبنيهم من نفس المصدر الموحّد (customizedAll)، ونرقّمهم بنفس رقم البوكس الثابت
+   *    (boxNoByCustomerId) الذي يكمّل بعد آخر رقم عادي — فيطابقون الستيكرات تماماً.
+   *    وجبات البوكس مسبوقة الترتيب (فطور→غداء→عشاء→سلطة→سناك) تُوزَّع على الأعمدة بالترتيب.
+   */
+  const customizedPeople = useMemo<KitchenPerson[]>(() => {
+    if (!customizedAll.length) return [];
+    const shortDate = (iso?: string) => {
+      if (!iso) return "";
+      const [, m, d] = String(iso).slice(0, 10).split("-");
+      return m && d ? `${Number(d)}-${Number(m)}` : "";
+    };
+    // اسم العميل → أحدث سجل نشِط (لجلب رقم البوكس والهاتف والتواريخ)
+    const custByName = new Map<string, any>();
+    (customers || []).forEach((c: any) => {
+      const nm = String(c.fullName || "").trim();
+      if (nm) custByName.set(nm, c);
+    });
+    const rows: KitchenPerson[] = customizedAll.map((p) => {
+      const c = custByName.get(String(p.name).trim());
+      const cid = c ? String(c._id) : "";
+      const no = (cid && boxNoByCustomerId.get(cid)) || 0;
+      const texts = p.meals.map((m) => (m.notset ? (isRtl ? "لم تُحدَّد" : "NOT SET") : m.text));
+      const col = (i: number) => texts[i] || "";
+      return {
+        no,
+        phone: c?.phone || "",
+        name: p.name,
+        dates: c?.startDate || c?.endDate ? `${shortDate(c?.startDate)} END ${shortDate(c?.endDate)}` : "",
+        remarks: "CUSTOM",
+        allergies: p.allergies,
+        breakfast: col(0),
+        snack1: col(1),
+        lunch: col(2),
+        snack2: col(3),
+        dinner: col(4),
+        meal4: texts.slice(5).join(" + "),
+        time: p.deliveryTime,
+        customized: true,
+      };
+    });
+    // بلا رقم بوكس (نادر) → للآخر؛ والباقي بترتيب البوكس المطابق للستيكرات.
+    return rows.sort((a, b) => (a.no || 1e9) - (b.no || 1e9));
+  }, [customizedAll, customers, boxNoByCustomerId, isRtl]);
+
   const [exporting, setExporting] = useState<null | "xlsx" | "pdf">(null);
   const exportSheet = async (kind: "xlsx" | "pdf") => {
-    if (!kitchenPeople.length) {
+    // ✅ الكشف = العاديون ثم المخصّصون (كلٌّ يذهب لقسمه داخل الملف عبر flag customized)
+    const people = [...kitchenPeople, ...customizedPeople];
+    if (!people.length) {
       void alertDialog({ message: isRtl ? "لا توجد وجبات لهذا اليوم" : "No meals for this day" });
       return;
     }
     setExporting(kind);
     try {
       const lang = isRtl ? "ar" : "en";
-      if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, kitchenPeople, lang);
-      else await downloadKitchenPdf(formattedDate, kitchenPeople, lang);
+      if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, people, lang);
+      else await downloadKitchenPdf(formattedDate, people, lang);
     } catch (e: any) {
       void alertDialog({ message: (isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e) });
     } finally {
