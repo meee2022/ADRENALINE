@@ -27,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useAction } from "convex/react";
 import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
-import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotBlockDate, localToday } from "@/lib/subscription";
+import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel } from "@/lib/mealSchedule";
 import { confirmDialog } from "@/lib/dialogs";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
@@ -1550,26 +1550,19 @@ export default function PublicMenuPage() {
             <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {days
-                // ✅ نخفي أيام الأسبوع اللي خارج مدة الاشتراك (مثلاً لو الاشتراك
-                //    ينتهي يوم الثلاثاء من أسبوع 2، الأربعاء والخميس من نفس الأسبوع
-                //    لن يظهروا).
+                // ✅ نعرض أيام هذا الأسبوع الواقعة فعلاً داخل نافذة الاشتراك (من بكرة
+                //    لنهايته). isSlotInSub مبنيّ على subscriptionSlots المضافة من ≥ بكرة
+                //    فقط، فالأيام الماضية مستبعَدة تلقائياً — لا نحتاج فلتراً ثانياً.
+                //    ⚠️ الفلتر القديم كان يستخدم slotBlockDate (أول ظهور للـ«أسبوع+يوم»)
+                //       فلأسبوع دورة يتكرّر داخل الاشتراك يرجّع تاريخ البلوك الأول (ماضٍ)
+                //       ويُخفي كل أيامه بالغلط — باگ اختفاء أيام الأسبوع 3 عند سلطان.
                 .filter((day) => isSlotInSub(selectedWeek, day.value))
-                // 🚫 نخفي أيام بلوك البداية اللي عدّى ميعاد تحضيرها (كسبت اليوم):
-                //    نقطة الانطلاق = ماكس(البداية، بكرة) لأن اليوم انقضى ميعاد طبخه.
-                //    اليوم الأسبق من ذلك لا توصيل له، فلا يُعرض بتاريخ بعيد مربك.
-                .filter((day) => {
-                  const iso = slotBlockDate(startDate, startRotForSub, selectedWeek, day.value);
-                  if (!iso) return true;
-                  const effStartISO = startDate > localToday()
-                    ? startDate
-                    : localISO(new Date(Date.now() + 86400000));
-                  return iso >= effStartISO;
-                })
                 .map((day) => {
                 const prog = dayProgress(day.value);
                 const isSel = selectedDay === day.value;
-                // 📅 التاريخ الطبيعي لهذا اليوم في بلوكه (نفس منطق المراجعة/الاعتماد)
-                const isoDate = slotBlockDate(startDate, startRotForSub, selectedWeek, day.value);
+                // 📅 تاريخ التوصيل الفعلي لهذا اليوم = أقرب ظهور لـ(أسبوع+يوم) ≥ بكرة
+                //    داخل الاشتراك (slotToDate) — لا أول ظهور مطلق (قد يكون ماضياً).
+                const isoDate = slotToDate(startDate, startRotForSub, selectedWeek, day.value);
                 const dateLbl = isoDate
                   ? (() => {
                       const dt = new Date(isoDate + "T00:00:00");
