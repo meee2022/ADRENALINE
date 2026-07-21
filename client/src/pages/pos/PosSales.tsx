@@ -441,6 +441,8 @@ export default function PosSales() {
                         src={imageUrl}
                         alt={m.name}
                         loading="lazy"
+                        decoding="async"
+                        draggable={false}
                         className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />

@@ -262,6 +262,14 @@
   grid-template-columns: repeat(auto-fill, minmax(min(145px, 100%), 1fr));
 }
 
+/* ⚡ أداء POS: 118 كارت بصور وظلال — بدون هذا المتصفح يرسمها كلها كل إطار
+   أثناء السكرول فيهنّج على جهاز الكاشير. content-visibility يتخطّى تخطيط
+   ورسم الكروت خارج الشاشة، وintrinsic-size يحجز مكانها فلا يقفز السكرول. */
+.pos-item-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 180px 165px;
+}
+
 .pos-sales-screen button:focus-visible,
 .pos-shell button:focus-visible,
 .pos-shell a:focus-visible {
