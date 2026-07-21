@@ -1517,13 +1517,16 @@ export default function PublicMenuPage() {
                       return;
                     }
                     setSelectedWeek(week.value); setWeekTouched(true);
-                    // ✅ عند فتح أسبوع: نضع العميل على **أول يوم ناقص فيه** (السبت عادةً)
-                    //    بدل إبقاء اليوم المنقول من الأسبوع السابق (كالخميس) — كان يتخطى
-                    //    قفل الترتيب ويُدخِله على آخر الأسبوع فيلتبس (شكوى المستخدم).
-                    const firstDay = DELIVERY_DAYS.find((d) =>
-                      isSlotInSub(week.value, d) && !dayCompleteInWeek(week.value, d),
-                    ) || DELIVERY_DAYS.find((d) => isSlotInSub(week.value, d)) || null;
-                    if (firstDay) setSelectedDay(firstDay);
+                    // ✅ عند فتح أسبوع: نضع العميل على **أول يوم ناقص فيه زمنياً** (بالتاريخ
+                    //    الفعلي من orderedSubSlots، لا بترتيب أيام الأسبوع) — تبويب الدورة
+                    //    الواحد قد يغطي فترتين في التقويم (أربعاء/خميس يوليو + سبت/أحد
+                    //    أغسطس لما تلفّ الدورة)، فالترتيب بأيام الأسبوع كان يختار «السبت»
+                    //    البعيد (15 أغسطس) بدل الأربعاء القريب (شكوى المستخدم).
+                    const nxtSlot =
+                      orderedSubSlots.find((s) => s.week === week.value && !dayCompleteInWeek(week.value, s.day))
+                      || orderedSubSlots.find((s) => s.week === week.value)
+                      || null;
+                    if (nxtSlot) setSelectedDay(nxtSlot.day);
                   }}
                   className={cn(
                     "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-1.5",
@@ -1564,6 +1567,14 @@ export default function PublicMenuPage() {
                 //       فلأسبوع دورة يتكرّر داخل الاشتراك يرجّع تاريخ البلوك الأول (ماضٍ)
                 //       ويُخفي كل أيامه بالغلط — باگ اختفاء أيام الأسبوع 3 عند سلطان.
                 .filter((day) => isSlotInSub(selectedWeek, day.value))
+                // ✅ ترتيب الشرائح **بتاريخ التوصيل الفعلي** — تبويب الدورة قد يجمع
+                //    فترتين (أربعاء/خميس يوليو + سبت/أحد أغسطس)، وترتيب أيام الأسبوع
+                //    كان يعرض السبت البعيد أولاً فيوهم العميل أنه أول أيامه.
+                .sort((a, b) => {
+                  const da = slotToDate(startDate, startRotForSub, selectedWeek, a.value) || "9999";
+                  const db = slotToDate(startDate, startRotForSub, selectedWeek, b.value) || "9999";
+                  return da.localeCompare(db);
+                })
                 .map((day) => {
                 const prog = dayProgress(day.value);
                 const isSel = selectedDay === day.value;
