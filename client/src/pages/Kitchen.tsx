@@ -904,21 +904,22 @@ export default function Kitchen() {
     };
     // ✅ المخصّصون من المصدر الموحّد (خطط اليوم الفعلية + القوالب) — إنجليزي دائماً
     void composeCust;
-    // ✅ تبسيط (طلب المستخدم): اسم العميل فوق، وتحته كل وجبة في سطر لوحدها — بلا
-    //    أرقام ولا عمود كمية ولا تظليل متبادل. نُبقي فقط تحذير الحساسية وتمييز
-    //    «لم تُحدَّد» (برتقالي) لأنه لازم يعرفه المطبخ. السلطات/السناكات القياسية
-    //    محسوبة أصلاً في الإجمالي فوق، فتظهر هنا كسطر عادي.
-    const personBox = (p: any) => `
-      <div class="person">
-        <div class="ph">
-          <b class="pn">${esc(p.name)}</b>
-          <span class="pdt">${p.deliveryTime === "MORNING" ? "☀ Morning" : "🌙 Evening"}</span>
-        </div>
-        ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-        <table class="pt">${p.meals.map((m: any) =>
-          `<tr class="${m.notset ? "nsrow" : ""}"><td class="pm">${esc(m.text)}</td></tr>`
-        ).join("")}</table>
-      </div>`;
+    // ✅ نفس تصميم جداول الوجبات العادية (.dish) بالظبط — رأس ملوّن (اسم العميل +
+    //    عدد وجباته) وصفوف مؤطّرة وعمود عدد، جدول لكل مخصّص (طلب المستخدم). يبقى
+    //    تحذير الحساسية (صف أحمر) وتمييز «لم تُحدَّد» (nsrow برتقالي).
+    const personBox = (p: any) => {
+      const dot = p.deliveryTime === "MORNING" ? "☀" : "🌙";
+      const rows = (p.meals || []).map((m: any) => {
+        const qty = m.notset ? "" : (m.isSide ? "•" : "1");
+        return `<tr class="${m.notset ? "nsrow" : ""}"><td class="lb">${esc(m.text)}</td><td class="ct">${qty}</td></tr>`;
+      }).join("");
+      return `
+      <div class="dishbox"><table class="dish">
+        <tr class="dh"><td class="dn">${esc(p.name)} ${dot}</td><td class="dc">${(p.meals || []).length}</td></tr>
+        ${p.allergies ? `<tr><td class="lb" colspan="2" style="background:#fef2f2;color:#b91c1c;font-weight:800">🚫 ${esc(p.allergies)}</td></tr>` : ""}
+        ${rows}
+      </table></div>`;
+    };
     const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
     // 📄 المخصّصون يبدأون في صفحة جديدة عند الطباعة — لا يلتصقون بآخر صفحة العاديين.
     const custHtml = customizedAll.length ? `
@@ -1471,30 +1472,31 @@ export default function Kitchen() {
                           {isRtl ? `الوجبات المخصّصة (${customizedAll.length} عميل)` : `Customized Orders (${customizedAll.length})`}
                         </h3>
                       </div>
-                      {/* ✅ مبسّط (طلب المستخدم): جدولان جنب بعض، وكل وجبة في سطر باسمها فقط —
-                          بلا أرقام أو عمود كمية أو تظليل متبادل. يبقى تحذير الحساسية و«لم تُحدَّد». */}
+                      {/* ✅ نفس تصميم جداول الوجبات العادية: رأس ملوّن (اسم + عدد) وصفوف
+                          مؤطّرة وعمود كمية — جدول لكل مخصّص (طلب المستخدم). */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {customizedAll.map((p, i) => (
-                          <div key={i} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1.5px solid #cdd9e6", boxShadow: "0 1px 3px rgba(14,42,74,.07), 0 10px 24px -16px rgba(14,42,74,.18)" }}>
-                            <div className="flex items-center justify-between gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#0E2A4A,#0E76AC)" }}>
-                              <span className="font-black text-base tracking-wide">{p.name}</span>
-                              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 whitespace-nowrap">
-                                {p.deliveryTime === "MORNING" ? (isRtl ? "☀ صباحي" : "☀ Morning") : (isRtl ? "🌙 مسائي" : "🌙 Evening")}
-                              </span>
-                            </div>
-                            {p.allergies && (
-                              <p className="text-[12px] text-red-700 bg-red-50 px-4 py-2 font-bold border-b border-red-100">🚫 {p.allergies}</p>
-                            )}
-                            <table className="w-full">
-                              <tbody>
-                                {p.meals.map((m: any, j: number) => (
-                                  <tr key={j} className={cn("border-t border-slate-100", m.notset ? "bg-amber-50" : "")}>
-                                    <td className={cn("px-4 py-2.5 font-bold text-[14px]", m.notset ? "text-amber-700" : "text-[#0f2438]")}>{m.text}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                          <table key={i} className="w-full border-collapse text-[13px]" style={{ boxShadow: "0 10px 24px -16px rgba(14,42,74,.18)" }}>
+                            <tbody>
+                              <tr>
+                                <td className="font-black text-white px-3 py-2" style={{ background: "#0E76AC", border: "1px solid #0E76AC" }}>
+                                  {p.name} {p.deliveryTime === "MORNING" ? "☀" : "🌙"}
+                                </td>
+                                <td className="font-black text-white text-center px-2 py-2 w-11" style={{ background: "#0E76AC", border: "1px solid #0E76AC" }}>
+                                  {p.meals.length}
+                                </td>
+                              </tr>
+                              {p.allergies && (
+                                <tr><td colSpan={2} className="text-red-700 bg-red-50 px-3 py-1.5 font-bold text-[12px]" style={{ border: "1px solid #6d8aa3" }}>🚫 {p.allergies}</td></tr>
+                              )}
+                              {p.meals.map((m: any, j: number) => (
+                                <tr key={j} className={cn(m.notset ? "bg-amber-50" : (j % 2 === 1 ? "bg-[#f6fafd]" : ""))}>
+                                  <td className={cn("px-3 py-1.5 font-bold", m.notset && "text-amber-700")} style={{ border: "1px solid #6d8aa3" }}>{m.text}</td>
+                                  <td className="text-center font-black px-2 py-1.5 text-[#0E76AC]" style={{ border: "1px solid #6d8aa3" }}>{m.notset ? "" : (m.isSide ? "•" : "1")}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         ))}
                       </div>
                     </div>
