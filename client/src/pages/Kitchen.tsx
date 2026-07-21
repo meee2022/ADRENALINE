@@ -541,16 +541,26 @@ export default function Kitchen() {
    *    fallback لسجلات قديمة لمن لم يُبنَ له قالب بعد (تختفي تلقائياً فور بناء قالبه).
    *    قبل هذا كانت الأولوية معكوسة، فمن عنده الاثنان ظهر بخطته لا بقالبه.
    */
+  type CustMeal = { text: string; isSide: boolean; notset: boolean };
   const customizedAll = useMemo(() => {
-    const list: { name: string; deliveryTime: string; allergies: string; meals: string[] }[] = [];
+    const list: { name: string; deliveryTime: string; allergies: string; meals: CustMeal[] }[] = [];
     const seen = new Set<string>();
+    // ✅ الأصناف القياسية = السناكات/السلطات/الشوربات/الحلو (النوع SNACK أو اسم قياسي معروف).
+    //    تُطبخ عادي وتُحسب مع الإجمالي، فتُعرض بكمية مظلّلة (•) لا «1».
+    const asMeal = (text: string, type?: any): CustMeal | null => {
+      const t = String(text || "").trim();
+      if (!t) return null;
+      const notset = /NOT SET|لم تُحدَّد/i.test(t);
+      const isSide = !notset && (String(type || "").toUpperCase() === "SNACK" || isStdSideName(t));
+      return { text: t, isSide, notset };
+    };
     // 1) القوالب أولاً — المصدر المعتمد
     for (const c of (customized || [])) {
       seen.add(c.customerName);
       list.push({
         name: c.customerName, deliveryTime: c.deliveryTime,
         allergies: [c.allergies, c.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
-        meals: (c.items || []).map((it: any) => composeCustItem(it)).filter(Boolean),
+        meals: (c.items || []).map((it: any) => asMeal(composeCustItem(it), it.type)).filter(Boolean) as CustMeal[],
       });
     }
     // 2) خطط قديمة لمن لا قالب له — حتى لا يفقد أحد أكله أثناء الانتقال
@@ -558,7 +568,7 @@ export default function Kitchen() {
       if (seen.has(p.name)) continue;
       list.push({
         name: p.name, deliveryTime: p.deliveryTime, allergies: p.allergies,
-        meals: p.items.map((it: any) => (it.note ? `${it.meal} — ${it.note}` : it.meal)).filter(Boolean),
+        meals: p.items.map((it: any) => asMeal(it.note ? `${it.meal} — ${it.note}` : it.meal, it.type)).filter(Boolean) as CustMeal[],
       });
     }
     return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));
@@ -813,10 +823,10 @@ export default function Kitchen() {
           <span class="pdt">${p.deliveryTime === "MORNING" ? "☀ Morning" : "🌙 Evening"}</span>
         </div>
         ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-        <table class="pt">${p.meals.map((m: string, i: number) => {
-          const side = isStdSideName(m);
-          const notset = /NOT SET|لم تُحدَّد/i.test(m);
-          return `<tr class="${notset ? "nsrow" : ""}"><td class="pmn">${i + 1}</td><td class="pm">${esc(m)}</td><td class="pq${side ? " sq" : ""}">${side ? "•" : "1"}</td></tr>`;
+        <table class="pt">${p.meals.map((m: any, i: number) => {
+          // كمية: «لم تُحدَّد» بلا رقم · السناك/السلطة (قياسي) نقطة مظلّلة · الرئيسي «1»
+          const qty = m.notset ? "" : (m.isSide ? "•" : "1");
+          return `<tr class="${m.notset ? "nsrow" : ""}"><td class="pmn">${i + 1}</td><td class="pm">${esc(m.text)}</td><td class="pq${m.isSide ? " sq" : ""}">${qty}</td></tr>`;
         }).join("")}</table>
       </div>`;
     const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
@@ -1073,10 +1083,10 @@ export default function Kitchen() {
                         <p className="text-[10.5px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mb-1.5">⚠ {c.allergies}</p>
                       )}
                       <ul className="space-y-1">
-                        {c.meals.map((meal, i) => (
-                          <li key={i} className="text-[12.5px] font-bold text-slate-700 flex items-start gap-1.5">
-                            <span className="text-[#0E76AC] shrink-0">•</span>
-                            <span>{meal}</span>
+                        {c.meals.map((m: any, i: number) => (
+                          <li key={i} className={cn("text-[12.5px] font-bold flex items-start gap-1.5", m.notset ? "text-amber-700" : "text-slate-700")}>
+                            <span className={cn("shrink-0", m.isSide ? "text-amber-500" : "text-[#0E76AC]")}>•</span>
+                            <span>{m.text}</span>
                           </li>
                         ))}
                       </ul>
@@ -1367,24 +1377,27 @@ export default function Kitchen() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                         {customizedAll.map((p, i) => (
-                          <div key={i} className="bg-white rounded-2xl p-4" style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 10px 24px -14px rgba(14,42,74,.16)" }}>
-                            <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-                              <span className="font-black text-gray-900">{p.name}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                                style={{ background: p.deliveryTime === "MORNING" ? "#fffbeb" : "#eff6ff", color: p.deliveryTime === "MORNING" ? "#92400e" : "#1e40af" }}>
+                          <div key={i} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #d5e0ea", boxShadow: "0 1px 2px rgba(14,42,74,.05), 0 10px 24px -16px rgba(14,42,74,.18)" }}>
+                            <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#0E2A4A,#0E76AC)" }}>
+                              <span className="font-black text-sm tracking-wide">{p.name}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 whitespace-nowrap">
                                 {p.deliveryTime === "MORNING" ? (isRtl ? "☀ صباحي" : "☀ Morning") : (isRtl ? "🌙 مسائي" : "🌙 Evening")}
                               </span>
                             </div>
                             {p.allergies && (
-                              <p className="text-[11px] text-amber-700 bg-amber-50 rounded px-2 py-1 mb-2 font-semibold">⚠ {p.allergies}</p>
+                              <p className="text-[11px] text-red-700 bg-red-50 px-3.5 py-1.5 font-bold border-b border-red-100">🚫 {p.allergies}</p>
                             )}
-                            <ul className="space-y-1.5">
-                              {p.meals.map((meal, j) => (
-                                <li key={j} className="text-sm">
-                                  <span className="font-bold text-[#0f1516]">• {meal}</span>
-                                </li>
-                              ))}
-                            </ul>
+                            <table className="w-full text-sm">
+                              <tbody>
+                                {p.meals.map((m: any, j: number) => (
+                                  <tr key={j} className={cn("border-t border-slate-100", m.notset ? "bg-amber-50" : (m.isSide ? "bg-amber-50/40" : (j % 2 === 1 ? "bg-slate-50/60" : "")))}>
+                                    <td className="w-6 text-center text-[11px] font-black text-slate-400 px-2 py-2">{j + 1}</td>
+                                    <td className={cn("px-2 py-2 font-bold", m.notset ? "text-amber-700" : "text-[#0f2438]")}>{m.text}</td>
+                                    <td className={cn("w-8 text-center font-black px-2", m.isSide ? "text-amber-500" : "text-[#0E76AC]")}>{m.notset ? "" : (m.isSide ? "•" : "1")}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         ))}
                       </div>
