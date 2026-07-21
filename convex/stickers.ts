@@ -585,7 +585,17 @@ export const get = query({
         for (const s of active) {
           const mealName = engText(s);
           if (!mealName) continue;
-          const rawCal = estimateCalories(mealName) || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
+          const canonicalSnack = s.type === "SNACK"
+            ? (publicMealsByName.get(String(s.baseName || "").trim().toLowerCase())
+              || publicMealsByName.get(mealName.trim().toLowerCase()))
+            : undefined;
+          const snackProtein = Number(canonicalSnack?.protein || 0);
+          const snackCarbs = Number(canonicalSnack?.carbs || 0);
+          const snackFats = Number(canonicalSnack?.fats || 0);
+          const rawCal = mealName === "⚠ NOT SET" ? 0
+            : Number(canonicalSnack?.calories || 0)
+              || estimateCalories(mealName)
+              || estimateFromParts(s.proteinName, s.proteinG, s.carbName, s.carbG);
           // Preserve differences between custom portions without printing extreme estimates.
           const cal = s.type === "MAIN" && rawCal > 450
             ? Math.min(490, 450 + Math.round((rawCal - 450) * 0.1))
@@ -602,8 +612,10 @@ export const get = query({
             warnings,
             caloriesText: cal ? `${cal} CAL` : "",
             calories: cal || undefined,
-            macros: undefined,
-            protein: undefined, carbs: undefined, fats: undefined,
+            macros: canonicalSnack ? `P ${snackProtein} • C ${snackCarbs} • F ${snackFats}` : undefined,
+            protein: canonicalSnack ? snackProtein : undefined,
+            carbs: canonicalSnack ? snackCarbs : undefined,
+            fats: canonicalSnack ? snackFats : undefined,
             dateText, prodDate, expDate,
             mealIndexText: `MEAL ${mIdx}`,
           });
