@@ -904,8 +904,10 @@ export default function Kitchen() {
     };
     // ✅ المخصّصون من المصدر الموحّد (خطط اليوم الفعلية + القوالب) — إنجليزي دائماً
     void composeCust;
-    // ✅ زي الإكسيل: وجبات المخصّص بالجرامات جنبها "1"، والسلطات/السناكات القياسية خانتها فاضية
-    //    (مظلّلة) لأنها محسوبة فوق في الإجمالي بكمياتها العادية.
+    // ✅ تبسيط (طلب المستخدم): اسم العميل فوق، وتحته كل وجبة في سطر لوحدها — بلا
+    //    أرقام ولا عمود كمية ولا تظليل متبادل. نُبقي فقط تحذير الحساسية وتمييز
+    //    «لم تُحدَّد» (برتقالي) لأنه لازم يعرفه المطبخ. السلطات/السناكات القياسية
+    //    محسوبة أصلاً في الإجمالي فوق، فتظهر هنا كسطر عادي.
     const personBox = (p: any) => `
       <div class="person">
         <div class="ph">
@@ -913,11 +915,9 @@ export default function Kitchen() {
           <span class="pdt">${p.deliveryTime === "MORNING" ? "☀ Morning" : "🌙 Evening"}</span>
         </div>
         ${p.allergies ? `<div class="alg">🚫 ${esc(p.allergies)}</div>` : ""}
-        <table class="pt">${p.meals.map((m: any, i: number) => {
-          // كمية: «لم تُحدَّد» بلا رقم · السناك/السلطة (قياسي) نقطة مظلّلة · الرئيسي «1»
-          const qty = m.notset ? "" : (m.isSide ? "•" : "1");
-          return `<tr class="${m.notset ? "nsrow" : ""}"><td class="pmn">${i + 1}</td><td class="pm">${esc(m.text)}</td><td class="pq${m.isSide ? " sq" : ""}">${qty}</td></tr>`;
-        }).join("")}</table>
+        <table class="pt">${p.meals.map((m: any) =>
+          `<tr class="${m.notset ? "nsrow" : ""}"><td class="pm">${esc(m.text)}</td></tr>`
+        ).join("")}</table>
       </div>`;
     const personWeight = (p: any) => 1.5 + (p.allergies ? 1 : 0) + (p.meals?.length || 0);
     // 📄 المخصّصون يبدأون في صفحة جديدة عند الطباعة — لا يلتصقون بآخر صفحة العاديين.
@@ -974,12 +974,9 @@ export default function Kitchen() {
         .pdt{font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
         .alg{color:#b91c1c;background:#fef2f2;font-size:11px;font-weight:800;padding:5px 12px;border-bottom:1px solid #fee2e2;line-height:1.4}
         .pt{width:100%;border-collapse:collapse}
-        .pt td{padding:6px 11px;font-size:13px;font-weight:700;line-height:1.35;border-top:1px solid #eef3f7;vertical-align:middle}
+        .pt td{padding:6px 12px;font-size:13.5px;font-weight:700;line-height:1.4;border-top:1px solid #eef3f7;vertical-align:middle}
         .pt tr:first-child td{border-top:none}
-        .pt tr:nth-child(even) td{background:#f7fafd}
-        .pmn{width:22px;text-align:center;color:#9db4c9;font-weight:900;font-size:11px}
         .pm{color:#0f2438}
-        .pq{width:30px;text-align:center;font-weight:900;font-size:14px;color:#0E76AC}
         .sq{color:#b45309}
         .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
