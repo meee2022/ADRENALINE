@@ -1169,21 +1169,20 @@ export default function Kitchen() {
                   {isRtl ? "الوجبات المخصّصة" : "Customized meals"}
                   <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{custShown.length}</span>
                 </h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {custShown.map((c, ci) => (
-                    <div key={ci} className="rounded-xl bg-white border border-slate-100 p-3">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-black text-sm text-[#0E2A4A]">{c.name}</span>
+                    <div key={ci} className="rounded-xl bg-white border border-slate-100 p-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-black text-[15px] text-[#0E2A4A]">{c.name}</span>
                         <span className="text-[10px] font-bold text-slate-400">{c.deliveryTime === "EVENING" ? (isRtl ? "مسائي" : "Eve") : (isRtl ? "صباحي" : "Morn")}</span>
                       </div>
                       {c.allergies && (
-                        <p className="text-[10.5px] text-amber-700 bg-amber-50 rounded px-1.5 py-0.5 mb-1.5">⚠ {c.allergies}</p>
+                        <p className="text-[11px] text-red-700 bg-red-50 rounded px-2 py-1 mb-2 font-bold">🚫 {c.allergies}</p>
                       )}
-                      <ul className="space-y-1">
+                      <ul className="divide-y divide-slate-100">
                         {c.meals.map((m: any, i: number) => (
-                          <li key={i} className={cn("text-[12.5px] font-bold flex items-start gap-1.5", m.notset ? "text-amber-700" : "text-slate-700")}>
-                            <span className={cn("shrink-0", m.isSide ? "text-amber-500" : "text-[#0E76AC]")}>•</span>
-                            <span>{m.text}</span>
+                          <li key={i} className={cn("text-[14px] font-bold py-2", m.notset ? "text-amber-700" : "text-[#0f2438]")}>
+                            {m.text}
                           </li>
                         ))}
                       </ul>
@@ -1472,25 +1471,25 @@ export default function Kitchen() {
                           {isRtl ? `الوجبات المخصّصة (${customizedAll.length} عميل)` : `Customized Orders (${customizedAll.length})`}
                         </h3>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* ✅ مبسّط (طلب المستخدم): جدولان جنب بعض، وكل وجبة في سطر باسمها فقط —
+                          بلا أرقام أو عمود كمية أو تظليل متبادل. يبقى تحذير الحساسية و«لم تُحدَّد». */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {customizedAll.map((p, i) => (
-                          <div key={i} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1px solid #d5e0ea", boxShadow: "0 1px 2px rgba(14,42,74,.05), 0 10px 24px -16px rgba(14,42,74,.18)" }}>
-                            <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#0E2A4A,#0E76AC)" }}>
-                              <span className="font-black text-sm tracking-wide">{p.name}</span>
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 whitespace-nowrap">
+                          <div key={i} className="bg-white rounded-2xl overflow-hidden" style={{ border: "1.5px solid #cdd9e6", boxShadow: "0 1px 3px rgba(14,42,74,.07), 0 10px 24px -16px rgba(14,42,74,.18)" }}>
+                            <div className="flex items-center justify-between gap-2 px-4 py-3 text-white" style={{ background: "linear-gradient(120deg,#0E2A4A,#0E76AC)" }}>
+                              <span className="font-black text-base tracking-wide">{p.name}</span>
+                              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-white/20 whitespace-nowrap">
                                 {p.deliveryTime === "MORNING" ? (isRtl ? "☀ صباحي" : "☀ Morning") : (isRtl ? "🌙 مسائي" : "🌙 Evening")}
                               </span>
                             </div>
                             {p.allergies && (
-                              <p className="text-[11px] text-red-700 bg-red-50 px-3.5 py-1.5 font-bold border-b border-red-100">🚫 {p.allergies}</p>
+                              <p className="text-[12px] text-red-700 bg-red-50 px-4 py-2 font-bold border-b border-red-100">🚫 {p.allergies}</p>
                             )}
-                            <table className="w-full text-sm">
+                            <table className="w-full">
                               <tbody>
                                 {p.meals.map((m: any, j: number) => (
-                                  <tr key={j} className={cn("border-t border-slate-100", m.notset ? "bg-amber-50" : (m.isSide ? "bg-amber-50/40" : (j % 2 === 1 ? "bg-slate-50/60" : "")))}>
-                                    <td className="w-6 text-center text-[11px] font-black text-slate-400 px-2 py-2">{j + 1}</td>
-                                    <td className={cn("px-2 py-2 font-bold", m.notset ? "text-amber-700" : "text-[#0f2438]")}>{m.text}</td>
-                                    <td className={cn("w-8 text-center font-black px-2", m.isSide ? "text-amber-500" : "text-[#0E76AC]")}>{m.notset ? "" : (m.isSide ? "•" : "1")}</td>
+                                  <tr key={j} className={cn("border-t border-slate-100", m.notset ? "bg-amber-50" : "")}>
+                                    <td className={cn("px-4 py-2.5 font-bold text-[14px]", m.notset ? "text-amber-700" : "text-[#0f2438]")}>{m.text}</td>
                                   </tr>
                                 ))}
                               </tbody>
