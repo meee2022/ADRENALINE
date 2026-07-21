@@ -859,12 +859,19 @@ export default function Kitchen() {
         <tr class="tp"><td class="lb">Total Portions</td><td class="ct">${m.count}</td>${main ? `<td class="gc"></td><td class="gc"></td>` : ""}</tr>
       </table></div>`;
     };
-    // ✅ الأطباق الرئيسية (بأعمدة الجرامات) بعرض الصفحة كامل؛ والأطباق العادية في عمودين
+    // ✅ ترتيب كشف الشيف (بطلب المستخدم): الفطور → السناك/الجانبي → الرئيسية → (المخصّصون قسم منفصل).
+    //    الرئيسية بعرض الصفحة كامل (أعمدة جرامات)، والفطور والجانبي في عمودين.
     const isMainDish = (m: any) => isMain(m.name) && (m.dietCount + m.fitnessCount + m.bulkCount) > 0;
-    const mainDishes = mealSummary.filter(isMainDish);
-    const sideDishes = mealSummary.filter((m: any) => !isMainDish(m));
+    const isBreakfastDish = (m: any) => /break|فطور|فطار/.test((String(m.category || "") + " " + String(m.name || "")).toLowerCase());
+    const breakfastDishes = mealSummary.filter((m: any) => isBreakfastDish(m) && !isMainDish(m));
+    const mainDishes = mealSummary.filter((m: any) => !isBreakfastDish(m) && isMainDish(m));
+    const sideDishes = mealSummary.filter((m: any) => !isBreakfastDish(m) && !isMainDish(m));
     const dishWeight = (m: any) => 2 + m.modGroups.length + m.modGroups.reduce((s: number, g: any) => s + Math.floor(String(g.customers.map((c: any) => c.name).join(", ")).length / 42), 0);
-    const dishHtml = mainDishes.map(dishTable).join("") + (sideDishes.length ? colsTable(sideDishes, 2, dishWeight, dishTable) : "");
+    const secHead = (label: string) => `<h3 class="dsec">${label}</h3>`;
+    const dishHtml =
+      (breakfastDishes.length ? secHead(isRtl ? "الفطور" : "Breakfast") + colsTable(breakfastDishes, 2, dishWeight, dishTable) : "") +
+      (sideDishes.length ? secHead(isRtl ? "السناك والجانبي" : "Snacks & sides") + colsTable(sideDishes, 2, dishWeight, dishTable) : "") +
+      (mainDishes.length ? secHead(isRtl ? "الوجبات الرئيسية" : "Main meals") + mainDishes.map(dishTable).join("") : "");
     // ✅ المخصّصون — من القالب (بجرامات + نوع بروتين) زي كشف الإكسيل: "دجاج 150جم + رز 200جم".
     //    يُركَّب بلغة الواجهة (الأساس من المنيو، والبروتين/الكارب مترجمان) حتى لا يظهر
     //    عربي في الكشف الإنجليزي. نرجع للنص المحفوظ فقط لو تعذّر التركيب.
@@ -954,6 +961,8 @@ export default function Kitchen() {
         .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
         .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
+        /* عنوان قسم داخل الكشف (الفطور/السناك/الرئيسية) — لا يُيتَّم أسفل الصفحة */
+        .dsec{font-size:12px;font-weight:900;color:#0E76AC;margin:10px 0 5px;border-bottom:1.5px solid #0E76AC;padding-bottom:3px;break-after:avoid;page-break-after:avoid}
         /* 📄 قسم المخصّصين يبدأ صفحة جديدة — لا يلتصق بآخر صفحة العاديين */
         .custpage{break-before:page;page-break-before:always}
         .custpage .sec{border-top:none;margin-top:0}
