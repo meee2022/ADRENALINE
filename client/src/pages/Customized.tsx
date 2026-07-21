@@ -279,7 +279,7 @@ export default function Customized() {
     const s: Slot[] = [];
     for (let i = 1; i <= nMeals; i++)
       // الجرامات تبدأ صفر (لا 150 افتراضي) — عشان لا يتسرّب رقم للمطبخ إلا لو الأخصائية كتبته فعلاً
-      s.push({ key: `MEAL ${i}`, label: `${t("وجبة", "Meal")} ${i}`, type: "MAIN", proteinG: 0, carbName: t("رز أبيض", "White rice"), carbG: 0 });
+      s.push({ key: `MEAL ${i}`, label: `${t("وجبة", "Meal")} ${i}`, type: "MAIN", proteinG: 0, carbName: "", carbG: 0 });
     for (let i = 1; i <= nSnacks; i++)
       s.push({ key: `SNACK ${i}`, label: `${t("سناك", "Snack")} ${i}`, type: "SNACK" });
     return s;
@@ -335,7 +335,7 @@ export default function Customized() {
       const cur = prev[activeWeek]?.[activeDay] || [];
       const n = cur.filter((s) => s.type === type).length + 1;
       const newSlot: Slot = type === "MAIN"
-        ? { key: `EXTRA-MEAL-${cur.length}`, label: `${t("وجبة زيادة", "Extra meal")} ${n}`, type: "MAIN", proteinG: 0, carbName: t("رز أبيض", "White rice"), carbG: 0 }
+        ? { key: `EXTRA-MEAL-${cur.length}`, label: `${t("وجبة زيادة", "Extra meal")} ${n}`, type: "MAIN", proteinG: 0, carbName: "", carbG: 0 }
         : { key: `EXTRA-SNACK-${cur.length}`, label: `${t("سناك زيادة", "Extra snack")} ${n}`, type: "SNACK" };
       return { ...prev, [activeWeek]: { ...(prev[activeWeek] || {}), [activeDay]: [...cur, newSlot] } };
     });
