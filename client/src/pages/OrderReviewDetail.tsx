@@ -247,10 +247,20 @@ export default function OrderReviewDetail() {
       return da < db ? -1 : da > db ? 1 : a - b;
     });
 
-  // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الأربعاء)
+  // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الخميس)
+  //    ⚠️ كان الخميس ناقصاً من الجدول (يأخذ 99 فيُرمى آخر الترتيب دائماً)
   const dayOrder: Record<string, number> = {
-    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4,
+    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5,
   };
+  /** ترتيب أيام أسبوع واحد **بتاريخ التوصيل الفعلي** (fallback: ترتيب الأسبوع الثابت).
+   *  Object.keys بلا ترتيب كان يعرضها بترتيب اختيار العميل — فطلب اختار 29 ثم 25
+   *  يعرض الأربعاء قبل السبت واللخبطة اللي اشتكى منها المستخدم. */
+  const sortDaysChrono = (weekNum: number, dayKeys: string[]): string[] =>
+    [...dayKeys].sort((a, b) => {
+      const da = dateForSlot(weekNum, a), db = dateForSlot(weekNum, b);
+      if (da && db && da !== db) return da < db ? -1 : 1;
+      return (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99);
+    });
   const allWeekDayKeys: string[] = Array.from(
     new Set(items.map((i) => `${i.week}-${i.day}`))
   ).sort((a, b) => {
@@ -378,9 +388,8 @@ export default function OrderReviewDetail() {
       .join("  •  ");
 
     const groups = weeks.map((w) => {
-      const days = Object.keys(groupedByWeek[w]).sort(
-        (a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99),
-      );
+      // ✅ نفس ترتيب الشاشة: بتاريخ التوصيل الفعلي (يمسك الخميس الذي كان ناقصاً من dayOrder)
+      const days = sortDaysChrono(w, Object.keys(groupedByWeek[w]));
       return {
         title: `${t("الأسبوع (دورة", "Week (cycle")} ${w})`,
         sections: days.map((d) => ({
@@ -537,7 +546,8 @@ export default function OrderReviewDetail() {
 
         {weeks.map((weekNum) => {
           const weekData = groupedByWeek[weekNum];
-          const days = Object.keys(weekData);
+          // ✅ أيام الأسبوع بترتيب تاريخ التوصيل الفعلي — لا بترتيب اختيار العميل
+          const days = sortDaysChrono(weekNum, Object.keys(weekData));
 
           return (
             <Card key={weekNum} className="p-6">
