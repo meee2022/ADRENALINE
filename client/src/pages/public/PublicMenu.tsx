@@ -1522,9 +1522,13 @@ export default function PublicMenuPage() {
                     //    الواحد قد يغطي فترتين في التقويم (أربعاء/خميس يوليو + سبت/أحد
                     //    أغسطس لما تلفّ الدورة)، فالترتيب بأيام الأسبوع كان يختار «السبت»
                     //    البعيد (15 أغسطس) بدل الأربعاء القريب (شكوى المستخدم).
+                    //    🔒 ونحترم قفل الترتيب: لا نضعه أبداً على يوم لم يحن دوره بعد
+                    //       (تبويب الدورة قد يضم أيام ذيل الاشتراك البعيدة — كانت
+                    //       auto-select تتخطى القفل وتفتحها للإضافة، شكوى المستخدم).
+                    //       لو كل أيامه المسموحة مكتملة → أول يوم مكتمل ليراجع اختياراته.
                     const nxtSlot =
-                      orderedSubSlots.find((s) => s.week === week.value && !dayCompleteInWeek(week.value, s.day))
-                      || orderedSubSlots.find((s) => s.week === week.value)
+                      orderedSubSlots.find((s) => s.week === week.value && !dayCompleteInWeek(week.value, s.day) && isSlotAllowed(week.value, s.day))
+                      || orderedSubSlots.find((s) => s.week === week.value && isSlotAllowed(week.value, s.day))
                       || null;
                     if (nxtSlot) setSelectedDay(nxtSlot.day);
                   }}
@@ -1609,11 +1613,15 @@ export default function PublicMenuPage() {
                         ? "bg-[#3CC4F0] text-white shadow-md"
                         : prog.complete
                           ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
-                          : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5",
+                          : !isSlotAllowed(selectedWeek, day.value)
+                            // 🔒 يوم لم يحن دوره بعد (ذيل الاشتراك) — باهت ومقفول بصرياً
+                            ? "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed"
+                            : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5",
                     )}
                   >
                     <span className="flex items-center gap-1.5">
                       {day.label}
+                      {!isSlotAllowed(selectedWeek, day.value) && !prog.complete && !isSel && <span className="text-[11px]">🔒</span>}
                       {/* ✓ لليوم المكتمل، أو عدّاد صغير لما اختار بعض الوجبات */}
                       {prog.complete ? (
                         <Check className={cn("h-3.5 w-3.5", isSel ? "text-white" : "text-emerald-600")} />
