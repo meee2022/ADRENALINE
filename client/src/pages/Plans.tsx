@@ -71,6 +71,7 @@ import { ar, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { getEffectivePlanItems } from "@/lib/planItems";
 
 /* ─── helpers ─────────────────────────────────────────── */
 function makeId() {
@@ -575,7 +576,10 @@ export default function PlansPage() {
     );
 
     if (existingPlan) {
-      setCurrentPlan(existingPlan);
+      setCurrentPlan({
+        ...existingPlan,
+        items: getEffectivePlanItems(existingPlan),
+      });
     } else {
       const customer = customers.find((c: any) => c._id === selectedCustomerId);
       const mealsPerDay = customer?.mealsPerDay ?? 0;
@@ -627,7 +631,7 @@ export default function PlansPage() {
     setCurrentPlan({
       ...currentPlan,
       deliveryTime: yesterdayPlan.deliveryTime || (selectedCustomer as any)?.deliveryTime || "MORNING",
-      items: (yesterdayPlan.items || []).map((item: any) => ({ ...item, id: makeId() })),
+      items: getEffectivePlanItems(yesterdayPlan).map((item: any) => ({ ...item, id: makeId() })),
       notes: yesterdayPlan.notes || "",
     });
     toast({ title: isRtl ? "✓ تم نسخ خطة الأمس" : "Copied" });
@@ -835,7 +839,7 @@ export default function PlansPage() {
       const customer = customers.find((c: any) => c._id === plan.customerId);
       const rowData: any[] = [plan.date, customer?.fullName || "Unknown", customer?.phone || "", customer?.deliveryTime || ""];
       for (const category of sortedCategories) {
-        const items = (plan.items || []).filter((i: any) => i.categoryId === category._id);
+        const items = getEffectivePlanItems(plan).filter((i: any) => i.categoryId === category._id);
         rowData.push(items.map((item: any) => {
           const id = selectedMealId(item);
           if (!id) return item?.isOff ? "OFF" : "Not Selected";

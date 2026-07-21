@@ -17,6 +17,23 @@ function isPrintableStatus(s: any) {
   return x !== "DRAFT" && x !== "CANCELLED";
 }
 
+function getEffectivePlanItems(planOrItems: any): any[] {
+  const items = Array.isArray(planOrItems)
+    ? planOrItems
+    : Array.isArray(planOrItems?.items)
+      ? planOrItems.items
+      : [];
+  const isImportedOrderSnapshot = (item: any) =>
+    Boolean(item?.mealId) && !item?.menuItemId && !item?.id && !item?.categoryId;
+  const importedCount = items.filter(isImportedOrderSnapshot).length;
+  const editorManagedCount = items.filter(
+    (item: any) => Boolean(item?.id || item?.categoryId || item?.menuItemId),
+  ).length;
+  return importedCount > 0 && importedCount === editorManagedCount
+    ? items.filter((item: any) => !isImportedOrderSnapshot(item))
+    : items;
+}
+
 function isoToDDMMYYYY(iso: string) {
   // iso = yyyy-MM-dd
   const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -231,7 +248,7 @@ export const get = query({
     // 3) Collect menuItemIds from plans
     const menuItemIds = new Set<string>();
     plans.forEach((p: any) => {
-      (p.items || []).forEach((it: any) => {
+      getEffectivePlanItems(p).forEach((it: any) => {
         if (it?.isOff) return;
         if (it?.menuItemId) menuItemIds.add(String(it.menuItemId));
       });
@@ -397,7 +414,7 @@ export const get = query({
       const customerNo = customerNoById.get(customerId) ?? 0;
 
       // ✅ لا نشترط menuItemId — الخطط المستوردة/اليدوية تحمل الاسم نصاً (mealNameEn)
-      const items = (p.items || [])
+      const items = getEffectivePlanItems(p)
         .filter((it: any) => it && !it.isOff && (
           it.publicMealId || it.mealId || it.menuItemId || it.mealNameEn || it.mealNameAr
         ))

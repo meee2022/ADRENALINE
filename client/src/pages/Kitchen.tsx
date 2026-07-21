@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/lib/kitchenSheet";
 import { openPrintDoc } from "@/lib/printDoc";
+import { getEffectivePlanItems } from "@/lib/planItems";
 import { Download, FileSpreadsheet } from "lucide-react";
 
 import {
@@ -350,7 +351,7 @@ export default function Kitchen() {
       const isCustomPlan = program.includes("CUSTOM");
       // ✅ قاعدة الإكسيل: نطوي فقط الأصناف القياسية للمخصّصين في الإجمالي؛ وجباتهم المخصّصة تبقى في بوكس الشخص.
 
-      (plan.items || [])
+      getEffectivePlanItems(plan)
         .filter((item: any) => !item.isOff)
         .forEach((item: any) => {
           const mealId = item.publicMealId || item.mealId || item.menuItemId;
@@ -552,7 +553,7 @@ export default function Kitchen() {
         allergies: [customer?.allergies, customer?.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
         items: [],
       };
-      (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
+      getEffectivePlanItems(plan).filter((it: any) => !it.isOff).forEach((item: any) => {
         const mealName = mealNameInLang(item.publicMealId || item.mealId || item.menuItemId, item);
         const note = String(item.specialNotes || "").trim(); // ملاحظة خاصة بالوجبة فقط
         byPerson[key].items.push({ meal: mealName, note });
@@ -644,7 +645,7 @@ export default function Kitchen() {
       const program = (customer?.program || plan.program || "STANDARD").toUpperCase();
       const slots = { breakfast: [] as string[], snack: [] as string[], lunch: [] as string[], dinner: [] as string[], other: [] as string[] };
 
-      (plan.items || []).filter((it: any) => !it.isOff).forEach((item: any) => {
+      getEffectivePlanItems(plan).filter((it: any) => !it.isOff).forEach((item: any) => {
         const { meal, legacyMenu } = resolvePlanMeal(item);
         const snapshotName = isRtl
           ? (item.mealNameAr || item.mealNameEn)
@@ -1572,7 +1573,7 @@ export default function Kitchen() {
                           if (c.includes("SNACK") || c.includes("سناك")) return 3;
                           return 4;
                         };
-                        return [...(plan.items || [])].filter((item: any) => !item.isOff).sort((a: any, b: any) => courseRank(a) - courseRank(b));
+                        return [...getEffectivePlanItems(plan)].filter((item: any) => !item.isOff).sort((a: any, b: any) => courseRank(a) - courseRank(b));
                       })()
                         .map((item: any, idx: number) => {
                           // ✅ دعم كلا النوعين: menuItemId (خطط يدوية) و mealId (طلبات عملاء)
@@ -1761,7 +1762,7 @@ export default function Kitchen() {
             (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
           );
           const totalMeals = allPlansToday.reduce(
-            (sum: number, p: any) => sum + (p.items || []).filter((i: any) => !i.isOff).length,
+            (sum: number, p: any) => sum + getEffectivePlanItems(p).filter((i: any) => !i.isOff).length,
             0
           );
           return (
