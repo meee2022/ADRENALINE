@@ -92,7 +92,7 @@ export function MobileBottomNav() {
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
-      className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-white to-cyan-50 border-t-2 border-cyan-300 shadow-[0_-4px_20px_rgba(6,182,212,0.15)]"
+      className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 border-t border-cyan-200/90 bg-[#f9fdfe]/[0.98] shadow-[0_-6px_22px_rgba(14,42,74,0.10)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <nav className="flex items-stretch justify-around min-h-16 px-1 max-w-screen-xl mx-auto">
@@ -104,15 +104,15 @@ export function MobileBottomNav() {
             <Link key={item.href} href={item.href} className="flex min-w-0 flex-1 sm:flex-none">
               <button
                 className={cn(
-                  "flex min-h-16 min-w-0 w-full flex-col items-center justify-center gap-0.5 px-1.5 py-1.5 rounded-xl transition-all duration-300 sm:min-w-[60px] sm:gap-1 sm:px-3 sm:py-2",
+                  "flex min-h-16 min-w-0 w-full flex-col items-center justify-center gap-0.5 px-1 py-1.5 rounded-xl transition-[color,background-color] duration-150 sm:min-w-[60px] sm:gap-1 sm:px-3 sm:py-2",
                   isActive
-                    ? "text-cyan-600 scale-110"
+                    ? "text-cyan-700"
                     : "text-gray-500 hover:text-cyan-500"
                 )}
               >
                 <div
                   className={cn(
-                    "relative p-1.5 rounded-xl transition-all duration-300 sm:p-2",
+                    "relative p-1.5 rounded-xl transition-[color,background-color,box-shadow] duration-150 sm:p-2",
                     isActive
                       ? "bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-lg shadow-cyan-500/50"
                       : "bg-transparent"
@@ -125,7 +125,7 @@ export function MobileBottomNav() {
                     )}
                   />
                   {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-cyan-500 rounded-full animate-pulse" />
+                    <div className="absolute -bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-cyan-600" />
                   )}
                 </div>
                 <span

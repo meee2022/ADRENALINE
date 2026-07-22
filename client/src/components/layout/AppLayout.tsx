@@ -80,7 +80,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       ) : (
         /* ✅ Mobile */
-        <div className="h-full w-full flex flex-col overflow-hidden">
+        <div className="app-mobile-shell h-full w-full flex flex-col overflow-hidden">
           <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <SheetContent
               side={isRtl ? "right" : "left"}
@@ -91,7 +91,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </Sheet>
 
           {/* Top mobile bar */}
-          <div className="h-14 border-b-2 border-cyan-200 flex items-center gap-2 px-3 bg-gradient-to-r from-cyan-50 to-blue-50 sticky top-0 z-20 shadow-lg">
+          <div className="app-mobile-header border-b border-cyan-200/80 flex items-center gap-2 px-3 bg-[#f3fbfd] sticky top-0 z-20 shadow-[0_4px_16px_rgba(14,42,74,0.08)]">
             {/* زرار القائمة الجانبية (كل الأقسام) */}
             <Button
               variant="ghost"
@@ -117,7 +117,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <main className="admin-data-tables relative flex-1 min-w-0 overflow-hidden" style={{ background: "#f1f5f9" }}>
             <div className="absolute inset-0 bg-grid-white/[0.02] bg-[length:50px_50px] pointer-events-none" />
 
-            <div className="app-mobile-content h-full w-full overflow-y-auto overflow-x-auto pb-20">
+            <div className="app-mobile-content h-full w-full overflow-y-auto overflow-x-hidden pb-20">
               <div className="w-full min-w-0 p-3 sm:p-4">{children}</div>
             </div>
           </main>

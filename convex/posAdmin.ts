@@ -414,14 +414,129 @@ export const dailySummary = query({
 });
 
 /** أفضل الأصناف مبيعاً في مدى تاريخ. */
+/** Historical POS sales for a selected date range, grouped by cashier and day. */
+export const rangeSalesSummary = query({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    branchId: v.optional(v.id("posBranches")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const start = Date.parse(`${args.from}T00:00:00+03:00`);
+    const end = Date.parse(`${args.to}T23:59:59.999+03:00`);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) {
+      throw new Error("Invalid report date range");
+    }
+
+    let tickets: any[] = await ctx.db
+      .query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
+      .collect();
+    if (args.branchId) {
+      tickets = tickets.filter((ticket) => String(ticket.branchId) === String(args.branchId));
+    }
+
+    const paid = tickets.filter((ticket) => ticket.status === "PAID" && !ticket.isNonRevenue);
+    const refunded = tickets.filter((ticket) => ticket.status === "REFUNDED" && !ticket.isNonRevenue);
+    const totalSales = paid.reduce((sum, ticket) => sum + Number(ticket.total || 0), 0);
+    const refundedValue = refunded.reduce((sum, ticket) => sum + Number(ticket.total || 0), 0);
+
+    type MethodAgg = { method: string; count: number; total: number };
+    type CashierAgg = {
+      cashierId: string;
+      name: string;
+      ticketsCount: number;
+      total: number;
+      methods: Record<string, MethodAgg>;
+    };
+    const byMethod = new Map<string, MethodAgg>();
+    const byCashier = new Map<string, CashierAgg>();
+    const byDay = new Map<string, { date: string; ticketsCount: number; total: number }>();
+
+    const addMethod = (target: Map<string, MethodAgg> | Record<string, MethodAgg>, method: string, amount: number) => {
+      const current = target instanceof Map ? target.get(method) : target[method];
+      const next = current || { method, count: 0, total: 0 };
+      next.count += 1;
+      next.total += amount;
+      if (target instanceof Map) target.set(method, next);
+      else target[method] = next;
+    };
+
+    for (const ticket of paid) {
+      const total = Number(ticket.total || 0);
+      const cashierId = String(ticket.cashierId);
+      const cashier = byCashier.get(cashierId) || {
+        cashierId,
+        name: ticket.cashierName || "Cashier",
+        ticketsCount: 0,
+        total: 0,
+        methods: {},
+      };
+      cashier.ticketsCount += 1;
+      cashier.total += total;
+
+      const allocations = Array.isArray(ticket.payments) && ticket.payments.length > 0
+        ? ticket.payments.map((payment: any) => ({ method: payment.method || "other", amount: Number(payment.amount || 0) }))
+        : [{ method: ticket.paymentMethod || "other", amount: total }];
+      for (const allocation of allocations) {
+        addMethod(byMethod, allocation.method, allocation.amount);
+        addMethod(cashier.methods, allocation.method, allocation.amount);
+      }
+      byCashier.set(cashierId, cashier);
+
+      const qatarDate = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Qatar", year: "numeric", month: "2-digit", day: "2-digit",
+      }).format(new Date(ticket.paidAt));
+      const day = byDay.get(qatarDate) || { date: qatarDate, ticketsCount: 0, total: 0 };
+      day.ticketsCount += 1;
+      day.total += total;
+      byDay.set(qatarDate, day);
+    }
+
+    const roundMoney = (value: number) => Math.round(value * 100) / 100;
+    return {
+      from: args.from,
+      to: args.to,
+      totalSales: roundMoney(totalSales),
+      ticketsCount: paid.length,
+      avgTicket: paid.length ? roundMoney(totalSales / paid.length) : 0,
+      refundedCount: refunded.length,
+      refundedValue: roundMoney(refundedValue),
+      byMethod: Array.from(byMethod.values())
+        .map((row) => ({ ...row, total: roundMoney(row.total) }))
+        .sort((a, b) => b.total - a.total),
+      byCashier: Array.from(byCashier.values())
+        .map((row) => ({
+          cashierId: row.cashierId,
+          name: row.name,
+          ticketsCount: row.ticketsCount,
+          total: roundMoney(row.total),
+          avgTicket: row.ticketsCount ? roundMoney(row.total / row.ticketsCount) : 0,
+          methods: Object.values(row.methods)
+            .map((method) => ({ ...method, total: roundMoney(method.total) }))
+            .sort((a, b) => b.total - a.total),
+        }))
+        .sort((a, b) => b.total - a.total),
+      byDay: Array.from(byDay.values())
+        .map((row) => ({ ...row, total: roundMoney(row.total) }))
+        .sort((a, b) => b.date.localeCompare(a.date)),
+    };
+  },
+});
+
 export const topItems = query({
   args: { from: v.string(), to: v.string(), branchId: v.optional(v.id("posBranches")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const start = new Date(args.from + "T00:00:00").getTime();
     const end = new Date(args.to + "T23:59:59.999").getTime();
-    const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
-    const paid = tickets.filter((t) => t.paidAt && t.paidAt >= start && t.paidAt <= end && t.status === "PAID"
+    const tickets: any[] = await ctx.db
+      .query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", start).lte("paidAt", end))
+      .collect();
+    const paid = tickets.filter((t) => t.status === "PAID" && !t.isNonRevenue
       && (!args.branchId || String(t.branchId) === String(args.branchId)));
     const paidIds = new Set(paid.map((t) => String(t._id)));
     const allLines = await ctx.db.query("posTicketLines").collect();

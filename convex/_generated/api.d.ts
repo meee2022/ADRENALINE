@@ -43,6 +43,7 @@ import type * as inventorySetup from "../inventorySetup.js";
 import type * as leaves from "../leaves.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_calories from "../lib/calories.js";
+import type * as lib_customerOrderRules from "../lib/customerOrderRules.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as loyalty from "../loyalty.js";
@@ -139,6 +140,7 @@ declare const fullApi: ApiFromModules<{
   leaves: typeof leaves;
   "lib/audit": typeof lib_audit;
   "lib/calories": typeof lib_calories;
+  "lib/customerOrderRules": typeof lib_customerOrderRules;
   "lib/dates": typeof lib_dates;
   "lib/phone": typeof lib_phone;
   loyalty: typeof loyalty;

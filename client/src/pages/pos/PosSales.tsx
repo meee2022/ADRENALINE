@@ -2,7 +2,7 @@
  * @file client/src/pages/pos/PosSales.tsx
  * @description شاشة البيع الرئيسية بهوية أدرينالين المضيئة، محسّنة للكاشير والشاشات الصغيرة.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
@@ -28,6 +28,47 @@ const MENU_CAT_META: Record<string, { label: string; labelAr: string; icon: any 
 
 // ✅ توليد رقم طلب مؤقّت لعرض الواجهة (الرقم الفعلي يجيه من السيرفر بعد الحفظ)
 const genLocalOrderNo = () => Math.floor(1000 + Math.random() * 9000);
+
+const posImageObserver = typeof window !== "undefined" && "IntersectionObserver" in window
+  ? new IntersectionObserver((entries, observer) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const image = entry.target as HTMLImageElement;
+        const source = image.dataset.src;
+        if (source) image.src = source;
+        observer.unobserve(image);
+      }
+    }, { rootMargin: "120px 0px" })
+  : null;
+
+function PosItemImage({ src, alt }: { src: string; alt: string }) {
+  const imageRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image) return;
+    if (!posImageObserver) {
+      image.src = src;
+      return;
+    }
+    posImageObserver.observe(image);
+    return () => posImageObserver.unobserve(image);
+  }, [src]);
+
+  return (
+    <img
+      ref={imageRef}
+      data-src={src}
+      alt={alt}
+      width={420}
+      height={320}
+      decoding="async"
+      fetchPriority="low"
+      draggable={false}
+      className="pos-item-image absolute inset-0 h-full w-full object-cover group-hover:scale-[1.04] transition-transform duration-200"
+    />
+  );
+}
 
 export default function PosSales() {
   const { language } = useLanguage();
@@ -427,24 +468,17 @@ export default function PosSales() {
           )}
           <div className="pos-items-grid grid gap-2.5 sm:gap-3">
             {filtered.map((m: any) => {
-              const imageUrl = m.imageUrl || getPosMealImage(m.nameEn, m.name, m.nameAr);
+              const imageUrl = getPosMealImage(m.nameEn, m.name, m.nameAr) || m.imageUrl;
               const hasImage = !!imageUrl;
               return (
                 <button
                   key={m.id}
                   onClick={() => addToCart(m)}
-                  className="pos-item-card group aspect-[1.08/1] rounded-2xl relative overflow-hidden border border-[#d8e6ec] bg-white shadow-[0_5px_16px_rgba(71,117,156,0.09)] hover:-translate-y-0.5 hover:border-[#9edcf0] hover:shadow-[0_12px_28px_rgba(71,117,156,0.16)] active:scale-[0.98] transition-all"
+                  className="pos-item-card group aspect-[1.08/1] rounded-2xl relative overflow-hidden border border-[#d8e6ec] bg-white shadow-[0_4px_12px_rgba(71,117,156,0.08)] hover:border-[#9edcf0] active:scale-[0.98] transition-[border-color,transform] duration-150"
                 >
                   {hasImage ? (
                     <>
-                      <img
-                        src={imageUrl}
-                        alt={m.name}
-                        loading="lazy"
-                        decoding="async"
-                        draggable={false}
-                        className="absolute inset-0 h-full w-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
+                      <PosItemImage src={imageUrl} alt={m.name} />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
                     </>
                   ) : (

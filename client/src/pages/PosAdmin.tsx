@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2 } from "lucide-react";
+import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2, CalendarDays, ReceiptText, WalletCards } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,7 +27,8 @@ export default function PosAdmin() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const { toast } = useToast();
 
-  const [tab, setTab] = useState<Tab>("overview");
+  const requestedTab = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null;
+  const [tab, setTab] = useState<Tab>(requestedTab === "reports" ? "reports" : "overview");
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40">
@@ -784,7 +785,13 @@ function EmailReportCard({ t, sessionToken }: any) {
 }
 
 function ReportsTab({ t, sessionToken }: any) {
-  const today = new Date().toISOString().slice(0, 10);
+  const dateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const today = dateKey(new Date());
   const [from, setFrom] = useState(today.slice(0, 7) + "-01");
   const [to, setTo] = useState(today);
   const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
@@ -792,7 +799,22 @@ function ReportsTab({ t, sessionToken }: any) {
   const bArg = branchId ? { branchId: branchId as any } : {};
   const top = useQuery(api.posAdmin.topItems, { from, to, ...bArg, sessionToken }) as any[] | undefined;
   const receipts = useQuery(api.posAdmin.listReceipts, { from, to, ...bArg, sessionToken }) as any[] | undefined;
+  const summary = useQuery(api.posAdmin.rangeSalesSummary, { from, to, ...bArg, sessionToken }) as any;
   const hasBranches = (branches?.length || 0) > 0;
+  const applyPreset = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days + 1);
+    setFrom(dateKey(start));
+    setTo(dateKey(end));
+  };
+  const applyYesterday = () => {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    const key = dateKey(date);
+    setFrom(key);
+    setTo(key);
+  };
 
   return (
     <div className="space-y-3">
@@ -806,8 +828,88 @@ function ReportsTab({ t, sessionToken }: any) {
           ))}
         </div>
       )}
+      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+        <CardContent className="p-4 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="h-9 w-9 rounded-xl bg-cyan-50 text-[#0E76AC] grid place-items-center"><CalendarDays className="h-4 w-4" /></div>
+            <div className="me-auto">
+              <h3 className="font-black text-slate-900">{t("فترة المبيعات", "Sales period")}</h3>
+              <p className="text-[11px] text-slate-500">{t("اختر يوماً أو فترة للمقارنة", "Choose a day or custom range")}</p>
+            </div>
+            <button onClick={applyYesterday} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("أمس", "Yesterday")}</button>
+            <button onClick={() => applyPreset(7)} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("7 أيام", "7 days")}</button>
+            <button onClick={() => applyPreset(30)} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("30 يوماً", "30 days")}</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><Label>{t("من", "From")}</Label><Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="h-10" /></div>
+            <div><Label>{t("إلى", "To")}</Label><Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="h-10" /></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          [WalletCards, t("إجمالي المبيعات", "Total sales"), summary?.totalSales, "#0E76AC", "QAR"],
+          [ReceiptText, t("عدد الفواتير", "Tickets"), summary?.ticketsCount, "#0f766e", ""],
+          [TrendingUp, t("متوسط الفاتورة", "Average ticket"), summary?.avgTicket, "#7c3aed", "QAR"],
+          [RefreshCw, t("المرتجعات", "Refunds"), summary?.refundedCount, "#dc2626", ""],
+        ].map(([Icon, label, value, color, suffix]: any) => (
+          <Card key={label} className="rounded-2xl border-slate-200 shadow-sm">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl grid place-items-center shrink-0" style={{ color, background: color + "14" }}><Icon className="h-5 w-5" /></div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-500 truncate">{label}</p>
+                <p className="text-xl sm:text-2xl font-black leading-tight" style={{ color }}>{value == null ? "—" : Number(value).toFixed(suffix ? 2 : 0)} <span className="text-[10px] text-slate-400">{suffix}</span></p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-900">{t("المبيعات حسب الكاشير", "Sales by cashier")}</h3>
+              <p className="text-[11px] text-slate-500">{t("إجمالي وعدد فواتير كل موظف خلال الفترة", "Totals and ticket count per cashier")}</p>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {(summary?.byCashier || []).map((cashier: any, index: number) => (
+                <div key={cashier.cashierId} className="p-3 flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-xl bg-[#0E2A4A] text-white grid place-items-center text-xs font-black">{index + 1}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-black text-sm text-slate-900 truncate">{cashier.name}</p>
+                    <p className="text-[11px] text-slate-500">{cashier.ticketsCount} {t("فاتورة", "tickets")} · {t("متوسط", "avg")} {cashier.avgTicket.toFixed(2)}</p>
+                  </div>
+                  <p className="font-black text-[#0E76AC]">{cashier.total.toFixed(2)} <span className="text-[9px] text-slate-400">QAR</span></p>
+                </div>
+              ))}
+              {summary && summary.byCashier.length === 0 && <p className="text-center text-sm text-slate-400 py-8">{t("لا توجد مبيعات في هذه الفترة", "No sales in this period")}</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            <div className="p-4 border-b border-slate-100">
+              <h3 className="font-black text-slate-900">{t("المبيعات اليومية", "Daily sales")}</h3>
+              <p className="text-[11px] text-slate-500">{t("تفصيل كل يوم داخل الفترة المحددة", "Day-by-day period breakdown")}</p>
+            </div>
+            <div className="max-h-[330px] overflow-y-auto divide-y divide-slate-100">
+              {(summary?.byDay || []).map((day: any) => (
+                <div key={day.date} className="p-3 flex items-center gap-3">
+                  <div className="h-9 min-w-9 px-2 rounded-xl bg-cyan-50 text-[#0E76AC] grid place-items-center text-xs font-black">{day.date.slice(8)}</div>
+                  <div className="flex-1"><p className="font-bold text-sm text-slate-800">{day.date}</p><p className="text-[11px] text-slate-500">{day.ticketsCount} {t("فاتورة", "tickets")}</p></div>
+                  <p className="font-black text-slate-900">{day.total.toFixed(2)} <span className="text-[9px] text-slate-400">QAR</span></p>
+                </div>
+              ))}
+              {summary && summary.byDay.length === 0 && <p className="text-center text-sm text-slate-400 py-8">{t("لا توجد بيانات يومية", "No daily data")}</p>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       <Card className="rounded-2xl">
-        <CardContent className="p-4 grid grid-cols-2 gap-3">
+        <CardContent className="hidden p-4 grid-cols-2 gap-3">
           <div><Label>{t("من", "From")}</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-10" /></div>
           <div><Label>{t("إلى", "To")}</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-10" /></div>
         </CardContent>

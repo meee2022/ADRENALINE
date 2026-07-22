@@ -58,7 +58,10 @@ export function getPosMealImage(...names: Array<string | null | undefined>) {
   for (const name of names) {
     if (!name) continue;
     const filename = POS_MEAL_IMAGES[normalizeMealName(name)];
-    if (filename) return `/pos-meals/${encodeURIComponent(filename)}`;
+    if (filename) {
+      const thumbnail = filename.replace(/\.[^.]+$/, ".webp");
+      return `/pos-meals/thumbs/${encodeURIComponent(thumbnail)}`;
+    }
   }
   return null;
 }

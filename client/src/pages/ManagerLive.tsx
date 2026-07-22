@@ -13,8 +13,9 @@ import { alertDialog } from "@/lib/dialogs";
 import { useStore } from "@/lib/store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Activity, AlertTriangle, Bell, BellOff, Clock, Package, Receipt, ShieldAlert, TrendingUp, Users, Wifi, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, Bell, BellOff, Clock, Package, Receipt, ShieldAlert, TrendingUp, Users, Wifi, RefreshCw, CalendarDays, ArrowUpLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const PAY_METHOD_META: Record<string, { color: string; ar: string; en: string }> = {
@@ -52,6 +53,25 @@ export default function ManagerLive() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
 
   const snap = useQuery(api.manager.liveSnapshot, { sessionToken }) as any;
+  const dateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const [historyFrom, setHistoryFrom] = useState(dateKey(yesterday));
+  const [historyTo, setHistoryTo] = useState(dateKey(yesterday));
+  const history = useQuery(api.posAdmin.rangeSalesSummary, { from: historyFrom, to: historyTo, sessionToken }) as any;
+  const applyHistoryPreset = (days: number) => {
+    const end = new Date();
+    if (days === 1) end.setDate(end.getDate() - 1);
+    const start = new Date(end);
+    start.setDate(end.getDate() - days + 1);
+    setHistoryFrom(dateKey(start));
+    setHistoryTo(dateKey(end));
+  };
 
   const [notifOn, setNotifOn] = useState<boolean>(false);
   const [tick, setTick] = useState(0);
@@ -170,6 +190,44 @@ export default function ManagerLive() {
         </Card>
 
         {/* ═══════ Alert Tiles ═══════ */}
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardContent className="p-4 sm:p-5 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="h-10 w-10 rounded-xl bg-cyan-50 text-[#0E76AC] grid place-items-center"><CalendarDays className="h-5 w-5" /></div>
+              <div className="me-auto">
+                <h2 className="font-black text-slate-900">{t("المبيعات السابقة", "Historical sales")}</h2>
+                <p className="text-[11px] text-slate-500">{t("راجع أمس أو أي فترة وحدد مبيعات كل كاشير", "Review any period and each cashier's sales")}</p>
+              </div>
+              <button onClick={() => applyHistoryPreset(1)} className="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200">{t("أمس", "Yesterday")}</button>
+              <button onClick={() => applyHistoryPreset(7)} className="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200">{t("7 أيام", "7 days")}</button>
+              <button onClick={() => applyHistoryPreset(30)} className="h-9 px-3 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200">{t("30 يوماً", "30 days")}</button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-[1fr_1fr_auto] gap-2">
+              <Input aria-label={t("من", "From")} type="date" value={historyFrom} max={historyTo} onChange={(event) => setHistoryFrom(event.target.value)} className="h-10" />
+              <Input aria-label={t("إلى", "To")} type="date" value={historyTo} min={historyFrom} onChange={(event) => setHistoryTo(event.target.value)} className="h-10" />
+              <a href="/pos-admin?tab=reports" className="col-span-2 sm:col-span-1 h-10 px-4 rounded-xl border border-cyan-200 text-[#0E76AC] text-xs font-black flex items-center justify-center gap-1 hover:bg-cyan-50">
+                {t("التقرير الكامل", "Full report")} <ArrowUpLeft className="h-3.5 w-3.5" />
+              </a>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl bg-[#0E2A4A] text-white p-3"><p className="text-[9px] text-cyan-100 font-bold">{t("المبيعات", "Sales")}</p><p className="text-lg sm:text-2xl font-black">{history?.totalSales?.toFixed(2) ?? "—"}</p><span className="text-[9px] text-cyan-100">QAR</span></div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[9px] text-slate-500 font-bold">{t("الفواتير", "Tickets")}</p><p className="text-lg sm:text-2xl font-black text-slate-900">{history?.ticketsCount ?? "—"}</p></div>
+              <div className="rounded-xl bg-slate-50 border border-slate-100 p-3"><p className="text-[9px] text-slate-500 font-bold">{t("المتوسط", "Average")}</p><p className="text-lg sm:text-2xl font-black text-[#0E76AC]">{history?.avgTicket?.toFixed(2) ?? "—"}</p></div>
+            </div>
+            {history?.byCashier?.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {history.byCashier.map((cashier: any) => (
+                  <div key={cashier.cashierId} className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-white text-[#0E76AC] grid place-items-center font-black shadow-sm">{cashier.name?.[0] || "?"}</div>
+                    <div className="min-w-0 flex-1"><p className="text-sm font-black truncate">{cashier.name}</p><p className="text-[10px] text-slate-500">{cashier.ticketsCount} {t("فاتورة", "tickets")}</p></div>
+                    <p className="font-black text-sm text-emerald-700">{cashier.total.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <AlertCard icon={AlertTriangle} label={t("فواتير كبيرة", "Big tickets")} value={alerts.bigTickets ?? 0} color="#f59e0b" />
           <AlertCard icon={ShieldAlert}   label={t("إلغاءات اليوم", "Voids today")} value={alerts.voidsToday ?? 0} color="#eab308" />
