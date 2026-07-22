@@ -41,6 +41,32 @@ function isoToDDMMYYYY(iso: string) {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
+function applyStickerCalorieOverride(sticker: any, calories: number) {
+  const targetCalories = Math.max(1, Math.round(Number(calories) || 0));
+  const originalCalories = Number(sticker?.calories || 0);
+  const protein = Number(sticker?.protein || 0);
+  const carbs = Number(sticker?.carbs || 0);
+  const fats = Number(sticker?.fats || 0);
+  const macroCalories = protein * 4 + carbs * 4 + fats * 9;
+  const baseCalories = originalCalories > 0 ? originalCalories : macroCalories;
+
+  if (macroCalories <= 0 || baseCalories <= 0) {
+    return { ...sticker, calories: targetCalories, caloriesText: `${targetCalories} CAL` };
+  }
+
+  const ratio = targetCalories / baseCalories;
+  const scale = (value: number) => Math.round(value * ratio * 10) / 10;
+  return {
+    ...sticker,
+    calories: targetCalories,
+    caloriesText: `${targetCalories} CAL`,
+    macros: undefined,
+    protein: protein > 0 ? scale(protein) : sticker.protein,
+    carbs: carbs > 0 ? scale(carbs) : sticker.carbs,
+    fats: fats > 0 ? scale(fats) : sticker.fats,
+  };
+}
+
 
 function buildModifierText(
   modifierIds: string[] | undefined,
@@ -157,6 +183,67 @@ export const ensureBoxNumbers = mutation({
   },
 });
 
+export const setCalorieOverride = mutation({
+  args: {
+    date: v.string(),
+    customerId: v.id("customers"),
+    stickerKey: v.string(),
+    calories: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const identity = await requireStaff(ctx, args.sessionToken);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) throw new Error("تاريخ الاستيكر غير صالح");
+    const stickerKey = args.stickerKey.trim();
+    if (!stickerKey || stickerKey.length > 300) throw new Error("معرّف الاستيكر غير صالح");
+
+    const existing = await ctx.db
+      .query("stickerCalorieOverrides")
+      .withIndex("by_date_key", (q) => q.eq("date", args.date).eq("stickerKey", stickerKey))
+      .first();
+
+    if (args.calories == null) {
+      if (existing) await ctx.db.delete(existing._id);
+      return { saved: false };
+    }
+
+    const calories = Math.round(args.calories);
+    if (!Number.isFinite(calories) || calories < 1 || calories > 3000) {
+      throw new Error("يجب أن تكون السعرات بين 1 و3000");
+    }
+
+    const values = {
+      customerId: args.customerId,
+      calories,
+      updatedBy: identity.userId as any,
+      updatedAt: Date.now(),
+    };
+    if (existing) {
+      await ctx.db.patch(existing._id, values);
+    } else {
+      await ctx.db.insert("stickerCalorieOverrides", {
+        date: args.date,
+        stickerKey,
+        ...values,
+      });
+    }
+    return { saved: true, calories };
+  },
+});
+
+export const clearCalorieOverrides = mutation({
+  args: { date: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const rows = await ctx.db
+      .query("stickerCalorieOverrides")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .collect();
+    for (const row of rows) await ctx.db.delete(row._id);
+    return { removed: rows.length };
+  },
+});
+
 /**
  * ✅ IMPORTANT:
  * الواجهة بتنادي api.stickers.get
@@ -171,6 +258,18 @@ export const get = query({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    const calorieOverrideRows = await ctx.db
+      .query("stickerCalorieOverrides")
+      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .collect();
+    const calorieOverrideByKey = new Map(
+      calorieOverrideRows.map((row: any) => [String(row.stickerKey), row]),
+    );
+    const withStoredCalorieOverride = (sticker: any, stickerKey: string) => {
+      const stored = calorieOverrideByKey.get(stickerKey) as any;
+      const base = { ...sticker, stickerKey, calorieOverrideSaved: Boolean(stored) };
+      return stored ? applyStickerCalorieOverride(base, stored.calories) : base;
+    };
     // 1) Plans of date + deliveryTime (confirmed only). "ALL" = صباحي + مسائي معاً.
     const plansAll = await ctx.db
       .query("dailyPlans")
@@ -543,7 +642,11 @@ export const get = query({
         // Macros string fallback من menuItem
         const macrosStr = String((menu as any)?.macros || "").trim();
 
-        mealStickers.push({
+        const sourceItemKey = String(
+          (it as any).id || it.publicMealId || it.mealId || it.menuItemId || it.mealNameEn || it.mealNameAr || mealIndex,
+        );
+        const stickerKey = `plan:${String((p as any)._id)}:${sourceItemKey}:${mealIndex}`;
+        mealStickers.push(withStoredCalorieOverride({
           customerId,
           customerNo,
           customerName: c.fullName || "",
@@ -563,7 +666,7 @@ export const get = query({
           prodDate,
           expDate,
           mealIndexText: `MEAL ${mealIndex}`,
-        });
+        }, stickerKey));
 
         mealIndex++;
       }
@@ -634,7 +737,8 @@ export const get = query({
           const cal = s.type === "MAIN"
             ? Math.min(560, 500 + Math.round(Math.max(0, rawCal - 500) * 0.1))
             : rawCal;
-          mealStickers.push({
+          const stickerKey = `custom:${String((tpl as any)._id)}:${mIdx}`;
+          mealStickers.push(withStoredCalorieOverride({
             customerId: String(c._id),
             customerNo,
             customerName: c.fullName || "",
@@ -652,7 +756,7 @@ export const get = query({
             fats: canonicalSnack ? snackFats : undefined,
             dateText, prodDate, expDate,
             mealIndexText: `MEAL ${mIdx}`,
-          });
+          }, stickerKey));
           mIdx++;
         }
       }

@@ -19,6 +19,7 @@ const CALORIE_OVERRIDES_STORAGE_KEY = "adrenaline:sticker-calorie-overrides:v1";
 
 function stickerOverrideKey(sticker: any, index: number) {
   return [
+    sticker?.stickerKey || "sticker",
     sticker?.customerId || sticker?.customerNumber || sticker?.customerNo || "customer",
     sticker?.prodDate || sticker?.dateText || "date",
     sticker?.mealIndexText || `meal-${index + 1}`,
@@ -126,7 +127,7 @@ export default function Stickers() {
   // طباعة مؤجّلة: نضبط النطاق قبل ما نفتح مربّع الطباعة
   const [pendingPrint, setPendingPrint] = useState<null | "all" | "selected">(null);
 
-  // تعديل مؤقت لجلسة الطباعة فقط. لا يغيّر بيانات الوجبة أو خطة المشترك.
+  // تعديل خاص باستيكر هذا اليوم. يُحفظ منفصلًا عن بيانات الوجبة وخطة المشترك.
   const [calOverride, setCalOverride] = useState<CalorieOverrides>(readCalorieOverrides);
   // ✅ بحث بالاسم/الرقم للوصول السريع لستيكر شخص معيّن (بدل تصفّح المئات)
   const [search, setSearch] = useState("");
@@ -152,10 +153,60 @@ export default function Stickers() {
   //    حتى لو أُضيف/عُدّل مشتركون بعد الطباعة (الجديد ياخد رقماً مُلحقاً فقط).
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
+  const saveCalorieOverride = useMutation(api.stickers.setCalorieOverride);
+  const clearSavedCalorieOverrides = useMutation(api.stickers.clearCalorieOverrides);
+  const [overrideSaveStatus, setOverrideSaveStatus] = useState<Record<string, "saving" | "saved" | "error">>({});
+  const [overrideActionError, setOverrideActionError] = useState("");
   useEffect(() => {
     if (!date || !sessionToken) return;
     ensureBoxNumbers({ date, sessionToken }).catch(() => { /* لا نُعطّل العرض */ });
   }, [date, sessionToken, ensureBoxNumbers]);
+
+  const persistCalorieOverride = async (sticker: any, index: number, calories?: number) => {
+    const localKey = stickerOverrideKey(sticker, index);
+    if (!sessionToken || !sticker?.stickerKey || !sticker?.customerId) {
+      setOverrideSaveStatus((prev) => ({ ...prev, [localKey]: "error" }));
+      setOverrideActionError(isRtl ? "تعذّر حفظ التعديل في قاعدة البيانات" : "Could not save this change");
+      return;
+    }
+    setOverrideActionError("");
+    setOverrideSaveStatus((prev) => ({ ...prev, [localKey]: "saving" }));
+    try {
+      await saveCalorieOverride({
+        date,
+        customerId: sticker.customerId as any,
+        stickerKey: sticker.stickerKey,
+        calories,
+        sessionToken,
+      });
+      setOverrideSaveStatus((prev) => ({ ...prev, [localKey]: "saved" }));
+    } catch {
+      setOverrideSaveStatus((prev) => ({ ...prev, [localKey]: "error" }));
+      setOverrideActionError(isRtl ? "لم يُحفظ تعديل السعرات. أعد المحاولة." : "Calories were not saved. Please retry.");
+    }
+  };
+
+  const resetCalorieOverride = async (sticker: any, index: number) => {
+    const localKey = stickerOverrideKey(sticker, index);
+    setCalOverride((prev) => {
+      const next = { ...prev };
+      delete next[localKey];
+      return next;
+    });
+    await persistCalorieOverride(sticker, index, undefined);
+  };
+
+  const clearAllCalorieOverrides = async () => {
+    setCalOverride({});
+    if (!sessionToken) return;
+    setOverrideActionError("");
+    try {
+      await clearSavedCalorieOverrides({ date, sessionToken });
+      setOverrideSaveStatus({});
+    } catch {
+      setOverrideActionError(isRtl ? "تعذّر مسح التعديلات المحفوظة" : "Could not clear saved changes");
+    }
+  };
 
   // الستيكرات الظاهرة: مفلترة بالبحث لكن بأرقامها الأصلية (للتعديل والطباعة).
   //    وقت الطباعة نتجاهل الفلتر تمامًا حتى تُطبع كل الستيكرات.
@@ -198,7 +249,9 @@ export default function Stickers() {
   const activeOverrideCount = useMemo(
     () => activeTab === "MEALS"
       ? activeStickers.reduce(
-          (count: number, sticker: any, index: number) => count + (calOverride[stickerOverrideKey(sticker, index)] != null ? 1 : 0),
+          (count: number, sticker: any, index: number) => count + (
+            calOverride[stickerOverrideKey(sticker, index)] != null || sticker?.calorieOverrideSaved ? 1 : 0
+          ),
           0,
         )
       : 0,
@@ -477,12 +530,17 @@ export default function Stickers() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setCalOverride({})}
+                  onClick={() => void clearAllCalorieOverrides()}
                   className="rounded-md bg-white px-2 py-1 text-[10px] text-amber-700 shadow-sm hover:bg-amber-100"
                 >
                   {isRtl ? "مسح التعديلات" : "Clear"}
                 </button>
               </div>
+            )}
+            {overrideActionError && (
+              <span className="rounded-lg bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">
+                {overrideActionError}
+              </span>
             )}
           </div>
 
@@ -552,9 +610,12 @@ export default function Stickers() {
         <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
           {visibleStickers.map(({ s0, idx }: any) => {
             const isSel = selected.has(idx);
-            // التعديل لحظي لهذه الطباعة فقط: السعرات والماكروز تتغير بنسبة واحدة.
+            // تعديل اليوم المحفوظ: السعرات والماكروز تتغير بنسبة واحدة.
             const overrideKey = stickerOverrideKey(s0, idx);
             const ov = calOverride[overrideKey];
+            const hasSavedOverride = Boolean(s0.calorieOverrideSaved);
+            const hasOverride = ov != null || hasSavedOverride;
+            const saveStatus = overrideSaveStatus[overrideKey];
             const s = (activeTab === "MEALS" && ov != null)
               ? scaleStickerMacros(s0, ov)
               : s0;
@@ -572,35 +633,52 @@ export default function Stickers() {
                   </label>
                   {activeTab === "MEALS" && (
                     <div className={cn("flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5",
-                      ov != null ? "bg-amber-100 text-amber-700 font-bold" : "bg-slate-50 text-slate-400")}>
+                      hasOverride ? "bg-amber-100 text-amber-700 font-bold" : "bg-slate-50 text-slate-400")}>
                       <span>cal</span>
                       <input
-                        type="number" min={0} step={1} dir="ltr"
+                        type="number" min={1} max={3000} step={1} dir="ltr"
                         className="w-14 h-5 text-center rounded border border-slate-200 bg-white text-slate-700"
                         value={ov != null ? String(ov) : (s0.calories ?? "")}
                         onChange={(e) => {
                           const v = e.target.value;
-                          setCalOverride((prev) => {
-                            const next = { ...prev };
-                            if (v === "" ) { delete next[overrideKey]; return next; }
-                            const calories = Number(v);
-                            if (!Number.isFinite(calories)) return prev;
-                            next[overrideKey] = Math.max(0, calories);
-                            return next;
-                          });
+                          if (v === "") {
+                            setCalOverride((prev) => {
+                              const next = { ...prev };
+                              delete next[overrideKey];
+                              return next;
+                            });
+                            return;
+                          }
+                          const calories = Math.max(1, Math.round(Number(v)));
+                          if (!Number.isFinite(calories)) return;
+                          setCalOverride((prev) => ({ ...prev, [overrideKey]: calories }));
+                          void persistCalorieOverride(s0, idx, calories);
                         }}
-                        title={isRtl ? "عدّل السعرات لهذه الطباعة فقط" : "Edit calories for this print only"}
+                        onBlur={(e) => {
+                          const calories = Number(e.currentTarget.value);
+                          if (Number.isFinite(calories) && calories >= 1) {
+                            void persistCalorieOverride(s0, idx, calories);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                        }}
+                        title={isRtl ? "تُحفظ السعرات لهذا الاستيكر في هذا اليوم" : "Saved for this sticker on this date"}
                       />
-                      {ov != null && (
+                      {hasOverride && (
                         <span className={cn("whitespace-nowrap text-[9px] font-black", hasBaseMacros ? "text-emerald-700" : "text-rose-600")}
                           title={hasBaseMacros
                             ? (isRtl ? "تم تحديث البروتين والكربوهيدرات والدهون بنفس النسبة" : "Protein, carbs and fats were scaled proportionally")
                             : (isRtl ? "لا توجد ماكروز أصلية لإعادة حسابها" : "No base macros available to recalculate")}>
-                          {hasBaseMacros ? "P/C/F ✓" : (isRtl ? "بلا ماكروز" : "No macros")}
+                          {saveStatus === "saving"
+                            ? (isRtl ? "جارٍ الحفظ…" : "Saving…")
+                            : saveStatus === "error"
+                              ? (isRtl ? "فشل الحفظ" : "Save failed")
+                              : (isRtl ? "محفوظ ✓" : "Saved ✓")}
                         </span>
                       )}
-                      {ov != null && (
-                        <button type="button" onClick={() => setCalOverride((p) => { const n = { ...p }; delete n[overrideKey]; return n; })}
+                      {hasOverride && (
+                        <button type="button" onClick={() => void resetCalorieOverride(s0, idx)}
                           className="text-amber-600 hover:text-amber-800" title={isRtl ? "رجوع للأصلي" : "Reset"}>↺</button>
                       )}
                     </div>

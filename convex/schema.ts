@@ -1403,6 +1403,19 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_date_customer", ["date", "customerId"]),
 
+  // تعديلات تغذية خاصة بطباعة استيكر محدد في يوم محدد.
+  // تبقى منفصلة عن المنيو والخطط حتى لا تؤثر في الأيام أو المشتركين الآخرين.
+  stickerCalorieOverrides: defineTable({
+    date: v.string(),
+    customerId: v.id("customers"),
+    stickerKey: v.string(),
+    calories: v.number(),
+    updatedBy: v.optional(v.id("users")),
+    updatedAt: v.number(),
+  })
+    .index("by_date", ["date"])
+    .index("by_date_key", ["date", "stickerKey"]),
+
   // عدّادات أرقام المستندات المالية (قيود/سندات).
   finCounters: defineTable({
     key: v.string(),                           // "journal" | "receipt" | "payment"
