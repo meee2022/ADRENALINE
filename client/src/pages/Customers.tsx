@@ -182,10 +182,13 @@ function weeksBetween(startISO?: string, endISO?: string): number | undefined {
   return Math.max(1, Math.round(days / 7));
 }
 
-/** يضيف عدد أسابيع لتاريخ ISO ويرجّع آخر يوم في المدة */
+/** يضيف عدد أسابيع لتاريخ ISO ويرجّع آخر يوم توصيل في المدة.
+ *  ⚠️ start + weeks×7 − 1 يقع على الجمعة إذا كانت البداية سبتاً (وهو الشائع)، والجمعة
+ *     إجازة بلا توصيل — فيبدو «يوماً زائداً». نرجع لآخر يوم توصيل فعلي (نتخطّى الجمعة). */
 function addWeeksISO(startISO: string, weeks: number): string {
   const d = new Date(startISO + "T00:00:00Z");
   d.setUTCDate(d.getUTCDate() + weeks * 7 - 1);
+  if (d.getUTCDay() === 5) d.setUTCDate(d.getUTCDate() - 1); // الجمعة (5) → الخميس
   return d.toISOString().slice(0, 10);
 }
 
