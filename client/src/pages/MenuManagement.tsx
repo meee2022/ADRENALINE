@@ -348,7 +348,11 @@ export default function MenuManagement() {
       {/* Ingredients dialog */}
       {ingredientsMeal && (
         <IngredientsDialog
-          meal={ingredientsMeal}
+          /* ✅ مصدر واحد للوصفات = publicMeals. نمرّر publicMealId المربوط فتُكتب
+             الوصفة على المنيو العام (نفس مكان صفحة إدارة المنيو العام)، لا على
+             menuItemId القديم. لو صنف قديم بلا رابط (نادر) نرجع للمسار القديم. */
+          meal={ingredientsMeal.publicMealId ? { ...ingredientsMeal, _id: ingredientsMeal.publicMealId } : ingredientsMeal}
+          catalog={ingredientsMeal.publicMealId ? "public" : "legacy"}
           open={!!ingredientsMeal}
           onClose={() => setIngredientsMeal(null)}
         />
