@@ -445,6 +445,9 @@ export default defineSchema({
 
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
+    // ✅ يستلم وجبات الجمعة يوم الخميس: نفس وجبات الخميس ×2 (بوكسان). يوم الخميس فقط،
+    //    للعميل المفعّل فقط. لا يمسّ حساب المدة/الأيام؛ الأخصائية تعدّل السعر يدوياً.
+    fridayDouble: v.optional(v.boolean()),
     paymentMethod: v.optional(v.string()),
     price: v.optional(v.number()),
     discount: v.optional(v.number()),

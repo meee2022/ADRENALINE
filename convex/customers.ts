@@ -194,6 +194,7 @@ export const create = mutation({
 
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
+    fridayDouble: v.optional(v.boolean()),
     durationWeeks: v.optional(v.number()),
     mealsPerDay: v.optional(v.number()),
     snacksPerDay: v.optional(v.number()),
@@ -271,6 +272,7 @@ export const update = mutation({
     mealCalorieOverrides: v.optional(v.array(v.object({ meal: v.string(), calories: v.number() }))),
     program: v.optional(v.string()),
     packageLabel: v.optional(v.string()),
+    fridayDouble: v.optional(v.boolean()),
     durationWeeks: v.optional(v.number()),
     mealsPerDay: v.optional(v.number()),
     snacksPerDay: v.optional(v.number()),

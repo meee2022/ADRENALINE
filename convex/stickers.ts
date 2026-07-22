@@ -646,7 +646,7 @@ export const get = query({
           (it as any).id || it.publicMealId || it.mealId || it.menuItemId || it.mealNameEn || it.mealNameAr || mealIndex,
         );
         const stickerKey = `plan:${String((p as any)._id)}:${sourceItemKey}:${mealIndex}`;
-        mealStickers.push(withStoredCalorieOverride({
+        const stk = {
           customerId,
           customerNo,
           customerName: c.fullName || "",
@@ -666,7 +666,16 @@ export const get = query({
           prodDate,
           expDate,
           mealIndexText: `MEAL ${mealIndex}`,
-        }, stickerKey));
+        };
+        mealStickers.push(withStoredCalorieOverride(stk, stickerKey));
+        // ✅ يوم الخميس: العميل المفعّل (fridayDouble) يأخذ نسخة ثانية = بوكس الجمعة
+        //    (نفس الوجبة، موسومة [جمعة]). يوم الخميس فقط، ولا يمسّ باقي الأيام.
+        if (dayKey === "thursday" && (c as any).fridayDouble) {
+          mealStickers.push(withStoredCalorieOverride({
+            ...stk,
+            mealTitle: `${mealTitle}${args.lang === "en" ? " — [Friday]" : " — [جمعة]"}`,
+          }, stickerKey + ":fri"));
+        }
 
         mealIndex++;
       }

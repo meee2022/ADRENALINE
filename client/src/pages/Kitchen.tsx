@@ -274,6 +274,8 @@ export default function Kitchen() {
     const allPlansToday = dailyPlans.filter(
       (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
+    // ✅ يوم الخميس فقط: العميل المفعّل (fridayDouble) وجباته تُطبخ ×2 (نسخة الجمعة).
+    const isThursday = new Date(String(formattedDate) + "T00:00:00Z").getUTCDay() === 4;
 
     // خريطة وجبات المنيو العام بالمعرّف — لحل اسم الطبق (وبالإنجليزي في وضع الإنجليزي)
     const pubById = new Map<string, any>();
@@ -426,16 +428,18 @@ export default function Kitchen() {
           // ✅ ممنوعات العميل مُفلترة حسب الطبق: "no fish" لا يعلّم طبق البيض مثلاً
           const custAvoidForMeal = filterAvoidForMeal(customer?.avoid, mealName);
           const plain = isPlainMeal(item, customer, custAvoidForMeal) && nameMods.length === 0 && !sideNote && !qtyNote;
-          summary[mealName].count += 1;
-          if (plain) summary[mealName].plainCount += 1;
-          else summary[mealName].modifiedCount += 1;
+          // ✅ عدد الحصص: ×2 للعميل المفعّل يوم الخميس (نسخة الجمعة)، وإلا 1.
+          const rep = (isThursday && (customer as any)?.fridayDouble) ? 2 : 1;
+          summary[mealName].count += rep;
+          if (plain) summary[mealName].plainCount += rep;
+          else summary[mealName].modifiedCount += rep;
 
           // ✅ الأصناف المطويّة من المخصّصين تُطبخ عادي → تُعدّ STANDARD (مش حسب برنامج العميل)
           const cntProg = isCustomPlan ? "STANDARD" : program;
-          if (cntProg.includes("DIET")) summary[mealName].dietCount += 1;
-          else if (cntProg.includes("FITNESS")) summary[mealName].fitnessCount += 1;
-          else if (cntProg.includes("BULK")) summary[mealName].bulkCount += 1;
-          else summary[mealName].standardCount += 1;
+          if (cntProg.includes("DIET")) summary[mealName].dietCount += rep;
+          else if (cntProg.includes("FITNESS")) summary[mealName].fitnessCount += rep;
+          else if (cntProg.includes("BULK")) summary[mealName].bulkCount += rep;
+          else summary[mealName].standardCount += rep;
 
           // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
           const { av, pr, po } = resolveMods(item.modifierIds);
@@ -451,7 +455,7 @@ export default function Kitchen() {
             return out.join(isRtl ? "، " : ", ") || undefined;
           };
 
-          summary[mealName].details.push({
+          const detailBase = {
             customerName,
             deliveryTime: plan.deliveryTime,
             categoryName,
@@ -465,7 +469,10 @@ export default function Kitchen() {
             portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
             isPlain: plain,
-          });
+          };
+          summary[mealName].details.push(detailBase);
+          // ✅ نسخة الجمعة (للعميل المفعّل يوم الخميس) — تظهر باسم موسوم عشان المطبخ يعرف
+          if (rep === 2) summary[mealName].details.push({ ...detailBase, customerName: `${customerName} (${isRtl ? "جمعة" : "Fri"})` });
         });
     });
 

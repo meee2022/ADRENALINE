@@ -261,6 +261,7 @@ const customerSchema = z.object({
   mealCalorieOverrides: z.array(z.object({ meal: z.string(), calories: z.coerce.number() })).optional(),
 
   packageLabel: z.string().optional(),
+  fridayDouble: z.boolean().optional(),
   durationWeeks: z.coerce.number().optional(),
   mealsPerDay: z.coerce.number().optional(),
   snacksPerDay: z.coerce.number().optional(),
@@ -354,6 +355,7 @@ export default function Customers() {
       notes: "",
 
       packageLabel: "",
+      fridayDouble: false,
       durationWeeks: undefined,
       mealsPerDay: undefined,
       snacksPerDay: undefined,
@@ -519,6 +521,7 @@ export default function Customers() {
       notes: "",
 
       packageLabel: "",
+      fridayDouble: false,
       durationWeeks: undefined,
       mealsPerDay: undefined,
       snacksPerDay: undefined,
@@ -648,6 +651,7 @@ export default function Customers() {
       mealCalorieOverrides: customer.mealCalorieOverrides ?? [],
 
       packageLabel: customer.packageLabel || "",
+      fridayDouble: !!customer.fridayDouble,
       durationWeeks: customer.durationWeeks,
       mealsPerDay: customer.mealsPerDay,
       snacksPerDay: customer.snacksPerDay,
@@ -1639,6 +1643,26 @@ export default function Customers() {
                     />
                   </div>
                 </div>
+
+                {/* ✅ خيار: وجبات الجمعة تُسلَّم يوم الخميس (نفس وجبات الخميس ×2 = بوكسان).
+                    يوم الخميس فقط، للعميل المفعّل فقط. الأخصائية تعدّل السعر يدويًا فوق. */}
+                <label className="flex items-start gap-3 rounded-xl border border-[#3cc4f0]/40 bg-[#f2fbff] p-3 cursor-pointer">
+                  <Checkbox
+                    checked={!!form.watch("fridayDouble")}
+                    onCheckedChange={(v) => form.setValue("fridayDouble", v === true, { shouldDirty: true })}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    <span className="block text-sm font-bold text-[#0E2A4A]">
+                      {isRtl ? "يستلم وجبات الجمعة يوم الخميس" : "Deliver Friday's meals on Thursday"}
+                    </span>
+                    <span className="block text-[11px] text-[#47759C] mt-0.5">
+                      {isRtl
+                        ? "نفس وجبات الخميس تُطبخ وتُطبع مرتين (بوكسان) يوم الخميس فقط. عدّل السعر يدويًا لو فيه زيادة."
+                        : "Thursday's meals are cooked & labeled twice (two boxes) on Thursday only. Adjust the price manually if extra."}
+                    </span>
+                  </span>
+                </label>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
