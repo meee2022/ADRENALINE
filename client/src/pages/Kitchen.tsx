@@ -766,7 +766,7 @@ export default function Kitchen() {
   };
 
   // ✅ طباعة كشف الشيف — نافذة نظيفة A4 (إجمالي + أطباق مرتّبة + تعديلات مجمّعة + مخصّصين)
-  const handlePrintChefSheet = () => {
+  const handlePrintLegacyChefSheet = () => {
     // ✅ كشف الشيف + الـPDF إنجليزي دائماً (الطاقم يقرأ إنجليزي) — نُظلّل isRtl داخل الدالة.
     const isRtl = false;
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
@@ -1010,6 +1010,188 @@ export default function Kitchen() {
     });
   };
 
+  // الكشف الرسمي الموحّد: يستخدم نفس mealSummary وcustomizedAll دون تغيير حسابات المطبخ.
+  const handlePrintChefSheet = () => {
+    const esc = (value: unknown) => String(value ?? "").replace(/[&<>]/g, (char) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char] as string
+    ));
+    const programOf = (value: unknown) => {
+      const program = String(value || "").toUpperCase();
+      if (program.includes("DIET")) return "DIET";
+      if (program.includes("FITNESS")) return "FITNESS";
+      if (program.includes("BULK")) return "BULK";
+      return "STANDARD";
+    };
+    const modificationOf = (detail: any) => [
+      detail?.avoid && `/NO ${detail.avoid}`,
+      detail?.preferences && `PREF: ${detail.preferences}`,
+      detail?.portions && String(detail.portions),
+      detail?.specialNotes && String(detail.specialNotes),
+    ].filter(Boolean).join(" · ");
+    const isMainMeal = (meal: any) => {
+      const haystack = `${meal?.category || ""} ${meal?.name || ""}`.toUpperCase();
+      if (haystack.includes("BREAKFAST") || haystack.includes("SNACK") || haystack.includes("SIDE")) return false;
+      return haystack.includes("LUNCH") || haystack.includes("DINNER") || haystack.includes("MAIN")
+        || Number(meal?.dietCount || 0) + Number(meal?.fitnessCount || 0) + Number(meal?.bulkCount || 0) > 0;
+    };
+    const sectionOf = (meal: any) => {
+      const haystack = `${meal?.category || ""} ${meal?.name || ""}`.toUpperCase();
+      if (haystack.includes("BREAKFAST")) return "BREAKFAST";
+      if (isMainMeal(meal)) return "MAIN MEALS";
+      return "SNACKS & SIDES";
+    };
+    const programOrder: Record<string, number> = { DIET: 0, FITNESS: 1, BULK: 2, STANDARD: 3 };
+
+    const mealRows = (meal: any) => {
+      const main = isMainMeal(meal);
+      const groups = new Map<string, {
+        program: string;
+        label: string;
+        qty: number;
+        carb: string | number;
+        protein: string | number;
+        names: string[];
+        isCustomPortion: boolean;
+      }>();
+      const details = Array.isArray(meal?.details) ? meal.details : [];
+
+      details.forEach((detail: any) => {
+        const program = main ? programOf(detail?.program) : "STANDARD";
+        const hasCustomGrams = main && (Number(detail?.carbGrams) > 0 || Number(detail?.proteinGrams) > 0);
+        const label = detail?.isPlain ? "" : modificationOf(detail);
+        const carb = main
+          ? (Number(detail?.carbGrams) > 0 ? Number(detail.carbGrams) : (programPortions as any)?.[program]?.carb ?? "")
+          : "";
+        const protein = main
+          ? (Number(detail?.proteinGrams) > 0 ? Number(detail.proteinGrams) : (programPortions as any)?.[program]?.protein ?? "")
+          : "";
+        const key = `${program}|${hasCustomGrams ? "CUSTOM" : "DEFAULT"}|${label.toUpperCase()}|${carb}|${protein}`;
+        if (!groups.has(key)) groups.set(key, { program, label, qty: 0, carb, protein, names: [], isCustomPortion: hasCustomGrams });
+        const group = groups.get(key)!;
+        group.qty += 1;
+        if ((label || hasCustomGrams) && detail?.customerName) group.names.push(String(detail.customerName));
+      });
+
+      if (groups.size === 0) {
+        const fallback = main
+          ? [
+              ["DIET", Number(meal?.dietCount || 0)],
+              ["FITNESS", Number(meal?.fitnessCount || 0)],
+              ["BULK", Number(meal?.bulkCount || 0)],
+              ["STANDARD", Number(meal?.standardCount || 0)],
+            ] as const
+          : [["STANDARD", Number(meal?.count || 0)]] as const;
+        fallback.forEach(([program, qty]) => {
+          if (!qty) return;
+          groups.set(program, {
+            program,
+            label: "",
+            qty,
+            carb: main ? (programPortions as any)?.[program]?.carb ?? "" : "",
+            protein: main ? (programPortions as any)?.[program]?.protein ?? "" : "",
+            names: [],
+            isCustomPortion: false,
+          });
+        });
+      }
+
+      const rows = [...groups.values()]
+        .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
+        .map((group) => `
+          <tr class="${[group.label ? "modified" : "", group.isCustomPortion ? "custom-portion" : ""].filter(Boolean).join(" ")}">
+            <td${main ? "" : ' colspan="3"'}>
+              <div class="row-label"><strong>${esc(group.program)}</strong>${group.isCustomPortion ? '<span class="custom-tag">CUSTOM PORTION</span>' : ""}${group.label ? `<span class="change">${esc(group.label)}</span>` : ""}</div>
+              ${group.names.length ? `<small>${esc(group.names.join(", "))}</small>` : ""}
+            </td>
+            <td class="number">${group.qty}</td>
+            ${main ? `<td class="number portion">${esc(group.carb)}</td><td class="number portion">${esc(group.protein)}</td>` : ""}
+          </tr>`).join("");
+
+      return `
+        <tbody class="meal-block">
+          <tr class="meal-title">
+            <td${main ? "" : ' colspan="3"'}>${esc(meal.name)}</td>
+            <td class="number">${meal.count}</td>
+            ${main ? '<td class="portion-label">CARB</td><td class="portion-label">PROTEIN</td>' : ""}
+          </tr>
+          ${rows}
+          <tr class="meal-total"><td${main ? "" : ' colspan="3"'}>Total portions</td><td class="number">${meal.count}</td>${main ? "<td></td><td></td>" : ""}</tr>
+        </tbody>`;
+    };
+
+    const sections = ["BREAKFAST", "SNACKS & SIDES", "MAIN MEALS"];
+    const standardHtml = sections.map((section) => {
+      const meals = mealSummary.filter((meal: any) => sectionOf(meal) === section);
+      if (!meals.length) return "";
+      const columns = section === "MAIN MEALS"
+        ? "<td>Preparation / modification</td><td>Qty</td><td>Carb g</td><td>Protein g</td>"
+        : '<td colspan="3">Preparation / modification</td><td>Qty</td>';
+      return `<tbody><tr class="section"><td colspan="4">${section}</td></tr><tr class="column-head">${columns}</tr></tbody>${meals.map(mealRows).join("")}`;
+    }).join("");
+
+    const customizedHtml = customizedAll.length ? `
+      <tbody class="customized-start"><tr class="section customized-section"><td colspan="4">CUSTOMIZED ORDERS · ONE BOX PER CUSTOMER (${customizedAll.length})</td></tr><tr class="column-head"><td colspan="3">Customer / meal</td><td>Qty / status</td></tr></tbody>
+      ${customizedAll.map((person: any) => `
+        <tbody class="customer-block">
+          <tr class="customer-title"><td colspan="3">${esc(person.name)}</td><td class="shift">${person.deliveryTime === "MORNING" ? "MORNING" : "EVENING"}</td></tr>
+          ${person.allergies ? `<tr class="allergy"><td colspan="4">ALLERGY: ${esc(person.allergies)}</td></tr>` : ""}
+          ${(person.meals || []).map((meal: any) => `
+            <tr class="${meal.notset ? "not-set" : ""}">
+              <td colspan="3">${esc(meal.text)}</td>
+              <td class="number">${meal.notset ? "—" : (meal.isSide ? "IN SUMMARY" : "1")}</td>
+            </tr>`).join("")}
+        </tbody>`).join("")}` : "";
+
+    const summaryPortions = mealSummary.reduce((sum, meal) => sum + meal.count, 0);
+    const customizedMainPortions = customizedAll.reduce((sum, person: any) => (
+      sum + (person.meals || []).filter((meal: any) => !meal.notset && !meal.isSide).length
+    ), 0);
+    const operationalTotal = summaryPortions + customizedMainPortions;
+
+    const html = `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Unified Chef Sheet Preview ${esc(formattedDate)}</title>
+      <style>
+        *{box-sizing:border-box}
+        body{margin:0;color:#10283f;font-family:'Segoe UI',Tahoma,sans-serif;font-size:10px;background:#fff}
+        .masthead{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid #28b7e1;padding-bottom:8px;margin-bottom:10px}
+        h1{margin:0;color:#0d3b5f;font-size:20px;letter-spacing:.2px}.meta{font-size:10px;color:#54738a;font-weight:700;text-align:right}
+         .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:11px}
+         .kpi{border:1px solid #cfe0eb;border-radius:6px;padding:6px 10px;background:#f7fbfd}.kpi b{display:block;font-size:18px;color:#0e76ac}.kpi span{font-size:8px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.6px}
+         .preview-actions{position:sticky;top:0;z-index:10;display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;padding:8px 0;background:rgba(255,255,255,.96)}.preview-actions button{border:0;border-radius:6px;padding:9px 14px;background:#0e76ac;color:#fff;font:800 12px 'Segoe UI',Tahoma,sans-serif;cursor:pointer;box-shadow:0 8px 22px rgba(13,59,95,.18)}.preview-actions .close{background:#fff;color:#0d3b5f;border:1px solid #bdd3e1;box-shadow:none}
+        table{width:100%;border-collapse:collapse;table-layout:fixed}col.name{width:auto}col.qty{width:54px}col.portion{width:72px}
+        td{border:1px solid #9cb2c2;padding:4px 7px;vertical-align:top;line-height:1.25}
+        .section td{background:#0d3b5f;color:#fff;font-size:11px;font-weight:900;letter-spacing:.8px;padding:6px 8px;border-color:#0d3b5f}
+        .meal-title td,.customer-title td{background:#acd5ec;color:#10283f;font-weight:900;font-size:11px;border-color:#6f9fba}
+        .meal-title{break-after:avoid;page-break-after:avoid}.meal-total td{background:#ffe082;font-weight:900;border-color:#d1a927}
+        .number{text-align:center;font-weight:900;color:#dc2626}.portion{color:#0e76ac}.portion-label{text-align:center;font-size:8px;font-weight:900;letter-spacing:.6px}
+        .modified td{background:#fff9eb}.change{color:#b45309;font-weight:800}.modified small{display:block;color:#687f90;font-size:7.5px;margin-top:2px}
+        .row-label{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.custom-portion td{background:#e8f7fc;border-color:#69bdd7}.custom-portion td:first-child{border-left:4px solid #0787b2}.custom-portion .custom-tag{display:inline-block;padding:2px 6px;border-radius:999px;background:#087da7;color:#fff;font-size:7px;font-weight:900;line-height:1.25;letter-spacing:.45px;white-space:nowrap}.custom-portion .change{color:#87510a}.custom-portion small{color:#075d7c;font-size:8px;font-weight:900}.custom-portion .portion{color:#dc2626;font-size:12px;font-weight:950;background:#fff1f2}
+        .customized-section td{background:#0e76ac;border-color:#0e76ac}.customer-title td{background:#d8edf8}.shift{text-align:center;font-size:8px!important;color:#0e76ac!important}
+        .customized-start{break-before:page;page-break-before:always}
+        .allergy td{background:#fff0f0;color:#b91c1c;font-weight:900}.not-set td{background:#fff7ed;color:#c2410c;font-weight:800}
+        tr{break-inside:avoid;page-break-inside:avoid}.customer-title{break-before:auto;break-after:avoid;page-break-after:avoid}
+        .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:4px 7px;text-align:left;font-size:8px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
+         @page{size:A4 portrait;margin:8mm 8mm 11mm}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.preview-actions{display:none}}
+       </style></head><body>
+         <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" class="close" onclick="window.close()">Close</button></div>
+         <div class="masthead"><div><h1>ADRENALINE · CHEF PRODUCTION SHEET</h1></div><div class="meta">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
+        <div class="kpis">
+          <div class="kpi"><b>${operationalTotal}</b><span>Operational portions</span></div>
+          <div class="kpi"><b>${summaryPortions}</b><span>Grouped portions</span></div>
+          <div class="kpi"><b>${customizedMainPortions}</b><span>Customized main portions</span></div>
+        </div>
+        <table><colgroup><col class="name"><col class="qty"><col class="portion"><col class="portion"></colgroup>
+          ${standardHtml}${customizedHtml}
+        </table>
+      </body></html>`;
+
+    openPrintDoc(html, {
+       fileName: `Chef production sheet - ADRENALINE - ${formattedDate}`,
+       isRtl: false,
+       pageNumbers: true,
+       autoPrint: false,
+     });
+  };
+
   const handleMarkPrepared = async (planId: string) => {
     try {
       // يعلّم الخطة كمحضّرة + يخصم مكوّنات الرسيبي من المخزون تلقائياً (idempotent)
@@ -1211,18 +1393,21 @@ export default function Kitchen() {
                 </Card>
               ) : (
                 <>
-                  <div className="flex items-center justify-between gap-3 mb-4">
-                    <div className="hidden sm:block sm:w-[110px]" />
-                    <h2 className="text-2xl font-bold text-gray-900 text-center flex-1">
-                      {isRtl ? "تفاصيل وجبات اليوم المحدد" : "Today's Meal Details"}
-                    </h2>
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                  <div className="mb-4 rounded-lg border border-[#dbe7ef] bg-white px-4 py-3 shadow-[0_8px_24px_-18px_rgba(14,42,74,.35)] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-xl font-black text-[#10283f]">
+                        {isRtl ? "تفاصيل وجبات اليوم المحدد" : "Today's Meal Details"}
+                      </h2>
+                      <p className="mt-0.5 text-xs font-medium text-[#6b8295]">
+                        {isRtl ? "ملخص تحضيري مباشر للكميات والتعديلات المطلوبة" : "Live preparation summary for quantities and required modifications"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       <button
                         onClick={() => exportSheet("xlsx")}
                         disabled={exporting !== null}
                         title={isRtl ? "تحميل كشف اليوم Excel" : "Download today's sheet as Excel"}
-                        className="h-11 px-4 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-60"
-                        style={{ background: "linear-gradient(135deg,#16a34a,#15803d)" }}
+                        className="h-10 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-black text-sm flex items-center gap-2 hover:bg-emerald-100 active:scale-95 transition-all disabled:opacity-60"
                       >
                         <FileSpreadsheet className="h-4 w-4" />
                         {exporting === "xlsx" ? "…" : "Excel"}
@@ -1231,16 +1416,14 @@ export default function Kitchen() {
                         onClick={() => exportSheet("pdf")}
                         disabled={exporting !== null}
                         title={isRtl ? "تحميل كشف اليوم PDF" : "Download today's sheet as PDF"}
-                        className="h-11 px-4 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all disabled:opacity-60"
-                        style={{ background: "linear-gradient(135deg,#dc2626,#b91c1c)" }}
+                        className="h-10 px-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-black text-sm flex items-center gap-2 hover:bg-red-100 active:scale-95 transition-all disabled:opacity-60"
                       >
                         <Download className="h-4 w-4" />
                         {exporting === "pdf" ? "…" : "PDF"}
                       </button>
                       <button
                         onClick={handlePrintChefSheet}
-                        className="h-11 px-5 rounded-xl font-bold text-white text-sm flex items-center gap-2 shadow-md hover:shadow-lg active:scale-95 transition-all"
-                        style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}
+                        className="h-10 px-4 rounded-lg bg-[#0E76AC] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#0a668f] active:scale-95 transition-all"
                       >
                         <Download className="h-4 w-4" />
                         {isRtl ? "تنزيل كشف الشيف" : "Download Chef Sheet"}
@@ -1254,17 +1437,17 @@ export default function Kitchen() {
                     const tPlain = mealSummary.reduce((s, m) => s + m.plainCount, 0);
                     const tMod = mealSummary.reduce((s, m) => s + m.modifiedCount, 0);
                     const cards = [
-                      { label: isRtl ? "إجمالي الوجبات" : "Total Meals", value: tMeals, bg: "linear-gradient(135deg,#3cc4f0,#0E76AC)", text: "#fff" },
+                      { label: isRtl ? "إجمالي الوجبات" : "Total Meals", value: tMeals, bg: "#e8f8fd", text: "#0E76AC" },
                       { label: isRtl ? "عادي" : "Plain", value: tPlain, bg: "#e8f8fd", text: "#0E76AC" },
                       { label: isRtl ? "معدّل" : "Modified", value: tMod, bg: "#fff7ed", text: "#c2410c" },
                       { label: isRtl ? "أنواع الأطباق" : "Dishes", value: mealSummary.length, bg: "#eaf1f7", text: "#47759c" },
                     ];
                     return (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-5">
                         {cards.map((c, i) => (
-                          <div key={i} className="rounded-2xl px-4 py-3 text-center" style={{ background: c.bg, border: "1px solid #e8eef4" }}>
-                            <div className="text-3xl font-black tabular-nums" style={{ color: c.text }}>{c.value}</div>
-                            <div className="text-[11px] font-bold mt-0.5" style={{ color: c.text, opacity: 0.85 }}>{c.label}</div>
+                          <div key={i} className="rounded-lg px-4 py-3 text-start min-h-[76px] flex flex-col justify-center" style={{ background: c.bg, border: "1px solid #dbe7ef" }}>
+                            <div className="text-2xl font-black tabular-nums leading-none text-red-600">{c.value}</div>
+                            <div className="text-[11px] font-bold mt-1" style={{ color: c.text, opacity: 0.85 }}>{c.label}</div>
                           </div>
                         ))}
                       </div>
@@ -1299,28 +1482,34 @@ export default function Kitchen() {
                     const colors = [
                       "bg-[#3cc4f0]",
                       "bg-[#47759c]",
-                      "bg-[#0f1516]",
+                      "bg-[#1686ad]",
                       "bg-[#5a8aad]",
                       "bg-[#7ba8c4]",
                       "bg-[#2d5c82]",
-                      "bg-[#3cc4f0]/70",
-                      "bg-[#47759c]/70",
-                      "bg-[#0f1516]/70",
+                      "bg-[#2d9b86]",
+                      "bg-[#3b82a0]",
+                      "bg-[#1f7a8c]",
                     ];
                     const color = colors[index % colors.length];
+                    const customPortionDetails = meal.details.filter((detail: any) => (
+                      Number(detail.carbGrams) > 0 || Number(detail.proteinGrams) > 0
+                    ));
 
                     return (
                       <div
                         key={index}
-                        className="bg-white rounded-2xl p-5 hover:-translate-y-0.5 transition-all"
-                        style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
+                        className="bg-white rounded-lg p-4 mb-3 transition-shadow hover:shadow-md"
+                        style={{ border: "1px solid #dbe7ef", boxShadow: "0 8px 24px -20px rgba(14,42,74,.35)" }}
                       >
-                        <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className={cn("w-3 h-3 rounded-full shrink-0", color)} />
-                            <span className={cn("text-xl font-bold truncate", (meal as any).preparedCount >= meal.count ? "text-emerald-600 line-through" : "text-gray-900")}>
-                              {meal.name}
-                            </span>
+                            <div className={cn("w-1.5 self-stretch min-h-11 rounded-full shrink-0", color)} />
+                            <div className="min-w-0">
+                              <span className={cn("text-lg font-black block truncate", (meal as any).preparedCount >= meal.count ? "text-emerald-600 line-through" : "text-[#10283f]")}>
+                                {meal.name}
+                              </span>
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#7b91a3]">{meal.category}</span>
+                            </div>
                             {/* ✅ عدّاد التقدّم + تعليم كل الحصص جاهزة دفعة واحدة */}
                             {(meal as any).locations?.length > 0 && (() => {
                               const done = (meal as any).preparedCount;
@@ -1343,10 +1532,7 @@ export default function Kitchen() {
 
                           <button
                             onClick={() => openMealDetailsDialog(meal.name, meal.details)}
-                            className={cn(
-                              "text-3xl font-bold text-white px-8 py-3 rounded-xl shadow-md hover:shadow-xl transition-all active:scale-95 shrink-0",
-                              color
-                            )}
+                            className="min-w-16 h-12 px-4 rounded-lg border border-red-200 bg-red-50 text-2xl font-black text-red-600 tabular-nums shadow-sm hover:bg-red-100 hover:shadow-md transition-all active:scale-95 shrink-0"
                           >
                             {meal.count}
                           </button>
@@ -1354,9 +1540,10 @@ export default function Kitchen() {
 
                         {/* ✅ Breakdown: عادي vs معدّل */}
                         {meal.count > 0 && (
-                          <div className="space-y-3 mt-3 pt-3 border-t border-gray-100">
+                          <div className={cn("mt-3 pt-3 border-t border-[#e8eef4] gap-3", meal.modGroups.length > 0 && "grid grid-cols-1 xl:grid-cols-[minmax(300px,.8fr)_minmax(0,1.2fr)]")}>
+                            <div className="space-y-2.5">
                             <div className="grid grid-cols-2 gap-2">
-                              <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                              <div className="flex items-center justify-between px-3 py-2 rounded-lg min-h-14"
                                 style={{ background: "#e8f8fd", border: "1px solid #3cc4f040" }}>
                                 <div>
                                   <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
@@ -1366,11 +1553,11 @@ export default function Kitchen() {
                                     {isRtl ? "بدون تعديلات" : "No modifications"}
                                   </p>
                                 </div>
-                                <span className="text-2xl font-black tabular-nums text-[#3cc4f0]">
+                                <span className="text-xl font-black tabular-nums text-red-600">
                                   {meal.plainCount}
                                 </span>
                               </div>
-                              <div className="flex items-center justify-between px-3 py-2 rounded-lg"
+                              <div className="flex items-center justify-between px-3 py-2 rounded-lg min-h-14"
                                 style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
                                 <div>
                                   <p className="text-[10px] font-bold text-[#47759c] uppercase tracking-wide">
@@ -1380,7 +1567,7 @@ export default function Kitchen() {
                                     {isRtl ? "ممنوعات/تفضيلات" : "Avoid/Prefs"}
                                   </p>
                                 </div>
-                                <span className="text-2xl font-black tabular-nums text-[#47759c]">
+                                <span className="text-xl font-black tabular-nums text-red-600">
                                   {meal.modifiedCount}
                                 </span>
                               </div>
@@ -1391,7 +1578,7 @@ export default function Kitchen() {
                               {meal.dietCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-sky-50/50 border border-sky-100 text-center">
                                   <span className="text-[9px] font-bold text-sky-600 block">DIET</span>
-                                  <span className="text-lg font-black text-sky-700">{meal.dietCount}</span>
+                                  <span className="text-lg font-black text-red-600">{meal.dietCount}</span>
                                   <span className="text-[8.5px] font-bold text-sky-600/80 block leading-tight" dir="ltr">
                                     C {programPortions.DIET?.carb}g · P {programPortions.DIET?.protein}g
                                   </span>
@@ -1403,7 +1590,7 @@ export default function Kitchen() {
                               {meal.fitnessCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-cyan-50/50 border border-cyan-100 text-center">
                                   <span className="text-[9px] font-bold text-cyan-600 block">FITNESS</span>
-                                  <span className="text-lg font-black text-cyan-700">{meal.fitnessCount}</span>
+                                  <span className="text-lg font-black text-red-600">{meal.fitnessCount}</span>
                                   <span className="text-[8.5px] font-bold text-cyan-600/80 block leading-tight" dir="ltr">
                                     C {programPortions.FITNESS?.carb}g · P {programPortions.FITNESS?.protein}g
                                   </span>
@@ -1415,7 +1602,7 @@ export default function Kitchen() {
                               {meal.bulkCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-amber-50/50 border border-amber-100 text-center">
                                   <span className="text-[9px] font-bold text-amber-600 block">BULK</span>
-                                  <span className="text-lg font-black text-amber-700">{meal.bulkCount}</span>
+                                  <span className="text-lg font-black text-red-600">{meal.bulkCount}</span>
                                   <span className="text-[8.5px] font-bold text-amber-600/80 block leading-tight" dir="ltr">
                                     C {programPortions.BULK?.carb}g · P {programPortions.BULK?.protein}g
                                   </span>
@@ -1427,30 +1614,51 @@ export default function Kitchen() {
                               {meal.customizedCount > 0 && (
                                 <div className="px-2.5 py-1.5 rounded-lg bg-purple-50/50 border border-purple-100 text-center">
                                   <span className="text-[9px] font-bold text-purple-600 block">CUSTOMIZED</span>
-                                  <span className="text-lg font-black text-purple-700">{meal.customizedCount}</span>
+                                  <span className="text-lg font-black text-red-600">{meal.customizedCount}</span>
                                 </div>
                               )}
                             </div>
 
+                            {customPortionDetails.length > 0 && (
+                              <div className="rounded-lg border border-red-200 bg-red-50/70 px-3 py-2.5">
+                                <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-red-700">
+                                  {isRtl ? "كميات كارب وبروتين مختلفة" : "Custom carb and protein portions"}
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {customPortionDetails.map((detail: any, detailIndex: number) => (
+                                    <span key={`${detail.customerName}-${detailIndex}`} className="rounded-md border border-red-200 bg-white px-2.5 py-1.5 text-[10px] font-bold text-[#47759c]">
+                                      {detail.customerName}
+                                      <strong className="ms-2 text-sm font-black text-red-600" dir="ltr">
+                                        {Number(detail.carbGrams) > 0 ? `C ${Number(detail.carbGrams)}g` : ""}
+                                        {Number(detail.carbGrams) > 0 && Number(detail.proteinGrams) > 0 ? " · " : ""}
+                                        {Number(detail.proteinGrams) > 0 ? `P ${Number(detail.proteinGrams)}g` : ""}
+                                      </strong>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            </div>
+
                             {/* ✅ تعديلات مجمّعة بعدّاد (chef-friendly): "بدون فطر ×3" + أسماء العملاء */}
                             {meal.modGroups.length > 0 && (
-                              <div className="mt-3 pt-3 border-t-2 border-dashed border-amber-200/60 bg-amber-50/20 rounded-xl p-3">
-                                <h4 className="text-xs font-black text-amber-700 flex items-center gap-1.5 mb-2">
-                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                              <div className="rounded-lg border border-amber-200 bg-amber-50/45 p-3 min-w-0">
+                                <h4 className="text-xs font-black text-amber-800 flex items-center gap-1.5 mb-2.5">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
                                   {isRtl ? `التعديلات المطلوبة (${meal.modGroups.length} نوع · ${meal.modifiedCount} وجبة)` : `Required Modifications (${meal.modGroups.length} types · ${meal.modifiedCount} meals)`}
                                 </h4>
-                                <div className="flex flex-col gap-1.5">
+                                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-2">
                                   {meal.modGroups.map((g: any, gi: number) => (
-                                    <div key={gi} className="bg-white rounded-lg px-3 py-2 border border-amber-200/50 shadow-sm">
+                                    <div key={gi} className="bg-white/90 rounded-md px-3 py-2 border border-amber-200/70">
                                       <div className="flex items-start gap-2">
-                                        <span className="shrink-0 text-sm font-black text-white bg-amber-500 rounded-md px-2 py-0.5 tabular-nums">
+                                        <span className="shrink-0 text-sm font-black text-white bg-red-600 rounded-md px-2 py-0.5 tabular-nums">
                                           ×{g.count}
                                         </span>
                                         <div className="flex-1 min-w-0">
                                           <p className="text-[13px] font-bold text-gray-900 leading-snug break-words">
                                             {g.label || (isRtl ? "تعديل مطلوب — راجع الطلب" : "Modification — check order")}
                                           </p>
-                                          <p className="text-[10px] text-gray-400 mt-0.5 truncate">
+                                          <p className="text-[10px] text-[#7b91a3] mt-1 leading-relaxed break-words">
                                             {g.customers.map((c: any) => `${c.name}${c.deliveryTime === "MORNING" ? " ☀" : " 🌙"}`).join(isRtl ? "، " : ", ")}
                                           </p>
                                         </div>
