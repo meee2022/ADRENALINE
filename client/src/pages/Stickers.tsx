@@ -13,6 +13,34 @@ import { useStore } from "@/lib/store";
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX";
 type MealCategoryFilter = "ALL" | "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+type CalorieOverrides = Record<string, number>;
+
+const CALORIE_OVERRIDES_STORAGE_KEY = "adrenaline:sticker-calorie-overrides:v1";
+
+function stickerOverrideKey(sticker: any, index: number) {
+  return [
+    sticker?.customerId || sticker?.customerNumber || sticker?.customerNo || "customer",
+    sticker?.prodDate || sticker?.dateText || "date",
+    sticker?.mealIndexText || `meal-${index + 1}`,
+    sticker?.mealName || sticker?.mealTitle || "meal",
+    sticker?.category || "category",
+  ].map((part) => String(part).trim().toLowerCase()).join("|");
+}
+
+function readCalorieOverrides(): CalorieOverrides {
+  if (typeof window === "undefined") return {};
+  try {
+    const parsed = JSON.parse(window.sessionStorage.getItem(CALORIE_OVERRIDES_STORAGE_KEY) || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([key, value]) => [key, Number(value)] as const)
+        .filter(([, value]) => Number.isFinite(value) && value >= 0),
+    ) as CalorieOverrides;
+  } catch {
+    return {};
+  }
+}
 
 function stickerCategory(value: unknown): Exclude<MealCategoryFilter, "ALL"> | "OTHER" {
   const category = String(value || "").trim().toUpperCase();
@@ -98,20 +126,27 @@ export default function Stickers() {
   // طباعة مؤجّلة: نضبط النطاق قبل ما نفتح مربّع الطباعة
   const [pendingPrint, setPendingPrint] = useState<null | "all" | "selected">(null);
 
-  // ✅ تعديل لحظي للسعرات وقت الطباعة (لا يُحفظ) — مفتاحه فهرس الاستيكر
-  const [calOverride, setCalOverride] = useState<Record<number, number>>({});
+  // تعديل مؤقت لجلسة الطباعة فقط. لا يغيّر بيانات الوجبة أو خطة المشترك.
+  const [calOverride, setCalOverride] = useState<CalorieOverrides>(readCalorieOverrides);
   // ✅ بحث بالاسم/الرقم للوصول السريع لستيكر شخص معيّن (بدل تصفّح المئات)
   const [search, setSearch] = useState("");
   const [mealCategory, setMealCategory] = useState<MealCategoryFilter>("ALL");
-  // امسح التحديد والتعديلات والبحث لما يتغيّر التبويب/التاريخ/الوقت (تتبدّل القائمة)
+  // امسح أدوات العرض عند تبدّل القائمة، مع إبقاء تعديلات السعرات حتى انتهاء جلسة الطباعة.
   useEffect(() => {
     setSelected(new Set());
     setRangeFrom("");
     setRangeTo("");
-    setCalOverride({});
     setSearch("");
     setMealCategory("ALL");
   }, [activeTab, date, deliveryTime]);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(CALORIE_OVERRIDES_STORAGE_KEY, JSON.stringify(calOverride));
+    } catch {
+      // الطباعة تظل تعمل حتى إذا منع المتصفح التخزين المؤقت.
+    }
+  }, [calOverride]);
 
   // ✅ تجميد أرقام البوكس لهذا اليوم عند فتحه — فيبقى رقم كل مشترك ثابتاً طوال اليوم
   //    حتى لو أُضيف/عُدّل مشتركون بعد الطباعة (الجديد ياخد رقماً مُلحقاً فقط).
@@ -159,6 +194,15 @@ export default function Stickers() {
         return hay.includes(searchQ);
       }),
     [activeStickers, activeTab, categoryQ, searchQ],
+  );
+  const activeOverrideCount = useMemo(
+    () => activeTab === "MEALS"
+      ? activeStickers.reduce(
+          (count: number, sticker: any, index: number) => count + (calOverride[stickerOverrideKey(sticker, index)] != null ? 1 : 0),
+          0,
+        )
+      : 0,
+    [activeStickers, activeTab, calOverride],
   );
 
   useEffect(() => {
@@ -424,6 +468,22 @@ export default function Stickers() {
                 {isRtl ? `${visibleStickers.length} نتيجة` : `${visibleStickers.length} result(s)`}
               </span>
             )}
+            {activeOverrideCount > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-black text-amber-800">
+                <span>
+                  {isRtl
+                    ? `${activeOverrideCount} تعديل محفوظ للطباعة`
+                    : `${activeOverrideCount} saved for printing`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCalOverride({})}
+                  className="rounded-md bg-white px-2 py-1 text-[10px] text-amber-700 shadow-sm hover:bg-amber-100"
+                >
+                  {isRtl ? "مسح التعديلات" : "Clear"}
+                </button>
+              </div>
+            )}
           </div>
 
           {activeTab === "MEALS" && (
@@ -493,7 +553,8 @@ export default function Stickers() {
           {visibleStickers.map(({ s0, idx }: any) => {
             const isSel = selected.has(idx);
             // التعديل لحظي لهذه الطباعة فقط: السعرات والماكروز تتغير بنسبة واحدة.
-            const ov = calOverride[idx];
+            const overrideKey = stickerOverrideKey(s0, idx);
+            const ov = calOverride[overrideKey];
             const s = (activeTab === "MEALS" && ov != null)
               ? scaleStickerMacros(s0, ov)
               : s0;
@@ -521,8 +582,10 @@ export default function Stickers() {
                           const v = e.target.value;
                           setCalOverride((prev) => {
                             const next = { ...prev };
-                            if (v === "" ) { delete next[idx]; return next; }
-                            next[idx] = Math.max(0, Number(v));
+                            if (v === "" ) { delete next[overrideKey]; return next; }
+                            const calories = Number(v);
+                            if (!Number.isFinite(calories)) return prev;
+                            next[overrideKey] = Math.max(0, calories);
                             return next;
                           });
                         }}
@@ -537,7 +600,7 @@ export default function Stickers() {
                         </span>
                       )}
                       {ov != null && (
-                        <button type="button" onClick={() => setCalOverride((p) => { const n = { ...p }; delete n[idx]; return n; })}
+                        <button type="button" onClick={() => setCalOverride((p) => { const n = { ...p }; delete n[overrideKey]; return n; })}
                           className="text-amber-600 hover:text-amber-800" title={isRtl ? "رجوع للأصلي" : "Reset"}>↺</button>
                       )}
                     </div>
