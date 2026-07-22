@@ -1549,7 +1549,9 @@ export default function Customers() {
                     </div>
                   </div>
 
-                  {/* ✅ محدّد المدة — يحسب تاريخ النهاية تلقائيًا من البداية (مفيد للمخصّص) */}
+                  {/* ✅ محدّد المدة — للباقة المخصّصة فقط (هي الوحيدة مفتوحة المدة). باقي
+                      الباقات مدتها ثابتة وتاريخ النهاية يُحسب تلقائيًا فور اختيار الباقة. */}
+                  {selectedPlan && planOptions.length === 0 && (
                   <div className="space-y-2">
                     <Label>{isRtl ? "المدة (يحسب تاريخ النهاية تلقائيًا)" : "Duration (auto-sets end date)"}</Label>
                     <Select
@@ -1574,6 +1576,7 @@ export default function Customers() {
                       </SelectContent>
                     </Select>
                   </div>
+                  )}
 
                   <p className="text-[11px] text-muted-foreground">
                     {isRtl
