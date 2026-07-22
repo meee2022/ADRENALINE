@@ -19,6 +19,18 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { cn } from "@/lib/utils";
 
+/** صورة بطاقة الباقة — روابط Convex Storage القديمة المخزّنة على الباقات ترجع 404،
+ *  فنستبدلها بالأصول الثابتة المرفقة (نفس منطق صفحة الخطط PublicPlansNew). */
+function planCardImage(plan: any): string {
+  const source = String(plan?.imageUrl || "").trim();
+  if (source && !source.includes(".convex.cloud/api/storage/")) return source;
+  const key = `${plan?.slug || ""} ${plan?.nameEn || ""}`.toLowerCase();
+  if (key.includes("diet") || key.includes("tanshif")) return "/plan-tanshif-real.png";
+  if (key.includes("fitness") || key.includes("liyaqa")) return "/plan-liyaqa-real.png";
+  if (key.includes("bulk") || key.includes("tadkhim")) return "/plan-tadkhim-real.jpg";
+  return "/adrenaline-logo-full.png";
+}
+
 export default function HomePage() {
   const { language, dir } = useLanguage();
   useSeo({ title: "أدرينالين للوجبات الصحية | وجبات صحية وتوصيل يومي في قطر", description: "وجبات صحية محسوبة السعرات تُحضَّر يوميًا بإشراف أخصائيي تغذية وتصل إلى باب منزلك في قطر. اشترك في باقتك الآن.", path: "/" });
@@ -259,9 +271,10 @@ export default function HomePage() {
 
                   <div className="relative h-32 md:h-48 overflow-hidden">
                     <motion.img
-                      src={plan.imageUrl}
+                      src={planCardImage(plan)}
                       alt={isRtl ? plan.nameAr : plan.nameEn || plan.nameAr}
                       loading="lazy"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/adrenaline-logo-full.png"; }}
                       whileHover={{ scale: 1.1 }}
                       transition={{ duration: 0.7 }}
                       className="w-full h-full object-cover"
