@@ -24,6 +24,8 @@ export default defineSchema({
     permissions: v.optional(v.array(v.string())),
     // ✅ PIN للكاشير (4-6 أرقام مشفّرة). يستخدم للدخول السريع على شل POS بدون كتابة إيميل/باسورد.
     pinHash: v.optional(v.string()),
+    // POS access is independent from the staff role, avoiding duplicate user accounts.
+    posEnabled: v.optional(v.boolean()),
     // ✅ فرع الكاشير المُعيَّن عليه (POS متعدّد الفروع). الأدمن يقدر يغيّره لتغطية فرع آخر.
     posBranchId: v.optional(v.id("posBranches")),
     isActive: v.boolean(),

@@ -12,6 +12,13 @@ import { ONLINE_PRICE_LIST } from "./onlinePriceList";
 import { reverseInventoryForTicket } from "./pos";
 import { reversePointsForPosTicket } from "./loyalty";
 
+function isPosUser(user: any): boolean {
+  if (user?.posEnabled === false) return false;
+  return user?.posEnabled === true
+    || user?.role === "CASHIER"
+    || (user?.role === "ADMIN" && !!user?.pinHash);
+}
+
 /* ═══════════════════════════════ الكاشيرون ═══════════════════════════════ */
 
 export const listCashiers = query({
@@ -22,17 +29,62 @@ export const listCashiers = query({
     const branches = await ctx.db.query("posBranches").collect();
     const branchName = new Map(branches.map((b: any) => [String(b._id), b.name]));
     return users
-      .filter((u: any) => u.role === "CASHIER")
+      .filter(isPosUser)
       .map((u: any) => ({
         id: String(u._id),
         name: u.name,
         email: u.email,
         phone: u.phone || null,
+        role: u.role,
         isActive: u.isActive,
+        posEnabled: isPosUser(u),
         hasPin: !!u.pinHash,
         branchId: u.posBranchId ? String(u.posBranchId) : null,
         branchName: u.posBranchId ? (branchName.get(String(u.posBranchId)) || null) : null,
       }));
+  },
+});
+
+export const listAssignableUsers = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const users = await ctx.db.query("users").collect();
+    return users
+      .filter((user: any) => user.isActive && !isPosUser(user))
+      .map((user: any) => ({ id: String(user._id), name: user.name, email: user.email, role: user.role }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+export const assignUserToPos = mutation({
+  args: {
+    userId: v.id("users"),
+    pin: v.string(),
+    posBranchId: v.optional(v.id("posBranches")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const user: any = await ctx.db.get(args.userId);
+    if (!user) throw new Error("المستخدم غير موجود");
+    if (!user.isActive) throw new Error("يجب تفعيل حساب المستخدم أولاً");
+    const clean = args.pin.trim();
+    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+    const allUsers = await ctx.db.query("users").collect();
+    for (const other of allUsers) {
+      if (String(other._id) === String(args.userId)) continue;
+      if (other.pinHash && isPosUser(other) && await verifyPassword(clean, other.pinHash)) {
+        throw new Error("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
+      }
+    }
+    await ctx.db.patch(args.userId, {
+      posEnabled: true,
+      pinHash: await hashPassword(clean),
+      posBranchId: args.posBranchId,
+      updatedAt: Date.now(),
+    } as any);
+    return { ok: true };
   },
 });
 
@@ -56,7 +108,7 @@ export const createCashier = mutation({
     const allUsers = await ctx.db.query("users").collect();
     
     for (const u of allUsers) {
-      if (u.pinHash && (u.role === "CASHIER" || u.role === "ADMIN")) {
+      if (u.pinHash && isPosUser(u)) {
         if (await verifyPassword(clean, u.pinHash)) throw new Error("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
       }
     }
@@ -70,6 +122,7 @@ export const createCashier = mutation({
       phone: args.phone?.trim() || undefined,
       role: "CASHIER",
       pinHash,
+      posEnabled: true,
       posBranchId: args.posBranchId,
       isActive: true,
       createdAt: Date.now(),
@@ -84,6 +137,7 @@ export const updateCashier = mutation({
     name: v.optional(v.string()),
     phone: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    posEnabled: v.optional(v.boolean()),
     pin: v.optional(v.string()),
     posBranchId: v.optional(v.id("posBranches")),
     sessionToken: v.optional(v.string()),
@@ -96,6 +150,7 @@ export const updateCashier = mutation({
     if (args.name !== undefined) patch.name = args.name.trim();
     if (args.phone !== undefined) patch.phone = args.phone.trim() || undefined;
     if (args.isActive !== undefined) patch.isActive = args.isActive;
+    if (args.posEnabled !== undefined) patch.posEnabled = args.posEnabled;
     if (args.posBranchId !== undefined) patch.posBranchId = args.posBranchId;
     if (args.pin !== undefined) {
       const clean = args.pin.trim();
@@ -104,7 +159,7 @@ export const updateCashier = mutation({
       const allUsers = await ctx.db.query("users").collect();
       for (const other of allUsers) {
         if (String(other._id) === String(args.id)) continue;
-        if (other.pinHash && (other.role === "CASHIER" || other.role === "ADMIN")) {
+        if (other.pinHash && isPosUser(other)) {
           if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
         }
       }
@@ -126,11 +181,11 @@ export const setUserPin = mutation({
     const allUsers = await ctx.db.query("users").collect();
     for (const other of allUsers) {
       if (String(other._id) === String(args.userId)) continue;
-      if (other.pinHash && (other.role === "CASHIER" || other.role === "ADMIN")) {
+      if (other.pinHash && isPosUser(other)) {
         if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
       }
     }
-    await ctx.db.patch(args.userId, { pinHash: await hashPassword(clean), updatedAt: Date.now() } as any);
+    await ctx.db.patch(args.userId, { pinHash: await hashPassword(clean), posEnabled: true, updatedAt: Date.now() } as any);
     return { ok: true };
   },
 });

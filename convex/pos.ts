@@ -31,8 +31,15 @@ async function requireCashier(ctx: QueryCtx | MutationCtx, token?: string | null
   if (!session) throw new Error("Invalid POS session");
   if (session.expiresAt < Date.now()) throw new Error("POS session expired");
   const user: any = await ctx.db.get(session.cashierId);
-  if (!user || !user.isActive) throw new Error("Cashier not active");
+  if (!user || !user.isActive || !canUsePos(user)) throw new Error("Cashier not active");
   return { session, user };
+}
+
+function canUsePos(user: any): boolean {
+  if (user?.posEnabled === false) return false;
+  return user?.posEnabled === true
+    || user?.role === "CASHIER"
+    || (user?.role === "ADMIN" && !!user?.pinHash);
 }
 
 function isAdmin(user: any): boolean {
@@ -94,11 +101,11 @@ export const loginWithPin = mutation({
     const clean = pin.trim();
     if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     await checkAndRecordFailure(ctx, "global", false);
-    const cashiers = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "CASHIER")).collect();
-    const admins = await ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", "ADMIN")).collect();
+    const users = await ctx.db.query("users").collect();
     let match: any = null;
-    for (const u of [...cashiers, ...admins]) {
+    for (const u of users) {
       if (!u.isActive) continue;
+      if (!canUsePos(u)) continue;
       if (!u.pinHash) continue;
       if (await verifyPassword(clean, u.pinHash)) { match = u; break; }
     }

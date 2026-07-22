@@ -363,11 +363,15 @@ function QuickCard({ title, value, color, icon: Icon }: any) {
 
 function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
   const rows = useQuery(api.posAdmin.listCashiers, { sessionToken }) as any[] | undefined;
+  const assignableUsers = useQuery(api.posAdmin.listAssignableUsers, { sessionToken }) as any[] | undefined;
   const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
   const create = useMutation(api.posAdmin.createCashier);
+  const assignUser = useMutation(api.posAdmin.assignUserToPos);
   const update = useMutation(api.posAdmin.updateCashier);
   const [showForm, setShowForm] = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
   const [f, setF] = useState({ name: "", email: "", phone: "", pin: "", branchId: "" });
+  const [assignForm, setAssignForm] = useState({ userId: "", pin: "", branchId: "" });
   const [editing, setEditing] = useState<any | null>(null);
   const [newPin, setNewPin] = useState("");
   const hasBranches = (branches?.length || 0) > 0;
@@ -379,6 +383,23 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
       toast({ title: t("تم إنشاء الكاشير ✓", "Cashier created ✓") });
       setShowForm(false); setF({ name: "", email: "", phone: "", pin: "", branchId: "" });
     } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message?.replace(/^\[.*?\]\s*/, "") }); }
+  };
+  const submitAssignment = async () => {
+    if (!assignForm.userId) return toast({ title: t("اختر مستخدمًا", "Select a user") });
+    if (!/^\d{4,6}$/.test(assignForm.pin)) return toast({ title: t("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام", "PIN must be 4-6 digits") });
+    try {
+      await assignUser({
+        userId: assignForm.userId as any,
+        pin: assignForm.pin,
+        ...(assignForm.branchId ? { posBranchId: assignForm.branchId as any } : {}),
+        sessionToken,
+      });
+      toast({ title: t("تم تفعيل المستخدم في نقطة البيع ✓", "User enabled for POS ✓") });
+      setShowAssign(false);
+      setAssignForm({ userId: "", pin: "", branchId: "" });
+    } catch (e: any) {
+      toast({ title: t("فشل", "Failed"), description: e?.message?.replace(/^\[.*?\]\s*/, "") });
+    }
   };
   const reassign = async (id: string, branchId: string) => {
     try { await update({ id: id as any, posBranchId: (branchId || undefined) as any, sessionToken }); toast({ title: t("تم تحديث الفرع ✓", "Branch updated ✓") }); }
@@ -395,12 +416,52 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-2">
         <p className="text-slate-600 text-sm font-bold">{rows?.length || 0} {t("كاشير", "cashier(s)")}</p>
-        <Button onClick={() => setShowForm(true)} className="h-10 text-white font-bold" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
-          <Plus className="h-4 w-4 me-1" /> {t("كاشير جديد", "New cashier")}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => { setShowAssign(true); setShowForm(false); }} className="h-10 font-bold border-cyan-200 text-[#0E76AC]">
+            <Users className="h-4 w-4 me-1" /> {t("اختيار مستخدم موجود", "Select existing user")}
+          </Button>
+          <Button onClick={() => { setShowForm(true); setShowAssign(false); }} className="h-10 text-white font-bold" style={{ background: "linear-gradient(135deg,#0E76AC,#0E2A4A)" }}>
+            <Plus className="h-4 w-4 me-1" /> {t("مستخدم كاشير جديد", "New cashier user")}
+          </Button>
+        </div>
       </div>
+
+      {showAssign && (
+        <Card className="rounded-2xl border-2 border-cyan-200 bg-cyan-50/30">
+          <CardContent className="p-4 space-y-4">
+            <div>
+              <h3 className="font-black text-slate-900">{t("تفعيل مستخدم موجود في نقطة البيع", "Enable an existing user for POS")}</h3>
+              <p className="text-xs text-slate-500">{t("سيبقى دوره وصلاحياته الحالية كما هي، ويُضاف له دخول الكاشير فقط.", "Their current role and permissions stay unchanged; only POS access is added.")}</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <Label>{t("المستخدم", "User")}</Label>
+                <select value={assignForm.userId} onChange={(e) => setAssignForm({ ...assignForm, userId: e.target.value })} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                  <option value="">{t("— اختر من المستخدمين —", "— select a user —")}</option>
+                  {(assignableUsers || []).map((user: any) => <option key={user.id} value={user.id}>{user.name} · {user.email} ({user.role})</option>)}
+                </select>
+              </div>
+              <div><Label>PIN</Label><Input value={assignForm.pin} onChange={(e) => setAssignForm({ ...assignForm, pin: e.target.value.replace(/\D/g, "").slice(0, 6) })} inputMode="numeric" placeholder="1234" /></div>
+              {hasBranches && (
+                <div>
+                  <Label>{t("الفرع", "Branch")}</Label>
+                  <select value={assignForm.branchId} onChange={(e) => setAssignForm({ ...assignForm, branchId: e.target.value })} className="w-full h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                    <option value="">{t("— اختر الفرع —", "— select branch —")}</option>
+                    {(branches || []).map((branch: any) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            {assignableUsers && assignableUsers.length === 0 && <p className="text-xs font-bold text-amber-700">{t("كل المستخدمين النشطين مفعّلون بالفعل أو لا يوجد مستخدم متاح.", "All active users are already enabled or no user is available.")}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowAssign(false)}>{t("إلغاء", "Cancel")}</Button>
+              <Button onClick={submitAssignment} className="bg-[#0E76AC] text-white hover:bg-[#0c6698]">{t("تفعيل نقطة البيع", "Enable POS")}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {showForm && (
         <Card className="rounded-2xl border-2 border-[#0E76AC]/30">
@@ -435,14 +496,17 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                 <th className="text-start p-3">{t("البريد الإلكتروني", "Email")}</th>
                 {hasBranches && <th className="text-start p-3">{t("الفرع", "Branch")}</th>}
                 <th className="text-center p-3">PIN</th>
-                <th className="text-center p-3">{t("نشط", "Active")}</th>
+                <th className="text-center p-3">{t("دخول POS", "POS access")}</th>
                 <th className="p-3" />
               </tr>
             </thead>
             <tbody>
               {(rows || []).map((c: any) => (
                 <tr key={c.id} className="border-t border-slate-100">
-                  <td className="p-3 font-bold">{c.name}</td>
+                  <td className="p-3">
+                    <p className="font-bold">{c.name}</p>
+                    <span className="inline-flex mt-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{c.role}</span>
+                  </td>
                   <td className="p-3 text-slate-600 text-xs">{c.email}</td>
                   {hasBranches && (
                     <td className="p-3">
@@ -467,8 +531,8 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                     )}
                   </td>
                   <td className="p-3 text-center">
-                    <button onClick={() => update({ id: c.id as any, isActive: !c.isActive, sessionToken })} className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", c.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
-                      {c.isActive ? t("نشط", "Active") : t("موقوف", "Off")}
+                    <button disabled={!c.isActive} onClick={() => update({ id: c.id as any, posEnabled: !c.posEnabled, sessionToken })} className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full disabled:cursor-not-allowed", c.isActive && c.posEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
+                      {!c.isActive ? t("الحساب موقوف", "Account off") : c.posEnabled ? t("مفعّل للـPOS", "POS enabled") : t("غير مفعّل", "Disabled")}
                     </button>
                   </td>
                   <td className="p-3 text-end" />

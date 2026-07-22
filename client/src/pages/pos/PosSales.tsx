@@ -16,6 +16,7 @@ import ReceiptModal from "./PosReceipt";
 
 type CartLine = { mealId: string | null; name: string; qty: number; unitPrice: number; note?: string };
 type OrderType = "dine_in" | "pickup" | "delivery";
+const POS_ITEMS_BATCH_SIZE = 24;
 
 const MENU_CAT_META: Record<string, { label: string; labelAr: string; icon: any }> = {
   all:       { label: "All",       labelAr: "الكل",  icon: Grid3x3  },
@@ -100,6 +101,9 @@ export default function PosSales() {
   const [busy, setBusy] = useState(false);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [localOrderNo] = useState(genLocalOrderNo);
+  const [visibleItemCount, setVisibleItemCount] = useState(POS_ITEMS_BATCH_SIZE);
+  const itemsCanvasRef = useRef<HTMLDivElement>(null);
+  const loadMoreItemsRef = useRef<HTMLDivElement>(null);
 
   const usePosCategories = (posCats?.length ?? 0) > 0;
   const catButtons: any[] = usePosCategories
@@ -120,6 +124,30 @@ export default function PosSales() {
           || String(m.nameAr).toLowerCase().includes(qq);
     });
   }, [items, activeCat, q, usePosCategories]);
+
+  const visibleItems = useMemo(
+    () => filtered.slice(0, visibleItemCount),
+    [filtered, visibleItemCount],
+  );
+
+  useEffect(() => {
+    setVisibleItemCount(POS_ITEMS_BATCH_SIZE);
+    itemsCanvasRef.current?.scrollTo({ top: 0 });
+  }, [activeCat, q]);
+
+  useEffect(() => {
+    const root = itemsCanvasRef.current;
+    const target = loadMoreItemsRef.current;
+    if (!root || !target || visibleItemCount >= filtered.length) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries[0]?.isIntersecting) return;
+      setVisibleItemCount((current) => Math.min(current + POS_ITEMS_BATCH_SIZE, filtered.length));
+    }, { root, rootMargin: "500px 0px" });
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [filtered.length, visibleItemCount]);
 
   const totals = useMemo(() => {
     let subtotal = 0, count = 0;
@@ -461,13 +489,13 @@ export default function PosSales() {
         </div>
 
         {/* Grid */}
-        <div className="pos-items-canvas flex-1 overflow-y-auto p-3 sm:p-4">
+        <div ref={itemsCanvasRef} className="pos-items-canvas flex-1 overflow-y-auto p-3 sm:p-4">
           {(!items) && <p className="text-center text-slate-500 py-16 font-bold">{tt("جاري التحميل…", "Loading...")}</p>}
           {items && filtered.length === 0 && (
             <p className="text-center text-slate-500 py-16 font-bold">{tt("لا توجد أصناف مطابقة", "No matching items")}</p>
           )}
           <div className="pos-items-grid grid gap-2.5 sm:gap-3">
-            {filtered.map((m: any) => {
+            {visibleItems.map((m: any) => {
               const imageUrl = getPosMealImage(m.nameEn, m.name, m.nameAr) || m.imageUrl;
               const hasImage = !!imageUrl;
               return (
@@ -502,6 +530,13 @@ export default function PosSales() {
                 </button>
               );
             })}
+            {visibleItemCount < filtered.length && (
+              <div
+                ref={loadMoreItemsRef}
+                aria-hidden="true"
+                className="col-span-full h-1"
+              />
+            )}
           </div>
         </div>
       </div>
