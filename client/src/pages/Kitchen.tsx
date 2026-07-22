@@ -913,9 +913,12 @@ export default function Kitchen() {
         const qty = m.notset ? "" : (m.isSide ? "•" : "1");
         return `<tr class="${m.notset ? "nsrow" : ""}"><td class="lb">${esc(m.text)}</td><td class="ct">${qty}</td></tr>`;
       }).join("");
+      // ⚠️ لا نضع «عدد وجبات» في الرأس — الطباخ قد يفهمها كمية وجبة واحدة (×3).
+      //    الرأس = الاسم فقط، وكل وجبة سطرها بكميتها (1). السلطات/السناكات القياسية
+      //    تُحسب في إجمالي الأطباق فوق (اتفاق سابق).
       return `
       <div class="dishbox"><table class="dish">
-        <tr class="dh"><td class="dn">${esc(p.name)} ${dot}</td><td class="dc">${(p.meals || []).length}</td></tr>
+        <tr class="dh"><td class="dn" colspan="2">${esc(p.name)} ${dot}</td></tr>
         ${p.allergies ? `<tr><td class="lb" colspan="2" style="background:#fef2f2;color:#b91c1c;font-weight:800">🚫 ${esc(p.allergies)}</td></tr>` : ""}
         ${rows}
       </table></div>`;
@@ -1478,12 +1481,10 @@ export default function Kitchen() {
                         {customizedAll.map((p, i) => (
                           <table key={i} className="w-full border-collapse text-[13px]" style={{ boxShadow: "0 10px 24px -16px rgba(14,42,74,.18)" }}>
                             <tbody>
+                              {/* الرأس = الاسم فقط بلا «عدد وجبات» (كي لا يفهمها الطباخ كمية ×N) */}
                               <tr>
-                                <td className="font-black text-white px-3 py-2" style={{ background: "#0E76AC", border: "1px solid #0E76AC" }}>
+                                <td colSpan={2} className="font-black text-white px-3 py-2" style={{ background: "#0E76AC", border: "1px solid #0E76AC" }}>
                                   {p.name} {p.deliveryTime === "MORNING" ? "☀" : "🌙"}
-                                </td>
-                                <td className="font-black text-white text-center px-2 py-2 w-11" style={{ background: "#0E76AC", border: "1px solid #0E76AC" }}>
-                                  {p.meals.length}
                                 </td>
                               </tr>
                               {p.allergies && (
