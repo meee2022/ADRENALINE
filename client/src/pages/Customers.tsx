@@ -1095,7 +1095,23 @@ export default function Customers() {
                     <Label htmlFor="startDate">
                       {t("customers.start_date")}
                     </Label>
-                    <Input type="date" {...form.register("startDate")} />
+                    {(() => {
+                      const reg = form.register("startDate");
+                      return (
+                        <Input type="date" {...reg}
+                          onChange={(e) => {
+                            reg.onChange(e);
+                            // ✅ لو الباقة مختارة، تغيير البداية يعيد حساب النهاية بنفس المدة
+                            //    (لا تبقى ثابتة). التعديل من onChange فقط فلا يلمس فتح التعديل.
+                            const start = e.target.value;
+                            const weeks = Number(form.getValues("durationWeeks"));
+                            if (planId && weeks > 0 && /^\d{4}-\d{2}-\d{2}$/.test(start)) {
+                              form.setValue("endDate", addWeeksISO(start, weeks), { shouldDirty: true });
+                            }
+                          }}
+                        />
+                      );
+                    })()}
                     {startRotation && (
                       <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1 flex items-center gap-1">
                         🗓️ {isRtl
