@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2, CalendarDays, ReceiptText, WalletCards } from "lucide-react";
+import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2, ReceiptText, WalletCards, Mail, Send, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -818,33 +818,38 @@ function EmailReportCard({ t, sessionToken }: any) {
   };
 
   return (
-    <Card className="rounded-2xl border-[#cfe7f3]">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-black text-[#0E2A4A]">📧 {t("تقرير يومي عبر البريد الإلكتروني (Z-report)", "Daily email report (Z-report)")}</h3>
-          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
-            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="w-4 h-4 accent-[#0E76AC]" />
-            {t("مُفعّل", "Enabled")}
-          </label>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50/80 shadow-[0_8px_30px_rgba(14,42,74,0.06)]">
+      <div className="flex flex-col gap-3 border-b border-slate-200 bg-[#0E2A4A] px-4 py-4 text-white sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-cyan-300"><Mail className="h-5 w-5" /></div>
+          <div>
+            <h3 className="text-sm font-black sm:text-base">{t("التقرير اليومي عبر البريد الإلكتروني", "Daily email report")}</h3>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-300">Z-report · {t("ملخص تلقائي لنهاية اليوم", "Automatic end-of-day summary")}</p>
+          </div>
+        </div>
+        <label className="flex h-9 cursor-pointer items-center justify-between gap-3 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-bold sm:justify-start">
+          <span>{enabled ? t("الإرسال مفعّل", "Sending enabled") : t("الإرسال متوقف", "Sending disabled")}</span>
+          <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} className="h-4 w-4 accent-cyan-400" />
+        </label>
+      </div>
+      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1.5fr)_220px]">
+        <div>
+          <Label className="mb-1.5 block text-xs font-extrabold text-slate-700">{t("البريد الإلكتروني للمستلمين", "Recipient emails")}</Label>
+          <Input value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="owner@example.com, manager@example.com" className="h-11 border-slate-200 bg-white shadow-none" />
+          <p className="mt-1.5 text-[10px] text-slate-500">{t("يمكن إضافة أكثر من بريد، مع الفصل بينها بفاصلة.", "Separate multiple email addresses with commas.")}</p>
         </div>
         <div>
-          <Label>{t("مستقبلو التقرير (افصل بفاصلة)", "Recipients (comma-separated)")}</Label>
-          <Input value={emails} onChange={(e) => setEmails(e.target.value)} placeholder="owner@example.com, manager@example.com" className="h-10" />
+          <Label className="mb-1.5 block text-xs font-extrabold text-slate-700">{t("وقت الإرسال بتوقيت قطر", "Send time, Qatar")}</Label>
+          <Input type="time" value={sendTime} onChange={(e) => setSendTime(e.target.value)} className="h-11 border-slate-200 bg-white shadow-none [font-variant-numeric:tabular-nums]" />
         </div>
-        <div className="grid grid-cols-2 gap-3 items-end">
-          <div>
-            <Label>{t("وقت الإرسال (توقيت قطر)", "Send time (Qatar)")}</Label>
-            <Input type="time" value={sendTime} onChange={(e) => setSendTime(e.target.value)} className="h-10" />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Button onClick={doSave} disabled={busy} className="h-10 bg-[#0E76AC] hover:bg-[#0c6698]">{t("حفظ", "Save")}</Button>
-            <Button onClick={doTest} disabled={busy} variant="outline" className="h-10">{t("إرسال تجريبي", "Test send")}</Button>
-          </div>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row lg:col-span-2 lg:justify-end">
+          <Button onClick={doTest} disabled={busy} variant="outline" className="h-10 border-slate-300 bg-white px-5 text-slate-700 hover:bg-slate-100"><Send className="me-2 h-4 w-4" />{t("إرسال تجريبي", "Test send")}</Button>
+          <Button onClick={doSave} disabled={busy} className="h-10 bg-[#0E76AC] px-7 hover:bg-[#0c6698]"><Save className="me-2 h-4 w-4" />{t("حفظ الإعدادات", "Save settings")}</Button>
         </div>
         {msg && <p className="text-xs font-bold text-[#0E76AC] bg-[#eef7fb] rounded-lg p-2">{msg}</p>}
         {cfg?.lastSentDate && <p className="text-[11px] text-slate-400">{t("آخر إرسال:", "Last sent:")} {cfg.lastSentDate}</p>}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -881,59 +886,59 @@ function ReportsTab({ t, sessionToken }: any) {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5 pb-6">
       <EmailReportCard t={t} sessionToken={sessionToken} />
-      {hasBranches && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-slate-500">{t("الفرع:", "Branch:")}</span>
-          <button onClick={() => setBranchId("")} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", !branchId ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{t("الكل", "All")}</button>
-          {(branches || []).map((b: any) => (
-            <button key={b.id} onClick={() => setBranchId(b.id)} className={cn("h-9 px-3 rounded-xl text-sm font-bold border", branchId === b.id ? "bg-[#0E76AC] text-white border-transparent" : "bg-white border-slate-200 text-slate-600")}>{b.name}</button>
-          ))}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(14,42,74,0.06)]">
+        <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50 px-4 py-3">
+          <div className="grid h-9 w-9 place-items-center rounded-xl bg-cyan-50 text-[#0E76AC]"><Settings2 className="h-4 w-4" /></div>
+          <div><h3 className="text-sm font-black text-slate-900">{t("نطاق التقرير", "Report scope")}</h3><p className="text-[10px] text-slate-500">{t("حدد الفرع والفترة المطلوبة", "Choose branch and date range")}</p></div>
         </div>
-      )}
-      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-cyan-50 text-[#0E76AC] grid place-items-center"><CalendarDays className="h-4 w-4" /></div>
-            <div className="me-auto">
-              <h3 className="font-black text-slate-900">{t("فترة المبيعات", "Sales period")}</h3>
-              <p className="text-[11px] text-slate-500">{t("اختر يوماً أو فترة للمقارنة", "Choose a day or custom range")}</p>
+        <div className="space-y-4 p-4">
+          {hasBranches && (
+            <div>
+              <Label className="mb-2 block text-xs font-extrabold text-slate-600">{t("الفرع", "Branch")}</Label>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button onClick={() => setBranchId("")} className={cn("h-9 shrink-0 px-4 rounded-xl text-xs font-black border transition-colors", !branchId ? "bg-[#0E2A4A] text-white border-[#0E2A4A]" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100")}>{t("كل الفروع", "All branches")}</button>
+                {(branches || []).map((b: any) => (
+                  <button key={b.id} onClick={() => setBranchId(b.id)} className={cn("h-9 shrink-0 px-4 rounded-xl text-xs font-black border transition-colors", branchId === b.id ? "bg-[#0E2A4A] text-white border-[#0E2A4A]" : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100")}>{b.name}</button>
+                ))}
+              </div>
             </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Label className="me-auto text-xs font-extrabold text-slate-600">{t("فترة المبيعات", "Sales period")}</Label>
             <button onClick={applyYesterday} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("أمس", "Yesterday")}</button>
             <button onClick={() => applyPreset(7)} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("7 أيام", "7 days")}</button>
             <button onClick={() => applyPreset(30)} className="h-9 px-3 rounded-xl text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200">{t("30 يوماً", "30 days")}</button>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><Label>{t("من", "From")}</Label><Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="h-10" /></div>
-            <div><Label>{t("إلى", "To")}</Label><Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="h-10" /></div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div><Label className="mb-1.5 block text-xs text-slate-600">{t("من", "From")}</Label><Input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className="h-11 border-slate-200 bg-slate-50 [font-variant-numeric:tabular-nums]" /></div>
+            <div><Label className="mb-1.5 block text-xs text-slate-600">{t("إلى", "To")}</Label><Input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className="h-11 border-slate-200 bg-slate-50 [font-variant-numeric:tabular-nums]" /></div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
           [WalletCards, t("إجمالي المبيعات", "Total sales"), summary?.totalSales, "#0E76AC", "QAR"],
           [ReceiptText, t("عدد الفواتير", "Tickets"), summary?.ticketsCount, "#0f766e", ""],
           [TrendingUp, t("متوسط الفاتورة", "Average ticket"), summary?.avgTicket, "#7c3aed", "QAR"],
           [RefreshCw, t("المرتجعات", "Refunds"), summary?.refundedCount, "#dc2626", ""],
-        ].map(([Icon, label, value, color, suffix]: any) => (
-          <Card key={label} className="rounded-2xl border-slate-200 shadow-sm">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl grid place-items-center shrink-0" style={{ color, background: color + "14" }}><Icon className="h-5 w-5" /></div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold text-slate-500 truncate">{label}</p>
-                <p className="text-xl sm:text-2xl font-black leading-tight" style={{ color }}>{value == null ? "—" : Number(value).toFixed(suffix ? 2 : 0)} <span className="text-[10px] text-slate-400">{suffix}</span></p>
-              </div>
-            </CardContent>
-          </Card>
+        ].map(([Icon, label, value, color, suffix]: any, index: number) => (
+          <div key={label} className={cn("min-w-0 rounded-2xl border p-4 shadow-[0_5px_18px_rgba(14,42,74,0.05)]", index === 0 ? "border-[#0E2A4A] bg-[#0E2A4A]" : "border-slate-200")} style={index === 0 ? undefined : { background: color + "08" }}>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <p className={cn("truncate text-[10px] font-extrabold sm:text-xs", index === 0 ? "text-slate-300" : "text-slate-500")}>{label}</p>
+              <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", index === 0 && "bg-white/10 text-cyan-300")} style={index === 0 ? undefined : { color, background: color + "12" }}><Icon className="h-4 w-4" /></div>
+            </div>
+            <p dir="ltr" className={cn("truncate text-start text-xl font-black leading-none sm:text-2xl [font-variant-numeric:tabular-nums]", index === 0 && "text-white")} style={index === 0 ? undefined : { color }}>{value == null ? "—" : Number(value).toFixed(suffix ? 2 : 0)} <span className={cn("text-[9px] font-bold", index === 0 ? "text-cyan-200" : "text-slate-400")}>{suffix}</span></p>
+          </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            <div className="p-4 border-b border-slate-100">
+            <div className="border-b border-slate-200 bg-slate-50/80 p-4">
               <h3 className="font-black text-slate-900">{t("المبيعات حسب الكاشير", "Sales by cashier")}</h3>
               <p className="text-[11px] text-slate-500">{t("إجمالي وعدد فواتير كل موظف خلال الفترة", "Totals and ticket count per cashier")}</p>
             </div>
@@ -955,7 +960,7 @@ function ReportsTab({ t, sessionToken }: any) {
 
         <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
           <CardContent className="p-0">
-            <div className="p-4 border-b border-slate-100">
+            <div className="border-b border-slate-200 bg-slate-50/80 p-4">
               <h3 className="font-black text-slate-900">{t("المبيعات اليومية", "Daily sales")}</h3>
               <p className="text-[11px] text-slate-500">{t("تفصيل كل يوم داخل الفترة المحددة", "Day-by-day period breakdown")}</p>
             </div>
@@ -979,9 +984,9 @@ function ReportsTab({ t, sessionToken }: any) {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-[0_5px_18px_rgba(14,42,74,0.05)]">
         <CardContent className="p-4">
-          <h3 className="font-black mb-3">{t("أكثر الأصناف مبيعاً", "Top Items")}</h3>
+          <div className="-mx-4 -mt-4 mb-3 border-b border-slate-200 bg-slate-50/80 px-4 py-3"><h3 className="font-black text-slate-900">{t("أكثر الأصناف مبيعاً", "Top Items")}</h3></div>
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-600"><tr>
               <th className="text-start p-2">{t("الوجبة", "Item")}</th>
@@ -1002,9 +1007,9 @@ function ReportsTab({ t, sessionToken }: any) {
         </CardContent>
       </Card>
 
-      <Card className="rounded-2xl">
+      <Card className="overflow-hidden rounded-2xl border-slate-200 shadow-[0_5px_18px_rgba(14,42,74,0.05)]">
         <CardContent className="p-4">
-          <h3 className="font-black mb-3">{t("سجل الفواتير", "Receipts log")}</h3>
+          <div className="-mx-4 -mt-4 mb-3 border-b border-slate-200 bg-slate-50/80 px-4 py-3"><h3 className="font-black text-slate-900">{t("سجل الفواتير", "Receipts log")}</h3></div>
           <div className="max-h-[400px] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0"><tr>
