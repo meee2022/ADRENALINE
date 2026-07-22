@@ -16,6 +16,13 @@ export function serveStatic(app: Express) {
     immutable: true,
   }));
 
+  app.use(["/app-version.json", "/sw.js", "/manifest.webmanifest", "/pos-manifest.webmanifest"], (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    next();
+  });
+
   // Everything else (including index.html) must revalidate every time
   app.use(express.static(distPath, { maxAge: 0, etag: true }));
 

@@ -83,18 +83,16 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        // In development, unregister any old SW and clear caches to avoid stale files
-        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            regs.forEach(r => r.unregister());
-          });
-          caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-        } else {
-          // Production only
-          window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-          });
-        }
+        // The app needs a live connection to Convex, so an offline shell adds stale-file
+        // risk without preserving the actual workflow. Retire any previous worker.
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => registration.unregister());
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(keys => {
+          keys.filter(key => key.startsWith('adrenaline-')).forEach(key => caches.delete(key));
+        });
       }
     </script>
   </body>

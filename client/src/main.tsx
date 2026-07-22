@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import { ConvexProvider } from "convex/react";
 import { convex } from "./lib/convex";
 import { purgeLegacyIdentity } from "./lib/customerIdentity";
+import { initializeAppVersion } from "./lib/appVersion";
 import App from "./App";
 import "./index.css";
 
@@ -9,6 +10,7 @@ import "./index.css";
 //    الحاليون رقمهم متخزّن في localStorage من النسخة القديمة — نمسحه مرة
 //    واحدة، وإلا فضل محفوظاً على أجهزتهم بلا قارئ.
 purgeLegacyIdentity();
+initializeAppVersion();
 
 createRoot(document.getElementById("root")!).render(
   <ConvexProvider client={convex}>

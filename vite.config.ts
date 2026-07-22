@@ -4,11 +4,29 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 
+const appBuildId =
+  process.env.COMMIT_REF ||
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.RENDER_GIT_COMMIT ||
+  new Date().toISOString();
+
+const appVersionPlugin = {
+  name: "adrenaline-app-version",
+  generateBundle(this: any) {
+    this.emitFile({
+      type: "asset",
+      fileName: "app-version.json",
+      source: JSON.stringify({ version: appBuildId }),
+    });
+  },
+};
+
 export default defineConfig({
   plugins: [
     react(),
     runtimeErrorOverlay(),
     metaImagesPlugin(),
+    appVersionPlugin,
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -21,6 +39,9 @@ export default defineConfig({
         ]
       : []),
   ],
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(appBuildId),
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "client", "src"),
