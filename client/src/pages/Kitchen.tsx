@@ -241,11 +241,10 @@ export default function Kitchen() {
   const composeCustItem = (it: any): string => {
     const gUnit = "g";
     const m: any = it.baseMealId ? mealById.get(String(it.baseMealId)) : null;
-    const base = m ? String(m.nameEn || m.nameAr || m.name).trim() : String(it.baseName || "").trim();
+    // إذا كانت لغة الكشف إنجليزية (الواجهة إنجليزي)، نفضل دائماً الاسم الإنجليزي (nameEn أو name) على nameAr
+    const base = m ? String(m.nameEn || m.name || m.nameAr).trim() : String(it.baseName || "").trim();
     if (it.type === "MAIN") {
       const protName = trName(it.proteinName || "", PROTEIN_TR, false); // فاضي = غير محدّد
-      // ✅ خانة رئيسية غير محدّدة (لا اسم وجبة ولا نوع بروتين) = يوم لم يُملأ.
-      //    لا نضع أكلاً وهمياً (Protein 150g) يلخبط الشيف — نعلن أنها غير محدّدة.
       if (!base && !protName) return NOT_SET;
       const bits: string[] = [];
       if (base) bits.push(base);
@@ -256,7 +255,6 @@ export default function Kitchen() {
       if (inner.length) bits.push(bits.length ? `— ${inner.join(" + ")}` : inner.join(" + "));
       return bits.join(" ").trim() || NOT_SET;
     }
-    // غير رئيسية (سناك/سلطة): الاسم كما هو
     return base || String(it.text || it.baseName || "—").trim();
   };
 
@@ -940,63 +938,54 @@ export default function Kitchen() {
     const html = `<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}" lang="${isRtl ? "ar" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=800"><title>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
-        body{margin:0;padding:10px;color:#0f1516;font-size:11px}
-        h1{font-size:16px;margin:0 0 1px} .date{color:#47759c;font-weight:700;margin-bottom:8px;font-size:11px}
-        .kpis{display:flex;gap:6px;margin-bottom:10px}
-        .kpi{flex:1;border:1px solid #cdd9e4;border-radius:8px;padding:5px;text-align:center}
-        .kpi .v{font-size:18px;font-weight:900} .kpi .l{font-size:9px;color:#47759c;font-weight:700}
+        body{margin:0;padding:6px;color:#0f1516;font-size:10.5px}
+        h1{font-size:14px;margin:0 0 1px} .date{color:#47759c;font-weight:700;margin-bottom:6px;font-size:10px}
+        .kpis{display:flex;gap:4px;margin-bottom:8px}
+        .kpi{flex:1;border:1px solid #cdd9e4;border-radius:6px;padding:4px;text-align:center}
+        .kpi .v{font-size:15px;font-weight:900} .kpi .l{font-size:8.5px;color:#47759c;font-weight:700}
         table.cols{width:100%;border-collapse:collapse;table-layout:fixed}
-        td.col{vertical-align:top;padding:0 5px}
+        td.col{vertical-align:top;padding:0 4px}
         td.col:first-child{padding-inline-start:0} td.col:last-child{padding-inline-end:0}
-        /* الجداول الطويلة تُقسَّم على الصفحات بين الصفوف (لا نمنع الكسر داخل الجدول كله وإلا تُدفع
-           لصفحة جديدة وتترك صفحة فاضية). نمنع فقط كسر الصف الواحد، ونُبقي العنوان مع أول صف. */
-        .dishbox{margin:0 0 8px}
-        table.dish{width:100%;border-collapse:collapse;font-size:10.5px}
+        .dishbox{margin:0 0 6px;break-inside:avoid;page-break-inside:avoid}
+        table.dish{width:100%;border-collapse:collapse;font-size:10px}
         table.dish tr{break-inside:avoid;page-break-inside:avoid}
         table.dish tr.dh{break-after:avoid;page-break-after:avoid}
-        table.dish td{border:1px solid #6d8aa3;padding:2.5px 6px;vertical-align:top}
-        tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC}
-        .dn{font-size:12.5px;font-weight:900}
-        .dc{font-size:13px;font-weight:900;text-align:center;width:44px}
-        .lb{font-weight:700;line-height:1.35}
-        .ct{font-weight:900;text-align:center;width:44px;font-size:11.5px}
-        .gc{text-align:center;width:64px;font-weight:800;font-size:10px;color:#0E76AC}
-        .ghd{text-align:center;width:64px;font-size:9px;font-weight:900;letter-spacing:.4px}
-        tr.pg td{background:#e8f4fb} tr.pg .lb b{color:#0E76AC;font-weight:900}
+        table.dish td{border:1px solid #6d8aa3;padding:2px 4px;vertical-align:top}
+        tr.dh td{background:#0E76AC;color:#fff;border-color:#0E76AC;padding:3px 5px}
+        .dn{font-size:11.5px;font-weight:900}
+        .dc{font-size:12px;font-weight:900;text-align:center;width:40px}
+        .lb{font-weight:700;line-height:1.25}
+        .ct{font-weight:900;text-align:center;width:40px;font-size:10.5px}
+        .gc{text-align:center;width:55px;font-weight:800;font-size:9.5px;color:#0E76AC}
+        .ghd{text-align:center;width:55px;font-size:8.5px;font-weight:900;letter-spacing:.3px}
+        tr.pg td{background:#e8f4fb;padding:2px 4px} tr.pg .lb b{color:#0E76AC;font-weight:900}
         .lb b{color:#47759c;font-weight:800}
         table.dish tr:nth-child(even):not(.dh):not(.tp):not(.pg) td{background:#f6fafd}
         .pt{width:100%;border-collapse:collapse;margin-top:2px}
-        .pt td{border:1px solid #dbe6ee;padding:2px 5px;font-size:9.5px;font-weight:700;line-height:1.35}
-        .pq{width:26px;text-align:center;font-weight:900}
+        .pt td{border:1px solid #dbe6ee;padding:2px 4px;font-size:9px;font-weight:700;line-height:1.25}
+        .pq{width:22px;text-align:center;font-weight:900}
         .sq{background:#fde68a}
-        .cst{color:#7d90a2;font-size:8.5px;font-weight:400;line-height:1.3;margin-top:1px}
-        tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC}
-        .sec{font-size:13px;margin:14px 0 6px;border-top:2px solid #0E76AC;padding-top:6px;break-before:auto;break-after:avoid}
-        /* عنوان قسم داخل الكشف (الفطور/السناك/الرئيسية) — لا يُيتَّم أسفل الصفحة */
-        .dsec{font-size:12px;font-weight:900;color:#0E76AC;margin:10px 0 5px;border-bottom:1.5px solid #0E76AC;padding-bottom:3px;break-after:avoid;page-break-after:avoid}
-        /* 📄 قسم المخصّصين يبدأ صفحة جديدة — لا يلتصق بآخر صفحة العاديين */
-        .custpage{break-before:page;page-break-before:always}
+        .cst{color:#7d90a2;font-size:8px;font-weight:400;line-height:1.2;margin-top:1px}
+        tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC;padding:2px 5px}
+        .sec{font-size:12px;margin:10px 0 4px;border-top:2px solid #0E76AC;padding-top:4px;break-before:auto;break-after:avoid}
+        .dsec{font-size:11px;font-weight:900;color:#0E76AC;margin:6px 0 4px;border-bottom:1.5px solid #0E76AC;padding-bottom:2px;break-after:avoid;page-break-after:avoid}
+        .custpage{margin-top:12px}
         .custpage .sec{border-top:none;margin-top:0}
-        /* ✅ بطاقة المخصّص — رأس ملوّن بالهوية، تحذير حساسية واضح، وجبات مرقّمة نظيفة */
-        /* جدولان جنب بعض (بدل 3) → عرض أوسع، فنكبّر الخط والمسافات ليقرأها الشيف بوضوح */
-        .person{border:1.5px solid #cdd9e6;border-radius:12px;overflow:hidden;margin:0 0 11px;break-inside:avoid;page-break-inside:avoid;font-size:13px;box-shadow:0 1px 3px rgba(14,42,74,.07)}
-        .ph{display:flex;justify-content:space-between;align-items:center;gap:6px;background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:7px 12px}
-        .pn{font-size:15px;font-weight:900;letter-spacing:.2px}
-        .pdt{font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
-        .alg{color:#b91c1c;background:#fef2f2;font-size:11px;font-weight:800;padding:5px 12px;border-bottom:1px solid #fee2e2;line-height:1.4}
+        .person{border:1px solid #cdd9e6;border-radius:8px;overflow:hidden;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid;font-size:10.5px;box-shadow:0 1px 2px rgba(14,42,74,.05)}
+        .ph{display:flex;justify-content:space-between;align-items:center;gap:4px;background:linear-gradient(120deg,#0E2A4A,#0E76AC);color:#fff;padding:4px 8px}
+        .pn{font-size:12px;font-weight:900;letter-spacing:.1px}
+        .pdt{font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.2);white-space:nowrap}
+        .alg{color:#b91c1c;background:#fef2f2;font-size:9.5px;font-weight:800;padding:4px 8px;border-bottom:1px solid #fee2e2;line-height:1.3}
         .pt{width:100%;border-collapse:collapse}
-        .pt td{padding:6px 12px;font-size:13.5px;font-weight:700;line-height:1.4;border-top:1px solid #eef3f7;vertical-align:middle}
+        .pt td{padding:4px 8px;font-size:10.5px;font-weight:700;line-height:1.3;border-top:1px solid #eef3f7;vertical-align:middle}
         .pt tr:first-child td{border-top:none}
         .pm{color:#0f2438}
         .sq{color:#b45309}
         .nsrow td{background:#fff7ed !important;color:#c2410c;font-weight:900}
         .nt{color:#c2410c}
-        /* ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
-           فلو تركنا الترقيم لِـopenPrintDoc (قاعدة ثانية) يُتجاهَل ولا يظهر رقم.
-           الهامش السفلي 13مم ليتّسع لصندوق @bottom-center. */
-        @page{size:A4;margin:8mm 8mm 13mm 8mm;
+        @page{size:A4;margin:6mm 6mm 10mm 6mm;
           @bottom-center{content:"${isRtl ? "صفحة" : "Page"} " counter(page);
-            font-family:'Cairo','Segoe UI',Tahoma,sans-serif;font-size:10px;font-weight:700;color:#64748b;}}
+            font-family:'Cairo','Segoe UI',Tahoma,sans-serif;font-size:9px;font-weight:700;color:#64748b;}}
       </style></head><body>
       <h1>${isRtl ? "كشف المطبخ" : "Kitchen Sheet"} — ADRENALINE</h1><div class="date">${isRtl ? "تاريخ" : "Date"}: ${esc(formattedDate)} · ${isRtl ? "الأرقام تشمل المشتركين المخصّصين" : "totals include customized subscribers"}</div>
       <div class="kpis">
@@ -1008,11 +997,9 @@ export default function Kitchen() {
       ${dishHtml}
       ${custHtml}
       </body></html>`;
-    // 📄 PDF عبر طباعة المتصفح — نفس مسار باقي التقارير (لا ملفات HTML).
     openPrintDoc(html, {
       fileName: `${isRtl ? "كشف المطبخ" : "Kitchen sheet"} - ADRENALINE - ${formattedDate}`,
       isRtl,
-      // الترقيم مُعرّف داخل @page الخاصة بالكشف — نوقف حقن openPrintDoc كي لا تتضارب قاعدتا @page
       pageNumbers: false,
     });
   };
@@ -1145,7 +1132,7 @@ export default function Kitchen() {
           ${(person.meals || []).map((meal: any) => `
             <tr class="${meal.notset ? "not-set" : ""}">
               <td colspan="3">${esc(meal.text)}</td>
-              <td class="number">${meal.notset ? "—" : (meal.isSide ? "IN SUMMARY" : "1")}</td>
+              <td class="number" style="font-size:10px;white-space:nowrap;padding:2px 4px">${meal.notset ? "—" : (meal.isSide ? (isRtl ? "في الإجمالي" : "SUMMARY") : "1")}</td>
             </tr>`).join("")}
         </tbody>`).join("")}` : "";
 
