@@ -682,17 +682,48 @@ export default function PlansPage() {
   const fillItemsWith = (items: any[], words: string[]): { items: any[]; filled: number; blocked: number } => {
     let filled = 0, blocked = 0;
     const isRestricted = (id: string) => mealIsRestricted(mealInfoByMenuItem.get(String(id)), words);
+    // تتبع الوجبات التي تم اختيارها بالفعل في هذه العملية لتجنب التكرار
+    const pickedInSession = new Set<string>();
+
     const out = items.map((it: any) => {
-      if (it.isOff || selectedMealId(it)) return it;
+      if (it.isOff || selectedMealId(it)) {
+        // إذا كانت الخانة ممتلئة مسبقاً يدوياً، نسجل الوجبة المختارة لمنع تكرارها في الخانات الفارغة الأخرى
+        const currentMealId = selectedMealId(it);
+        if (currentMealId) pickedInSession.add(String(currentMealId));
+        return it;
+      }
       const candidates = scheduledByCategory[String(it.categoryId)] || [];
       if (!candidates.length) return it;
+      
       const start = (((it?.meta?.index ?? 1) - 1) % candidates.length + candidates.length) % candidates.length;
       let pick: string | null = null;
+
+      // المحاولة الأولى: البحث عن وجبة غير ممنوعة ولم تُختر بعد في هذه الجلسة
       for (let k = 0; k < candidates.length; k++) {
         const cand = candidates[(start + k) % candidates.length];
-        if (!isRestricted(cand)) { pick = cand; break; }
+        if (!isRestricted(cand) && !pickedInSession.has(String(cand))) {
+          pick = cand;
+          break;
+        }
       }
-      if (!pick) { blocked++; return it; }
+
+      // المحاولة الثانية: إذا كانت كل الوجبات المتاحة مكررة، نقبل بالتكرار طالما أنها غير ممنوعة
+      if (!pick) {
+        for (let k = 0; k < candidates.length; k++) {
+          const cand = candidates[(start + k) % candidates.length];
+          if (!isRestricted(cand)) {
+            pick = cand;
+            break;
+          }
+        }
+      }
+
+      if (!pick) {
+        blocked++;
+        return it;
+      }
+
+      pickedInSession.add(String(pick));
       filled++;
       return { ...it, publicMealId: pick, mealId: pick, menuItemId: null };
     });
