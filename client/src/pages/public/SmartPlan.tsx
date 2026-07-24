@@ -337,6 +337,14 @@ export default function SmartPlan() {
       return;
     }
     setError(""); setResult(null); setWeekly(null); setOrderNo(""); setLoading(true);
+    toast({
+      title: t("✨ جارٍ توليد خطتك الذكية...", "✨ Generating your smart plan..."),
+      description: t(
+        "يرجى الانتظار قليلاً، نقوم باختيار وجباتك وتصميم الخطة وفق هدفك وتفضيلاتك.",
+        "Please wait a moment while we pick your meals and design the plan according to your goals and preferences."
+      ),
+      duration: 8000,
+    });
     const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
     try {
       // 🔒 التوليد الأسبوعي يستلزم جلسة (منع استنزاف رصيد AI من الزوار)
