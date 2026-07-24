@@ -1158,25 +1158,25 @@ export default function Kitchen() {
     const html = `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Unified Chef Sheet Preview ${esc(formattedDate)}</title>
       <style>
         *{box-sizing:border-box}
-        body{margin:0;color:#10283f;font-family:'Segoe UI',Tahoma,sans-serif;font-size:10px;background:#fff}
+        body{margin:0;color:#10283f;font-family:'Segoe UI',Tahoma,sans-serif;font-size:12.5px;background:#fff}
         .masthead{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:3px solid #28b7e1;padding-bottom:8px;margin-bottom:10px}
-        h1{margin:0;color:#0d3b5f;font-size:20px;letter-spacing:.2px}.meta{font-size:10px;color:#54738a;font-weight:700;text-align:right}
+        h1{margin:0;color:#0d3b5f;font-size:24px;letter-spacing:.2px}.meta{font-size:12px;color:#54738a;font-weight:700;text-align:right}
          .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:11px}
-         .kpi{border:1px solid #cfe0eb;border-radius:6px;padding:6px 10px;background:#f7fbfd}.kpi b{display:block;font-size:18px;color:#0e76ac}.kpi span{font-size:8px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.6px}
+         .kpi{border:1px solid #cfe0eb;border-radius:6px;padding:6px 10px;background:#f7fbfd}.kpi b{display:block;font-size:22px;color:#0e76ac}.kpi span{font-size:9px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.6px}
          .preview-actions{position:sticky;top:0;z-index:10;display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;padding:8px 0;background:rgba(255,255,255,.96)}.preview-actions button{border:0;border-radius:6px;padding:9px 14px;background:#0e76ac;color:#fff;font:800 12px 'Segoe UI',Tahoma,sans-serif;cursor:pointer;box-shadow:0 8px 22px rgba(13,59,95,.18)}.preview-actions .close{background:#fff;color:#0d3b5f;border:1px solid #bdd3e1;box-shadow:none}
-        table{width:100%;border-collapse:collapse;table-layout:fixed}col.name{width:auto}col.qty{width:54px}col.portion{width:72px}
-        td{border:1px solid #9cb2c2;padding:4px 7px;vertical-align:top;line-height:1.25}
-        .section td{background:#0d3b5f;color:#fff;font-size:11px;font-weight:900;letter-spacing:.8px;padding:6px 8px;border-color:#0d3b5f}
-        .meal-title td,.customer-title td{background:#acd5ec;color:#10283f;font-weight:900;font-size:11px;border-color:#6f9fba}
-        .meal-title{break-after:avoid;page-break-after:avoid}.meal-total td{background:#ffe082;font-weight:900;border-color:#d1a927}
-        .number{text-align:center;font-weight:900;color:#dc2626}.portion{color:#0e76ac}.portion-label{text-align:center;font-size:8px;font-weight:900;letter-spacing:.6px}
-        .modified td{background:#fff9eb}.change{color:#b45309;font-weight:800}.modified small{display:block;color:#687f90;font-size:7.5px;margin-top:2px}
-        .row-label{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.custom-portion td{background:#e8f7fc;border-color:#69bdd7}.custom-portion td:first-child{border-left:4px solid #0787b2}.custom-portion .custom-tag{display:inline-block;padding:2px 6px;border-radius:999px;background:#087da7;color:#fff;font-size:7px;font-weight:900;line-height:1.25;letter-spacing:.45px;white-space:nowrap}.custom-portion .change{color:#87510a}.custom-portion small{color:#075d7c;font-size:8px;font-weight:900}.custom-portion .portion{color:#dc2626;font-size:12px;font-weight:950;background:#fff1f2}
-        .customized-section td{background:#0e76ac;border-color:#0e76ac}.customer-title td{background:#d8edf8}.shift{text-align:center;font-size:8px!important;color:#0e76ac!important}
+        table{width:100%;border-collapse:collapse;table-layout:fixed}col.name{width:auto}col.qty{width:64px}col.portion{width:80px}col.portion{width:80px}
+        td{border:1px solid #9cb2c2;padding:6px 9px;vertical-align:top;line-height:1.35}
+        .section td{background:#0d3b5f;color:#fff;font-size:14px;font-weight:900;letter-spacing:.8px;padding:8px 10px;border-color:#0d3b5f}
+        .meal-title td,.customer-title td{background:#acd5ec;color:#10283f;font-weight:900;font-size:14px;padding:7px 10px;border-color:#6f9fba}
+        .meal-title{break-after:avoid;page-break-after:avoid}.meal-total td{background:#ffe082;font-weight:900;font-size:13px;border-color:#d1a927}
+        .number{text-align:center;font-weight:900;font-size:15px;color:#dc2626}.portion{color:#0e76ac;font-weight:700}.portion-label{text-align:center;font-size:10px;font-weight:900;letter-spacing:.6px}
+        .modified td{background:#fff9eb}.change{color:#b45309;font-weight:800;font-size:12px}.modified small{display:block;color:#687f90;font-size:10.5px;margin-top:2px}
+        .row-label{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.custom-portion td{background:#e8f7fc;border-color:#69bdd7}.custom-portion td:first-child{border-left:5px solid #0787b2}.custom-portion .custom-tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#087da7;color:#fff;font-size:9.5px;font-weight:900;line-height:1.25;letter-spacing:.45px;white-space:nowrap}.custom-portion .change{color:#87510a}.custom-portion small{color:#075d7c;font-size:10px;font-weight:900}.custom-portion .portion{color:#dc2626;font-size:14px;font-weight:950;background:#fff1f2}
+        .customized-section td{background:#0e76ac;border-color:#0e76ac}.customer-title td{background:#d8edf8}.shift{text-align:center;font-size:11px!important;color:#0e76ac!important}
         .customized-start{break-before:page;page-break-before:always}
-        .allergy td{background:#fff0f0;color:#b91c1c;font-weight:900}.not-set td{background:#fff7ed;color:#c2410c;font-weight:800}
+        .allergy td{background:#fff0f0;color:#b91c1c;font-weight:900;font-size:13px}.not-set td{background:#fff7ed;color:#c2410c;font-weight:800}
         tr{break-inside:avoid;page-break-inside:avoid}.customer-title{break-before:auto;break-after:avoid;page-break-after:avoid}
-        .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:4px 7px;text-align:left;font-size:8px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
+        .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:6px 9px;text-align:left;font-size:10px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
          @page{size:A4 portrait;margin:8mm 8mm 11mm}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.preview-actions{display:none}}
        </style></head><body>
          <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" class="close" onclick="window.close()">Close</button></div>

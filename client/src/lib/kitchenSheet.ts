@@ -179,13 +179,13 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .sec-t{font-weight:900;font-size:13px;color:#0E2A4A;background:#eaf3fb;border:1px solid #cfe4f3;
              border-radius:8px;padding:6px 10px;margin-bottom:6px}
       .sec-t span{float:${lang === "ar" ? "left" : "right"};color:#0E76AC;font-size:11px}
-      table{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed}
-      th{background:#0E76AC;color:#fff;padding:4px 3px;font-weight:800;border:1px solid #0b5f8a;font-size:8.5px}
-      td{padding:3px 4px;border:1px solid #cfd9e4;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}
+      table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+      th{background:#0E76AC;color:#fff;padding:6px 4px;font-weight:800;border:1px solid #0b5f8a;font-size:11px}
+      td{padding:6px 6px;border:1px solid #cfd9e4;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}
       tr:nth-child(even) td{background:#f7fbfe}
-      .c{text-align:center} .nm{font-weight:800} .sm{font-size:8px;color:#47759c}
-      .al{color:#b45309;font-size:8px;font-weight:700}
-      .foot{margin:6px 16px 12px;font-size:9px;color:#94a3b8;text-align:center}
+      .c{text-align:center} .nm{font-weight:800;font-size:13px} .sm{font-size:10.5px;color:#47759c}
+      .al{color:#b45309;font-size:10.5px;font-weight:700}
+      .foot{margin:6px 16px 12px;font-size:11px;color:#94a3b8;text-align:center}
       /* ✅ ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
              فالاعتماد على حقن openPrintDoc (قاعدة ثانية) كان يُتجاهَل فلا يظهر رقم. */
       @page{ size:A4 landscape; margin:6mm 6mm 12mm 6mm;
