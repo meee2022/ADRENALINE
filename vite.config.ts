@@ -76,7 +76,6 @@ export default defineConfig({
       deny: ["**/.*"],
     },
     hmr: {
-      clientPort: 5000,
       path: "/vite-hmr",
     },
   },

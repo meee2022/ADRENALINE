@@ -2,6 +2,10 @@ declare const __APP_BUILD_ID__: string;
 
 const VERSION_STORAGE_KEY = "adrenaline:app-build";
 const VERSION_ENDPOINT = "/app-version.json";
+const VERSION_CHECK_INTERVAL_MS = 60_000;
+
+let versionCheckInFlight = false;
+let reloadStarted = false;
 
 async function clearAppCaches() {
   if ("caches" in window) {
@@ -26,6 +30,9 @@ function reloadWithVersion(version: string) {
 }
 
 async function applyVersion(version: string) {
+  if (reloadStarted) return;
+  reloadStarted = true;
+
   try {
     window.localStorage.setItem(VERSION_STORAGE_KEY, version);
   } catch {
@@ -33,6 +40,35 @@ async function applyVersion(version: string) {
   }
   await clearAppCaches();
   reloadWithVersion(version);
+}
+
+async function checkForRemoteVersion() {
+  if (versionCheckInFlight || reloadStarted) return;
+  versionCheckInFlight = true;
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(`${VERSION_ENDPOINT}?t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    const remoteVersion =
+      typeof payload?.version === "string" ? payload.version : null;
+    if (remoteVersion && remoteVersion !== __APP_BUILD_ID__) {
+      await applyVersion(remoteVersion);
+    }
+  } catch {
+    // A temporary network outage must never block normal application use.
+  } finally {
+    window.clearTimeout(timeout);
+    versionCheckInFlight = false;
+  }
 }
 
 /**
@@ -57,21 +93,16 @@ export function initializeAppVersion() {
     return;
   }
 
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 3500);
+  void checkForRemoteVersion();
 
-  void fetch(`${VERSION_ENDPOINT}?t=${Date.now()}`, {
-    cache: "no-store",
-    headers: { "Cache-Control": "no-cache" },
-    signal: controller.signal,
-  })
-    .then((response) => (response.ok ? response.json() : null))
-    .then((payload) => {
-      const remoteVersion = typeof payload?.version === "string" ? payload.version : null;
-      if (remoteVersion && remoteVersion !== __APP_BUILD_ID__) {
-        return applyVersion(remoteVersion);
-      }
-    })
-    .catch(() => undefined)
-    .finally(() => window.clearTimeout(timeout));
+  const checkWhenActive = () => {
+    if (document.visibilityState === "visible") {
+      void checkForRemoteVersion();
+    }
+  };
+
+  window.setInterval(checkWhenActive, VERSION_CHECK_INTERVAL_MS);
+  document.addEventListener("visibilitychange", checkWhenActive);
+  window.addEventListener("focus", checkWhenActive);
+  window.addEventListener("online", checkWhenActive);
 }

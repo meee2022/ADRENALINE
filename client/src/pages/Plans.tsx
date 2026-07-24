@@ -103,6 +103,14 @@ function MealPicker({
   infoById?: Map<string, any>;
 }) {
   const [open, setOpen] = useState(false);
+  const [showFullMenu, setShowFullMenu] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setShowFullMenu(false);
+    }
+  }, [open]);
+
   const selected = items.find((m) => m._id === value);
   const selectedInfo = selected ? infoById?.get(String(selected._id)) : null;
   const sugSet = new Set(suggestedIds);
@@ -141,6 +149,20 @@ function MealPicker({
       <PopoverContent className="meal-picker-popover w-[min(22rem,calc(100vw-2rem))] p-0" align={isRtl ? "end" : "start"}>
         <Command>
           <CommandInput placeholder={placeholder} className={isRtl ? "text-right" : "text-left"} />
+          <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border-b border-slate-100" style={{ direction: isRtl ? "rtl" : "ltr" }}>
+            <span className="text-xs text-gray-400 font-medium">{isRtl ? "خيارات التصفية:" : "Filtering:"}</span>
+            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showFullMenu}
+                onChange={(e) => setShowFullMenu(e.target.checked)}
+                className="rounded border-gray-300 text-[#3cc4f0] focus:ring-[#3cc4f0]"
+              />
+              <span className="text-xs font-bold text-[#0E76AC]">
+                {isRtl ? "عرض كامل المنيو" : "Show Full Menu"}
+              </span>
+            </label>
+          </div>
           <CommandList>
             <CommandEmpty>{isRtl ? "لا توجد نتائج" : "No results"}</CommandEmpty>
             {suggested.length > 0 && (
@@ -165,26 +187,28 @@ function MealPicker({
                 ))}
               </CommandGroup>
             )}
-            <CommandGroup heading={suggested.length > 0 ? (isRtl ? "كل الأصناف" : "All items") : undefined}>
-              {rest.map((m) => (
-                <CommandItem
-                  key={m._id}
-                  value={`${m.name}`}
-                  onSelect={() => { onChange(m._id); setOpen(false); }}
-                  className={cn("flex items-center justify-between", isRtl ? "flex-row-reverse" : "")}
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    {infoById?.get(String(m._id))?.imageUrl ? (
-                      <img src={infoById.get(String(m._id)).imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
-                    ) : (
-                      <span className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">🍽️</span>
-                    )}
-                    <span className="font-medium text-sm truncate">{m.name}</span>
-                  </span>
-                  {value === m._id && <Check className="h-4 w-4 text-[#3cc4f0]" />}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {showFullMenu && rest.length > 0 && (
+              <CommandGroup heading={isRtl ? "كل الأصناف" : "All items"}>
+                {rest.map((m) => (
+                  <CommandItem
+                    key={m._id}
+                    value={`${m.name}`}
+                    onSelect={() => { onChange(m._id); setOpen(false); }}
+                    className={cn("flex items-center justify-between", isRtl ? "flex-row-reverse" : "")}
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      {infoById?.get(String(m._id))?.imageUrl ? (
+                        <img src={infoById.get(String(m._id)).imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <span className="h-10 w-10 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">🍽️</span>
+                      )}
+                      <span className="font-medium text-sm truncate">{m.name}</span>
+                    </span>
+                    {value === m._id && <Check className="h-4 w-4 text-[#3cc4f0]" />}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -538,6 +562,26 @@ export default function PlansPage() {
     };
   });
 
+  const enrichPlanWithCategories = (plan: any) => {
+    if (!plan || !plan.items) return plan;
+    const items = getEffectivePlanItems(plan).map((item: any) => {
+      let categoryId = item.categoryId;
+      if (!categoryId && item.category) {
+        const itemCat = String(item.category).toLowerCase();
+        const targetSlotIds = slotIdsForPublicCat[itemCat];
+        if (targetSlotIds && targetSlotIds.length > 0) {
+          categoryId = targetSlotIds[0];
+        }
+      }
+      return {
+        ...item,
+        id: item.id || makeId(),
+        categoryId,
+      };
+    });
+    return { ...plan, items };
+  };
+
   // ممنوعات/حساسية المشترك المختار — كلمات المنع (المصدر الوحيد lib/mealRestrictions).
   const restrictWords = useMemo(
     () => restrictionWords((selectedCustomer as any)?.avoid, (selectedCustomer as any)?.allergies),
@@ -552,10 +596,8 @@ export default function PlansPage() {
     );
 
     if (existingPlan) {
-      setCurrentPlan({
-        ...existingPlan,
-        items: getEffectivePlanItems(existingPlan),
-      });
+      const enriched = enrichPlanWithCategories(existingPlan);
+      setCurrentPlan(enriched);
     } else {
       const customer = customers.find((c: any) => c._id === selectedCustomerId);
       const mealsPerDay = customer?.mealsPerDay ?? 0;
@@ -811,11 +853,12 @@ export default function PlansPage() {
       return;
     }
     const headers = ["Date", "Customer Name", "Phone", "Delivery Time", ...sortedCategories.map((c: any) => c.name), "Notes"];
-    const rows = dailyPlans.map((plan: any) => {
+    const rows = dailyPlans.map((rawPlan: any) => {
+      const plan = enrichPlanWithCategories(rawPlan);
       const customer = customers.find((c: any) => c._id === plan.customerId);
       const rowData: any[] = [plan.date, customer?.fullName || "Unknown", customer?.phone || "", customer?.deliveryTime || ""];
       for (const category of sortedCategories) {
-        const items = getEffectivePlanItems(plan).filter((i: any) => i.categoryId === category._id);
+        const items = (plan.items || []).filter((i: any) => i.categoryId === category._id);
         rowData.push(items.map((item: any) => {
           const id = selectedMealId(item);
           if (!id) return item?.isOff ? "OFF" : "Not Selected";
@@ -1757,20 +1800,25 @@ export default function PlansPage() {
                           if (!category) return null;
                           const accent = getCategoryAccent(category.name);
                           // ✅ قائمة الاختيار = أصناف الخانة + أي صنف مجدول اليوم لها.
-                          //    بدون الشق الثاني كان المقترح يُفلتر ويختفي، لأن
-                          //    menuItem.categoryId قديم/محذوف لكثير من الأصناف.
                           const slotSuggestedIds = scheduledByCategory[String(item.categoryId)] || [];
                           const slotSugSet = new Set(slotSuggestedIds);
-                          const categoryItems = (subscriberMeals as any[])
-                            .filter((meal: any) => slotSugSet.has(String(meal._id)))
+
+                          const catName = category?.name?.toLowerCase() || "";
+                          const pubCat = Object.entries(PUBLIC_CAT_ALIASES).find(([_, aliases]) =>
+                            aliases.includes(catName.trim().toLowerCase())
+                          )?.[0];
+
+                          const allCategoryMeals = (subscriberMeals as any[])
+                            .filter((meal: any) => String(meal.category).toLowerCase() === pubCat)
                             .map((meal: any) => ({
                               ...meal,
                               name: isRtl ? (meal.nameAr || meal.nameEn) : (meal.nameEn || meal.nameAr),
                             }));
+
                           const currentSelectedId = selectedMealId(item);
-                          if (currentSelectedId && !categoryItems.some((meal: any) => String(meal._id) === String(currentSelectedId))) {
+                          if (currentSelectedId && !allCategoryMeals.some((meal: any) => String(meal._id) === String(currentSelectedId))) {
                             const legacyInfo = mealInfoByMenuItem.get(String(currentSelectedId));
-                            if (legacyInfo) categoryItems.push({
+                            if (legacyInfo) allCategoryMeals.push({
                               _id: currentSelectedId,
                               name: isRtl ? (legacyInfo.nameAr || legacyInfo.nameEn) : (legacyInfo.nameEn || legacyInfo.nameAr),
                             });
@@ -1862,7 +1910,7 @@ export default function PlansPage() {
                                   <MealPicker
                                     value={currentSelectedId}
                                     onChange={(val) => updateItemById(item.id, { publicMealId: val, mealId: val, menuItemId: null })}
-                                    items={categoryItems}
+                                    items={allCategoryMeals}
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}
                                     suggestedIds={slotSuggestedIds}

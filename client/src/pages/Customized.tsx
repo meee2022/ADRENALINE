@@ -290,6 +290,57 @@ export default function Customized() {
   useEffect(() => {
     if (!selected) { setWeekSlots({}); return; }
     const saved = template?.slots;
+
+    const adjustSlots = (src: Slot[]): Slot[] => {
+      const nMeals = Math.max(0, Math.floor(Number(selected?.mealsPerDay) || 0));
+      const nSnacks = Math.max(0, Math.floor(Number(selected?.snacksPerDay) || 0));
+
+      const mains = src.filter((s) => s.type === "MAIN");
+      const snacks = src.filter((s) => s.type === "SNACK");
+      const offs = src.filter((s) => s.type === "OFF");
+
+      const newMains: Slot[] = [...mains];
+      if (newMains.length < nMeals) {
+        for (let i = newMains.length + 1; i <= nMeals; i++) {
+          newMains.push({
+            key: `MEAL ${i}`,
+            label: `${t("وجبة", "Meal")} ${i}`,
+            type: "MAIN",
+            proteinG: 0,
+            carbName: "",
+            carbG: 0,
+          });
+        }
+      } else if (newMains.length > nMeals) {
+        newMains.splice(nMeals);
+      }
+
+      newMains.forEach((s, idx) => {
+        s.key = `MEAL ${idx + 1}`;
+        s.label = `${t("وجبة", "Meal")} ${idx + 1}`;
+      });
+
+      const newSnacks: Slot[] = [...snacks];
+      if (newSnacks.length < nSnacks) {
+        for (let i = newSnacks.length + 1; i <= nSnacks; i++) {
+          newSnacks.push({
+            key: `SNACK ${i}`,
+            label: `${t("سناك", "Snack")} ${i}`,
+            type: "SNACK",
+          });
+        }
+      } else if (newSnacks.length > nSnacks) {
+        newSnacks.splice(nSnacks);
+      }
+
+      newSnacks.forEach((s, idx) => {
+        s.key = `SNACK ${idx + 1}`;
+        s.label = `${t("سناك", "Snack")} ${idx + 1}`;
+      });
+
+      return [...newMains, ...newSnacks, ...offs];
+    };
+
     // يبني خريطة أيام من مصدر اختياري (base list أو daysObj) — نسخة مستقلة في كل استدعاء
     const daysFrom = (daysObj?: Record<string, Slot[]>, base?: Slot[]): Record<string, Slot[]> => {
       const d: Record<string, Slot[]> = {};
@@ -297,7 +348,8 @@ export default function Customized() {
         const src = daysObj && Array.isArray(daysObj[dy.key]) && daysObj[dy.key].length
           ? daysObj[dy.key]
           : (base && base.length ? base : blankSlots());
-        d[dy.key] = src.map((s) => ({ ...s }));
+        const adjusted = adjustSlots(src);
+        d[dy.key] = adjusted.map((s) => ({ ...s }));
       });
       return d;
     };

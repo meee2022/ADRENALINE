@@ -52,6 +52,22 @@ const isRtlLang = () => {
 };
 const tr = (a: string, e: string) => (isRtlLang() ? a : e);
 
+function isRecoverableRuntimeError(error?: Error): boolean {
+  const message = error?.message || "";
+  const staleChunk =
+    /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
+      message,
+    );
+  const staleDevReact =
+    import.meta.env.DEV &&
+    (/Invalid hook call/i.test(message) ||
+      /Cannot read properties of null \(reading '(useState|useEffect|useMemo|useContext)'\)/i.test(
+        message,
+      ));
+
+  return staleChunk || staleDevReact;
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
@@ -63,8 +79,8 @@ export class ErrorBoundary extends Component<Props, State> {
     // ✅ نسخة جديدة منشورة: أسماء chunks القديمة (بالـ hash) لم تعد موجودة،
     //    فيفشل الاستيراد الديناميكي. الحل: تحديث تلقائي مرة واحدة (يجلب
     //    index.html الجديد). حارس sessionStorage يمنع حلقة تحديث لانهائية.
-    if (/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(error.message || "")) {
-      const KEY = "chunk-reload-at";
+    if (isRecoverableRuntimeError(error)) {
+      const KEY = "runtime-reload-at";
       const last = Number(sessionStorage.getItem(KEY) || 0);
       if (Date.now() - last > 30_000) {
         sessionStorage.setItem(KEY, String(Date.now()));
@@ -107,6 +123,34 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      if (isRecoverableRuntimeError(this.state.error)) {
+        return (
+          <div
+            dir={isRtlLang() ? "rtl" : "ltr"}
+            className="min-h-screen flex items-center justify-center bg-slate-50 p-6"
+          >
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+            >
+              <RefreshCw className="h-5 w-5 animate-spin text-[#0E76AC]" />
+              <div>
+                <p className="text-sm font-extrabold text-slate-800">
+                  {tr("جاري تحديث التطبيق", "Updating the application")}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  {tr(
+                    "لحظات وسيتم تحميل أحدث نسخة تلقائيًا.",
+                    "The latest version will load automatically.",
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       // جلسة منتهية: componentDidCatch يعيد التوجيه — لا تومض شاشة الانهيار
       if (isAuthError(this.state.error)) {
         return (
