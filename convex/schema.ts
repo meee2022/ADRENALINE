@@ -1427,6 +1427,18 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_date_key", ["date", "stickerKey"]),
 
+  // ✅ انهيارات الواجهة كما حدثت فعلاً — الرقم المرجعي وحده لم يكن يقود لأي سجل،
+  //    فكنا نخمّن سبب الانهيار. هنا نحفظ الرسالة والمسار والجهاز لنعرف بالدليل.
+  clientErrors: defineTable({
+    refCode: v.string(),
+    message: v.string(),
+    stack: v.optional(v.string()),
+    path: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    userName: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_at", ["at"]),
+
   // عدّادات أرقام المستندات المالية (قيود/سندات).
   finCounters: defineTable({
     key: v.string(),                           // "journal" | "receipt" | "payment"

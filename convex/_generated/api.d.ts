@@ -17,6 +17,7 @@ import type * as auditLog from "../auditLog.js";
 import type * as auth from "../auth.js";
 import type * as banners from "../banners.js";
 import type * as cleanupDuplicateMeals from "../cleanupDuplicateMeals.js";
+import type * as clientErrors from "../clientErrors.js";
 import type * as coupons from "../coupons.js";
 import type * as crons from "../crons.js";
 import type * as customerAuth from "../customerAuth.js";
@@ -114,6 +115,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   banners: typeof banners;
   cleanupDuplicateMeals: typeof cleanupDuplicateMeals;
+  clientErrors: typeof clientErrors;
   coupons: typeof coupons;
   crons: typeof crons;
   customerAuth: typeof customerAuth;

@@ -7,6 +7,8 @@ import { logError } from "@/lib/logger";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { isAuthError } from "@/lib/authError";
 import { useStore } from "@/lib/store";
+import { convex } from "@/lib/convex";
+import { api } from "../../../convex/_generated/api";
 
 interface Props {
   children: ReactNode;
@@ -26,8 +28,23 @@ function makeRefCode(): string {
   return "ERR-" + Array.from(a).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
-/** يحاول إرسال الخطأ لـendpoint داخلي لو مضبوط (VITE_ERROR_LOG_ENDPOINT). */
+/**
+ * يسجّل الانهيار في Convex (clientErrors) — الرقم المرجعي وحده كان بلا سجل
+ * يقابله، فكنا نخمّن. يُرسل أيضاً لـendpoint خارجي لو مضبوط.
+ */
 async function shipToServer(payload: any) {
+  try {
+    await convex.mutation(api.clientErrors.report, {
+      refCode: String(payload.refCode || ""),
+      message: String(payload.message || ""),
+      stack: payload.stack ? String(payload.stack) : undefined,
+      path: payload.path ? String(payload.path) : undefined,
+      userAgent: payload.userAgent ? String(payload.userAgent) : undefined,
+      userName: payload.userName ? String(payload.userName) : undefined,
+    });
+  } catch {
+    // فشل التسجيل لا يمنع عرض الشاشة
+  }
   try {
     const url = (import.meta as any).env?.VITE_ERROR_LOG_ENDPOINT;
     if (!url) return;
@@ -55,7 +72,7 @@ const tr = (a: string, e: string) => (isRtlLang() ? a : e);
 function isRecoverableRuntimeError(error?: Error): boolean {
   const message = error?.message || "";
   const staleChunk =
-    /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/i.test(
+    /Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module|Load failed|Unable to load script|Failed to load module script|dynamically imported module/i.test(
       message,
     );
   const staleDevReact =
@@ -103,12 +120,20 @@ export class ErrorBoundary extends Component<Props, State> {
     }
     // ✅ سجل محلياً + أرسل لـendpoint داخلي (لو مضبوط) — لا نعد المستخدم بشيء لا يحدث
     logError(error.message, error.stack || errorInfo.componentStack);
+    let userName = "";
+    try {
+      const st: any = useStore.getState();
+      userName = st?.currentUser?.fullName || st?.currentUser?.username || "";
+    } catch {
+      // المستخدم غير معروف — لا يمنع التسجيل
+    }
     void shipToServer({
       refCode: this.state.refCode,
       message: error.message,
       stack: error.stack || errorInfo.componentStack,
-      path: window.location.pathname,
+      path: window.location.pathname + window.location.search,
       userAgent: navigator.userAgent,
+      userName,
       at: Date.now(),
     });
   }
