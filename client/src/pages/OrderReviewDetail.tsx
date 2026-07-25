@@ -222,6 +222,59 @@ export default function OrderReviewDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderData]);
 
+  /**
+   * ⚠️ الكتل تُبنى بالأسبوع **التقويمي الفعلي**، لا برقم دورة المطبخ.
+   * الدورة تلفّ 1..4، فاشتراك يمتدّ على خمسة أسابيع تقويمية (بداية وسط الأسبوع)
+   * يعود لنفس رقم الدورة في آخره — فكانت أيام 22-24 أغسطس تُحشر تحت عنوان
+   * «دورة 3» مع أيام 28-30 يوليو، فينكسر الترتيب الزمني أمام الأخصائية.
+   * التاريخ من dateForSlot(week, day) وهو دقيق لكل (دورة، يوم) على حدة.
+   */
+  const weekBlocks = useMemo(() => {
+    type Block = { cycle: number; days: string[]; firstDate: string };
+    const blocks: Block[] = [];
+    const its = (orderData?.items || []) as any[];
+    const daysOf: Record<number, string[]> = {};
+    its.forEach((i: any) => {
+      const w = Number(i.week);
+      if (!daysOf[w]) daysOf[w] = [];
+      if (!daysOf[w].includes(i.day)) daysOf[w].push(i.day);
+    });
+    Object.keys(daysOf).map(Number).forEach((cycle) => {
+      const dated = daysOf[cycle]
+        .map((d) => ({ d, iso: dateForSlot(cycle, d) }))
+        .filter((x) => x.iso)
+        .sort((a, b) => (a.iso! < b.iso! ? -1 : 1));
+
+      // أيام بلا تاريخ (لا تاريخ بداية بعد) تبقى كتلة واحدة بترتيب الأسبوع الثابت
+      const undated = daysOf[cycle].filter((d) => !dateForSlot(cycle, d));
+      if (undated.length) {
+        blocks.push({
+          cycle,
+          days: undated.sort((a, b) => (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99)),
+          firstDate: "9999",
+        });
+      }
+      // نقطع كتلة جديدة كلما تجاوزت الفجوة بين يومين متتاليين أسبوعاً كاملاً
+      let cur: Block | null = null;
+      dated.forEach(({ d, iso }) => {
+        const gapTooBig = cur
+          ? (new Date(iso! + "T00:00:00Z").getTime()
+             - new Date(cur.days.length ? dateForSlot(cycle, cur.days[cur.days.length - 1])! + "T00:00:00Z" : iso! + "T00:00:00Z").getTime())
+            > 7 * 86400000
+          : false;
+        if (!cur || gapTooBig) {
+          cur = { cycle, days: [d], firstDate: iso! };
+          blocks.push(cur);
+        } else {
+          cur.days.push(d);
+        }
+      });
+    });
+    return blocks.sort((a, b) => (a.firstDate < b.firstDate ? -1 : a.firstDate > b.firstDate ? 1 : a.cycle - b.cycle));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderData, dateForSlot]);
+
+
   // ⚠️ خطط قائمة للعميل في تواريخ هذا الطلب — الاعتماد سيستبدلها (لا يتعايش
   //    خطتان لنفس اليوم وإلا تضاعف الأكل). نعرضها للأخصائية قبل الضغط.
   const targetDates = useMemo(
@@ -279,17 +332,6 @@ export default function OrderReviewDetail() {
   // 🔗 تاريخ كل صنف من **المصدر الوحيد** (lib/subscription.slotToDate) — نفس ما
   //    يراه العميل في المنيو وما ينفّذه الاعتماد. يبدأ من أول يوم توصيل فعلي
   //    (بكرة لو اليوم انقضى)، يتخطّى الجمعة، والاسم يطابق التاريخ.
-  // ⚠️ نرتّب الأسابيع **زمنياً** بأول تاريخ لكل أسبوع، لا برقم الدورة. دورات
-  //    العميل قد تلفّ [2,3,4,1]، فترتيبها الرقمي يعرض دورة 1 (آخر أسبوع للعميل)
-  //    أولاً — وهو ما جعل المراجعة تبدأ من السبت بينما المنيو من الأحد.
-  const weeks = Object.keys(groupedByWeek)
-    .map(Number)
-    .sort((a, b) => {
-      const da = Object.keys(groupedByWeek[a]).map((d) => dateForSlot(a, d)).filter(Boolean).sort()[0] || "9999";
-      const db = Object.keys(groupedByWeek[b]).map((d) => dateForSlot(b, d)).filter(Boolean).sort()[0] || "9999";
-      return da < db ? -1 : da > db ? 1 : a - b;
-    });
-
   /** ترتيب أيام أسبوع واحد **بتاريخ التوصيل الفعلي** (fallback: ترتيب الأسبوع الثابت).
    *  Object.keys بلا ترتيب كان يعرضها بترتيب اختيار العميل — فطلب اختار 29 ثم 25
    *  يعرض الأربعاء قبل السبت واللخبطة اللي اشتكى منها المستخدم. */
@@ -432,9 +474,7 @@ export default function OrderReviewDetail() {
       .filter(Boolean)
       .join("  •  ");
 
-    const groups = weeks.map((w) => {
-      // ✅ نفس ترتيب الشاشة: بتاريخ التوصيل الفعلي (يمسك الخميس الذي كان ناقصاً من dayOrder)
-      const days = sortDaysChrono(w, Object.keys(groupedByWeek[w]));
+    const groups = weekBlocks.map(({ cycle: w, days }) => {
       return {
         title: `${t("الأسبوع (دورة", "Week (cycle")} ${w})`,
         sections: days.map((d) => ({
@@ -453,8 +493,9 @@ export default function OrderReviewDetail() {
       };
     });
 
-    const totalMeals = weeks.reduce(
-      (s, w) => s + Object.values(groupedByWeek[w]).reduce((a: number, arr: any) => a + arr.length, 0),
+    // الإجمالي من الكتل نفسها — الكتلة الواحدة قد تحمل جزءاً من دورة متكرّرة
+    const totalMeals = groups.reduce(
+      (sum, g) => sum + g.sections.reduce((a, sec) => a + sec.rows.length, 0),
       0,
     );
 
@@ -464,7 +505,7 @@ export default function OrderReviewDetail() {
         title: `${t("جدول وجبات", "Meal plan")} — ${order.customerName || "—"}`,
         subtitle: [order.customerPhone, note].filter(Boolean).join("  ·  ") || undefined,
         kpis: [
-          { label: t("عدد الأسابيع", "Weeks"), value: weeks.length },
+          { label: t("عدد الأسابيع", "Weeks"), value: weekBlocks.length },
           { label: t("إجمالي الوجبات", "Total meals"), value: totalMeals },
         ],
         groups,
@@ -589,13 +630,11 @@ export default function OrderReviewDetail() {
           📅 {t("جدول الوجبات المختارة", "Selected meals plan")}
         </h3>
 
-        {weeks.map((weekNum) => {
+        {weekBlocks.map(({ cycle: weekNum, days, firstDate }) => {
           const weekData = groupedByWeek[weekNum];
-          // ✅ أيام الأسبوع بترتيب تاريخ التوصيل الفعلي — لا بترتيب اختيار العميل
-          const days = sortDaysChrono(weekNum, Object.keys(weekData));
 
           return (
-            <Card key={weekNum} className="p-6">
+            <Card key={`${weekNum}-${firstDate}`} className="p-6">
               <div className="mb-4 px-4 py-2.5 rounded-xl bg-[#EAF3FB] border border-[#CFE4F3] text-[#0E2A4A] font-black text-lg">
                 🗓️ {t("الأسبوع (دورة","Week (cycle")} {weekNum})
               </div>

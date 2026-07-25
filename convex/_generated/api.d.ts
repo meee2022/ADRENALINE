@@ -28,7 +28,6 @@ import type * as customizedPlans from "../customizedPlans.js";
 import type * as dailyPlans from "../dailyPlans.js";
 import type * as delivery from "../delivery.js";
 import type * as dupMerge from "../dupMerge.js";
-import type * as errProbe from "../errProbe.js";
 import type * as files from "../files.js";
 import type * as finance from "../finance.js";
 import type * as financePost from "../financePost.js";
@@ -129,7 +128,6 @@ declare const fullApi: ApiFromModules<{
   dailyPlans: typeof dailyPlans;
   delivery: typeof delivery;
   dupMerge: typeof dupMerge;
-  errProbe: typeof errProbe;
   files: typeof files;
   finance: typeof finance;
   financePost: typeof financePost;
