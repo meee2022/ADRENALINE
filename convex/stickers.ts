@@ -694,7 +694,18 @@ export const get = query({
         "باستا": "Pasta", "بطاطس": "Potato", "بطاطس مهروسة": "Mashed potato", "بطاطا حلوة": "Sweet potato",
         "خبز": "Bread", "خبز أسمر": "Brown bread", "برغل": "Bulgur", "كينوا": "Quinoa", "شوفان": "Oats", "بدون": "None",
       };
-      const en = (n: any) => AR2EN[String(n || "").trim()] || String(n || "").trim();
+      /** ترجمة اسم عربي → إنجليزي: (1) جدول البروتين/الكارب، ثم (2) بحث في منيو
+       *  publicMeals بالاسم العربي فنأخذ nameEn. الاستيكر إنجليزي دائماً للمطبخ،
+       *  فأي صنف عربي (سلطة الفستق/مافن/شوربة الفطر…) يُترجَم تلقائياً. */
+      const en = (n: any) => {
+        const raw = String(n || "").trim();
+        if (!raw) return "";
+        const mapped = AR2EN[raw];
+        if (mapped) return mapped;
+        const pm: any = publicMealsByName.get(raw.toLowerCase());
+        if (pm?.nameEn) return String(pm.nameEn).trim();
+        return raw;
+      };
       const engText = (s: any): string => {
         const baseName = String(s.baseName || "").trim();
         const protName = String(s.proteinName || "").trim();
@@ -710,7 +721,8 @@ export const get = query({
           if (!baseHasGramPortions && s.carbG && String(s.carbName || "").trim() && !/^none|بدون/i.test(String(s.carbName))) inner.push(`${en(s.carbName)} ${s.carbG}g`);
           if (inner.length) parts.push(parts.length ? `+ ${inner.join(" + ")}` : inner.join(" + "));
         }
-        return (parts.join(" ").trim() || String(s.text || baseName || "").trim());
+        // ✅ الاحتياطي أيضاً يمرّ على الترجمة — لا يتسرّب اسم عربي للاستيكر
+        return (parts.join(" ").trim() || en(String(s.text || baseName || "").trim()));
       };
 
       const stickered = new Set(mealStickers.map((s) => String(s.customerId)));
