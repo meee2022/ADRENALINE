@@ -239,8 +239,16 @@ export default function PublicMenuPage() {
     return { calories, protein, carbs, fats };
   };
 
-  const mealsPerDay = Number(verifiedCustomer?.mealsPerDay) || Infinity;
-  const snacksPerDay = Number(verifiedCustomer?.snacksPerDay) || Infinity;
+  /** حدّ الاشتراك: **صفر يعني صفر** (مشترك يريد وجبات بلا سناك مثلاً)، وغير المسجَّل
+   *  (null/undefined) فقط يعني «بلا حد معروف». كان `Number(v) || Infinity` يحوّل
+   *  الصفر إلى بلا حد، فيفتح للمشترك سناكات بلا نهاية — عكس اشتراكه. */
+  const limitOf = (v: any): number => {
+    if (v === null || v === undefined || v === "") return Infinity;
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 0 ? n : Infinity;
+  };
+  const mealsPerDay = limitOf(verifiedCustomer?.mealsPerDay);
+  const snacksPerDay = limitOf(verifiedCustomer?.snacksPerDay);
   const hasMealLimit = Number.isFinite(mealsPerDay);
   const hasSnackLimit = Number.isFinite(snacksPerDay);
   // ⛔ اشتراك بلا عدد وجبات محدّد (لا رئيسية ولا سناك) — لا يقدر النظام تقدير

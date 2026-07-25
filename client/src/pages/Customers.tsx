@@ -1553,29 +1553,58 @@ export default function Customers() {
                     </div>
                   </div>
 
-                  {/* ✅ الوجبات والسناك قابلة للتعديل يدويًا (للمخصّص/أي عدد) — الباقة تملأها كبداية وتقدر تغيّرها */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <div className="rounded-lg bg-white border p-2 text-center">
-                      <Input type="number" min="0" step="1"
-                        {...form.register("mealsPerDay")}
-                        className="text-xl font-black text-[#0E76AC] text-center h-9 border-0 p-0 focus-visible:ring-1" />
-                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "وجبات/يوم" : "Meals/day"}</div>
-                    </div>
-                    <div className="rounded-lg bg-white border p-2 text-center">
-                      <Input type="number" min="0" step="1"
-                        {...form.register("snacksPerDay")}
-                        className="text-xl font-black text-[#0E76AC] text-center h-9 border-0 p-0 focus-visible:ring-1" />
-                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "سناك/يوم" : "Snacks/day"}</div>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 border p-2 text-center">
-                      <div className="text-xl font-black text-[#0E76AC]">{(Number(form.watch("mealsPerDay")) || 0) + (Number(form.watch("snacksPerDay")) || 0) || "—"}</div>
-                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "الإجمالي/يوم" : "Total/day"}</div>
-                    </div>
-                    <div className="rounded-lg bg-slate-50 border p-2 text-center">
-                      <div className="text-xl font-black text-[#0E76AC]">{computedWeeks ?? "—"}</div>
-                      <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "المدة (أسابيع)" : "Weeks"}</div>
-                    </div>
-                  </div>
+                  {/* ✅ الوجبات والسناك قابلة للتعديل — العميل قد يريد أقل من الباقة
+                      (مثال: باقة DIET وجبتين + سناكين، لكنه يريد وجبتين فقط). القيم
+                      المعدّلة هي التي تحكم القيود والخطط، فلا يُحسب أكل زائد. */}
+                  {(() => {
+                    const mpd = Number(form.watch("mealsPerDay")) || 0;
+                    const spd = Number(form.watch("snacksPerDay")) || 0;
+                    const opt = selectedPlan && optionIdx !== "" ? planOptions[Number(optionIdx)] : null;
+                    const changed = !!opt && (mpd !== Number(opt.mealsCount ?? 0) || spd !== Number(opt.snacksCount ?? 0));
+                    const step = (field: "mealsPerDay" | "snacksPerDay", delta: number) => {
+                      const cur = Number(form.getValues(field)) || 0;
+                      form.setValue(field, Math.max(0, cur + delta), { shouldDirty: true });
+                    };
+                    const Stepper = ({ field, label }: { field: "mealsPerDay" | "snacksPerDay"; label: string }) => (
+                      <div className="rounded-lg bg-white border-2 border-[#3cc4f0]/50 p-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button type="button" onClick={() => step(field, -1)}
+                            className="h-7 w-7 shrink-0 rounded-md bg-slate-100 text-slate-600 font-black text-lg leading-none hover:bg-slate-200"
+                            aria-label={isRtl ? `تقليل ${label}` : `Decrease ${label}`}>−</button>
+                          <Input type="number" min="0" step="1"
+                            {...form.register(field)}
+                            className="text-xl font-black text-[#0E76AC] text-center h-9 border-0 p-0 focus-visible:ring-1 w-12" />
+                          <button type="button" onClick={() => step(field, +1)}
+                            className="h-7 w-7 shrink-0 rounded-md bg-slate-100 text-slate-600 font-black text-lg leading-none hover:bg-slate-200"
+                            aria-label={isRtl ? `زيادة ${label}` : `Increase ${label}`}>+</button>
+                        </div>
+                        <div className="text-[10px] text-[#0E76AC] font-bold mt-0.5">✎ {label}</div>
+                      </div>
+                    );
+                    return (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <Stepper field="mealsPerDay" label={isRtl ? "وجبات/يوم" : "Meals/day"} />
+                          <Stepper field="snacksPerDay" label={isRtl ? "سناك/يوم" : "Snacks/day"} />
+                          <div className="rounded-lg bg-slate-50 border p-2 text-center">
+                            <div className="text-xl font-black text-[#0E76AC]">{mpd + spd || "—"}</div>
+                            <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "الإجمالي/يوم" : "Total/day"}</div>
+                          </div>
+                          <div className="rounded-lg bg-slate-50 border p-2 text-center">
+                            <div className="text-xl font-black text-[#0E76AC]">{computedWeeks ?? "—"}</div>
+                            <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "المدة (أسابيع)" : "Weeks"}</div>
+                          </div>
+                        </div>
+                        {changed && (
+                          <p className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                            {isRtl
+                              ? `✎ معدّل عن الباقة (${opt.mealsCount} وجبة + ${opt.snacksCount} سناك) — سيُطبَّق ${mpd} وجبة + ${spd} سناك على خططه وقيوده. عدّل السعر لو لزم.`
+                              : `✎ Modified from package (${opt.mealsCount} meals + ${opt.snacksCount} snacks) — ${mpd} meals + ${spd} snacks will apply. Adjust the price if needed.`}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* ✅ محدّد المدة — للباقة المخصّصة فقط (هي الوحيدة مفتوحة المدة). باقي
                       الباقات مدتها ثابتة وتاريخ النهاية يُحسب تلقائيًا فور اختيار الباقة. */}

@@ -383,8 +383,10 @@ function ruleBasedPlan(profile: any, candidates: any[]) {
 
   const picks: any[] = [];
   let kcal = 0;
-  const nMeals = Math.max(1, Math.min(profile.mealsPerDay || 3, mains.length));
-  const nSnacks = Math.max(0, Math.min(profile.snacksPerDay || 1, snacks.length));
+  // ✅ ?? لا || : الصفر قيمة مقصودة (مشترك بلا سناك)، فلا نستبدله بالافتراضي.
+  //    `snacksPerDay || 1` كان يعطي سناكاً لمن اشتراكه 0 سناك.
+  const nMeals = Math.max(1, Math.min(profile.mealsPerDay ?? 3, mains.length));
+  const nSnacks = Math.max(0, Math.min(profile.snacksPerDay ?? 1, snacks.length));
 
   /* 🔴 كان: mains مرتّبة بالبروتين ثم نأخذ أعلى N بلا نظر للتصنيف — فمشترك
    *    3 وجبات ممكن ياخد 3 عشاء وما ياخدش فطور ولا غدا، لأن الأعلى بروتيناً
