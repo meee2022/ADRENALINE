@@ -988,6 +988,13 @@ export default function Kitchen() {
         .pq{width:22px;text-align:center;font-weight:900}
         .sq{background:#fde68a}
         .cst{color:#7d90a2;font-size:8px;font-weight:400;line-height:1.2;margin-top:1px}
+        /* ⇄ صف الاستبدال — كحلي كامل بنص أبيض عشان يبان فوراً وسط الممنوعات البرتقالية */
+        table.dish tr.swaprow td{background:#0E2A4A !important;color:#fff !important;border-color:#0E2A4A !important;padding:3px 5px}
+        table.dish tr.swaprow .lb{font-size:11.5px;font-weight:900;letter-spacing:.2px}
+        table.dish tr.swaprow .lb b{color:#9ec7e8 !important;font-weight:900}
+        table.dish tr.swaprow .ct{color:#fff !important;font-size:12px}
+        table.dish tr.swaprow .gc{color:#9ec7e8 !important}
+        table.dish tr.swaprow .cst{color:#c8dcee !important;font-size:8.5px;font-weight:600}
         tr.tp td{background:#dcebf5;color:#0E76AC;font-weight:900;border-top:1.5px solid #0E76AC;padding:2px 5px}
         .sec{font-size:12px;margin:10px 0 4px;border-top:2px solid #0E76AC;padding-top:4px;break-before:auto;break-after:avoid}
         .dsec{font-size:11px;font-weight:900;color:#0E76AC;margin:6px 0 4px;border-bottom:1.5px solid #0E76AC;padding-bottom:2px;break-after:avoid;page-break-after:avoid}
