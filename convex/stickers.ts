@@ -738,6 +738,28 @@ export const get = query({
 
         const customerNo = customerNoById.get(String(c._id)) ?? 0; // ✅ رقم ثابت من روستر اليوم
         const warnings = [String(c.allergies || "").trim(), String(c.avoid || "").trim()].filter(Boolean).join(" • ");
+
+        // ✅ استيكر بوكس للمخصّص أيضاً — boxBase يُبنى من dailyPlans فقط، والمخصّصون
+        //    وجباتهم في القوالب، فكانوا بلا أي استيكر بوكس (29 عميلاً). نضيفه هنا
+        //    بنفس شكل العاديين ليطبعه التغليف.
+        boxStickers.push({
+          customerId: String(c._id),
+          customerNo,
+          slNo: customerNo,
+          customerName: c.fullName || "",
+          customerNumber: normalizePhone(c.phone) || "",
+          goal: String(c.goalType || c.goals || "").trim(),
+          program: String(c.program || c.goalType || "").trim(),
+          deliveryTime: cTime,
+          planLabel:
+            (c.packageLabel && String(c.packageLabel).trim()) ||
+            (c.program && String(c.program).trim()) ||
+            "CUSTOMIZED",
+          dateText,
+          prodDate,
+          expDate,
+        });
+
         let mIdx = 1;
         for (const s of active) {
           const mealName = engText(s);
@@ -804,6 +826,9 @@ export const get = query({
       const bi = Number(String(b.mealIndexText).replace(/\D/g, "")) || 0;
       return ai - bi;
     });
+
+    // ✅ إعادة الترتيب برقم البوكس بعد إضافة بوكسات المخصّصين (تُدفَع في آخر المصفوفة)
+    boxStickers.sort((a: any, b: any) => (a.customerNo ?? 0) - (b.customerNo ?? 0));
 
     return { boxStickers, mealStickers };
   },
