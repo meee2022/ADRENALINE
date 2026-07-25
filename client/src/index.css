@@ -799,13 +799,11 @@
 
 .plans-sticky-header {
   padding-block: 0.7rem !important;
-  /* لمسة لون من الهوية أعلى الشريط بدل الأبيض المسطّح، مع حدّ سفلي واضح يفصله عن المحتوى */
-  background:
-    linear-gradient(180deg, rgba(60, 196, 240, 0.10) 0, rgba(255, 255, 255, 0) 34px),
-    rgba(255, 255, 255, 0.96) !important;
-  border-bottom: 1px solid #d7e6f0 !important;
-  backdrop-filter: blur(14px);
-  box-shadow: 0 8px 20px -14px rgba(14, 42, 74, 0.34) !important;
+  /* هيدر ملوّن بهوية المطعم — الأبيض كان بيبلع النص وبيخلي الشارات تبان مقحومة */
+  background: linear-gradient(135deg, #0E2A4A 0%, #10517d 52%, #0E76AC 100%) !important;
+  border-bottom: 3px solid #3cc4f0 !important;
+  backdrop-filter: none;
+  box-shadow: 0 10px 24px -16px rgba(14, 42, 74, 0.75) !important;
 }
 
 .plans-header-inner {
@@ -826,78 +824,93 @@
   justify-self: end;
 }
 
-/* العنوان: هو مرساة الشريط — أغمق وأثقل من كل ما حوله */
+/* العنوان أبيض ثقيل — هو مرساة الشريط */
 .plans-sticky-header h1 {
-  color: #0E2A4A !important;
+  color: #ffffff !important;
   font-weight: 900 !important;
-  font-size: 1.02rem !important;
+  font-size: 1.05rem !important;
   letter-spacing: -0.01em;
 }
 
-/* التنقّل بين الأيام: عنصر تحكّم واحد مؤطّر، لا ثلاثة أزرار سايبة */
+/* التنقّل بالأيام: عنصر واحد بعرض محتواه فقط — كان يتمدّد على العمود فيبان صندوقاً فارغاً */
 .plans-date-nav {
-  border: 1px solid #d7e6f0;
-  background: #f7fbfe;
+  width: fit-content !important;
+  justify-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   padding: 2px;
   gap: 0 !important;
 }
 
+[dir="rtl"] .plans-date-nav {
+  justify-self: end;
+}
+
 .plans-date-nav > button {
-  color: #47759c !important;
+  color: rgba(255, 255, 255, 0.75) !important;
   border-radius: 10px !important;
 }
 
 .plans-date-nav > button:hover {
-  background: #e6f2fa !important;
-  color: #0E2A4A !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+}
+
+.plans-date-nav svg {
+  color: inherit !important;
 }
 
 .plans-sticky-header .plans-date-label {
-  color: #0E2A4A !important;
+  color: #ffffff !important;
   font-weight: 800 !important;
   text-shadow: none;
 }
 
-/* شارة «توصيل غدًا»: تلميح هادئ لا نيون يسحب العين من العنوان */
 .plans-sticky-header .plans-date-badge {
-  color: #0b5f88 !important;
-  background: #ddf1fb !important;
-  border: 1px solid #b7dff2 !important;
+  color: #06263c !important;
+  background: #7ce0fa !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
   line-height: 1.5;
 }
 
-/* شارة دورة المطبخ: معلومة حالة — كحلي على خلفية فاتحة بحدّ واضح */
+/* شارة دورة المطبخ: زجاجية على الكحلي */
 .plans-rotation-chip {
-  color: #0E2A4A !important;
-  background: #eaf4fb !important;
-  border: 1px solid #c3ddee !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.26) !important;
   border-radius: 999px !important;
-  padding: 0.25rem 0.6rem !important;
+  padding: 0.25rem 0.65rem !important;
   white-space: nowrap;
 }
 
 .plans-rotation-chip svg {
-  color: #0E76AC !important;
+  color: #7ce0fa !important;
 }
 
-/* زر المراجعة: الإجراء الأساسي — ممتلئ ليُقرأ كزر لا كنص باهت */
+/* زر المراجعة: أبيض ممتلئ ليقفز فوق الكحلي */
 .plans-review-btn {
-  background: #0E76AC !important;
-  color: #fff !important;
-  box-shadow: 0 6px 14px -8px rgba(14, 118, 172, 0.85);
+  background: #ffffff !important;
+  color: #0E2A4A !important;
+  box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.55);
 }
 
 .plans-review-btn svg {
-  color: #fff !important;
+  color: #0E2A4A !important;
 }
 
 .plans-review-btn:hover {
-  background: #0b5f8c !important;
+  background: #dff3fd !important;
 }
 
-.plans-sticky-header .plans-header-inner svg {
-  color: #0E76AC;
+/* زر التصدير (أيقونة فقط) */
+.plans-header-inner > :last-child > button:not(.plans-review-btn) {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.plans-header-inner > :last-child > button:not(.plans-review-btn):hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
 }
 
 [dir="rtl"] .plans-header-inner > :last-child {
@@ -1449,7 +1462,7 @@
     justify-self: stretch;
     justify-content: space-between;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #dbe6ed;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
   }
 
   .plans-header-inner > :first-child {
