@@ -81,6 +81,16 @@ function buildModifierText(
 
   if (!picked.length) return "";
 
+  // ⇄ الاستبدال أولاً وبصيغة بارزة (RICE → MASHED POTATO) — الشيف يراه فوراً
+  const swaps = picked
+    .filter((m: any) => m.group === "SWAP")
+    .map((m: any) => {
+      const from = String(m.swapFrom || "").trim();
+      const to = String(m.swapTo || "").trim();
+      return from && to ? `${from} → ${to}` : String(m.name || "").trim();
+    })
+    .filter(Boolean);
+
   const groups: Array<"AVOID" | "PREF" | "PORTION"> = [
     "AVOID",
     "PREF",
@@ -98,7 +108,16 @@ function buildModifierText(
     })
     .filter(Boolean) as string[];
 
+  if (swaps.length) lines.unshift(`⇄ ${swaps.join(" · ")}`);
   return lines.join(" | ");
+}
+
+/** ✅ مجموع فرق السعرات من الاستبدالات المختارة — يُطبَّق تلقائياً على الاستيكر. */
+function swapCaloriesDelta(modifierIds: string[] | undefined, modifiers: any[]): number {
+  return (modifierIds || []).reduce((sum, id) => {
+    const m: any = modifiers.find((x: any) => String(x._id) === String(id));
+    return m && m.group === "SWAP" ? sum + (Number(m.caloriesDelta) || 0) : sum;
+  }, 0);
 }
 
 /**
@@ -629,9 +648,22 @@ export const get = query({
           carbs = Math.max(0, Math.round(carbs * ratio));
           fats = Math.max(0, Math.round(fats * ratio));
         }
-        const calories = protein || carbs || fats
+        let calories = protein || carbs || fats
           ? protein * 4 + carbs * 4 + fats * 9
           : targetCalories;
+
+        // ⇄ استبدال مكوّن (رز ← بطاطس مهروسة): فرق السعرات يُطبَّق تلقائياً هنا،
+        //    ويُوزَّع على الماكروز بنفس النسبة. التعديل اليدوي للسعرات
+        //    (withStoredCalorieOverride) يأتي بعده فيبقى هو الأعلى أولوية.
+        const swapDelta = swapCaloriesDelta(it.modifierIds, modifiers);
+        if (swapDelta !== 0 && calories > 0) {
+          const adjusted = Math.max(1, Math.round(calories + swapDelta));
+          const r = adjusted / calories;
+          if (protein > 0) protein = Math.max(0, Math.round(protein * r));
+          if (carbs > 0) carbs = Math.max(0, Math.round(carbs * r));
+          if (fats > 0) fats = Math.max(0, Math.round(fats * r));
+          calories = adjusted;
+        }
 
         const hasMacros = protein > 0 || carbs > 0 || fats > 0;
 

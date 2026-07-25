@@ -312,6 +312,7 @@ export default function Kitchen() {
         preferences?: string;
         portions?: string;
         specialNotes?: string;
+        swap?: string;   // ⇄ استبدال — يُعرض في سطر مستقل مميّز
         isPlain: boolean;     // ✅ هل عادية؟
       }>
     }> = {};
@@ -319,6 +320,9 @@ export default function Kitchen() {
     // helper: يحوّل modifierIds المختارة إلى أسماء مجمّعة حسب المجموعة
     const resolveMods = (ids: string[] = []) => {
       const av: string[] = [], pr: string[] = [], po: string[] = [];
+      // ⇄ الاستبدالات منفصلة تماماً — تُعرض في سطر خاص بلون مميّز، ولها فرق سعرات
+      const sw: string[] = [];
+      let calDelta = 0;
       ids.forEach((id) => {
         const mod: any = modifiers.find((m: any) => m._id === id);
         if (!mod) return;
@@ -326,8 +330,14 @@ export default function Kitchen() {
         if (mod.group === "AVOID") av.push(nm);
         else if (mod.group === "PREF") pr.push(nm);
         else if (mod.group === "PORTION") po.push(nm);
+        else if (mod.group === "SWAP") {
+          const from = String(mod.swapFrom || "").trim();
+          const to = String(mod.swapTo || "").trim();
+          sw.push(from && to ? `${from} → ${to}` : nm);
+          calDelta += Number(mod.caloriesDelta) || 0;
+        }
       });
-      return { av, pr, po };
+      return { av, pr, po, sw, calDelta };
     };
 
     // helper: يحدد لو الوجبة عادية (مفيش أي تعديلات)
@@ -445,7 +455,7 @@ export default function Kitchen() {
           else summary[mealName].standardCount += rep;
 
           // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
-          const { av, pr, po } = resolveMods(item.modifierIds);
+          const { av, pr, po, sw } = resolveMods(item.modifierIds);
           // ✅ دمج بدون تكرار على مستوى العنصر: "MUSHROOM ,BROCOLI" + "MUSHROOM، BROCOLI" = مرة واحدة
           const joinUniq = (arr: (string | undefined)[]) => {
             const seen = new Set<string>();
@@ -471,6 +481,7 @@ export default function Kitchen() {
             preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
             portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
+            swap: sw.length ? sw.join(isRtl ? "، " : ", ") : undefined,
             isPlain: plain,
           };
           summary[mealName].details.push(detailBase);
@@ -810,7 +821,9 @@ export default function Kitchen() {
       return "STANDARD";
     };
     // تسمية التعديل بأسلوب الإكسيل: "/NO TOMATO ,MUSHROOM"
+    // ⇄ الاستبدال أولاً وبعلامة مميّزة — يتجمّع بعدّاد مستقل عن الممنوعات
     const modLabel = (d: any) => [
+      d.swap && `⇄ ${d.swap}`,
       d.avoid && `/NO ${d.avoid}`,
       d.preferences && `PREF: ${d.preferences}`,
       d.portions && `${d.portions}`,
@@ -855,7 +868,9 @@ export default function Kitchen() {
         if (!b || (b.plain === 0 && b.mods.size === 0)) return;
         if (b.plain > 0) rows += `<tr class="pg"><td class="lb"><b>${pg}</b></td><td class="ct">${b.plain}</td>${gcells(pg)}</tr>`;
         [...b.mods.values()].sort((a, b2) => b2.count - a.count).forEach((g) => {
-          rows += `<tr><td class="lb"><b>${pg}</b> ${esc(g.label)}<div class="cst">${esc(g.names.join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td>${gcells(pg)}</tr>`;
+          // ⇄ سطر الاستبدال يأخذ صنفاً مميّزاً (أزرق غامق) فلا يلتبس بالممنوعات
+          const isSwapRow = g.label.trim().startsWith("⇄");
+          rows += `<tr class="${isSwapRow ? "swaprow" : ""}"><td class="lb"><b>${pg}</b> ${esc(g.label)}<div class="cst">${esc(g.names.join(isRtl ? "، " : ", "))}</div></td><td class="ct">${g.count}</td>${gcells(pg)}</tr>`;
         });
       });
       // أسطر المخصّصين — أرقام كارب/بروتين خاصة بهم (مميّزة بلون)

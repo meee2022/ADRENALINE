@@ -496,9 +496,15 @@ export default defineSchema({
   // ✅ أهم جزء: modifiers + index by_group_sort
   modifiers: defineTable({
     name: v.string(),
-    group: v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION")),
+    // ✅ SWAP = استبدال مكوّن داخل الوجبة (رز ← بطاطس مهروسة). نوع مستقل عن
+    //    الممنوعات/التفضيلات ليظهر بشكل مميّز للشيف ولا يضيع وسط الملاحظات.
+    group: v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION"), v.literal("SWAP")),
     isActive: v.boolean(),
     sortOrder: v.number(),
+    // ── حقول الاستبدال (SWAP فقط) ──
+    swapFrom: v.optional(v.string()),      // المكوّن الأصلي: "رز أبيض"
+    swapTo: v.optional(v.string()),        // البديل: "بطاطس مهروسة"
+    caloriesDelta: v.optional(v.number()), // فرق السعرات (سالب/موجب) — يُطبَّق تلقائياً
   })
     .index("by_group_sort", ["group", "sortOrder"])
     .index("by_active", ["isActive"]),

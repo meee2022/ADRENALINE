@@ -23,16 +23,26 @@ export const list = query({
       .withIndex("by_group_sort", (q) => q.eq("group", "PREF"))
       .collect();
 
-    return [...portion, ...avoid, ...pref];
+    // ✅ الاستبدالات (رز ← بطاطس مهروسة…) — نوع مستقل يظهر مميّزاً للشيف
+    const swap = await ctx.db
+      .query("modifiers")
+      .withIndex("by_group_sort", (q) => q.eq("group", "SWAP"))
+      .collect();
+
+    return [...portion, ...avoid, ...pref, ...swap];
   },
 });
 
 export const create = mutation({
   args: {
     name: v.string(),
-    group: v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION")),
+    group: v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION"), v.literal("SWAP")),
     isActive: v.boolean(),
     sortOrder: v.optional(v.number()),
+    // ── استبدال (SWAP): من ← إلى + فرق السعرات المطبَّق تلقائياً ──
+    swapFrom: v.optional(v.string()),
+    swapTo: v.optional(v.string()),
+    caloriesDelta: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -51,10 +61,13 @@ export const update = mutation({
     data: v.object({
       name: v.optional(v.string()),
       group: v.optional(
-        v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION")),
+        v.union(v.literal("AVOID"), v.literal("PREF"), v.literal("PORTION"), v.literal("SWAP")),
       ),
       isActive: v.optional(v.boolean()),
       sortOrder: v.optional(v.number()),
+      swapFrom: v.optional(v.string()),
+      swapTo: v.optional(v.string()),
+      caloriesDelta: v.optional(v.number()),
     }),
     sessionToken: v.optional(v.string()),
   },

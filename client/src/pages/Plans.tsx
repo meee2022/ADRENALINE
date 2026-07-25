@@ -217,7 +217,7 @@ function MealPicker({
 }
 
 /* ─── ModifiersPicker ─────────────────────────────────── */
-type ModifierGroup = "AVOID" | "PREF" | "PORTION";
+type ModifierGroup = "AVOID" | "PREF" | "PORTION" | "SWAP";
 
 function ModifiersPicker({
   value, onChange, modifiers, isRtl,
@@ -244,6 +244,7 @@ function ModifiersPicker({
   const groupLabel = (g: ModifierGroup) => {
     if (g === "AVOID") return isRtl ? "ممنوع" : "Avoid";
     if (g === "PREF") return isRtl ? "تفضيلات" : "Prefs";
+    if (g === "SWAP") return isRtl ? "⇄ استبدال" : "⇄ Swap";
     return isRtl ? "كمية" : "Portion";
   };
 
@@ -271,10 +272,12 @@ function ModifiersPicker({
                     "text-xs px-2 py-0.5 rounded-full border",
                     m.group === "AVOID" && "bg-red-50 text-red-700 border-red-200",
                     m.group === "PREF" && "bg-[#3cc4f0]/10 text-[#0891b2] border-[#3cc4f0]/30",
-                    m.group === "PORTION" && "bg-gray-100 text-gray-700 border-gray-200"
+                    m.group === "PORTION" && "bg-gray-100 text-gray-700 border-gray-200",
+                    // ⇄ الاستبدال بلون مميّز تماماً — لا يضيع وسط الممنوعات/التفضيلات
+                    m.group === "SWAP" && "bg-[#0E2A4A] text-white border-[#0E2A4A] font-black"
                   )}
                 >
-                  {m.name}
+                  {m.group === "SWAP" ? `⇄ ${m.name}` : m.name}
                 </Badge>
               ))
             )}
@@ -285,7 +288,7 @@ function ModifiersPicker({
       <PopoverContent className="w-80 p-0" align={isRtl ? "end" : "start"}>
         <div className="p-3 space-y-3">
           <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-            {(["AVOID", "PREF", "PORTION"] as ModifierGroup[]).map((g) => (
+            {(["AVOID", "PREF", "PORTION", "SWAP"] as ModifierGroup[]).map((g) => (
               <button
                 key={g}
                 onClick={() => setGroup(g)}
