@@ -11,7 +11,11 @@ import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
-type TabKey = "MEALS" | "BOX";
+type TabKey = "MEALS" | "BOX" | "CUSTOM";
+
+/** استيكر مشترك مخصّص؟ الباك إند يضع goal="CUSTOMIZED" لاستيكرات القوالب. */
+const isCustomizedSticker = (s: any) =>
+  String(s?.goal || "").trim().toUpperCase() === "CUSTOMIZED";
 type MealCategoryFilter = "ALL" | "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 type CalorieOverrides = Record<string, number>;
 
@@ -117,8 +121,31 @@ export default function Stickers() {
   // ✅ أسماء الوجبات على الاستيكر إنجليزي دائماً (المطبخ/التغليف يقرأ إنجليزي)
   const data = useStickers({ date, deliveryTime, lang: "en" });
   const boxStickers = data?.boxStickers ?? [];
-  const mealStickers = data?.mealStickers ?? [];
-  const activeStickers = activeTab === "MEALS" ? mealStickers : boxStickers;
+  const allMealStickers = data?.mealStickers ?? [];
+  // ✅ فصل المخصّصين في تبويب مستقل (طلب المستخدم): تبويب «الوجبات» للعاديين فقط،
+  //    وتبويب «المخصّصون» يعرضهم **مجمّعين بالعميل** — كل وجبات الشخص ورا بعض
+  //    بترتيب رقم البوكس، فالطباعة تطلع اسم ورا اسم بلا تشتيت.
+  const mealStickers = useMemo(
+    () => allMealStickers.filter((s: any) => !isCustomizedSticker(s)),
+    [allMealStickers],
+  );
+  const customStickers = useMemo(() => {
+    const rows = allMealStickers.filter((s: any) => isCustomizedSticker(s));
+    return rows
+      .map((s: any, i: number) => ({ s, i }))
+      .sort((a, b) => {
+        const na = Number(a.s.customerNo) || 0, nb = Number(b.s.customerNo) || 0;
+        if (na !== nb) return na - nb;                       // ترتيب رقم البوكس
+        const cmp = String(a.s.customerName || "").localeCompare(String(b.s.customerName || ""), "ar");
+        if (cmp !== 0) return cmp;                            // ثم الاسم
+        return a.i - b.i;                                     // ثم ترتيب وجبات نفس الشخص كما هي
+      })
+      .map(({ s }) => s);
+  }, [allMealStickers]);
+  const activeStickers = activeTab === "MEALS" ? mealStickers
+    : activeTab === "CUSTOM" ? customStickers
+    : boxStickers;
+  const isMealLike = activeTab === "MEALS" || activeTab === "CUSTOM";
 
   // ✅ تحديد استيكرات لطباعتها لوحدها (لو الطابعة وقفت في نص الطباعة، تعيد المتبقّي فقط)
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -247,7 +274,7 @@ export default function Stickers() {
     [activeStickers, activeTab, categoryQ, searchQ],
   );
   const activeOverrideCount = useMemo(
-    () => activeTab === "MEALS"
+    () => isMealLike
       ? activeStickers.reduce(
           (count: number, sticker: any, index: number) => count + (
             calOverride[stickerOverrideKey(sticker, index)] != null || sticker?.calorieOverrideSaved ? 1 : 0
@@ -422,8 +449,9 @@ export default function Stickers() {
         <div className="bg-white rounded-2xl p-1.5 flex gap-1.5"
           style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.05)" }}>
           {([
-            { key: "MEALS" as TabKey, label: isRtl ? "ستيكرات الوجبات" : "Meal Stickers", icon: UtensilsCrossed },
-            { key: "BOX"   as TabKey, label: isRtl ? "ستيكرات البوكس"  : "Box Stickers",  icon: Package },
+            { key: "MEALS"  as TabKey, label: isRtl ? "ستيكرات الوجبات" : "Meal Stickers", icon: UtensilsCrossed },
+            { key: "CUSTOM" as TabKey, label: isRtl ? "المخصّصون"       : "Customized",    icon: Layers },
+            { key: "BOX"    as TabKey, label: isRtl ? "ستيكرات البوكس"  : "Box Stickers",  icon: Package },
           ]).map(({ key, label, icon: Icon }) => {
             const active = activeTab === key;
             return (
@@ -608,20 +636,32 @@ export default function Stickers() {
         </div>
       ) : (
         <div className={cn("print-grid mt-4", pendingPrint === "selected" && "scope-selected")}>
-          {visibleStickers.map(({ s0, idx }: any) => {
+          {visibleStickers.map(({ s0, idx }: any, vi: number) => {
             const isSel = selected.has(idx);
+            // ✅ في تبويب المخصّصين: فاصل باسم العميل قبل أول وجبة له (على الشاشة فقط)
+            //    عشان يبان إن وجباته مجمّعة ورا بعض قبل ما نطبع.
+            const prevCust = vi > 0 ? visibleStickers[vi - 1].s0 : null;
+            const newCustomer = activeTab === "CUSTOM"
+              && String(s0.customerId || s0.customerName) !== String(prevCust?.customerId || prevCust?.customerName || "");
             // تعديل اليوم المحفوظ: السعرات والماكروز تتغير بنسبة واحدة.
             const overrideKey = stickerOverrideKey(s0, idx);
             const ov = calOverride[overrideKey];
             const hasSavedOverride = Boolean(s0.calorieOverrideSaved);
             const hasOverride = ov != null || hasSavedOverride;
             const saveStatus = overrideSaveStatus[overrideKey];
-            const s = (activeTab === "MEALS" && ov != null)
+            const s = (isMealLike && ov != null)
               ? scaleStickerMacros(s0, ov)
               : s0;
             const hasBaseMacros = toSafeNumber(s0.protein) > 0 || toSafeNumber(s0.carbs) > 0 || toSafeNumber(s0.fats) > 0;
             return (
               <div key={idx} className={cn("st-item", !isSel && "st-not-selected")}>
+                {newCustomer && (
+                  <div className="print:hidden st-cust-head mb-1 rounded-lg px-2 py-1 text-[11px] font-black text-white truncate"
+                    style={{ background: "linear-gradient(120deg,#0E2A4A,#0E76AC)" }}
+                    title={s0.customerName}>
+                    #{s0.customerNo || "—"} · {s0.customerName}
+                  </div>
+                )}
                 {/* رأس التحديد + تعديل السعرات — على الشاشة فقط، يختفي في الطباعة */}
                 <div className="print:hidden flex items-center gap-1.5 mb-1">
                   <label className={cn(
@@ -631,7 +671,7 @@ export default function Stickers() {
                     <input type="checkbox" checked={isSel} onChange={() => toggleOne(idx)} className="h-3 w-3" />
                     #{idx + 1}
                   </label>
-                  {activeTab === "MEALS" && (
+                  {isMealLike && (
                     <div className={cn("flex items-center gap-1 text-[11px] rounded-md px-1.5 py-0.5",
                       hasOverride ? "bg-amber-100 text-amber-700 font-bold" : "bg-slate-50 text-slate-400")}>
                       <span>cal</span>
@@ -684,7 +724,7 @@ export default function Stickers() {
                     </div>
                   )}
                 </div>
-                {activeTab === "MEALS" ? <MealSticker s={s} /> : <BoxSticker s={s} />}
+                {isMealLike ? <MealSticker s={s} /> : <BoxSticker s={s} />}
               </div>
             );
           })}
