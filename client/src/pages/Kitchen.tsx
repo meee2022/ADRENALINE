@@ -533,6 +533,8 @@ export default function Kitchen() {
       const groups: Record<string, any> = {};
       details.filter((d) => !d.isPlain).forEach((d) => {
         const parts = [
+          // ⇄ الاستبدال أولاً — أوضح حاجة للشيف
+          d.swap && `⇄ ${d.swap}`,
           d.avoid && `${isRtl ? "بدون" : "No"}: ${d.avoid}`,
           d.preferences && `${isRtl ? "تفضيل" : "Pref"}: ${d.preferences}`,
           d.portions && `${isRtl ? "كمية" : "Portion"}: ${d.portions}`,
@@ -1037,6 +1039,7 @@ export default function Kitchen() {
       return "STANDARD";
     };
     const modificationOf = (detail: any) => [
+      detail?.swap && `⇄ ${detail.swap}`,
       detail?.avoid && `/NO ${detail.avoid}`,
       detail?.preferences && `PREF: ${detail.preferences}`,
       detail?.portions && String(detail.portions),
@@ -2339,7 +2342,7 @@ export default function Kitchen() {
                 )}
 
                 {/* Fallback when modified but no textual detail */}
-                {!detail.isPlain && !detail.allergies && !detail.avoid && !detail.preferences && !detail.portions && !detail.specialNotes && (
+                {!detail.isPlain && !detail.swap && !detail.allergies && !detail.avoid && !detail.preferences && !detail.portions && !detail.specialNotes && (
                   <div className="mt-3 rounded-lg px-3 py-2 text-xs font-bold text-amber-800"
                     style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
                     {isRtl ? "⚠ تعديل مطلوب — راجع تفاصيل الطلب" : "⚠ Modification required — check order"}
@@ -2347,6 +2350,17 @@ export default function Kitchen() {
                 )}
 
                 {/* Modifications */}
+                {/* ⇄ الاستبدال — سطر كامل بلون مميّز فوق باقي التعديلات */}
+                {!detail.isPlain && detail.swap && (
+                  <div className="mt-3 rounded-lg px-3 py-2 text-white"
+                    style={{ background: "#0E2A4A" }}>
+                    <p className="text-[10px] font-black uppercase tracking-wide opacity-80">
+                      ⇄ {isRtl ? "استبدال" : "Swap"}
+                    </p>
+                    <p className="text-sm font-black mt-0.5 leading-tight">{detail.swap}</p>
+                  </div>
+                )}
+
                 {!detail.isPlain && (detail.avoid || detail.preferences || detail.portions) && (
                   <div className="mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-3 gap-2">
                     {detail.avoid && (
