@@ -400,8 +400,8 @@ export default function Kitchen() {
             return;
           }
 
-          // ✅ من خطة مخصّص: نحسب فقط الأصناف القياسية (سلطة/سناك/حلو) في الإجمالي؛ وجباته المخصّصة تبقى في بوكسه
-          if (isCustomPlan && !isStandardSide(mealName)) return;
+          // ✅ المخصّصون تُجمع أصنافهم الجانبية (سناك/سلطة/شوربة/حلو) في الحلقة الثانية أدناه من قوالبهم (customized)، ووجباتهم الرئيسية تبقى في بوكس الشخص. فلا نحسبهم هنا لمنع التكرار المزدوج.
+          if (isCustomPlan) return;
 
           const category = getCategory(item.categoryId);
           const categoryName = category?.name || item.category || (isRtl ? "غير محدد" : "Unknown");
