@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, Plus, Trash2, Check, Package, Wand2 } from "lucide-react";
+import { FileText, Plus, Trash2, Check, Package, Wand2, ChevronDown, Sparkles } from "lucide-react";
 
 type Line = {
   name: string;
@@ -55,6 +55,18 @@ export default function InvoiceImport() {
 
   const [supplierName, setSupplierName] = useState("");
   const [supplierPhone, setSupplierPhone] = useState("");
+  const [supplierCr, setSupplierCr] = useState("");
+  const [supplierTaxNumber, setSupplierTaxNumber] = useState("");
+  const [supplierAddress, setSupplierAddress] = useState("");
+  const [supplierEmail, setSupplierEmail] = useState("");
+  const [supplierContact, setSupplierContact] = useState("");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [lpoNo, setLpoNo] = useState("");
+  const [deliveryNo, setDeliveryNo] = useState("");
+  const [salesman, setSalesman] = useState("");
+  const [receivedBy, setReceivedBy] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
   const [total, setTotal] = useState("");
@@ -66,10 +78,50 @@ export default function InvoiceImport() {
 
   const importInvoice = useMutation(api.purchaseInvoices.importInvoice);
   const invoices = useQuery(api.purchaseInvoices.listInvoices, { limit: 15, sessionToken }) as any[] | undefined;
+  const suppliers = useQuery(api.inventory.getSuppliers, { sessionToken }) as any[] | undefined;
+  const allItems = useQuery(api.inventory.listItems, { sessionToken }) as any[] | undefined;
+
+  // مفتاح مطابقة موحّد — نفس منطق الخادم، ليتطابق ما تراه مع ما سيُحفظ
+  const normKey = (x: string) =>
+    String(x || "").toUpperCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
+  const knownItemKeys = useMemo(() => {
+    const m = new Map<string, any>();
+    (allItems || []).forEach((i: any) => {
+      m.set(normKey(i.nameEn || i.nameAr), i);
+      if (i.nameAr) m.set(normKey(i.nameAr), i);
+    });
+    return m;
+  }, [allItems]);
+
+  /** اختيار مورّد موجود يملأ بياناته — يمنع تكرار نفس المورّد باسمين. */
+  const pickSupplier = (name: string) => {
+    setSupplierName(name);
+    const hit = (suppliers || []).find((s: any) => normKey(s.name) === normKey(name));
+    if (!hit) return;
+    setSupplierPhone(hit.phone || "");
+    setSupplierCr(hit.crNumber || "");
+    setSupplierTaxNumber(hit.taxNumber || "");
+    setSupplierAddress(hit.address || "");
+    setSupplierEmail(hit.email || "");
+    setSupplierContact(hit.contactName || "");
+    if (hit.paymentTerms) setPaymentTerms(hit.paymentTerms);
+  };
+
+  const isKnownSupplier = useMemo(
+    () => !!supplierName.trim() && (suppliers || []).some((s: any) => normKey(s.name) === normKey(supplierName)),
+    [supplierName, suppliers],
+  );
 
   const validLines = useMemo(
     () => lines.filter((l) => l.name.trim() && Number(l.quantity) > 0),
     [lines],
+  );
+
+  // كم صنف سيُنشأ وكم سيُطابَق — يظهر قبل الحفظ لا بعده
+  const newCount = useMemo(
+    () => validLines.filter((l) => !knownItemKeys.has(normKey(l.name))).length,
+    [validLines, knownItemKeys],
   );
 
   // مجموع الأسطر — يُقارَن بإجمالي الفاتورة المكتوب فيها لكشف أي سطر ناقص
@@ -108,6 +160,17 @@ export default function InvoiceImport() {
         supplierPhone: supplierPhone.trim() || undefined,
         invoiceNo: invoiceNo.trim(),
         invoiceDate,
+        supplierCr: supplierCr.trim() || undefined,
+        supplierTaxNumber: supplierTaxNumber.trim() || undefined,
+        supplierAddress: supplierAddress.trim() || undefined,
+        supplierEmail: supplierEmail.trim() || undefined,
+        supplierContact: supplierContact.trim() || undefined,
+        lpoNo: lpoNo.trim() || undefined,
+        deliveryNo: deliveryNo.trim() || undefined,
+        salesman: salesman.trim() || undefined,
+        receivedBy: receivedBy.trim() || undefined,
+        dueDate: dueDate || undefined,
+        paymentTerms: paymentTerms.trim() || undefined,
         total: stated || undefined,
         receiveStock,
         lines: validLines.map((l) => ({
@@ -131,6 +194,7 @@ export default function InvoiceImport() {
           : `Done. ${res.itemsCreated} new items, ${res.itemsMatched} matched, ${res.linksCreated + res.linksUpdated} supplier links${res.received ? `, ${res.received} lines received` : ""}.`,
       });
       setInvoiceNo(""); setTotal(""); setLines([emptyLine()]);
+      setLpoNo(""); setDeliveryNo(""); setReceivedBy("");
     } catch (e: any) {
       void alertDialog({ message: e?.message || (isRtl ? "تعذّر الاستيراد" : "Import failed") });
     } finally {
@@ -162,8 +226,19 @@ export default function InvoiceImport() {
       <div className="rounded-2xl border-2 border-slate-200 bg-white p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
         <div className="space-y-1.5 lg:col-span-2">
           <Label>{isRtl ? "المورّد" : "Supplier"}</Label>
-          <Input value={supplierName} onChange={(e) => setSupplierName(e.target.value)}
+          {/* اقتراح من المورّدين المسجّلين — الاختيار يملأ بياناته ويمنع تكراره باسمين */}
+          <Input list="supplier-options" value={supplierName}
+            onChange={(e) => pickSupplier(e.target.value)}
             placeholder={isRtl ? "مثال: Bradma Qatar Food" : "e.g. Bradma Qatar Food"} />
+          <datalist id="supplier-options">
+            {(suppliers || []).map((s: any) => <option key={String(s._id)} value={s.name} />)}
+          </datalist>
+          {isKnownSupplier && (
+            <p className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+              <Check className="h-3 w-3" />
+              {isRtl ? "مورّد مسجّل — بياناته اتملت" : "Known supplier — details filled in"}
+            </p>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>{isRtl ? "هاتف المورّد" : "Supplier phone"}</Label>
@@ -177,14 +252,73 @@ export default function InvoiceImport() {
           <Label>{isRtl ? "تاريخ الفاتورة" : "Invoice date"}</Label>
           <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
         </div>
+
+        <button type="button" onClick={() => setMoreOpen((o) => !o)}
+          className="lg:col-span-5 flex items-center gap-1.5 text-xs font-bold text-[#0E76AC] hover:underline w-fit">
+          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", moreOpen && "rotate-180")} />
+          {isRtl ? "بيانات المورّد وتفاصيل الفاتورة" : "Supplier details & invoice references"}
+        </button>
+
+        {moreOpen && (
+          <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 border-t border-slate-200">
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "السجل التجاري (CR)" : "CR number"}</Label>
+              <Input dir="ltr" value={supplierCr} onChange={(e) => setSupplierCr(e.target.value)} placeholder="CR-195910" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "الرقم الضريبي" : "Tax number"}</Label>
+              <Input dir="ltr" value={supplierTaxNumber} onChange={(e) => setSupplierTaxNumber(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "البريد الإلكتروني" : "Email"}</Label>
+              <Input dir="ltr" value={supplierEmail} onChange={(e) => setSupplierEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "العنوان" : "Address"}</Label>
+              <Input value={supplierAddress} onChange={(e) => setSupplierAddress(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "مندوب المبيعات" : "Salesman"}</Label>
+              <Input value={salesman} onChange={(e) => setSalesman(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "رقم أمر الشراء (LPO)" : "LPO no."}</Label>
+              <Input dir="ltr" value={lpoNo} onChange={(e) => setLpoNo(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "رقم الشحنة" : "Delivery no."}</Label>
+              <Input dir="ltr" value={deliveryNo} onChange={(e) => setDeliveryNo(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "استلمها" : "Received by"}</Label>
+              <Input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "شروط الدفع" : "Payment terms"}</Label>
+              <Input value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} placeholder="Credit / Cash" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isRtl ? "تاريخ الاستحقاق" : "Due date"}</Label>
+              <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* الأسطر */}
       <div className="rounded-2xl border-2 border-slate-200 bg-white overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-2 p-3 border-b border-slate-200 bg-slate-50">
-          <p className="font-black text-slate-700 text-sm">
-            {isRtl ? `أصناف الفاتورة (${validLines.length})` : `Invoice lines (${validLines.length})`}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-black text-slate-700 text-sm">
+              {isRtl ? `أصناف الفاتورة (${validLines.length})` : `Invoice lines (${validLines.length})`}
+            </p>
+            {validLines.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black">
+                <Sparkles className="h-3 w-3 inline -mt-0.5" />{" "}
+                {isRtl ? `${newCount} صنف جديد · ${validLines.length - newCount} موجود` : `${newCount} new · ${validLines.length - newCount} known`}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => setPasteOpen((o) => !o)}>
               <Wand2 className={cn("h-3.5 w-3.5", isRtl ? "ml-1.5" : "mr-1.5")} />
@@ -210,6 +344,17 @@ export default function InvoiceImport() {
           </div>
         )}
 
+        <datalist id="item-options">
+          {(allItems || []).map((i: any) => (
+            <option key={String(i._id)} value={i.nameEn || i.nameAr}>{i.nameAr}</option>
+          ))}
+        </datalist>
+        <datalist id="unit-options">
+          {["KG", "G", "LTR", "ML", "PCS", "CTN", "BAG", "PKT", "TIN", "BTL", "BOX"].map((u) => (
+            <option key={u} value={u} />
+          ))}
+        </datalist>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
@@ -228,7 +373,25 @@ export default function InvoiceImport() {
               {lines.map((l, i) => (
                 <tr key={i} className="border-b border-slate-100 hover:bg-slate-50/60">
                   <td className="px-2 py-1.5">
-                    <Input dir="ltr" className="h-9" value={l.name} onChange={(e) => setLine(i, { name: e.target.value })} />
+                    <div className="flex items-center gap-1.5">
+                      <Input dir="ltr" list="item-options" className="h-9" value={l.name}
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          const hit = knownItemKeys.get(normKey(name));
+                          // الصنف المعروف يجلب اسمه العربي ووحدته — أقل كتابة وأقل خطأ
+                          setLine(i, hit
+                            ? { name, nameAr: l.nameAr || hit.nameAr || "", unit: l.unit === "PCS" ? (hit.purchaseUnit || hit.unit || l.unit) : l.unit }
+                            : { name });
+                        }} />
+                      {l.name.trim() && (
+                        <span className={cn("shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black whitespace-nowrap",
+                          knownItemKeys.has(normKey(l.name))
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700")}>
+                          {knownItemKeys.has(normKey(l.name)) ? (isRtl ? "موجود" : "known") : (isRtl ? "جديد" : "new")}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-2 py-1.5">
                     <Input className="h-9" value={l.nameAr} onChange={(e) => setLine(i, { nameAr: e.target.value })} />
@@ -240,7 +403,8 @@ export default function InvoiceImport() {
                     <Input dir="ltr" className="h-9 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <Input dir="ltr" className="h-9 text-center" value={l.unit} onChange={(e) => setLine(i, { unit: e.target.value })} />
+                    <Input dir="ltr" list="unit-options" className="h-9 text-center" value={l.unit}
+                      onChange={(e) => setLine(i, { unit: e.target.value })} />
                   </td>
                   <td className="px-2 py-1.5">
                     <Input dir="ltr" className="h-9 text-center" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />

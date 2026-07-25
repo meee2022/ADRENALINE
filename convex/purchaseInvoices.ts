@@ -113,8 +113,20 @@ export const importInvoice = mutation({
   args: {
     supplierName: v.string(),
     supplierPhone: v.optional(v.string()),
+    // بيانات المورّد كما على وجه الفاتورة — تُحفظ على سجلّه وتُحدَّث لو تغيّرت
+    supplierCr: v.optional(v.string()),
+    supplierTaxNumber: v.optional(v.string()),
+    supplierAddress: v.optional(v.string()),
+    supplierEmail: v.optional(v.string()),
+    supplierContact: v.optional(v.string()),
     invoiceNo: v.string(),
     invoiceDate: v.string(),               // yyyy-MM-dd
+    lpoNo: v.optional(v.string()),
+    deliveryNo: v.optional(v.string()),
+    salesman: v.optional(v.string()),
+    receivedBy: v.optional(v.string()),
+    dueDate: v.optional(v.string()),
+    paymentTerms: v.optional(v.string()),
     total: v.optional(v.number()),
     discount: v.optional(v.number()),
     vat: v.optional(v.number()),
@@ -143,11 +155,30 @@ export const importInvoice = mutation({
       const sid = await ctx.db.insert("suppliers", {
         name: args.supplierName,
         phone: args.supplierPhone,
+        crNumber: args.supplierCr,
+        taxNumber: args.supplierTaxNumber,
+        address: args.supplierAddress,
+        email: args.supplierEmail,
+        contactName: args.supplierContact || args.salesman,
+        paymentTerms: args.paymentTerms,
         isActive: true,
         createdAt: Date.now(),
       });
       supplier = await ctx.db.get(sid);
       supplierCreated = true;
+    } else {
+      // نملأ الفراغات فقط — لا نمسح بيانات مُدخلة يدوياً ببيانات فاتورة ناقصة
+      const fill: any = {};
+      if (!supplier.phone && args.supplierPhone) fill.phone = args.supplierPhone;
+      if (!supplier.crNumber && args.supplierCr) fill.crNumber = args.supplierCr;
+      if (!supplier.taxNumber && args.supplierTaxNumber) fill.taxNumber = args.supplierTaxNumber;
+      if (!supplier.address && args.supplierAddress) fill.address = args.supplierAddress;
+      if (!supplier.email && args.supplierEmail) fill.email = args.supplierEmail;
+      if (!supplier.contactName && (args.supplierContact || args.salesman)) {
+        fill.contactName = args.supplierContact || args.salesman;
+      }
+      if (!supplier.paymentTerms && args.paymentTerms) fill.paymentTerms = args.paymentTerms;
+      if (Object.keys(fill).length) await ctx.db.patch(supplier._id, fill);
     }
     const supplierId = supplier._id as Id<"suppliers">;
 
@@ -266,6 +297,12 @@ export const importInvoice = mutation({
       supplierName: args.supplierName,
       invoiceNo: args.invoiceNo,
       invoiceDate: args.invoiceDate,
+      lpoNo: args.lpoNo,
+      deliveryNo: args.deliveryNo,
+      salesman: args.salesman,
+      receivedBy: args.receivedBy,
+      dueDate: args.dueDate,
+      paymentTerms: args.paymentTerms,
       currency: "QAR",
       subtotal: computedTotal,
       discount: args.discount,

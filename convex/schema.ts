@@ -555,6 +555,7 @@ export default defineSchema({
   suppliers: defineTable({
     name: v.string(),
     phone: v.optional(v.string()),
+    crNumber: v.optional(v.string()),   // رقم السجل التجاري (CR 157972)
     contactName: v.optional(v.string()),
     email: v.optional(v.string()),
     address: v.optional(v.string()),
@@ -648,6 +649,13 @@ export default defineSchema({
     supplierName: v.string(),
     invoiceNo: v.string(),
     invoiceDate: v.string(),               // yyyy-MM-dd
+    // بيانات ترد على وجه الفاتورة ويُسأل عنها لاحقاً عند المراجعة أو النزاع
+    lpoNo: v.optional(v.string()),         // رقم أمر الشراء (E758008621)
+    deliveryNo: v.optional(v.string()),    // رقم الشحنة/التوصيل
+    salesman: v.optional(v.string()),      // مندوب المبيعات
+    receivedBy: v.optional(v.string()),    // من استلم البضاعة
+    dueDate: v.optional(v.string()),       // تاريخ الاستحقاق
+    paymentTerms: v.optional(v.string()),  // Credit / Cash / 0007
     currency: v.optional(v.string()),
     subtotal: v.optional(v.number()),
     discount: v.optional(v.number()),
