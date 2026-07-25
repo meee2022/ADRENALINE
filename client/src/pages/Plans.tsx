@@ -562,16 +562,37 @@ export default function PlansPage() {
     };
   });
 
+  /** 🛟 خانة احتياطية لأي صنف بتصنيف غير معروف — كي لا يختفي من محرّر الخطط.
+   *  محرّر الخطط يتجاهل أي عنصر بلا categoryId مطابق (`if (!category) return null`)،
+   *  وعناصر الطلبات المعتمدة تُخزَّن بتصنيف نصّي فقط. فلو ظهر تصنيف غير مُعرَّف
+   *  (salad مثلاً، أو تصنيف جديد) نضعه في «أخرى» بدل أن تختفي الوجبة من عين الأخصائية. */
+  const fallbackCategoryId = useMemo(() => {
+    const list = (categories as any[]) || [];
+    const byName = (pred: (n: string) => boolean) =>
+      list.find((c) => pred(String(c?.name || "").trim().toLowerCase()));
+    const other = byName((n) => n === "other" || n === "أخرى" || n === "اخرى");
+    return String((other || list[0])?._id || "");
+  }, [categories]);
+
   const enrichPlanWithCategories = (plan: any) => {
     if (!plan || !plan.items) return plan;
     const items = getEffectivePlanItems(plan).map((item: any) => {
       let categoryId = item.categoryId;
-      if (!categoryId && item.category) {
-        const itemCat = String(item.category).toLowerCase();
+      const itemCat = String(item.category || "").toLowerCase();
+      if (!categoryId && itemCat) {
         const targetSlotIds = slotIdsForPublicCat[itemCat];
         if (targetSlotIds && targetSlotIds.length > 0) {
           categoryId = targetSlotIds[0];
         }
+      }
+      // 🛟 لم نجد خانة مطابقة: السلطة تُحسب سناك في هذا النظام، وأي تصنيف آخر
+      //    (أو بلا تصنيف) يقع تحت «أخرى» — المهم أن تبقى الوجبة ظاهرة وقابلة للتعديل.
+      if (!categoryId) {
+        const snackIds = slotIdsForPublicCat.snack;
+        categoryId = (isSnackCategoryName(itemCat) || itemCat.includes("salad") || itemCat.includes("سلط"))
+          && snackIds?.length
+          ? snackIds[0]
+          : fallbackCategoryId;
       }
       return {
         ...item,
