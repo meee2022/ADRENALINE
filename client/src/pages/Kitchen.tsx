@@ -1049,8 +1049,8 @@ export default function Kitchen() {
       if (program.includes("BULK")) return "BULK";
       return "STANDARD";
     };
+    // ⚠️ الاستبدال لا يدخل هنا — يُعرض كشارة مستقلة (swap-tag) بلون مميّز
     const modificationOf = (detail: any) => [
-      detail?.swap && `⇄ ${detail.swap}`,
       detail?.avoid && `/NO ${detail.avoid}`,
       detail?.preferences && `PREF: ${detail.preferences}`,
       detail?.portions && String(detail.portions),
@@ -1080,6 +1080,7 @@ export default function Kitchen() {
         protein: string | number;
         names: string[];
         isCustomPortion: boolean;
+        swap: string;
       }>();
       const details = Array.isArray(meal?.details) ? meal.details : [];
 
@@ -1087,17 +1088,18 @@ export default function Kitchen() {
         const program = main ? programOf(detail?.program) : "STANDARD";
         const hasCustomGrams = main && (Number(detail?.carbGrams) > 0 || Number(detail?.proteinGrams) > 0);
         const label = detail?.isPlain ? "" : modificationOf(detail);
+        const swap = detail?.isPlain ? "" : String(detail?.swap || "").trim();
         const carb = main
           ? (Number(detail?.carbGrams) > 0 ? Number(detail.carbGrams) : (programPortions as any)?.[program]?.carb ?? "")
           : "";
         const protein = main
           ? (Number(detail?.proteinGrams) > 0 ? Number(detail.proteinGrams) : (programPortions as any)?.[program]?.protein ?? "")
           : "";
-        const key = `${program}|${hasCustomGrams ? "CUSTOM" : "DEFAULT"}|${label.toUpperCase()}|${carb}|${protein}`;
-        if (!groups.has(key)) groups.set(key, { program, label, qty: 0, carb, protein, names: [], isCustomPortion: hasCustomGrams });
+        const key = `${program}|${hasCustomGrams ? "CUSTOM" : "DEFAULT"}|${swap.toUpperCase()}|${label.toUpperCase()}|${carb}|${protein}`;
+        if (!groups.has(key)) groups.set(key, { program, label, qty: 0, carb, protein, names: [], isCustomPortion: hasCustomGrams, swap });
         const group = groups.get(key)!;
         group.qty += 1;
-        if ((label || hasCustomGrams) && detail?.customerName) group.names.push(String(detail.customerName));
+        if ((label || swap || hasCustomGrams) && detail?.customerName) group.names.push(String(detail.customerName));
       });
 
       if (groups.size === 0) {
@@ -1119,6 +1121,7 @@ export default function Kitchen() {
             protein: main ? (programPortions as any)?.[program]?.protein ?? "" : "",
             names: [],
             isCustomPortion: false,
+            swap: "",
           });
         });
       }
@@ -1126,9 +1129,9 @@ export default function Kitchen() {
       const rows = [...groups.values()]
         .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
         .map((group) => `
-          <tr class="${[group.label ? "modified" : "", group.isCustomPortion ? "custom-portion" : ""].filter(Boolean).join(" ")}">
+          <tr class="${[group.label ? "modified" : "", group.isCustomPortion ? "custom-portion" : "", group.swap ? "swap-row" : ""].filter(Boolean).join(" ")}">
             <td${main ? "" : ' colspan="3"'}>
-              <div class="row-label"><strong>${esc(group.program)}</strong>${group.isCustomPortion ? '<span class="custom-tag">CUSTOM PORTION</span>' : ""}${group.label ? `<span class="change">${esc(group.label)}</span>` : ""}</div>
+              <div class="row-label"><strong>${esc(group.program)}</strong>${group.swap ? `<span class="swap-tag">&#8646; ${esc(group.swap)}</span>` : ""}${group.isCustomPortion ? '<span class="custom-tag">CUSTOM PORTION</span>' : ""}${group.label ? `<span class="change">${esc(group.label)}</span>` : ""}</div>
               ${group.names.length ? `<small>${esc(group.names.join(", "))}</small>` : ""}
             </td>
             <td class="number">${group.qty}</td>
@@ -1193,6 +1196,12 @@ export default function Kitchen() {
         .number{text-align:center;font-weight:900;font-size:15px;color:#dc2626}.portion{color:#0e76ac;font-weight:700}.portion-label{text-align:center;font-size:10px;font-weight:900;letter-spacing:.6px}
         .modified td{background:#fff9eb}.change{color:#b45309;font-weight:800;font-size:12px}.modified small{display:block;color:#687f90;font-size:10.5px;margin-top:2px}
         .row-label{display:flex;align-items:center;flex-wrap:wrap;gap:4px}.custom-portion td{background:#e8f7fc;border-color:#69bdd7}.custom-portion td:first-child{border-left:5px solid #0787b2}.custom-portion .custom-tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#087da7;color:#fff;font-size:9.5px;font-weight:900;line-height:1.25;letter-spacing:.45px;white-space:nowrap}.custom-portion .change{color:#87510a}.custom-portion small{color:#075d7c;font-size:10px;font-weight:900}.custom-portion .portion{color:#dc2626;font-size:14px;font-weight:950;background:#fff1f2}
+        /* ⇄ الاستبدال: شارة كحلية + شريط جانبي — يختلف كلياً عن البرتقالي (ممنوعات) والسماوي (كميات) */
+        .swap-row td{background:#eef3fa;border-color:#0E2A4A}
+        .swap-row td:first-child{border-left:5px solid #0E2A4A}
+        .swap-tag{display:inline-block;padding:2px 9px;border-radius:999px;background:#0E2A4A;color:#fff;font-size:10.5px;font-weight:900;line-height:1.3;letter-spacing:.4px;white-space:nowrap}
+        .swap-row small{color:#0E2A4A;font-size:10px;font-weight:900}
+        .swap-row .number{color:#0E2A4A}
         .customized-section td{background:#0e76ac;border-color:#0e76ac}.customer-title td{background:#d8edf8}.shift{text-align:center;font-size:11px!important;color:#0e76ac!important}
         .customized-start{break-before:page;page-break-before:always}
         .allergy td{background:#fff0f0;color:#b91c1c;font-weight:900;font-size:13px}.not-set td{background:#fff7ed;color:#c2410c;font-weight:800}
