@@ -271,6 +271,26 @@ export default function OrderReviewDetail() {
     return (dayOrder[da] ?? 99) - (dayOrder[db] ?? 99);
   });
 
+  // ⚠️ خطط قائمة للعميل في تواريخ هذا الطلب — الاعتماد سيستبدلها (لا يتعايش
+  //    خطتان لنفس اليوم وإلا تضاعف الأكل). نعرضها للأخصائية قبل الضغط.
+  const targetDates = useMemo(
+    () => Array.from(new Set(allWeekDayKeys
+      .map((k) => {
+        const [w, d] = k.split("-");
+        return dateOverrides[k] ? localISO(dateOverrides[k]!) : dateForSlot(Number(w), d);
+      })
+      .filter(Boolean) as string[])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allWeekDayKeys.join("|"), dateOverrides, startISOForSlots, startRotForSlots],
+  );
+  const linkedCustomerId = (selectedCustomerId || (orderData as any)?.customerId) as Id<"customers"> | undefined;
+  const conflicts = useQuery(
+    api.customerOrders.plansToBeReplaced,
+    linkedCustomerId && targetDates.length
+      ? { customerId: linkedCustomerId, dates: targetDates, sessionToken }
+      : "skip",
+  ) as { total: number; manual: number; rows: any[] } | undefined;
+
   const handleApprove = async () => {
     if (!orderId) return;
 
@@ -300,6 +320,23 @@ export default function OrderReviewDetail() {
         message: (isRtl ? `⚠️ يرجى تحديد تاريخ ليوم البداية على الأقل (${firstKey}) أو تحديد تاريخ بداية التوصيل في الأعلى.` : `⚠️ Set a date for at least the first day (${firstKey}) or set the delivery start date above.`),
       });
       return;
+    }
+
+    // ⚠️ تأكيد صريح لو فيه خطط قائمة ستُستبدل (خصوصاً اليدوية من الأخصائية)
+    if (conflicts && conflicts.total > 0) {
+      const lines = conflicts.rows.slice(0, 8)
+        .map((r) => `• ${r.date} — ${r.source === "manual" ? (isRtl ? "يدوية" : "manual") : (isRtl ? "من طلب" : "from order")} (${r.items} ${isRtl ? "صنف" : "items"})`)
+        .join("\n");
+      const more = conflicts.rows.length > 8 ? `\n… +${conflicts.rows.length - 8}` : "";
+      const ok = await confirmDialog({
+        title: isRtl ? "استبدال خطط قائمة" : "Replace existing plans",
+        message: isRtl
+          ? `هذا المشترك لديه ${conflicts.total} خطة في تواريخ هذا الطلب${conflicts.manual ? ` (منها ${conflicts.manual} يدوية من الأخصائية)` : ""}.\n\nسيتم **استبدالها** باختيار العميل — حتى لا يتضاعف الأكل.\n\n${lines}${more}\n\nمتابعة؟`
+          : `This subscriber has ${conflicts.total} plan(s) on this order's dates${conflicts.manual ? ` (${conflicts.manual} manual)` : ""}.\n\nThey will be REPLACED by the customer's selection to avoid double food.\n\n${lines}${more}\n\nContinue?`,
+        confirmText: isRtl ? "نعم، استبدل واعتمد" : "Yes, replace & approve",
+        cancelText: isRtl ? "إلغاء" : "Cancel",
+      });
+      if (!ok) return;
     }
 
     try {
@@ -927,6 +964,32 @@ export default function OrderReviewDetail() {
               onChange={(e) => setApproveNotes(e.target.value)}
             />
           </div>
+
+          {/* ⚠️ تنبيه: خطط قائمة ستُستبدل عند الاعتماد — تظهر قبل الضغط لا بعده */}
+          {conflicts && conflicts.total > 0 && (
+            <div className="mb-4 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+              <p className="text-sm font-black text-amber-900">
+                ⚠️ {isRtl
+                  ? `لهذا المشترك ${conflicts.total} خطة في تواريخ هذا الطلب${conflicts.manual ? ` — منها ${conflicts.manual} يدوية من الأخصائية` : ""}`
+                  : `This subscriber has ${conflicts.total} plan(s) on this order's dates${conflicts.manual ? ` — ${conflicts.manual} manual` : ""}`}
+              </p>
+              <p className="text-[12px] font-bold text-amber-800 mt-1">
+                {isRtl
+                  ? "سيتم استبدالها باختيار العميل عند الاعتماد (منعاً لمضاعفة الأكل والبوكسات)."
+                  : "They will be replaced by the customer's selection on approval (prevents double food/boxes)."}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {conflicts.rows.slice(0, 12).map((r: any, i: number) => (
+                  <span key={i} className="text-[11px] font-bold rounded-md px-2 py-0.5 bg-white border border-amber-200 text-amber-900">
+                    {r.date} · {r.source === "manual" ? (isRtl ? "يدوية" : "manual") : (isRtl ? "طلب" : "order")} ({r.items})
+                  </span>
+                ))}
+                {conflicts.rows.length > 12 && (
+                  <span className="text-[11px] font-bold text-amber-700">+{conflicts.rows.length - 12}</span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex gap-4">

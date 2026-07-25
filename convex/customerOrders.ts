@@ -573,9 +573,9 @@ export const approve = mutation({
     }
 
     // 4. إنشاء/تحديث خطة يومية لكل تاريخ
-    // ✅ نمنع التكرار: لو فيه plan موجودة لنفس (customer + date + deliveryTime) من نفس الطلب،
-    // نستبدلها بدلاً من إنشاء واحدة جديدة
+    // ✅ الاعتماد يستبدل أي خطة قائمة لنفس (عميل + تاريخ + وقت) — يدوية أو من طلب أقدم.
     const effectiveCustomerId = customerId || order.customerId;
+    let replacedPlans = 0; // كم خطة زائدة حُذفت (تكرار سابق) — نُرجعها للواجهة
     // ✅ وقت التوصيل من اشتراك العميل نفسه (صباحي/مسائي) بدل MORNING الثابت —
     //    وإلا كل طلب معتمد يذهب للجولة الصباحية فقط، فالخدمة المسائية تُكسر.
     const deliveryTime: "MORNING" | "EVENING" =
@@ -615,15 +615,19 @@ export const approve = mutation({
         .withIndex("by_date", (q) => q.eq("date", date))
         .collect();
 
-      const duplicatePlan = existingPlans.find((p: any) => {
-        // فحص العميل (customerId لو موجود، أو الاسم لو مش موجود)
+      // ✅ الاعتماد **يستبدل** أي خطة قائمة لنفس (عميل + تاريخ + وقت توصيل) أياً كان
+      //    مصدرها — يدوية من الأخصائية أو من طلب أقدم. اعتمادها للطلب = موافقة على
+      //    اختيار العميل، فلا يصح أن تتعايش خطتان لنفس اليوم (ضعف الأكل وبوكسان).
+      //    ⚠️ كان الشرط يتطلّب sourceOrderId === orderId، والخطة اليدوية بلا مصدر،
+      //       فلا تتطابق أبداً → تُنشأ خطة ثانية بجوارها (حالة FATMA BAHZAD 26-7).
+      const sameSlot = existingPlans.filter((p: any) => {
         const sameCustomer = effectiveCustomerId
           ? p.customerId === effectiveCustomerId
           : p.customerName === order.customerName;
-        const sameTime = p.deliveryTime === deliveryTime;
-        const sameOrigin = p.sourceOrderId === orderId; // علامة لتمييز الـ plans اللي جاية من نفس الطلب
-        return sameCustomer && sameTime && sameOrigin;
+        return sameCustomer && p.deliveryTime === deliveryTime;
       });
+      // نفضّل تحديث خطة نفس الطلب (إعادة اعتماد)، وإلا نستبدل الموجودة.
+      const duplicatePlan = sameSlot.find((p: any) => p.sourceOrderId === orderId) ?? sameSlot[0];
 
       if (duplicatePlan) {
         // ✅ تحديث الـ plan الموجودة بدل إنشاء جديدة
@@ -631,8 +635,16 @@ export const approve = mutation({
           items: planItems,
           notes: notes || "",
           status: "CONFIRMED",
+          sourceOrderId: orderId, // صارت مملوكة لهذا الطلب
           updatedAt: Date.now(),
         });
+        // 🧹 أي خطط زائدة لنفس الخانة (تكرار سابق) تُحذف — وإلا بقي الأكل مضاعفاً
+        for (const extra of sameSlot) {
+          if (String(extra._id) !== String(duplicatePlan._id)) {
+            await ctx.db.delete(extra._id);
+            replacedPlans++;
+          }
+        }
       } else {
         // إنشاء plan جديدة
         await ctx.db.insert("dailyPlans", {
@@ -700,7 +712,11 @@ export const approve = mutation({
       });
     }
 
-    return { success: true, message: "تم اعتماد الطلب وإضافته للمطبخ" };
+    return {
+      success: true,
+      message: "تم اعتماد الطلب وإضافته للمطبخ",
+      replacedPlans, // خطط زائدة حُذفت لمنع ازدواج الأكل
+    };
   },
 });
 
@@ -878,5 +894,43 @@ export const deleteOrder = mutation({
     await ctx.db.delete(orderId);
 
     return { success: true, removedItems: items.length, removedPlans: plans.length };
+  },
+});
+
+/**
+ * ⚠️ تنبيه ما قبل الاعتماد: خطط قائمة لنفس العميل في التواريخ المستهدفة — سيتم
+ *    استبدالها عند الاعتماد. تعرضها شاشة المراجعة للأخصائية قبل الضغط، فلا تتفاجأ
+ *    بأن خطتها اليدوية اختفت أو تظن أن الأكل تضاعف.
+ *    قراءة فقط — لا تعدّل شيئاً.
+ */
+export const plansToBeReplaced = query({
+  args: {
+    customerId: v.optional(v.id("customers")),
+    dates: v.array(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    if (!args.customerId || args.dates.length === 0) return { total: 0, rows: [] };
+    const wanted = new Set(args.dates.map((d) => String(d).slice(0, 10)));
+    const all = await ctx.db
+      .query("dailyPlans")
+      .filter((q: any) => q.eq(q.field("customerId"), args.customerId))
+      .collect();
+    const rows = (all as any[])
+      .filter((p) => wanted.has(String(p.date).slice(0, 10)))
+      .map((p) => ({
+        date: p.date,
+        deliveryTime: p.deliveryTime,
+        status: p.status,
+        source: p.sourceOrderId ? "order" : "manual",
+        items: (p.items || []).filter((i: any) => !i?.isOff).length,
+      }))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    return {
+      total: rows.length,
+      manual: rows.filter((r) => r.source === "manual").length,
+      rows,
+    };
   },
 });
