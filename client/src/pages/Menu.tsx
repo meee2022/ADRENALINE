@@ -1436,16 +1436,18 @@ function MenuItemsTab({
 /* =========================
    ✅ ModifiersTab (التفضيلات/الممنوعات/الكميات)
 ========================= */
-type ModifierGroup = "PREF" | "AVOID" | "PORTION";
+type ModifierGroup = "PREF" | "AVOID" | "PORTION" | "SWAP";
 
 function groupLabel(g: ModifierGroup, isRtl: boolean) {
   if (!isRtl) {
     if (g === "PREF") return "Preferences";
     if (g === "AVOID") return "Avoid";
+    if (g === "SWAP") return "Swap";
     return "Portion";
   }
   if (g === "PREF") return "تفضيلات";
   if (g === "AVOID") return "ممنوعات";
+  if (g === "SWAP") return "استبدال";
   return "كميات";
 }
 
@@ -1463,12 +1465,19 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
   const [name, setName] = useState("");
   const [group, setGroup] = useState<ModifierGroup>("PREF");
   const [isActive, setIsActive] = useState(true);
+  // ⇄ حقول الاستبدال (تظهر فقط عند اختيار النوع "استبدال")
+  const [swapFrom, setSwapFrom] = useState("");
+  const [swapTo, setSwapTo] = useState("");
+  const [caloriesDelta, setCaloriesDelta] = useState("");
 
   const reset = () => {
     setEditing(null);
     setName("");
     setGroup("PREF");
     setIsActive(true);
+    setSwapFrom("");
+    setSwapTo("");
+    setCaloriesDelta("");
   };
 
   const sorted = useMemo(() => {
@@ -1490,12 +1499,33 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
     setName((m as any).name || "");
     setGroup(((m as any).group || "PREF") as any);
     setIsActive(!!(m as any).isActive);
+    setSwapFrom((m as any).swapFrom || "");
+    setSwapTo((m as any).swapTo || "");
+    setCaloriesDelta(
+      typeof (m as any).caloriesDelta === "number" ? String((m as any).caloriesDelta) : "",
+    );
     setIsOpen(true);
   };
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: any = { name, group, isActive };
+    const isSwap = group === "SWAP";
+    // الاسم في الاستبدال يُشتقّ تلقائياً من «من ← إلى» ليظهر موحّداً للشيف وعلى الاستيكر
+    const finalName = isSwap ? `${swapFrom.trim()} → ${swapTo.trim()}` : name;
+    if (isSwap && (!swapFrom.trim() || !swapTo.trim())) {
+      void alertDialog({
+        message: isRtl ? "اكتب المكوّن الأصلي والبديل" : "Enter both the original and the replacement",
+      });
+      return;
+    }
+    const payload: any = {
+      name: finalName,
+      group,
+      isActive,
+      swapFrom: isSwap ? swapFrom.trim() : undefined,
+      swapTo: isSwap ? swapTo.trim() : undefined,
+      caloriesDelta: isSwap ? Number(caloriesDelta) || 0 : undefined,
+    };
 
     try {
       if (editing) {
@@ -1533,6 +1563,7 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
       PREF: [],
       AVOID: [],
       PORTION: [],
+      SWAP: [],
     };
     sorted.forEach((m: any) => {
       const g = m.group || "PREF";
@@ -1547,6 +1578,7 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
     PREF: grouped.PREF.length,
     AVOID: grouped.AVOID.length,
     PORTION: grouped.PORTION.length,
+    SWAP: grouped.SWAP.length,
   };
 
   // Get icon and color for each group
@@ -1558,6 +1590,15 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
         bg: "from-blue-400 to-blue-500",
         lightBg: "bg-blue-50",
         borderColor: "border-blue-200",
+      };
+    }
+    if (g === "SWAP") {
+      return {
+        icon: "⇄",
+        color: "text-[#0E2A4A]",
+        bg: "from-[#1B4670] to-[#0E2A4A]",
+        lightBg: "bg-[#0E2A4A]/5",
+        borderColor: "border-[#0E2A4A]/30",
       };
     }
     if (g === "AVOID") {
@@ -1598,8 +1639,8 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        {(["PREF", "AVOID", "PORTION"] as ModifierGroup[]).map((g) => {
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {(["PREF", "AVOID", "PORTION", "SWAP"] as ModifierGroup[]).map((g) => {
           const style = getGroupStyle(g);
           return (
             <div
@@ -1655,16 +1696,18 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
                 isRtl ? "text-right" : "text-left",
               )}
             >
-              <div className="space-y-2">
-                <Label>{isRtl ? "الاسم" : "Name"}</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className={isRtl ? "text-right" : "text-left"}
-                  placeholder={isRtl ? "مثال: بدون طماطم" : "e.g. No tomato"}
-                />
-              </div>
+              {group !== "SWAP" && (
+                <div className="space-y-2">
+                  <Label>{isRtl ? "الاسم" : "Name"}</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    className={isRtl ? "text-right" : "text-left"}
+                    placeholder={isRtl ? "مثال: بدون طماطم" : "e.g. No tomato"}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label>{isRtl ? "النوع" : "Group"}</Label>
@@ -1688,9 +1731,65 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
                     <SelectItem value="PORTION">
                       {groupLabel("PORTION", isRtl)}
                     </SelectItem>
+                    <SelectItem value="SWAP">
+                      ⇄ {groupLabel("SWAP", isRtl)}
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* ⇄ حقول الاستبدال: من ← إلى + فرق السعرات (يُطبَّق تلقائياً على الاستيكر) */}
+              {group === "SWAP" && (
+                <div className="space-y-3 rounded-xl border-2 border-[#0E2A4A]/30 bg-[#0E2A4A]/5 p-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "المكوّن الأصلي" : "Original"}</Label>
+                      <Input
+                        value={swapFrom}
+                        onChange={(e) => setSwapFrom(e.target.value)}
+                        className={isRtl ? "text-right" : "text-left"}
+                        placeholder={isRtl ? "مثال: RICE" : "e.g. RICE"}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>{isRtl ? "البديل" : "Replacement"}</Label>
+                      <Input
+                        value={swapTo}
+                        onChange={(e) => setSwapTo(e.target.value)}
+                        className={isRtl ? "text-right" : "text-left"}
+                        placeholder={isRtl ? "مثال: MASHED POTATO" : "e.g. MASHED POTATO"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>
+                      {isRtl ? "فرق السعرات (+ / −)" : "Calories delta (+ / −)"}
+                    </Label>
+                    <Input
+                      type="number"
+                      value={caloriesDelta}
+                      onChange={(e) => setCaloriesDelta(e.target.value)}
+                      className={isRtl ? "text-right" : "text-left"}
+                      placeholder="0"
+                    />
+                    <p className="text-[11px] text-gray-600 leading-relaxed">
+                      {isRtl
+                        ? "يُضاف/يُطرح تلقائياً من سعرات الوجبة على الاستيكر، والماكروز تتوزّع بنفس النسبة. أي تعديل يدوي للسعرات على الاستيكر يظلّ هو الأقوى."
+                        : "Applied automatically to the sticker calories; macros scale with it. A manual per-sticker override still wins."}
+                    </p>
+                  </div>
+
+                  {(swapFrom.trim() || swapTo.trim()) && (
+                    <div className="rounded-lg bg-[#0E2A4A] px-3 py-2 text-white text-sm font-black text-center">
+                      ⇄ {swapFrom.trim() || "…"} → {swapTo.trim() || "…"}
+                      {Number(caloriesDelta)
+                        ? `  (${Number(caloriesDelta) > 0 ? "+" : ""}${Number(caloriesDelta)} CAL)`
+                        : ""}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div
                 className={cn(
@@ -1713,7 +1812,7 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
       </div>
 
       {/* Grouped Modifiers */}
-      {(["AVOID", "PREF", "PORTION"] as ModifierGroup[]).map((g) => {
+      {(["SWAP", "AVOID", "PREF", "PORTION"] as ModifierGroup[]).map((g) => {
         const items = grouped[g];
         if (items.length === 0) return null;
         
@@ -1782,8 +1881,14 @@ function ModifiersTab({ modifiers }: { modifiers: Modifier[] }) {
 
                   <div className="bg-white/80 rounded-lg p-3 border border-white/50">
                     <p className="font-bold text-gray-900 text-sm sm:text-base">
-                      {m.name}
+                      {g === "SWAP" ? `⇄ ${m.name}` : m.name}
                     </p>
+                    {g === "SWAP" && Number(m.caloriesDelta) !== 0 && (
+                      <p className="mt-1 text-xs font-black text-[#0E2A4A]">
+                        {Number(m.caloriesDelta) > 0 ? "+" : ""}
+                        {Number(m.caloriesDelta)} CAL
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

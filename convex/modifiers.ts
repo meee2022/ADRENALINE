@@ -193,3 +193,52 @@ export const seedDefaults = mutation({
     return { ok: true, inserted: rows.length };
   },
 });
+
+/**
+ * ⇄ قائمة استبدالات جاهزة (idempotent — يضيف الناقص فقط ولا يكرّر).
+ * فرق السعرات تقديري لحصة ~150جم ويُعدَّل يدوياً من شاشة المنيو وقت ما تحب.
+ */
+export const seedSwaps = mutation({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const existing = await ctx.db
+      .query("modifiers")
+      .withIndex("by_group_sort", (q) => q.eq("group", "SWAP"))
+      .collect();
+    const seen = new Set(existing.map((m: any) => String(m.name || "").toUpperCase()));
+
+    const rows: Array<[string, string, number]> = [
+      ["RICE", "MASHED POTATO", -65],
+      ["RICE", "SWEET POTATO", -60],
+      ["RICE", "BAKED POTATO", -55],
+      ["RICE", "PASTA", 0],
+      ["RICE", "QUINOA", -15],
+      ["RICE", "BULGUR", -70],
+      ["RICE", "SALAD", -165],
+      ["RICE", "GRILLED VEGETABLES", -140],
+      ["WHITE RICE", "BROWN RICE", -5],
+      ["PASTA", "MASHED POTATO", -65],
+      ["POTATO", "RICE", 65],
+      ["BREAD", "SWEET POTATO", -30],
+    ];
+
+    let inserted = 0;
+    for (let i = 0; i < rows.length; i++) {
+      const [from, to, delta] = rows[i];
+      const name = `${from} → ${to}`;
+      if (seen.has(name.toUpperCase())) continue;
+      await ctx.db.insert("modifiers", {
+        name,
+        group: "SWAP" as const,
+        isActive: true,
+        sortOrder: 100 + i,
+        swapFrom: from,
+        swapTo: to,
+        caloriesDelta: delta,
+      });
+      inserted++;
+    }
+    return { ok: true, inserted, alreadyThere: existing.length };
+  },
+});
