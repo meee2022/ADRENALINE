@@ -38,6 +38,7 @@ import {
   Landmark,
   Search as SearchIcon,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { LanguageSwitcher } from "../LanguageSwitcher";
 import { NotificationBell } from "../NotificationBell";
@@ -76,6 +77,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   delivery: Truck,
   drivers: UsersIcon,
   audit: ScrollText,
+  clientErrors: AlertTriangle,
   reports: FileText,
   analytics: BarChart3,
   coupons: Tag,

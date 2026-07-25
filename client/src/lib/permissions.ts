@@ -186,6 +186,7 @@ export interface MenuItemDef {
     | "drivers"
     | "driver"
     | "audit"
+    | "clientErrors"
     | "reports"
     | "analytics"
     | "coupons"
@@ -326,6 +327,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/users", iconKey: "users", labelAr: "إدارة الحسابات", labelEn: "User Management",
         roles: ["ADMIN"] },
       { href: "/audit-log", iconKey: "audit", labelAr: "سجل النشاطات", labelEn: "Audit Log",
+        roles: ["ADMIN"] },
+      { href: "/client-errors", iconKey: "clientErrors", labelAr: "أخطاء الواجهة", labelEn: "Client Errors",
         roles: ["ADMIN"] },
       { href: "/settings/restaurant", iconKey: "settings", labelAr: "إعدادات المطعم", labelEn: "Restaurant Settings",
         roles: ["ADMIN"] },

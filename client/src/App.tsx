@@ -51,6 +51,7 @@ const OrdersPending = lazy(() => import("@/pages/OrdersPending"));
 const OrderReviewDetail = lazy(() => import("@/pages/OrderReviewDetail"));
 const RestaurantSettings = lazy(() => import("@/pages/RestaurantSettings"));
 const AuditLog = lazy(() => import("@/pages/AuditLog"));
+const ClientErrors = lazy(() => import("@/pages/ClientErrors"));
 const Reports = lazy(() => import("@/pages/Reports"));
 const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const OrderTracking = lazy(() => import("@/pages/public/OrderTracking"));
@@ -303,6 +304,9 @@ function Router() {
       </Route>
       <Route path="/audit-log">
         <ProtectedRoute component={AuditLog} />
+      </Route>
+      <Route path="/client-errors">
+        <ProtectedRoute component={ClientErrors} />
       </Route>
       <Route path="/reports">
         <ProtectedRoute component={Reports} />
