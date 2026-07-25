@@ -65,7 +65,8 @@ const lineValidator = v.object({
   name: v.string(),                      // اسم الصنف كما في الفاتورة
   nameAr: v.optional(v.string()),
   supplierSku: v.optional(v.string()),
-  quantity: v.number(),
+  // الكمية اختيارية: بناء الكتالوج لا يحتاجها — الأرصدة تُدخَل لاحقاً عند التشغيل
+  quantity: v.optional(v.number()),
   unit: v.string(),                      // وحدة الفاتورة
   unitPrice: v.number(),                 // سعر وحدة الشراء
   lineTotal: v.optional(v.number()),
@@ -258,11 +259,12 @@ export const importInvoice = mutation({
       }
 
       // 4) الرصيد — اختياري
-      if (args.receiveStock && l.quantity > 0) {
+      const qty = Number(l.quantity) || 0;
+      if (args.receiveStock && qty > 0) {
         await ctx.db.insert("inventoryBatches", {
           itemId: item._id,
-          quantityReceived: l.quantity,
-          quantityRemaining: l.quantity,
+          quantityReceived: qty,
+          quantityRemaining: qty,
           unitCost: l.unitPrice,
           supplierId,
           receivedAt: args.invoiceDate,
@@ -271,7 +273,7 @@ export const importInvoice = mutation({
         await ctx.db.insert("inventoryMovements", {
           itemId: item._id,
           type: "receive",
-          quantity: l.quantity,
+          quantity: qty,
           unitCost: l.unitPrice,
           supplierId,
           referenceType: "purchaseInvoice",
@@ -281,7 +283,7 @@ export const importInvoice = mutation({
         });
         const fresh: any = await ctx.db.get(item._id);
         await ctx.db.patch(item._id, {
-          currentStock: Number(fresh.currentStock || 0) + l.quantity,
+          currentStock: Number(fresh.currentStock || 0) + qty,
           updatedAt: now,
         });
         received++;
@@ -290,7 +292,7 @@ export const importInvoice = mutation({
 
     // 5) رأس الفاتورة للمرجع والتدقيق
     const computedTotal = args.lines.reduce(
-      (s, l) => s + (Number(l.lineTotal) || Number(l.quantity) * Number(l.unitPrice)), 0,
+      (s, l) => s + (Number(l.lineTotal) || (Number(l.quantity) || 0) * Number(l.unitPrice)), 0,
     );
     await ctx.db.insert("purchaseInvoices", {
       supplierId,

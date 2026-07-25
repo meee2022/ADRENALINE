@@ -21,19 +21,19 @@ type Line = {
   name: string;
   nameAr: string;
   supplierSku: string;
-  quantity: string;
   unit: string;
   unitPrice: string;
   packSize: string;
 };
 
 const emptyLine = (): Line => ({
-  name: "", nameAr: "", supplierSku: "", quantity: "", unit: "PCS", unitPrice: "", packSize: "",
+  name: "", nameAr: "", supplierSku: "", unit: "PCS", unitPrice: "", packSize: "",
 });
 
 /**
  * لصق أسطر الفاتورة: كل سطر صنف، والأعمدة مفصولة بتاب (نسخ من إكسل) أو بفواصل.
- * الترتيب المتوقّع: الاسم · الكمية · الوحدة · السعر — والباقي اختياري.
+ * الترتيب المتوقّع: الاسم · الوحدة · السعر · العبوة — والباقي اختياري.
+ * لا كمية هنا: الهدف بناء كتالوج الأصناف، والأرصدة تُدخَل لاحقاً عند التشغيل.
  */
 function parsePaste(text: string): Line[] {
   return String(text || "")
@@ -42,8 +42,8 @@ function parsePaste(text: string): Line[] {
     .filter(Boolean)
     .map((row) => {
       const cols = row.split(/\t|\s*[|;]\s*|,(?=\s*\S)/).map((c) => c.trim());
-      const [name = "", quantity = "", unit = "", unitPrice = "", packSize = ""] = cols;
-      return { ...emptyLine(), name, quantity, unit: unit || "PCS", unitPrice, packSize };
+      const [name = "", unit = "", unitPrice = "", packSize = ""] = cols;
+      return { ...emptyLine(), name, unit: unit || "PCS", unitPrice, packSize };
     })
     .filter((l) => l.name);
 }
@@ -69,8 +69,6 @@ export default function InvoiceImport() {
   const [paymentTerms, setPaymentTerms] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
   const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().slice(0, 10));
-  const [total, setTotal] = useState("");
-  const [receiveStock, setReceiveStock] = useState(true);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState("");
   const [lines, setLines] = useState<Line[]>([emptyLine()]);
@@ -113,24 +111,13 @@ export default function InvoiceImport() {
     [supplierName, suppliers],
   );
 
-  const validLines = useMemo(
-    () => lines.filter((l) => l.name.trim() && Number(l.quantity) > 0),
-    [lines],
-  );
+  const validLines = useMemo(() => lines.filter((l) => l.name.trim()), [lines]);
 
   // كم صنف سيُنشأ وكم سيُطابَق — يظهر قبل الحفظ لا بعده
   const newCount = useMemo(
     () => validLines.filter((l) => !knownItemKeys.has(normKey(l.name))).length,
     [validLines, knownItemKeys],
   );
-
-  // مجموع الأسطر — يُقارَن بإجمالي الفاتورة المكتوب فيها لكشف أي سطر ناقص
-  const computed = useMemo(
-    () => validLines.reduce((s, l) => s + Number(l.quantity) * Number(l.unitPrice || 0), 0),
-    [validLines],
-  );
-  const stated = Number(total) || 0;
-  const mismatch = stated > 0 && Math.abs(stated - computed) > 1;
 
   const setLine = (i: number, patch: Partial<Line>) =>
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
@@ -171,13 +158,11 @@ export default function InvoiceImport() {
         receivedBy: receivedBy.trim() || undefined,
         dueDate: dueDate || undefined,
         paymentTerms: paymentTerms.trim() || undefined,
-        total: stated || undefined,
-        receiveStock,
+        receiveStock: false, // بناء كتالوج فقط — لا تتحرّك أرصدة
         lines: validLines.map((l) => ({
           name: l.name.trim(),
           nameAr: l.nameAr.trim() || undefined,
           supplierSku: l.supplierSku.trim() || undefined,
-          quantity: Number(l.quantity),
           unit: l.unit.trim() || "PCS",
           unitPrice: Number(l.unitPrice) || 0,
           packSize: l.packSize.trim() || undefined,
@@ -193,7 +178,7 @@ export default function InvoiceImport() {
           ? `تم. ${res.itemsCreated} صنف جديد، ${res.itemsMatched} صنف موجود، ${res.linksCreated + res.linksUpdated} ربط بالمورّد${res.received ? `، و${res.received} سطر دخل المخزن` : ""}.`
           : `Done. ${res.itemsCreated} new items, ${res.itemsMatched} matched, ${res.linksCreated + res.linksUpdated} supplier links${res.received ? `, ${res.received} lines received` : ""}.`,
       });
-      setInvoiceNo(""); setTotal(""); setLines([emptyLine()]);
+      setInvoiceNo(""); setLines([emptyLine()]);
       setLpoNo(""); setDeliveryNo(""); setReceivedBy("");
     } catch (e: any) {
       void alertDialog({ message: e?.message || (isRtl ? "تعذّر الاستيراد" : "Import failed") });
@@ -335,11 +320,11 @@ export default function InvoiceImport() {
           <div className="p-3 border-b border-slate-200 bg-[#0E76AC]/5 space-y-2">
             <p className="text-[11px] text-slate-600 font-bold">
               {isRtl
-                ? "سطر لكل صنف بالترتيب: الاسم · الكمية · الوحدة · السعر · العبوة — مفصولة بتاب أو فاصلة."
-                : "One line per item: name · qty · unit · price · pack — separated by tab or comma."}
+                ? "سطر لكل صنف بالترتيب: الاسم · الوحدة · السعر · العبوة — مفصولة بتاب أو فاصلة."
+                : "One line per item: name · unit · price · pack — separated by tab or comma."}
             </p>
             <Textarea rows={6} value={paste} onChange={(e) => setPaste(e.target.value)} dir="ltr"
-              placeholder={"EGG QATARI 1 X 30 X 12, 1, CTN, 210\nTURMERIC POWDER 88, 2, KG, 15"} />
+              placeholder={"EGG QATARI 1 X 30 X 12, CTN, 210\nTURMERIC POWDER 88, KG, 15"} />
             <Button size="sm" onClick={applyPaste}>{isRtl ? "حوّلها لأسطر" : "Convert to rows"}</Button>
           </div>
         )}
@@ -362,10 +347,9 @@ export default function InvoiceImport() {
                 <th className={cn(th, "text-start min-w-[220px]")}>{isRtl ? "الصنف (كما في الفاتورة)" : "Item"}</th>
                 <th className={cn(th, "text-start min-w-[150px]")}>{isRtl ? "الاسم بالعربي" : "Arabic name"}</th>
                 <th className={cn(th, "text-start w-24")}>{isRtl ? "كود المورّد" : "SKU"}</th>
-                <th className={cn(th, "text-center w-20")}>{isRtl ? "الكمية" : "Qty"}</th>
                 <th className={cn(th, "text-center w-20")}>{isRtl ? "الوحدة" : "Unit"}</th>
-                <th className={cn(th, "text-center w-24")}>{isRtl ? "السعر" : "Price"}</th>
-                <th className={cn(th, "text-center w-24")}>{isRtl ? "الإجمالي" : "Total"}</th>
+                <th className={cn(th, "text-center w-28")}>{isRtl ? "آخر سعر" : "Last price"}</th>
+                <th className={cn(th, "text-start w-32")}>{isRtl ? "العبوة" : "Pack"}</th>
                 <th className="w-10" />
               </tr>
             </thead>
@@ -400,17 +384,15 @@ export default function InvoiceImport() {
                     <Input dir="ltr" className="h-9" value={l.supplierSku} onChange={(e) => setLine(i, { supplierSku: e.target.value })} />
                   </td>
                   <td className="px-2 py-1.5">
-                    <Input dir="ltr" className="h-9 text-center" value={l.quantity} onChange={(e) => setLine(i, { quantity: e.target.value })} />
-                  </td>
-                  <td className="px-2 py-1.5">
                     <Input dir="ltr" list="unit-options" className="h-9 text-center" value={l.unit}
                       onChange={(e) => setLine(i, { unit: e.target.value })} />
                   </td>
                   <td className="px-2 py-1.5">
                     <Input dir="ltr" className="h-9 text-center" value={l.unitPrice} onChange={(e) => setLine(i, { unitPrice: e.target.value })} />
                   </td>
-                  <td className="px-2 py-1.5 text-center font-black text-slate-700 tabular-nums">
-                    {(Number(l.quantity) * Number(l.unitPrice || 0) || 0).toFixed(2)}
+                  <td className="px-2 py-1.5">
+                    <Input dir="ltr" className="h-9" value={l.packSize}
+                      onChange={(e) => setLine(i, { packSize: e.target.value })} placeholder="24*400GM" />
                   </td>
                   <td className="px-1">
                     <button onClick={() => setLines((p) => p.filter((_, idx) => idx !== i))}
@@ -425,34 +407,16 @@ export default function InvoiceImport() {
         </div>
 
         <div className="p-3 border-t border-slate-200 bg-slate-50 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="space-y-1">
-              <Label className="text-[11px]">{isRtl ? "إجمالي الفاتورة (للمطابقة)" : "Stated total"}</Label>
-              <Input dir="ltr" className="h-9 w-32" value={total} onChange={(e) => setTotal(e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="text-sm">
-              <p className="text-[11px] text-slate-500 font-bold">{isRtl ? "مجموع الأسطر" : "Lines total"}</p>
-              <p className={cn("font-black tabular-nums", mismatch ? "text-red-600" : "text-slate-700")}>
-                {computed.toFixed(2)} QAR
-              </p>
-            </div>
-            {mismatch && (
-              <p className="text-[11px] font-black text-red-600 max-w-[220px]">
-                {isRtl ? `فرق ${Math.abs(stated - computed).toFixed(2)} — راجع الأسطر قبل الحفظ` : `Off by ${Math.abs(stated - computed).toFixed(2)} — check the lines`}
-              </p>
-            )}
-          </div>
+          <p className="text-[11px] text-slate-600 font-bold max-w-md leading-relaxed">
+            {isRtl
+              ? "بناء كتالوج فقط — لا تُسجَّل كميات ولا تتحرّك أرصدة. الأرصدة تُدخَل لاحقاً من صفحة المخزون عند بدء التشغيل."
+              : "Catalogue only — no quantities recorded, no stock moved. Balances are entered later from Inventory."}
+          </p>
 
-          <div className="flex items-center gap-3">
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-              <input type="checkbox" checked={receiveStock} onChange={(e) => setReceiveStock(e.target.checked)} className="h-4 w-4" />
-              {isRtl ? "أدخل الكميات للمخزن" : "Receive into stock"}
-            </label>
-            <Button onClick={submit} disabled={busy || !validLines.length} className="bg-[#0E76AC] hover:bg-[#0b5f8c]">
-              <Check className={cn("h-4 w-4", isRtl ? "ml-1.5" : "mr-1.5")} />
-              {busy ? (isRtl ? "جارٍ…" : "Working…") : (isRtl ? "استيراد الفاتورة" : "Import invoice")}
-            </Button>
-          </div>
+          <Button onClick={submit} disabled={busy || !validLines.length} className="bg-[#0E76AC] hover:bg-[#0b5f8c]">
+            <Check className={cn("h-4 w-4", isRtl ? "ml-1.5" : "mr-1.5")} />
+            {busy ? (isRtl ? "جارٍ…" : "Working…") : (isRtl ? "حفظ الأصناف" : "Save items")}
+          </Button>
         </div>
       </div>
 
