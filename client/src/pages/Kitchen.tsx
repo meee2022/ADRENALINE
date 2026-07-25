@@ -457,11 +457,15 @@ export default function Kitchen() {
           // ✅ اجمع كل مصادر التعديل: item + بيانات العميل + المُعدِّلات المختارة (بالاسم)
           const { av, pr, po, sw } = resolveMods(item.modifierIds);
           // ✅ دمج بدون تكرار على مستوى العنصر: "MUSHROOM ,BROCOLI" + "MUSHROOM، BROCOLI" = مرة واحدة
-          const joinUniq = (arr: (string | undefined)[]) => {
+          // stripNo: الكشف بيضيف بادئة "/NO " بنفسه، ومصادر الممنوعات (نص العميل
+          // والمُعدِّلات) أغلبها مكتوب أصلاً "NO SEAFOOD" — فبدون التنظيف ده يطلع
+          // "/NO NO SEAFOOD". يُطبَّق على الممنوعات فقط، عرضاً بلا تعديل الداتا.
+          const joinUniq = (arr: (string | undefined)[], stripNo = false) => {
             const seen = new Set<string>();
             const out: string[] = [];
             arr.flatMap((x) => String(x || "").split(/[,،]/)).forEach((tok) => {
-              const t = tok.replace(/\s+/g, " ").trim();
+              let t = tok.replace(/\s+/g, " ").trim();
+              if (stripNo) t = t.replace(/^(?:no|بدون)\s+/i, "").trim();
               const k = t.toUpperCase();
               if (t && !seen.has(k)) { seen.add(k); out.push(t); }
             });
@@ -477,7 +481,7 @@ export default function Kitchen() {
             proteinGrams: (customer as any)?.proteinGrams,
             mainMealCalories: (customer as any)?.mainMealCalories,
             allergies: joinUniq([customer?.allergies]),
-            avoid: joinUniq([item.avoid, custAvoidForMeal, ...av, ...nameMods.map((m: string) => m.replace(/^NO\s+/i, ""))]),
+            avoid: joinUniq([item.avoid, custAvoidForMeal, ...av, ...nameMods], true),
             preferences: joinUniq([item.preferences, customer?.preferences, ...pr]),
             portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
