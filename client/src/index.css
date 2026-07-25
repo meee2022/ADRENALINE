@@ -798,63 +798,106 @@
 }
 
 .plans-sticky-header {
-  padding-block: 0.75rem !important;
-  /* أفتح وأنظف (زي صفحة المخصّصة) — أبيض بنص غامق بدل الكحلي التقيل */
-  background: rgba(255, 255, 255, 0.92) !important;
-  border-color: #e6eef5 !important;
+  padding-block: 0.7rem !important;
+  /* لمسة لون من الهوية أعلى الشريط بدل الأبيض المسطّح، مع حدّ سفلي واضح يفصله عن المحتوى */
+  background:
+    linear-gradient(180deg, rgba(60, 196, 240, 0.10) 0, rgba(255, 255, 255, 0) 34px),
+    rgba(255, 255, 255, 0.96) !important;
+  border-bottom: 1px solid #d7e6f0 !important;
   backdrop-filter: blur(14px);
-  box-shadow: 0 6px 18px -10px rgba(14, 42, 74, 0.18) !important;
+  box-shadow: 0 8px 20px -14px rgba(14, 42, 74, 0.34) !important;
 }
 
 .plans-header-inner {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   min-height: 44px;
+  align-items: center;
 }
 
 .plans-header-title {
   position: static !important;
   transform: none !important;
   justify-self: center;
+  gap: 0.5rem !important;
 }
 
 .plans-header-inner > :last-child {
   justify-self: end;
 }
 
-.plans-sticky-header h1,
-.plans-sticky-header .plans-header-inner button {
+/* العنوان: هو مرساة الشريط — أغمق وأثقل من كل ما حوله */
+.plans-sticky-header h1 {
   color: #0E2A4A !important;
+  font-weight: 900 !important;
+  font-size: 1.02rem !important;
+  letter-spacing: -0.01em;
 }
 
-.plans-sticky-header .plans-header-inner button > span {
-  color: #0E76AC !important;
+/* التنقّل بين الأيام: عنصر تحكّم واحد مؤطّر، لا ثلاثة أزرار سايبة */
+.plans-date-nav {
+  border: 1px solid #d7e6f0;
+  background: #f7fbfe;
+  border-radius: 12px;
+  padding: 2px;
+  gap: 0 !important;
+}
+
+.plans-date-nav > button {
+  color: #47759c !important;
+  border-radius: 10px !important;
+}
+
+.plans-date-nav > button:hover {
+  background: #e6f2fa !important;
+  color: #0E2A4A !important;
 }
 
 .plans-sticky-header .plans-date-label {
   color: #0E2A4A !important;
+  font-weight: 800 !important;
   text-shadow: none;
 }
 
-.plans-sticky-header .plans-header-inner button > .plans-date-badge {
-  color: #073b59 !important;
-  background: #7ce0fa !important;
-  border: 1px solid rgba(255, 255, 255, 0.42) !important;
+/* شارة «توصيل غدًا»: تلميح هادئ لا نيون يسحب العين من العنوان */
+.plans-sticky-header .plans-date-badge {
+  color: #0b5f88 !important;
+  background: #ddf1fb !important;
+  border: 1px solid #b7dff2 !important;
+  line-height: 1.5;
 }
 
-.plans-sticky-header .plans-header-inner button:hover {
-  background: #eef4f9 !important;
+/* شارة دورة المطبخ: معلومة حالة — كحلي على خلفية فاتحة بحدّ واضح */
+.plans-rotation-chip {
+  color: #0E2A4A !important;
+  background: #eaf4fb !important;
+  border: 1px solid #c3ddee !important;
+  border-radius: 999px !important;
+  padding: 0.25rem 0.6rem !important;
+  white-space: nowrap;
 }
 
-.plans-sticky-header .plans-header-inner svg {
+.plans-rotation-chip svg {
   color: #0E76AC !important;
 }
 
-.plans-sticky-header .plans-header-title > span,
-.plans-sticky-header .plans-header-inner button span[style]:not(.plans-date-badge) {
-  color: #0E2A4A !important;
-  background: rgba(14, 118, 172, 0.08) !important;
-  border-color: #cfe4f3 !important;
+/* زر المراجعة: الإجراء الأساسي — ممتلئ ليُقرأ كزر لا كنص باهت */
+.plans-review-btn {
+  background: #0E76AC !important;
+  color: #fff !important;
+  box-shadow: 0 6px 14px -8px rgba(14, 118, 172, 0.85);
+}
+
+.plans-review-btn svg {
+  color: #fff !important;
+}
+
+.plans-review-btn:hover {
+  background: #0b5f8c !important;
+}
+
+.plans-sticky-header .plans-header-inner svg {
+  color: #0E76AC;
 }
 
 [dir="rtl"] .plans-header-inner > :last-child {

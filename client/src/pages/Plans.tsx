@@ -977,7 +977,7 @@ export default function PlansPage() {
         <div className="plans-header-inner max-w-[1400px] mx-auto flex items-center justify-between gap-3">
 
           {/* Left: date navigation */}
-          <div className="flex items-center gap-1">
+          <div className="plans-date-nav flex items-center gap-1">
             <button
               onClick={() => setDate(d => subDays(d, 1))}
               className="h-8 w-8 rounded-lg flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
@@ -993,8 +993,7 @@ export default function PlansPage() {
                     {format(date, "EEEE، d MMM", { locale: dateLocale })}
                   </span>
                   {(isTomorrowDate || isToday) && (
-                    <span className="plans-date-badge text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap"
-                      style={{ background: "#eaf6fd", color: "#0E76AC" }}>
+                    <span className="plans-date-badge text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap">
                       {isTomorrowDate ? (isRtl ? "توصيل غدًا" : "Tomorrow") : (isRtl ? "اليوم" : "Today")}
                     </span>
                   )}
@@ -1021,8 +1020,7 @@ export default function PlansPage() {
             {/* ✅ دورة المطبخ لهذا اليوم — نفس المنطق اللي يستخدمه العميل والمطبخ */}
             {rotationInfo && (
               <span
-                className="hidden sm:inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-black"
-                style={{ background: "#eaf6fd", color: "#0E76AC", border: "1px solid #bfe6f7" }}
+                className="plans-rotation-chip hidden sm:inline-flex items-center gap-1.5 text-[11px] font-black"
                 title={isRtl
                   ? `المطبخ الآن على أسبوع ${rotationInfo.currentCookingWeek} — في هذا التاريخ سيكون على أسبوع ${rotationInfo.rotationWeek}`
                   : `Kitchen now on week ${rotationInfo.currentCookingWeek} — on this date it will be on week ${rotationInfo.rotationWeek}`}
@@ -1046,8 +1044,7 @@ export default function PlansPage() {
             </button>
             <button
               onClick={() => setLocation(`/plans-review/${formattedDate}`)}
-              className="h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors"
-              style={{ background: "#3cc4f010", color: "#3cc4f0" }}
+              className="plans-review-btn h-8 px-3 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-colors"
             >
               <Eye className="h-3.5 w-3.5" />
               <span>{isRtl ? "مراجعة" : "Review"}</span>
