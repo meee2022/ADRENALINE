@@ -3,7 +3,7 @@ import { api } from "@/../../convex/_generated/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRoute, useLocation } from "wouter";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
@@ -194,6 +194,54 @@ export default function OrderReviewDetail() {
     } catch (e) { console.error("swap failed", e); } finally { setSwapping(false); }
   };
 
+  /* ⚠️ كل الـhooks لازم تسبق الـearly return أدناه. كانت targetDates (useMemo)
+     و conflicts (useQuery) تحته، فيتغيّر عدد الـhooks بين لحظة التحميل ولحظة
+     وصول الطلب → React #310 وانهيار الصفحة على الأخصائية أثناء المراجعة. */
+  const startISOForSlots = startDate ? localISO(startDate) : undefined;
+  const startRotForSlots = Number(rotationInfo?.rotationWeek) || 1;
+  const dateForSlot = useCallback(
+    (week: number, day: string): string | null =>
+      startISOForSlots ? slotToDate(startISOForSlots, startRotForSlots, week, day) : null,
+    [startISOForSlots, startRotForSlots],
+  );
+
+  // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الخميس)
+  //    ⚠️ كان الخميس ناقصاً من الجدول (يأخذ 99 فيُرمى آخر الترتيب دائماً)
+  const dayOrder: Record<string, number> = {
+    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5,
+  };
+  const allWeekDayKeys: string[] = useMemo(() => {
+    const its = (orderData?.items || []) as any[];
+    return Array.from(new Set(its.map((i: any) => `${i.week}-${i.day}`))).sort((a, b) => {
+      const [wa, da] = a.split("-");
+      const [wb, db] = b.split("-");
+      const weekDiff = Number(wa) - Number(wb);
+      if (weekDiff !== 0) return weekDiff;
+      return (dayOrder[da] ?? 99) - (dayOrder[db] ?? 99);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderData]);
+
+  // ⚠️ خطط قائمة للعميل في تواريخ هذا الطلب — الاعتماد سيستبدلها (لا يتعايش
+  //    خطتان لنفس اليوم وإلا تضاعف الأكل). نعرضها للأخصائية قبل الضغط.
+  const targetDates = useMemo(
+    () => Array.from(new Set(allWeekDayKeys
+      .map((k) => {
+        const [w, d] = k.split("-");
+        return dateOverrides[k] ? localISO(dateOverrides[k]!) : dateForSlot(Number(w), d);
+      })
+      .filter(Boolean) as string[])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allWeekDayKeys.join("|"), dateOverrides, dateForSlot],
+  );
+  const linkedCustomerId = (selectedCustomerId || (orderData as any)?.customerId) as Id<"customers"> | undefined;
+  const conflicts = useQuery(
+    api.customerOrders.plansToBeReplaced,
+    linkedCustomerId && targetDates.length
+      ? { customerId: linkedCustomerId, dates: targetDates, sessionToken }
+      : "skip",
+  ) as { total: number; manual: number; rows: any[] } | undefined;
+
   if (!orderData) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -231,11 +279,6 @@ export default function OrderReviewDetail() {
   // 🔗 تاريخ كل صنف من **المصدر الوحيد** (lib/subscription.slotToDate) — نفس ما
   //    يراه العميل في المنيو وما ينفّذه الاعتماد. يبدأ من أول يوم توصيل فعلي
   //    (بكرة لو اليوم انقضى)، يتخطّى الجمعة، والاسم يطابق التاريخ.
-  const startISOForSlots = startDate ? localISO(startDate) : undefined;
-  const startRotForSlots = Number(rotationInfo?.rotationWeek) || 1;
-  const dateForSlot = (week: number, day: string): string | null =>
-    startISOForSlots ? slotToDate(startISOForSlots, startRotForSlots, week, day) : null;
-
   // ⚠️ نرتّب الأسابيع **زمنياً** بأول تاريخ لكل أسبوع، لا برقم الدورة. دورات
   //    العميل قد تلفّ [2,3,4,1]، فترتيبها الرقمي يعرض دورة 1 (آخر أسبوع للعميل)
   //    أولاً — وهو ما جعل المراجعة تبدأ من السبت بينما المنيو من الأحد.
@@ -247,11 +290,6 @@ export default function OrderReviewDetail() {
       return da < db ? -1 : da > db ? 1 : a - b;
     });
 
-  // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الخميس)
-  //    ⚠️ كان الخميس ناقصاً من الجدول (يأخذ 99 فيُرمى آخر الترتيب دائماً)
-  const dayOrder: Record<string, number> = {
-    saturday: 0, sunday: 1, monday: 2, tuesday: 3, wednesday: 4, thursday: 5,
-  };
   /** ترتيب أيام أسبوع واحد **بتاريخ التوصيل الفعلي** (fallback: ترتيب الأسبوع الثابت).
    *  Object.keys بلا ترتيب كان يعرضها بترتيب اختيار العميل — فطلب اختار 29 ثم 25
    *  يعرض الأربعاء قبل السبت واللخبطة اللي اشتكى منها المستخدم. */
@@ -261,36 +299,6 @@ export default function OrderReviewDetail() {
       if (da && db && da !== db) return da < db ? -1 : 1;
       return (dayOrder[a] ?? 99) - (dayOrder[b] ?? 99);
     });
-  const allWeekDayKeys: string[] = Array.from(
-    new Set(items.map((i) => `${i.week}-${i.day}`))
-  ).sort((a, b) => {
-    const [wa, da] = a.split("-");
-    const [wb, db] = b.split("-");
-    const weekDiff = Number(wa) - Number(wb);
-    if (weekDiff !== 0) return weekDiff;
-    return (dayOrder[da] ?? 99) - (dayOrder[db] ?? 99);
-  });
-
-  // ⚠️ خطط قائمة للعميل في تواريخ هذا الطلب — الاعتماد سيستبدلها (لا يتعايش
-  //    خطتان لنفس اليوم وإلا تضاعف الأكل). نعرضها للأخصائية قبل الضغط.
-  const targetDates = useMemo(
-    () => Array.from(new Set(allWeekDayKeys
-      .map((k) => {
-        const [w, d] = k.split("-");
-        return dateOverrides[k] ? localISO(dateOverrides[k]!) : dateForSlot(Number(w), d);
-      })
-      .filter(Boolean) as string[])),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allWeekDayKeys.join("|"), dateOverrides, startISOForSlots, startRotForSlots],
-  );
-  const linkedCustomerId = (selectedCustomerId || (orderData as any)?.customerId) as Id<"customers"> | undefined;
-  const conflicts = useQuery(
-    api.customerOrders.plansToBeReplaced,
-    linkedCustomerId && targetDates.length
-      ? { customerId: linkedCustomerId, dates: targetDates, sessionToken }
-      : "skip",
-  ) as { total: number; manual: number; rows: any[] } | undefined;
-
   const handleApprove = async () => {
     if (!orderId) return;
 

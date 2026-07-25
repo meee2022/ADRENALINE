@@ -1488,6 +1488,49 @@ export default defineSchema({
     at: v.number(),
   }).index("by_at", ["at"]),
 
+  /**
+   * العُهد النقدية: كل موظف يأخذ سلفة نقدية ويصرف منها مصاريف تشغيل
+   * (بنزين، تصليح، نثريات) ثم يُسوّى الرصيد. كل حركة تُرحَّل قيداً مزدوجاً
+   * على حساب «عُهد نقدية لدى الموظفين» (1115) فلا تضيع فلوس خارج الدفاتر.
+   */
+  pettyCashTxns: defineTable({
+    holderId: v.id("users"),
+    holderName: v.string(),                  // مخزّن للعرض السريع دون قراءة المستخدم
+    date: v.string(),                        // yyyy-MM-dd
+    type: v.union(
+      v.literal("ADVANCE"),                  // صرف سلفة للموظف
+      v.literal("EXPENSE"),                  // مصروف صرفه الموظف من العهدة
+      v.literal("RETURN"),                   // إرجاع باقي الكاش للخزنة
+    ),
+    amount: v.number(),
+    expenseAccountCode: v.optional(v.string()), // 6160 بنزين / 6190 صيانة …
+    description: v.optional(v.string()),
+    receiptNo: v.optional(v.string()),
+    costCenterId: v.optional(v.id("finCostCenters")),
+    journalEntryId: v.optional(v.id("finJournalEntries")),
+    createdBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_holder", ["holderId"])
+    .index("by_date", ["date"])
+    .index("by_holder_date", ["holderId", "date"]),
+
+  /** جرد الفكة: الكاش المعدود فعلياً مقابل الرصيد الدفتري، لكشف أي عجز. */
+  pettyCashCounts: defineTable({
+    holderId: v.id("users"),
+    holderName: v.string(),
+    date: v.string(),
+    denominations: v.any(),                  // { "500": 0, "200": 1, … }
+    countedTotal: v.number(),
+    bookBalance: v.number(),                 // الرصيد الدفتري وقت الجرد
+    variance: v.number(),                    // معدود − دفتري (سالب = عجز)
+    notes: v.optional(v.string()),
+    countedBy: v.optional(v.id("users")),
+    createdAt: v.number(),
+  })
+    .index("by_holder", ["holderId"])
+    .index("by_date", ["date"]),
+
   // عدّادات أرقام المستندات المالية (قيود/سندات).
   finCounters: defineTable({
     key: v.string(),                           // "journal" | "receipt" | "payment"

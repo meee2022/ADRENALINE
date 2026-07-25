@@ -30,6 +30,7 @@ const CHART: Acc[] = [
   { code: "11", nameAr: "الأصول المتداولة", nameEn: "Current Assets", type: "asset", postable: false, parent: "1" },
   { code: "1110", nameAr: "الصندوق (كاش)", nameEn: "Cash on Hand", type: "asset", sub: "cash", op: "cash", parent: "11" },
   { code: "1111", nameAr: "درج الكاشير", nameEn: "POS Cash Drawer", type: "asset", sub: "cash", op: "cash", parent: "11" },
+  { code: "1115", nameAr: "عُهد نقدية لدى الموظفين", nameEn: "Staff Cash Advances", type: "asset", sub: "cash", op: "cash", parent: "11" },
   { code: "1120", nameAr: "البنك", nameEn: "Bank Accounts", type: "asset", sub: "bank", op: "bank", parent: "11" },
   { code: "1130", nameAr: "شبكة/بطاقات تحت التحصيل", nameEn: "Card Settlements Receivable", type: "asset", sub: "receivable", op: "trade_receivable", parent: "11" },
   { code: "1140", nameAr: "منصّات التوصيل تحت التحصيل", nameEn: "Delivery Platforms Receivable", type: "asset", sub: "receivable", op: "trade_receivable", parent: "11" },
