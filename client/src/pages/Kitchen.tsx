@@ -86,15 +86,6 @@ const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: b
   return o ? (isRtl ? o.ar : o.en) : name;
 };
 
-// ✅ الأصناف القياسية (سلطة/سناك/شوربة/حلو) — تُطبخ عادي حتى للمخصّصين وتُحسب في الإجمالي (زي الإكسيل)
-// نعتبر أي صنف ليس "رئيسي" (أي ليس غداء أو عشاء أو وجبة رئيسية) كصنف جانبي قياسي يتم تجميعه تلقائياً
-const isStdSideName = (nm: string) => {
-  const u = String(nm || "").toUpperCase();
-  // إذا كان اسم الوجبة أو تصنيفها يحتوي على الكلمات المفتاحية للوجبات الرئيسية، فهو ليس طبقاً جانبياً
-  const isMain = u.includes("LUNCH") || u.includes("DINNER") || u.includes("BEEF") || u.includes("CHICKEN") || u.includes("SALMON") || u.includes("SHRIMP") || u.includes("STEAK") || u.includes("FISH") || u.includes("KOFTA") || u.includes("BURGER") || u.includes("PASTA") || u.includes("NOODLES") || u.includes("BIRYANI") || u.includes("MAJBOUS") || u.includes("STROGANOF") || u.includes("ALFREDO");
-  return !isMain;
-};
-
 // ✅ فلترة الممنوعات حسب الطبق: الممنوع القاطع (سمك/لحمة/فراخ/رومي) يُطبَّق فقط على الأطباق التي
 //    يخصّها اسمها؛ الطبق الغامض البروتين لا يُتخطّى أبداً (أماناً). الممنوعات الدقيقة (طماطم/بصل/فطر…)
 //    تبقى مطبّقة دائماً لأننا لا نملك مكوّنات كل طبق. تُطبَّق على "الممنوعات" فقط — الحساسية تظل دائماً.
@@ -283,9 +274,6 @@ export default function Kitchen() {
     // خريطة وجبات المنيو العام بالمعرّف — لحل اسم الطبق (وبالإنجليزي في وضع الإنجليزي)
     const pubById = new Map<string, any>();
     (publicMealsList || []).forEach((m: any) => { if (m?._id) pubById.set(String(m._id), m); });
-
-    // ✅ الأصناف القياسية (سلطة/سناك/شوربة/حلو) التي تُطبخ عادي حتى للمخصّصين → تُحسب في الإجمالي
-    const isStandardSide = isStdSideName;
 
     const summary: Record<string, {
       count: number;
@@ -566,7 +554,7 @@ export default function Kitchen() {
     );
     // 🔀 من بُني له قالب مصدره القالب — نستبعد خطته اليومية القديمة هنا
     const tplNames = new Set((customized || []).map((c: any) => c.customerName));
-    const byPerson: Record<string, { name: string; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string }> }> = {};
+    const byPerson: Record<string, { name: string; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string; type: string }> }> = {};
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
       const program = (customer?.program || plan.program || "").toUpperCase();
@@ -583,7 +571,13 @@ export default function Kitchen() {
       getEffectivePlanItems(plan).filter((it: any) => !it.isOff).forEach((item: any) => {
         const mealName = mealNameInLang(item.publicMealId || item.mealId || item.menuItemId, item);
         const note = String(item.specialNotes || "").trim(); // ملاحظة خاصة بالوجبة فقط
-        byPerson[key].items.push({ meal: mealName, note });
+        // ✅ تصنيف البند كما هو مسجّل في الخطة — هو الفيصل بين «وجبة رئيسية تُحسب»
+        //    و«صنف قياسي يُطوى في الإجمالي». بدونه كنا نخمّن من الاسم فتضيع وجبات.
+        const cat = String(item.category || "").toUpperCase();
+        const type = /LUNCH|DINNER|MAIN|غداء|عشاء|رئيس/.test(cat) ? "MAIN"
+          : /SNACK|SALAD|SOUP|DESSERT|SIDE|سناك|سلط|شورب|حلو|جانب/.test(cat) ? "SNACK"
+          : "";
+        byPerson[key].items.push({ meal: mealName, note, type });
       });
     });
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
@@ -600,13 +594,40 @@ export default function Kitchen() {
   const customizedAll = useMemo(() => {
     const list: { name: string; deliveryTime: string; allergies: string; meals: CustMeal[] }[] = [];
     const seen = new Set<string>();
+    // أسماء الأصناف القياسية غير الرئيسية كما هي في المنيو — مصدر الحقيقة للطيّ في الإجمالي
+    const normName = (x: string) =>
+      String(x || "").toUpperCase().replace(/[‏‎]/g, "").replace(/\s+/g, " ").trim();
+    const isMainCatName = (cat: string) => {
+      const u = String(cat || "").toUpperCase();
+      return u.includes("LUNCH") || u.includes("غداء") || u.includes("DINNER")
+        || u.includes("عشاء") || u.includes("MAIN") || u.includes("رئيس");
+    };
+    const stdSideNameSet = new Set<string>();
+    (publicMealsList || []).forEach((m: any) => {
+      const cat = String(m?.category || m?.categoryName || "");
+      if (isMainCatName(cat)) return;
+      [m?.nameEn, m?.name, m?.nameAr].forEach((n: any) => {
+        const k = normName(n);
+        if (k) stdSideNameSet.add(k);
+      });
+    });
     // ✅ الأصناف القياسية = السناكات/السلطات/الشوربات/الحلو (النوع SNACK أو اسم قياسي معروف).
     //    تُطبخ عادي وتُحسب مع الإجمالي، فتُعرض بكمية مظلّلة (•) لا «1».
     const asMeal = (text: string, type?: any): CustMeal | null => {
       const t = String(text || "").trim();
       if (!t) return null;
       const notset = /NOT SET|لم تُحدَّد/i.test(t);
-      const isSide = !notset && (String(type || "").toUpperCase() === "SNACK" || isStdSideName(t));
+      // ✅ القرار بالدليل لا بالتخمين:
+      //    1) القوالب والخطط بتحمل نوعاً صريحاً (MAIN / SNACK) → يُحترم كما هو.
+      //    2) لو النوع غايب (سجلات قديمة) → نطويه في الإجمالي فقط لو اسمه يطابق
+      //       فعلاً صنفاً قياسياً موجوداً في المنيو (سلطة/سناك واحدة للجميع).
+      //    غير كده يُحسب وجبة مستقلة بـ«1» — أأمن من إخفاء أكل عن المطبخ.
+      const explicit = String(type || "").toUpperCase();
+      const isSide = !notset && (
+        explicit === "SNACK" ? true
+        : explicit === "MAIN" ? false
+        : stdSideNameSet.has(normName(t))
+      );
       return { text: t, isSide, notset };
     };
     // 1) القوالب أولاً — المصدر المعتمد
@@ -627,7 +648,7 @@ export default function Kitchen() {
       });
     }
     return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));
-  }, [customizedByPerson, customized]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [customizedByPerson, customized, publicMealsList]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ رقم البوكس = **نفس رقم استيكر البوكس بالضبط** (المصدر الوحيد convex/stickers)
   //    حتى يطابق الكشفُ الستيكرَ الفيزيائي، فيعرف المطبخ بوكس كل مشترك. deliveryTime
