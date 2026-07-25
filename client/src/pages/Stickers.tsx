@@ -743,7 +743,10 @@ export default function Stickers() {
         .label {
           width: var(--label-w);
           height: var(--label-h);
-          padding: 0.3mm 2.5mm 1.2mm;
+          /* ⬆️ هامش سفلي أوسع: سطر التواريخ كان يلامس حافة الاستيكر عند الطباعة.
+             content-center (flex:1 + overflow:hidden) يمتصّ الفرق، فلا يركب شيء
+             على شيء. مقيس: أضيق استيكر يملك 8.7px فراغاً، ونأخذ ~4.9px فقط. */
+          padding: 0.3mm 2.5mm 2.5mm;
           border: 0.5px solid #000;
           border-radius: 1.5mm;
           background: #fff;
