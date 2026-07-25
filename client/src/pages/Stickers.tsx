@@ -1257,15 +1257,17 @@ function MealSticker({ s }: any) {
           <div className="date-label">No.</div>
           <div className="date-value cust-num-inline">{s.customerNo}</div>
         </div>
-        <div className="date-divider" />
-        <div className="date-cell">
-          <div className="date-label">EXP</div>
-          <div className="date-value">{s.expDate || s.dateText}</div>
-        </div>
+        {/* ✅ الترتيب المنطقي: تاريخ الإنتاج (البداية) ثم الانتهاء (النهاية) —
+            كان معكوساً (EXP قبل PROD) فيلتبس على من يقرأ الاستيكر. */}
         <div className="date-divider" />
         <div className="date-cell">
           <div className="date-label">PROD</div>
           <div className="date-value">{s.prodDate || s.dateText}</div>
+        </div>
+        <div className="date-divider" />
+        <div className="date-cell">
+          <div className="date-label">EXP</div>
+          <div className="date-value">{s.expDate || s.dateText}</div>
         </div>
       </div>
     </div>
