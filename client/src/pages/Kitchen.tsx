@@ -87,8 +87,13 @@ const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: b
 };
 
 // ✅ الأصناف القياسية (سلطة/سناك/شوربة/حلو) — تُطبخ عادي حتى للمخصّصين وتُحسب في الإجمالي (زي الإكسيل)
-const STD_SIDE_KEYS = ["CRAB SALAD", "LAVA CAKE", "COOKIES", "FRUIT SALAD", "VEGETABLES SOUP", "CINNAMON APPLE", "BROWNIES", "LAZY CAKE", "CEASAR SALAD", "TIRAMISU", "PISTACHIO SALAD", "MUFFIN"];
-const isStdSideName = (nm: string) => { const u = String(nm || "").toUpperCase(); return STD_SIDE_KEYS.some((k) => u.includes(k)); };
+// نعتبر أي صنف ليس "رئيسي" (أي ليس غداء أو عشاء أو وجبة رئيسية) كصنف جانبي قياسي يتم تجميعه تلقائياً
+const isStdSideName = (nm: string) => {
+  const u = String(nm || "").toUpperCase();
+  // إذا كان اسم الوجبة أو تصنيفها يحتوي على الكلمات المفتاحية للوجبات الرئيسية، فهو ليس طبقاً جانبياً
+  const isMain = u.includes("LUNCH") || u.includes("DINNER") || u.includes("BEEF") || u.includes("CHICKEN") || u.includes("SALMON") || u.includes("SHRIMP") || u.includes("STEAK") || u.includes("FISH") || u.includes("KOFTA") || u.includes("BURGER") || u.includes("PASTA") || u.includes("NOODLES") || u.includes("BIRYANI") || u.includes("MAJBOUS") || u.includes("STROGANOF") || u.includes("ALFREDO");
+  return !isMain;
+};
 
 // ✅ فلترة الممنوعات حسب الطبق: الممنوع القاطع (سمك/لحمة/فراخ/رومي) يُطبَّق فقط على الأطباق التي
 //    يخصّها اسمها؛ الطبق الغامض البروتين لا يُتخطّى أبداً (أماناً). الممنوعات الدقيقة (طماطم/بصل/فطر…)
