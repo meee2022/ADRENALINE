@@ -187,6 +187,7 @@ export interface MenuItemDef {
     | "driver"
     | "audit"
     | "clientErrors"
+    | "invoiceImport"
     | "reports"
     | "analytics"
     | "coupons"
@@ -279,6 +280,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     titleEn: "Inventory & Suppliers",
     items: [
       { href: "/inventory", iconKey: "inventory", labelAr: "المخزون", labelEn: "Inventory",
+        roles: ["ADMIN", "INVENTORY_MANAGER"] },
+      { href: "/invoice-import", iconKey: "invoiceImport", labelAr: "استلام فاتورة شراء", labelEn: "Import Invoice",
         roles: ["ADMIN", "INVENTORY_MANAGER"] },
       { href: "/inventory-reports", iconKey: "inventoryReports", labelAr: "تقارير المخزون", labelEn: "Inventory Reports",
         roles: ["ADMIN", "INVENTORY_MANAGER"] },

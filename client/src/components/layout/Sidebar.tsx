@@ -78,6 +78,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   drivers: UsersIcon,
   audit: ScrollText,
   clientErrors: AlertTriangle,
+  invoiceImport: FileText,
   reports: FileText,
   analytics: BarChart3,
   coupons: Tag,

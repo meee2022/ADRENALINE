@@ -77,6 +77,7 @@ import type * as posBranches from "../posBranches.js";
 import type * as posReports from "../posReports.js";
 import type * as publicMeals from "../publicMeals.js";
 import type * as publicPlans from "../publicPlans.js";
+import type * as purchaseInvoices from "../purchaseInvoices.js";
 import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as ratings from "../ratings.js";
@@ -175,6 +176,7 @@ declare const fullApi: ApiFromModules<{
   posReports: typeof posReports;
   publicMeals: typeof publicMeals;
   publicPlans: typeof publicPlans;
+  purchaseInvoices: typeof purchaseInvoices;
   purchaseOrders: typeof purchaseOrders;
   rateLimit: typeof rateLimit;
   ratings: typeof ratings;

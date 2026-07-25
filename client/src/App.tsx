@@ -25,6 +25,7 @@ const InventoryItemDetails = lazy(() => import("@/pages/InventoryItemDetails"));
 const InventoryReports = lazy(() => import("@/pages/InventoryReports"));
 const WasteReport = lazy(() => import("@/pages/WasteReport"));
 const ReceiveGoods = lazy(() => import("@/pages/ReceiveGoods"));
+const InvoiceImport = lazy(() => import("@/pages/InvoiceImport"));
 const InventoryAlerts = lazy(() => import("@/pages/InventoryAlerts"));
 const PurchaseOrders = lazy(() => import("@/pages/PurchaseOrders"));
 const StockTake = lazy(() => import("@/pages/StockTake"));
@@ -219,6 +220,9 @@ function Router() {
       </Route>
       <Route path="/inventory/waste">
         <ProtectedRoute component={WasteReport} />
+      </Route>
+      <Route path="/invoice-import">
+        <ProtectedRoute component={InvoiceImport} />
       </Route>
       <Route path="/inventory/receive">
         <ProtectedRoute component={ReceiveGoods} />

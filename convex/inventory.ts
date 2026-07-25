@@ -1073,3 +1073,126 @@ export const getReorderList = query({
     };
   },
 });
+
+/* ════════════════════════════════════════════════════════════════════
+   🗑️ حذف الأصناف
+   الحذف يُرفض افتراضياً لأي صنف له أثر (رصيد/دفعات/حركات/وصفة/أمر شراء)
+   حتى لا تختفي تكلفة أو استهلاك من السجل. force يتخطّى ذلك عن قصد.
+   ════════════════════════════════════════════════════════════════════ */
+
+/** يجمع كل ما يتعلّق بصنف — يُستخدم للمنع وللعرض قبل الحذف. */
+async function itemUsage(ctx: any, itemId: Id<"inventoryItems">) {
+  const [batches, movements, recipes] = await Promise.all([
+    ctx.db.query("inventoryBatches").withIndex("by_itemId", (q: any) => q.eq("itemId", itemId)).collect(),
+    ctx.db.query("inventoryMovements").withIndex("by_itemId", (q: any) => q.eq("itemId", itemId)).collect(),
+    ctx.db.query("mealIngredients").withIndex("by_inventoryItem", (q: any) => q.eq("inventoryItemId", itemId)).collect(),
+  ]);
+  const pos = await ctx.db.query("purchaseOrders").collect();
+  const inPO = pos.filter((p: any) => (p.items || []).some((i: any) => String(i.itemId) === String(itemId)));
+  const item: any = await ctx.db.get(itemId);
+  return {
+    stock: Number(item?.currentStock || 0),
+    batches: batches.length,
+    movements: movements.length,
+    recipes: recipes.length,
+    purchaseOrders: inPO.length,
+    blocked:
+      Number(item?.currentStock || 0) !== 0 ||
+      batches.length > 0 || movements.length > 0 ||
+      recipes.length > 0 || inPO.length > 0,
+    _batches: batches, _movements: movements, _recipes: recipes, _pos: inPO,
+  };
+}
+
+/** ما الذي سيتأثّر لو حذفنا؟ يُعرض للمستخدم قبل أن يؤكّد. */
+export const deletePreview = query({
+  args: { ids: v.optional(v.array(v.id("inventoryItems"))), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const all = await ctx.db.query("inventoryItems").collect();
+    const targets = args.ids?.length
+      ? all.filter((i: any) => args.ids!.some((x) => String(x) === String(i._id)))
+      : all;
+    const rows: any[] = [];
+    for (const it of targets) {
+      const u = await itemUsage(ctx, it._id);
+      rows.push({
+        id: String(it._id), nameAr: it.nameAr, category: it.category, unit: it.unit,
+        stock: u.stock, batches: u.batches, movements: u.movements,
+        recipes: u.recipes, purchaseOrders: u.purchaseOrders, blocked: u.blocked,
+      });
+    }
+    return {
+      total: rows.length,
+      safe: rows.filter((r) => !r.blocked).length,
+      blocked: rows.filter((r) => r.blocked).length,
+      rows,
+    };
+  },
+});
+
+export const deleteItem = mutation({
+  args: {
+    id: v.id("inventoryItems"),
+    force: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken); // 🔒 حذف صنف = قرار مالي
+    const u = await itemUsage(ctx, args.id);
+    if (u.blocked && !args.force) {
+      throw new Error(
+        `لا يمكن حذف الصنف: رصيد ${u.stock}، ${u.batches} دفعة، ${u.movements} حركة، ${u.recipes} وصفة، ${u.purchaseOrders} أمر شراء. استخدم الحذف القسري لو متأكد.`,
+      );
+    }
+    // الحذف القسري ينظّف الأثر كله حتى لا تبقى سجلات معلّقة على صنف غير موجود
+    for (const b of u._batches) await ctx.db.delete(b._id);
+    for (const m of u._movements) await ctx.db.delete(m._id);
+    for (const r of u._recipes) await ctx.db.delete(r._id);
+    for (const p of u._pos) {
+      const kept = (p.items || []).filter((i: any) => String(i.itemId) !== String(args.id));
+      if (kept.length) await ctx.db.patch(p._id, { items: kept });
+      else await ctx.db.delete(p._id);
+    }
+    await ctx.db.delete(args.id);
+    return { ok: true, removed: { batches: u.batches, movements: u.movements, recipes: u.recipes } };
+  },
+});
+
+/**
+ * مسح كامل للأصناف. يتطلّب كتابة كلمة تأكيد حرفية حتى لا يقع بضغطة خطأ.
+ * بدون force يحذف الآمن فقط ويترك ما له أثر ويخبرك بعددهم.
+ */
+export const deleteAllItems = mutation({
+  args: {
+    confirm: v.string(),          // يجب أن تساوي "DELETE ALL"
+    force: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    if (args.confirm !== "DELETE ALL") throw new Error('اكتب "DELETE ALL" للتأكيد');
+    const all = await ctx.db.query("inventoryItems").collect();
+    let deleted = 0, skipped = 0;
+    const skippedNames: string[] = [];
+    for (const it of all) {
+      const u = await itemUsage(ctx, it._id);
+      if (u.blocked && !args.force) {
+        skipped++;
+        if (skippedNames.length < 20) skippedNames.push(it.nameAr);
+        continue;
+      }
+      for (const b of u._batches) await ctx.db.delete(b._id);
+      for (const m of u._movements) await ctx.db.delete(m._id);
+      for (const r of u._recipes) await ctx.db.delete(r._id);
+      for (const p of u._pos) {
+        const kept = (p.items || []).filter((i: any) => String(i.itemId) !== String(it._id));
+        if (kept.length) await ctx.db.patch(p._id, { items: kept });
+        else await ctx.db.delete(p._id);
+      }
+      await ctx.db.delete(it._id);
+      deleted++;
+    }
+    return { deleted, skipped, skippedNames };
+  },
+});

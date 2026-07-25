@@ -620,6 +620,47 @@ export default defineSchema({
     .index("by_barcode", ["barcode"])
     .index("by_category", ["category"]),
 
+  /**
+   * ✅ ربط الصنف بمورّديه — الصنف الواحد يأتي من أكثر من مورّد بسعر مختلف،
+   *    و inventoryItems.supplierId المفرد لا يتّسع لذلك. هنا سجل لكل (صنف، مورّد)
+   *    يحمل آخر سعر وتاريخه وكود الصنف عند المورّد ووحدة الشراء، فتُقارَن الأسعار.
+   */
+  itemSuppliers: defineTable({
+    itemId: v.id("inventoryItems"),
+    supplierId: v.id("suppliers"),
+    supplierSku: v.optional(v.string()),   // كود الصنف عند المورّد (476816…)
+    supplierItemName: v.optional(v.string()), // اسمه في فاتورة المورّد كما هو
+    purchaseUnit: v.optional(v.string()),  // CTN / KG / PCS …
+    packSize: v.optional(v.string()),      // "24*400GM" — كما في الفاتورة
+    lastUnitCost: v.optional(v.number()),  // آخر سعر لوحدة الشراء
+    lastPurchasedAt: v.optional(v.string()), // yyyy-MM-dd
+    timesPurchased: v.optional(v.number()),
+    isPreferred: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_item", ["itemId"])
+    .index("by_supplier", ["supplierId"])
+    .index("by_item_supplier", ["itemId", "supplierId"]),
+
+  /** رأس فاتورة الشراء كما وردت من المورّد — مرجع للتدقيق ومنع الاستيراد مرتين. */
+  purchaseInvoices: defineTable({
+    supplierId: v.id("suppliers"),
+    supplierName: v.string(),
+    invoiceNo: v.string(),
+    invoiceDate: v.string(),               // yyyy-MM-dd
+    currency: v.optional(v.string()),
+    subtotal: v.optional(v.number()),
+    discount: v.optional(v.number()),
+    vat: v.optional(v.number()),
+    total: v.number(),
+    lineCount: v.number(),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_supplier", ["supplierId"])
+    .index("by_invoiceNo", ["invoiceNo"])
+    .index("by_date", ["invoiceDate"]),
+
   inventoryBatches: defineTable({
     itemId: v.id("inventoryItems"),
     quantityReceived: v.number(),
