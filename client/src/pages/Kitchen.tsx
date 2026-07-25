@@ -484,7 +484,7 @@ export default function Kitchen() {
       (c.items || []).forEach((it: any) => {
         if (it?.isOff) return;
         if (String(it?.type || "").toUpperCase() === "MAIN") return; // الرئيسي يبقى في بوكس الشخص
-        const raw = String(it?.baseName || it?.text || "").trim();
+        const raw = composeCustItem(it).trim();
         if (!raw || raw.length < 3 || /NOT SET|لم تُحدَّد/i.test(raw)) return;
         // طابق مفتاحاً موجوداً بلا حساسية حالة، وإلا أنشئ جديداً (لدمج العدّ مع نفس الطبق العادي)
         const key = Object.keys(summary).find((k) => k.toLowerCase() === raw.toLowerCase()) || raw;
