@@ -169,17 +169,38 @@ export const ensureBoxNumbers = mutation({
       .query("stickerBoxNumbers")
       .withIndex("by_date", (q) => q.eq("date", args.date))
       .collect();
-    const assigned = new Set(existing.map((e: any) => String(e.customerId)));
-    let maxNo = existing.reduce((m: number, e: any) => Math.max(m, e.boxNo || 0), 0);
+
+    // 🧹 (1) تنظيف: صفوف تشير لعميل لم يعد موجوداً في القاعدة (حُذف بعد التجميد).
+    //     هذه هي مصدر الفجوات في أرقام البوكس (#4, #30 … عند المطبخ).
+    //     نحذف فقط المحذوفين فعلاً — لا نلمس من خرج مؤقتاً من الروستر حتى لا يتغيّر رقمه.
+    const alive: any[] = [];
+    let removed = 0;
+    for (const e of existing as any[]) {
+      const c = await ctx.db.get(e.customerId);
+      if (!c) { await ctx.db.delete(e._id); removed += 1; continue; }
+      alive.push(e);
+    }
+
+    // 🔢 (2) رصّ الأرقام 1..N بلا فجوات — بنفس الترتيب القائم، فلا يتبدّل ترتيب أحد.
+    alive.sort((a: any, b: any) => (a.boxNo || 0) - (b.boxNo || 0));
+    let seq = 0;
+    let renumbered = 0;
+    for (const e of alive) {
+      seq += 1;
+      if (Number(e.boxNo) !== seq) { await ctx.db.patch(e._id, { boxNo: seq }); renumbered += 1; }
+    }
+
+    // ➕ (3) الجدد يكمّلون في الآخر (لا يزحزحون أحداً) — نفس السلوك السابق.
+    const assigned = new Set(alive.map((e: any) => String(e.customerId)));
     const now = Date.now();
     let created = 0;
     for (const id of orderedIds) {
       if (assigned.has(id)) continue;
-      maxNo += 1;
-      await ctx.db.insert("stickerBoxNumbers", { date: args.date, customerId: id as any, boxNo: maxNo, createdAt: now });
+      seq += 1;
+      await ctx.db.insert("stickerBoxNumbers", { date: args.date, customerId: id as any, boxNo: seq, createdAt: now });
       created += 1;
     }
-    return { total: orderedIds.length, created, frozen: existing.length + created };
+    return { total: orderedIds.length, created, removed, renumbered, frozen: alive.length + created };
   },
 });
 
