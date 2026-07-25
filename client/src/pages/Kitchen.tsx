@@ -87,7 +87,7 @@ const trName = (name: string, table: Array<{ ar: string; en: string }>, isRtl: b
 };
 
 // ✅ الأصناف القياسية (سلطة/سناك/شوربة/حلو) — تُطبخ عادي حتى للمخصّصين وتُحسب في الإجمالي (زي الإكسيل)
-const STD_SIDE_KEYS = ["CRAB SALAD", "LAVA CAKE", "COOKIES", "FRUIT SALAD", "VEGETABLES SOUP", "CINNAMON APPLE", "BROWNIES", "LAZY CAKE", "CEASAR SALAD", "TIRAMISU"];
+const STD_SIDE_KEYS = ["CRAB SALAD", "LAVA CAKE", "COOKIES", "FRUIT SALAD", "VEGETABLES SOUP", "CINNAMON APPLE", "BROWNIES", "LAZY CAKE", "CEASAR SALAD", "TIRAMISU", "PISTACHIO SALAD", "MUFFIN"];
 const isStdSideName = (nm: string) => { const u = String(nm || "").toUpperCase(); return STD_SIDE_KEYS.some((k) => u.includes(k)); };
 
 // ✅ فلترة الممنوعات حسب الطبق: الممنوع القاطع (سمك/لحمة/فراخ/رومي) يُطبَّق فقط على الأطباق التي
