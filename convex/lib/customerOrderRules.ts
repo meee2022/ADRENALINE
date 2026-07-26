@@ -122,7 +122,9 @@ export function validateCustomerOrderSelection(args: {
     if (isSnackCategory(category)) count.snacks += 1;
     else count.mains += 1;
     if (category === "breakfast") count.breakfast += 1;
-    if (count.breakfast > BREAKFAST_MAX_PER_DAY) fail("BREAKFAST_LIMIT");
+    // ☕ لا نرفض فطاراً ثانياً: المشترك حرّ فيه بعد تأكيد صريح في المنيو
+    //    (BREAKFAST_MAX_PER_DAY يبقى سقفاً للاختيار **التلقائي** فقط).
+    //    العدد الكلي للوجبات الرئيسية يظل مفروضاً أدناه، فلا يزيد أحد حصّته.
     counts.set(key, count);
   }
 

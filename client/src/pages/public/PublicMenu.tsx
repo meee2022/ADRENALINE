@@ -755,20 +755,20 @@ Remove one, or pick another day.`),
       });
       return;
     }
-    // ⭐ سقف الفطار: وجبة فطار واحدة/يوم. الفطار رئيسية ويُحسب ضمن الإجمالي،
-    //    لكن بعد اختيار فطار يُقفَل الفطار (الباقي غداء/عشاء). حدٌّ أعلى فقط.
+    // ☕ فطار ثانٍ في نفس اليوم: مسموح باختيار المشترك بعد تأكيد صريح.
+    //    كان ممنوعاً منعاً باتاً، لكن من لا تعجبه وجبات الغداء/العشاء ليومه قد
+    //    يفضّل فطارين — وهو حرّ ما دام العدد الكلي ضمن اشتراكه.
+    //    ⚠️ السقف باقٍ في الاختيار التلقائي (الذكية والإكمال) فلا تُنتِج فطارين وحدها.
     if (isBreakfastCategory(meal.category) && breakfastToday >= BREAKFAST_MAX_PER_DAY) {
-      await alertDialog({
-        title: isRtl ? `⛔ اكتمل فطار ${dayLabelNow}` : `⛔ Breakfast is full for ${dayLabelNow}`,
+      const okBf = await confirmDialog({
+        title: isRtl ? "☕ فطار ثانٍ لنفس اليوم؟" : "☕ A second breakfast for this day?",
+        confirmText: isRtl ? "نعم أريد فطارين" : "Yes, two breakfasts",
+        cancelText: isRtl ? "إلغاء" : "Cancel",
         message: isRtl
-          ? `الفطار وجبة واحدة يوميًا كحدٍّ أقصى، وقد اخترت فطارك ليوم ${dayLabelNow}.
-
-اختر غداءً أو عشاءً لبقية وجبات اليوم.`
-          : `Breakfast is capped at one per day and you already picked yours for ${dayLabelNow}.
-
-Pick lunch or dinner for the rest of the day.`,
+          ? `اخترت بالفعل ${breakfastToday} فطار ليوم ${dayLabelNow}، وهذه وجبة فطار أخرى.\n\nستُحسب ضمن وجباتك الرئيسية (${mainMealsToday + 1} من ${mealsPerDay})، أي ستستلم فطارين في نفس اليوم بدل غداء أو عشاء.\n\nهل تريد المتابعة؟`
+          : `You already picked ${breakfastToday} breakfast for ${dayLabelNow}, and this is another one.\n\nIt counts toward your main meals (${mainMealsToday + 1} of ${mealsPerDay}) — you would get two breakfasts that day instead of a lunch or dinner.\n\nContinue?`,
       });
-      return;
+      if (!okBf) return;
     }
     if (!isSnack && mainMealsToday >= mealsPerDay) {
       await alertDialog({
