@@ -453,16 +453,19 @@ export const get = query({
     //    نفس منطق عرض المنيو للعميل، فالاستيكر يطابق ما رآه.
     const restSettings: any = await ctx.db.query("restaurantSettings").first();
     // fallback = قيم كشف المطبخ 7-7-2026 — تعمل حتى قبل أول حفظ من الإعدادات
-    /* معاملات الحصص معايَرة على ملف DATABASE لا على تقدير:
-       نسبة الفتنس للدايت ثابتة عبر أطباقه — 450/373 و468/389 و493/410 ≈ **1.20**.
-       والبلك أعلى بحكم حصّته في نفس الإعدادات (بروتين 150-160جم وكارب 170 مقابل
-       100-110 و150 للفتنس)، فلا يصحّ أن يتساوى معه — **1.30**.
-       كانت 1.08/1.15 هنا و1.05/1.10 في الإعدادات المحفوظة (وهي الغالبة)، فكان
-       استيكر الفتنس أقل من الحقيقة بنحو 60-80 سعرة. */
+    /* معاملات الحصص معايَرة على ملفات DATABASE (1-6 · 7-7 · 28-7) — 1519 صفاً
+       و44 طبقاً — لا على تقدير، ومن مصدرين متفقين:
+         • جدول السعرات الرسمي فيها: غداء 450 → 560 → 630 ⇒ ×1.24 و×1.40.
+         • نفس الطبق عبر الباقات: وسيط الفتنس ×1.27، والبلك 1.49 و1.51
+           (سلمون كاري · شاورما) مقابل 1.20 لراب واحد لا يتمدّد خبزه.
+       والدايت أساس لا يُضرب — وسيطه في التطبيق 375 يطابق DATABASE (373 غداء
+       و380 عشاء)، فالأساس سليم والخلل كان في المعامل وحده.
+       الفطار والسناك لا يُضربان أصلاً (isMainCourse)، وDATABASE يؤكّد ذلك:
+       فطار 298/280/280 وسناك 133/138/138 عبر الباقات الثلاث. */
     const pp = restSettings?.programPortions || {
       DIET: { calFactor: 1 },
-      FITNESS: { calFactor: 1.2 },
-      BULK: { calFactor: 1.3 },
+      FITNESS: { calFactor: 1.25 },
+      BULK: { calFactor: 1.4 },
     };
     const factorFor = (program: string): number => {
       if (!pp) return 1;
@@ -637,14 +640,14 @@ export const get = query({
            ولا ترفع طبقاً خفيفاً ليبدو ثقيلاً. الأطباق الخفيفة تبقى خفيفة. */
         const automaticRange = isMainCourse(category)
           ? programCode.includes("CUSTOM")
-            ? { min: 250, max: 620 }
+            ? { min: 250, max: 660 }
             : programCode.includes("BULK")
-            ? { min: 250, max: 580 }
+            ? { min: 250, max: 660 }   // DATABASE يصل 596، وجدول 1800 سعرة يعطي غداء 630
             : programCode.includes("FITNESS")
-              ? { min: 250, max: 500 }
+              ? { min: 250, max: 570 } // DATABASE يصل 493، وجدول 1600 يعطي 560
               : programCode.includes("DIET")
-                ? { min: 250, max: 420 }
-                : { min: 250, max: 500 }
+                ? { min: 250, max: 440 } // أعلى دايت في DATABASE 410
+                : { min: 250, max: 570 }
           : String(category || "").toUpperCase().includes("BREAKFAST")
             ? { min: 0, max: 310 }
             : { min: 0, max: Number.POSITIVE_INFINITY };
