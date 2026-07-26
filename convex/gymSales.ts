@@ -224,10 +224,17 @@ export const listMealsForGym = query({
     return meals
       .filter((m: any) => hasOutletCatalog ? outletByMeal.has(String(m._id)) : !!m.isGymItem)
       .map((m: any) => {
-        const listPrice = Number(m.priceQAR) || 0;
         const outletRow: any = outletByMeal.get(String(m._id));
         const hasCustom = outletRow ? true : m.gymPrice != null && m.gymPrice >= 0;
-        const effectivePrice = outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : Math.round(listPrice * (1 - discount / 100) * 100) / 100;
+        /* سعر المنفذ هو **سعر ما قبل الخصم**، والخصم يُطبَّق فوقه.
+           كان الكود يأخذ سعر الكتالوج كما هو ويتجاهل نسبة المنفذ، فحساب الجم
+           مكتوب عليه 20% ولم تُطبَّق على 138 سطراً من 152. */
+        const listPrice = outletRow
+          ? Number(outletRow.price)
+          : hasCustom
+          ? Number(m.gymPrice)
+          : Number(m.priceQAR) || 0;
+        const effectivePrice = Math.round(listPrice * (1 - discount / 100) * 100) / 100;
         return {
           id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
           nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
@@ -863,20 +870,20 @@ async function buildGymOrderLines(
     if (!meal || !meal.isActive) throw new Error("وجبة غير متوفرة");
     const outletRow: any = outletByMeal.get(String(meal._id));
     if (hasOutletCatalog && !outletRow) throw new Error("الصنف غير متاح في هذا المنفذ");
-    const catalogPrice = Number(meal.priceQAR) || 0;
     const hasCustom = meal.gymPrice != null && meal.gymPrice >= 0;
-    const unitPrice = outletRow
+    /* سعر المنفذ (كتالوجه أو سعره المخصّص) هو **ما قبل الخصم**، ونسبة المنفذ
+       تُطبَّق فوقه. كان الكود يعيد سعر الكتالوج كما هو ويتجاهل النسبة، فبقي
+       خصم الجم 20% حبراً على ورق: 138 سطراً من 152 حُوسبت بالسعر الكامل.
+       وسعر المنيو العام `priceQAR` لا يُستخدم إلا لمنفذ بلا قائمة أسعار — فهو
+       بقيّة من بداية المشروع (المشترك لا يرى أسعاراً، والمرخية بأسعار الأونلاين،
+       والكافيه بالجرامات). */
+    const listPrice = outletRow
       ? Number(outletRow.price)
       : hasCustom
       ? Number(meal.gymPrice)
-      : Math.round(catalogPrice * (1 - discountPct / 100) * 100) / 100;
+      : Number(meal.priceQAR) || 0;
+    const unitPrice = Math.round(listPrice * (1 - discountPct / 100) * 100) / 100;
     if (unitPrice < 0) throw new Error("سعر غير صالح");
-    /* «قبل الخصم» لا يصحّ أن يقلّ عن المدفوع. أصناف المنافذ كثيراً ما يكون سعرها
-       في المنيو العام صفراً (لا تُباع هناك أصلاً)، فكان الفرق يخرج **بالسالب**:
-       فاتورة 16-7 قالت «قبل الخصم 2077 والمطلوب 2531 وخصم −454».
-       فإن لم يكن للصنف سعر قائمة أعلى، فسعر بيعه هو سعر قائمته والخصم صفر.
-       المبلغ المحصَّل (unitPrice) لا يتأثر بهذا السطر إطلاقاً. */
-    const listPrice = catalogPrice > unitPrice ? catalogPrice : unitPrice;
     subtotal += listPrice * qty;
     total += unitPrice * qty;
     mealsCount += qty;
