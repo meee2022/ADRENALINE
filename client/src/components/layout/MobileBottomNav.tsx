@@ -26,7 +26,7 @@ export function MobileBottomNav() {
     {
       href: "/",
       icon: Home,
-      label: isRtl ? "الرئيسية" : "Home",
+      label: isRtl ? "الموقع" : "Website",
       roles: ["ADMIN", "KITCHEN", "DELIVERY"],
     },
     {

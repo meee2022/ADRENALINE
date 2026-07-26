@@ -632,6 +632,27 @@ export const listOpenTickets = query({
   },
 });
 
+/** حفظ الطلب مؤقتاً (park) بدون خصم مخزون أو إنشاء حركة مالية. */
+export const parkTicket = mutation({
+  args: {
+    token: v.string(), lines: v.array(ticketLineArg), discount: v.optional(v.number()),
+    orderType: v.optional(v.string()), customerName: v.optional(v.string()), notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { user } = await requireCashier(ctx, args.token);
+    const shift = await ctx.db.query("posShifts").withIndex("by_cashier", q => q.eq("cashierId", user._id)).filter(q => q.eq(q.field("status"), "OPEN")).first();
+    if (!shift) throw new Error("يجب فتح وردية أولاً");
+    const lines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
+    const rawDiscount = Number(args.discount || 0);
+    const preview = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
+    assertDiscountAllowed(preview, rawDiscount, isAdmin(user));
+    const totals = await computeTotals(ctx, lines, rawDiscount);
+    const id = await ctx.db.insert("posTickets", { ticketNumber: await nextTicketNumber(ctx), cashierId: user._id, cashierName: user.name, branchId: (shift as any).branchId, shiftId: shift._id, status: "OPEN", orderType: args.orderType, subtotal: totals.subtotal, discount: totals.discount, tax: 0, total: totals.total, customerName: args.customerName?.trim() || undefined, notes: args.notes?.trim() || undefined, createdAt: Date.now(), updatedAt: Date.now() });
+    for (const line of lines) await ctx.db.insert("posTicketLines", { ticketId: id, mealId: line.mealId, name: line.name, qty: line.qty, unitPrice: line.unitPrice, lineTotal: Math.round(line.qty * line.unitPrice * 100) / 100, notes: line.notes });
+    return { id: String(id) };
+  },
+});
+
 export const getTicket = query({
   args: { token: v.string(), ticketId: v.id("posTickets") },
   handler: async (ctx, { token, ticketId }) => {
@@ -663,6 +684,19 @@ export const getTicket = query({
         };
       })),
     };
+  },
+});
+
+/** بيانات استئناف فاتورة مفتوحة للواجهة؛ لا يسمح إلا لصاحبها أو المدير. */
+export const resumeOpenTicket = mutation({
+  args: { token: v.string(), ticketId: v.id("posTickets") },
+  handler: async (ctx, args) => {
+    const { user } = await requireCashier(ctx, args.token);
+    const ticket: any = await ctx.db.get(args.ticketId);
+    if (!ticket || ticket.status !== "OPEN") throw new Error("الفاتورة غير متاحة");
+    if (String(ticket.cashierId) !== String(user._id) && !isAdmin(user)) throw new Error("لا يمكن فتح فاتورة كاشير آخر");
+    const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", q => q.eq("ticketId", args.ticketId)).collect();
+    return { id: String(ticket._id), customerName: ticket.customerName || "", orderType: ticket.orderType || "dine_in", discount: ticket.discount || 0, lines: lines.map((l: any) => ({ mealId: l.mealId ? String(l.mealId) : null, name: l.name, qty: l.qty, unitPrice: l.unitPrice, note: l.notes })) };
   },
 });
 

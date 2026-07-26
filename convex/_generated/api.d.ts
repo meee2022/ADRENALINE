@@ -9,6 +9,7 @@
  */
 
 import type * as accountLookup from "../accountLookup.js";
+import type * as adminCenter from "../adminCenter.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
 import type * as applySchedulePairs from "../applySchedulePairs.js";
@@ -19,6 +20,7 @@ import type * as banners from "../banners.js";
 import type * as cleanupDuplicateMeals from "../cleanupDuplicateMeals.js";
 import type * as clientErrors from "../clientErrors.js";
 import type * as coupons from "../coupons.js";
+import type * as crm from "../crm.js";
 import type * as crons from "../crons.js";
 import type * as customerAuth from "../customerAuth.js";
 import type * as customerOrders from "../customerOrders.js";
@@ -109,6 +111,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accountLookup: typeof accountLookup;
+  adminCenter: typeof adminCenter;
   ai: typeof ai;
   analytics: typeof analytics;
   applySchedulePairs: typeof applySchedulePairs;
@@ -119,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   cleanupDuplicateMeals: typeof cleanupDuplicateMeals;
   clientErrors: typeof clientErrors;
   coupons: typeof coupons;
+  crm: typeof crm;
   crons: typeof crons;
   customerAuth: typeof customerAuth;
   customerOrders: typeof customerOrders;

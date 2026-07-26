@@ -462,6 +462,24 @@ export default defineSchema({
     .index("by_deliveryTime", ["deliveryTime"])
     .index("by_active", ["isActive"]),
 
+  // ===== CRM: ملاحظات ومهام المتابعة الداخلية =====
+  customerFollowUps: defineTable({
+    customerId: v.id("customers"),
+    type: v.union(v.literal("RENEWAL"), v.literal("DELIVERY_FAILURE"), v.literal("GENERAL")),
+    status: v.union(v.literal("OPEN"), v.literal("DONE"), v.literal("DISMISSED")),
+    dueDate: v.optional(v.string()),
+    note: v.string(),
+    sourcePlanId: v.optional(v.id("dailyPlans")),
+    assignedTo: v.optional(v.id("users")),
+    createdBy: v.optional(v.id("users")),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_customer", ["customerId", "status"])
+    .index("by_status", ["status", "dueDate"])
+    .index("by_plan", ["sourcePlanId"]),
+
   mealCategories: defineTable({
     name: v.string(),
     sortOrder: v.number(),

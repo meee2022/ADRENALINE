@@ -58,6 +58,9 @@ const AnalyticsDashboard = lazy(() => import("@/pages/AnalyticsDashboard"));
 const OrderTracking = lazy(() => import("@/pages/public/OrderTracking"));
 const Coupons = lazy(() => import("@/pages/Coupons"));
 const Finance = lazy(() => import("@/pages/Finance"));
+const AdminActionCenter = lazy(() => import("@/pages/AdminActionCenter"));
+const LoyaltyRatings = lazy(() => import("@/pages/LoyaltyRatings"));
+const CustomerCrm = lazy(() => import("@/pages/CustomerCrm"));
 
 // Public Pages (No Auth)
 const HomePage = lazy(() => import("@/pages/public/HomePage"));
@@ -184,6 +187,15 @@ function Router() {
 
       <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} />
+      </Route>
+      <Route path="/admin-center">
+        <ProtectedRoute component={AdminActionCenter} />
+      </Route>
+      <Route path="/loyalty-ratings">
+        <ProtectedRoute component={LoyaltyRatings} />
+      </Route>
+      <Route path="/crm">
+        <ProtectedRoute component={CustomerCrm} />
       </Route>
       <Route path="/customers">
         <ProtectedRoute component={Customers} />
