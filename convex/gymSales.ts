@@ -211,10 +211,15 @@ export const listMealsForGym = query({
       : [];
     const hasOutletCatalog = outletRows.length > 0;
     const outletByMeal = new Map(outletRows.filter((row) => row.isActive).map((row) => [String(row.mealId), row]));
-    // باركود كل صنف من استيكرات المنافذ — يسمح بإدخال الطلبية بالماسح بدل البحث بالاسم
-    const barcodeByMeal = new Map<string, string>();
+    /* باركودات كل صنف من استيكرات المنافذ — يسمح بإدخال الطلبية بالماسح بدل البحث
+       بالاسم. الصنف قد يحمل أكثر من استيكر (طبعات مختلفة على العلب)، فنُعيدها كلها:
+       لو أعدنا واحداً فقط لظلّت العلب المطبوعة بالباركود الآخر ترفض المسح. */
+    const barcodesByMeal = new Map<string, string[]>();
     for (const label of await ctx.db.query("outletProductLabels").collect()) {
-      if (label.publicMealId && label.isActive) barcodeByMeal.set(String(label.publicMealId), label.barcode);
+      if (!label.publicMealId || !label.isActive) continue;
+      const key = String(label.publicMealId);
+      const list = barcodesByMeal.get(key);
+      if (list) list.push(label.barcode); else barcodesByMeal.set(key, [label.barcode]);
     }
     return meals
       .filter((m: any) => hasOutletCatalog ? outletByMeal.has(String(m._id)) : !!m.isGymItem)
@@ -230,7 +235,7 @@ export const listMealsForGym = query({
           listPrice, gymPrice: outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : null,
           effectivePrice, isCustom: hasCustom, sortOrder: outletRow?.sortOrder ?? m.sortOrder ?? 0,
           returnAfterDays: Number(m.gymReturnAfterDays || (m.category === "snack" ? 4 : 2)),
-          barcode: barcodeByMeal.get(String(m._id)) || null,
+          barcodes: barcodesByMeal.get(String(m._id)) || [],
         };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));

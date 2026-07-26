@@ -168,7 +168,8 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
      قائمة أصناف المنفذ المحمّلة أصلاً — الماسح أسرع من استعلام لكل مسحة. */
   const mealByBarcode = useMemo(() => {
     const m = new Map<string, any>();
-    (meals || []).forEach((x: any) => { if (x.barcode) m.set(String(x.barcode), x); });
+    // الصنف قد يحمل أكثر من استيكر — كلها تفتح على نفس الوجبة
+    (meals || []).forEach((x: any) => (x.barcodes || []).forEach((b: string) => m.set(String(b), x)));
     return m;
   }, [meals]);
 
