@@ -2,7 +2,7 @@
  * @file client/src/pages/pos/PosSales.tsx
  * @description شاشة البيع الرئيسية بهوية أدرينالين المضيئة، محسّنة للكاشير والشاشات الصغيرة.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
@@ -10,7 +10,7 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { getPosMealImage } from "@/lib/posMealImages";
-import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, ShoppingCart, ChevronDown } from "lucide-react";
+import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, ShoppingCart, ChevronDown, Bookmark } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
 
@@ -75,13 +75,16 @@ export default function PosSales() {
   const { language } = useLanguage();
   const isAr = language === "ar";
   const tt = (a: string, e: string) => (isAr ? a : e);
-  const { token, cart, setCart, clearCart } = usePosStore();
+  const { token, cart, setCart, clearCart, activeTicketId, setActiveTicketId, resumedMeta, setResumedMeta } = usePosStore();
   const items = useQuery(api.pos.listItems, { token: token || undefined }) as any[] | undefined;
   const posCats = useQuery(api.pos.listCategories, { token: token || undefined }) as any[] | undefined;
   const shift = useQuery(api.pos.currentShift, token ? { token } : "skip") as any;
   const posCfg = useQuery(api.pos.posSettings, { token: token || undefined }) as any;
   const deliveryFee = Number(posCfg?.deliveryFee ?? 10);
   const quickSale = useMutation(api.pos.quickSale);
+  const parkTicket = useMutation(api.pos.parkTicket);
+  const updateTicketLines = useMutation(api.pos.updateTicketLines);
+  const chargeTicket = useMutation(api.pos.chargeTicket);
 
   const [q, setQ] = useState("");
   const [activeCat, setActiveCat] = useState<string>("all");
@@ -110,9 +113,13 @@ export default function PosSales() {
     ? [{ id: "all", name: "الكل", nameEn: "All", color: null }, ...(posCats || [])]
     : Object.entries(MENU_CAT_META).map(([id, m]) => ({ id, name: m.labelAr, nameEn: m.label, color: null }));
 
+  /* ⌨️ الكتابة تبقى فورية: الحرف يظهر في الحقل حالاً، وإعادة بناء الشبكة
+     تتأخّر إطاراً واحداً (useDeferredValue). كانت كل ضغطة تُعيد الفلترة
+     وتُصفّر عدّاد العرض وتُرجِع التمرير للأعلى في نفس الإطار. */
+  const deferredQ = useDeferredValue(q);
   const filtered = useMemo(() => {
     if (!items) return [];
-    const qq = q.trim().toLowerCase();
+    const qq = deferredQ.trim().toLowerCase();
     return items.filter((m: any) => {
       if (activeCat !== "all") {
         if (usePosCategories) { if (m.posCategoryId !== activeCat) return false; }
@@ -123,7 +130,7 @@ export default function PosSales() {
           || String(m.nameEn).toLowerCase().includes(qq)
           || String(m.nameAr).toLowerCase().includes(qq);
     });
-  }, [items, activeCat, q, usePosCategories]);
+  }, [items, activeCat, deferredQ, usePosCategories]);
 
   const visibleItems = useMemo(
     () => filtered.slice(0, visibleItemCount),
@@ -133,7 +140,7 @@ export default function PosSales() {
   useEffect(() => {
     setVisibleItemCount(POS_ITEMS_BATCH_SIZE);
     itemsCanvasRef.current?.scrollTo({ top: 0 });
-  }, [activeCat, q]);
+  }, [activeCat, deferredQ]);
 
   useEffect(() => {
     const root = itemsCanvasRef.current;
@@ -148,6 +155,22 @@ export default function PosSales() {
     observer.observe(target);
     return () => observer.disconnect();
   }, [filtered.length, visibleItemCount]);
+
+  /* ♻️ فاتورة مستأنَفة: نعيد نوع الطلب والعميل والخصم كما حُفظت، ثم نمسح
+     البيانات فلا تُطبَّق مرتين. الخصم يُخزَّن مبلغاً، والشاشة تعمل بنسبة —
+     نحوّله من مجموع أصنافها هي لا من سلة لاحقة. */
+  useEffect(() => {
+    if (!resumedMeta) return;
+    if (resumedMeta.orderType) setOrderType(resumedMeta.orderType as OrderType);
+    if (resumedMeta.customerName) setCustomerName(resumedMeta.customerName);
+    const amount = Number(resumedMeta.discount || 0);
+    if (amount > 0) {
+      const sub = (cart as CartLine[]).reduce((s, l) => s + l.qty * l.unitPrice, 0);
+      setDiscountPct(sub > 0 ? Math.round((amount / sub) * 1000) / 10 : 0);
+    }
+    setResumedMeta(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumedMeta]);
 
   const totals = useMemo(() => {
     let subtotal = 0, count = 0;
@@ -181,13 +204,18 @@ export default function PosSales() {
     //    نولّده مرة واحدة لكل محاولة دفع من نفس السلة.
     const idem = `t_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     try {
-      const r: any = await quickSale({
+      const lineArgs = cart.map((l: any) => ({
+        ...(l.mealId ? { mealId: l.mealId as any } : {}),
+        ...(l.kind ? { kind: l.kind } : {}),
+        name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
+      }));
+      const r: any = activeTicketId ? await (async () => {
+        await updateTicketLines({ token, ticketId: activeTicketId as any, lines: lineArgs, orderType, customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined, discount: totals.discount || undefined });
+        const paid:any = await chargeTicket({ token, ticketId: activeTicketId as any, paymentMethod, cashReceived, ...(payments && payments.length ? { payments } : {}), orderType, customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined, discount: totals.discount || undefined });
+        return { ...paid, id: activeTicketId };
+      })() : await quickSale({
         token,
-        lines: cart.map((l: any) => ({
-          ...(l.mealId ? { mealId: l.mealId as any } : {}),
-          ...(l.kind ? { kind: l.kind } : {}),
-          name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
-        })),
+        lines: lineArgs,
         paymentMethod, cashReceived,
         ...(payments && payments.length ? { payments } : {}),
         orderType,
@@ -197,6 +225,7 @@ export default function PosSales() {
         idempotencyKey: idem,
       });
       clearCart();
+      setActiveTicketId(null);
       setShowCharge(false);
       setCustomerName("");
       setLinkedCustomer(null);
@@ -205,6 +234,33 @@ export default function PosSales() {
     } catch (e: any) {
       void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || tt("حدث خطأ", "Something went wrong") });
     } finally { setBusy(false); }
+  };
+
+  const parkCurrentTicket = async () => {
+    if (!token || !cart.length) return;
+    setBusy(true);
+    try {
+      const lineArgs = cart.map((l: any) => ({
+        ...(l.mealId ? { mealId: l.mealId as any } : {}),
+        ...(l.kind ? { kind: l.kind } : {}),
+        name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
+      }));
+      const meta = {
+        orderType,
+        customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined,
+        discount: totals.discount || undefined,
+      };
+      // ♻️ فاتورة مستأنَفة تُحدَّث في مكانها؛ إنشاء واحدة جديدة كان يترك
+      //    الأصلية مفتوحة فتظهر الفاتورة مرّتين في «الفواتير المفتوحة».
+      if (activeTicketId) {
+        await updateTicketLines({ token, ticketId: activeTicketId as any, lines: lineArgs, ...meta });
+      } else {
+        await parkTicket({ token, lines: lineArgs, ...meta });
+      }
+      clearCart(); setActiveTicketId(null); setCustomerName(""); setLinkedCustomer(null); setDiscountPct(0);
+      void alertDialog({ message: tt("تم حفظ الفاتورة ضمن الفواتير المفتوحة", "Ticket saved under Open Tickets") });
+    } catch (e: any) { void alertDialog({ message: e?.message || tt("تعذّر حفظ الفاتورة", "Could not save ticket") }); }
+    finally { setBusy(false); }
   };
 
   const ORDER_TYPES: { key: OrderType; ar: string; en: string; icon: any }[] = [
@@ -248,6 +304,13 @@ export default function PosSales() {
             >
               <Trash2 className="h-5 w-5" />
             </button>
+            <button
+              aria-label={tt("حفظ كفاتورة مفتوحة", "Park ticket")}
+              onClick={parkCurrentTicket}
+              disabled={!cart.length || busy}
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-cyan-100 bg-cyan-50 text-cyan-600 transition-colors hover:bg-cyan-100 disabled:opacity-40"
+              title={tt("حفظ كفاتورة مفتوحة", "Park ticket")}
+            ><Bookmark className="h-5 w-5" /></button>
             <div className="text-end">
               <p className="text-[10px] font-bold uppercase text-[#6f8795]">{tt("الطلب الحالي", "Current order")}</p>
               <p className="text-lg font-black text-[#0E76AC]">#{localOrderNo}</p>
