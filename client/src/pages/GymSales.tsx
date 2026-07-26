@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks, PackageX, Pencil } from "lucide-react";
+import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Printer, ChefHat, Coffee, Salad, Cookie, Utensils, Save, X, Building2, Check, ListChecks, PackageX, Pencil, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { confirmDialog, promptDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
@@ -131,6 +131,9 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<CatKey>("all");
   const [saving, setSaving] = useState(false);
+  const [scanOn, setScanOn] = useState(false);
+  const [scanMsg, setScanMsg] = useState("");
+  const scanRef = useRef<HTMLInputElement>(null);
 
   const meals = useQuery(
     api.gymSales.listMealsForGym,
@@ -158,6 +161,29 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
       }
       return [...prev, { mealId: m.id, nameEn: m.nameEn, nameAr: m.nameAr, qty: 1, listPrice: m.listPrice, unitPrice: m.effectivePrice }];
     });
+  };
+
+  /* ── الإدخال بالماسح ──
+     الماسح يعمل كلوحة مفاتيح: يكتب الرقم ثم Enter. المطابقة تتم على الجهاز من
+     قائمة أصناف المنفذ المحمّلة أصلاً — الماسح أسرع من استعلام لكل مسحة. */
+  const mealByBarcode = useMemo(() => {
+    const m = new Map<string, any>();
+    (meals || []).forEach((x: any) => { if (x.barcode) m.set(String(x.barcode), x); });
+    return m;
+  }, [meals]);
+
+  useEffect(() => { if (scanOn) scanRef.current?.focus(); }, [scanOn]);
+
+  const onScan = (raw: string) => {
+    const code = String(raw || "").replace(/\s+/g, "").trim();
+    if (!code) return;
+    const meal = mealByBarcode.get(code);
+    if (!meal) {
+      setScanMsg(t(`⚠ ${code} — باركود غير معروف في هذا المنفذ`, `⚠ ${code} — unknown barcode for this outlet`));
+      return;
+    }
+    addToCart(meal);
+    setScanMsg(`✓ ${isRtl ? (meal.nameAr || meal.nameEn) : (meal.nameEn || meal.nameAr)}`);
   };
 
   const setLineQty = (i: number, qty: number) => setCart((p) => {
@@ -238,10 +264,43 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
         {/* Search + categories */}
         <Card className="rounded-2xl border-slate-200">
           <CardContent className="p-4 space-y-3">
-            <div className="relative">
-              <Search className="absolute h-4 w-4 top-3 start-3 text-slate-400 pointer-events-none" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث عن وجبة…", "Search meals…")} className="h-10 ps-9" />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute h-4 w-4 top-3 start-3 text-slate-400 pointer-events-none" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث عن وجبة…", "Search meals…")} className="h-10 ps-9" />
+              </div>
+              <button
+                type="button"
+                onClick={() => { setScanOn((v) => !v); setScanMsg(""); }}
+                className={cn("flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-xs font-black transition-colors",
+                  scanOn ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50")}
+              >
+                <ScanLine className="h-4 w-4" />{t("ماسح", "Scan")}
+              </button>
             </div>
+
+            {/* حقل المسح — يبقى مركَّزاً حتى لا تضيع مسحة */}
+            {scanOn && (
+              <div className="rounded-xl border-2 border-[#0E76AC]/30 bg-[#0E76AC]/[0.04] p-3">
+                <Input
+                  ref={scanRef}
+                  dir="ltr"
+                  className="h-12 text-center text-base font-black tracking-widest"
+                  placeholder={t("وجّه الماسح على الباركود…", "Point the scanner…")}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    onScan((e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).value = "";
+                  }}
+                  onBlur={(e) => setTimeout(() => e.target.focus(), 0)}
+                />
+                {scanMsg && (
+                  <p className={cn("mt-2 text-center text-sm font-black",
+                    scanMsg.startsWith("⚠") ? "text-rose-600" : "text-emerald-600")}>{scanMsg}</p>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {(Object.keys(CAT_META) as CatKey[]).map((k) => {
                 const M = CAT_META[k]; const Icon = M.icon; const active = cat === k;

@@ -211,6 +211,11 @@ export const listMealsForGym = query({
       : [];
     const hasOutletCatalog = outletRows.length > 0;
     const outletByMeal = new Map(outletRows.filter((row) => row.isActive).map((row) => [String(row.mealId), row]));
+    // باركود كل صنف من استيكرات المنافذ — يسمح بإدخال الطلبية بالماسح بدل البحث بالاسم
+    const barcodeByMeal = new Map<string, string>();
+    for (const label of await ctx.db.query("outletProductLabels").collect()) {
+      if (label.publicMealId && label.isActive) barcodeByMeal.set(String(label.publicMealId), label.barcode);
+    }
     return meals
       .filter((m: any) => hasOutletCatalog ? outletByMeal.has(String(m._id)) : !!m.isGymItem)
       .map((m: any) => {
@@ -225,6 +230,7 @@ export const listMealsForGym = query({
           listPrice, gymPrice: outletRow ? Number(outletRow.price) : hasCustom ? Number(m.gymPrice) : null,
           effectivePrice, isCustom: hasCustom, sortOrder: outletRow?.sortOrder ?? m.sortOrder ?? 0,
           returnAfterDays: Number(m.gymReturnAfterDays || (m.category === "snack" ? 4 : 2)),
+          barcode: barcodeByMeal.get(String(m._id)) || null,
         };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
