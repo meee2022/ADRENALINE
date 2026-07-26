@@ -50,6 +50,12 @@ export default function DashboardNew() {
   const leave = useQuery(api.leaves.onLeaveToday, { date: dateKey, sessionToken }) as any;
   const managerSnap = useQuery(api.manager.liveSnapshot, { sessionToken }) as any;
   const posDaily = useQuery(api.posAdmin.dailySummary, { date: dateKey, sessionToken }) as any;
+  /* ⚠️ المخصّصون مصدرهم القالب (customizedTemplates) لا الخطة اليومية، فلا صفّ
+     لهم في dailyPlans إطلاقاً. كانت اللوحة تعدّ الخطط وحدها فتُسقطهم بالكامل:
+     يوم 26-7 كان 110 خطة بينما هناك 29 مخصّصاً نشطاً — صفر منهم في العدّ. */
+  const customizedToday = useQuery(
+    api.customizedPlans.forDate, { date: dateKey, sessionToken },
+  ) as any[] | undefined;
   const gymList = useQuery(api.gymSales.listOrders, { from: dateKey, to: dateKey, sessionToken }) as any;
   const loading = customersLoading || plansLoading;
 
@@ -68,14 +74,23 @@ export default function DashboardNew() {
     const prepared = todayPlans.filter((p) => ["PREPARED", "DELIVERED"].includes(p.status)).length;
     const delivered = todayPlans.filter((p) => p.status === "DELIVERED").length;
     const morning = todayPlans.filter((p) => p.deliveryTime === "MORNING").length;
+    // المخصّصون يُطبخون ويُوصَّلون مثل الجميع، فيدخلون العدّ والتوزيع الصباحي/المسائي.
+    const custList = customizedToday || [];
+    const custMorning = custList.filter((c: any) => c.deliveryTime !== "EVENING").length;
+    const totalToday = todayPlans.length + custList.length;
     return {
-      todayPlans, active, expiring, expired, lowStock, prepared, delivered, morning,
-      evening: todayPlans.length - morning,
+      todayPlans, active, expiring, expired, lowStock, prepared, delivered,
+      customized: custList.length,
+      totalToday,
+      morning: morning + custMorning,
+      evening: totalToday - (morning + custMorning),
       paused: customers.filter((c: any) => Boolean(c.pausedFrom)).length,
+      // ⚠️ نسبتا المطبخ والتوصيل تُحسبان على الخطط القابلة للتتبّع فقط —
+      //    المخصّص بلا حالة (لا PREPARED ولا DELIVERED) فإدخاله يخفض النسبة زوراً.
       prepRate: todayPlans.length ? Math.round((prepared / todayPlans.length) * 100) : 0,
       deliveryRate: todayPlans.length ? Math.round((delivered / todayPlans.length) * 100) : 0,
     };
-  }, [customers, dailyPlans, inventoryItems, dateKey]);
+  }, [customers, dailyPlans, inventoryItems, dateKey, customizedToday]);
 
   const weeklyData = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const day = addDays(new Date(), i - 6);
@@ -216,8 +231,8 @@ export default function DashboardNew() {
       {/* ═══════ 3. KPI row (Today at a glance) ═══════ */}
       <section className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {[
-          { label: tr("وجبات اليوم", "Today's meals"), value: metrics.todayPlans.length,
-            note: `${metrics.morning} ${tr("صباحي", "morning")} · ${metrics.evening} ${tr("مسائي", "evening")}`,
+          { label: tr("وجبات اليوم", "Today's meals"), value: metrics.totalToday,
+            note: `${metrics.morning} ${tr("صباحي", "morning")} · ${metrics.evening} ${tr("مسائي", "evening")}${metrics.customized ? ` · ${metrics.customized} ${tr("مخصّص", "customized")}` : ""}`,
             icon: CalendarDays, color: "#3cc4f0", action: () => setDetailView("meals") },
           { label: tr("تقدم المطبخ", "Kitchen progress"), value: `${metrics.prepRate}%`,
             note: `${metrics.prepared}/${metrics.todayPlans.length} ${tr("جاهزة", "ready")}`,
