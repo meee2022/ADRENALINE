@@ -2,14 +2,20 @@
  * @file client/src/pages/pos/PosOpenTickets.tsx
  * @description الفواتير المفتوحة (parked) — لسه ما اتدفعتش. للنسخة الأولى بسيط.
  */
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
 import { ClipboardList } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { useLocation } from "wouter";
 
 export default function PosOpenTickets() {
   const token = usePosStore((s) => s.token) as string;
+  const setCart = usePosStore((s) => s.setCart);
+  const setActiveTicketId = usePosStore((s) => s.setActiveTicketId);
+  const setResumedMeta = usePosStore((s) => s.setResumedMeta);
+  const resume = useMutation(api.pos.resumeOpenTicket);
+  const [, go] = useLocation();
   const rows = useQuery(api.pos.listOpenTickets, { token }) as any[] | undefined;
   const { language } = useLanguage();
   const isAr = language === "ar";
@@ -39,7 +45,15 @@ export default function PosOpenTickets() {
           )}
           <div className="divide-y divide-slate-100">
             {rows?.map((r: any) => (
-              <div key={r.id} className="p-4 flex items-center gap-3">
+              <button key={r.id} onClick={async()=>{
+                  // نعيد الفاتورة كاملة: الأصناف + نوع الطلب + العميل + الخصم.
+                  // الاكتفاء بالأصناف كان يحوّل طلب توصيل إلى صالة ويُسقط رسوم التوصيل.
+                  const ticket:any=await resume({token,ticketId:r.id as any});
+                  setCart(ticket.lines);
+                  setResumedMeta({ orderType: ticket.orderType, customerName: ticket.customerName, discount: ticket.discount });
+                  setActiveTicketId(ticket.id);
+                  go("/pos");
+                }} className="p-4 flex w-full items-center gap-3 text-start hover:bg-cyan-50">
                 <div className="flex-1 min-w-0">
                   <div className="font-black text-slate-900">#{r.ticketNumber}
                     {r.customerName && <span className="text-slate-500 font-bold ms-2">· {r.customerName}</span>}
@@ -47,7 +61,7 @@ export default function PosOpenTickets() {
                   <div className="text-xs text-slate-500 font-bold">{new Date(r.createdAt).toLocaleTimeString()}</div>
                 </div>
                 <div className="text-xl font-black text-cyan-600">{r.total.toFixed(2)}</div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
