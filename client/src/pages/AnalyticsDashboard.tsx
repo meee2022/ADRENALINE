@@ -293,9 +293,10 @@ export default function AnalyticsDashboard() {
             <p className="text-center text-slate-400 py-8">{t("لا توجد طلبيات منافذ مسجّلة هذا الشهر", "No outlet orders recorded this month")}</p>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3 mb-2">
-                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.orders}</div><div className="text-xs text-slate-500">{t("طلبات", "Orders")}</div></div>
-                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.meals}</div><div className="text-xs text-slate-500">{t("وجبات", "Meals")}</div></div>
+              {/* لا عدّاد وجبات هنا: أصناف الكافيه تُباع بالوزن فتُسجَّل الكمية
+                  بالجرام، فجمعها مع القطع يعطي رقماً بلا معنى (148 ألف «وجبة»). */}
+              <div className="grid grid-cols-2 gap-3 mb-2">
+                <div className="rounded-xl bg-slate-50 p-3 text-center"><div className="text-2xl font-black text-[#0E76AC]">{online.totals.orders}</div><div className="text-xs text-slate-500">{t("طلبيات", "Orders")}</div></div>
                 <div className="rounded-xl bg-emerald-50 p-3 text-center"><div className="text-2xl font-black text-emerald-600">{Math.round(online.totals.revenue).toLocaleString()}</div><div className="text-xs text-slate-500">{t("إيراد (ر.ق)", "Revenue (QAR)")}</div></div>
               </div>
               {online.platforms.map((p: any) => {
