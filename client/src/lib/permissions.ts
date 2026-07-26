@@ -63,6 +63,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/kitchen",
     "/stickers",
     "/outlet-labels",
+    "/outlet-scan",      // تأكيد استلام طلبيات المنافذ بالماسح
     "/meal-issuance",    // حصر الوجبات الصادرة
     "/online-orders",    // حصر طلبات المنصّات
     "/plans",            // قراءة الخطط لمعرفة الوجبات
@@ -168,6 +169,7 @@ export interface MenuItemDef {
     | "banners"
     | "stickers"
     | "outletLabels"
+    | "outletScan"
     | "mealIssuance"
     | "gymSales"
     | "posAdmin"
@@ -264,6 +266,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/meal-issuance", iconKey: "mealIssuance", labelAr: "حصر الصادر", labelEn: "Meal Issuance",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات المنافذ", labelEn: "Outlet Sales",
+        roles: ["ADMIN", "KITCHEN"] },
+      { href: "/outlet-scan", iconKey: "outletScan", labelAr: "استلام طلبية بالماسح", labelEn: "Scan Receipt",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/pos-admin", iconKey: "posAdmin", labelAr: "نقطة البيع (POS)", labelEn: "Point of Sale (POS)",
         roles: ["ADMIN"] },

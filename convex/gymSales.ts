@@ -814,6 +814,8 @@ export const listOrders = query({
         wasteValue: Number(r.wasteValue || 0),
         netTotal: Number(r.netTotal ?? r.total),
         isVoid: !!r.isVoid,
+        receiptConfirmedAt: r.receiptConfirmedAt ?? null,
+        shortageQty: Number(r.shortageQty || 0),
       });
     }
     return {

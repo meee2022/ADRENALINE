@@ -1210,7 +1210,14 @@ export default defineSchema({
     returnsRecordedBy: v.optional(v.string()),
     returnedTotal: v.optional(v.number()),      // مجموع المرتجعات (وجبات)
     wasteValue: v.optional(v.number()),          // قيمة الهالك (unitPrice × returnedQty)
-    netTotal: v.optional(v.number()),            // الفاتورة الفعلية = total - wasteValue
+    netTotal: v.optional(v.number()),            // الفاتورة الفعلية = total - wasteValue - shortageValue
+    // ✅ تأكيد استلام الفرع بالماسح
+    receiptConfirmedAt: v.optional(v.number()),
+    receiptConfirmedBy: v.optional(v.string()),
+    receivedCount: v.optional(v.number()),       // إجمالي الوجبات التي وصلت فعلاً
+    shortageQty: v.optional(v.number()),         // المُرسَل − المستلم (وجبات)
+    shortageValue: v.optional(v.number()),       // قيمة النقص بالريال — تُخصم من الفاتورة
+    scanNotes: v.optional(v.string()),           // باركودات مُسحت وليست في الطلبية
   })
     .index("by_date", ["date"])
     .index("by_gym_date", ["gymId", "date"]),
@@ -1229,6 +1236,10 @@ export default defineSchema({
     lineTotal: v.number(),             // qty * unitPrice
     // 🔒 المرتجعات = هالك (مدّة الوجبة يومين، ما بترجعش للمخزون)
     returnedQty: v.optional(v.number()),  // عدد الوجبات اللي رجعت من هذا السطر
+    // ✅ تأكيد الاستلام بالماسح: كم وصل فعلاً مقابل qty المُرسَل.
+    //    qty يبقى كما هو دائماً — لو عدّلناه لاختفى النقص من السجل ولم يعرف
+    //    المطبخ الرئيسي أنه حدث أصلاً.
+    receivedQty: v.optional(v.number()),
   })
     .index("by_order", ["orderId"])
     .index("by_meal_date", ["mealId", "date"])
