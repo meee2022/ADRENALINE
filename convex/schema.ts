@@ -480,6 +480,48 @@ export default defineSchema({
     .index("by_status", ["status", "dueDate"])
     .index("by_plan", ["sourcePlanId"]),
 
+  // ===== CRM: إعدادات وسجل رسائل واتساب الآلية =====
+  messageAutomationSettings: defineTable({
+    channel: v.literal("WHATSAPP"),
+    enabled: v.boolean(),
+    testMode: v.boolean(),
+    timezone: v.string(),
+    sendHour: v.number(),
+    renewal7Enabled: v.boolean(),
+    renewal3Enabled: v.boolean(),
+    expiryDayEnabled: v.boolean(),
+    expired2Enabled: v.boolean(),
+    deliveryFailureEnabled: v.boolean(),
+    templateRenewalAr: v.string(),
+    templateRenewalEn: v.string(),
+    templateDeliveryAr: v.string(),
+    templateDeliveryEn: v.string(),
+    updatedBy: v.optional(v.id("users")),
+    updatedAt: v.number(),
+  }).index("by_channel", ["channel"]),
+
+  messageAutomationLogs: defineTable({
+    customerId: v.optional(v.id("customers")),
+    customerName: v.string(),
+    phone: v.string(),
+    eventKey: v.string(),
+    language: v.string(),
+    status: v.union(
+      v.literal("SIMULATED"),
+      v.literal("QUEUED"),
+      v.literal("SENT"),
+      v.literal("FAILED"),
+      v.literal("SKIPPED"),
+    ),
+    providerMessageId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    sentAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_customer", ["customerId", "createdAt"])
+    .index("by_event", ["eventKey", "createdAt"]),
+
   mealCategories: defineTable({
     name: v.string(),
     sortOrder: v.number(),
