@@ -130,6 +130,16 @@ export default function PublicMenuPage() {
     return matchingCustomers.find((c: any) => String(c._id) === verifiedCustomerId) || null;
   }, [matchingCustomers, verifiedCustomerId]);
 
+  const isPhoneVerified = !!verifiedPhone && !!verifiedCustomer;
+
+  /* الزائر غير المتحقَّق: داخل يشوف الأكل، مالوش اشتراك ولا تاريخ بداية ولا دورة.
+     الأسبوع واليوم أدوات مشترك، وعرضها له تطلب منه قراراً بلا معنى — والأسوأ أنها
+     تحصر ما يراه في وجبات يوم واحد فيظن أن هذه كل القائمة. فنُخفيها عنه ونعرض
+     المنيو كاملاً. لا شيء من منطق المشترك يتغيّر: هذا الشرط لا يتحقق إلا وهو
+     غير متحقَّق من رقمه. */
+  const [visitorDayPicker, setVisitorDayPicker] = useState(false);
+  const isVisitor = browseMode && !isPhoneVerified;
+
   // Restaurant settings (for WhatsApp)
   const settings = useQuery(api.restaurantSettings.get);
   const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
@@ -920,6 +930,10 @@ Is that what you want?`,
         : String(meal.category || "").toLowerCase() === activeCategory;
       if (!ok) return false;
     }
+    // الزائر يرى القائمة كاملة: الجدولة تخصّ من له اشتراك وجدول توصيل، وتصفيتها
+    // عليه كانت تُظهر 9 وجبات من 140. لا يمرّ هنا أي مشترك — الشرط يشمل
+    // !isPhoneVerified، ومتى تحقّق العميل عاد الفلتر كما هو تماماً.
+    if (isVisitor && !visitorDayPicker) return true;
     // ✅ نفس حكم الخطة الذكية (lib/mealSchedule.ts) — كانت المقارنة هنا بـ===
     //    بلا توحيد نوع، فأي جدولة تُكتب بأسبوع نصّي "2" أو يوم "Saturday"
     //    كانت تختفي من المنيو اليدوي وحده بينما تظهر في الذكية.
@@ -1019,8 +1033,7 @@ Is that what you want?`,
     { value: "thursday", label: isRtl ? "الخميس" : "Thursday" },
   ];
 
-  // ─── Phone gate state determination ───
-  const isPhoneVerified = !!verifiedPhone && !!verifiedCustomer;
+  // ─── Phone gate state determination ─── (isPhoneVerified مُعرّف أعلاه — يحتاجه فلتر الزائر)
   const canViewMenu = isPhoneVerified || browseMode;
   const showPhonePrompt = !verifiedPhone;
   const showCustomerPicker = verifiedPhone && matchingCustomers && matchingCustomers.length > 1 && !verifiedCustomerId;
@@ -1453,7 +1466,8 @@ Is that what you want?`,
         image={menuHeaderImage}
       />
 
-      {/* Choose: manual selection vs AI smart plan */}
+      {/* Choose: manual selection vs AI smart plan — أداة مشترك، تُخفى عن الزائر */}
+      {!isVisitor && (
       <section className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 py-5" dir={isRtl ? "rtl" : "ltr"}>
           <p className="text-center text-sm font-bold text-[#47759C] mb-3">
@@ -1487,9 +1501,10 @@ Is that what you want?`,
           </div>
         </div>
       </section>
+      )}
 
       {/* Browse-mode notice: cart is saved locally but ordering needs a subscription */}
-      {browseMode && (
+      {browseMode && !isVisitor && (
         <div className="bg-amber-50 border-b border-amber-200" dir={isRtl ? "rtl" : "ltr"}>
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -1505,7 +1520,45 @@ Is that what you want?`,
         </div>
       )}
 
+      {/* شريط الزائر — بديل هادئ عن أدوات الجدولة: يقول ما يراه ويعطيه طريق الاشتراك */}
+      {isVisitor && (
+        <div className="border-b border-[#3CC4F0]/25 bg-[#F2FBFF]" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3.5">
+            <UtensilsCrossed className="h-5 w-5 shrink-0 text-[#0E76AC]" />
+            <p className="min-w-0 flex-1 text-sm font-bold text-[#0E2A4A]">
+              {isRtl ? "هذه قائمتنا الكاملة" : "This is our full menu"}
+              <span className="ms-2 font-semibold text-[#47759C]">
+                {isRtl ? "— تتنوّع الوجبات على مدار الشهر" : "— meals rotate through the month"}
+              </span>
+            </p>
+            <button
+              onClick={() => setVisitorDayPicker((v) => !v)}
+              className="rounded-full border border-[#3CC4F0]/50 bg-white px-3 py-1.5 text-xs font-black text-[#0E76AC] hover:bg-[#3CC4F0]/10"
+            >
+              {visitorDayPicker
+                ? (isRtl ? "عرض القائمة كاملة" : "Show the full menu")
+                : (isRtl ? "عرض وجبات يوم محدّد" : "View a specific day")}
+            </button>
+            <Button
+              size="sm"
+              onClick={() => {
+                const msg = isRtl
+                  ? "مرحباً 👋\nأرغب في الاشتراك في أدرينالين."
+                  : "Hello 👋\nI'd like to subscribe to Adrenaline.";
+                window.location.href = whatsappLink(msg);
+              }}
+              className="h-9 rounded-full px-4 font-bold text-white"
+              style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
+            >
+              <MessageCircle className={cn("h-3.5 w-3.5", isRtl ? "ml-1.5" : "mr-1.5")} />
+              {isRtl ? "اشترك الآن" : "Subscribe"}
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* NEW: Week & Day Scheduling Section */}
+      {(!isVisitor || visitorDayPicker) && (
       <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 py-6">
 
@@ -2075,6 +2128,7 @@ Is that what you want?`,
           </>)}
         </div>
       </section>
+      )}
 
       {/* Search & Filters */}
       <section className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
