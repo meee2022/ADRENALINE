@@ -30,41 +30,23 @@ const MENU_CAT_META: Record<string, { label: string; labelAr: string; icon: any 
 // ✅ توليد رقم طلب مؤقّت لعرض الواجهة (الرقم الفعلي يجيه من السيرفر بعد الحفظ)
 const genLocalOrderNo = () => Math.floor(1000 + Math.random() * 9000);
 
-const posImageObserver = typeof window !== "undefined" && "IntersectionObserver" in window
-  ? new IntersectionObserver((entries, observer) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const image = entry.target as HTMLImageElement;
-        const source = image.dataset.src;
-        if (source) image.src = source;
-        observer.unobserve(image);
-      }
-    }, { rootMargin: "120px 0px" })
-  : null;
-
+/**
+ * ⚡ صورة صنف POS.
+ * كانت تُحمَّل بمراقب تقاطع (IntersectionObserver) وبأولوية `low`، فتظهر الكروت
+ * بيضاء ثوانيَ عند التمرير السريع ثم تلحق الصور — وهو ما اشتكى منه الكاشير.
+ * المصغّرات الآن ~11KB (كل الشبكة ~1.4MB)، فالتحميل الكسول اليدوي صار كلفةً
+ * بلا فائدة. نستخدم `loading="lazy"` الأصلي: المتصفح يبدأ التحميل قبل دخول
+ * الصورة الشاشة بمسافة أكبر، ويحتفظ بها في الكاش عند الرجوع للأعلى.
+ */
 function PosItemImage({ src, alt }: { src: string; alt: string }) {
-  const imageRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    const image = imageRef.current;
-    if (!image) return;
-    if (!posImageObserver) {
-      image.src = src;
-      return;
-    }
-    posImageObserver.observe(image);
-    return () => posImageObserver.unobserve(image);
-  }, [src]);
-
   return (
     <img
-      ref={imageRef}
-      data-src={src}
+      src={src}
       alt={alt}
       width={420}
       height={320}
+      loading="lazy"
       decoding="async"
-      fetchPriority="low"
       draggable={false}
       className="pos-item-image absolute inset-0 h-full w-full object-cover group-hover:scale-[1.04] transition-transform duration-200"
     />
