@@ -13,6 +13,7 @@ import {
   Activity, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, Check, ChefHat,
   ChevronLeft, ChevronRight, CircleAlert, ClipboardCheck, Package, Receipt, Route,
   ShieldAlert, Sparkles, Store, Sun, Sunset, TrendingUp, Users, UserCheck, Dumbbell, Coins,
+  Wallet, Truck, Boxes, Bug, FileText, ArrowDownRight, ArrowUpRight,
 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts";
 import { api } from "@/../../convex/_generated/api";
@@ -29,6 +30,12 @@ const STATUS_STYLES: Record<string, string> = {
   PREPARED: "bg-emerald-50 text-emerald-700",
   DELIVERED: "bg-teal-50 text-teal-700",
 };
+
+/** صف صافي الربح — أخضر للربح وأحمر للخسارة، فيُقرأ الاتجاه قبل الرقم. */
+const cnRow = (positive: boolean) =>
+  `mt-2 flex items-center justify-between rounded-xl border-2 px-3 py-2.5 ${
+    positive ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-rose-300 bg-rose-50 text-rose-800"
+  }`;
 
 export default function DashboardNew() {
   const { language, dir } = useLanguage();
@@ -56,6 +63,17 @@ export default function DashboardNew() {
   const customizedToday = useQuery(
     api.customizedPlans.forDate, { date: dateKey, sessionToken },
   ) as any[] | undefined;
+
+  /* ═══ الحجم التشغيلي: أقسام كانت شغّالة في التطبيق وغائبة عن اللوحة ═══
+     المالية والمخزون والمشتريات وصحة النظام. لا نعرض قسماً بلا بيانات
+     حقيقية (العُهد والتقييمات فارغتان بعد) حتى لا تُقرأ الأصفار كأرقام. */
+  const monthStart = format(new Date(new Date().getFullYear(), new Date().getMonth(), 1), "yyyy-MM-dd");
+  const fin = useQuery(api.financeReports.financeDashboard,
+    { fromDate: monthStart, toDate: dateKey, sessionToken }) as any;
+  const invSummary = useQuery(api.inventory.getSummary, { sessionToken }) as any;
+  const invoices = useQuery(api.purchaseInvoices.listInvoices, { limit: 100, sessionToken }) as any[] | undefined;
+  const suppliers = useQuery(api.inventory.getSuppliers, { sessionToken }) as any[] | undefined;
+  const clientErrors = useQuery(api.clientErrors.recent, { limit: 50, sessionToken }) as any[] | undefined;
   const gymList = useQuery(api.gymSales.listOrders, { from: dateKey, to: dateKey, sessionToken }) as any;
   const loading = customersLoading || plansLoading;
 
@@ -91,6 +109,23 @@ export default function DashboardNew() {
       deliveryRate: todayPlans.length ? Math.round((delivered / todayPlans.length) * 100) : 0,
     };
   }, [customers, dailyPlans, inventoryItems, dateKey, customizedToday]);
+
+  /** ملخّص المشتريات: فواتير الشهر الجاري وقيمتها — من رؤوس الفواتير المستوردة. */
+  const purchases = useMemo(() => {
+    const rows = (invoices || []).filter((i: any) => String(i.invoiceDate) >= monthStart);
+    return {
+      count: rows.length,
+      total: rows.reduce((s: number, i: any) => s + Number(i.total || 0), 0),
+      lastDate: rows.map((i: any) => i.invoiceDate).sort().pop() || null,
+    };
+  }, [invoices, monthStart]);
+
+  /** أخطاء الواجهة: إجمالي المسجَّل وكم منها خلال 24 ساعة. */
+  const errors = useMemo(() => {
+    const rows = clientErrors || [];
+    const dayAgo = Date.now() - 86400000;
+    return { total: rows.length, last24h: rows.filter((e: any) => Number(e.at) >= dayAgo).length };
+  }, [clientErrors]);
 
   const weeklyData = useMemo(() => Array.from({ length: 7 }, (_, i) => {
     const day = addDays(new Date(), i - 6);
@@ -263,6 +298,150 @@ export default function DashboardNew() {
             )}
           </button>
         ))}
+      </section>
+
+      {/* ═══════ 3-ب. الحجم التشغيلي — المالية · المخزون والمشتريات · صحة النظام ═══════
+           أقسام شغّالة في التطبيق وكانت غائبة تماماً عن اللوحة. كل رقم من مصدره
+           الحقيقي، ولا يُعرض قسم بلا بيانات فعلية (العُهد والتقييمات فارغتان بعد). */}
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <span className="h-5 w-1.5 rounded-full bg-[#0E76AC]" />
+          <h2 className="text-base font-black text-[#0E2A4A]">{tr("الحجم التشغيلي", "Operational scale")}</h2>
+          <span className="text-[11px] font-bold text-slate-400">
+            {tr(`من ${monthStart} حتى اليوم`, `${monthStart} to today`)}
+          </span>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          {/* ── المالية ── */}
+          <div className="rounded-2xl border-2 border-[#0E2A4A]/10 bg-white p-4 shadow-[0_10px_28px_-22px_rgba(14,42,74,.55)]">
+            <button onClick={() => navigate("/finance")} className="mb-3 flex w-full items-center gap-2 text-start">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0E2A4A] text-white"><Wallet className="h-4 w-4" /></span>
+              <span className="flex-1">
+                <span className="block text-sm font-black text-[#0E2A4A]">{tr("المالية — هذا الشهر", "Finance — this month")}</span>
+                <span className="block text-[11px] font-bold text-slate-400">{tr("من القيود المُرحَّلة", "From posted entries")}</span>
+              </span>
+              <ArrowIcon className="h-4 w-4 text-slate-300" />
+            </button>
+            {fin ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
+                    <p className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700"><ArrowUpRight className="h-3 w-3" />{tr("إيراد", "Revenue")}</p>
+                    <p className="mt-0.5 text-lg font-black tabular-nums text-emerald-800">{Math.round(fin.revenue).toLocaleString()}</p>
+                  </div>
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 p-2.5">
+                    <p className="flex items-center gap-1 text-[10px] font-black uppercase text-rose-700"><ArrowDownRight className="h-3 w-3" />{tr("مصروف", "Expense")}</p>
+                    <p className="mt-0.5 text-lg font-black tabular-nums text-rose-800">{Math.round(fin.expense).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className={cnRow(fin.netProfit >= 0)}>
+                  <span className="text-xs font-black">{tr("صافي الربح", "Net profit")}</span>
+                  <span className="text-xl font-black tabular-nums">
+                    {Math.round(fin.netProfit).toLocaleString()} <span className="text-[10px] font-bold opacity-70">{tr("ر.ق", "QAR")}</span>
+                  </span>
+                </div>
+                {purchases.total > 0 && fin.expense === 0 && (
+                  <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-2 text-[11px] font-black leading-relaxed text-amber-900">
+                    {tr(
+                      `⚠️ المصروف صفر لأن فواتير الشراء (${Math.round(purchases.total).toLocaleString()} ر.ق) لم تُرحَّل محاسبياً بعد — الإيراد أعلاه من المبيعات فقط.`,
+                      `⚠️ Expense reads zero because purchase invoices (${Math.round(purchases.total).toLocaleString()} QAR) are not posted to the ledger yet — revenue above is sales only.`,
+                    )}
+                  </p>
+                )}
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
+                  <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-slate-600">
+                    {tr("نقدية وبنك", "Cash & bank")}
+                    <b className="block text-sm tabular-nums text-[#0E2A4A]">{Math.round(fin.cashOnHand).toLocaleString()}</b>
+                  </p>
+                  <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-slate-600">
+                    {tr("مستحق للموردين", "Owed to suppliers")}
+                    <b className="block text-sm tabular-nums text-[#0E2A4A]">{Math.round(fin.payable).toLocaleString()}</b>
+                  </p>
+                </div>
+              </>
+            ) : (
+              <p className="py-6 text-center text-xs font-bold text-slate-400">{tr("جارٍ التحميل…", "Loading…")}</p>
+            )}
+          </div>
+
+          {/* ── المخزون والمشتريات ── */}
+          <div className="rounded-2xl border-2 border-[#0E2A4A]/10 bg-white p-4 shadow-[0_10px_28px_-22px_rgba(14,42,74,.55)]">
+            <button onClick={() => navigate("/inventory")} className="mb-3 flex w-full items-center gap-2 text-start">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#0E76AC] text-white"><Boxes className="h-4 w-4" /></span>
+              <span className="flex-1">
+                <span className="block text-sm font-black text-[#0E2A4A]">{tr("المخزون والمشتريات", "Stock & purchasing")}</span>
+                <span className="block text-[11px] font-bold text-slate-400">
+                  {purchases.lastDate
+                    ? tr(`آخر فاتورة ${purchases.lastDate}`, `Last invoice ${purchases.lastDate}`)
+                    : tr("لا فواتير هذا الشهر", "No invoices this month")}
+                </span>
+              </span>
+              <ArrowIcon className="h-4 w-4 text-slate-300" />
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: tr("أصناف المخزن", "Items"), value: invSummary ? invSummary.totalItems : "—", tone: "border-slate-200 bg-slate-50 text-[#0E2A4A]" },
+                { label: tr("قيمة المخزون", "Stock value"), value: invSummary ? Math.round(invSummary.stockValue).toLocaleString() : "—", tone: "border-slate-200 bg-slate-50 text-[#0E2A4A]" },
+                { label: tr("فواتير الشهر", "Invoices"), value: purchases.count, tone: "border-cyan-200 bg-cyan-50 text-[#0E76AC]" },
+                { label: tr("قيمة المشتريات", "Purchases"), value: Math.round(purchases.total).toLocaleString(), tone: "border-cyan-200 bg-cyan-50 text-[#0E76AC]" },
+              ].map((c) => (
+                <div key={c.label} className={`rounded-xl border p-2.5 ${c.tone}`}>
+                  <p className="text-lg font-black tabular-nums">{c.value}</p>
+                  <p className="text-[11px] font-bold opacity-70">{c.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-600">
+                <Truck className="me-1 inline h-3 w-3" />{suppliers ? suppliers.length : 0} {tr("مورّد", "suppliers")}
+              </span>
+              {Number(invSummary?.lowStockCount) > 0 && (
+                <span className="rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] font-black text-amber-800">
+                  {invSummary.lowStockCount} {tr("تحت الحد الأدنى", "below minimum")}
+                </span>
+              )}
+              {Number(invSummary?.expiringSoonCount) > 0 && (
+                <span className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-[11px] font-black text-rose-800">
+                  {invSummary.expiringSoonCount} {tr("قرب الانتهاء", "expiring")}
+                </span>
+              )}
+              <button onClick={() => navigate("/invoice-import")} className="ms-auto rounded-lg border border-cyan-200 px-2.5 py-1.5 text-[11px] font-black text-[#0E76AC] hover:bg-cyan-50">
+                <FileText className="me-1 inline h-3 w-3" />{tr("استلام فاتورة", "Import invoice")}
+              </button>
+            </div>
+          </div>
+
+          {/* ── صحة النظام ── */}
+          <div className="rounded-2xl border-2 border-[#0E2A4A]/10 bg-white p-4 shadow-[0_10px_28px_-22px_rgba(14,42,74,.55)]">
+            <button onClick={() => navigate("/client-errors")} className="mb-3 flex w-full items-center gap-2 text-start">
+              <span className={`grid h-9 w-9 place-items-center rounded-xl text-white ${errors.last24h ? "bg-rose-600" : "bg-emerald-600"}`}>
+                {errors.last24h ? <Bug className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+              </span>
+              <span className="flex-1">
+                <span className="block text-sm font-black text-[#0E2A4A]">{tr("صحة النظام", "System health")}</span>
+                <span className="block text-[11px] font-bold text-slate-400">{tr("أخطاء تظهر للطاقم", "Errors staff hit")}</span>
+              </span>
+              <ArrowIcon className="h-4 w-4 text-slate-300" />
+            </button>
+            <div className={`rounded-xl border-2 p-3 text-center ${errors.last24h ? "border-rose-300 bg-rose-50" : "border-emerald-200 bg-emerald-50"}`}>
+              <p className={`text-3xl font-black tabular-nums ${errors.last24h ? "text-rose-700" : "text-emerald-700"}`}>{errors.last24h}</p>
+              <p className={`text-[11px] font-black ${errors.last24h ? "text-rose-700" : "text-emerald-700"}`}>
+                {errors.last24h ? tr("انهيار خلال 24 ساعة", "crashes in 24h") : tr("لا انهيارات خلال 24 ساعة", "no crashes in 24h")}
+              </p>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] font-bold">
+              <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-slate-600">
+                {tr("إجمالي مسجَّل", "Logged total")}
+                <b className="block text-sm tabular-nums text-[#0E2A4A]">{errors.total}</b>
+              </p>
+              <p className="rounded-lg bg-slate-50 px-2.5 py-2 text-slate-600">
+                {tr("طلبات تنتظر مراجعة", "Orders to review")}
+                <b className="block text-sm tabular-nums text-[#0E2A4A]">{pendingOrders ?? 0}</b>
+              </p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ═══════ 4. Today ops flow + Needs attention ═══════ */}
