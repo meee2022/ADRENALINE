@@ -629,19 +629,22 @@ export const get = query({
         const explicitCalories = perMeal ? Math.round(Number(perMeal.calories))
           : custCal > 0 ? Math.round(custCal) : 0;
         const programCode = String(c.program || (c as any).goalType || (c as any).goals || "").toUpperCase();
-        /* المدى شبكة أمان ضد رقم شاذّ، لا أداة ضبط: كان سقف الدايت 380 وDATABASE
-           فيه أطباق دايت 389 و410 فتُقصّ، وأرضية الفتنس 390 كانت ترفع أرقاماً
-           لأعلى غصباً. وُسّع ليحتوي مدى DATABASE الحقيقي ويظل يمسك الشاذّ. */
+        /* المدى **شبكة أمان ضد رقم شاذّ، لا أداة ضبط**.
+           الأرضية العالية كانت تُسطّح المنيو: 9 أطباق بلك خرجت كلها 450 لأنها
+           رُفعت للأرضية، فبدت السلطة والباستا سواء. والسقف كان يقصّ أطباق دايت
+           حقيقية عند 380 بينما DATABASE فيه 389 و410.
+           الأرضية الآن 250 لكل الباقات — تمسك رقماً منهاراً (وجبة بلا ماكروز)
+           ولا ترفع طبقاً خفيفاً ليبدو ثقيلاً. الأطباق الخفيفة تبقى خفيفة. */
         const automaticRange = isMainCourse(category)
           ? programCode.includes("CUSTOM")
-            ? { min: 500, max: 560 }
+            ? { min: 250, max: 620 }
             : programCode.includes("BULK")
-            ? { min: 450, max: 580 }
+            ? { min: 250, max: 580 }
             : programCode.includes("FITNESS")
-              ? { min: 380, max: 500 }
+              ? { min: 250, max: 500 }
               : programCode.includes("DIET")
-                ? { min: 300, max: 420 }
-                : { min: 300, max: 500 }
+                ? { min: 250, max: 420 }
+                : { min: 250, max: 500 }
           : String(category || "").toUpperCase().includes("BREAKFAST")
             ? { min: 0, max: 310 }
             : { min: 0, max: Number.POSITIVE_INFINITY };
