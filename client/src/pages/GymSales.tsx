@@ -1882,6 +1882,8 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
     selectedGymId ? { outletId: selectedGymId as any, sessionToken } : "skip"
   ) as any[] | undefined;
   const setPrice = useMutation(api.gymSales.setOutletCatalogItem);
+  // نسبة خصم المنفذ — تُطبَّق فوق سعره، فيراها من يضبط الأسعار لا الكاشير وحده
+  const gymDiscount = Number(gyms.find((g: any) => g.id === selectedGymId)?.discountPct || 0);
   const setNames = useMutation(api.gymSales.setMealGymNames);
   const applyBulk = useMutation((api.gymSales as any).applyGymPriceList);
   const applyByAr = useMutation((api.gymSales as any).applyGymPricesByArName);
@@ -2019,14 +2021,23 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
         <CardContent className="p-0">
           <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-bold">
             {t("كل سعر هنا خاص بالمنفذ المحدد فقط. الأصناف الموقوفة تظل ظاهرة ويُحفظ سعرها لإعادة تفعيلها لاحقًا.", "Every price here belongs only to the selected outlet. Disabled items remain visible and retain their price.")}
+            {gymDiscount > 0 && (
+              <span className="ms-2 rounded bg-amber-200/70 px-2 py-0.5 font-black text-amber-900">
+                {t(`خصم هذا المنفذ ${gymDiscount}% — يُطبَّق على الأسعار أدناه`, `This outlet's ${gymDiscount}% discount applies on top of the prices below`)}
+              </span>
+            )}
           </div>
           <div className="max-h-[65vh] overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
               <tr>
                 <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
-                <th className="text-end p-2">{t("سعر القائمة", "Menu price")}</th>
-                <th className="text-end p-2">{t("سعر المنفذ النافذ", "Effective outlet price")}</th>
+                <th className="text-end p-2">{t("سعر المنفذ (قبل الخصم)", "Outlet price (before discount)")}</th>
+                <th className="text-end p-2">
+                  {gymDiscount > 0
+                    ? t(`بعد خصم ${gymDiscount}%`, `After ${gymDiscount}% discount`)
+                    : t("السعر النافذ", "Effective price")}
+                </th>
                 <th className="text-end p-2">{t("سعر مؤقت", "Custom price")}</th>
                 <th className="text-center p-2">{t("الحالة", "Status")}</th>
                 <th className="p-2" />
@@ -2068,11 +2079,17 @@ function PricesTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGym
                       </div>
                       <p className="text-[10px] text-slate-400">{m.category}</p>
                     </td>
-                    <td className={cn("p-2 text-end font-bold", m.listPrice === 0 && "text-red-600")}>
-                      {m.listPrice.toFixed(2)}
-                      {m.listPrice === 0 && <span className="ms-1 text-[9px] px-1 py-0.5 bg-red-50 text-red-700 rounded font-bold">{t("ضروري", "needed")}</span>}
+                    {/* عمود «سعر القائمة» كان يعرض priceQAR — رقم من بداية المشروع
+                        لا يُستعمل في التسعير، فكان يظهر 38 بجوار سعر منفذ 30 ويطلب
+                        «ضروري» لصنف سعره سليم. الآن: سعر المنفذ نفسه، والتحذير
+                        على صفر حقيقي — صنف بصفر يخرج مجاناً على الفاتورة. */}
+                    <td className={cn("p-2 text-end font-bold", m.effectivePrice === 0 && "text-red-600")}>
+                      {m.effectivePrice.toFixed(2)}
+                      {m.effectivePrice === 0 && <span className="ms-1 text-[9px] px-1 py-0.5 bg-red-50 text-red-700 rounded font-bold">{t("ضروري", "needed")}</span>}
                     </td>
-                    <td className="p-2 text-end font-black text-[#0E76AC]">{m.effectivePrice.toFixed(2)}</td>
+                    <td className="p-2 text-end font-black text-[#0E76AC]">
+                      {(Math.round(m.effectivePrice * (1 - gymDiscount / 100) * 100) / 100).toFixed(2)}
+                    </td>
                     <td className="p-2 text-end">
                       <input type="number" step="0.01" value={displayVal} onChange={(e) => setDrafts((d) => ({ ...d, [m.id]: e.target.value }))} placeholder="—" className="w-20 h-8 text-center border border-slate-200 rounded font-bold" />
                     </td>
