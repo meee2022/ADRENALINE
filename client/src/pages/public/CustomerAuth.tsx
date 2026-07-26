@@ -86,8 +86,11 @@ export default function CustomerAuth() {
     if (form.password !== form.confirmPassword) {
       setError(isRtl ? "كلمة المرور غير متطابقة" : "Passwords do not match"); return;
     }
-    if (form.password.length < 6) {
-      setError(isRtl ? "كلمة المرور يجب أن تكون 6 أحرف على الأقل" : "Password must be at least 6 characters"); return;
+    // 8 لا 6: الخادم يرفض أقل من 8 (passwordReset.verifyAndReset)، فمن يكتب 6 أو 7
+    // كان يمرّ من هنا ثم يُردّ بعد إدخال الكود برسالة مختلفة، فيظنّ الكود هو الخطأ.
+    // التسجيل أُبقي على 6 — حدّه على الخادم مختلف ولا يمرّ من هنا.
+    if (form.password.length < 8) {
+      setError(isRtl ? "كلمة المرور يجب أن تكون 8 أحرف على الأقل" : "Password must be at least 8 characters"); return;
     }
     setIsLoading(true);
     try {
