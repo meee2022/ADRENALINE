@@ -18,6 +18,7 @@ export const liveSnapshot = query({
     const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
     const dayStart = startOfDay.getTime();
     const hourAgo = now - 60 * 60 * 1000;
+    const sixHoursAgo = now - 6 * 60 * 60 * 1000;
 
     /* ═══════ فواتير اليوم ═══════ */
     const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
@@ -51,7 +52,9 @@ export const liveSnapshot = query({
 
     /* ═══════ آخر 20 فاتورة (activity feed) ═══════ */
     const recent = tickets
-      .filter((t) => t.paidAt && t.paidAt >= hourAgo * 6) // آخر 6 ساعات
+      // آخر 6 ساعات. كان `hourAgo * 6` — و`hourAgo` توقيت مطلق لا مدة، فضربه
+      // يرمي الحد إلى سنة 14000 ولا تمرّ أي فاتورة، فتظهر اللوحة فاضية دائماً.
+      .filter((t) => t.paidAt && t.paidAt >= sixHoursAgo)
       .sort((a, b) => (b.paidAt || 0) - (a.paidAt || 0))
       .slice(0, 20)
       .map((t: any) => ({
