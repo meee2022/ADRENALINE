@@ -61,22 +61,46 @@ let currentSetter: ((d: PendingDialog | null) => void) | null = null;
 const HEAD_BRAND = "bg-gradient-to-l from-[#0E2A4A] via-[#10517d] to-[#0E76AC]";
 const HEAD_DANGER = "bg-gradient-to-l from-[#7f1d1d] via-[#b91c1c] to-[#dc2626]";
 
+/**
+ * سطر المسؤولية يُبرز في صندوق تحذيري خاص — هو أهم سطر عند أي خلاف لاحق
+ * («اخترتها وأنت مُبلَّغ»)، وكان يمرّ بنفس لون بقية النص فلا يُقرأ.
+ * يُلتقط بعلامة ‹!› في أول السطر داخل نص الرسالة.
+ */
+const NOTE_MARK = "‹!›";
+
 function DialogShell({
   rtl, danger, title, message, children,
 }: {
   rtl: boolean; danger?: boolean; title?: string; message: string; children: React.ReactNode;
 }) {
+  const idx = message.indexOf(NOTE_MARK);
+  const SEP = String.fromCharCode(10) + String.fromCharCode(10);
+  const body = idx >= 0 ? message.slice(0, idx).trimEnd() : message;
+  const tail = idx >= 0 ? message.slice(idx + NOTE_MARK.length).split(SEP) : [];
+  const note = tail.length ? tail[0].trim() : "";
+  const rest = tail.length > 1 ? tail.slice(1).join(SEP).trim() : "";
+
   return (
-    <AlertDialogContent dir={rtl ? "rtl" : "ltr"} className="p-0 gap-0 overflow-hidden max-w-md border-2 border-[#0E2A4A]/15">
+    <AlertDialogContent dir={rtl ? "rtl" : "ltr"} className="p-0 gap-0 overflow-hidden max-w-lg border-2 border-[#0E2A4A]/15">
       <div className={`${danger ? HEAD_DANGER : HEAD_BRAND} px-5 py-4`}>
         <AlertDialogTitle className="text-white text-lg font-black leading-snug m-0">
           {title || (rtl ? "تنبيه" : "Notice")}
         </AlertDialogTitle>
       </div>
-      <div className="px-5 py-4">
-        <AlertDialogDescription className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700 font-semibold">
-          {message}
+      <div className="px-5 py-4 space-y-3">
+        <AlertDialogDescription className="whitespace-pre-wrap text-[15px] leading-[1.9] text-slate-700 font-semibold">
+          {body}
         </AlertDialogDescription>
+        {note && (
+          <p className="whitespace-pre-wrap rounded-xl bg-amber-50 border-2 border-amber-300 px-3.5 py-2.5 text-[13.5px] leading-[1.8] font-black text-amber-900">
+            ⚠️ {note}
+          </p>
+        )}
+        {rest && (
+          <p className="whitespace-pre-wrap text-[15px] leading-[1.9] text-slate-800 font-black">
+            {rest}
+          </p>
+        )}
       </div>
       <div className="px-5 pb-5 pt-1 bg-slate-50/60 border-t border-slate-100">
         {children}

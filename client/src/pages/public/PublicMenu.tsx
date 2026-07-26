@@ -802,7 +802,7 @@ Remove one, or pick another day.`,
 المُسجَّل في ملفك كممنوع: ${avoidHit.toUpperCase()}
 ممنوعاتك وحساسيتك المسجَّلة: ${registered || "—"}
 
-اختيارك لهذه الوجبة مسؤوليتك، وسيظهر هذا التنبيه للأخصائية عند مراجعة طلبك.
+‹!›اختيارك لهذه الوجبة مسؤوليتك، وسيظهر هذا التنبيه للأخصائية عند مراجعة طلبك.
 
 هل تريد إضافتها رغم ذلك؟`
           : `Meal: "${mealNm}"
@@ -810,7 +810,7 @@ Remove one, or pick another day.`,
 Restricted on your file: ${avoidHit.toUpperCase()}
 Your registered allergies/avoid list: ${registered || "—"}
 
-Choosing it is your responsibility, and this warning will be shown to the specialist when your order is reviewed.
+‹!›Choosing it is your responsibility, and this warning will be shown to the specialist when your order is reviewed.
 
 Add it anyway?`,
       });
