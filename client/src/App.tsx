@@ -48,7 +48,10 @@ const PosAdmin = lazy(() => import("@/pages/PosAdmin"));
 const ManagerLive = lazy(() => import("@/pages/ManagerLive"));
 const PosShell = lazy(() => import("@/pages/pos/PosShell"));
 const DriverAssignments = lazy(() => import("@/pages/DriverAssignments"));
-const OnlineOrders = lazy(() => import("@/pages/OnlineOrders"));
+// ⛔ «طلبات أونلاين» معطّلة (2026-07-26): مبيعات المنافذ صارت تغطّيها، والجدول لم
+//    يستقبل طلباً واحداً قط. الصفحة ودوالّها والويبهوك باقية كما هي — تعطيل لا حذف،
+//    فإعادتها = سطر lazy + سطر Route + بند القائمة.
+// const OnlineOrders = lazy(() => import("@/pages/OnlineOrders"));
 const OrdersPending = lazy(() => import("@/pages/OrdersPending"));
 const OrderReviewDetail = lazy(() => import("@/pages/OrderReviewDetail"));
 const RestaurantSettings = lazy(() => import("@/pages/RestaurantSettings"));
@@ -281,9 +284,6 @@ function Router() {
       </Route>
       <Route path="/drivers">
         <ProtectedRoute component={DriverAssignments} />
-      </Route>
-      <Route path="/online-orders">
-        <ProtectedRoute component={OnlineOrders} />
       </Route>
       <Route path="/delivery">
         <ProtectedRoute component={Delivery} />

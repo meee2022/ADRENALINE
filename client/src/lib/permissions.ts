@@ -65,7 +65,6 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/outlet-labels",
     "/outlet-scan",      // تأكيد استلام طلبيات المنافذ بالماسح
     "/meal-issuance",    // حصر الوجبات الصادرة
-    "/online-orders",    // حصر طلبات المنصّات
     "/plans",            // قراءة الخطط لمعرفة الوجبات
     "/plans-review/*",
   ],
@@ -273,8 +272,6 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN"] },
       { href: "/manager", iconKey: "managerLive", labelAr: "لوحة المدير اللحظية", labelEn: "Manager Live",
         roles: ["ADMIN"] },
-      { href: "/online-orders", iconKey: "onlineOrders", labelAr: "طلبات أونلاين", labelEn: "Online Orders",
-        roles: ["ADMIN", "KITCHEN"] },
       { href: "/delivery", iconKey: "delivery", labelAr: "التوصيل والتتبع", labelEn: "Delivery & Tracking",
         roles: ["ADMIN", "DELIVERY"] },
       { href: "/drivers", iconKey: "drivers", labelAr: "سواقين التوصيل", labelEn: "Delivery Drivers",
