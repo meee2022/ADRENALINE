@@ -17,7 +17,7 @@ import { DailyPlanItem } from "@/lib/types";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
-import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
+import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
 import { confirmDialog } from "@/lib/dialogs";
 
 import { Button } from "@/components/ui/button";
@@ -822,6 +822,37 @@ export default function PlansPage() {
         item.id === itemId ? { ...item, ...updates } : item
       ),
     });
+  };
+
+  /**
+   * الاختيار اليدوي للأخصائية — تحذير لا منع.
+   *
+   * زر «املأ» لا يختار ممنوعاً أبداً، لكن الاختيار بالإصبع من القائمة كان يمرّ
+   * بلا أي فحص: تُسنَد Chicken Tacos لمشتركة ممنوعة الدجاج ولا شيء يعترض.
+   * نُسمّي المخالفة بالضبط ونترك القرار لها — أحياناً تستثني بمعرفتها، وأحياناً
+   * يكون التطابق باسم متشابه. الإلغاء يُبقي الخانة كما كانت.
+   */
+  const chooseMealForItem = async (itemId: string, val: string | null) => {
+    if (val && restrictWords.length) {
+      const info = mealInfoByMenuItem.get(String(val));
+      const hit = matchedRestriction(info, restrictWords);
+      if (hit) {
+        const nm = isRtl ? (info?.nameAr || info?.nameEn) : (info?.nameEn || info?.nameAr);
+        const registered = [(selectedCustomer as any)?.allergies, (selectedCustomer as any)?.avoid]
+          .filter(Boolean).join(" · ");
+        const ok = await confirmDialog({
+          variant: "danger",
+          title: isRtl ? "⛔ الوجبة ضمن ممنوعات المشترك" : "⛔ Meal is on the customer's restricted list",
+          confirmText: isRtl ? "أعرف ذلك — أسنِدها" : "I know — assign it",
+          cancelText: isRtl ? "إلغاء" : "Cancel",
+          message: isRtl
+            ? `المشترك: ${(selectedCustomer as any)?.name || "—"}\nالوجبة: «${nm || "—"}»\n\nالمخالفة: ${String(hit).toUpperCase()}\nالمسجَّل في ملفه: ${registered || "—"}\n\nهل تريد إسنادها رغم ذلك؟`
+            : `Customer: ${(selectedCustomer as any)?.name || "—"}\nMeal: "${nm || "—"}"\n\nMatched restriction: ${String(hit).toUpperCase()}\nOn file: ${registered || "—"}\n\nAssign it anyway?`,
+        });
+        if (!ok) return;
+      }
+    }
+    updateItemById(itemId, { publicMealId: val, mealId: val, menuItemId: null } as any);
   };
 
   const addCategorySlot = (categoryId: string) => {
@@ -1961,13 +1992,31 @@ export default function PlansPage() {
                                   {/* Meal picker */}
                                   <MealPicker
                                     value={currentSelectedId}
-                                    onChange={(val) => updateItemById(item.id, { publicMealId: val, mealId: val, menuItemId: null })}
+                                    onChange={(val) => { void chooseMealForItem(item.id, val); }}
                                     items={allCategoryMeals}
                                     placeholder={isRtl ? "اختر الوجبة" : "Choose meal"}
                                     isRtl={isRtl}
                                     suggestedIds={slotSuggestedIds}
                                     infoById={mealInfoByMenuItem}
                                   />
+
+                                  {/* شارة ثابتة للمخالفة: نافذة التأكيد تُغلق وتُنسى، والخطة قد تُفتح
+                                      لاحقاً أو تأتي من مصدر آخر — فالمخالفة تبقى مرئية حتى الاعتماد. */}
+                                  {(() => {
+                                    const selId = selectedMealId(item);
+                                    const hit = selId && restrictWords.length
+                                      ? matchedRestriction(mealInfoByMenuItem.get(String(selId)), restrictWords)
+                                      : null;
+                                    if (!hit) return null;
+                                    return (
+                                      <div className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-2.5 py-1.5">
+                                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-red-600" />
+                                        <span className="text-[11px] font-black text-red-700">
+                                          {isRtl ? "ضمن ممنوعات المشترك" : "On the customer's restricted list"}: {String(hit).toUpperCase()}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* ℹ️ تحذيرات العميل (حساسية/ممنوعات) لم تعد تتكرّر في كل بطاقة —
                                       تظهر مرة واحدة في شريط ثابت أعلى قسم الوجبات. */}
