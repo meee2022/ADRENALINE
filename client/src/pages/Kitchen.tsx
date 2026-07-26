@@ -274,6 +274,13 @@ export default function Kitchen() {
     // خريطة وجبات المنيو العام بالمعرّف — لحل اسم الطبق (وبالإنجليزي في وضع الإنجليزي)
     const pubById = new Map<string, any>();
     (publicMealsList || []).forEach((m: any) => { if (m?._id) pubById.set(String(m._id), m); });
+    /** اسم عربي → اسم إنجليزي، لتوحيد بنود المخصّصين مع إجمالي اليوم. */
+    const arToEnMeal = new Map<string, string>();
+    (publicMealsList || []).forEach((m: any) => {
+      const ar = String(m?.nameAr || "").trim().toLowerCase();
+      const en = String(m?.nameEn || "").trim();
+      if (ar && en) arToEnMeal.set(ar, en);
+    });
 
     const summary: Record<string, {
       count: number;
@@ -494,8 +501,15 @@ export default function Kitchen() {
         if (String(it?.type || "").toUpperCase() === "MAIN") return; // الرئيسي يبقى في بوكس الشخص
         const raw = composeCustItem(it).trim();
         if (!raw || raw.length < 3 || /NOT SET|لم تُحدَّد/i.test(raw)) return;
-        // طابق مفتاحاً موجوداً بلا حساسية حالة، وإلا أنشئ جديداً (لدمج العدّ مع نفس الطبق العادي)
-        const key = Object.keys(summary).find((k) => k.toLowerCase() === raw.toLowerCase()) || raw;
+        /* طابق مفتاحاً موجوداً بلا حساسية حالة، وإلا أنشئ جديداً (لدمج العدّ مع نفس الطبق العادي).
+           ⚠️ الأخصائية تكتب بند المخصّص بالعربي أحياناً («تيراميسو») بينما إجمالي
+           اليوم بالإنجليزي («Tiramisu»)، فكان يُنشَأ سطران لنفس الطبق ويطبخ
+           المطبخ العدد ناقصاً. نترجم الاسم عبر المنيو (nameAr → nameEn) قبل المطابقة.
+           يوم 28-7 وحده: 10 حصص تيراميسو كانت ستنفصل عن 97. */
+        const canon = arToEnMeal.get(raw.trim().toLowerCase()) || raw;
+        const key = Object.keys(summary).find((k) => k.toLowerCase() === canon.toLowerCase())
+          || Object.keys(summary).find((k) => k.toLowerCase() === raw.toLowerCase())
+          || canon;
         const catName = /salad|سلط/i.test(raw) ? "Salad" : (/soup|شور/i.test(raw) ? "Soup" : "Snack");
         if (!summary[key]) summary[key] = emptySummary(catName);
         summary[key].count += 1;
