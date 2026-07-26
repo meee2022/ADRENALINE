@@ -278,15 +278,36 @@
   outline-offset: 2px;
 }
 
+/* ═══ كثافة شاشة الكاشير ═══
+   شكوى الكاشير: «العناصر كبيرة والشاشة مش مرتبة». الشاشة عريضة لكن الكروت
+   والتبويبات مأخوذة من مقاسات الموبايل، فيظهر 4 أعمدة فقط ويضيع نصف المساحة.
+   نضغط المقاسات مع إبقاء ارتفاع كل زر ≥ 40px (شاشة لمس). */
+@media (min-width: 761px) {
+  .pos-items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(116px, 100%), 1fr));
+    gap: 0.5rem;
+  }
+  .pos-item-card {
+    aspect-ratio: 1.2 / 1;
+    contain-intrinsic-size: 150px 128px;
+  }
+  /* اسم الصنف وسعره داخل الكارت */
+  .pos-item-card .line-clamp-2,
+  .pos-item-card p:first-of-type { font-size: 12px; line-height: 1.25; }
+  .pos-items-canvas { padding: 0.625rem; }
+
+  /* شريط التبويبات والبحث */
+  .pos-items-panel .pos-cat-tabs button { height: 38px; padding-inline: 0.75rem; font-size: 13px; }
+  .pos-items-panel input[type="text"], .pos-items-panel input:not([type]) { height: 40px; font-size: 13px; }
+}
+
 @media (max-width: 1024px) {
   .pos-ticket-panel {
     width: clamp(270px, 31vw, 310px) !important;
   }
-  .pos-items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(min(132px, 100%), 1fr));
-  }
+  /* ⚠️ لا نُعيد تكبير الكروت هنا: شاشة الكاشير غالباً ضمن هذا النطاق بعد
+     تكبير ويندوز، وكانت هذه القاعدة تُلغي الكثافة أعلاه فتظهر 4 أعمدة فقط. */
   .pos-item-card {
-    aspect-ratio: 1.18 / 1;
     border-radius: 0.75rem;
   }
 }

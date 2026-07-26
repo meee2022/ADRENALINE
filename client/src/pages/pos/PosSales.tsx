@@ -509,7 +509,7 @@ export default function PosSales() {
           </div>
 
           {/* Category tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <div className="pos-cat-tabs flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {catButtons.map((c: any) => {
               const M = MENU_CAT_META[c.id];
               const Icon = M?.icon;
@@ -526,7 +526,9 @@ export default function PosSales() {
                     : { background: "#fff", border: "1px solid #d8e5ea" }}
                 >
                   {Icon && <Icon className="h-4 w-4" />}
-                  {c.name || c.nameEn}
+                  {/* ⚠️ كان c.name دائماً (العربي) فلا تتحوّل التبويبات مع اللغة.
+                     الآن تتبع لغة الواجهة، مع الرجوع للاسم الآخر إن كان فارغاً. */}
+                  {isAr ? (c.name || c.nameEn) : (c.nameEn || c.name)}
                 </button>
               );
             })}
