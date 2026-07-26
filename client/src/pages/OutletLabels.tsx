@@ -74,7 +74,15 @@ export default function OutletLabels() {
   const { language } = useLanguage();
   const isRtl = language === "ar";
   const sessionToken = useStore(s => s.sessionToken) || undefined;
-  const rows = (useQuery(api.outletLabels.list, { sessionToken }) || []) as LabelRow[];
+  /* المنفذ يحدّد السعر المطبوع: نفس الباركود يُباع بسعرين في منفذين، والسعر
+     يُقرأ لحظياً من «أصناف المنافذ» فلا ينحرف الملصق عن الفاتورة. */
+  const outlets = (useQuery(api.gymSales.listGyms, { sessionToken }) || []) as any[];
+  const [outletId, setOutletId] = useState<string>("");
+  useEffect(() => { if (!outletId && outlets.length) setOutletId(outlets[0].id); }, [outlets, outletId]);
+  const rows = (useQuery(
+    api.outletLabels.list,
+    outletId ? { outletId: outletId as any, sessionToken } : { sessionToken },
+  ) || []) as LabelRow[];
   const seed = useMutation(api.outletLabels.seed);
   const update = useMutation(api.outletLabels.update);
   const create = useMutation(api.outletLabels.create);
@@ -214,6 +222,19 @@ export default function OutletLabels() {
               ))}
             </div>
             <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex flex-wrap items-center gap-3">
+              <div>
+                <select
+                  value={outletId}
+                  onChange={(e) => setOutletId(e.target.value)}
+                  className="h-11 rounded-md border border-slate-200 bg-white px-3 text-sm font-black text-[#0E2A4A]"
+                  aria-label={isRtl ? "المنفذ" : "Outlet"}
+                >
+                  {outlets.map((o: any) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                </select>
+                <p className="mt-0.5 text-[10px] font-bold text-slate-400">
+                  {isRtl ? "السعر من «أصناف المنافذ» لهذا المنفذ" : "Price from this outlet's items"}
+                </p>
+              </div>
               <div className="relative flex-1"><Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isRtl ? "ابحث بالاسم أو رقم الباركود..." : "Search name or barcode..."} className="h-11 ps-10 bg-white" /></div>
               {tab === "online" && <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>}
               <button onClick={() => setCreating(true)} className="h-11 px-4 rounded-md bg-[#0E76AC] text-white font-black flex items-center gap-2 shadow-sm"><Plus className="h-4 w-4" />{isRtl ? "صنف استيكر جديد" : "New label product"}</button>

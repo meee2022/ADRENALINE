@@ -75,11 +75,39 @@ const LABELS: SeedRow[] = [
   ["CHICKEN FAJITA SANDWICH", 40, 418, 35, 38, 14],
 ];
 
+/**
+ * قائمة الاستيكرات. حين يُمرَّر `outletId` يُقرأ السعر **لحظياً** من كتالوج ذلك
+ * المنفذ بدل السعر المخزَّن في صف الاستيكر.
+ *
+ * لماذا: السعر المخزَّن لقطة أُخذت مرة واحدة من `posItems.posPrice`، فكان ينحرف
+ * كلما تغيّر سعر المنفذ ولا يعود أحد لتحديثه — Beetroot Salad كتالوجه 25
+ * واستيكره 35، وCookies كتالوجه 20 واستيكره 18. الباركود هوية المنتج، والسعر
+ * يخصّ المنفذ، فيُقرأ من مصدره الواحد: شاشة «أصناف المنافذ».
+ *
+ * ويُطبع **سعر ما قبل الخصم**: خصم المنفذ ربحه هو، وما على العلبة هو ما يدفعه
+ * الزبون في المحل.
+ */
 export const list = query({
-  args: { sessionToken: v.optional(v.string()) },
+  args: { outletId: v.optional(v.id("gymAccounts")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    return await ctx.db.query("outletProductLabels").withIndex("by_sequence").collect();
+    const rows = await ctx.db.query("outletProductLabels").withIndex("by_sequence").collect();
+    if (!args.outletId) return rows.map((r: any) => ({ ...r, priceSource: "label" as const }));
+
+    const cat = await ctx.db
+      .query("outletCatalogItems")
+      .withIndex("by_outlet", (q) => q.eq("outletId", args.outletId!))
+      .collect();
+    const priceByMeal = new Map<string, number>();
+    cat.forEach((c: any) => { if (c.isActive) priceByMeal.set(String(c.mealId), Number(c.price)); });
+
+    return rows.map((r: any) => {
+      const live = r.publicMealId ? priceByMeal.get(String(r.publicMealId)) : undefined;
+      return live === undefined
+        // غير مربوط بوجبة أو ليس في كتالوج هذا المنفذ ⇒ نُبقي المخزَّن ونُعلمه
+        ? { ...r, priceSource: "label" as const }
+        : { ...r, price: live, priceSource: "outlet" as const };
+    });
   },
 });
 
