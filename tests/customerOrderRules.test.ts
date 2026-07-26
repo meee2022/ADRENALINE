@@ -64,12 +64,21 @@ describe("customer order server rules", () => {
     })).toThrow("SUBSCRIPTION_COUNT_MISMATCH");
   });
 
-  it("rejects more than one breakfast per day", () => {
+  // ☕ الفطار الثاني مسموح عمداً: المشترك حرّ فيه بعد تأكيد صريح في المنيو
+  //    (701adba). السقف يبقى على الاختيار التلقائي وحده، والعدد الكلي للوجبات
+  //    الرئيسية يظلّ مفروضاً فلا يزيد أحد حصّته. هذا الاختبار يحرس ذلك.
+  it("allows a second breakfast without inflating the daily count", () => {
     const items = validItems();
     items[1] = { mealId: "breakfast-2", week: 2, day: "thursday", meal: meal("breakfast") };
     expect(() => validateCustomerOrderSelection({
       items, customer, startRotationWeek: 2, todayISO: TODAY,
-    })).toThrow("BREAKFAST_LIMIT");
+    })).not.toThrow();
+
+    // لكن فطار إضافي فوق الحصّة يُرفض كأي وجبة رئيسية زائدة
+    expect(() => validateCustomerOrderSelection({
+      items: [...items, { mealId: "breakfast-3", week: 2, day: "thursday", meal: meal("breakfast") }],
+      customer, startRotationWeek: 2, todayISO: TODAY,
+    })).toThrow("SUBSCRIPTION_COUNT_MISMATCH");
   });
 
   it("rejects paused and expired subscriptions", () => {
