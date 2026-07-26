@@ -453,10 +453,16 @@ export const get = query({
     //    نفس منطق عرض المنيو للعميل، فالاستيكر يطابق ما رآه.
     const restSettings: any = await ctx.db.query("restaurantSettings").first();
     // fallback = قيم كشف المطبخ 7-7-2026 — تعمل حتى قبل أول حفظ من الإعدادات
+    /* معاملات الحصص معايَرة على ملف DATABASE لا على تقدير:
+       نسبة الفتنس للدايت ثابتة عبر أطباقه — 450/373 و468/389 و493/410 ≈ **1.20**.
+       والبلك أعلى بحكم حصّته في نفس الإعدادات (بروتين 150-160جم وكارب 170 مقابل
+       100-110 و150 للفتنس)، فلا يصحّ أن يتساوى معه — **1.30**.
+       كانت 1.08/1.15 هنا و1.05/1.10 في الإعدادات المحفوظة (وهي الغالبة)، فكان
+       استيكر الفتنس أقل من الحقيقة بنحو 60-80 سعرة. */
     const pp = restSettings?.programPortions || {
       DIET: { calFactor: 1 },
-      FITNESS: { calFactor: 1.08 },
-      BULK: { calFactor: 1.15 },
+      FITNESS: { calFactor: 1.2 },
+      BULK: { calFactor: 1.3 },
     };
     const factorFor = (program: string): number => {
       if (!pp) return 1;
@@ -623,16 +629,19 @@ export const get = query({
         const explicitCalories = perMeal ? Math.round(Number(perMeal.calories))
           : custCal > 0 ? Math.round(custCal) : 0;
         const programCode = String(c.program || (c as any).goalType || (c as any).goals || "").toUpperCase();
+        /* المدى شبكة أمان ضد رقم شاذّ، لا أداة ضبط: كان سقف الدايت 380 وDATABASE
+           فيه أطباق دايت 389 و410 فتُقصّ، وأرضية الفتنس 390 كانت ترفع أرقاماً
+           لأعلى غصباً. وُسّع ليحتوي مدى DATABASE الحقيقي ويظل يمسك الشاذّ. */
         const automaticRange = isMainCourse(category)
           ? programCode.includes("CUSTOM")
             ? { min: 500, max: 560 }
             : programCode.includes("BULK")
-            ? { min: 490, max: 550 }
+            ? { min: 450, max: 580 }
             : programCode.includes("FITNESS")
-              ? { min: 390, max: 470 }
+              ? { min: 380, max: 500 }
               : programCode.includes("DIET")
-                ? { min: 300, max: 380 }
-                : { min: 330, max: 490 }
+                ? { min: 300, max: 420 }
+                : { min: 300, max: 500 }
           : String(category || "").toUpperCase().includes("BREAKFAST")
             ? { min: 0, max: 310 }
             : { min: 0, max: Number.POSITIVE_INFINITY };
