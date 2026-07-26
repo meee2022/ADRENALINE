@@ -863,14 +863,20 @@ async function buildGymOrderLines(
     if (!meal || !meal.isActive) throw new Error("وجبة غير متوفرة");
     const outletRow: any = outletByMeal.get(String(meal._id));
     if (hasOutletCatalog && !outletRow) throw new Error("الصنف غير متاح في هذا المنفذ");
-    const listPrice = Number(meal.priceQAR) || 0;
+    const catalogPrice = Number(meal.priceQAR) || 0;
     const hasCustom = meal.gymPrice != null && meal.gymPrice >= 0;
     const unitPrice = outletRow
       ? Number(outletRow.price)
       : hasCustom
       ? Number(meal.gymPrice)
-      : Math.round(listPrice * (1 - discountPct / 100) * 100) / 100;
+      : Math.round(catalogPrice * (1 - discountPct / 100) * 100) / 100;
     if (unitPrice < 0) throw new Error("سعر غير صالح");
+    /* «قبل الخصم» لا يصحّ أن يقلّ عن المدفوع. أصناف المنافذ كثيراً ما يكون سعرها
+       في المنيو العام صفراً (لا تُباع هناك أصلاً)، فكان الفرق يخرج **بالسالب**:
+       فاتورة 16-7 قالت «قبل الخصم 2077 والمطلوب 2531 وخصم −454».
+       فإن لم يكن للصنف سعر قائمة أعلى، فسعر بيعه هو سعر قائمته والخصم صفر.
+       المبلغ المحصَّل (unitPrice) لا يتأثر بهذا السطر إطلاقاً. */
+    const listPrice = catalogPrice > unitPrice ? catalogPrice : unitPrice;
     subtotal += listPrice * qty;
     total += unitPrice * qty;
     mealsCount += qty;
