@@ -258,6 +258,22 @@ export default function CustomerAuth() {
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    {/* الشرط يُقال قبل المحاولة لا بعدها: كان يُكتشف بعد إدخال الكود
+                        فيظنّ المستخدم أن الكود هو الخطأ ويطلب كوداً جديداً. */}
+                    {(() => {
+                      const min = mode === "reset" ? 8 : 6;
+                      const typed = form.password.length;
+                      const ok = typed >= min;
+                      return (
+                        <p className="text-xs font-bold" style={{ color: typed === 0 ? "#94a3b8" : ok ? "#1E7A45" : "#dc2626" }}>
+                          {typed === 0
+                            ? (isRtl ? `يجب ألا تقل عن ${min} أحرف` : `Must be at least ${min} characters`)
+                            : ok
+                              ? (isRtl ? "✓ الطول مناسب" : "✓ Length is fine")
+                              : (isRtl ? `ناقص ${min - typed} من ${min} أحرف` : `${min - typed} more of ${min} characters`)}
+                        </p>
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-1.5">
