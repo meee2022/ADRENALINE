@@ -176,30 +176,47 @@ export const kitchenPerformance = query({
   },
 });
 
-// ✅ إيراد منصّات الأونلاين لهذا الشهر (طلبات/سنونو/رفيق…) — لكل منصّة عدد+وجبات+إيراد
-export const onlinePlatforms = query({
+/**
+ * إيراد المنافذ لهذا الشهر — لكل منفذ عدد الطلبيات والوجبات والإيراد.
+ *
+ * كان المصدر جدول `onlineOrders`، وهو لم يستقبل صفاً واحداً قط، فكان الكارت
+ * يعرض أصفاراً بجوار أرقام حقيقية. الأرقام الفعلية في طلبيات المنافذ.
+ *
+ * الإيراد = `netTotal` (بعد المرتجعات والنقص) لا `total`: العميل يقرأ هذا الرقم
+ * كإيراد، وما ارتدّ لم يُقبض. والطلبيات الملغاة تُستبعد تماماً.
+ */
+export const outletRevenue = query({
   args: { month: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const month = args.month || new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 7);
-    const rows = await ctx.db
-      .query("onlineOrders")
-      .withIndex("by_month", (q) => q.eq("month", month))
-      .collect();
+    const rows: any[] = (await ctx.db.query("gymOrders").collect())
+      .filter((r) => !r.isVoid && String(r.date || "").startsWith(month));
+
+    const names = new Map<string, string>();
     const map: Record<string, { platform: string; orders: number; meals: number; revenue: number }> = {};
     for (const r of rows) {
-      const k = r.platform;
-      (map[k] ||= { platform: k, orders: 0, meals: 0, revenue: 0 });
-      map[k].orders++; map[k].meals += r.mealsCount || 0; map[k].revenue += r.amount || 0;
+      const key = String(r.gymId);
+      if (!names.has(key)) {
+        const g: any = await ctx.db.get(r.gymId);
+        names.set(key, g?.name || "—");
+      }
+      const name = names.get(key) as string;
+      (map[name] ||= { platform: name, orders: 0, meals: 0, revenue: 0 });
+      map[name].orders++;
+      map[name].meals += Number(r.mealsCount || 0);
+      map[name].revenue += Number(r.netTotal ?? r.total ?? 0);
     }
-    const platforms = Object.values(map).sort((a, b) => b.revenue - a.revenue);
+    const platforms = Object.values(map)
+      .map((p) => ({ ...p, revenue: Math.round(p.revenue * 100) / 100 }))
+      .sort((a, b) => b.revenue - a.revenue);
     return {
       month,
       platforms,
       totals: {
         orders: platforms.reduce((s, p) => s + p.orders, 0),
         meals: platforms.reduce((s, p) => s + p.meals, 0),
-        revenue: platforms.reduce((s, p) => s + p.revenue, 0),
+        revenue: Math.round(platforms.reduce((s, p) => s + p.revenue, 0) * 100) / 100,
       },
     };
   },

@@ -67,7 +67,7 @@ export default function AnalyticsDashboard() {
   const topMeals = useQuery(api.analytics.topMeals, { limit: 10, sessionToken }) || [];
   const growth = useQuery(api.analytics.customerGrowth, { sessionToken }) || [];
   const kitchen = useQuery(api.analytics.kitchenPerformance, { days: 7, sessionToken }) || [];
-  const online = useQuery(api.analytics.onlinePlatforms, { sessionToken }) as any;
+  const online = useQuery(api.analytics.outletRevenue, { sessionToken }) as any;
   const drivers = useQuery(api.analytics.driverStats, { days: 7, sessionToken }) as any[] | undefined;
   const PCOLOR: Record<string, string> = { TALABAT: "#FF5A00", SNOONU: "#6D28D9", RAFEEQ: "#2563eb", DELIVEROO: "#00CCBC", KEETA: "#f59e0b", OTHER: "#64748b" };
 
@@ -287,10 +287,10 @@ export default function AnalyticsDashboard() {
 
       {/* ✅ إيراد منصّات الأونلاين هذا الشهر */}
       <Card>
-        <CardHeader><CardTitle>💳 {t("إيراد منصّات الأونلاين", "Online Platforms Revenue")} — {online?.month || t("الشهر", "This Month")}</CardTitle></CardHeader>
+        <CardHeader><CardTitle>💳 {t("إيراد المنافذ", "Outlet Revenue")} — {online?.month || t("الشهر", "This Month")}</CardTitle></CardHeader>
         <CardContent>
           {!online || online.platforms.length === 0 ? (
-            <p className="text-center text-slate-400 py-8">{t("لا توجد طلبات أونلاين مسجّلة هذا الشهر", "No online orders recorded this month")}</p>
+            <p className="text-center text-slate-400 py-8">{t("لا توجد طلبيات منافذ مسجّلة هذا الشهر", "No outlet orders recorded this month")}</p>
           ) : (
             <div className="space-y-3">
               <div className="grid grid-cols-3 gap-3 mb-2">
@@ -304,7 +304,7 @@ export default function AnalyticsDashboard() {
                   <div key={p.platform}>
                     <div className="flex items-center justify-between text-sm font-bold mb-1">
                       <span style={{ color: PCOLOR[p.platform] || "#64748b" }}>{p.platform}</span>
-                      <span className="text-slate-600">{Math.round(p.revenue).toLocaleString()} {t("ر.ق", "QAR")} · {p.orders} {t("طلب", "orders")}</span>
+                      <span className="text-slate-600">{Math.round(p.revenue).toLocaleString()} {t("ر.ق", "QAR")} · {p.orders} {t("طلبية", "orders")}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${pct}%`, background: PCOLOR[p.platform] || "#64748b" }} />
