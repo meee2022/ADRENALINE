@@ -477,6 +477,31 @@ export default function DashboardNew() {
                   </div>
                 );
               })}
+
+              {/* ⚠️ المخصّصون يُطبخون من قالبهم لا من dailyPlans، فلا حالة لهم
+                   (لا PREPARED ولا DELIVERED). كانوا يغيبون عن هذا السطر تماماً
+                   فيبدو حجم يوم المطبخ أقل مما هو. نعرضهم صراحةً بدل إخفائهم،
+                   وخارج النِسَب أعلاه حتى لا تُظهر تأخيراً كاذباً. */}
+              {metrics.customized > 0 && (
+                <div className="rounded-xl border-2 border-[#0E2A4A]/15 bg-[#0E2A4A]/[0.04] p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 text-xs font-black text-[#0E2A4A]">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {tr("وجبات مخصّصة اليوم", "Customized meals today")}
+                    </span>
+                    <span className="text-lg font-black tabular-nums text-[#0E2A4A]">{metrics.customized}</span>
+                  </div>
+                  <p className="mt-1 text-[11px] font-bold leading-relaxed text-slate-500">
+                    {tr(
+                      `تُطبخ من قوالبها لا من الخطط اليومية، فلا تحمل حالة تتبّع — لذلك هي خارج النِسَب أعلاه. إجمالي يوم المطبخ ${metrics.totalToday}.`,
+                      `Cooked from their templates, not daily plans, so they carry no tracking status and sit outside the bars above. Kitchen total today ${metrics.totalToday}.`,
+                    )}
+                  </p>
+                  <button onClick={() => navigate("/customized")} className="mt-2 text-[11px] font-black text-[#0E76AC] hover:underline">
+                    {tr("عرض الوجبات المخصّصة", "View customized meals")} ←
+                  </button>
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-2 border-slate-100 lg:border-s lg:ps-5">
               <button onClick={() => navigate("/kitchen")} className="rounded-xl bg-[linear-gradient(145deg,#47759c,#315f83)] p-3 text-start text-white shadow-[0_10px_24px_-16px_rgba(49,95,131,.8)] hover:brightness-110">
