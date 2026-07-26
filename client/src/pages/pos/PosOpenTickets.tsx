@@ -40,7 +40,7 @@ export default function PosOpenTickets() {
             <div className="p-12 text-center">
               <ClipboardList className="h-12 w-12 text-slate-300 mx-auto mb-2" />
               <p className="text-slate-500 font-bold">{t("لا توجد فواتير معلّقة", "No parked tickets")}</p>
-              <p className="text-slate-400 text-sm mt-1">{t("الميزة هتبقى متاحة كاملة قريباً", "Full feature coming soon")}</p>
+              <p className="text-slate-400 text-sm mt-1">{t("ستتوفّر هذه الميزة كاملة قريباً", "Full feature coming soon")}</p>
             </div>
           )}
           <div className="divide-y divide-slate-100">

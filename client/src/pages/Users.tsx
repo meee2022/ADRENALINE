@@ -146,7 +146,7 @@ export default function Users() {
         <p className="text-[11px] text-gray-400">{isRtl ? "يحدّد الدور الصفحات الافتراضية، ويمكنك تخصيصها أدناه" : "Role sets default pages — customize below"}</p>
       </div>
       {formData.role === "ADMIN" ? (
-        <p className="text-xs font-bold text-emerald-600">{isRtl ? "المسؤول (ADMIN) عنده كل الصلاحيات تلقائيًا." : "Admin has full access automatically."}</p>
+        <p className="text-xs font-bold text-emerald-600">{isRtl ? "المسؤول (ADMIN) يملك جميع الصلاحيات تلقائيًا." : "Admin has full access automatically."}</p>
       ) : (
         <div className="space-y-2">
           <Label>{isRtl ? "الصفحات المسموحة لهذا الحساب" : "Pages this account can access"}</Label>
