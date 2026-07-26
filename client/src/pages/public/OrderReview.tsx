@@ -7,7 +7,7 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { getVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionShortfall, orderedSubscriptionSlots, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor } from "@/lib/mealSchedule";
-import { restrictionWords, mealIsRestricted } from "@/lib/mealRestrictions";
+import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
 import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
@@ -299,6 +299,62 @@ export default function OrderReview() {
           </div>
         </div>
 
+        {/* ⛔ حصر المخالفات قبل الإرسال — المشترك قد يكون ضغط «متابعة» على التنبيه
+            وقت الاختيار دون انتباه، فيراها هنا مجمَّعة قبل أن يرسل، وتظل ظاهرة
+            في الخطة التي تصله بعد اعتماد الأخصائية. */}
+        {(() => {
+          const hits: { meal: any; word: string; week: string; day: string }[] = [];
+          Object.entries(organizedMeals).forEach(([week, days]: any) => {
+            Object.entries(days).forEach(([day, meals]: any) => {
+              (meals as any[]).forEach((m: any) => {
+                const w = matchedRestriction(m, restrictWords);
+                if (w) hits.push({ meal: m, word: w, week, day });
+              });
+            });
+          });
+          if (!hits.length) return null;
+          return (
+            <div style={{
+              border: "2px solid #dc2626", borderRadius: 16, overflow: "hidden",
+              marginBottom: 16, background: "#fff",
+            }}>
+              <div style={{
+                background: "linear-gradient(to left,#7f1d1d,#b91c1c,#dc2626)",
+                color: "#fff", padding: "12px 16px", fontWeight: 900, fontSize: 15,
+              }}>
+                ⛔ {t(`اخترت ${hits.length} وجبة ضمن ممنوعاتك`, `${hits.length} meal(s) on your restricted list`)}
+              </div>
+              <div style={{ padding: "12px 16px" }}>
+                <p style={{ fontSize: 12.5, color: "#7f1d1d", fontWeight: 800, marginBottom: 10, lineHeight: 1.7 }}>
+                  {t(
+                    "المُسجَّل في ملفك كممنوع أو حساسية ظهر في الوجبات التالية. اختيارك لها مسؤوليتك، وستظهر هذه القائمة للأخصائية عند المراجعة. يمكنك تبديل أي منها بزر «تبديل».",
+                    "The following meals match your registered allergies/avoid list. Choosing them is your responsibility, and this list is shown to the specialist. Use Swap to change any of them.",
+                  )}
+                </p>
+                <div style={{ display: "grid", gap: 6 }}>
+                  {hits.map((h, i) => (
+                    <div key={i} style={{
+                      display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap",
+                      background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 10, padding: "7px 11px",
+                    }}>
+                      <span style={{
+                        background: "#dc2626", color: "#fff", borderRadius: 999,
+                        padding: "2px 9px", fontSize: 10.5, fontWeight: 900, whiteSpace: "nowrap",
+                      }}>{String(h.word).toUpperCase()}</span>
+                      <span style={{ fontWeight: 800, fontSize: 13, color: "#7f1d1d" }}>
+                        {isRtl ? h.meal.nameAr : (h.meal.nameEn || h.meal.nameAr)}
+                      </span>
+                      <span style={{ fontSize: 11, color: "#b91c1c" }}>
+                        {dayName(h.day)}{dateForSlot(Number(h.week), h.day) ? ` · ${dateForSlot(Number(h.week), h.day)}` : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* تفاصيل الوجبات — نفس تصميم الخطة الذكية (SmartPlan). الشكل فقط، لا منطق */}
         <div className="space-y-4">
           {Object.entries(organizedMeals)
@@ -345,6 +401,14 @@ export default function OrderReview() {
                                 <div style={{ padding: "7px 9px" }}>
                                   <div className="line-clamp-1" style={{ fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800, color: B.ink, lineHeight: 1.3 }}>{isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr)}</div>
                                   <div style={{ fontSize: 11, color: B.ink2, marginTop: 2 }}>{catName(meal.category)} · {meal.calories} {t("سعرة", "kcal")}</div>
+                                  {matchedRestriction(meal, restrictWords) && (
+                                    <div style={{
+                                      marginTop: 4, background: "#dc2626", color: "#fff", borderRadius: 6,
+                                      padding: "2px 6px", fontSize: 10, fontWeight: 900, textAlign: "center",
+                                    }}>
+                                      ⛔ {t("ممنوع", "Restricted")}: {String(matchedRestriction(meal, restrictWords)).toUpperCase()}
+                                    </div>
+                                  )}
                                   {/* تبديل في المكان — بدائل نفس الصنف/اليوم بلا الرجوع للمنيو */}
                                   <button
                                     onClick={() => setSwap(meal)}

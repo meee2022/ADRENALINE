@@ -29,7 +29,8 @@ import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
 import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel } from "@/lib/mealSchedule";
-import { confirmDialog } from "@/lib/dialogs";
+import { confirmDialog, alertDialog } from "@/lib/dialogs";
+import { restrictionWords, matchedRestriction } from "@/lib/mealRestrictions";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import {
   getVerifiedPhone,
@@ -690,11 +691,19 @@ export default function PublicMenuPage() {
       .filter((t) => t.length >= 3);
   }, [verifiedCustomer]);
 
-  const mealHasAvoidConflict = (meal: any) => {
-    if (avoidTokens.length === 0) return false;
-    const hay = [meal.nameAr, meal.nameEn, meal.descriptionAr, meal.descriptionEn]
-      .filter(Boolean).join(" ").toLowerCase();
-    return avoidTokens.some((t) => hay.includes(t));
+  /** الكلمة المخالفة نفسها (TURKEY / AVOCADO) — تُسمّى للمشترك بدل تحذير مبهم.
+   *  من المصدر الوحيد lib/mealRestrictions، نفس ما تستخدمه الأخصائية والمراجعة. */
+  const restrictWords = useMemo(
+    () => restrictionWords(verifiedCustomer?.avoid, verifiedCustomer?.allergies),
+    [verifiedCustomer],
+  );
+  const avoidHitFor = (meal: any): string | null => {
+    const byLib = matchedRestriction(meal, restrictWords);
+    if (byLib) return byLib;
+    // احتياط: الوصف لا يفحصه المصدر الوحيد، فنفحصه هنا حتى لا يفلت شيء
+    if (!avoidTokens.length) return null;
+    const hay = [meal.descriptionAr, meal.descriptionEn].filter(Boolean).join(" ").toLowerCase();
+    return avoidTokens.find((t) => hay.includes(t)) || null;
   };
   
   // Handle adding meal to cart
@@ -725,46 +734,114 @@ export default function PublicMenuPage() {
     // ✅ Check subscription limits — نُخبره بما يفعله بعدها، لا نكتفي بالرفض
     const isSnack = isSnackCategory(meal.category);
     const dayLabelNow = isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay;
+    // ⛔ السقوف تُعرض كـpop-up لا كتنبيه أسفل الصفحة — التنبيه العابر يمرّ
+    //    دون أن يراه المشترك، فيظنّ أن اختياره تمّ ثم يشتكي أن يومه ناقص.
     if (isSnack && snacksToday >= snacksPerDay) {
-      toast({
-        title: isRtl ? `اكتملت سناكات ${dayLabelNow}` : `Snacks are full for ${dayLabelNow}`,
-        description: isRtl
-          ? `اشتراكك ${snacksPerDay} سناك يوميًا. اختر يومًا آخر لإضافة المزيد.`
-          : `Your plan allows ${snacksPerDay} snacks/day. Pick another day to add more.`,
+      await alertDialog({
+        title: isRtl ? `⛔ اكتملت سناكات ${dayLabelNow}` : `⛔ Snacks are full for ${dayLabelNow}`,
+        message: isRtl
+          ? (snacksPerDay === 0
+            ? `اشتراكك لا يشمل أي سناك — ${mealsPerDay} وجبات يوميًا فقط.
+
+لإضافة سناكات تواصل مع الأخصائية لتعديل اشتراكك.`
+            : `اخترت بالفعل ${snacksToday} سناك ليوم ${dayLabelNow}، واشتراكك ${snacksPerDay} سناك يوميًا.
+
+احذف واحداً من سناكات هذا اليوم، أو اختر يومًا آخر.`)
+          : (snacksPerDay === 0
+            ? `Your plan includes no snacks — ${mealsPerDay} meals/day only.`
+            : `You already picked ${snacksToday} snack(s) for ${dayLabelNow}; your plan allows ${snacksPerDay}/day.
+
+Remove one, or pick another day.`),
       });
       return;
     }
     // ⭐ سقف الفطار: وجبة فطار واحدة/يوم. الفطار رئيسية ويُحسب ضمن الإجمالي،
     //    لكن بعد اختيار فطار يُقفَل الفطار (الباقي غداء/عشاء). حدٌّ أعلى فقط.
     if (isBreakfastCategory(meal.category) && breakfastToday >= BREAKFAST_MAX_PER_DAY) {
-      toast({
-        title: isRtl ? `اكتمل فطار ${dayLabelNow}` : `Breakfast is full for ${dayLabelNow}`,
-        description: isRtl
-          ? `الفطار وجبة واحدة يوميًا. اختر غداءً أو عشاءً لبقية وجباتك.`
-          : `Breakfast is one meal per day. Pick lunch or dinner for the rest.`,
+      await alertDialog({
+        title: isRtl ? `⛔ اكتمل فطار ${dayLabelNow}` : `⛔ Breakfast is full for ${dayLabelNow}`,
+        message: isRtl
+          ? `الفطار وجبة واحدة يوميًا كحدٍّ أقصى، وقد اخترت فطارك ليوم ${dayLabelNow}.
+
+اختر غداءً أو عشاءً لبقية وجبات اليوم.`
+          : `Breakfast is capped at one per day and you already picked yours for ${dayLabelNow}.
+
+Pick lunch or dinner for the rest of the day.`,
       });
       return;
     }
     if (!isSnack && mainMealsToday >= mealsPerDay) {
-      toast({
-        title: isRtl ? `اكتملت وجبات ${dayLabelNow}` : `Meals are full for ${dayLabelNow}`,
-        description: isRtl
-          ? `اشتراكك ${mealsPerDay} وجبات يوميًا. اختر يومًا آخر لإضافة المزيد.`
-          : `Your plan allows ${mealsPerDay} meals/day. Pick another day to add more.`,
+      await alertDialog({
+        title: isRtl ? `⛔ اكتملت وجبات ${dayLabelNow}` : `⛔ Meals are full for ${dayLabelNow}`,
+        message: isRtl
+          ? `اخترت بالفعل ${mainMealsToday} وجبات رئيسية ليوم ${dayLabelNow}، واشتراكك ${mealsPerDay} وجبات يوميًا.
+
+احذف واحدة من وجبات هذا اليوم، أو اختر يومًا آخر.`
+          : `You already picked ${mainMealsToday} main meal(s) for ${dayLabelNow}; your plan allows ${mealsPerDay}/day.
+
+Remove one, or pick another day.`,
       });
       return;
     }
 
-    // ⚠ Warn about avoid conflict
-    if (mealHasAvoidConflict(meal)) {
-      const ok = await confirmDialog({ message: isRtl
-        ? `⚠ تنبيه: هذه الوجبة قد تحتوي على شيء من ممنوعاتك (${[verifiedCustomer?.allergies, verifiedCustomer?.avoid].filter(Boolean).join(" / ")}). هل تريد المتابعة؟`
-        : `⚠ Warning: This meal may contain items you avoid. Continue anyway?` });
+    // ⛔ ممنوع/حساسية — رسالة رسمية صريحة تُسمّي المخالفة، لا تنبيه عابر.
+    //    لا نمنع نهائياً (قد يكون التطابق باسم متشابه)، لكن نُوثّق أنه أُبلغ صراحةً.
+    const avoidHit = avoidHitFor(meal);
+    if (avoidHit) {
+      const mealNm = isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr);
+      const registered = [verifiedCustomer?.allergies, verifiedCustomer?.avoid]
+        .filter(Boolean).join(" · ");
+      const ok = await confirmDialog({
+        variant: "danger",
+        title: isRtl ? "⛔ هذه الوجبة ضمن ممنوعاتك" : "⛔ This meal is on your restricted list",
+        confirmText: isRtl ? "أفهم ذلك وأريدها" : "I understand, add it",
+        cancelText: isRtl ? "إلغاء الاختيار" : "Cancel",
+        message: isRtl
+          ? `الوجبة: «${mealNm}»
+
+المُسجَّل في ملفك كممنوع: ${avoidHit.toUpperCase()}
+ممنوعاتك وحساسيتك المسجَّلة: ${registered || "—"}
+
+اختيارك لهذه الوجبة مسؤوليتك، وسيظهر هذا التنبيه للأخصائية عند مراجعة طلبك.
+
+هل تريد إضافتها رغم ذلك؟`
+          : `Meal: "${mealNm}"
+
+Restricted on your file: ${avoidHit.toUpperCase()}
+Your registered allergies/avoid list: ${registered || "—"}
+
+Choosing it is your responsibility, and this warning will be shown to the specialist when your order is reviewed.
+
+Add it anyway?`,
+      });
       if (!ok) return;
     }
 
-    // 🔁 كم نسخة من هذه الوجبة موجودة لنفس اليوم قبل هذه الإضافة (لتنبيه التكرار).
+    // 🔁 تكرار نفس الصنف في نفس اليوم — تأكيد صريح **قبل** الإضافة.
+    //    كان تنبيهاً أسفل الشاشة بعد الإضافة، يختفي ولا يراه أحد، فيصل للمطبخ
+    //    يومٌ فيه نفس الصنف مرتين دون أن يكون المشترك قاصداً.
     const beforeCount = itemCount(meal._id);
+    if (beforeCount >= 1) {
+      const mealNm2 = isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr);
+      const dayLbl2 = isRtl ? (DAY_LABEL_AR[selectedDay] || selectedDay) : selectedDay;
+      const okDup = await confirmDialog({
+        title: isRtl ? "🔁 نفس الوجبة مرة أخرى؟" : "🔁 Same meal again?",
+        confirmText: isRtl ? "نعم أريدها مكرّرة" : "Yes, add it again",
+        cancelText: isRtl ? "إلغاء" : "Cancel",
+        message: isRtl
+          ? `«${mealNm2}» مختارة بالفعل ${beforeCount} ${beforeCount === 1 ? "مرة" : "مرات"} ليوم ${dayLbl2}.
+
+بالإضافة ستصبح ${beforeCount + 1} مرات في نفس اليوم — أي أنك ستستلم نفس الصنف مكرّراً.
+
+هل هذا ما تريده؟`
+          : `"${mealNm2}" is already picked ${beforeCount} time(s) for ${dayLbl2}.
+
+Adding it makes ${beforeCount + 1} of the same item on one day.
+
+Is that what you want?`,
+      });
+      if (!okDup) return;
+    }
 
     const nutrition = nutritionFor(meal);
     addItem({
@@ -786,21 +863,11 @@ export default function PublicMenuPage() {
 
     const dayLbl = isRtl ? (DAY_LABEL_AR[selectedDay] || selectedDay) : selectedDay;
     const mealLbl = isRtl ? meal.nameAr : (meal.nameEn || meal.nameAr);
-    if (beforeCount >= 1) {
-      // ⚠️ تنبيه التكرار — العميل اختار نفس الوجبة أكثر من مرة لنفس اليوم
-      toast({
-        title: isRtl ? "🔁 وجبة مكرّرة" : "🔁 Repeated meal",
-        description: isRtl
-          ? `اخترت «${mealLbl}» ${beforeCount + 1} مرات لنفس اليوم (${dayLbl}). لو غير مقصود، اضغط «−».`
-          : `You picked "${mealLbl}" ${beforeCount + 1} times for the same day (${dayLbl}). Tap "−" if unintended.`,
-      });
-    } else {
-      // ✅ تأكيد فوري للإضافة
-      toast({
-        title: isRtl ? "✓ أُضيفت للخطة" : "✓ Added to plan",
-        description: `${mealLbl} — ${isRtl ? "أسبوع" : "Week"} ${selectedWeek} · ${dayLbl}`,
-      });
-    }
+    // ✅ تأكيد فوري للإضافة (التكرار أُقرّ صراحةً قبلها بحوار)
+    toast({
+      title: isRtl ? "✓ أُضيفت للخطة" : "✓ Added to plan",
+      description: `${mealLbl} — ${isRtl ? "أسبوع" : "Week"} ${selectedWeek} · ${dayLbl}`,
+    });
   };
   
   // ✅ زر الوجبة toggle: لو مضافة يشيلها (عشان يختار غيرها)، لو لأ يضيفها
@@ -2067,7 +2134,7 @@ export default function PublicMenuPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
               {meals.map((meal: any) => {
-                const hasConflict = mealHasAvoidConflict(meal);
+                const hasConflict = !!avoidHitFor(meal);
                 // السلطة سناك ⇒ تُقاس بحد السناكات. كانت تُقاس بحد الوجبات
                 // الرئيسية (فرع else)، فتُقفل غلط أو تُفتح غلط.
                 const isSnackMeal = isSnackCategory(meal.category);

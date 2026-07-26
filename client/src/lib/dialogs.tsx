@@ -53,6 +53,38 @@ type PendingDialog =
 
 let currentSetter: ((d: PendingDialog | null) => void) | null = null;
 
+/**
+ * ═══ شكل الرسائل ═══
+ * رأس ملوّن بهوية أدرينالين (كحلي→أزرق) بنص أبيض، وأحمر للتحذيرات الخطرة —
+ * كان الحوار أبيض بلا رأس فيبدو تنبيهاً عابراً لا قراراً يستحق الوقوف عنده.
+ */
+const HEAD_BRAND = "bg-gradient-to-l from-[#0E2A4A] via-[#10517d] to-[#0E76AC]";
+const HEAD_DANGER = "bg-gradient-to-l from-[#7f1d1d] via-[#b91c1c] to-[#dc2626]";
+
+function DialogShell({
+  rtl, danger, title, message, children,
+}: {
+  rtl: boolean; danger?: boolean; title?: string; message: string; children: React.ReactNode;
+}) {
+  return (
+    <AlertDialogContent dir={rtl ? "rtl" : "ltr"} className="p-0 gap-0 overflow-hidden max-w-md border-2 border-[#0E2A4A]/15">
+      <div className={`${danger ? HEAD_DANGER : HEAD_BRAND} px-5 py-4`}>
+        <AlertDialogTitle className="text-white text-lg font-black leading-snug m-0">
+          {title || (rtl ? "تنبيه" : "Notice")}
+        </AlertDialogTitle>
+      </div>
+      <div className="px-5 py-4">
+        <AlertDialogDescription className="whitespace-pre-wrap text-[15px] leading-relaxed text-slate-700 font-semibold">
+          {message}
+        </AlertDialogDescription>
+      </div>
+      <div className="px-5 pb-5 pt-1 bg-slate-50/60 border-t border-slate-100">
+        {children}
+      </div>
+    </AlertDialogContent>
+  );
+}
+
 function DialogHost() {
   const [pending, setPending] = useState<PendingDialog | null>(null);
   const [promptValue, setPromptValue] = useState("");
@@ -69,19 +101,17 @@ function DialogHost() {
     const danger = variant === "danger";
     return (
       <AlertDialog open onOpenChange={(o) => { if (!o) { resolve(false); setPending(null); } }}>
-        <AlertDialogContent dir={rtl ? "rtl" : "ltr"}>
-          <AlertDialogHeader>
-            {title && <AlertDialogTitle>{title}</AlertDialogTitle>}
-            <AlertDialogDescription className="whitespace-pre-wrap">{message}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { resolve(false); setPending(null); }}>{xText}</AlertDialogCancel>
+        <DialogShell rtl={rtl} danger={danger} title={title} message={message}>
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="mt-0 font-bold" onClick={() => { resolve(false); setPending(null); }}>{xText}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => { resolve(true); setPending(null); }}
-              className={danger ? "bg-red-600 hover:bg-red-700 focus:ring-red-600" : undefined}
+              className={danger
+                ? "bg-red-600 hover:bg-red-700 focus:ring-red-600 font-black"
+                : "bg-[#0E76AC] hover:bg-[#0b5f8c] font-black"}
             >{cText}</AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogContent>
+        </DialogShell>
       </AlertDialog>
     );
   }
@@ -116,15 +146,14 @@ function DialogHost() {
   const oText = okText || (rtl ? "حسنًا" : "OK");
   return (
     <AlertDialog open onOpenChange={(o) => { if (!o) { resolve(); setPending(null); } }}>
-      <AlertDialogContent dir={rtl ? "rtl" : "ltr"}>
-        <AlertDialogHeader>
-          {title && <AlertDialogTitle>{title}</AlertDialogTitle>}
-          <AlertDialogDescription className="whitespace-pre-wrap">{message}</AlertDialogDescription>
-        </AlertDialogHeader>
+      <DialogShell rtl={rtl} danger={String(title || "").includes("⛔")} title={title} message={message}>
         <AlertDialogFooter>
-          <AlertDialogAction onClick={() => { resolve(); setPending(null); }}>{oText}</AlertDialogAction>
+          <AlertDialogAction
+            className="bg-[#0E76AC] hover:bg-[#0b5f8c] font-black w-full sm:w-auto"
+            onClick={() => { resolve(); setPending(null); }}
+          >{oText}</AlertDialogAction>
         </AlertDialogFooter>
-      </AlertDialogContent>
+      </DialogShell>
     </AlertDialog>
   );
 }

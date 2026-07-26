@@ -50,3 +50,17 @@ export function mealIsRestricted(meal: any, words: string[]): boolean {
   ].filter(Boolean).join(" ").toLowerCase();
   return words.some((w) => hay.includes(w));
 }
+
+/**
+ * أي كلمة منع طابقت الوجبة — لنُسمّيها للمشترك في الرسالة بدل تحذير مبهم.
+ * تُرجع الكلمة كما كتبتها الأخصائية (TURKEY / AVOCADO) أو null.
+ */
+export function matchedRestriction(meal: any, words: string[]): string | null {
+  if (!words.length || !meal) return null;
+  const hay = [
+    meal.nameAr, meal.nameEn, meal.name,
+    ...(Array.isArray(meal.ingredients) ? meal.ingredients : []),
+    ...(Array.isArray(meal.tags) ? meal.tags : []),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return words.find((w) => hay.includes(w)) || null;
+}
