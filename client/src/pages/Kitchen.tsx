@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/lib/kitchenSheet";
 import { openPrintDoc } from "@/lib/printDoc";
+import { downloadChefSheetXlsx, type ChefRow } from "@/lib/kitchenSheet";
 import { getEffectivePlanItems } from "@/lib/planItems";
 import { Download, FileSpreadsheet } from "lucide-react";
 
@@ -1105,6 +1106,9 @@ export default function Kitchen() {
     };
     const programOrder: Record<string, number> = { DIET: 0, FITNESS: 1, BULK: 2, STANDARD: 3 };
 
+    /* صفوف Excel تُبنى داخل نفس الحلقة التي تبني الورقة، فلا يفترق الملف عن
+       المطبوع إن تغيّر أحدهما. */
+    const xlsxRows: ChefRow[] = [];
     const mealRows = (meal: any) => {
       const main = isMainMeal(meal);
       const groups = new Map<string, {
@@ -1173,6 +1177,18 @@ export default function Kitchen() {
             ${main ? `<td class="number portion">${esc(group.carb)}</td><td class="number portion">${esc(group.protein)}</td>` : ""}
           </tr>`).join("");
 
+      xlsxRows.push({ kind: "dish", cells: [meal.name, meal.count, main ? "CARB" : "", main ? "PROTEIN" : ""] });
+      [...groups.values()]
+        .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
+        .forEach((g) => xlsxRows.push({
+          kind: g.label || g.swap ? "modified" : "standard",
+          cells: [
+            [g.program, g.swap ? `⇄ ${g.swap}` : "", g.isCustomPortion ? "CUSTOM PORTION" : "", g.label,
+             g.names.length ? `— ${g.names.join(", ")}` : ""].filter(Boolean).join("  "),
+            g.qty, main ? g.carb : "", main ? g.protein : "",
+          ],
+        }));
+
       return `
         <tbody class="meal-block">
           <tr class="meal-title">
@@ -1192,6 +1208,8 @@ export default function Kitchen() {
       const columns = section === "MAIN MEALS"
         ? "<td>Preparation / modification</td><td>Qty</td><td>Carb g</td><td>Protein g</td>"
         : '<td colspan="3">Preparation / modification</td><td>Qty</td>';
+      xlsxRows.push({ kind: "section", cells: [section, "", "", ""] });
+      xlsxRows.push({ kind: "head", cells: ["Preparation / modification", "Qty", "Carb g", "Protein g"] });
       return `<tbody><tr class="section"><td colspan="4">${section}</td></tr><tr class="column-head">${columns}</tr></tbody>${meals.map(mealRows).join("")}`;
     }).join("");
 
@@ -1207,6 +1225,23 @@ export default function Kitchen() {
               <td class="number" style="font-size:10px;white-space:nowrap;padding:2px 4px">${meal.notset ? "—" : (meal.isSide ? (isRtl ? "في الإجمالي" : "SUMMARY") : "1")}</td>
             </tr>`).join("")}
         </tbody>`).join("")}` : "";
+
+    /* صفوف Excel من **نفس** المصادر التي تبني الورقة (mealSummary و
+       customizedAll) — فلا يفترق الملف عن المطبوع إن تغيّر أحدهما. */
+    if (customizedAll.length) {
+      xlsxRows.push({ kind: "section", cells: [`CUSTOMIZED ORDERS · ONE BOX PER CUSTOMER (${customizedAll.length})`, "", "", ""] });
+      xlsxRows.push({ kind: "head", cells: ["Customer / meal", "Qty / status", "", ""] });
+      customizedAll.forEach((person: any) => {
+        xlsxRows.push({ kind: "customer", cells: [person.name, person.deliveryTime === "MORNING" ? "MORNING" : "EVENING", "", ""] });
+        if (person.allergies) xlsxRows.push({ kind: "allergy", cells: [`ALLERGY: ${person.allergies}`, "", "", ""] });
+        (person.meals || []).forEach((meal: any) => {
+          xlsxRows.push({
+            kind: meal.notset ? "notset" : "meal",
+            cells: [meal.text, meal.notset ? "—" : (meal.isSide ? "SUMMARY" : 1), "", ""],
+          });
+        });
+      });
+    }
 
     const summaryPortions = mealSummary.reduce((sum, meal) => sum + meal.count, 0);
     const customizedMainPortions = customizedAll.reduce((sum, person: any) => (
@@ -1244,7 +1279,7 @@ export default function Kitchen() {
         .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:3px 8px;text-align:left;font-size:9px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
          @page{size:A4 portrait;margin:8mm 8mm 11mm}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.preview-actions{display:none}}
        </style></head><body>
-         <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" class="close" onclick="window.close()">Close</button></div>
+         <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" onclick="window.opener && window.opener.postMessage('adr-chef-xlsx','*')">Download Excel</button><button type="button" class="close" onclick="window.close()">Close</button></div>
          <div class="masthead"><div><h1>ADRENALINE · CHEF PRODUCTION SHEET</h1></div><div class="meta">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
         <div class="kpis">
           <div class="kpi"><b>${operationalTotal}</b><span>Operational portions</span></div>
@@ -1255,6 +1290,19 @@ export default function Kitchen() {
           ${standardHtml}${customizedHtml}
         </table>
       </body></html>`;
+
+    /* نافذة المعاينة منفصلة، فزرّ Excel يرسل رسالة للأصل الذي يملك البيانات.
+       المستمع يُزال بعد أول استعمال فلا يتراكم مع كل فتح. */
+    const onMsg = (e: MessageEvent) => {
+      if (e.data !== "adr-chef-xlsx") return;
+      void downloadChefSheetXlsx(formattedDate, xlsxRows, [
+        { label: "Operational portions", value: operationalTotal },
+        { label: "Grouped portions", value: summaryPortions },
+        { label: "Customized main portions", value: customizedMainPortions },
+      ]);
+    };
+    window.addEventListener("message", onMsg);
+    window.setTimeout(() => window.removeEventListener("message", onMsg), 10 * 60 * 1000);
 
     openPrintDoc(html, {
        fileName: `Chef production sheet - ADRENALINE - ${formattedDate}`,

@@ -229,3 +229,71 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
     pageNumbers: false,
   });
 }
+
+/* ─────────────── كشف الشيف (Chef Production Sheet) — Excel بنفس ألوانه ─────────────── */
+
+/**
+ * صف واحد في كشف الشيف. `kind` يحدّد التنسيق فقط، والألوان مطابقة لألوان
+ * الطباعة حرفياً حتى يقرأ المطبخ الورقة والملف بنفس العين.
+ */
+export type ChefRow = {
+  kind: "section" | "head" | "dish" | "standard" | "modified" | "customer" | "allergy" | "meal" | "notset";
+  cells: (string | number)[];
+};
+
+const CHEF_COLORS: Record<ChefRow["kind"], { bg?: string; fg: string; bold: boolean }> = {
+  section:  { bg: "0D3B5F", fg: "FFFFFF", bold: true },   // كحلي — رأس القسم
+  head:     { bg: "E9F2F7", fg: "54738A", bold: true },   // رمادي فاتح — أسماء الأعمدة
+  dish:     { bg: "ACD5EC", fg: "10283F", bold: true },   // سماوي — اسم الطبق
+  standard: { fg: "10283F", bold: false },
+  modified: { bg: "FFF9EB", fg: "B45309", bold: true },   // برتقالي — تعديل
+  customer: { bg: "D8EDF8", fg: "10283F", bold: true },
+  allergy:  { bg: "FFF0F0", fg: "B91C1C", bold: true },   // أحمر — حساسية
+  meal:     { fg: "10283F", bold: false },
+  notset:   { bg: "FFF7ED", fg: "C2410C", bold: true },
+};
+
+/** كشف الشيف كملف Excel — نفس الصفوف والألوان، وقابل للفرز والملاحظات. */
+export async function downloadChefSheetXlsx(
+  dateStr: string,
+  rows: ChefRow[],
+  kpis: Array<{ label: string; value: number }>,
+): Promise<void> {
+  const XLSX = (await import("xlsx-js-style")).default as any;
+  const thin = { style: "thin", color: { rgb: "9CB2C2" } };
+  const border = { top: thin, bottom: thin, left: thin, right: thin };
+
+  const aoa: any[][] = [
+    [{ v: `ADRENALINE · CHEF PRODUCTION SHEET`, s: { font: { bold: true, sz: 15, color: { rgb: "0D3B5F" } } } }],
+    [{ v: `Production date: ${dateStr}`, s: { font: { bold: true, sz: 10, color: { rgb: "54738A" } } } }],
+    kpis.map((k) => ({
+      v: `${k.value}  —  ${k.label}`,
+      s: { font: { bold: true, sz: 11, color: { rgb: "0E76AC" } }, fill: { fgColor: { rgb: "F7FBFD" } }, border },
+    })),
+    [],
+  ];
+
+  for (const r of rows) {
+    const c = CHEF_COLORS[r.kind];
+    const style: any = {
+      font: { bold: c.bold, color: { rgb: c.fg }, sz: r.kind === "section" ? 12 : 10 },
+      border,
+      alignment: { vertical: "center", wrapText: true },
+    };
+    if (c.bg) style.fill = { fgColor: { rgb: c.bg } };
+    aoa.push(r.cells.map((v, i) => ({
+      v,
+      s: i === r.cells.length - 1 && /^(dish|standard|modified|meal|notset)$/.test(r.kind)
+        // عمود الكمية أحمر عريض كما في الورقة
+        ? { ...style, font: { ...style.font, bold: true, color: { rgb: "DC2626" }, sz: 11 }, alignment: { horizontal: "center", vertical: "center" } }
+        : style,
+    })));
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{ wch: 62 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
+  ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "CHEF SHEET");
+  XLSX.writeFile(wb, `Chef production sheet - ADRENALINE - ${dateStr}.xlsx`);
+}
