@@ -1112,16 +1112,17 @@ export default function Stickers() {
         }
         /* رقم الترتيب في رزمة الطباعة. حين ينفد الورق يقرأ الطاقم آخر ملصق
            خرج ويكمل من الرقم التالي بدل البحث بالاسم في مئات الملصقات.
-           موضعه ركن الملصق وحجمه صغير فلا يزاحم الاسم ولا الرقم. أسود صلب لا
+           صغير جداً عمداً (5.5px): على ملصق البوكس رقم العميل الكبير أسفل الملصق،
+           فلو تقاربا في الحجم اختلطا على من يفرز. أسود صلب لا
            رمادي: الطابعة الحرارية تُبقّع التدرّج، وقاعدة الشفافية على الملصق
            تلغي أي شفافية هنا أصلاً. */
         .seq-mark {
           position: absolute;
-          top: 0.6mm;
-          inset-inline-end: 1.2mm;
-          font-size: 8px;
-          font-weight: 900;
-          letter-spacing: 0.2px;
+          top: 0.4mm;
+          inset-inline-end: 0.8mm;
+          font-size: 5.5px;
+          font-weight: 700;
+          letter-spacing: 0;
           color: #000;
           line-height: 1;
         }
@@ -1254,12 +1255,12 @@ function MealSticker({ s, seq }: any) {
       {/* Center content */}
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
-        {/* لا رقم هاتف على ملصق الوجبة: الاسم وحده يكفي المطبخ للتمييز، والملصق
-            يخرج مع الطعام فلا داعٍ لطباعة رقم العميل عليه. الرقم يبقى على ملصق
-            البوكس حيث يحتاجه التوصيل. */}
-        {s.goal && (
+        {/* الرقم أُعيد بطلب المستخدم: رزمة اليوم مطبوعة به، وأي ملصق يُعاد طبعه
+            بعدها يجب أن يطابقها — ملصقان لنفس الوجبة بشكلين يربكان من يعبّئ. */}
+        {(s.goal || s.customerNumber) && (
           <div className="cust-sub">
-            <span className="goal-badge">{s.goal}</span>
+            {s.goal ? <span className="goal-badge">{s.goal}</span> : null}
+            {s.customerNumber ? <span className="cust-phone">{s.customerNumber}</span> : null}
           </div>
         )}
         <div className="meal-line">{mealName}</div>
