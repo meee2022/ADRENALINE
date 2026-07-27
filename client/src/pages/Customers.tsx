@@ -287,12 +287,14 @@ const customerSchema = z.object({
         message: "حدّد عدد الوجبات في اليوم / Set meals per day",
       });
     }
+    /* السناك يبدأ من صفر ويُزاد عند اللزوم، فلا يُطلب تعبئته — لكن سالباً
+       لا معنى له، والخانة رقمية يمكن الكتابة فيها بحرّية. */
     const snacks = Number(data.snacksPerDay);
-    if (data.snacksPerDay === undefined || !Number.isFinite(snacks) || snacks < 0) {
+    if (data.snacksPerDay !== undefined && (!Number.isFinite(snacks) || snacks < 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["snacksPerDay"],
-        message: "حدّد عدد السناكات (اكتب 0 لو بلا سناك) / Set snacks per day (0 if none)",
+        message: "عدد السناكات لا يقل عن صفر / Snacks per day cannot be negative",
       });
     }
   });
@@ -379,7 +381,7 @@ export default function Customers() {
       fridayDouble: false,
       durationWeeks: undefined,
       mealsPerDay: undefined,
-      snacksPerDay: undefined,
+      snacksPerDay: 0,
       totalMealsPerDay: undefined,
       paymentMethod: "",
       price: undefined,
@@ -545,7 +547,7 @@ export default function Customers() {
       fridayDouble: false,
       durationWeeks: undefined,
       mealsPerDay: undefined,
-      snacksPerDay: undefined,
+      snacksPerDay: 0,
       totalMealsPerDay: undefined,
       paymentMethod: "",
       price: undefined,
@@ -768,7 +770,7 @@ export default function Customers() {
       durationWeeks: durationWeeks ?? undefined,
 
       mealsPerDay: mealsPerDay ?? undefined,
-      snacksPerDay: snacksPerDay ?? undefined,
+      snacksPerDay: snacksPerDay ?? 0,
       totalMealsPerDay: totalMealsPerDay ?? undefined,
 
       paymentMethod,

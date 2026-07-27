@@ -231,15 +231,15 @@ export const create = mutation({
     if (!(Number(args.mealsPerDay) >= 1)) {
       throw new Error("حدّد عدد الوجبات في اليوم / Set meals per day");
     }
-    if (args.snacksPerDay === undefined || !(Number(args.snacksPerDay) >= 0)) {
-      throw new Error("حدّد عدد السناكات (0 لو بلا سناك) / Set snacks per day (0 if none)");
-    }
+    // السناك افتراضه صفر ويُزاد عند اللزوم، فغيابه ليس نقصاً — يُخزَّن صفراً.
+    const snacksPerDay = Number(args.snacksPerDay) >= 0 ? Number(args.snacksPerDay) : 0;
 
     // ✅ يشتق program من الباقة/الهدف لو ماجاش صريح — يمنع ظهور المشترك STANDARD بالغلط
     const program = args.program || deriveProgram(args.goals, args.packageLabel);
 
     return await ctx.db.insert("customers", {
       ...fields,
+      snacksPerDay,
       program,
       phone,
       // نخزن ISO نظيف
