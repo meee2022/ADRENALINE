@@ -788,9 +788,10 @@ export default function Stickers() {
           white-space: nowrap;
         }
         .cust-phone {
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.3px;
+          /* ملصق البوكس وحده يحمل الرقم الآن، والتوصيل يقرؤه من مسافة — فكبّر */
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: 0.4px;
           direction: ltr;
         }
 
@@ -1109,8 +1110,14 @@ export default function Stickers() {
           -webkit-text-stroke: 0.15px #000;
         }
         .cust-num-inline {
-          font-size: 12px;
+          /* رقم العميل هو ما يُنادى به عند الفرز والتسليم — أبرز رقم على الملصق.
+             الملصق 39مم والخانة تتمدّد، فالزيادة محسوبة: 12px → 16px (+4) بينما
+             يمتصّها القسم الأوسط المرن، ولا تُزاح خانتا الوردية والهدف. */
+          font-size: 16px;
+          font-weight: 900;
           letter-spacing: 0;
+          line-height: 1.05;
+          -webkit-text-stroke: 0.3px #000;
         }
 
         @media print {
