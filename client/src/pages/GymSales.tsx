@@ -122,6 +122,11 @@ export default function GymSales() {
 
 /* ═══════════════════════════════ POS Tab ═══════════════════════════════ */
 
+/** سعر الوحدة كما هو: الموزون بثلاث خانات (0.056 ر.ق/جم) وغيره بخانتين.
+ *  المبالغ (سطر/إجمالي) تبقى بخانتين — تلك نقود لا أسعار وحدة. */
+const unitFmt = (v: any, unit?: string | null) =>
+  Number(v || 0).toFixed(/gram|gm|kg|kilo|جرام|كيلو/i.test(String(unit || "")) ? 3 : 2);
+
 function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId, toast }: any) {
   const [date, setDate] = useState(todayStr());
   const [notes, setNotes] = useState("");
@@ -336,7 +341,7 @@ function PosTab({ isRtl, t, sessionToken, gyms, selectedGymId, setSelectedGymId,
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: (CAT_META[m.category as CatKey] || CAT_META.all).color + "20", color: (CAT_META[m.category as CatKey] || CAT_META.all).color }}>
                   {isRtl ? (CAT_META[m.category as CatKey]?.ar || m.category) : (CAT_META[m.category as CatKey]?.en || m.category)}
                 </span>
-                <span className="text-sm font-black text-[#0E76AC]">{m.effectivePrice.toFixed(2)}</span>
+                <span className="text-sm font-black text-[#0E76AC]">{unitFmt(m.effectivePrice, m.priceUnit)}</span>
               </div>
               {m.isCustom ? (
                 <span className="mt-1 inline-block text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-50 text-purple-700">{t("سعر المنفذ", "outlet price")}</span>
@@ -604,7 +609,7 @@ function HistoryTab({ isRtl, t, sessionToken, gyms, toast }: any) {
               <div className="mb-3 flex flex-col gap-2 sm:flex-row">
                 <select value={newEditMealId} onChange={(e) => setNewEditMealId(e.target.value)} className="h-10 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold">
                   <option value="">{t("اختر صنفًا لإضافته…", "Choose an item to add…")}</option>
-                  {(editMeals || []).map((meal: any) => <option key={meal.id} value={meal.id}>{isRtl ? (meal.nameAr || meal.nameEn) : (meal.nameEn || meal.nameAr)} · {meal.effectivePrice.toFixed(2)}</option>)}
+                  {(editMeals || []).map((meal: any) => <option key={meal.id} value={meal.id}>{isRtl ? (meal.nameAr || meal.nameEn) : (meal.nameEn || meal.nameAr)} · {unitFmt(meal.effectivePrice, meal.priceUnit)}</option>)}
                 </select>
                 <Button type="button" variant="outline" onClick={addEditMeal} disabled={!newEditMealId}><Plus className="me-1 h-4 w-4" />{t("إضافة صنف", "Add item")}</Button>
               </div>
@@ -649,7 +654,7 @@ function HistoryTab({ isRtl, t, sessionToken, gyms, toast }: any) {
                       <td className="p-2 font-bold">{isRtl ? (l.mealNameAr || l.mealNameEn) : (l.mealNameEn || l.mealNameAr)}</td>
                       <td className="p-2 text-center">{l.qty}</td>
                       <td className="p-2 text-center font-black text-red-600">{l.returnedQty || 0}</td>
-                      <td className="p-2 text-end">{l.unitPrice.toFixed(2)}</td>
+                      <td className="p-2 text-end">{unitFmt(l.unitPrice, l.priceUnit)}</td>
                       <td className="p-2 text-end font-bold text-red-600">{Number(l.wasteValue || 0).toFixed(2)}</td>
                       <td className="p-2 text-end font-black text-[#0E76AC]">{l.lineTotal.toFixed(2)}</td>
                     </tr>

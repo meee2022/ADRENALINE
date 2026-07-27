@@ -196,6 +196,17 @@ export const createGymMeal = mutation({
   },
 });
 
+
+/**
+ * تقريب سعر الوحدة. الأصناف الموزونة سعرها بالجرام (بروكلي 0.056 ر.ق/جم)،
+ * فالتقريب لخانتين يحوّله إلى 0.06 — زيادة 7% على كل جرام تظهر في كل فاتورة.
+ * ثلاث خانات تكفي لسعر الجرام، والمبالغ (سطر/إجمالي) تُقرَّب لخانتين كالمال.
+ */
+const roundUnit = (v: number, unit?: string | null) =>
+  /gram|gm|kg|kilo|جرام|كيلو/i.test(String(unit || ""))
+    ? Math.round(v * 1000) / 1000
+    : Math.round(v * 100) / 100;
+
 export const listMealsForGym = query({
   args: { gymId: v.optional(v.id("gymAccounts")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -234,7 +245,7 @@ export const listMealsForGym = query({
           : hasCustom
           ? Number(m.gymPrice)
           : Number(m.priceQAR) || 0;
-        const effectivePrice = Math.round(listPrice * (1 - discount / 100) * 100) / 100;
+        const effectivePrice = roundUnit(listPrice * (1 - discount / 100), m.priceUnit);
         return {
           id: String(m._id), nameEn: m.gymNameEn || m.nameEn || m.nameAr || "",
           nameAr: m.gymNameAr || m.nameAr || m.nameEn || "", category: m.category || "other",
@@ -976,7 +987,7 @@ async function buildGymOrderLines(
       : hasCustom
       ? Number(meal.gymPrice)
       : Number(meal.priceQAR) || 0;
-    const unitPrice = Math.round(listPrice * (1 - discountPct / 100) * 100) / 100;
+    const unitPrice = roundUnit(listPrice * (1 - discountPct / 100), meal.priceUnit);
     if (unitPrice < 0) throw new Error("سعر غير صالح");
     subtotal += listPrice * qty;
     total += unitPrice * qty;
@@ -986,6 +997,7 @@ async function buildGymOrderLines(
       mealNameEn: meal.gymNameEn || meal.nameEn || meal.nameAr || "",
       mealNameAr: meal.gymNameAr || meal.nameAr || meal.nameEn || "",
       qty, listPrice, unitPrice,
+      priceUnit: meal.priceUnit || undefined,
       lineTotal: Math.round(qty * unitPrice * 100) / 100,
     });
   }

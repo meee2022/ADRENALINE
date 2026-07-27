@@ -1242,6 +1242,7 @@ export default defineSchema({
     qty: v.number(),
     listPrice: v.number(),             // السعر الأصلي من المنيو
     unitPrice: v.number(),             // السعر الفعلي بعد الخصم/gymPrice
+    priceUnit: v.optional(v.string()),   // "gram" للموزون — يحدّد خانات العرض
     lineTotal: v.number(),             // qty * unitPrice
     // 🔒 المرتجعات = هالك (مدّة الوجبة يومين، ما بترجعش للمخزون)
     returnedQty: v.optional(v.number()),  // عدد الوجبات اللي رجعت من هذا السطر
