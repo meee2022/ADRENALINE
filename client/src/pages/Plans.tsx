@@ -1091,6 +1091,13 @@ export default function PlansPage() {
         {!selectedCustomerId ? (() => {
           // Compute stats
           const customersWithPlans = new Set(dailyPlans.map((p: any) => String(p.customerId)));
+          /* خطة كاملة الوجبات لكن حالتها DRAFT كانت تلبس شارة «جاهز» الخضراء
+             نفسها، فتغيب عن «المراجعة النهائية» (تعرض المؤكد فقط) ولا يجدها
+             أحد — حدث يوم 29-7: شاشة التخطيط 94/94 والمراجعة 92. المسودّة
+             تُعلَّم بشارة كهرمانية «بانتظار التأكيد» فتُرى قبل يوم الطبخ. */
+          const draftCustomers = new Set(
+            dailyPlans.filter((p: any) => p.status === "DRAFT").map((p: any) => String(p.customerId)),
+          );
           const plannedCount = activeCustomers.filter((c: any) => customersWithPlans.has(String(c._id))).length;
           const pendingCount = activeCustomers.length - plannedCount;
           const morningCount = activeCustomers.filter((c: any) => c.deliveryTime === "MORNING").length;
@@ -1466,7 +1473,9 @@ export default function PlansPage() {
                         <div
                           className="plan-customer-status-strip h-1.5"
                           style={{
-                            background: hasPlan
+                            background: hasPlan && draftCustomers.has(String(customer._id))
+                              ? "linear-gradient(90deg, #f59e0b, #fbbf24)"   // مسودّة: كهرماني لا أخضر
+                              : hasPlan
                               ? "linear-gradient(90deg, #10b981, #34d399)"
                               : "linear-gradient(90deg, #3cc4f0, #2bb0dc)",
                           }}
@@ -1483,7 +1492,13 @@ export default function PlansPage() {
                                   {isRtl ? "حساسية" : "Allergy"}
                                 </span>
                               )}
-                              {hasPlan ? (
+                              {hasPlan && draftCustomers.has(String(customer._id)) ? (
+                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1"
+                                  style={{ background: "#fffbeb", color: "#b45309", border: "1px solid #fcd34d" }}>
+                                  <AlertTriangle className="h-2.5 w-2.5" />
+                                  {isRtl ? "بانتظار التأكيد" : "Not confirmed"}
+                                </span>
+                              ) : hasPlan ? (
                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1"
                                   style={{ background: "#ecfdf5", color: "#059669", border: "1px solid #a7f3d0" }}>
                                   <Check className="h-2.5 w-2.5" />
