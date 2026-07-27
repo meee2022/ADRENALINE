@@ -64,3 +64,6 @@ adrenaline-bridge.zip
 adrenaline-bridge/
 assets-src/
 backups/
+
+# سجلّات تشغيل محلية — ليست من المشروع
+.codex-runtime/
