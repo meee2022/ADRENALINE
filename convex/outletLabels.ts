@@ -111,6 +111,69 @@ export const list = query({
   },
 });
 
+/**
+ * قائمة استيكرات المنفذ **مشتقّة من أصنافه المفعّلة** لا مخزَّنة بجانبها.
+ *
+ * كانت قائمة الاستيكرات جدولاً مستقلاً، فكل صنف يُضاف أو يُوقف في المنفذ يخلق
+ * فارقاً جديداً بين ما يُباع وما يُطبع. هنا: ما يظهر للطباعة هو ما فُعِّل في
+ * «أصناف المنافذ» بالضبط، بسعره من كتالوج المنفذ (قبل الخصم — خصم المنفذ ربحه).
+ * الباركود يأتي من الملصق المرتبط، أو بمطابقة الاسم حين اختلفت الإملاءات
+ * (`CRIPSY CHICKEN WRAP` مقابل `Crispy Chicken Wrap`)، ويظهر الصنف بلا باركود
+ * صراحةً بدل أن يُحذف بصمت.
+ */
+export const forOutlet = query({
+  args: { outletId: v.id("gymAccounts"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const rows = await ctx.db
+      .query("outletCatalogItems")
+      .withIndex("by_outlet", (q) => q.eq("outletId", args.outletId))
+      .collect();
+    const labels = await ctx.db.query("outletProductLabels").collect();
+
+    const norm = (s: string) => String(s || "").toLowerCase()
+      .replace(/\bw[\\/]?\s*/g, "with ").replace(/&/g, " and ")
+      .replace(/[^a-z0-9]+/g, " ").trim();
+    const letters = (s: string) => norm(s).replace(/\s+/g, "").split("").sort().join("");
+
+    const byMeal = new Map<string, any>();
+    const byNorm = new Map<string, any>();
+    const byLetters = new Map<string, any>();
+    for (const l of labels) {
+      if (l.publicMealId) byMeal.set(String(l.publicMealId), l);
+      if (!byNorm.has(norm(l.nameEn))) byNorm.set(norm(l.nameEn), l);
+      // نفس الحروف بترتيب مختلف تمسك أخطاء الإملاء الشائعة (CRIPSY / CEASAR)
+      if (!byLetters.has(letters(l.nameEn))) byLetters.set(letters(l.nameEn), l);
+    }
+
+    const out: any[] = [];
+    for (const r of rows) {
+      if (!r.isActive) continue;
+      const meal: any = await ctx.db.get(r.mealId);
+      if (!meal) continue;
+      const name = String(meal.gymNameEn || meal.nameEn || meal.nameAr || "").trim();
+      const lb = byMeal.get(String(r.mealId)) || byNorm.get(norm(name)) || byLetters.get(letters(name));
+      out.push({
+        _id: lb ? String(lb._id) : `meal:${String(meal._id)}`,
+        sequence: lb ? Number(lb.sequence) : 0,
+        barcode: lb ? String(lb.barcode) : "",
+        nameEn: name,
+        price: Number(r.price),
+        calories: meal.calories != null ? Number(meal.calories) : undefined,
+        carbs: meal.carbs != null ? Number(meal.carbs) : undefined,
+        protein: meal.protein != null ? Number(meal.protein) : undefined,
+        fats: meal.fats != null ? Number(meal.fats) : undefined,
+        isActive: true,
+        publicMealId: String(meal._id),
+        hasBarcode: !!lb,
+        // نُعلم كيف عُثر على الباركود ليُراجَع المطابَق بالاسم لا أن يُصدَّق
+        matchedBy: lb ? (byMeal.has(String(r.mealId)) ? "link" : "name") : "none",
+      });
+    }
+    return out.sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  },
+});
+
 export const seed = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {

@@ -375,9 +375,54 @@ export const setOutletCatalogItem = mutation({
         createdAt: Date.now(),
       });
     }
-    return { ok: true };
+    const label = await ensureLabelForMeal(ctx, meal);
+    return { ok: true, labelCreated: label };
   },
 });
+
+/**
+ * يضمن وجود استيكر (باركود) للصنف. يُستدعى عند إضافة صنف لمنفذ.
+ *
+ * الاستيكرات كانت تُنشأ بثلاث طرق فقط — قائمة ثابتة في الكود، أو استيراد من
+ * أصناف الكاشير المسعّرة، أو يدوياً. فما يُضاف لكتالوج منفذ مباشرةً يبقى بلا
+ * باركود: 30 صنفاً من 48 في الجم. الباركود هوية المنتج فيُنشأ مرة واحدة عالمياً،
+ * والسعر يُقرأ لحظياً من كتالوج المنفذ عند الطباعة.
+ *
+ * يُستثنى ما يُباع بالوزن: سعر ثابت على ملصق صنف يُوزن عند البيع بلا معنى.
+ */
+async function ensureLabelForMeal(ctx: any, meal: any): Promise<boolean> {
+  if (!meal) return false;
+  const unit = String(meal.priceUnit || "").toLowerCase();
+  if (/gram|gm|kg|kilo|جرام|كيلو/.test(unit)) return false;
+
+  const all: any[] = await ctx.db.query("outletProductLabels").collect();
+  if (all.some((l) => l.publicMealId && String(l.publicMealId) === String(meal._id))) return false;
+
+  const nameEn = String(meal.gymNameEn || meal.nameEn || meal.nameAr || "").trim();
+  if (!nameEn) return false;
+  // يتبنّى استيكراً قديماً بنفس الاسم بدل أن يكرّره — الباركود المطبوع يبقى صالحاً
+  const norm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const orphan = all.find((l) => !l.publicMealId && norm(l.nameEn) === norm(nameEn));
+  const now = Date.now();
+  const data = {
+    nameEn,
+    price: Number(meal.priceQAR || 0) || undefined,
+    calories: meal.calories != null ? Number(meal.calories) : undefined,
+    carbs: meal.carbs != null ? Number(meal.carbs) : undefined,
+    protein: meal.protein != null ? Number(meal.protein) : undefined,
+    fats: meal.fats != null ? Number(meal.fats) : undefined,
+    publicMealId: meal._id,
+    isActive: true,
+    updatedAt: now,
+  };
+  if (orphan) { await ctx.db.patch(orphan._id, data); return true; }
+  const seq = all.reduce((m, l) => Math.max(m, Number(l.sequence) || 0), 0) + 1;
+  await ctx.db.insert("outletProductLabels", {
+    ...data, sequence: seq, barcode: String(100000 + seq),
+    source: "online" as const, createdAt: now,
+  });
+  return true;
+}
 
 /** Create an item exclusively for one outlet and attach its independent price. */
 export const createOutletMeal = mutation({
@@ -421,7 +466,33 @@ export const createOutletMeal = mutation({
       sortOrder: Date.now(),
       createdAt: Date.now(),
     });
+    // باركود فوراً: الصنف لا يُباع في منفذ بلا ملصق يُمسح
+    await ensureLabelForMeal(ctx, await ctx.db.get(mealId));
     return { id: String(mealId) };
+  },
+});
+
+/**
+ * يُنشئ الاستيكرات الناقصة لكل صنف مفعَّل في كتالوجات المنافذ.
+ * لسدّ ما تراكم قبل أن يصبح الإنشاء تلقائياً. قابل للتكرار بلا تكرار الملصقات.
+ */
+export const backfillOutletLabels = mutation({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    await requireGymSalesAccess(ctx, args.sessionToken);
+    const rows: any[] = await ctx.db.query("outletCatalogItems").collect();
+    const seen = new Set<string>();
+    let created = 0, skipped = 0;
+    for (const r of rows) {
+      if (!r.isActive) continue;
+      const key = String(r.mealId);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const meal: any = await ctx.db.get(r.mealId);
+      if (await ensureLabelForMeal(ctx, meal)) created++; else skipped++;
+    }
+    return { created, skipped, meals: seen.size };
   },
 });
 

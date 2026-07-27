@@ -83,13 +83,18 @@ export default function OutletLabels() {
     api.outletLabels.list,
     outletId ? { outletId: outletId as any, sessionToken } : { sessionToken },
   ) || []) as LabelRow[];
+  // قائمة الطباعة الحقيقية: أصناف هذا المنفذ المفعّلة، بأسعارها من كتالوجه
+  const outletRows = (useQuery(
+    api.outletLabels.forOutlet,
+    outletId ? { outletId: outletId as any, sessionToken } : "skip",
+  ) || []) as LabelRow[];
   const seed = useMutation(api.outletLabels.seed);
   const update = useMutation(api.outletLabels.update);
   const create = useMutation(api.outletLabels.create);
   const remove = useMutation(api.outletLabels.remove);
   const importFromPos = useMutation(api.outletLabels.importFromPos);
   const [importing, setImporting] = useState(false);
-  const [tab, setTab] = useState<"online" | "gym">("gym");
+  const [tab, setTab] = useState<"outlet" | "all">("outlet");
   const [search, setSearch] = useState("");
   const [queue, setQueue] = useState<Record<string, number>>({});
   const [editing, setEditing] = useState<LabelRow | null>(null);
@@ -101,7 +106,7 @@ export default function OutletLabels() {
     setImporting(true);
     try {
       const r: any = await importFromPos({ sessionToken });
-      setTab("online");
+      setTab("all");
       void alertDialog({ message: isRtl
         ? `تم الاستيراد من الأونلاين ✓\nجديد: ${r.added} · مُحدَّث: ${r.updated}${r.skipped ? ` · متخطّى: ${r.skipped}` : ""} (إجمالي أصناف POS المسعّرة: ${r.total})`
         : `Imported from online ✓\nNew: ${r.added} · Updated: ${r.updated}${r.skipped ? ` · Skipped: ${r.skipped}` : ""} (priced POS items: ${r.total})` });
@@ -110,17 +115,17 @@ export default function OutletLabels() {
     } finally { setImporting(false); }
   };
 
-  // كتالوجان منفصلان: "online" (مستورد من POS، مربوط بوجبة) و "gym" (القائمة الأصلية)
-  const rowSource = (row: any): "online" | "gym" => row.source ?? (row.publicMealId ? "online" : "gym");
-  const gymRows = useMemo(() => rows.filter(r => rowSource(r) === "gym"), [rows]);
-  const onlineRows = useMemo(() => rows.filter(r => rowSource(r) === "online"), [rows]);
-  const tabRows = tab === "online" ? onlineRows : gymRows;
+  /* «أصناف المنفذ» تُشتقّ من المفعّل في مبيعات المنافذ فلا تنحرف عمّا يُباع؛
+     و«كل الاستيكرات» تبقى للأصناف خارج أي منفذ. القسمة القديمة كانت بمصدر
+     الملصق (قائمة قديمة / مستورد من الكاشير) فكان صنف الجم الواحد يقع في أي
+     منهما، ومن يطبع يبحث في الاثنين. */
+  const tabRows = tab === "outlet" ? outletRows : rows;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return tabRows.filter(row => !q || row.nameEn.toLowerCase().includes(q) || row.barcode.includes(q));
   }, [tabRows, search]);
-  const queuedRows = useMemo(() => rows.filter(row => (queue[row._id] || 0) > 0), [rows, queue]);
+  const queuedRows = useMemo(() => [...outletRows, ...rows].filter((row, i, a) => a.findIndex(x => x._id === row._id) === i && (queue[row._id] || 0) > 0), [outletRows, rows, queue]);
   const totalCopies = queuedRows.reduce((sum, row) => sum + (queue[row._id] || 0), 0);
   const incomplete = tabRows.filter(row => row.price == null || row.calories == null || row.carbs == null || row.protein == null || row.fats == null).length;
 
@@ -163,7 +168,7 @@ export default function OutletLabels() {
         carbs: Number(form.get("carbs")),
         protein: Number(form.get("protein")),
         fats: Number(form.get("fats")),
-        source: tab,
+        source: "gym",
         sessionToken,
       });
       setCreating(false);
@@ -200,7 +205,7 @@ export default function OutletLabels() {
               <div><h1 className="text-2xl font-black">{isRtl ? "استيكرات أصناف المنافذ" : "Outlet Product Labels"}</h1><p className="text-sm text-cyan-100 mt-1">{isRtl ? "طباعة مستقلة عن الطلبات والفواتير" : "Print independently from orders and invoices"}</p></div>
             </div>
             <div className="flex gap-3 text-center">
-              <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{tabRows.length}</b><span className="text-[11px] text-cyan-100">{tab === "online" ? (isRtl ? "أونلاين" : "Online") : (isRtl ? "جم" : "Gym")}</span></div>
+              <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{tabRows.length}</b><span className="text-[11px] text-cyan-100">{tab === "outlet" ? (isRtl ? "أصناف المنفذ" : "Outlet items") : (isRtl ? "كل الاستيكرات" : "All labels")}</span></div>
               <div className="min-w-24 rounded-lg bg-white/10 border border-white/15 px-4 py-2"><b className="block text-xl">{totalCopies}</b><span className="text-[11px] text-cyan-100">{isRtl ? "نسخة" : "Copies"}</span></div>
             </div>
           </div>
@@ -214,7 +219,7 @@ export default function OutletLabels() {
           <section className="rounded-lg border border-slate-200 bg-white shadow-[0_10px_35px_rgba(15,55,85,.08)] overflow-hidden">
             {/* تابين منفصلين: الأونلاين (POS) · الجم */}
             <div className="flex border-b border-slate-200">
-              {([["gym", isRtl ? "الجم" : "Gym", gymRows.length], ["online", isRtl ? "الأونلاين (POS)" : "Online (POS)", onlineRows.length]] as const).map(([k, label, count]) => (
+              {([["outlet", isRtl ? "أصناف هذا المنفذ" : "This outlet's items", outletRows.length], ["all", isRtl ? "كل الاستيكرات" : "All labels", rows.length]] as const).map(([k, label, count]) => (
                 <button key={k} onClick={() => setTab(k)}
                   className={`flex-1 h-12 font-black text-sm flex items-center justify-center gap-2 border-b-2 transition-colors ${tab === k ? "border-[#0E76AC] text-[#0E76AC] bg-[#eef7fb]" : "border-transparent text-slate-500 hover:bg-slate-50"}`}>
                   {label} <span className={`text-[11px] rounded-full px-2 py-0.5 ${tab === k ? "bg-[#0E76AC] text-white" : "bg-slate-200 text-slate-600"}`}>{count}</span>
@@ -236,16 +241,16 @@ export default function OutletLabels() {
                 </p>
               </div>
               <div className="relative flex-1"><Search className="absolute top-1/2 -translate-y-1/2 start-3 h-4 w-4 text-slate-400" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder={isRtl ? "ابحث بالاسم أو رقم الباركود..." : "Search name or barcode..."} className="h-11 ps-10 bg-white" /></div>
-              {tab === "online" && <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>}
+              {tab === "all" && <button onClick={runImportOnline} disabled={importing} className="h-11 px-4 rounded-md border border-[#0E76AC] text-[#0E76AC] bg-white font-black flex items-center gap-2 shadow-sm disabled:opacity-50"><Barcode className="h-4 w-4" />{importing ? (isRtl ? "جارٍ الاستيراد…" : "Importing…") : (isRtl ? "استيراد من الأونلاين (POS)" : "Import from online (POS)")}</button>}
               <button onClick={() => setCreating(true)} className="h-11 px-4 rounded-md bg-[#0E76AC] text-white font-black flex items-center gap-2 shadow-sm"><Plus className="h-4 w-4" />{isRtl ? "صنف استيكر جديد" : "New label product"}</button>
             </div>
             <div className="divide-y divide-slate-100 max-h-[680px] overflow-y-auto">
               {filtered.length === 0 && (
                 <div className="py-16 text-center text-slate-400">
                   <Barcode className="h-9 w-9 mx-auto mb-3 opacity-50" />
-                  <p className="font-bold">{tab === "online"
-                    ? (isRtl ? "لا أصناف أونلاين بعد — اضغط «استيراد من الأونلاين (POS)»" : "No online items yet — click Import from online (POS)")
-                    : (isRtl ? "لا أصناف في قائمة الجم" : "No gym items")}</p>
+                  <p className="font-bold">{tab === "outlet"
+                    ? (isRtl ? "لا أصناف مفعّلة لهذا المنفذ — فعّلها من «مبيعات المنافذ ← أصناف المنافذ»" : "No enabled items for this outlet — enable them in Outlet Sales → Outlet Items")
+                    : (isRtl ? "لا استيكرات" : "No labels")}</p>
                 </div>
               )}
               {filtered.map(item => {
@@ -253,12 +258,14 @@ export default function OutletLabels() {
                 const missing = item.price == null || item.calories == null || item.carbs == null || item.protein == null || item.fats == null;
                 return <div key={item._id} className={`grid grid-cols-[52px_minmax(0,1fr)_auto] gap-3 items-center p-3 ${qty ? "bg-cyan-50/60" : "hover:bg-slate-50"}`}>
                   <span className="h-10 w-10 rounded-md bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">{item.sequence}</span>
-                  <div className="min-w-0"><div className="flex items-center gap-2"><h3 className="font-black text-slate-900 truncate" dir="ltr">{item.nameEn}</h3>{missing && <span title={isRtl ? "بيانات ناقصة" : "Missing data"} className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />}</div><div className="flex flex-wrap gap-x-3 text-xs text-slate-500 mt-1" dir="ltr"><b className="text-[#0E76AC]">{item.barcode}</b><span>{item.price ?? "--"} QAR</span><span>{item.calories ?? "--"} kcal</span><span>P {item.protein ?? "--"}</span><span>C {item.carbs ?? "--"}</span><span>F {item.fats ?? "--"}</span></div></div>
+                  <div className="min-w-0"><div className="flex items-center gap-2"><h3 className="font-black text-slate-900 truncate" dir="ltr">{item.nameEn}</h3>{missing && <span title={isRtl ? "بيانات ناقصة" : "Missing data"} className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />}</div><div className="flex flex-wrap gap-x-3 text-xs text-slate-500 mt-1" dir="ltr">{item.barcode
+                    ? <b className="text-[#0E76AC]">{item.barcode}</b>
+                    : <b className="rounded bg-rose-100 px-1.5 py-0.5 text-rose-700">{isRtl ? "بلا باركود" : "no barcode"}</b>}<span>{item.price ?? "--"} QAR</span><span>{item.calories ?? "--"} kcal</span><span>P {item.protein ?? "--"}</span><span>C {item.carbs ?? "--"}</span><span>F {item.fats ?? "--"}</span></div></div>
                   <div className="flex items-center gap-1.5">
-                    <button onClick={() => setEditing(item)} title={isRtl ? "تعديل" : "Edit"} className="h-9 w-9 rounded-md border border-slate-200 text-slate-500 hover:text-[#0E76AC] flex items-center justify-center"><Pencil className="h-4 w-4" /></button>
+                    {item.barcode && <button onClick={() => setEditing(item)} title={isRtl ? "تعديل" : "Edit"} className="h-9 w-9 rounded-md border border-slate-200 text-slate-500 hover:text-[#0E76AC] flex items-center justify-center"><Pencil className="h-4 w-4" /></button>}
                     <button onClick={() => changeQty(item._id, -1)} disabled={!qty} className="h-9 w-9 rounded-md border border-slate-200 flex items-center justify-center disabled:opacity-30"><Minus className="h-4 w-4" /></button>
                     <span className="w-8 text-center font-black text-slate-900">{qty}</span>
-                    <button onClick={() => changeQty(item._id, 1)} className="h-9 w-9 rounded-md bg-[#0E76AC] text-white flex items-center justify-center"><Plus className="h-4 w-4" /></button>
+                    <button onClick={() => changeQty(item._id, 1)} disabled={!item.barcode} title={item.barcode ? "" : (isRtl ? "لا يمكن الطباعة بلا باركود" : "Cannot print without a barcode")} className="h-9 w-9 rounded-md bg-[#0E76AC] text-white flex items-center justify-center disabled:opacity-30"><Plus className="h-4 w-4" /></button>
                   </div>
                 </div>;
               })}
