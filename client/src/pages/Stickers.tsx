@@ -1419,10 +1419,12 @@ function BoxSticker({ s, seq }: any) {
         ) : null}
       </div>
 
+      {/* الرقم صعد لركن الملصق العلوي (كملصق الوجبة) فخانته السفلية صارت
+          لتاريخ التوصيل — كان ملصق البوكس الوحيد الذي يخرج بلا تاريخ. */}
       <div className="date-row">
         <div className="date-cell">
-          <div className="date-label">No.</div>
-          <div className="date-value cust-num-inline">{s.customerNo}</div>
+          <div className="date-label">DATE</div>
+          <div className="date-value">{s.prodDate || s.dateText}</div>
         </div>
         <div className="date-divider" />
         <div className="date-cell">
