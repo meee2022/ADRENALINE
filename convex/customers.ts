@@ -225,6 +225,16 @@ export const create = mutation({
     )) {
       throw new Error("يوجد مشترك بنفس الاسم ورقم الهاتف بالفعل / Customer already exists");
     }
+    /* حارس على الخادم أيضاً: الرقمان يُبنى منهما سطر الباقة على ملصق البوكس
+       ويُقاس بهما نقص الخطة. من يُسجَّل بدونهما يطبع ملصقاً مختلف الشكل عن
+       بقية الرزمة. الواجهة تمنعه، وهذا يمنعه لو نادى المسار أحد غيرها. */
+    if (!(Number(args.mealsPerDay) >= 1)) {
+      throw new Error("حدّد عدد الوجبات في اليوم / Set meals per day");
+    }
+    if (args.snacksPerDay === undefined || !(Number(args.snacksPerDay) >= 0)) {
+      throw new Error("حدّد عدد السناكات (0 لو بلا سناك) / Set snacks per day (0 if none)");
+    }
+
     // ✅ يشتق program من الباقة/الهدف لو ماجاش صريح — يمنع ظهور المشترك STANDARD بالغلط
     const program = args.program || deriveProgram(args.goals, args.packageLabel);
 

@@ -274,7 +274,28 @@ const customerSchema = z.object({
   status: z.string().optional(),
 
   isActive: z.boolean().default(true),
-});
+})
+  /* عدد الوجبات والسناكات هو ما يُبنى منه سطر الباقة على ملصق البوكس، وما تقيس
+     به الخطة نقص الاشتراك. من يُسجَّل بلا الرقمين يطبع ملصقاً يقرأ من النص
+     الحر القديم فينفرد بشكل مختلف عن بقية الرزمة — لذا يُمنع الحفظ هنا. */
+  .superRefine((data, ctx) => {
+    const meals = Number(data.mealsPerDay);
+    if (!Number.isFinite(meals) || meals < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["mealsPerDay"],
+        message: "حدّد عدد الوجبات في اليوم / Set meals per day",
+      });
+    }
+    const snacks = Number(data.snacksPerDay);
+    if (data.snacksPerDay === undefined || !Number.isFinite(snacks) || snacks < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["snacksPerDay"],
+        message: "حدّد عدد السناكات (اكتب 0 لو بلا سناك) / Set snacks per day (0 if none)",
+      });
+    }
+  });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
 
@@ -1595,6 +1616,20 @@ export default function Customers() {
                             <div className="text-[10px] text-muted-foreground font-semibold">{isRtl ? "المدة (أسابيع)" : "Weeks"}</div>
                           </div>
                         </div>
+                        {/* الخانتان بلا رسالة خطأ، فمن يحفظ ناقصاً كان الزر يصمت
+                            عليه بلا سبب ظاهر. نُظهر سبب التوقّف عند الخانة نفسها. */}
+                        {(form.formState.errors.mealsPerDay || form.formState.errors.snacksPerDay) && (
+                          <p className="text-[11px] font-bold text-rose-800 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                            ⚠ {String(
+                              form.formState.errors.mealsPerDay?.message ||
+                              form.formState.errors.snacksPerDay?.message || "",
+                            )}
+                            {" — "}
+                            {isRtl
+                              ? "الرقمان يُطبعان على ملصق البوكس وتُقاس بهما الخطة."
+                              : "Both print on the box label and size the plan."}
+                          </p>
+                        )}
                         {changed && (
                           <p className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
                             {isRtl
