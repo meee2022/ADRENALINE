@@ -125,6 +125,19 @@ function swapCaloriesDelta(modifierIds: string[] | undefined, modifiers: any[]):
  *    يستخدمه الاستعلام (ترقيم حي احتياطي) والحفظ (ensureBoxNumbers) معاً
  *    حتى لا يختلف المنطق بينهما. يشمل عملاء الخطط العادية + المخصّصين لكل الأوقات.
  */
+/* هل يُحسب العميل ضمن يومٍ معيّن؟ نفس قاعدة كشف المطبخ (customizedPlans.ts):
+   الإيقاف يسري من `pausedFrom` فصاعداً، أما `isActive=false` بلا تاريخ فهو
+   إيقاف فوري. كان الشرط هنا `!c.isActive` وحده، فراشد المنصوري — الموقوف من
+   29 — ظهرت وجباته في كشف 28 بعد إصلاح الكشف بينما بقيت استيكراته غائبة،
+   لأن الاستيكرات تفلتر من موضعين آخرين لم يمسّهما الإصلاح. */
+function countsOnDate(c: any, date: string): boolean {
+  if (!c) return false;
+  const d = String(date).slice(0, 10);
+  const pausedFrom = String(c.pausedFrom || "").slice(0, 10);
+  if (pausedFrom) return d < pausedFrom;
+  return !!c.isActive;
+}
+
 async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<string[]> {
   const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const dayKey = DOW[new Date(date + "T00:00:00Z").getUTCDay()];
@@ -160,7 +173,7 @@ async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<strin
     const cid = String(tpl.customerId);
     if (regularIds.has(cid)) continue;
     const c: any = await ctx.db.get(tpl.customerId);
-    if (!c || !c.isActive) continue;
+    if (!countsOnDate(c, date)) continue;
     if (activeSlots(tpl).length) customizedIds.add(cid);
   }
   // ترتيب كل مجموعة أبجدياً، ثم: العاديون 1..R، والمخصّصون يكمّلون R+1..N.
@@ -824,7 +837,7 @@ export const get = query({
       const stickered = new Set(mealStickers.map((s) => String(s.customerId)));
       for (const tpl of allTemplates) {
         const c: any = await ctx.db.get(tpl.customerId);
-        if (!c || !c.isActive) continue;
+        if (!countsOnDate(c, args.date)) continue;
         if (stickered.has(String(c._id))) continue; // تجنّب تكرار من عنده dailyPlans
         const cTime = String(c.deliveryTime || "MORNING");
         if (args.deliveryTime !== "ALL" && cTime !== args.deliveryTime) continue;
