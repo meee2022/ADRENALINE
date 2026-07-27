@@ -1540,14 +1540,14 @@ export default function Kitchen() {
                         className="h-10 px-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-black text-sm flex items-center gap-2 hover:bg-red-100 active:scale-95 transition-all disabled:opacity-60"
                       >
                         <Download className="h-4 w-4" />
-                        {exporting === "pdf" ? "…" : "PDF"}
+                        {exporting === "pdf" ? "…" : "Check List"}
                       </button>
                       <button
                         onClick={handlePrintChefSheet}
                         className="h-10 px-4 rounded-lg bg-[#0E76AC] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#0a668f] active:scale-95 transition-all"
                       >
                         <Download className="h-4 w-4" />
-                        {isRtl ? "تنزيل كشف الشيف" : "Download Chef Sheet"}
+                        {isRtl ? "قائمة الطلبات" : "Order List"}
                       </button>
                     </div>
                   </div>
