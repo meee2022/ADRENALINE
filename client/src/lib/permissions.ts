@@ -63,6 +63,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
     "/kitchen",
     "/stickers",
     "/outlet-labels",
+    "/pantry-labels",    // استيكرات المخزن والبهارات
     "/outlet-scan",      // تأكيد استلام طلبيات المنافذ بالماسح
     "/meal-issuance",    // حصر الوجبات الصادرة
     "/plans",            // قراءة الخطط لمعرفة الوجبات
@@ -80,6 +81,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
 
   INVENTORY_MANAGER: [
     "/",
+    "/pantry-labels",  // استيكرات المخزن والبهارات
     "/inventory",
     "/inventory/*",
     "/inventory-reports",
@@ -262,6 +264,8 @@ export const MENU_SECTIONS: MenuSection[] = [
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/outlet-labels", iconKey: "outletLabels", labelAr: "استيكرات المنافذ", labelEn: "Outlet Labels",
         roles: ["ADMIN", "KITCHEN"] },
+      { href: "/pantry-labels", iconKey: "outletLabels", labelAr: "استيكرات المخزن", labelEn: "Pantry Labels",
+        roles: ["ADMIN", "KITCHEN", "INVENTORY_MANAGER"] },
       { href: "/meal-issuance", iconKey: "mealIssuance", labelAr: "حصر الصادر", labelEn: "Meal Issuance",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/gym-sales", iconKey: "gymSales", labelAr: "مبيعات المنافذ", labelEn: "Outlet Sales",

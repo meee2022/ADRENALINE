@@ -38,6 +38,7 @@ const TrackOrder = lazy(() => import("@/pages/public/TrackOrder"));
 const PublicMealPlan = lazy(() => import("@/pages/public/PublicMealPlan"));
 const Stickers = lazy(() => import("@/pages/Stickers"));
 const OutletLabels = lazy(() => import("@/pages/OutletLabels"));
+const PantryLabels = lazy(() => import("@/pages/PantryLabels"));
 const OutletScan = lazy(() => import("@/pages/OutletScan"));
 const Payroll = lazy(() => import("@/pages/Payroll"));
 const Leaves = lazy(() => import("@/pages/Leaves"));
@@ -296,6 +297,9 @@ function Router() {
       </Route>
       <Route path="/outlet-labels">
         <ProtectedRoute component={OutletLabels} />
+      </Route>
+      <Route path="/pantry-labels">
+        <ProtectedRoute component={PantryLabels} />
       </Route>
       <Route path="/outlet-scan">
         <ProtectedRoute component={OutletScan} />
