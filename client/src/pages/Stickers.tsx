@@ -1229,10 +1229,12 @@ function MealSticker({ s }: any) {
       {/* Center content */}
       <div className="content-center">
         <div className="cust-line">{s.customerName}</div>
-        {(s.goal || s.customerNumber) && (
+        {/* لا رقم هاتف على ملصق الوجبة: الاسم وحده يكفي المطبخ للتمييز، والملصق
+            يخرج مع الطعام فلا داعٍ لطباعة رقم العميل عليه. الرقم يبقى على ملصق
+            البوكس حيث يحتاجه التوصيل. */}
+        {s.goal && (
           <div className="cust-sub">
-            {s.goal ? <span className="goal-badge">{s.goal}</span> : null}
-            {s.customerNumber ? <span className="cust-phone">{s.customerNumber}</span> : null}
+            <span className="goal-badge">{s.goal}</span>
           </div>
         )}
         <div className="meal-line">{mealName}</div>
