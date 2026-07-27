@@ -1364,13 +1364,13 @@ function MealSticker({ s, seq }: any) {
       </div>
 
       {/* Footer */}
+      {/* الرقم صعد للركن العلوي وحده، فخانته السفلية صارت للهدف —
+          الصف: GOAL | PROD | EXP، والإنتاج قبل الانتهاء (البداية ثم النهاية). */}
       <div className="date-row">
         <div className="date-cell">
-          <div className="date-label">No.</div>
-          <div className="date-value cust-num-inline">{s.customerNo}</div>
+          <div className="date-label">GOAL</div>
+          <div className="date-value goal-cell">{s.goal || "—"}</div>
         </div>
-        {/* ✅ الترتيب المنطقي: تاريخ الإنتاج (البداية) ثم الانتهاء (النهاية) —
-            كان معكوساً (EXP قبل PROD) فيلتبس على من يقرأ الاستيكر. */}
         <div className="date-divider" />
         <div className="date-cell">
           <div className="date-label">PROD</div>
@@ -1381,15 +1381,6 @@ function MealSticker({ s, seq }: any) {
           <div className="date-label">EXP</div>
           <div className="date-value">{s.expDate || s.dateText}</div>
         </div>
-        {s.goal ? (
-          <>
-            <div className="date-divider" />
-            <div className="date-cell">
-              <div className="date-label">GOAL</div>
-              <div className="date-value goal-cell">{s.goal}</div>
-            </div>
-          </>
-        ) : null}
       </div>
     </div>
   );
