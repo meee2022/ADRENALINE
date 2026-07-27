@@ -229,9 +229,26 @@ export default function OrderReview() {
       void alertDialog({ message: t(`✅ تم إرسال طلبك بنجاح!\nرقم الطلب: ${result.orderNumber}\nسنتواصل معك قريباً.`, `✅ Your order was sent successfully!\nOrder number: ${result.orderNumber}\nWe'll contact you soon.`) });
       clearCart();
       setLocation("/");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting order:", error);
-      void alertDialog({ message: t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again.") });
+      /* الرسالة العامة كانت تبلع السبب الحقيقي فلا يعرف المشترك ولا نحن لماذا
+         رُفض (فاطمة حاولت مراراً على «حدث خطأ» بلا تفسير). نترجم أكواد التحقق
+         المعروفة، ونعرض نص الخادم لغيرها بدل التعمية. */
+      const raw = String(error?.message || "").replace(/^\[CONVEX .*?\]\s*/, "").replace(/\s*Called by client$/, "");
+      const code = raw.match(/ORDER_VALIDATION:([A-Z_]+)/)?.[1];
+      const known: Record<string, [string, string]> = {
+        SUBSCRIPTION_PAUSED: ["اشتراكك متوقف حالياً — تواصل مع الفريق لتفعيله ثم أعد الإرسال.", "Your subscription is currently stopped — contact the team to activate it, then resend."],
+        SUBSCRIPTION_EXPIRED: ["انتهت مدة اشتراكك — جدّد الاشتراك ثم أعد إرسال خطتك.", "Your subscription has ended — renew it, then resend your plan."],
+        CUSTOMER_IDENTITY_MISMATCH: ["رقم الجوال لا يطابق الحساب المربوط — راجع الرقم وأعد المحاولة.", "The phone number doesn't match the linked account — check it and try again."],
+        INVALID_MEAL_CHANNEL: ["إحدى الوجبات المختارة لم تعد متاحة في المنيو — احذفها واختر بديلاً.", "One of the selected meals is no longer available — remove it and pick another."],
+        MEAL_NOT_SCHEDULED: ["إحدى الوجبات لم تعد مجدولة في يومها المختار — أعد اختيارها من المنيو.", "One selected meal is no longer scheduled on that day — reselect it from the menu."],
+      };
+      const msg = code && known[code]
+        ? t(`❌ ${known[code][0]}`, `❌ ${known[code][1]}`)
+        : raw && !/^ORDER_VALIDATION:/.test(raw)
+          ? t(`❌ تعذّر إرسال الطلب: ${raw}`, `❌ Couldn't send the order: ${raw}`)
+          : t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again.");
+      void alertDialog({ message: msg });
     } finally {
       setIsSubmitting(false);
     }

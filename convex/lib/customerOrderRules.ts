@@ -130,7 +130,14 @@ export function validateCustomerOrderSelection(args: {
 
   // Preserve guest ordering behavior while still enforcing catalog/schedule rules.
   if (!customer) return;
-  if (customer.isActive === false || customer.pausedFrom) fail("SUBSCRIPTION_PAUSED");
+  /* «لم يبدأ بعد» ليس «موقوفاً». المجدِّد يُسجَّل ببداية مستقبلية وحسابه
+     isActive=false حتى يوم البداية — وهذه بالضبط فترة إرسال خطته كي يطبخ له
+     المطبخ من أول يوم. فاطمة الورثان (تبدأ 29-7) بنت 120 وجبة ورُفض الإرسال
+     هنا. يُحجب الإرسال فقط عن الموقوف فعلاً: pausedFrom مثبَّت، أو معطَّل
+     وبدايته ليست أمامه. */
+  const startISO = String(customer.startDate || "");
+  const startsAhead = /^\d{4}-\d{2}-\d{2}$/.test(startISO) && startISO > todayISO;
+  if (customer.pausedFrom || (customer.isActive === false && !startsAhead)) fail("SUBSCRIPTION_PAUSED");
   const endDate = String(customer.endDate || "");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < todayISO) fail("SUBSCRIPTION_EXPIRED");
 
