@@ -93,6 +93,7 @@ export default function OutletLabels() {
   const create = useMutation(api.outletLabels.create);
   const remove = useMutation(api.outletLabels.remove);
   const importFromPos = useMutation(api.outletLabels.importFromPos);
+  const updateMealFacts = useMutation(api.outletLabels.updateMealFacts);
   const [importing, setImporting] = useState(false);
   const [tab, setTab] = useState<"outlet" | "all">("outlet");
   const [search, setSearch] = useState("");
@@ -140,16 +141,26 @@ export default function OutletLabels() {
     const form = new FormData(event.currentTarget);
     setSaving(true);
     try {
-      await update({
-        id: editing._id as any,
+      const facts = {
         nameEn: String(form.get("nameEn") || ""),
-        price: optionalNumber(String(form.get("price") || "")),
         calories: optionalNumber(String(form.get("calories") || "")),
         carbs: optionalNumber(String(form.get("carbs") || "")),
         protein: optionalNumber(String(form.get("protein") || "")),
         fats: optionalNumber(String(form.get("fats") || "")),
-        sessionToken,
-      });
+      };
+      /* التعديل يذهب إلى **الوجبة** حين يكون الصنف مرتبطاً بها: هي ما يقرأه
+         استيكر المشترك والمنيو أيضاً، فإصلاح الملصق وحده يترك الباقي غلطاً.
+         السعر لا يُكتب هنا إطلاقاً — مكانه «أصناف المنافذ» لأنه يخصّ المنفذ. */
+      if (editing.publicMealId) {
+        await updateMealFacts({ mealId: editing.publicMealId as any, ...facts, sessionToken });
+      } else {
+        await update({
+          id: editing._id as any,
+          ...facts,
+          price: optionalNumber(String(form.get("price") || "")),
+          sessionToken,
+        });
+      }
       setEditing(null);
     } finally {
       setSaving(false);
