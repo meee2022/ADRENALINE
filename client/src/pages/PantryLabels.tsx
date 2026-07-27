@@ -52,7 +52,7 @@ function Barcode({ value }: { value: string }) {
     try {
       JsBarcode(ref.current, value || " ", {
         format: "CODE128", displayValue: false, margin: 0,
-        height: 30, width: 1.4, background: "transparent", lineColor: "#050505",
+        height: 44, width: 1.9, background: "transparent", lineColor: "#050505",
       });
     } catch { /* باركود فارغ/غير صالح: نترك المكان فارغاً بدل كسر الصفحة */ }
   }, [value]);
@@ -262,8 +262,8 @@ export default function PantryLabels() {
         .sp-dates div { display: flex; gap: 1.6mm; justify-content: flex-end; }
         .sp-dates b { font-size: 7px; }
         .sp-bc { text-align: center; }
-        .sp-bc svg { max-width: 100%; height: 7mm; }
-        .sp-bc span { display: block; font-size: 7px; font-weight: 700; letter-spacing: 1.5px; }
+        .sp-bc svg { max-width: 100%; height: 9.5mm; }
+        .sp-bc span { display: block; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
         .sp-footer {
           text-align: center; font-weight: 900; font-size: 8px;
           letter-spacing: 2px; text-transform: uppercase; margin-top: 0.6mm;
