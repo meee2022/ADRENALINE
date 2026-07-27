@@ -161,13 +161,25 @@ export const forOutlet = query({
     };
 
     const out: any[] = [];
+    /* في الكتالوج صفوف نشطة تشير لوجبتين مختلفتين بنفس الاسم — بقايا الوجبات
+       المكرَّرة («Beef Stroganoff» مرتين إحداهما لوجبة موقوفة، وLazy Cake
+       بحالتي أحرف). الكاشير يدمجها عند البيع، أما هنا فكل صفٍّ كان يصير
+       ملصقاً فتُطبع الوجبة مرتين. نطبع الاسم مرة واحدة، ونُقدِّم صفَّ الوجبة
+       النشطة على صفّ الموقوفة. البيانات نفسها لا تُمَسّ من هذه الشاشة. */
+    const emitted = new Map<string, number>();
     for (const r of rows) {
       if (!r.isActive) continue;
       const meal: any = await ctx.db.get(r.mealId);
       if (!meal) continue;
       const name = String(meal.gymNameEn || meal.nameEn || meal.nameAr || "").trim();
+      const dupKey = norm(name);
+      const prevIdx = emitted.get(dupKey);
+      if (prevIdx !== undefined) {
+        // الاسم مطبوع فعلاً — نُبدل الصفّ فقط لو الحالي وجبته نشطة والسابق لا
+        if (meal.isActive === false || out[prevIdx].mealIsActive !== false) continue;
+      }
       const lb = byMeal.get(String(r.mealId)) || byNorm.get(norm(name)) || byLetters.get(letters(name));
-      out.push({
+      const entry = {
         _id: lb ? String(lb._id) : `meal:${String(meal._id)}`,
         sequence: lb ? Number(lb.sequence) : 0,
         barcode: String((r as any).barcode || (lb ? lb.barcode : "")),
@@ -182,7 +194,10 @@ export const forOutlet = query({
         hasBarcode: !!lb,
         // نُعلم كيف عُثر على الباركود ليُراجَع المطابَق بالاسم لا أن يُصدَّق
         matchedBy: lb ? (byMeal.has(String(r.mealId)) ? "link" : "name") : "none",
-      });
+        mealIsActive: meal.isActive !== false,
+      };
+      if (prevIdx !== undefined) out[prevIdx] = entry;
+      else { emitted.set(dupKey, out.length); out.push(entry); }
     }
     return out.sort((a, b) => a.nameEn.localeCompare(b.nameEn));
   },
