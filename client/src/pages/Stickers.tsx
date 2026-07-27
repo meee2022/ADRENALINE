@@ -1300,12 +1300,13 @@ function MealSticker({ s, seq }: any) {
     <div className="label">
       <div className="seq-mark">{seq}</div>
       {/* Brand header — heart icon + ADRENALINE logo + HEALTHY FOOD tag */}
+      {/* القلب يمين الاسم لا يساره — هكذا كان الاستيكر القديم الذي اعتاده الفريق */}
       <div className="brand-block">
-        <img src="/heart-logo.png" alt="" className="brand-heart" />
         <div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
+        <img src="/heart-logo.png" alt="" className="brand-heart" />
       </div>
       <div className="brand-rule" />
 
@@ -1369,12 +1370,13 @@ function BoxSticker({ s, seq }: any) {
   return (
     <div className="label label-box">
       <div className="seq-mark">{seq}</div>
+      {/* القلب يمين الاسم لا يساره — هكذا كان الاستيكر القديم الذي اعتاده الفريق */}
       <div className="brand-block">
-        <img src="/heart-logo.png" alt="" className="brand-heart" />
         <div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
+        <img src="/heart-logo.png" alt="" className="brand-heart" />
       </div>
       <div className="brand-rule" />
 
