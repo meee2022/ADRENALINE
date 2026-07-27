@@ -804,12 +804,15 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     const showTop = scope === "full" || scope === "top";
     const showActions = scope === "full" || scope === "returns";
 
-    // 💵 كشف الحساب: كمية/قيمة الإنتاج، كمية/قيمة المرتجع، ثم المبيعات − العمولة = المستحق.
-    //    نسبة العمولة = خصم المنفذ (discountPct، افتراضي 20). كل المنافذ ⇒ 20 افتراضياً.
+    /* 💵 كشف الحساب. الفاتورة تُسجَّل أصلاً بسعرٍ بعد خصم المنفذ
+       (unitPrice = سعر البيع × (1 − discountPct))، فكان الكشف يطرح
+       «عمولة 20%» فوقها فيتقاضى المنفذ خصمه مرتين — 64% بدل 80%.
+       الخصم يظهر سطراً معلوماتياً بقيمته الحقيقية من الفواتير
+       (totalDiscount = سعر البيع − سعر الفاتورة)، والمستحق = المبيعات كما هي. */
     const commissionRate = Number((gym as any)?.discountPct ?? 20);
-    const salesAmt = netRevenue; // = إجمالي الإنتاج − قيمة المرتجع
-    const commissionAmt = Math.round(salesAmt * commissionRate) / 100;
-    const receivable = Math.round((salesAmt - commissionAmt) * 100) / 100;
+    const salesAmt = netRevenue; // = إجمالي الفواتير − قيمة المرتجع (بأسعار ما بعد الخصم)
+    const grantedDiscount = Number(report?.totalDiscount || 0);
+    const receivable = salesAmt;
     const statementHtml = !showStatement ? "" : `
       <p class="stmt-intro">${t(`الأصناف الغذائية المورّدة خلال (${rangeLabel}):`, `Food items supplied during (${rangeLabel}):`)}</p>
       <table><thead>
@@ -828,8 +831,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <div class="fin">
         <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
         <table>
-          <tr><td class="lbl">${t("المبيعات (الإنتاج − المرتجع)", "Sales (production − returns)")}</td><td class="val">${salesAmt.toFixed(2)}</td></tr>
-          <tr class="minus"><td class="lbl">${t("العمولة", "Commission")} (${commissionRate}%)</td><td class="val">− ${commissionAmt.toFixed(2)}</td></tr>
+          <tr><td class="lbl">${t("المبيعات (الإنتاج − المرتجع) — بأسعار ما بعد خصم المنفذ", "Sales (production − returns) — at post-discount prices")}</td><td class="val">${salesAmt.toFixed(2)}</td></tr>
+          <tr><td class="lbl">${t(`خصم المنفذ (${commissionRate}%) — مطبَّق في أسعار الفواتير`, `Outlet discount (${commissionRate}%) — already applied in invoice prices`)}</td><td class="val">${grantedDiscount ? grantedDiscount.toFixed(2) : "—"}</td></tr>
           <tr class="net"><td class="lbl">${t("المستحق (Receivable)", "Receivable")}</td><td class="val">${receivable.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
         </table>
       </div>
@@ -1139,8 +1142,9 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       {scope === "statement" && report && (() => {
         const commissionRate = Number((gyms.find((g: any) => g.id === gymId) as any)?.discountPct ?? 20);
         const sales = Number(report.netRevenue ?? report.totalRevenue);
-        const commission = Math.round(sales * commissionRate) / 100;
-        const receivable = Math.round((sales - commission) * 100) / 100;
+        // الخصم داخل أسعار الفواتير أصلاً — لا يُطرح ثانيةً (كان يُخصم مرتين)
+        const granted = Number(report.totalDiscount || 0);
+        const receivable = sales;
         return (
           <div className="space-y-3">
             <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -1177,8 +1181,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
               <div className="bg-[#0E2A4A] px-4 py-2.5 text-sm font-black text-white">{t("الخلاصة المالية", "Financial summary")}</div>
               <div className="divide-y divide-slate-100 text-sm">
-                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("المبيعات (الإنتاج − المرتجع)", "Sales (production − returns)")}</span><span className="font-black tabular-nums">{sales.toFixed(2)}</span></div>
-                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("العمولة", "Commission")} ({commissionRate}%)</span><span className="font-black tabular-nums text-red-600">− {commission.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("المبيعات (الإنتاج − المرتجع) — بأسعار ما بعد خصم المنفذ", "Sales (production − returns) — at post-discount prices")}</span><span className="font-black tabular-nums">{sales.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t(`خصم المنفذ (${commissionRate}%) — مطبَّق في أسعار الفواتير`, `Outlet discount (${commissionRate}%) — already in invoice prices`)}</span><span className="font-black tabular-nums text-slate-400">{granted ? granted.toFixed(2) : "—"}</span></div>
                 <div className="flex items-center justify-between bg-[#0E76AC] px-4 py-3 text-white"><span className="font-black">{t("المستحق (Receivable)", "Receivable")}</span><span className="font-black tabular-nums">{receivable.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
               </div>
             </section>
