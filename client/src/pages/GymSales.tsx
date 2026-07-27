@@ -561,6 +561,10 @@ function HistoryTab({ isRtl, t, sessionToken, gyms, toast }: any) {
                 <th className="text-start p-3">{t("التاريخ", "Date")}</th>
                 <th className="text-start p-3">{t("المنفذ", "Outlet")}</th>
                 <th className="text-center p-3">{t("وجبات", "Meals")}</th>
+                {/* الفاتورة تُسجَّل بأسعار ما بعد خصم المنفذ، فمن يقارنها بأسعار
+                    البيع لا يجد الرقم — نعرض الأصل والخصم صراحةً بجانب الصافي. */}
+                <th className="text-end p-3">{t("قبل الخصم", "Before disc.")}</th>
+                <th className="text-end p-3">{t("الخصم", "Discount")}</th>
                 <th className="text-end p-3">{t("الإجمالي", "Total")}</th>
                 <th className="p-3" />
               </tr>
@@ -571,6 +575,14 @@ function HistoryTab({ isRtl, t, sessionToken, gyms, toast }: any) {
                   <td className="p-3 font-bold">{r.date}</td>
                   <td className="p-3">{r.gymName}</td>
                   <td className="p-3 text-center font-black">{r.mealsCount}</td>
+                  <td className="p-3 text-end font-bold tabular-nums text-slate-500">
+                    {Number(r.discountAmount || 0) > 0 ? Number(r.subtotal || 0).toFixed(2) : "—"}
+                  </td>
+                  <td className="p-3 text-end font-bold tabular-nums">
+                    {Number(r.discountAmount || 0) > 0
+                      ? <span className="text-amber-600">− {Number(r.discountAmount).toFixed(2)}</span>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
                   <td className="p-3 text-end">
                     <div className="font-black text-[#0E76AC]">{Number(r.netTotal ?? r.total).toFixed(2)}</div>
                     {r.returnedTotal > 0 && <div className="mt-0.5 text-[10px] font-bold text-red-600">{t("هالك", "Waste")}: {r.wasteValue.toFixed(2)} · {r.returnedTotal} {t("مرتجع", "returned")}</div>}
