@@ -904,6 +904,11 @@ export default function Stickers() {
           line-height: 1;
         }
         .box-no-top {
+          /* مثبَّت على أقصى يسار الملصق — لا داخل صفّ الشعار — فيبقى الشعار
+             في منتصفه تماماً ويُلتقط الرقم من الطرف بنظرة. */
+          position: absolute;
+          top: 1mm;
+          left: 1.2mm;
           min-width: 5.6mm;
           height: 5.6mm;
           display: inline-flex;
