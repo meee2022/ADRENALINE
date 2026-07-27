@@ -314,7 +314,11 @@ export const listOutletCatalogAdmin = query({
         hasOutletRecord: !!row,
         sortOrder: row?.sortOrder ?? meal.sortOrder ?? 0,
       };
-    }).sort((a, b) => Number(b.isEnabled) - Number(a.isEnabled) || a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
+      // ⚠️ الترتيب لا يعتمد على التفعيل: كان المفعّل يُرفع للأعلى، فأي إيقاف
+      //    يقفز بالصنف إلى آخر القائمة ولا يعرف من أوقفه ما الذي نزل — ولا كيف
+      //    يتراجع عن ضغطة بالخطأ. الصنف يبقى مكانه، وأزرار «مفعّل/موقوف» أعلى
+      //    القائمة تكفي لتصفيته.
+    }).sort((a, b) => a.sortOrder - b.sortOrder || a.nameEn.localeCompare(b.nameEn));
   },
 });
 
