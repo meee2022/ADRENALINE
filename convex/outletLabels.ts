@@ -146,6 +146,14 @@ export const forOutlet = query({
       if (!byLetters.has(letters(l.nameEn))) byLetters.set(letters(l.nameEn), l);
     }
 
+    /** الوجبة أولاً، فالملصق. رقم موجود خيرٌ من شرطتين على ملصق يقرأه زبون. */
+    const pick = (meal: any, lb: any) => {
+      const mealHas = Number(meal.protein || 0) || Number(meal.carbs || 0) || Number(meal.fats || 0);
+      const src = mealHas || !lb ? meal : lb;
+      const n = (v: any) => (v != null && v !== "" ? Number(v) : undefined);
+      return { calories: n(src.calories), carbs: n(src.carbs), protein: n(src.protein), fats: n(src.fats) };
+    };
+
     const out: any[] = [];
     for (const r of rows) {
       if (!r.isActive) continue;
@@ -159,10 +167,10 @@ export const forOutlet = query({
         barcode: lb ? String(lb.barcode) : "",
         nameEn: name,
         price: Number(r.price),
-        calories: meal.calories != null ? Number(meal.calories) : undefined,
-        carbs: meal.carbs != null ? Number(meal.carbs) : undefined,
-        protein: meal.protein != null ? Number(meal.protein) : undefined,
-        fats: meal.fats != null ? Number(meal.fats) : undefined,
+        /* الماكروز من الوجبة، وإلا من الملصق. 22 صنفاً في الجم ماكروزها على
+           الملصق وحده (أُدخلت مع الملصق ولم تُكتب في الوجبة)، فالقراءة من الوجبة
+           وحدها كانت ستطبع «--» مكان أرقام صحيحة. */
+        ...pick(meal, lb),
         isActive: true,
         publicMealId: String(meal._id),
         hasBarcode: !!lb,
