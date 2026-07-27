@@ -450,6 +450,32 @@ export const todayIngredients = query({
   },
 });
 
+/**
+ * اعتماد كل مسودّات يومٍ دفعةً واحدة (DRAFT → CONFIRMED فقط).
+ * المخطِّط ينهي 90+ خطة ثم يصطاد المسودّتين المنسيّتين واحدة واحدة —
+ * يوم 29-7 قال التخطيط 94 والمراجعة 92 ولم يعرف أحد أين الفارق.
+ * لا يمسّ إلا DRAFT: الموقوف (PAUSED) والمؤكد وما بعده يبقون كما هم،
+ * ولا يُعتمد ما لا وجبات فيه.
+ */
+export const confirmAllDrafts = mutation({
+  args: { date: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { date, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_date", (q) => q.eq("date", date))
+      .collect();
+    let confirmed = 0, skippedEmpty = 0;
+    for (const p of plans as any[]) {
+      if (normalizeStatus(p.status) !== "DRAFT") continue;
+      if (!Array.isArray(p.meals) || p.meals.length === 0) { skippedEmpty++; continue; }
+      await ctx.db.patch(p._id, { status: "CONFIRMED" });
+      confirmed++;
+    }
+    return { confirmed, skippedEmpty };
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {

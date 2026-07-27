@@ -14,9 +14,10 @@ import {
 } from "@/lib/api";
 import type { DailyPlan } from "@/lib/api";
 import { DailyPlanItem } from "@/lib/types";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { alertDialog } from "@/lib/dialogs";
 import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
 import { confirmDialog } from "@/lib/dialogs";
 
@@ -420,6 +421,8 @@ export default function PlansPage() {
 
   const createPlanMutation = useCreateDailyPlan();
   const updatePlanMutation = useUpdateDailyPlan();
+  const confirmAllDrafts = useMutation(api.dailyPlans.confirmAllDrafts);
+  const [confirmingAll, setConfirmingAll] = useState(false);
   const dateLocale = isRtl ? ar : enUS;
 
   const selectedCustomer = useMemo(
@@ -1408,6 +1411,46 @@ export default function PlansPage() {
                     {isRtl ? "افتح ←" : "Open →"}
                   </span>
                 </button>
+              )}
+
+              {/* اعتماد كل المسودّات دفعة واحدة: من أنهى التخطيط لا يصطاد
+                  المسودّات المنسيّة كرتاً كرتاً — يوم 29-7 بقيت اثنتان صامتتين
+                  وقالت المراجعة 92 من 94. يظهر فقط حين توجد مسودّات. */}
+              {draftCustomers.size > 0 && (
+                <div className="rounded-2xl p-4 flex items-center gap-3"
+                  style={{ background: "linear-gradient(135deg,#fffbeb,#ffffff)", border: "1px solid #fcd34d",
+                           boxShadow: "0 2px 10px rgba(245,158,11,0.12)" }}>
+                  <div className="h-9 w-9 rounded-xl flex-shrink-0 flex items-center justify-center text-white"
+                    style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)" }}>
+                    <AlertTriangle className="h-4 w-4" />
+                  </div>
+                  <p className="flex-1 min-w-0 text-[12px] font-black" style={{ color: "#78350f" }}>
+                    {isRtl
+                      ? `${draftCustomers.size} خطة كاملة بانتظار التأكيد — لن تظهر في المراجعة النهائية قبل اعتمادها.`
+                      : `${draftCustomers.size} finished plan(s) still drafts — the final review won't show them until confirmed.`}
+                  </p>
+                  <button
+                    onClick={async () => {
+                      if (confirmingAll) return;
+                      setConfirmingAll(true);
+                      try {
+                        const r: any = await confirmAllDrafts({ date: formattedDate, sessionToken } as any);
+                        void alertDialog({ message: isRtl
+                          ? `تم اعتماد ${r.confirmed} خطة ✓${r.skippedEmpty ? `
+${r.skippedEmpty} بلا وجبات تُركت مسودّة.` : ""}`
+                          : `Confirmed ${r.confirmed} plan(s) ✓${r.skippedEmpty ? `
+${r.skippedEmpty} with no meals left as drafts.` : ""}` });
+                      } catch (e: any) {
+                        void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "تعذّر الاعتماد" : "Couldn't confirm") });
+                      } finally { setConfirmingAll(false); }
+                    }}
+                    disabled={confirmingAll}
+                    className="text-[11px] font-black flex-shrink-0 px-3 h-8 rounded-lg flex items-center gap-1 text-white disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)" }}>
+                    <Check className="h-3.5 w-3.5" />
+                    {confirmingAll ? "…" : isRtl ? "اعتماد الكل" : "Confirm all"}
+                  </button>
+                </div>
               )}
 
               {/* ─── Customer cards grid ─── */}
