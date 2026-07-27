@@ -102,7 +102,23 @@ export const forDate = query({
         }));
       if (!items.length) continue;
       const c: any = await ctx.db.get(tpl.customerId);
-      if (!c || !c.isActive) continue;
+      if (!c) continue;
+      /**
+       * الاستبعاد يكون **بتاريخ الكشف**، لا بحالة الحساب اليوم.
+       *
+       * كان الشرط `!c.isActive` وحده، فمن يُوقَف اعتباراً من 29 يختفي فوراً من
+       * كشف 28 — يوم هو مشترك فيه ووجباته مطبوخة له. حدث فعلاً مع
+       * RASHED ALMANSOURI: أربع وجبات سقطت من كشف 28-7 لأن حسابه أُوقف من 29.
+       * المطبخ لا يحضّرها ولا يُطبع لها استيكر، ويكتشف الأمر عند التوصيل.
+       *
+       * فالإيقاف يسري من `pausedFrom` فصاعداً، والانتهاء من بعد `endDate`،
+       * والبدء قبل `startDate` لا يُطعِم أحداً. أما `isActive=false` بلا تاريخ
+       * فهو إيقاف فوري يسري على كل التواريخ.
+       */
+      const d = String(args.date).slice(0, 10);
+      const pausedFrom = String(c.pausedFrom || "").slice(0, 10);
+      if (pausedFrom) { if (d >= pausedFrom) continue; }
+      else if (!c.isActive) continue;
       out.push({
         customerId: String(tpl.customerId),
         customerName: c.fullName || "",

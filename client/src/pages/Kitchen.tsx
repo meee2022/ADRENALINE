@@ -1188,6 +1188,7 @@ export default function Kitchen() {
             g.qty, main ? g.carb : "", main ? g.protein : "",
           ],
         }));
+      xlsxRows.push({ kind: "total", cells: ["Total portions", meal.count, "", ""] });
 
       return `
         <tbody class="meal-block">

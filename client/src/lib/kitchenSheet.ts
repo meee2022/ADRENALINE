@@ -237,7 +237,7 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
  * الطباعة حرفياً حتى يقرأ المطبخ الورقة والملف بنفس العين.
  */
 export type ChefRow = {
-  kind: "section" | "head" | "dish" | "standard" | "modified" | "customer" | "allergy" | "meal" | "notset";
+  kind: "section" | "head" | "dish" | "standard" | "modified" | "total" | "customer" | "allergy" | "meal" | "notset";
   cells: (string | number)[];
 };
 
@@ -247,6 +247,7 @@ const CHEF_COLORS: Record<ChefRow["kind"], { bg?: string; fg: string; bold: bool
   dish:     { bg: "ACD5EC", fg: "10283F", bold: true },   // سماوي — اسم الطبق
   standard: { fg: "10283F", bold: false },
   modified: { bg: "FFF9EB", fg: "B45309", bold: true },   // برتقالي — تعديل
+  total:    { bg: "FFE082", fg: "10283F", bold: true },
   customer: { bg: "D8EDF8", fg: "10283F", bold: true },
   allergy:  { bg: "FFF0F0", fg: "B91C1C", bold: true },   // أحمر — حساسية
   meal:     { fg: "10283F", bold: false },
@@ -262,38 +263,129 @@ export async function downloadChefSheetXlsx(
   const XLSX = (await import("xlsx-js-style")).default as any;
   const thin = { style: "thin", color: { rgb: "9CB2C2" } };
   const border = { top: thin, bottom: thin, left: thin, right: thin };
-
-  const aoa: any[][] = [
-    [{ v: `ADRENALINE · CHEF PRODUCTION SHEET`, s: { font: { bold: true, sz: 15, color: { rgb: "0D3B5F" } } } }],
-    [{ v: `Production date: ${dateStr}`, s: { font: { bold: true, sz: 10, color: { rgb: "54738A" } } } }],
-    kpis.map((k) => ({
-      v: `${k.value}  —  ${k.label}`,
-      s: { font: { bold: true, sz: 11, color: { rgb: "0E76AC" } }, fill: { fgColor: { rgb: "F7FBFD" } }, border },
-    })),
-    [],
-  ];
-
-  for (const r of rows) {
-    const c = CHEF_COLORS[r.kind];
-    const style: any = {
-      font: { bold: c.bold, color: { rgb: c.fg }, sz: r.kind === "section" ? 12 : 10 },
+  const baseStyle = (kind: ChefRow["kind"]): any => {
+    const c = CHEF_COLORS[kind];
+    return {
+      font: { name: "Arial", bold: c.bold, color: { rgb: c.fg }, sz: kind === "section" ? 12 : 10 },
       border,
       alignment: { vertical: "center", wrapText: true },
+      fill: { patternType: "solid", fgColor: { rgb: c.bg || "FFFFFF" } },
     };
-    if (c.bg) style.fill = { fgColor: { rgb: c.bg } };
-    aoa.push(r.cells.map((v, i) => ({
-      v,
-      s: i === r.cells.length - 1 && /^(dish|standard|modified|meal|notset)$/.test(r.kind)
-        // عمود الكمية أحمر عريض كما في الورقة
-        ? { ...style, font: { ...style.font, bold: true, color: { rgb: "DC2626" }, sz: 11 }, alignment: { horizontal: "center", vertical: "center" } }
-        : style,
-    })));
+  };
+  const cell = (v: string | number, s: any) => ({ v, s });
+  const centered = (s: any) => ({ ...s, alignment: { ...s.alignment, horizontal: "center", vertical: "center" } });
+  const qtyStyle = (s: any, dish = false) => ({
+    ...centered(s),
+    font: { ...s.font, bold: true, sz: 11, color: { rgb: dish ? "10283F" : "DC2626" } },
+  });
+
+  // Six physical columns let the three KPI cards remain equal while preserving
+  // the PDF's four logical table columns.
+  const aoa: any[][] = Array.from({ length: 7 }, () => Array(6).fill(null));
+  const merges: any[] = [
+    { s: { r: 0, c: 0 }, e: { r: 1, c: 3 } },
+    { s: { r: 0, c: 4 }, e: { r: 0, c: 5 } },
+    { s: { r: 1, c: 4 }, e: { r: 1, c: 5 } },
+    { s: { r: 3, c: 0 }, e: { r: 3, c: 1 } },
+    { s: { r: 3, c: 2 }, e: { r: 3, c: 3 } },
+    { s: { r: 3, c: 4 }, e: { r: 3, c: 5 } },
+    { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } },
+    { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } },
+    { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } },
+  ];
+  const titleStyle = {
+    font: { name: "Arial", bold: true, sz: 16, color: { rgb: "0D3B5F" } },
+    fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+    alignment: { vertical: "center" },
+    border: { bottom: { style: "medium", color: { rgb: "28B7E1" } } },
+  };
+  const metaStyle = {
+    font: { name: "Arial", bold: true, sz: 10, color: { rgb: "54738A" } },
+    fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } },
+    alignment: { horizontal: "right", vertical: "center", wrapText: true },
+    border: { bottom: { style: "medium", color: { rgb: "28B7E1" } } },
+  };
+  aoa[0][0] = cell("ADRENALINE · CHEF PRODUCTION SHEET", titleStyle);
+  aoa[0][4] = cell("Production date", metaStyle);
+  aoa[1][4] = cell(dateStr, { ...metaStyle, font: { ...metaStyle.font, sz: 11 } });
+  kpis.slice(0, 3).forEach((k, i) => {
+    const col = i * 2;
+    const card = { fill: { patternType: "solid", fgColor: { rgb: "F7FBFD" } }, border };
+    aoa[3][col] = cell(k.value, { ...card, font: { name: "Arial", bold: true, sz: 17, color: { rgb: "0E76AC" } }, alignment: { vertical: "center" } });
+    aoa[4][col] = cell(k.label.toUpperCase(), { ...card, font: { name: "Arial", bold: true, sz: 9, color: { rgb: "54738A" } }, alignment: { vertical: "center" } });
+  });
+
+  const rowHeights = [22, 22, 7, 25, 19, 7, 7];
+  let currentSection = "";
+  for (const r of rows) {
+    const out = Array(6).fill(null);
+    const rowIndex = aoa.length;
+    const style = baseStyle(r.kind);
+    const isMain = currentSection === "MAIN MEALS";
+    const isCustomized = currentSection.startsWith("CUSTOMIZED ORDERS");
+    if (r.kind === "section") {
+      currentSection = String(r.cells[0] || "");
+      out[0] = cell(currentSection, style);
+      merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 5 } });
+    } else if (r.kind === "head") {
+      if (isMain) {
+        out[0] = cell(String(r.cells[0] || ""), style);
+        out[3] = cell(String(r.cells[1] || "Qty"), centered(style));
+        out[4] = cell(String(r.cells[2] || "Carb g"), centered(style));
+        out[5] = cell(String(r.cells[3] || "Protein g"), centered(style));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 2 } });
+      } else {
+        out[0] = cell(String(r.cells[0] || ""), style);
+        out[5] = cell(isCustomized ? "Qty / status" : "Qty", centered(style));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 4 } });
+      }
+    } else if (r.kind === "allergy") {
+      out[0] = cell(String(r.cells[0] || ""), style);
+      merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 5 } });
+    } else if (r.kind === "customer") {
+      out[0] = cell(String(r.cells[0] || ""), style);
+      out[5] = cell(String(r.cells[1] || ""), { ...centered(style), font: { ...style.font, color: { rgb: "0E76AC" } } });
+      merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 4 } });
+    } else {
+      const text = String(r.cells[0] || "").replace(/\s+—\s+/, "\n");
+      out[0] = cell(text, style);
+      if (isMain && !isCustomized) {
+        out[3] = cell(r.cells[1] ?? "", qtyStyle(style, r.kind === "dish" || r.kind === "total"));
+        out[4] = cell(r.cells[2] ?? "", centered({ ...style, font: { ...style.font, color: { rgb: "0E76AC" } } }));
+        out[5] = cell(r.cells[3] ?? "", centered({ ...style, font: { ...style.font, color: { rgb: "0E76AC" } } }));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 2 } });
+      } else {
+        out[5] = cell(r.cells[1] ?? "", qtyStyle(style, r.kind === "dish" || r.kind === "total"));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 4 } });
+      }
+    }
+    aoa.push(out);
+    rowHeights.push(
+      r.kind === "modified" ? 29
+        : r.kind === "section" ? 22
+        : r.kind === "dish" || r.kind === "customer" ? 21
+        : r.kind === "head" || r.kind === "total" ? 20
+        : 18,
+    );
   }
 
+  const blankStyle = { fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } } };
+  for (let ri = 0; ri < aoa.length; ri++) {
+    for (let ci = 0; ci < 6; ci++) if (aoa[ri][ci] == null) aoa[ri][ci] = cell("", blankStyle);
+  }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws["!cols"] = [{ wch: 62 }, { wch: 12 }, { wch: 10 }, { wch: 10 }];
-  ws["!freeze"] = { xSplit: 0, ySplit: 4 };
+  ws["!merges"] = merges;
+  ws["!cols"] = [{ wch: 24 }, { wch: 19 }, { wch: 19 }, { wch: 11 }, { wch: 11 }, { wch: 12 }];
+  ws["!rows"] = rowHeights.map((hpt) => ({ hpt }));
+  ws["!freeze"] = { xSplit: 0, ySplit: 7 };
+  ws["!autofilter"] = { ref: `A7:F${aoa.length}` };
+  ws["!margins"] = { left: 0.25, right: 0.25, top: 0.35, bottom: 0.45, header: 0.15, footer: 0.2 };
+  ws["!pageSetup"] = { paperSize: 9, orientation: "portrait", fitToWidth: 1, fitToHeight: 0 };
+  ws["!printHeader"] = [0, 6];
+  ws["!headerFooter"] = { oddFooter: `&LADRENALINE&RPage &P of &N` };
+  ws["!sheetViews"] = [{ showGridLines: false }];
   const wb = XLSX.utils.book_new();
+  wb.Props = { Title: `Chef production sheet - ${dateStr}`, Subject: "Kitchen production", Author: "ADRENALINE" };
   XLSX.utils.book_append_sheet(wb, ws, "CHEF SHEET");
   XLSX.writeFile(wb, `Chef production sheet - ADRENALINE - ${dateStr}.xlsx`);
 }
