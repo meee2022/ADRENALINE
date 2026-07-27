@@ -870,6 +870,15 @@ export default function Stickers() {
             border: 0.5px solid #000 !important;
             font-weight: 900 !important;
           }
+          .label .warn-line { border-width: 1px !important; color: #000 !important; -webkit-text-fill-color: #000 !important; }
+          .label .warn-tag {
+            background: #000 !important;
+            color: #fff !important;
+            -webkit-text-fill-color: #fff !important;
+            border: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           /* إطار الباقة: خلفية بيضاء + حدود ونص أسود للطباعة الحرارية */
           .label .plan-box { background: #fff !important; border: 0.6px solid #000 !important; }
           .label .plan-txt { color: #000 !important; -webkit-text-fill-color: #000 !important; }
@@ -1074,11 +1083,30 @@ export default function Stickers() {
 
         /* Warnings — red pill, centered. يلتفّ لسطرين مضغوطين (بدل سطر عريض
            ينزل تحت ويلامس الفوتر)، وباتجاه LTR حتى لا يختلّ الاقتصاص. */
+        .goal-inline {
+          font-size: 7px;
+          padding: 0.15mm 1mm;
+          margin-inline-start: 1.4mm;
+          vertical-align: middle;
+        }
+        .warn-tag {
+          display: inline-block;
+          background: #b91c1c;
+          color: #fff;
+          -webkit-text-fill-color: #fff;
+          font-size: 5.5px;
+          font-weight: 900;
+          border-radius: 0.8mm;
+          padding: 0.1mm 1mm;
+          margin-inline-end: 1mm;
+          vertical-align: middle;
+          letter-spacing: 0.3px;
+        }
         .warn-line {
           display: -webkit-box;
-          -webkit-line-clamp: 2;
+          -webkit-line-clamp: 3;
           -webkit-box-orient: vertical;
-          font-size: 6.5px;
+          font-size: 8.5px;
           font-weight: 900;
           color: #b91c1c !important;
           -webkit-text-fill-color: #b91c1c !important;
@@ -1088,7 +1116,7 @@ export default function Stickers() {
           padding: 0.25mm 1mm;
           border-radius: 1mm;
           background: rgba(220,38,38,0.08) !important;
-          border: 0.5px solid rgba(220,38,38,0.5);
+          border: 1px solid #b91c1c;
           max-width: 96%;
           overflow: hidden;
           white-space: normal;
@@ -1283,15 +1311,13 @@ function MealSticker({ s, seq }: any) {
 
       {/* Center content */}
       <div className="content-center">
-        <div className="cust-line">{s.customerName}</div>
-        {/* لا رقم هاتف على ملصق الوجبة: الملصق يخرج ملصوقاً على الطعام، والمطبخ
-            يميّز بالاسم ورقم البوكس. الرقم يبقى على ملصق البوكس حيث يحتاجه
-            التوصيل، وعلى الشاشة حيث يُبحَث به. */}
-        {s.goal && (
-          <div className="cust-sub">
-            <span className="goal-badge">{s.goal}</span>
-          </div>
-        )}
+        {/* لا رقم هاتف على ملصق الوجبة (يبقى على ملصق البوكس). وشارة الهدف
+            بجوار الاسم لا في سطر مستقل: المطبخ طلب إبراز الممنوعات، والسطر
+            الموفَّر هنا هو ما يتّسع به تحذير أكبر بثلاثة أسطر بدل اثنين. */}
+        <div className="cust-line">
+          {s.customerName}
+          {s.goal ? <span className="goal-badge goal-inline">{s.goal}</span> : null}
+        </div>
         <div className="meal-line">{mealName}</div>
 
         {/* التصنيف + السعرات + الماكروز في صف واحد */}
@@ -1308,7 +1334,12 @@ function MealSticker({ s, seq }: any) {
           </div>
         )}
 
-        {warnings ? <div className="warn-line">{warnings}</div> : null}
+        {warnings ? (
+          <div className="warn-line">
+            <span className="warn-tag">AVOID</span>
+            {warnings}
+          </div>
+        ) : null}
       </div>
 
       {/* Footer */}
