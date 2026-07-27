@@ -136,11 +136,13 @@ export default function Stickers() {
     return rows
       .map((s: any, i: number) => ({ s, i }))
       .sort((a, b) => {
-        const na = Number(a.s.customerNo) || 0, nb = Number(b.s.customerNo) || 0;
-        if (na !== nb) return na - nb;                       // ترتيب رقم البوكس
-        const cmp = String(a.s.customerName || "").localeCompare(String(b.s.customerName || ""), "ar");
-        if (cmp !== 0) return cmp;                            // ثم الاسم
-        return a.i - b.i;                                     // ثم ترتيب وجبات نفس الشخص كما هي
+        // نفس ترتيب كشف الشيف حرفياً — المطبخ يمشي بالكشف، والتغليف يمشي بالاستيكرات،
+        // فلو اختلف الترتيبان تاه من يطابق بينهما. الكشف يرتّب المخصّصين بالاسم:
+        //   list.sort((a, b) => a.name.localeCompare(b.name))   (Kitchen.tsx)
+        // فنستخدم نفس المقارنة بلا وسيط لغة — الترتيب برقم البوكس كان يخالفه.
+        const cmp = String(a.s.customerName || "").localeCompare(String(b.s.customerName || ""));
+        if (cmp !== 0) return cmp;
+        return a.i - b.i;                                     // ثم وجبات نفس الشخص بترتيبها
       })
       .map(({ s }) => s);
   }, [allMealStickers]);
