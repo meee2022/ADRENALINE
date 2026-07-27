@@ -417,6 +417,17 @@ export const get = query({
       return String(raw || "").trim().toUpperCase();
     };
 
+    /** محطة التحضير داخل السناكات: سلطات / شوربة / حلويات — من وسوم المنيو واسم
+     *  الصنف. ما لا يُعرَف يبقى «سناك» عاماً بلا تخمين. */
+    const stationOf = (tags: any, name: string): "SALAD" | "SOUP" | "SWEET" | null => {
+      const t = (Array.isArray(tags) ? tags.join(",") : String(tags || ""));
+      const n = String(name || "");
+      if (/سلطات|سلطة/.test(t) || /SALAD/i.test(t) || /SALAD/i.test(n) || /سلطة/.test(n)) return "SALAD";
+      if (/SOUP/i.test(n) || /شوربة|شوربه/.test(n)) return "SOUP";
+      if (/حلويات|حلو/.test(t) || /DESSERT|SWEET/i.test(t)) return "SWEET";
+      return null;
+    };
+
     // ✅ تحميل publicMeals كمصدر إضافي للماكروز (مطابقة بالاسم)
     const publicMealsAll = await ctx.db.query("publicMeals").collect();
     const publicMealsById = new Map<string, any>();
@@ -582,7 +593,7 @@ export const get = query({
         // ✅ اسم البحث ثابت (عربي) للمطابقة مع publicMeals مهما كانت لغة العرض
         const lookupName = arName;
         // ✅ تصنيف الوجبة (Lunch / Breakfast / Snack / Dinner)
-        const category = catLabel(
+        let category = catLabel(
           categoryById.get(String((menu as any)?.categoryId || (it as any).categoryId || "")) || String((it as any).category || ""),
         );
 
@@ -592,6 +603,12 @@ export const get = query({
           || publicMealsByName.get(String(lookupName).trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameAr || "").trim().toLowerCase())
           || publicMealsByName.get(String((menu as any)?.nameEn || "").trim().toLowerCase());
+
+        /* الطلبات القادمة من المشترك أونلاين تحفظ الصنف بلا تصنيف للسطر — المشترك
+           يختار من المنيو مباشرةً. فيسقط الاستيكر خارج محطته ويُطبع في آخر الرزمة:
+           تيراميسو بعد العشاء بدل أن يكون مع السناكات (8 استيكرات يوم 28-7).
+           تصنيف الصنف نفسه معروف، فنأخذه حين يغيب تصنيف السطر. */
+        if (!category && pmLookup?.category) category = catLabel(String(pmLookup.category));
 
         // ✅ اسم العرض بلغة الواجهة: إنجليزي من (لقطة الطلب / publicMeals) وإلا العربي
         const legacyMenuName = (menu as any)?.nameEn || (menu as any)?.name || (menu as any)?.nameAr;
@@ -721,6 +738,7 @@ export const get = query({
           customerNumber: normalizePhone(c.phone) || "",
           goal: String((c as any).goalType || (c as any).goals || "").trim(),
           category,
+          station: stationOf(pmLookup?.tags, `${mealName} ${lookupName}`),
           mealName,
           mealTitle,
           warnings,
@@ -856,6 +874,7 @@ export const get = query({
             customerNumber: normalizePhone(c.phone) || "",
             goal: "CUSTOMIZED",
             category: s.type === "SNACK" ? "SNACK" : "LUNCH",
+            station: stationOf(null, mealName),
             mealName,
             mealTitle: s.notes ? `${mealName} — ${String(s.notes).trim()}` : mealName,
             warnings,
@@ -873,18 +892,21 @@ export const get = query({
       }
     }
 
-    /* ترتيب الطباعة: **فطار → سناك → غداء → عشاء**.
-       المطبخ يحضّر السناكات كلها معاً، فتأتي رزمة واحدة بعد الفطار كما يطلبها
-       الطاقم. والسلطات معها لأنها تُحضَّر في نفس المحطة.
-       (تقسيم السناك إلى «سناك 1/2/3» بين الوجبات غير ممكن اليوم: كل السناكات
-       تصنيف واحد بلا ترقيم — 197 سناكاً في 28-7 كلها بلا index.) */
+    /* ترتيب الطباعة بالمحطة كما يعمل المطبخ:
+         فطار → سلطات → شوربة → حلويات → غداء → عشاء
+       «السناك» ليس محطة واحدة: 201 استيكر يوم 28-7 كانت ثلاث محطات في رزمة
+       واحدة — 98 حلو و59 شوربة و44 سلطة — فمن يحضّر السلطات يقلّب بينها كلها.
+       التقسيم مأخوذ من الموجود لا من تخمين: الأصناف موسومة «سلطات» و«حلويات»
+       في المنيو، والشوربة تُعرَف باسمها. وما لم يُعرَف يبقى في رزمة السناك. */
+    const stationRank = (s: any): number | null =>
+      s.station === "SALAD" ? 1 : s.station === "SOUP" ? 2 : s.station === "SWEET" ? 3 : null;
     const catRank = (s: any) => {
       const c = String(s.category || "").toUpperCase();
       if (c.includes("BREAKFAST")) return 0;
-      if (c.includes("SNACK") || c.includes("SALAD")) return 1;
-      if (c.includes("LUNCH")) return 2;
-      if (c.includes("DINNER")) return 3;
-      return 4;
+      if (c.includes("SNACK") || c.includes("SALAD")) return stationRank(s) ?? 4;
+      if (c.includes("LUNCH")) return 5;
+      if (c.includes("DINNER")) return 6;
+      return 7;
     };
     mealStickers.sort((a, b) => {
       const r = catRank(a) - catRank(b);
