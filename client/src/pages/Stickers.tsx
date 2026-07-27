@@ -814,7 +814,7 @@ export default function Stickers() {
         }
         .cust-phone {
           /* ملصق البوكس وحده يحمل الرقم الآن، والتوصيل يقرؤه من مسافة — فكبّر */
-          font-size: 12px;
+          font-size: 14px;
           font-weight: 900;
           letter-spacing: 0.4px;
           direction: ltr;
@@ -914,6 +914,9 @@ export default function Stickers() {
           -webkit-text-fill-color: #000 !important;
           -webkit-text-stroke: 0.2px #000;
         }
+        /* ملصق البوكس أخفّ محتوى من ملصق الوجبة، ففيه متّسع لرقمٍ أكبر —
+           وهو الرقم الذي يُنادى به عند التسليم. الوجبة تبقى على 16px. */
+        .label-box .cust-num-inline { font-size: 18px; }
         .brand-tag {
           font-size: 7px;
           font-weight: 900;
@@ -1331,7 +1334,7 @@ function MealSticker({ s, seq }: any) {
 
 function BoxSticker({ s, seq }: any) {
   return (
-    <div className="label">
+    <div className="label label-box">
       <div className="seq-mark">{seq}</div>
       <div className="brand-block">
         <img src="/heart-logo.png" alt="" className="brand-heart" />
