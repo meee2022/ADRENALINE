@@ -922,6 +922,7 @@ export default function Stickers() {
           color: #000;
           box-sizing: border-box;
         }
+        .goal-cell { font-size: 6.5px; letter-spacing: 0; }
         .brand-heart {
           width: 5.6mm;
           height: 5.6mm;
@@ -1335,12 +1336,9 @@ function MealSticker({ s, seq }: any) {
       {/* Center content */}
       <div className="content-center">
         {/* لا رقم هاتف على ملصق الوجبة (يبقى على ملصق البوكس). وشارة الهدف
-            بجوار الاسم لا في سطر مستقل: المطبخ طلب إبراز الممنوعات، والسطر
-            الموفَّر هنا هو ما يتّسع به تحذير أكبر بثلاثة أسطر بدل اثنين. */}
-        <div className="cust-line">
-          {s.customerName}
-          {s.goal ? <span className="goal-badge goal-inline">{s.goal}</span> : null}
-        </div>
+            نزلت لصفّ التواريخ أسفل الملصق — كخانة GOAL في ملصق البوكس تماماً —
+            فيصفو الوسط للاسم والوجبة والتحذير الكبير. */}
+        <div className="cust-line">{s.customerName}</div>
         <div className="meal-line">{mealName}</div>
 
         {/* التصنيف + السعرات + الماكروز في صف واحد */}
@@ -1383,6 +1381,15 @@ function MealSticker({ s, seq }: any) {
           <div className="date-label">EXP</div>
           <div className="date-value">{s.expDate || s.dateText}</div>
         </div>
+        {s.goal ? (
+          <>
+            <div className="date-divider" />
+            <div className="date-cell">
+              <div className="date-label">GOAL</div>
+              <div className="date-value goal-cell">{s.goal}</div>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );
