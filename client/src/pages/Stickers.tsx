@@ -724,7 +724,7 @@ export default function Stickers() {
                     </div>
                   )}
                 </div>
-                {isMealLike ? <MealSticker s={s} /> : <BoxSticker s={s} />}
+                {isMealLike ? <MealSticker s={s} seq={idx + 1} /> : <BoxSticker s={s} seq={idx + 1} />}
               </div>
             );
           })}
@@ -757,6 +757,7 @@ export default function Stickers() {
           box-sizing: border-box;
         }
 
+        .label { position: relative; }
         .label, .label * {
           opacity: 1 !important;
           text-shadow: none !important;
@@ -1109,6 +1110,22 @@ export default function Stickers() {
           -webkit-text-fill-color: #000 !important;
           -webkit-text-stroke: 0.15px #000;
         }
+        /* رقم الترتيب في رزمة الطباعة. حين ينفد الورق يقرأ الطاقم آخر ملصق
+           خرج ويكمل من الرقم التالي بدل البحث بالاسم في مئات الملصقات.
+           موضعه ركن الملصق وحجمه صغير فلا يزاحم الاسم ولا الرقم. أسود صلب لا
+           رمادي: الطابعة الحرارية تُبقّع التدرّج، و`opacity:1 !important` على
+           الملصق يلغي أي شفافية هنا أصلاً. */
+        .seq-mark {
+          position: absolute;
+          top: 0.6mm;
+          inset-inline-end: 1.2mm;
+          font-size: 8px;
+          font-weight: 900;
+          letter-spacing: 0.2px;
+          color: #000;
+          line-height: 1;
+        }
+
         .cust-num-inline {
           /* رقم العميل هو ما يُنادى به عند الفرز والتسليم — أبرز رقم على الملصق.
              الملصق 39مم والخانة تتمدّد، فالزيادة محسوبة: 12px → 16px (+4) بينما
@@ -1205,7 +1222,7 @@ function parseMealData(s: any) {
   return { mealName: mealName || raw, warnings };
 }
 
-function MealSticker({ s }: any) {
+function MealSticker({ s, seq }: any) {
   const { mealName, warnings } = parseMealData(s);
 
   // ✅ ابني سطر الماكروز
@@ -1223,6 +1240,7 @@ function MealSticker({ s }: any) {
 
   return (
     <div className="label">
+      <div className="seq-mark">{seq}</div>
       {/* Brand header — heart icon + ADRENALINE logo + HEALTHY FOOD tag */}
       <div className="brand-block">
         <img src="/heart-logo.png" alt="" className="brand-heart" />
@@ -1286,9 +1304,10 @@ function MealSticker({ s }: any) {
   );
 }
 
-function BoxSticker({ s }: any) {
+function BoxSticker({ s, seq }: any) {
   return (
     <div className="label">
+      <div className="seq-mark">{seq}</div>
       <div className="brand-block">
         <img src="/heart-logo.png" alt="" className="brand-heart" />
         <div className="brand-text">
