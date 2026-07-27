@@ -146,10 +146,15 @@ export const forOutlet = query({
       if (!byLetters.has(letters(l.nameEn))) byLetters.set(letters(l.nameEn), l);
     }
 
-    /** الوجبة أولاً، فالملصق. رقم موجود خيرٌ من شرطتين على ملصق يقرأه زبون. */
+    /**
+     * **الملصق أولاً، ثم الوجبة.**
+     * بيانات المشترك (على `publicMeals`) مضبوطة ومستقرّة ولا يجوز أن يحرّكها
+     * تعديل يخصّ محلاً — لكل منفذ حصّته وتقديمه. فما يخصّ المنفذ يبقى في المنفذ،
+     * والوجبة تُقرأ فقط حين لا يحمل الملصق رقماً، لئلا يُطبع «--» بلا داعٍ.
+     */
     const pick = (meal: any, lb: any) => {
-      const mealHas = Number(meal.protein || 0) || Number(meal.carbs || 0) || Number(meal.fats || 0);
-      const src = mealHas || !lb ? meal : lb;
+      const lbHas = lb && (Number(lb.protein || 0) || Number(lb.carbs || 0) || Number(lb.fats || 0));
+      const src = lbHas ? lb : meal;
       const n = (v: any) => (v != null && v !== "" ? Number(v) : undefined);
       return { calories: n(src.calories), carbs: n(src.carbs), protein: n(src.protein), fats: n(src.fats) };
     };
@@ -250,68 +255,7 @@ export const importFromPos = mutation({
   },
 });
 
-/**
- * ينقل ماكروز الملصق إلى الوجبة حين تكون الوجبة فارغة.
- *
- * كثير من أصناف المنافذ أُدخلت ماكروزها مع الملصق ولم تُكتب على الوجبة، فبقيت
- * الوجبة صفراً بينما الملصق يحمل الأرقام. الوجبة هي المصدر الذي يقرأ منه استيكر
- * المشترك والمنيو، فنقلها إليها يجعل الرقم واحداً في كل مكان.
- * لا يُكتب فوق قيمة موجودة في الوجبة أبداً.
- */
-export const backfillMealFacts = mutation({
-  args: { dryRun: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
-    const labels = await ctx.db.query("outletProductLabels").collect();
-    const moved: string[] = [];
-    let skipped = 0;
-    for (const l of labels) {
-      if (!l.publicMealId) { skipped++; continue; }
-      const meal: any = await ctx.db.get(l.publicMealId);
-      if (!meal) { skipped++; continue; }
-      const mealHas = Number(meal.protein || 0) || Number(meal.carbs || 0) || Number(meal.fats || 0);
-      const lblHas = Number(l.protein || 0) || Number(l.carbs || 0) || Number(l.fats || 0);
-      if (mealHas || !lblHas) { skipped++; continue; }
-      const p = Number(l.protein || 0), c = Number(l.carbs || 0), f = Number(l.fats || 0);
-      // السعرات = مجموع الماكروز دائماً — الاستيكر يحسبها هكذا، فلا نترك رقمين مختلفين
-      const calories = Math.round(p * 4 + c * 4 + f * 9);
-      if (!args.dryRun) await ctx.db.patch(meal._id, { protein: p, carbs: c, fats: f, calories } as any);
-      moved.push(`${meal.nameEn || meal.nameAr}: P${p} C${c} F${f} = ${calories}`);
-    }
-    return { dryRun: !!args.dryRun, filled: moved.length, skipped, sample: moved.slice(0, 12) };
-  },
-});
 
-/**
- * تعديل حقائق الصنف من شاشة الاستيكرات — تُكتب في **الوجبة** لا في الملصق.
- * الملصق نسخة عرض؛ الوجبة هي ما يقرأه استيكر المشترك والمنيو والخطة الذكية،
- * فالتعديل هنا يصل إليها جميعاً بدل أن يصلح الملصق ويترك الباقي غلطاً.
- */
-export const updateMealFacts = mutation({
-  args: {
-    mealId: v.id("publicMeals"),
-    nameEn: v.optional(v.string()),
-    calories: v.optional(v.number()),
-    carbs: v.optional(v.number()),
-    protein: v.optional(v.number()),
-    fats: v.optional(v.number()),
-    sessionToken: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
-    const meal: any = await ctx.db.get(args.mealId);
-    if (!meal) throw new Error("الصنف غير موجود");
-    const p = args.protein ?? Number(meal.protein || 0);
-    const c = args.carbs ?? Number(meal.carbs || 0);
-    const f = args.fats ?? Number(meal.fats || 0);
-    const patch: any = { protein: p, carbs: c, fats: f };
-    // السعرات تتبع الماكروز إلا إذا كُتبت صراحةً
-    patch.calories = args.calories != null ? Math.round(args.calories) : Math.round(p * 4 + c * 4 + f * 9);
-    if (args.nameEn && args.nameEn.trim()) patch.gymNameEn = args.nameEn.trim();
-    await ctx.db.patch(args.mealId, patch);
-    return { ok: true, calories: patch.calories };
-  },
-});
 
 export const update = mutation({
   args: {
