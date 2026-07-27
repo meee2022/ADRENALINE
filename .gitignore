@@ -67,3 +67,4 @@ backups/
 
 # سجلّات تشغيل محلية — ليست من المشروع
 .codex-runtime/
+zt.json
