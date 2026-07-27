@@ -503,6 +503,19 @@ export const get = query({
     })();
     const expDate = expDateObj;
 
+    /* سطر الباقة على ملصق البوكس. كان يطبع packageLabel وهو نص حر يكتبه الطاقم،
+       فخرج بخمس وعشرين صيغة: «3M & 2S -4 Weeks» و«DIET PACK — 3 MEALS/2 SNACKS»
+       و«الباقة المخصّصة» بالعربي، و16 عميلاً بلا نص فوقعوا على البرنامج فطُبع
+       الهدف وحده — وهو مطبوع أصلاً في خانة GOAL. وأسوأ من التشتت أن النص كان
+       يكذب: علي الكعبي ست وجبات ونصّه يقول ثلاثاً. الرقمان أدناه مضبوطان لكل
+       مشترك نشط، فمنهما يُبنى السطر. */
+    const packLine = (c: any) => {
+      const m = Number(c?.mealsPerDay);
+      const sn = Number(c?.snacksPerDay);
+      if (!(m > 0)) return (c?.packageLabel && String(c.packageLabel).trim()) || "";
+      return sn > 0 ? `${m} MEALS / ${sn} SNACKS` : `${m} MEALS`;
+    };
+
     // helper: استخراج تحذيرات نظيفة (avoid + allergies) كنص قصير
     const buildWarnings = (cust: any, modifierIds: string[] | undefined) => {
       const parts: string[] = [];
@@ -527,10 +540,7 @@ export const get = query({
         const c = customerMap.get(String(p.customerId));
         if (!c) return null;
 
-        const planLabel =
-          (c.packageLabel && String(c.packageLabel).trim()) ||
-          (c.program && String(c.program).trim()) ||
-          "DIET";
+        const planLabel = packLine(c);
 
         const customerId = String(c._id);
         const customerNo = customerNoById.get(customerId) ?? 0;
@@ -837,10 +847,7 @@ export const get = query({
           goal: String(c.goalType || c.goals || "").trim(),
           program: String(c.program || c.goalType || "").trim(),
           deliveryTime: cTime,
-          planLabel:
-            (c.packageLabel && String(c.packageLabel).trim()) ||
-            (c.program && String(c.program).trim()) ||
-            "CUSTOMIZED",
+          planLabel: packLine(c),
           dateText,
           prodDate,
           expDate,

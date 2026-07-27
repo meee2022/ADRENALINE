@@ -1352,7 +1352,9 @@ function BoxSticker({ s, seq }: any) {
             <span className="cust-phone">{s.customerNumber}</span>
           </div>
         )}
-        <div className="plan-box"><div className="plan-txt">{s.planLabel}</div></div>
+        {s.planLabel ? (
+          <div className="plan-box"><div className="plan-txt">{s.planLabel}</div></div>
+        ) : null}
       </div>
 
       <div className="date-row">
