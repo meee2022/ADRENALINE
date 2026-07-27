@@ -873,15 +873,18 @@ export const get = query({
       }
     }
 
-    // ترتيب الطباعة: حسب نوع الوجبة (فطور → غداء → عشاء → سلطة → سناك) ثم العميل ثم رقم الوجبة
+    /* ترتيب الطباعة: **فطار → سناك → غداء → عشاء**.
+       المطبخ يحضّر السناكات كلها معاً، فتأتي رزمة واحدة بعد الفطار كما يطلبها
+       الطاقم. والسلطات معها لأنها تُحضَّر في نفس المحطة.
+       (تقسيم السناك إلى «سناك 1/2/3» بين الوجبات غير ممكن اليوم: كل السناكات
+       تصنيف واحد بلا ترقيم — 197 سناكاً في 28-7 كلها بلا index.) */
     const catRank = (s: any) => {
       const c = String(s.category || "").toUpperCase();
       if (c.includes("BREAKFAST")) return 0;
-      if (c.includes("LUNCH")) return 1;
-      if (c.includes("DINNER")) return 2;
-      if (c.includes("SALAD")) return 3;
-      if (c.includes("SNACK")) return 4;
-      return 5;
+      if (c.includes("SNACK") || c.includes("SALAD")) return 1;
+      if (c.includes("LUNCH")) return 2;
+      if (c.includes("DINNER")) return 3;
+      return 4;
     };
     mealStickers.sort((a, b) => {
       const r = catRank(a) - catRank(b);
