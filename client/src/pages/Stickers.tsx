@@ -835,10 +835,11 @@ export default function Stickers() {
           /* أعلى تخصيص لتغلب على لون العلامة السماوي */
           .label .brand-name, .label .brand-tag,
           .label .goal-badge, .label .cust-phone, .label .warn-line,
-          .label .macros-text, .label .cust-num-inline {
+          .label .macros-text, .label .cust-num-inline, .label .box-no-top {
             color: #000 !important;
             -webkit-text-fill-color: #000 !important;
           }
+          .label .box-no-top { border-color: #000 !important; background: #fff !important; }
           /* Calorie pill + category tag: solid black fill + white text (knockout) */
           .label .macros-cal, .label .meal-cat {
             background: #000 !important;
@@ -901,6 +902,20 @@ export default function Stickers() {
           justify-content: center;
           gap: 1.8mm;
           line-height: 1;
+        }
+        .box-no-top {
+          min-width: 5.6mm;
+          height: 5.6mm;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 0.6px solid #000;
+          border-radius: 1mm;
+          padding: 0 0.8mm;
+          font-size: 12px;
+          font-weight: 900;
+          color: #000;
+          box-sizing: border-box;
         }
         .brand-heart {
           width: 5.6mm;
@@ -1300,8 +1315,10 @@ function MealSticker({ s, seq }: any) {
     <div className="label">
       <div className="seq-mark">{seq}</div>
       {/* Brand header — heart icon + ADRENALINE logo + HEALTHY FOOD tag */}
-      {/* القلب يمين الاسم لا يساره — هكذا كان الاستيكر القديم الذي اعتاده الفريق */}
+      {/* القلب يمين الاسم (كالاستيكر القديم)، ورقم البوكس شمالَه في إطار —
+          التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
+        <span className="box-no-top">{s.customerNo}</span>
         <div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
@@ -1370,8 +1387,10 @@ function BoxSticker({ s, seq }: any) {
   return (
     <div className="label label-box">
       <div className="seq-mark">{seq}</div>
-      {/* القلب يمين الاسم لا يساره — هكذا كان الاستيكر القديم الذي اعتاده الفريق */}
+      {/* القلب يمين الاسم (كالاستيكر القديم)، ورقم البوكس شمالَه في إطار —
+          التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
+        <span className="box-no-top">{s.customerNo}</span>
         <div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
