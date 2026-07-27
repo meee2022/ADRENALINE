@@ -95,7 +95,9 @@ export default function Stickers() {
 
   // ✅ الاستيكرات تُطبع اليوم لتوصيل الغد — الافتراضي "بكرة" (زي المطبخ)
   const [date, setDate] = useState<string>(format(new Date(Date.now() + 86400000), "yyyy-MM-dd"));
-  const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("MORNING");
+  // «الكل» هو الافتراضي: الطباعة تتم لليوم كاملاً، والبدء على «صباحي» كان يُخفي
+  // نصف الرزمة حتى ينتبه أحد لتبديلها.
+  const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("ALL");
   const [activeTab, setActiveTab] = useState<TabKey>("MEALS");
   // وضع الطباعة: "label" = طابعة استيكرات (كل استيكر صفحة بمقاسه) · "sheet" = ورقة A4 شبكة
   const [printerMode, setPrinterMode] = useState<"label" | "sheet">("label");
@@ -297,6 +299,23 @@ export default function Stickers() {
     setSelected((s) => { const n = new Set(s); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
   const selectAll = () => setSelected(new Set(activeStickers.map((_: any, i: number) => i)));
   const clearSel = () => setSelected(new Set());
+  /** يبني مجموعة النطاق (1-based من المستخدم → 0-based للمصفوفة). */
+  const rangeSet = () => {
+    const a = Math.max(1, parseInt(rangeFrom, 10) || 1);
+    const b = Math.min(activeStickers.length, parseInt(rangeTo, 10) || activeStickers.length);
+    const n = new Set<number>();
+    for (let i = a; i <= b; i++) n.add(i - 1);
+    return n;
+  };
+  /* زرّان للطباعة كانا متباعدين، فمن يحدّد نطاقاً ثم يضغط «طباعة الكل» الكبير
+     يطبع الرزمة كلها. هذا الزر يفعل الاثنين معاً: التحديد ثم الطباعة — والتحديث
+     يقع في نفس الدفعة فيكون الوسم على العناصر قبل أن يفتح مربع الطباعة. */
+  const printRange = () => {
+    const n = rangeSet();
+    if (!n.size) return;
+    setSelected(n);
+    setPendingPrint("selected");
+  };
   const applyRange = () => {
     const a = Math.max(1, parseInt(rangeFrom, 10) || 1);
     const b = Math.min(activeStickers.length, parseInt(rangeTo, 10) || activeStickers.length);
@@ -354,7 +373,7 @@ export default function Stickers() {
               style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
             >
               <Printer className="h-4 w-4" />
-              {isRtl ? "طباعة الكل" : "Print All"}
+              {isRtl ? `طباعة الكل (${activeStickers.length})` : `Print All (${activeStickers.length})`}
             </button>
           </div>
         </div>
@@ -496,8 +515,13 @@ export default function Stickers() {
                 <Input value={rangeTo} onChange={(e) => setRangeTo(e.target.value)} type="number" min={1} max={activeStickers.length}
                   className="h-9 w-20 text-center font-bold" placeholder={String(activeStickers.length)} />
               </div>
-              <button onClick={applyRange} className="h-9 px-3 rounded-lg text-xs font-bold text-white bg-[#0E76AC] hover:opacity-90">
+              <button onClick={applyRange} className="h-9 px-3 rounded-lg text-xs font-bold border border-[#0E76AC] text-[#0E76AC] bg-white hover:bg-[#0E76AC]/5">
                 {isRtl ? "حدّد النطاق" : "Select range"}
+              </button>
+              <button onClick={printRange} className="h-9 px-3 rounded-lg text-xs font-black text-white flex items-center gap-1.5"
+                style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
+                <Printer className="h-3.5 w-3.5" />
+                {isRtl ? "اطبع النطاق" : "Print range"}
               </button>
             </div>
             <div className="flex items-center gap-1.5">
