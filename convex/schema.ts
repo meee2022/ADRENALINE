@@ -1153,6 +1153,15 @@ export default defineSchema({
     outletId: v.id("gymAccounts"),
     mealId: v.id("publicMeals"),
     price: v.number(),
+    /* حقائق هذا المنفذ وحده — لكل محل حصّته وتقديمه، وبيانات المشترك على
+       `publicMeals` مضبوطة ولا يجوز أن يحرّكها تعديل يخصّ محلاً. تُترك فارغة
+       فيقرأ الملصق من مصدره القديم، وتُملأ فتغلب على كل ما عداها. */
+    calories: v.optional(v.number()),
+    protein: v.optional(v.number()),
+    carbs: v.optional(v.number()),
+    fats: v.optional(v.number()),
+    // باركود هذا المنفذ إن اختلف؛ فارغاً يُستعمل باركود المنتج المطبوع
+    barcode: v.optional(v.string()),
     isActive: v.boolean(),
     sortOrder: v.optional(v.number()),
     createdAt: v.number(),

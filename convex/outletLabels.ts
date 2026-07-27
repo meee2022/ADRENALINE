@@ -152,9 +152,10 @@ export const forOutlet = query({
      * تعديل يخصّ محلاً — لكل منفذ حصّته وتقديمه. فما يخصّ المنفذ يبقى في المنفذ،
      * والوجبة تُقرأ فقط حين لا يحمل الملصق رقماً، لئلا يُطبع «--» بلا داعٍ.
      */
-    const pick = (meal: any, lb: any) => {
-      const lbHas = lb && (Number(lb.protein || 0) || Number(lb.carbs || 0) || Number(lb.fats || 0));
-      const src = lbHas ? lb : meal;
+    const pick = (meal: any, lb: any, row: any) => {
+      const has = (x: any) => x && (Number(x.protein || 0) || Number(x.carbs || 0) || Number(x.fats || 0));
+      // صفّ المنفذ أولاً — هو المكان الوحيد الذي تُعدَّل منه بيانات المنفذ
+      const src = has(row) ? row : has(lb) ? lb : meal;
       const n = (v: any) => (v != null && v !== "" ? Number(v) : undefined);
       return { calories: n(src.calories), carbs: n(src.carbs), protein: n(src.protein), fats: n(src.fats) };
     };
@@ -169,13 +170,13 @@ export const forOutlet = query({
       out.push({
         _id: lb ? String(lb._id) : `meal:${String(meal._id)}`,
         sequence: lb ? Number(lb.sequence) : 0,
-        barcode: lb ? String(lb.barcode) : "",
+        barcode: String((r as any).barcode || (lb ? lb.barcode : "")),
         nameEn: name,
         price: Number(r.price),
         /* الماكروز من الوجبة، وإلا من الملصق. 22 صنفاً في الجم ماكروزها على
            الملصق وحده (أُدخلت مع الملصق ولم تُكتب في الوجبة)، فالقراءة من الوجبة
            وحدها كانت ستطبع «--» مكان أرقام صحيحة. */
-        ...pick(meal, lb),
+        ...pick(meal, lb, r),
         isActive: true,
         publicMealId: String(meal._id),
         hasBarcode: !!lb,

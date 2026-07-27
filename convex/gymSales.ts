@@ -309,6 +309,12 @@ export const listOutletCatalogAdmin = query({
         listPrice: Number(meal.priceQAR || 0),
         gymPrice: row ? Number(row.price) : fallbackPrice,
         effectivePrice: row ? Number(row.price) : fallbackPrice,
+        outletCalories: row?.calories ?? null,
+        outletProtein: row?.protein ?? null,
+        outletCarbs: row?.carbs ?? null,
+        outletFats: row?.fats ?? null,
+        outletBarcode: row?.barcode ?? null,
+        mealCalories: meal.calories ?? null,
         isCustom: !!row,
         isEnabled: row ? !!row.isActive : !hasOutletCatalog && !!meal.isGymItem,
         hasOutletRecord: !!row,
@@ -329,6 +335,12 @@ export const setOutletCatalogItem = mutation({
     mealId: v.id("publicMeals"),
     isEnabled: v.optional(v.boolean()),
     price: v.optional(v.number()),
+    // حقائق تخصّ هذا المنفذ وحده — لا تُكتب في الوجبة إطلاقاً
+    calories: v.optional(v.number()),
+    protein: v.optional(v.number()),
+    carbs: v.optional(v.number()),
+    fats: v.optional(v.number()),
+    barcode: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -363,6 +375,11 @@ export const setOutletCatalogItem = mutation({
       await ctx.db.patch(existing._id, {
         isActive: args.isEnabled ?? existing.isActive,
         price: args.price ?? existing.price,
+        calories: args.calories ?? existing.calories,
+        protein: args.protein ?? existing.protein,
+        carbs: args.carbs ?? existing.carbs,
+        fats: args.fats ?? existing.fats,
+        barcode: args.barcode ?? existing.barcode,
         updatedAt: Date.now(),
       });
     } else {
@@ -370,6 +387,8 @@ export const setOutletCatalogItem = mutation({
         outletId: args.outletId,
         mealId: args.mealId,
         price: args.price ?? fallbackPrice,
+        calories: args.calories, protein: args.protein, carbs: args.carbs, fats: args.fats,
+        barcode: args.barcode,
         isActive: args.isEnabled ?? true,
         sortOrder: meal.sortOrder ?? Date.now(),
         createdAt: Date.now(),
