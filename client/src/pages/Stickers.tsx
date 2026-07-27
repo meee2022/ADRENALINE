@@ -1303,6 +1303,11 @@ function parseMealData(s: any) {
 
 function MealSticker({ s, seq }: any) {
   const { mealName, warnings } = parseMealData(s);
+  /* أسماء المخصّصين وصفات كاملة («220 G PERI PERI CHICKEN /NO SPICIES…») لا
+     أسماء أطباق — على 10.5px تأخذ أربعة أسطر فتدفع التحذير فوق صفّ التواريخ.
+     الخط يتدرّج مع الطول فيظل كل شيء داخل حدوده، والأسماء العادية كما هي. */
+  const mealLen = String(mealName || "").length;
+  const mealFont = mealLen > 100 ? 7 : mealLen > 70 ? 7.5 : mealLen > 45 ? 8.5 : 10.5;
 
   // ✅ ابني سطر الماكروز
   const macrosLine = (() => {
@@ -1339,7 +1344,7 @@ function MealSticker({ s, seq }: any) {
             نزلت لصفّ التواريخ أسفل الملصق — كخانة GOAL في ملصق البوكس تماماً —
             فيصفو الوسط للاسم والوجبة والتحذير الكبير. */}
         <div className="cust-line">{s.customerName}</div>
-        <div className="meal-line">{mealName}</div>
+        <div className="meal-line" style={{ fontSize: `${mealFont}px` }}>{mealName}</div>
 
         {/* التصنيف + السعرات + الماكروز في صف واحد */}
         {(macrosLine || s.calories || s.category) && (
