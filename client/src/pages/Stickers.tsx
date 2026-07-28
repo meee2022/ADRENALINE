@@ -914,11 +914,12 @@ export default function Stickers() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border: 0.6px solid #000;
+          border: 0.9px solid #000;
           border-radius: 1mm;
           padding: 0 0.8mm;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 900;
+          -webkit-text-stroke: 0.35px #000; /* الوزن 900 وحده يخرج رفيعاً على الرأس الحراري */
           color: #000;
           box-sizing: border-box;
         }
