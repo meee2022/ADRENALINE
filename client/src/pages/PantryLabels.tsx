@@ -22,6 +22,8 @@ type PantryLabel = {
   prodDate: string;    // yyyy-mm-dd من <input type=date>
   expDate: string;
   barcode: string;
+  /** أول سبعة أرقام: البادئة وكود الصنف. الباقي يُبنى من الوزن. */
+  barcodePrefix?: string;
   footer: string;
   copies: number;
 };
@@ -32,6 +34,30 @@ const STORAGE_KEY = "adrenaline:pantry-labels:v1";
    المميِّزة للصنف وحدها بدل كتابة ثلاثة عشر رقماً كل مرة. الصنف الذي سبقت
    طباعته يستعيد سرياله هو من «المطبوعة سابقاً». */
 const BASE_BARCODE = "9912539010102";
+/* أول سبعة أرقام من ملصق المورّد: بادئة الميزان وكود الصنف. */
+const BASE_PREFIX = BASE_BARCODE.slice(0, 7);
+
+/** خانة تحقق EAN-13 لأول اثني عشر رقماً. */
+function eanCheckDigit(d12: string): number {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) sum += Number(d12[i] || 0) * (i % 2 ? 3 : 1);
+  return (10 - (sum % 10)) % 10;
+}
+
+/**
+ * باركود الميزان: البادئة (7) + الوزن بالجرام (5) + خانة تحقق.
+ * الملصق الأصلي يشفّر الوزن في الأرقام الأخيرة — 1.010 كجم تظهر 01010 —
+ * فنسخ رقم كيسٍ على كيسٍ آخر كان يعطي وزناً كاذباً. يُبنى تلقائياً من الوزن
+ * المكتوب، وتبقى البادئة بيد المخزن ليميّز الصنف.
+ */
+function buildBarcode(prefix: string, weightKg: string): string {
+  const p = String(prefix || BASE_PREFIX).replace(/\D/g, "").slice(0, 7).padEnd(7, "0");
+  const grams = Math.round((Number(weightKg) || 0) * 1000);
+  if (!grams) return "";
+  const w = String(Math.min(99999, grams)).padStart(5, "0");
+  const base = p + w;
+  return base + String(eanCheckDigit(base));
+}
 
 /* أصناف المخزن الثابتة — يختار منها أمين المخزن بدل كتابة الاسم حرفاً حرفاً،
    وتبقى الخانة حرّة فأي صنف جديد يُكتب مباشرةً ويُحفظ في «المطبوعة سابقاً»
@@ -56,7 +82,7 @@ const plusYearISO = () => {
 const EMPTY: PantryLabel = {
   name: "", unitPrice: "", grossWeight: "", totalPrice: "",
   prodDate: todayISO(), expDate: plusYearISO(),
-  barcode: BASE_BARCODE, footer: "ADRENALINE HEALTHY FOOD", copies: 1,
+  barcode: "", barcodePrefix: BASE_PREFIX, footer: "ADRENALINE HEALTHY FOOD", copies: 1,
 };
 
 // dd-mm-yy كما على ملصق المورّد (25-07-26)
@@ -72,7 +98,7 @@ function Barcode({ value }: { value: string }) {
     try {
       JsBarcode(ref.current, value || " ", {
         format: "CODE128", displayValue: false, margin: 0,
-        height: 44, width: 1.9, background: "transparent", lineColor: "#050505",
+        height: 62, width: 1.9, background: "transparent", lineColor: "#050505",
       });
     } catch { /* باركود فارغ/غير صالح: نترك المكان فارغاً بدل كسر الصفحة */ }
   }, [value]);
@@ -132,7 +158,16 @@ export default function PantryLabels() {
     return Number.isFinite(u) && Number.isFinite(w) && u > 0 && w > 0
       ? (Math.round(u * w * 100) / 100).toFixed(2) : "";
   }, [form.unitPrice, form.grossWeight]);
-  const effective: PantryLabel = { ...form, totalPrice: form.totalPrice || autoTotal };
+  // الباركود يتبع الوزن دائماً ما لم يكتبه المخزن بيده صراحةً
+  const autoBarcode = useMemo(
+    () => buildBarcode(form.barcodePrefix || BASE_PREFIX, form.grossWeight),
+    [form.barcodePrefix, form.grossWeight],
+  );
+  const effective: PantryLabel = {
+    ...form,
+    totalPrice: form.totalPrice || autoTotal,
+    barcode: form.barcode || autoBarcode,
+  };
 
   /* القائمة المعروضة = الأصناف الثابتة + ما أضافه المخزن بالكتابة، بلا تكرار. */
   const nameOptions = useMemo(() => {
@@ -210,19 +245,32 @@ export default function PantryLabels() {
             </Field>
           </div>
           <div className="grid grid-cols-[1fr_120px] gap-2">
-            <Field label={t("الباركود — عدّل الأرقام المميِّزة", "Barcode — edit the item digits")}>
-              <div className="flex gap-1.5">
-                <Input dir="ltr" value={form.barcode} onChange={set("barcode")}
-                  placeholder={BASE_BARCODE} className="flex-1 tabular-nums font-bold" />
-                <button type="button" onClick={() => setForm((f) => ({ ...f, barcode: BASE_BARCODE }))}
-                  title={t("أعد السريال الأساسي", "Reset to base serial")}
-                  className="h-10 w-10 shrink-0 rounded-md border bg-white text-sm font-black text-[#0E76AC]">↺</button>
-              </div>
+            <Field label={t("كود الصنف (7 أرقام)", "Item code (7 digits)")}>
+              <Input dir="ltr" value={form.barcodePrefix ?? BASE_PREFIX}
+                onChange={(e) => setForm((f) => ({ ...f, barcodePrefix: e.target.value.replace(/\D/g, "").slice(0, 7), barcode: "" }))}
+                placeholder={BASE_PREFIX} className="tabular-nums font-bold" />
             </Field>
             <Field label={t("عدد النسخ", "Copies")}>
               <Input type="number" min={1} dir="ltr" value={String(form.copies)} onChange={set("copies")} />
             </Field>
           </div>
+          <div className="rounded-lg bg-slate-50 border px-3 py-2 flex items-center gap-2">
+            <span className="text-[11px] font-black text-muted-foreground shrink-0">
+              {t("الباركود", "Barcode")}
+            </span>
+            <code className="flex-1 text-sm font-black tabular-nums" dir="ltr">
+              {effective.barcode || t("اكتب الوزن أولاً", "enter a weight first")}
+            </code>
+            {form.barcode ? (
+              <button type="button" onClick={() => setForm((f) => ({ ...f, barcode: "" }))}
+                className="text-[11px] font-black text-[#0E76AC]">{t("تلقائي", "Auto")}</button>
+            ) : (
+              <span className="text-[10px] font-bold text-emerald-600">
+                {t("يتولّد من الوزن", "from weight")}
+              </span>
+            )}
+          </div>
+
           <Field label={t("سطر أسفل الملصق", "Footer line")}>
             <Input dir="ltr" value={form.footer} onChange={set("footer")} />
           </Field>
@@ -310,7 +358,7 @@ export default function PantryLabels() {
         .sp-dates div { display: flex; gap: 1.6mm; justify-content: flex-end; }
         .sp-dates b { font-size: 7px; }
         .sp-bc { text-align: center; }
-        .sp-bc svg { max-width: 100%; height: 9.5mm; }
+        .sp-bc svg { max-width: 100%; height: 12.5mm; }
         .sp-bc span { display: block; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
         .sp-footer {
           text-align: center; font-weight: 900; font-size: 8px;
