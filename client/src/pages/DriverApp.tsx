@@ -35,6 +35,8 @@ export default function DriverApp() {
 
   const stops = useQuery(api.delivery.myStops, { date: today, deliveryTime: shift, sessionToken }) as any[] | undefined;
   const startDelivery = useMutation(api.delivery.startDelivery);
+  const startShift = useMutation(api.delivery.startDeliveryShift);
+  const [startingShift, setStartingShift] = useState(false);
   const markDelivered = useMutation(api.delivery.markDelivered);
   const markFailed = useMutation(api.delivery.markFailed);
   const updateMyLocation = useMutation(api.delivery.updateMyLocation);
@@ -50,8 +52,23 @@ export default function DriverApp() {
       total: s.length,
       delivered: s.filter((x) => x.status === "DELIVERED").length,
       onWay: s.filter((x) => x.status === "OUT_FOR_DELIVERY").length,
+      // لم تخرج بعد — عليها يعمل زرّ «خرجت للتوصيل — الكل»
+      waiting: s.filter((x) => x.status === "PREPARED").length,
     };
   }, [stops]);
+
+  /* السائق يحمّل الرزمة ثم يتحرّك، فيعلّم جولته دفعة واحدة بدل فتح كل محطة.
+     الجولة المفتوحة وحدها (صباحي/مسائي) — المسائي فترة أخرى لم تبدأ بعد. */
+  const handleStartShift = async () => {
+    if (startingShift || !counts.waiting) return;
+    setStartingShift(true);
+    try {
+      const r: any = await startShift({ date: today, deliveryTime: shift, sessionToken });
+      toast({ title: t(`تم تعليم ${r.started} محطة كخارجة للتوصيل`, `${r.started} stop(s) marked out for delivery`) });
+    } catch (e: any) {
+      toast({ title: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || t("تعذّر التنفيذ", "Failed"), variant: "destructive" });
+    } finally { setStartingShift(false); }
+  };
 
   /* ── بثّ الموقع الحي أثناء الجولة (watchPosition) ── */
   const startBroadcast = () => {
@@ -199,6 +216,16 @@ export default function DriverApp() {
           </div>
           <span className="text-xs font-black tabular-nums">{counts.delivered}/{counts.total} {t("تم", "done")}</span>
         </div>
+
+        {counts.waiting > 0 && (
+          <button onClick={handleStartShift} disabled={startingShift}
+            className="mt-3 w-full h-12 rounded-2xl bg-white text-[#0E2A4A] font-black text-sm flex items-center justify-center gap-2 disabled:opacity-60 active:scale-[.99] transition-transform">
+            <Truck className="h-4 w-4" />
+            {startingShift ? "…" : t(
+              `🚚 خرجت للتوصيل — كل ${shift === "MORNING" ? "الصباحي" : "المسائي"} (${counts.waiting})`,
+              `🚚 Out for delivery — all ${shift === "MORNING" ? "morning" : "evening"} (${counts.waiting})`)}
+          </button>
+        )}
       </div>
 
       {/* Broadcast hint */}

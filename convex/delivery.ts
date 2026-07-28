@@ -368,6 +368,51 @@ export const driverBoard = query({
 
 /* ───────────────────────── دورة حياة التوصيل (state machine صارمة) ───────────────────────── */
 
+/**
+ * 🔒 «خرجت للتوصيل» لكل محطات جولةٍ واحدة (صباحي أو مسائي).
+ * السائق يشيل الرزمة كاملة ثم يتحرّك، فكان يفتح كل محطة ليضغطها وحدها.
+ * الجولة المقصودة تُمرَّر صراحةً — الصباحي والمسائي فترتان مختلفتان ولا
+ * يجوز أن يعلّم المسائي وهو لم يخرج بعد. لا يمسّ إلا PREPARED من محطاته
+ * (المباشرة أو بالسائق الافتراضي)، فما خرج أو سُلّم يبقى كما هو.
+ */
+export const startDeliveryShift = mutation({
+  args: {
+    date: v.string(),
+    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, deliveryTime, sessionToken }) => {
+    const staff = await requireStaff(ctx, sessionToken);
+    if (String(staff.role || "").toUpperCase() !== "DELIVERY") {
+      throw new Error("هذه العملية للسائق فقط");
+    }
+    const driverId = String(staff.userId);
+    const rows = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_date", (q: any) => q.eq("date", date))
+      .collect();
+    let started = 0;
+    for (const p of rows as any[]) {
+      if (p.deliveryTime !== deliveryTime || p.status !== "PREPARED") continue;
+      if (p.driverId) {
+        if (String(p.driverId) !== driverId) continue;
+      } else {
+        const c: any = p.customerId ? await ctx.db.get(p.customerId) : null;
+        if (String(c?.defaultDriverId || "") !== driverId) continue;
+      }
+      await ctx.db.patch(p._id, {
+        status: "OUT_FOR_DELIVERY",
+        outForDeliveryAt: Date.now(),
+        trackToken: p.trackToken || newToken(),
+        driverId: p.driverId || (staff.userId as any),
+        updatedAt: Date.now(),
+      });
+      started++;
+    }
+    return { started };
+  },
+});
+
 /** 🔒 يبدأ توصيل: PREPARED → OUT_FOR_DELIVERY فقط. سائق المحطة أو ADMIN. */
 export const startDelivery = mutation({
   args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
