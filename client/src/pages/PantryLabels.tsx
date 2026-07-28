@@ -27,6 +27,21 @@ type PantryLabel = {
 };
 
 const STORAGE_KEY = "adrenaline:pantry-labels:v1";
+
+/* أصناف المخزن الثابتة — يختار منها أمين المخزن بدل كتابة الاسم حرفاً حرفاً،
+   وتبقى الخانة حرّة فأي صنف جديد يُكتب مباشرةً ويُحفظ في «المطبوعة سابقاً»
+   فيظهر في القائمة بعدها. الأسماء إنجليزية كما تُطبع على الملصق. */
+const PANTRY_ITEMS = [
+  "Ajinomoto Salt", "Almond Nut", "Bay Leaves", "Biryani Powder",
+  "Black Pepper Powder", "Black Pepper Whole", "Cajun Powder", "Cashew Nut",
+  "Chili Powder", "Cinnamon Powder", "Cinnamon Stick", "Coriander Powder",
+  "Coriander Seeds", "Cumin Powder", "Cumin Seeds", "Curry Powder",
+  "Garlic Powder", "Kabsa Powder", "Lumi", "Majbos Powder", "Onion Powder",
+  "Oregano", "Paprika Powder", "Peanut", "Pistachio Slice", "Pumpkin Seeds",
+  "Quinoa", "Raisins", "Rosemary", "Salt", "Seven Spices", "Star Anise",
+  "Sunflower Seeds", "Sweet Paprika", "Thyme", "Turmeric Powder", "Walnut",
+  "White Pepper Powder", "White Sugar",
+];
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const plusYearISO = () => {
   const d = new Date(); d.setFullYear(d.getFullYear() + 1); d.setDate(d.getDate() - 1);
@@ -114,6 +129,13 @@ export default function PantryLabels() {
   }, [form.unitPrice, form.grossWeight]);
   const effective: PantryLabel = { ...form, totalPrice: form.totalPrice || autoTotal };
 
+  /* القائمة المعروضة = الأصناف الثابتة + ما أضافه المخزن بالكتابة، بلا تكرار. */
+  const nameOptions = useMemo(() => {
+    const seen = new Set(PANTRY_ITEMS.map((x) => x.toLowerCase()));
+    const extra = saved.map((x) => x.name).filter((n) => n && !seen.has(n.toLowerCase()));
+    return [...PANTRY_ITEMS, ...Array.from(new Set(extra))].sort((a, b) => a.localeCompare(b));
+  }, [saved]);
+
   const persist = (rows: PantryLabel[]) => {
     setSaved(rows);
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(rows)); } catch { /* مساحة ممتلئة: نتجاهل */ }
@@ -145,8 +167,23 @@ export default function PantryLabels() {
       <div className="grid md:grid-cols-2 gap-4 print:hidden">
         {/* ── النموذج ── */}
         <div className="rounded-2xl border bg-white p-4 space-y-3">
-          <Field label={t("اسم الصنف (إنجليزي كما يُطبع)", "Item name (printed as-is)")}>
-            <Input dir="ltr" value={form.name} onChange={set("name")} placeholder="SEED PUMPKIN PEELED" className="font-black uppercase" />
+          <Field label={t("اسم الصنف — اختر من القائمة أو اكتب", "Item name — pick or type")}>
+            <div className="flex gap-2">
+              <Input dir="ltr" list="pantry-items" value={form.name} onChange={set("name")}
+                placeholder="Curry Powder" className="font-black uppercase flex-1" />
+              <select
+                value=""
+                onChange={(e) => { if (e.target.value) setForm((f) => ({ ...f, name: e.target.value })); }}
+                aria-label={t("اختر صنفاً", "Pick an item")}
+                className="h-10 w-11 shrink-0 rounded-md border bg-white text-center text-sm font-black">
+                <option value="">▾</option>
+                {nameOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            {/* datalist للكتابة السريعة، والقائمة جنبها لمن يتصفّح */}
+            <datalist id="pantry-items">
+              {nameOptions.map((n) => <option key={n} value={n} />)}
+            </datalist>
           </Field>
           <div className="grid grid-cols-3 gap-2">
             <Field label={t("سعر الوحدة", "Unit price")}>
