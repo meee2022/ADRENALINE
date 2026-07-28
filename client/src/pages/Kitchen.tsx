@@ -1320,12 +1320,22 @@ export default function Kitchen() {
      PREPARED ويخصم مخزونها — نفس جوهر زرّ الكرت الواحد على الخادم. */
   const handlePrepareAll = async () => {
     if (preparingAll || !stats.today) return;
+    /* التاريخ واليوم بالنصّ داخل التأكيد: الشاشة تفتح على «بكرة» افتراضياً،
+       وضُغط الزر مرة على 29-7 والمقصود يومها 28 — العدد وحده لا يكشف الخلط. */
+    const dayName = format(date, "EEEE d MMMM", { locale: isRtl ? ar : enUS });
+    const whichDay = isTomorrow
+      ? (isRtl ? "توصيل بكرة" : "TOMORROW's delivery")
+      : isTodayDate
+      ? (isRtl ? "توصيل النهاردة" : "TODAY's delivery")
+      : (isRtl ? "يوم آخر — راجع التاريخ!" : "another day — check the date!");
     const ok = await confirmDialog({
       message: isRtl
-        ? `اعتماد التحضير لكل خطط اليوم المؤكدة (${stats.today} خطة)؟
-سيُخصم المخزون حسب الرسيبي وتظهر للتوصيل.`
-        : `Mark all ${stats.today} confirmed plans as prepared?
-Inventory will be deducted and they'll appear for delivery.`,
+        ? `⚠️ تحضير كل خطط ${dayName} (${whichDay})؟
+${stats.today} خطة مؤكدة ستتعلّم «تم التحضير» ويُخصم مخزونها وتظهر للتوصيل.
+لو كنت تقصد يوماً آخر بدّل Today/Tomorrow أعلى الشاشة أولاً.`
+        : `⚠️ Prepare ALL plans of ${dayName} (${whichDay})?
+${stats.today} confirmed plans will be marked prepared, inventory deducted, and sent to delivery.
+If you meant another day, switch Today/Tomorrow first.`,
     });
     if (!ok) return;
     setPreparingAll(true);
