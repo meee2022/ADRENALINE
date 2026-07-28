@@ -444,8 +444,20 @@ export default function PlansPage() {
   const activeCustomers = useMemo(
     () => {
       const targetISO = formattedDate;
+      /* التجميد له تاريخ، فيُقاس بالتاريخ المفتوح لا بحالة الحساب اليوم.
+         `isActive=false` يبقى قائماً طوال التجميد، فمن جُمّد ثلاثة أيام ورجع
+         السبت كان يختفي حتى وأنت تبني خطة السبت نفسها — وهي أول خطة يحتاجها.
+         نفس قاعدة المطبخ والاستيكرات وبوابة الطلبات: التجميد يسري من
+         `pausedFrom` حتى يوم الرجوع، وما قبله وما بعده يظهر. */
+      const pausedOnTarget = (c: any) => {
+        const from = String(c?.pausedFrom || "").slice(0, 10);
+        if (!from) return c?.isActive === false;      // إيقاف بلا تاريخ = فوري
+        if (targetISO < from) return false;            // قبل التجميد
+        const back = String(c?.pauseExpectedResume || "").slice(0, 10);
+        return back ? targetISO < back : true;         // بلا تاريخ رجوع = مفتوح
+      };
       return (customers || [])
-        .filter((c: any) => c?.status === "ACTIVE" || c?.isActive === true || c?.isActive === undefined)
+        .filter((c: any) => !pausedOnTarget(c))
         // 🔀 المخصّصون لهم صفحتهم — نستبعدهم هنا لمنع ازدواج مصدر المطبخ
         .filter((c: any) => !isCustomizedCustomer(c))
         .filter((c: any) => {
