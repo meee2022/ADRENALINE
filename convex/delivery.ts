@@ -509,14 +509,21 @@ export const myStops = query({
   handler: async (ctx, { date, deliveryTime, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const driverId = staff.userId as any;
-    const rows = await ctx.db
-      .query("dailyPlans")
-      .withIndex("by_driver_date", (q) => q.eq("driverId", driverId).eq("date", date))
-      .collect();
+    /* نفس قاعدة لوحة المشرف حرفياً: الإسناد المباشر على الخطة أولاً، وإلا
+       السائق الافتراضي للعميل. كانت هذه الشاشة تقرأ الإسناد المباشر وحده،
+       بينما «سواقين التوصيل» يوزّع افتراضياً — فرأى المشرف التوزيع كاملاً
+       وفتح مهند تطبيقه على «لا توجد محطات» رغم 105 خطط محضّرة. */
+    const rows = (
+      await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect()
+    ).filter((p: any) => String(p.driverId || "") === String(driverId) || !p.driverId);
     const stops = [];
     for (const p of rows) {
       if (p.deliveryTime !== deliveryTime) continue;
       if (p.status === "DRAFT" || p.status === "CONFIRMED") continue;
+      if (!p.driverId) {
+        const c0: any = p.customerId ? await ctx.db.get(p.customerId) : null;
+        if (String(c0?.defaultDriverId || "") !== String(driverId)) continue;
+      }
       const c = p.customerId ? await ctx.db.get(p.customerId) : null;
       stops.push({
         planId: p._id,

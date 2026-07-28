@@ -32,6 +32,7 @@ import {
   Truck,
   AlertTriangle,
   ChefHat,
+  Search,
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -1421,9 +1422,9 @@ If you meant another day, switch Today/Tomorrow first.`,
   return (
     <>
       {/* Screen Version */}
-      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-gray-50 pb-24 print:hidden">
+      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-100/80 pb-24 print:hidden">
         {/* Header */}
-        <div className="max-w-6xl mx-auto px-4 pt-6">
+        <div className="max-w-[1500px] mx-auto px-3 sm:px-5 pt-4 sm:pt-6">
           <DashboardHeader
             icon={<ChefHat className="h-6 w-6 sm:h-7 sm:w-7" />}
             titleAr="عرض المطبخ" titleEn="Kitchen Display"
@@ -1493,17 +1494,17 @@ If you meant another day, switch Today/Tomorrow first.`,
         </div>
 
         {/* Tabs */}
-        <div className="bg-white border-b border-gray-200 px-4 py-4 shadow-sm mt-4">
-          <div className="max-w-6xl mx-auto">
+        <div className="sticky top-0 z-30 bg-slate-100/95 backdrop-blur-md border-b border-slate-200/80 px-3 sm:px-5 py-3 mt-4">
+          <div className="max-w-[1500px] mx-auto">
             {/* Tabs */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
               <button
                 onClick={() => setActiveTab("MORNING")}
                 className={cn(
-                  "flex-1 h-12 rounded-xl font-bold text-base transition-all",
+                  "h-11 rounded-xl font-black text-sm transition-colors",
                   activeTab === "MORNING"
-                    ? "bg-cyan-500 text-white shadow-md"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                    ? "bg-[#0E76AC] text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100"
                 )}
               >
                 {isRtl ? "توصيل صباحي" : "Morning Delivery"}
@@ -1511,10 +1512,10 @@ If you meant another day, switch Today/Tomorrow first.`,
               <button
                 onClick={() => setActiveTab("EVENING")}
                 className={cn(
-                  "flex-1 h-12 rounded-xl font-bold text-base transition-all",
+                  "h-11 rounded-xl font-black text-sm transition-colors",
                   activeTab === "EVENING"
-                    ? "bg-gray-700 text-white shadow-md"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                    ? "bg-[#47759c] text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100"
                 )}
               >
                 {isRtl ? "توصيل مسائي" : "Evening Delivery"}
@@ -1522,10 +1523,10 @@ If you meant another day, switch Today/Tomorrow first.`,
               <button
                 onClick={() => setActiveTab("SUMMARY")}
                 className={cn(
-                  "flex-1 h-12 rounded-xl font-bold text-base transition-all",
+                  "h-11 rounded-xl font-black text-sm transition-colors",
                   activeTab === "SUMMARY"
-                    ? "bg-[#47759c] text-white shadow-md"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                    ? "bg-[#10283f] text-white shadow-sm"
+                    : "text-slate-600 hover:bg-slate-100"
                 )}
               >
                 {isRtl ? "إجمالي الوجبات" : "Meal Summary"}
@@ -1535,7 +1536,7 @@ If you meant another day, switch Today/Tomorrow first.`,
         </div>
 
         {/* Content */}
-        <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        <div className="max-w-[1500px] mx-auto px-3 sm:px-5 py-4 space-y-4">
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
@@ -1873,17 +1874,20 @@ If you meant another day, switch Today/Tomorrow first.`,
             /* ✅ تابات التوصيل (MORNING / EVENING) */
             <>
               {/* شريط لاصق: يبقى البحث والعدّاد في متناول اليد مهما طال التمرير */}
-              <div className="sticky top-2 z-20 rounded-2xl bg-white/95 backdrop-blur border border-[#e8eef4] shadow-sm px-3 py-2.5 flex items-center gap-3">
-                <input
+              <div className="sticky top-[76px] z-20 rounded-xl bg-white/95 backdrop-blur-md border border-slate-200 shadow-[0_8px_24px_-18px_rgba(14,42,74,.45)] p-2 flex items-center gap-2">
+                <div className="relative flex-1 min-w-0">
+                  <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400", isRtl ? "right-3" : "left-3")} />
+                  <input
                   value={personSearch}
                   onChange={(e) => setPersonSearch(e.target.value)}
                   placeholder={isRtl ? "🔍 ابحث باسم المشترك…" : "🔍 Search subscriber…"}
-                  className="flex-1 h-10 rounded-xl border border-[#e8eef4] bg-[#f7fbfe] px-3 text-sm font-bold outline-none focus:border-[#3cc4f0]"
+                  className={cn("w-full h-10 rounded-lg border border-slate-200 bg-slate-50 text-sm font-bold outline-none focus:border-[#3cc4f0] focus:bg-white", isRtl ? "pr-9 pl-3" : "pl-9 pr-3")}
                 />
-                <span className="text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 whitespace-nowrap">
+                </div>
+                <span className="h-9 flex items-center text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 whitespace-nowrap tabular-nums">
                   {stats.today} {isRtl ? "متبقٍّ" : "left"}
                 </span>
-                <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 whitespace-nowrap">
+                <span className="h-9 flex items-center text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 whitespace-nowrap tabular-nums">
                   ✓ {stats.prepared}
                 </span>
               </div>
@@ -1897,7 +1901,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid lg:grid-cols-2 gap-3 items-start">
+              <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 items-start">
               {filteredPlans.map((plan: any) => {
               const customer: any = getCustomer(plan.customerId);
               // ✅ إذا لم يوجد customer مربوط، نعرض الطلب بدون بيانات العميل المفصلة
@@ -1928,30 +1932,30 @@ If you meant another day, switch Today/Tomorrow first.`,
                 <Card
                   key={plan._id}
                   className={cn(
-                    "overflow-hidden rounded-2xl transition-all",
-                    isPrepared ? "bg-[#f4f8fb] opacity-80" : "bg-white hover:-translate-y-0.5"
+                    "overflow-hidden rounded-xl transition-shadow",
+                    isPrepared ? "bg-[#f4f8fb] opacity-80" : "bg-white hover:shadow-md"
                   )}
                   style={{
                     border: isPrepared ? "1px solid #cbe8f5" : "1px solid #e8eef4",
-                    boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)",
+                    boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 8px 20px -16px rgba(14,42,74,.22)",
                   }}
                 >
                   {/* شريط الحساسية — مرّة واحدة أعلى الكرت، مع نص الحساسية الفعلي */}
                   {hasAllergy && (
-                    <div className="bg-red-600 text-white px-4 py-2 flex items-center gap-2.5 font-bold">
-                      <AlertTriangle className="h-5 w-5 shrink-0" />
-                      <span className="text-[11px] uppercase tracking-wider bg-white/20 rounded px-1.5 py-0.5 shrink-0">
+                    <div className="bg-red-600 text-white px-3 py-1.5 flex items-center gap-2 font-bold">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      <span className="text-[10px] uppercase tracking-wide bg-white/15 rounded px-1.5 py-0.5 shrink-0">
                         {isRtl ? "حساسية" : "Allergy"}
                       </span>
-                      <span className="text-sm font-extrabold truncate">{customer?.allergies}</span>
+                      <span className="text-xs font-extrabold truncate">{customer?.allergies}</span>
                     </div>
                   )}
 
-                  <CardContent className="p-4">
+                  <CardContent className="p-3.5">
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="flex items-start justify-between mb-2.5 gap-2">
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-lg font-black text-gray-900 leading-tight truncate">
+                        <h2 className="text-base font-black text-gray-900 leading-tight truncate">
                           {customerName}
                         </h2>
                         <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
@@ -1966,14 +1970,39 @@ If you meant another day, switch Today/Tomorrow first.`,
                           {isRtl ? "جاهز للتوصيل" : "Ready to Deliver"}
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-50 text-amber-700 border-0 text-[11px] px-2.5 py-1 rounded-full font-black shrink-0">
+                        <Badge className="bg-amber-50 text-amber-700 border border-amber-100 text-[10px] px-2 py-1 rounded-full font-black shrink-0">
                           {isRtl ? "جاهز للتحضير" : "Ready to Prepare"}
                         </Badge>
                       )}
                     </div>
 
                     {/* Meals — مرتّبة حسب ترتيب الوجبة (فطور ← غداء ← عشاء ← سناك) لسهولة التحضير */}
-                    <div className="space-y-2 mb-3">
+                    {(String(customer?.avoid || "").trim() ||
+                      String(customer?.preferences || "").trim() ||
+                      String(customer?.portions || "").trim()) && (
+                      <div className="mb-2.5 grid gap-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                        {String(customer?.avoid || "").trim() && (
+                          <p className="flex items-start gap-1.5 text-[11px] font-bold leading-snug text-red-800">
+                            <span className="mt-px shrink-0 font-black text-red-600">✕ {isRtl ? "ممنوع:" : "Avoid:"}</span>
+                            <span>{String(customer.avoid).trim()}</span>
+                          </p>
+                        )}
+                        {String(customer?.preferences || "").trim() && (
+                          <p className="flex items-start gap-1.5 text-[11px] font-semibold leading-snug text-cyan-900">
+                            <span className="mt-px shrink-0 font-black text-cyan-600">★ {isRtl ? "تفضيلات:" : "Prefs:"}</span>
+                            <span>{String(customer.preferences).trim()}</span>
+                          </p>
+                        )}
+                        {String(customer?.portions || "").trim() && (
+                          <p className="flex items-start gap-1.5 text-[11px] font-semibold leading-snug text-slate-700">
+                            <span className="mt-px shrink-0 font-black text-[#47759c]">⚖ {isRtl ? "الكمية:" : "Portion:"}</span>
+                            <span>{String(customer.portions).trim()}</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5 mb-2.5">
                       {(() => {
                         const courseRank = (item: any) => {
                           const c = String(getCategory(item.categoryId)?.name || item.category || "").toUpperCase();
@@ -1995,22 +2024,31 @@ If you meant another day, switch Today/Tomorrow first.`,
                           
                           const { avoid, pref, portion } = getModifiersByGroup(item.modifierIds);
 
-                          // ✅ دمج modifiers من 3 مصادر:
-                          // 1) modifierIds (المختارة من الـ picker)
-                          // 2) item نفسه (بيانات مضمنة من الطلب الإلكتروني)
-                          // 3) customer (الحساسية والممنوعات والتفضيلات والكميات من بيانات الاشتراك)
-                          const allAvoid = [...avoid];
-                          const allPref = [...pref];
-                          const allPortions = [...portion];
-
-                          if (item.avoid) allAvoid.push(item.avoid);
-                          if (item.preferences) allPref.push(item.preferences);
-                          if (item.portions) allPortions.push(item.portions);
-
-                          // من بيانات العميل (تنطبق على كل وجباته)
-                          if (customer?.avoid && String(customer.avoid).trim()) allAvoid.push(String(customer.avoid).trim());
-                          if (customer?.preferences && String(customer.preferences).trim()) allPref.push(String(customer.preferences).trim());
-                          if (customer?.portions && String(customer.portions).trim()) allPortions.push(String(customer.portions).trim());
+                          // اعرض داخل الوجبة الاختلافات الخاصة بها فقط. قيود المشترك
+                          // العامة تظهر مرة واحدة أعلى الكارت، فلا نكررها مع كل طبق.
+                          const mealSpecificValues = (values: unknown[], subscriberValue: unknown) => {
+                            const split = (value: unknown) => String(value || "")
+                              .split(/[/,،]/)
+                              .map((part) => part.replace(/\s+/g, " ").trim())
+                              .filter(Boolean);
+                            const keyOf = (value: string) => value
+                              .replace(/^(?:no|without|بدون)\s+/i, "")
+                              .trim()
+                              .toUpperCase();
+                            const subscriberKeys = new Set(split(subscriberValue).map(keyOf));
+                            const seen = new Set<string>();
+                            return values
+                              .flatMap(split)
+                              .filter((value) => {
+                                const key = keyOf(value);
+                                if (!key || subscriberKeys.has(key) || seen.has(key)) return false;
+                                seen.add(key);
+                                return true;
+                              });
+                          };
+                          const allAvoid = mealSpecificValues([...avoid, item.avoid], customer?.avoid);
+                          const allPref = mealSpecificValues([...pref, item.preferences], customer?.preferences);
+                          const allPortions = mealSpecificValues([...portion, item.portions], customer?.portions);
 
                           // ملاحظة خاصة بالوجبة (من Plans.tsx)
                           const itemNote = String(item.specialNotes || "").trim();
@@ -2022,16 +2060,16 @@ If you meant another day, switch Today/Tomorrow first.`,
                           return (
                             <div
                               key={idx}
-                              className={cn("rounded-lg px-3 py-2 transition-all", itemDone ? "bg-emerald-50/60" : "bg-[#f7fbfe]")}
+                              className={cn("rounded-lg px-2.5 py-2 transition-colors", itemDone ? "bg-emerald-50/60" : "bg-slate-50/80")}
                               style={{ border: itemDone ? "1px solid #a7f3d0" : "1px solid #e8eef4" }}
                             >
                               {/* رأس الوجبة: التصنيف يسارًا + زر التعليم كجاهزة يمينًا */}
-                              <div className="flex items-center justify-between gap-2 mb-1">
+                              <div className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                   <Badge
                                     variant="outline"
                                     className={cn(
-                                      "text-[11px] font-bold px-2.5 py-0.5 border-0 tracking-wide",
+                                      "text-[10px] font-black px-2 py-0.5 border-0 tracking-wide",
                                       getCategoryLabel(category?.name || item.category || "").includes("BREAKFAST") && "bg-[#e8f8fd] text-[#0E76AC]",
                                       getCategoryLabel(category?.name || item.category || "").includes("LUNCH") && "bg-cyan-100 text-cyan-700",
                                       getCategoryLabel(category?.name || item.category || "").includes("DINNER") && "bg-[#eaf1f7] text-[#47759c]",
@@ -2050,7 +2088,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                                   <button
                                     onClick={() => toggleItemPrepared({ id: plan._id, itemIndex: origIdx, prepared: !itemDone, sessionToken: sessionTok })}
                                     className={cn(
-                                      "shrink-0 h-8 px-3 rounded-lg text-xs font-black flex items-center gap-1.5 transition-all",
+                                    "shrink-0 min-h-8 px-2.5 rounded-lg text-[11px] font-black flex items-center gap-1 transition-colors",
                                       itemDone ? "bg-emerald-500 text-white" : "bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-50"
                                     )}
                                   >
@@ -2060,26 +2098,26 @@ If you meant another day, switch Today/Tomorrow first.`,
                               </div>
 
                               {/* اسم الوجبة */}
-                              <h3 className={cn("text-[13.5px] font-black mb-1 leading-snug", itemDone ? "text-emerald-600 line-through" : "text-[#0f1516]")}>
+                              <h3 className={cn("text-[13px] font-black mt-0.5 leading-snug", itemDone ? "text-emerald-600 line-through" : "text-[#0f1516]")}>
                                 {mealName}
                               </h3>
 
                               {/* Modifiers + customer dietary data */}
                               {(allAvoid.length > 0 || allPref.length > 0 || allPortions.length > 0) && (
-                                <div className="space-y-1">
+                                <div className="mt-1 grid gap-1">
                                   {allAvoid.length > 0 && (
-                                    <p className="rounded-md px-2 py-1 text-xs font-bold leading-snug text-red-800"
+                                    <p className="rounded-md px-2 py-1 text-[11px] font-bold leading-snug text-red-800"
                                       style={{ background: "#fef2f2", border: "1px solid #ef444440" }}>
                                       <span className="font-black text-red-600">✕ {isRtl ? "ممنوع:" : "Avoid:"}</span> {allAvoid.join(isRtl ? "، " : ", ")}
                                     </p>
                                   )}
                                   {allPref.length > 0 && (
-                                    <p className="rounded-md px-2 py-1 text-xs font-semibold leading-snug" style={{ background: "#ecfeff", border: "1px solid #a5f3fc", color: "#155e75" }}>
+                                    <p className="rounded-md px-2 py-1 text-[11px] font-semibold leading-snug" style={{ background: "#ecfeff", border: "1px solid #a5f3fc", color: "#155e75" }}>
                                       <span className="font-black" style={{ color: "#0891b2" }}>★ {isRtl ? "تفضيلات:" : "Prefs:"}</span> {allPref.join(isRtl ? "، " : ", ")}
                                     </p>
                                   )}
                                   {allPortions.length > 0 && (
-                                    <p className="rounded-md px-2 py-1 text-xs font-semibold leading-snug text-[#0f1516]" style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
+                                    <p className="rounded-md px-2 py-1 text-[11px] font-semibold leading-snug text-[#0f1516]" style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
                                       <span className="font-black text-[#47759c]">⚖ {isRtl ? "الكمية:" : "Portion:"}</span> {allPortions.join(isRtl ? "، " : ", ")}
                                     </p>
                                   )}
@@ -2088,7 +2126,7 @@ If you meant another day, switch Today/Tomorrow first.`,
 
                               {/* Special note for this specific meal */}
                               {itemNote && (
-                                <p className="mt-1 rounded-md px-2 py-1 text-xs font-semibold leading-snug text-[#0f1516]"
+                                <p className="mt-1 rounded-md px-2 py-1 text-[11px] font-semibold leading-snug text-[#0f1516]"
                                   style={{ background: "#eaf1f7", border: "1px solid #47759c50" }}>
                                   <span className="font-black text-[#47759c]">📝 {isRtl ? "ملاحظة:" : "Note:"}</span> {itemNote}
                                 </p>
@@ -2100,7 +2138,7 @@ If you meant another day, switch Today/Tomorrow first.`,
 
                     {/* Special Notes */}
                     {plan.notes && plan.notes.trim().length > 0 && (
-                      <div className="bg-[#eaf1f7] rounded-xl p-4 border-2 border-[#47759c]/30 mb-4">
+                      <div className="bg-[#eaf1f7] rounded-lg p-2.5 border border-[#47759c]/30 mb-2.5">
                         <div className="flex items-start gap-2">
                           <span className="text-2xl">💬</span>
                           <div className="flex-1">
@@ -2119,7 +2157,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                     {!isPrepared && (
                       <Button
                         onClick={() => handleMarkPrepared(plan._id)}
-                        className="w-full h-11 rounded-xl text-white font-black text-sm shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
+                        className="w-full h-10 rounded-lg text-white font-black text-sm shadow-sm hover:brightness-105 active:scale-[.99]" style={{background:"#0E76AC"}}
                       >
                         {isRtl ? 'تحديد ك "تم التحضير"' : 'Mark as "Prepared"'}
                       </Button>
