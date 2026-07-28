@@ -120,7 +120,8 @@ function SpiceLabel({ l }: { l: PantryLabel }) {
           </div>
           <div className="sp-fact">
             <span className="sp-k">GROSS<br />WEIGHT</span>
-            <span className="sp-box">{l.grossWeight || "—"}</span>
+            {/* الوحدة ثابتة على الملصق فلا يكتبها المخزن ولا تُنسى */}
+            <span className="sp-box">{l.grossWeight || "—"}<i className="sp-u">KG</i></span>
           </div>
           <div className="sp-fact">
             <span className="sp-k">TOTAL<br />PRICE</span>
@@ -359,6 +360,10 @@ export default function PantryLabels() {
         }
         .sp-box-lg { font-size: 13.5px; }
         .sp-box i { font-style: normal; font-size: 6px; vertical-align: top; margin-inline-end: 0.6mm; }
+        .sp-box .sp-u {
+          font-size: 7px; font-weight: 900; vertical-align: baseline;
+          margin-inline-start: 1mm; margin-inline-end: 0; letter-spacing: 0.5px;
+        }
         .sp-side { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
         .sp-dates { font-size: 11.5px; font-weight: 900; display: flex; flex-direction: column; gap: 0.9mm; }
         .sp-dates div { display: flex; gap: 2mm; align-items: baseline; justify-content: flex-start; }
