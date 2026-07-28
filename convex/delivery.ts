@@ -47,13 +47,24 @@ function assertTransition(from: string, to: string) {
 }
 
 /** يتحقق أن المستدعي هو صاحب المحطة (سائقها) أو ADMIN. */
-function assertStopOwnershipOrAdmin(staff: any, plan: any) {
+/* قاعدة الملكية = قاعدة العرض في myStops حرفياً: الإسناد المباشر، وإلا
+   السائق الافتراضي للعميل. كان الحارس يطلب إسناداً مباشراً وحده، فتظهر
+   المحطة للسائق ثم يُرفض ضغطه بـ«مسندة لسائق آخر» — وهي بلا سائق أصلاً.
+   لذلك صار async: تحديد المالك الافتراضي يحتاج قراءة العميل. */
+async function assertStopOwnershipOrAdmin(ctx: any, staff: any, plan: any) {
   const role = String(staff.role || "").toUpperCase();
   if (role === "ADMIN") return;
   // السائق يقدر ينفّذ محطاته فقط
   if (role !== "DELIVERY") throw new Error("هذه العملية للسائق أو الأدمن فقط");
-  if (!plan.driverId || String(plan.driverId) !== String(staff.userId)) {
-    throw new Error("هذه المحطة مسندة لسائق آخر");
+  if (plan.driverId) {
+    if (String(plan.driverId) !== String(staff.userId)) {
+      throw new Error("هذه المحطة مسندة لسائق آخر");
+    }
+    return;
+  }
+  const c: any = plan.customerId ? await ctx.db.get(plan.customerId) : null;
+  if (String(c?.defaultDriverId || "") !== String(staff.userId)) {
+    throw new Error("هذه المحطة غير مسندة لك");
   }
 }
 
@@ -351,7 +362,7 @@ export const startDelivery = mutation({
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
-    assertStopOwnershipOrAdmin(staff, plan);
+    await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "OUT_FOR_DELIVERY");
     const token = plan.trackToken || newToken();
     await ctx.db.patch(planId, {
@@ -377,7 +388,7 @@ export const markDelivered = mutation({
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
-    assertStopOwnershipOrAdmin(staff, plan);
+    await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "DELIVERED");
     await ctx.db.patch(planId, {
       status: "DELIVERED",
@@ -401,7 +412,7 @@ export const markFailed = mutation({
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
-    assertStopOwnershipOrAdmin(staff, plan);
+    await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "FAILED");
     const r = String(reason || "").trim();
     if (r.length < 3) throw new Error("سبب الفشل مطلوب (3 أحرف أو أكثر)");
