@@ -28,6 +28,11 @@ type PantryLabel = {
 
 const STORAGE_KEY = "adrenaline:pantry-labels:v1";
 
+/* سريال ملصق الميزان الأصلي (Bradma) — يُملأ جاهزاً فيعدّل المخزن الأرقام
+   المميِّزة للصنف وحدها بدل كتابة ثلاثة عشر رقماً كل مرة. الصنف الذي سبقت
+   طباعته يستعيد سرياله هو من «المطبوعة سابقاً». */
+const BASE_BARCODE = "9912539010102";
+
 /* أصناف المخزن الثابتة — يختار منها أمين المخزن بدل كتابة الاسم حرفاً حرفاً،
    وتبقى الخانة حرّة فأي صنف جديد يُكتب مباشرةً ويُحفظ في «المطبوعة سابقاً»
    فيظهر في القائمة بعدها. الأسماء إنجليزية كما تُطبع على الملصق. */
@@ -51,7 +56,7 @@ const plusYearISO = () => {
 const EMPTY: PantryLabel = {
   name: "", unitPrice: "", grossWeight: "", totalPrice: "",
   prodDate: todayISO(), expDate: plusYearISO(),
-  barcode: "", footer: "ADRENALINE HEALTHY FOOD", copies: 1,
+  barcode: BASE_BARCODE, footer: "ADRENALINE HEALTHY FOOD", copies: 1,
 };
 
 // dd-mm-yy كما على ملصق المورّد (25-07-26)
@@ -205,8 +210,14 @@ export default function PantryLabels() {
             </Field>
           </div>
           <div className="grid grid-cols-[1fr_120px] gap-2">
-            <Field label={t("الباركود (اختياري)", "Barcode (optional)")}>
-              <Input dir="ltr" value={form.barcode} onChange={set("barcode")} placeholder="9912539010102" />
+            <Field label={t("الباركود — عدّل الأرقام المميِّزة", "Barcode — edit the item digits")}>
+              <div className="flex gap-1.5">
+                <Input dir="ltr" value={form.barcode} onChange={set("barcode")}
+                  placeholder={BASE_BARCODE} className="flex-1 tabular-nums font-bold" />
+                <button type="button" onClick={() => setForm((f) => ({ ...f, barcode: BASE_BARCODE }))}
+                  title={t("أعد السريال الأساسي", "Reset to base serial")}
+                  className="h-10 w-10 shrink-0 rounded-md border bg-white text-sm font-black text-[#0E76AC]">↺</button>
+              </div>
             </Field>
             <Field label={t("عدد النسخ", "Copies")}>
               <Input type="number" min={1} dir="ltr" value={String(form.copies)} onChange={set("copies")} />
