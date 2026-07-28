@@ -242,9 +242,22 @@ export default function OrderReview() {
         CUSTOMER_IDENTITY_MISMATCH: ["رقم الجوال لا يطابق الحساب المربوط — راجع الرقم وأعد المحاولة.", "The phone number doesn't match the linked account — check it and try again."],
         INVALID_MEAL_CHANNEL: ["إحدى الوجبات المختارة لم تعد متاحة في المنيو — احذفها واختر بديلاً.", "One of the selected meals is no longer available — remove it and pick another."],
         MEAL_NOT_SCHEDULED: ["إحدى الوجبات لم تعد مجدولة في يومها المختار — أعد اختيارها من المنيو.", "One selected meal is no longer scheduled on that day — reselect it from the menu."],
+        /* لا يوم واحد صالح في مدّة الاشتراك — غالباً تواريخ مقلوبة في الحساب
+           (آمنة الحاتمي: بداية 1-8 ونهاية 28-7)، وليس شيئاً يصلحه المشترك. */
+        SUBSCRIPTION_NO_ORDERABLE_DAYS: ["تواريخ اشتراكك غير مضبوطة في النظام (البداية بعد النهاية) — تواصل مع الفريق لتصحيحها ثم أعد الإرسال.", "Your subscription dates are inconsistent (start after end) — contact the team to correct them, then resend."],
+        SUBSCRIPTION_COUNTS_MISSING: ["عدد وجبات اشتراكك غير مسجّل — تواصل مع الفريق لضبطه ثم أعد الإرسال.", "Your meals-per-day isn't recorded — contact the team to set it, then resend."],
+        SUBSCRIPTION_COUNT_MISMATCH: ["عدد الوجبات المختارة لا يطابق باقتك في أحد الأيام — أكمل أو احذف حتى يتطابق.", "The meals picked don't match your package on one of the days — add or remove until they match."],
+        SLOT_OUTSIDE_SUBSCRIPTION: ["اخترت يوماً خارج مدة اشتراكك — احذفه ثم أعد الإرسال.", "You picked a day outside your subscription period — remove it and resend."],
+        INVALID_CATEGORY: ["إحدى الوجبات تصنيفها غير صالح للخطة — احذفها واختر بديلاً.", "One meal's category isn't valid for a plan — remove it and pick another."],
+        INVALID_SLOT: ["أحد الاختيارات على يوم غير صالح — أعد بناء الخطة من المنيو.", "One pick sits on an invalid day — rebuild the plan from the menu."],
       };
       const msg = code && known[code]
         ? t(`❌ ${known[code][0]}`, `❌ ${known[code][1]}`)
+        : code
+          /* كود تحقّق لم يُترجَم بعد: لا يُعرض خاماً للمشترك — لا يفهمه ولا
+             يفيده. نُظهر رسالة تُرشده لمن يصلحه، والكود يبقى في الكونسول. */
+          ? t("❌ تعذّر إرسال الخطة بسبب إعداد في اشتراكك — تواصل مع الفريق وسنضبطه لك.",
+              "❌ Your plan couldn't be sent due to a setting on your subscription — contact the team and we'll fix it.")
         : raw && !/^ORDER_VALIDATION:/.test(raw)
           ? t(`❌ تعذّر إرسال الطلب: ${raw}`, `❌ Couldn't send the order: ${raw}`)
           : t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again.");

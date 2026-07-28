@@ -2,7 +2,7 @@
  * @file client/src/pages/Customers.tsx
  * @description إدارة العملاء (المشتركين) + Import JSON/CSV
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useCustomers,
   useCreateCustomer,
@@ -279,6 +279,16 @@ const customerSchema = z.object({
      به الخطة نقص الاشتراك. من يُسجَّل بلا الرقمين يطبع ملصقاً يقرأ من النص
      الحر القديم فينفرد بشكل مختلف عن بقية الرزمة — لذا يُمنع الحفظ هنا. */
   .superRefine((data, ctx) => {
+    /* حارس أخير مهما اختلّ الحساب: اشتراك ينتهي قبل أن يبدأ لا يُطعم أحداً
+       ويُسقط إرسال الخطة بلا سبب مفهوم للمشترك. */
+    const st = String(data.startDate || ""), en = String(data.endDate || "");
+    if (/^\d{4}-\d{2}-\d{2}$/.test(st) && /^\d{4}-\d{2}-\d{2}$/.test(en) && en < st) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["endDate"],
+        message: "تاريخ النهاية قبل البداية / End date is before the start date",
+      });
+    }
     const meals = Number(data.mealsPerDay);
     if (!Number.isFinite(meals) || meals < 1) {
       ctx.addIssue({
@@ -509,6 +519,20 @@ export default function Customers() {
   const watchedStart = form.watch("startDate");
   const watchedEnd = form.watch("endDate");
   const computedWeeks = weeksBetween(watchedStart, watchedEnd);
+
+  /* النهاية كانت تُحسب عند اختيار الباقة فقط. من يختار الباقة ثم يضبط
+     البداية — وهو ما يحدث في كل تجديد — تبقى نهايته القديمة مكانها، فتخرج
+     بداية بعد نهاية: آمنة الحاتمي بدأت 1-8 ونهايتها 28-7، فحسب النظام أن لا
+     يوم واحد صالح ورفض إرسال خطتها. تحريك البداية يُزحزح النهاية بنفس المدّة. */
+  const prevStartRef = useRef<string>("");
+  useEffect(() => {
+    const prev = prevStartRef.current;
+    prevStartRef.current = watchedStart || "";
+    if (!prev || !watchedStart || prev === watchedStart) return;
+    const weeks = weeksBetween(prev, form.getValues("endDate"))
+      ?? (Number(form.getValues("durationWeeks")) || 0);
+    if (weeks > 0) form.setValue("endDate", addWeeksISO(watchedStart, weeks), { shouldDirty: true });
+  }, [watchedStart]);
 
   // ✅ الأسبوع الذي يصادفه تاريخ بداية الاشتراك في دورة المطبخ (للأخصائية).
   const startRotation = useQuery(
