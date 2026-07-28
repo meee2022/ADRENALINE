@@ -189,6 +189,9 @@ export default function Kitchen() {
         (p: any) =>
           p.date === formattedDate &&
           p.deliveryTime === activeTab &&
+          // صفوف المخصّصين التشغيلية (تُولد عند «تحضير الكل» للتوصيل فقط) لا
+          // تظهر هنا — المطبخ يقرأ وجباتهم من قسم القوالب أعلاه.
+          (p as any).origin !== "CUSTOMIZED" &&
           (p.status === "CONFIRMED" || p.status === "PREPARED")
       )
       .sort((a: any, b: any) => {
@@ -1343,10 +1346,10 @@ export default function Kitchen() {
     const ok = await confirmDialog({
       message: isRtl
         ? `⚠️ تحضير كل خطط ${dayName} (${whichDay})؟
-${dayConfirmed.total} خطة مؤكدة (${dayConfirmed.morning} صباحي + ${dayConfirmed.evening} مسائي) ستتعلّم «تم التحضير» ويُخصم مخزونها وتظهر للتوصيل.
+${dayConfirmed.total} خطة مؤكدة (${dayConfirmed.morning} صباحي + ${dayConfirmed.evening} مسائي) ستتعلّم «تم التحضير» ويُخصم مخزونها وتظهر للتوصيل، وسيدخل المخصّصون منظومة التوصيل أيضاً.
 لو كنت تقصد يوماً آخر بدّل Today/Tomorrow أعلى الشاشة أولاً.`
         : `⚠️ Prepare ALL plans of ${dayName} (${whichDay})?
-${dayConfirmed.total} confirmed plans (${dayConfirmed.morning} morning + ${dayConfirmed.evening} evening) will be marked prepared, inventory deducted, and sent to delivery.
+${dayConfirmed.total} confirmed plans (${dayConfirmed.morning} morning + ${dayConfirmed.evening} evening) will be marked prepared, inventory deducted, and sent to delivery — customized subscribers join delivery too.
 If you meant another day, switch Today/Tomorrow first.`,
     });
     if (!ok) return;
@@ -1354,8 +1357,10 @@ If you meant another day, switch Today/Tomorrow first.`,
     try {
       const r: any = await prepareAllMutation({ date: formattedDate, sessionToken: sessionTok } as any);
       void alertDialog({ message: isRtl
-        ? `تم تحضير ${r.prepared} خطة (اليوم كاملاً بورديتيه) ✓`
-        : `Prepared ${r.prepared} plan(s) — the whole day, both shifts ✓` });
+        ? `تم تحضير ${r.prepared} خطة (اليوم كاملاً بورديتيه) ✓${r.preparedCustomized ? `
++ ${r.preparedCustomized} مخصّص دخلوا التوصيل` : ""}`
+        : `Prepared ${r.prepared} plan(s) — the whole day, both shifts ✓${r.preparedCustomized ? `
++ ${r.preparedCustomized} customized sent to delivery` : ""}` });
     } catch (e: any) {
       void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "تعذّر التحضير" : "Couldn't prepare") });
     } finally { setPreparingAll(false); }

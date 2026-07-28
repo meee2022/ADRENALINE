@@ -582,6 +582,9 @@ export default defineSchema({
     // ✅ تتبع المصدر — لو الخطة جاية من approve order، نحفظ orderId
     // عشان نمنع التكرار لو الـ approve اتنفذ أكثر من مرة لنفس الطلب
     sourceOrderId: v.optional(v.id("customerOrders")),
+    // ✅ "CUSTOMIZED" = صفّ تشغيلي وُلد من قالب مخصّص عند «تحضير الكل» ليدخل
+    //    صاحبه منظومة التوصيل. المطبخ والاستيكرات يقرآن القالب نفسه ويتجاهلانه.
+    origin: v.optional(v.string()),
     // ✅ ختم خصم المخزون (idempotent) — يُملأ عند تحضير الخطة وخصم المكوّنات
     inventoryConsumedAt: v.optional(v.number()),
     // ✅ أختام التوصيل الحقيقية (بدل وقت العرض المتغيّر)

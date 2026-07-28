@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { convertUnit } from "./units";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
+import { dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { autoPostInventoryMovement, autoPostInventoryReceipt } from "./financePost";
 
 async function fifoValue(ctx: any, itemId: Id<"inventoryItems">, quantity: number) {
@@ -1054,7 +1055,47 @@ export const prepareAndConsumeAllForDate = mutation({
       await prepareAndConsumeOne(ctx, p._id);
       prepared++;
     }
-    return { prepared, skipped };
+
+    /* المخصّصون: وجباتهم في القوالب لا في الخطط اليومية، فكانت منظومة التوصيل
+       لا تعرفهم إطلاقاً — لا لوحة التوصيل ولا تطبيق السائق. عند «تحضير الكل»
+       نولّد لكل مخصّصٍ محسوبٍ في هذا اليوم صفَّ خطة تشغيلياً (origin=CUSTOMIZED،
+       PREPARED مباشرة) ليركب سلسلة التوصيل كأي مشترك. المطبخ والاستيكرات
+       يقرآن القالب نفسه ويستبعدان صفوف أصحاب القوالب، فلا ازدواج.
+       ولا خصم مخزون هنا: وجبات القوالب نصوص وصفات بلا رسيبيات مربوطة. */
+    const withPlan = new Set((plans as any[]).map((p) => String(p.customerId || "")));
+    const templates = await ctx.db.query("customizedTemplates").collect();
+    const settings: any = await ctx.db.query("restaurantSettings").first();
+    const curWk = Number(settings?.currentCookingWeek) || 1;
+    const anchor = String(settings?.cookingWeekAdvancedOn || "");
+    const rot = /^\d{4}-\d{2}-\d{2}$/.test(anchor) ? rotationWeekAtDate(curWk, anchor, date) : curWk;
+    const dayKey = dayNameOf(date);
+    let preparedCustomized = 0;
+    for (const t of templates as any[]) {
+      if (withPlan.has(String(t.customerId))) continue; // له صفّ فعلاً — لا تكرار
+      const c: any = await ctx.db.get(t.customerId);
+      if (!c) continue;
+      const pf = String(c.pausedFrom || "").slice(0, 10);
+      if (pf ? date >= pf : !c.isActive) continue;
+      if (c.startDate && String(c.startDate).slice(0, 10) > date) continue;
+      if (c.endDate && String(c.endDate).slice(0, 10) < date) continue;
+      const cTime = String(c.deliveryTime || "MORNING");
+      if (deliveryTime && cTime !== deliveryTime) continue;
+      const wk = t.slots?.weeks ? (t.slots.weeks[rot] || t.slots.weeks[String(rot)])?.days : null;
+      const days = wk || t.slots?.days;
+      const arr: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : [];
+      const filled = arr.filter((x: any) => x && x.type !== "OFF" && (x.baseName || x.text || x.proteinG));
+      if (!filled.length) continue; // يومه فاضي — لا شيء يوصَل
+      const now = Date.now();
+      await ctx.db.insert("dailyPlans", {
+        date, customerId: t.customerId, deliveryTime: cTime as any,
+        status: "PREPARED", origin: "CUSTOMIZED",
+        items: filled.map((x: any) => ({ mealNameEn: String(x.text || x.baseName || "").trim(), isOff: false })),
+        inventoryConsumedAt: now, // ختم يمنع أي خصم لاحق بالخطأ
+        createdAt: now, updatedAt: now,
+      });
+      preparedCustomized++;
+    }
+    return { prepared, skipped, preparedCustomized };
   },
 });
 
