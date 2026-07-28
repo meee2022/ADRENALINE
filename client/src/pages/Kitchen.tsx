@@ -1546,9 +1546,23 @@ If you meant another day, switch Today/Tomorrow first.`,
               const label = `${isTomorrow ? "🍳 Prep for TOMORROW's delivery (cook today) — " : isTodayDate ? "Today's delivery — " : "Delivery — "}${format(date, "EEEE, d MMMM yyyy", { locale: enUS })}`;
               return { subtitleAr: label, subtitleEn: label };
             })()}
+            /* إجمالي اليوم أولاً (عاديون + مخصّصون) ثم توزيع الورديتين، ثم
+               حالة الوردية المفتوحة — كان الرأس يعرض الوردية وحدها بلا
+               المخصّصين، فلا يُقرأ حجم اليوم من مكان واحد. */
             kpis={[
-              { value: stats.today, labelAr: "قيد التحضير", labelEn: "To Prepare" },
-              { value: stats.prepared, labelAr: "جاهز", labelEn: "Prepared" },
+              {
+                value: dayTotals.total,
+                labelAr: `إجمالي اليوم · ${dayTotals.regular}+${dayTotals.custom} مخصّص`,
+                labelEn: `Day total · ${dayTotals.regular}+${dayTotals.custom} custom`,
+              },
+              { value: dayTotals.morning, labelAr: "صباحي", labelEn: "Morning", color: "#fcd34d" },
+              { value: dayTotals.evening, labelAr: "مسائي", labelEn: "Evening", color: "#a5b4fc" },
+              {
+                value: `${stats.prepared}/${stats.today + stats.prepared}`,
+                labelAr: "محضَّر (هذه الوردية)",
+                labelEn: "Prepared (this shift)",
+                color: "#6ee7b7",
+              },
             ]}
             actions={
               <>
@@ -1650,27 +1664,6 @@ If you meant another day, switch Today/Tomorrow first.`,
 
         {/* Content */}
         <div className="max-w-[1500px] mx-auto px-3 sm:px-5 py-4 space-y-4">
-          {/* إجمالي اليوم — ثابت لا يتبدّل بتبديل التبويب: حجم اليوم لا الوردية */}
-          {dayTotals.total > 0 && (
-            <div className="rounded-2xl border border-[#cfe4f3] bg-white px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <span className="text-[12px] font-black text-[#0E2A4A]">
-                {isRtl ? "إجمالي اليوم" : "Day total"}
-              </span>
-              <span className="text-2xl font-black text-[#0E76AC] tabular-nums">{dayTotals.total}</span>
-              <span className="text-[11px] font-bold text-slate-500">
-                {isRtl ? `${dayTotals.regular} عادي + ${dayTotals.custom} مخصّص`
-                       : `${dayTotals.regular} standard + ${dayTotals.custom} customized`}
-              </span>
-              <span className="ms-auto flex items-center gap-2">
-                <span className="text-[11px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
-                  ☀ {isRtl ? "صباحي" : "Morning"} {dayTotals.morning}
-                </span>
-                <span className="text-[11px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1">
-                  ☾ {isRtl ? "مسائي" : "Evening"} {dayTotals.evening}
-                </span>
-              </span>
-            </div>
-          )}
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
