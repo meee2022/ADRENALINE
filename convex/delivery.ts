@@ -231,16 +231,29 @@ export const customerAssignments = query({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const customers = await ctx.db.query("customers").collect();
+    /* حسابات سائقين حُذفت وبقيت مراجعها على العملاء: الصفّ يبدو مربوطاً
+       (أخضر) والقائمة لا تجد الاسم فتعرض «بلا سائق…» — فلا يُنبَّه أحد ولا
+       يصل الطلب للسائق. نُعلّم المرجع الميت صراحةً ليُعاد ربطه. */
+    const driverIds = new Set(
+      (await ctx.db.query("users").collect())
+        .filter((u: any) => String(u.role || "").toUpperCase() === "DELIVERY")
+        .map((u: any) => String(u._id)),
+    );
     return customers
       .filter((c: any) => c.isActive)
-      .map((c: any) => ({
-        id: String(c._id),
-        name: c.fullName || "",
-        phone: c.phone || "",
-        area: String(c.address || "").split(/[,،\-|]/)[0].trim(),
-        deliveryTime: c.deliveryTime || "MORNING",
-        driverId: c.defaultDriverId ? String(c.defaultDriverId) : "",
-      }))
+      .map((c: any) => {
+        const raw = c.defaultDriverId ? String(c.defaultDriverId) : "";
+        const stale = !!raw && !driverIds.has(raw);
+        return {
+          id: String(c._id),
+          name: c.fullName || "",
+          phone: c.phone || "",
+          area: String(c.address || "").split(/[,،\-|]/)[0].trim(),
+          deliveryTime: c.deliveryTime || "MORNING",
+          driverId: stale ? "" : raw,
+          staleDriver: stale,
+        };
+      })
       .sort((a: any, b: any) => a.name.localeCompare(b.name, "ar"));
   },
 });

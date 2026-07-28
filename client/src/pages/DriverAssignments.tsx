@@ -52,15 +52,23 @@ export default function DriverAssignments() {
   const driverName = (id: string) => drivers.find((d) => String(d._id) === id)?.name || "";
 
   // عدّادات الربط لكل سائق + غير المربوطين
+  /** كلمة بحث محجوزة: تعرض من ضاع ربطه بحذف حساب سائقه. */
+  const STALE_FILTER = "@stale";
+
   const counts = useMemo(() => {
     const m: Record<string, number> = {};
     let none = 0;
-    for (const c of assignments) c.driverId ? (m[c.driverId] = (m[c.driverId] || 0) + 1) : none++;
-    return { m, none };
+    let stale = 0;
+    for (const c of assignments) {
+      if (c.driverId) m[c.driverId] = (m[c.driverId] || 0) + 1;
+      else { none++; if ((c as any).staleDriver) stale++; }
+    }
+    return { m, none, stale };
   }, [assignments]);
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
+    if (s === STALE_FILTER) return assignments.filter((c: any) => c.staleDriver);
     if (!s) return assignments;
     return assignments.filter((c) =>
       c.name.toLowerCase().includes(s) || String(c.phone).includes(s) || (c.area || "").toLowerCase().includes(s) ||
@@ -226,6 +234,19 @@ export default function DriverAssignments() {
             </div>
           </div>
 
+          {/* من كان سائقه على حساب محذوف يبدو «بلا سائق» ولا شيء ينبّه أن ربطاً
+              قديماً ضاع — نُبرزه ونعطي طريقاً مباشراً لتصفيته وإعادة ربطه. */}
+          {counts.stale > 0 && (
+            <button onClick={() => setSearch(STALE_FILTER)}
+              className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-start flex items-center gap-3 hover:bg-rose-100 transition-colors">
+              <span className="text-2xl font-black text-rose-600">{counts.stale}</span>
+              <span className="flex-1 text-[12px] font-black text-rose-700">
+                {t("عميل سائقه القديم اتحذف — اضغط لعرضهم وإعادة ربطهم",
+                   "customers whose old driver was deleted — tap to list and reassign")}
+              </span>
+            </button>
+          )}
+
           {/* البحث */}
           <div className="relative">
             <Search className={cn("absolute top-3 h-4 w-4 text-slate-400", isRtl ? "right-3" : "left-3")} />
@@ -246,10 +267,17 @@ export default function DriverAssignments() {
                     </span>
                   </p>
                   <p className="text-[11px] text-slate-400 truncate"><span dir="ltr">{c.phone}</span>{c.area ? ` · ${c.area}` : ""}</p>
+                  {c.staleDriver && (
+                    <p className="text-[10px] font-black text-rose-600 mt-0.5">
+                      ⚠ {t("سائقه القديم اتحذف — أعد ربطه", "Old driver deleted — reassign")}
+                    </p>
+                  )}
                 </div>
                 <select value={c.driverId} onChange={(e) => setDriver(c.id, e.target.value)}
                   className={cn("h-9 rounded-lg border px-2 text-xs font-bold bg-white shrink-0 w-36",
-                    c.driverId ? "border-emerald-300 text-emerald-700" : "border-amber-300 text-amber-600")}>
+                    c.driverId ? "border-emerald-300 text-emerald-700"
+                    : c.staleDriver ? "border-rose-400 text-rose-600 bg-rose-50"
+                    : "border-amber-300 text-amber-600")}>
                   <option value="">{t("بلا سائق…", "No driver…")}</option>
                   {drivers.map((d: any) => <option key={d._id} value={d._id}>{d.name}</option>)}
                 </select>

@@ -1338,7 +1338,102 @@ export default function Kitchen() {
        isRtl: false,
        pageNumbers: true,
        autoPrint: false,
-     });
+    });
+  };
+
+  /**
+   * Compact production totals: one aggregate row per regular dish, followed
+   * by one row per customized main meal. Customized sides stay in mealSummary.
+   */
+  const handlePrintProductionTotals = () => {
+    const esc = (value: unknown) => String(value ?? "").replace(/[&<>"]/g, (char) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] as string
+    ));
+    const normalize = (value: unknown) => String(value || "")
+      .toUpperCase()
+      .replace(/[‏‎]/g, "")
+      .replace(/[^A-Z0-9\u0600-\u06FF]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const breakfastNames = mealSummary
+      .filter((meal: any) => normalize(meal.category).includes("BREAKFAST") || normalize(meal.category).includes("فطور"))
+      .map((meal: any) => normalize(meal.name))
+      .filter(Boolean);
+    const customizedMainRows = customizedAll.flatMap((person: any) => (
+      (person.meals || [])
+        .filter((meal: any) => {
+          if (meal.notset || meal.isSide) return false;
+          const mealText = normalize(meal.text);
+          return !breakfastNames.some((name) => mealText === name || mealText.startsWith(`${name} `));
+        })
+        .map((meal: any) => ({
+          customer: person.name,
+          meal: meal.text,
+          deliveryTime: person.deliveryTime,
+        }))
+    ));
+    const groupedTotal = mealSummary.reduce((sum, meal: any) => sum + Number(meal.count || 0), 0);
+    const operationalTotal = groupedTotal + customizedMainRows.length;
+    const groupedRows = mealSummary.map((meal: any, index: number) => `
+      <tr>
+        <td class="index">${index + 1}</td>
+        <td class="dish">${esc(meal.name)}</td>
+        <td class="category">${esc(meal.category)}</td>
+        <td class="qty">${Number(meal.count || 0)}</td>
+      </tr>`).join("");
+    const customizedRows = customizedMainRows.map((row: any, index: number) => `
+      <tr>
+        <td class="index">${index + 1}</td>
+        <td class="dish">${esc(row.meal)}</td>
+        <td class="customer">${esc(row.customer)} <small>${row.deliveryTime === "EVENING" ? "EVENING" : "MORNING"}</small></td>
+        <td class="qty">1</td>
+      </tr>`).join("");
+
+    const html = `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8">
+      <title>Production Totals ${esc(formattedDate)}</title>
+      <style>
+        *{box-sizing:border-box}
+        body{margin:0;background:#fff;color:#10283f;font:12px 'Segoe UI',Tahoma,sans-serif}
+        .actions{position:sticky;top:0;z-index:5;display:flex;justify-content:flex-end;gap:8px;padding:8px 0;background:#fff}
+        .actions button{border:0;border-radius:7px;padding:9px 15px;background:#0e76ac;color:#fff;font-weight:800;cursor:pointer}
+        .actions .close{background:#fff;color:#0d3b5f;border:1px solid #bdd3e1}
+        .masthead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #28b7e1;padding:4px 0 7px;margin-bottom:8px}
+        h1{margin:0;color:#0d3b5f;font-size:20px;letter-spacing:.2px}.date{text-align:right;color:#54738a;font-weight:700}
+        .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}
+        .kpi{border:1px solid #cfe0eb;border-radius:7px;background:#f7fbfd;padding:7px 10px}
+        .kpi b{display:block;color:#0e76ac;font-size:22px;line-height:1}.kpi span{display:block;margin-top:3px;color:#54738a;font-size:9px;font-weight:900;text-transform:uppercase}
+        table{width:100%;border-collapse:collapse;table-layout:fixed;margin-bottom:12px}
+        th,td{border:1px solid #9cb2c2;padding:5px 8px;vertical-align:middle}
+        th{background:#e9f2f7;color:#54738a;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+        .section{margin:0;background:#0d3b5f;color:#fff;padding:6px 9px;font-size:13px;font-weight:900;letter-spacing:.6px}
+        .index{width:34px;text-align:center;color:#7890a2}.dish{font-weight:800}.category{width:150px;color:#54738a;font-size:10px;font-weight:700}
+        .customer{width:220px;color:#0e76ac;font-weight:800}.customer small{margin-left:6px;color:#7890a2;font-size:8px}
+        .qty{width:70px;text-align:center;color:#dc2626;font-size:16px;font-weight:950}
+        tr{break-inside:avoid;page-break-inside:avoid}
+        @page{size:A4 portrait;margin:9mm 8mm 11mm}
+        @media print{.actions{display:none}body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+      </style></head><body>
+        <div class="actions"><button onclick="window.print()">Print / Save PDF</button><button class="close" onclick="window.close()">Close</button></div>
+        <div class="masthead"><h1>ADRENALINE · PRODUCTION TOTALS</h1><div class="date">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
+        <div class="kpis">
+          <div class="kpi"><b>${operationalTotal}</b><span>Total portions to produce</span></div>
+          <div class="kpi"><b>${groupedTotal}</b><span>Grouped regular portions</span></div>
+          <div class="kpi"><b>${customizedMainRows.length}</b><span>Customized main portions</span></div>
+        </div>
+        <h2 class="section">GROUPED DISH TOTALS</h2>
+        <table><thead><tr><th class="index">#</th><th>Dish</th><th class="category">Category</th><th class="qty">Qty</th></tr></thead><tbody>${groupedRows}</tbody></table>
+        ${customizedMainRows.length ? `
+          <h2 class="section">CUSTOMIZED MAIN MEALS · ONE ROW PER CUSTOMER</h2>
+          <table><thead><tr><th class="index">#</th><th>Customized main meal</th><th class="customer">Customer / shift</th><th class="qty">Qty</th></tr></thead><tbody>${customizedRows}</tbody></table>
+        ` : ""}
+      </body></html>`;
+
+    openPrintDoc(html, {
+      fileName: `Production totals - ADRENALINE - ${formattedDate}`,
+      isRtl: false,
+      pageNumbers: true,
+      autoPrint: false,
+    });
   };
 
   /* «تحضير الكل»: المطبخ يغلّف الرزمة كاملة ثم كان يفتح 90+ كرتاً ليضغط
@@ -1584,6 +1679,14 @@ If you meant another day, switch Today/Tomorrow first.`,
                       >
                         <Download className="h-4 w-4" />
                         {isRtl ? "قائمة الطلبات" : "Order List"}
+                      </button>
+                      <button
+                        onClick={handlePrintProductionTotals}
+                        title={isRtl ? "كشف إجمالي الكميات المطلوبة للإنتاج" : "Compact totals for kitchen production"}
+                        className="h-10 px-4 rounded-lg bg-[#10283f] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#173b59] active:scale-95 transition-all"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        {isRtl ? "مجاميع الإنتاج" : "Production Totals"}
                       </button>
                     </div>
                   </div>
