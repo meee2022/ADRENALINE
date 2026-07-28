@@ -381,13 +381,22 @@ export default function PantryLabels() {
         .sp-preview .sp-label { transform: scale(1.6); transform-origin: center; margin: 12mm 0; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 
         @media print {
+          /* نفس تثبيت استيكرات المنافذ: بلا هوامش الصفحة وبعرض الملصق تماماً.
+             بدونه كان هامش body يزيح المحتوى فينزل السطر الأخير لصفحة ثانية. */
+          @page { size: 58mm 39mm; margin: 0; }
+          html, body {
+            width: 58mm !important; margin: 0 !important; padding: 0 !important;
+            background: #fff !important;
+          }
           body * { visibility: hidden; }
           .sp-print-run, .sp-print-run * { visibility: visible; }
-          .sp-print-run { position: absolute; inset: 0; }
-          @page { size: 58mm 39mm; margin: 0; }
-          .sp-page { page-break-after: always; width: 58mm; height: 39mm; }
-          .sp-page:last-child { page-break-after: auto; }
-          .sp-page .sp-label { border: none; border-radius: 0; }
+          .sp-print-run { position: absolute; left: 0; top: 0; width: 58mm; }
+          .sp-page {
+            width: 58mm; height: 39mm; overflow: hidden;   /* لا يتسرّب سطر لصفحة تالية */
+            break-after: page; page-break-after: always; break-inside: avoid;
+          }
+          .sp-page:last-child { break-after: auto; page-break-after: auto; }
+          .sp-page .sp-label { border: 0; border-radius: 0; width: 58mm; height: 39mm; }
         }
       `}</style>
     </div>
