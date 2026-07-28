@@ -193,7 +193,7 @@ export default function PantryLabels() {
   };
 
   return (
-    <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-4" dir={dir}>
+    <div className="pantry-root p-4 md:p-6 max-w-5xl mx-auto space-y-4" dir={dir}>
       <div className="flex items-center gap-3 print:hidden">
         <div className="h-10 w-10 rounded-xl flex items-center justify-center text-white"
           style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
@@ -381,22 +381,26 @@ export default function PantryLabels() {
         .sp-preview .sp-label { transform: scale(1.6); transform-origin: center; margin: 12mm 0; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 
         @media print {
-          /* نفس تثبيت استيكرات المنافذ: بلا هوامش الصفحة وبعرض الملصق تماماً.
-             بدونه كان هامش body يزيح المحتوى فينزل السطر الأخير لصفحة ثانية. */
+          /* نفس آلية استيكرات المنافذ حرفياً — وهي التي تطبع صفحةً لكل ملصق.
+             الآلية السابقة كانت تُخفي الصفحة بـvisibility وتضع رزمة الطباعة
+             في وضع absolute، وكروم لا يُقسّم العنصر المطلق على الصفحات، فكان
+             السطر الأخير يفيض إلى الملصق التالي. الآن: بقيّة الصفحة مخفيّة
+             بـprint:hidden أصلاً، والرزمة كتلة عادية تُقسَّم قبل كل ملصق. */
           @page { size: 58mm 39mm; margin: 0; }
           html, body {
             width: 58mm !important; margin: 0 !important; padding: 0 !important;
             background: #fff !important;
           }
-          body * { visibility: hidden; }
-          .sp-print-run, .sp-print-run * { visibility: visible; }
-          .sp-print-run { position: absolute; left: 0; top: 0; width: 58mm; }
-          .sp-page {
-            width: 58mm; height: 39mm; overflow: hidden;   /* لا يتسرّب سطر لصفحة تالية */
-            break-after: page; page-break-after: always; break-inside: avoid;
+          .pantry-root {
+            padding: 0 !important; margin: 0 !important; max-width: none !important;
           }
-          .sp-page:last-child { break-after: auto; page-break-after: auto; }
-          .sp-page .sp-label { border: 0; border-radius: 0; width: 58mm; height: 39mm; }
+          .sp-print-run { display: block !important; }
+          .sp-page {
+            width: 58mm; height: 39mm; overflow: hidden; margin: 0;
+            break-before: page; page-break-before: always; break-inside: avoid;
+          }
+          .sp-page:first-child { break-before: auto; page-break-before: auto; }
+          .sp-page .sp-label { border: 0 !important; border-radius: 0 !important; margin: 0 !important; }
         }
       `}</style>
     </div>
