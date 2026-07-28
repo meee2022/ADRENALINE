@@ -8,6 +8,7 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { openPrintDoc } from "@/lib/printDoc";
 import { api } from "@/../../convex/_generated/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -15,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useToast } from "@/hooks/use-toast";
-import { Truck, Users, Search, CheckCircle2, Route } from "lucide-react";
+import { Truck, Users, Search, CheckCircle2, Route, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -65,6 +66,80 @@ export default function DriverAssignments() {
     }
     return { m, none, stale };
   }, [assignments]);
+
+  /* ورقة تحميل لكل سائق: رقم البوكس + الاسم + الهاتف + المنطقة. السائق
+     يحمّل من رصّة فيها مئة بوكس مرقّم، فبالورقة يلتقط أرقامه بدل قراءة
+     كل اسم. الرقم هو نفسه المطبوع على استيكر البوكس (stickerBoxNumbers). */
+  const sheetFor = (rows: any[]) =>
+    rows.slice().sort((a, b) => (a.boxNo || 9999) - (b.boxNo || 9999)).map((st, i) => `
+      <tr>
+        <td class="n">${i + 1}</td>
+        <td class="box">${st.boxNo || "—"}</td>
+        <td class="nm">${String(st.customer || "").replace(/[<>&]/g, "")}</td>
+        <td class="ph" dir="ltr">${String(st.phone || "")}</td>
+        <td class="ar">${String(st.area || "").replace(/[<>&]/g, "")}</td>
+        <td class="sig"></td>
+      </tr>`).join("");
+
+  const printDriverSheet = (list: Array<{ driver: string; stops: any[] }>) => {
+    const shiftLbl = shift === "MORNING" ? t("صباحي", "Morning")
+      : shift === "EVENING" ? t("مسائي", "Evening") : t("اليوم كامل", "All day");
+    const pages = list.filter((d) => d.stops.length).map((d, idx) => `
+      <section class="pg" ${idx ? 'style="page-break-before:always"' : ""}>
+        <div class="hd">
+          <div class="brand">ADRENALINE<small>HEALTHY FOOD</small></div>
+          <div class="meta">
+            <b>${t("كشف تحميل السائق", "Driver loading sheet")}</b>
+            <span>${date} · ${shiftLbl}</span>
+          </div>
+        </div>
+        <div class="drv"><span>${t("السائق", "Driver")}</span><b>${String(d.driver || "").replace(/[<>&]/g, "")}</b>
+          <span class="cnt">${d.stops.length} ${t("بوكس", "boxes")}</span></div>
+        <table>
+          <thead><tr>
+            <th class="n">#</th><th class="box">${t("رقم البوكس", "Box No.")}</th>
+            <th>${t("العميل", "Customer")}</th><th>${t("الهاتف", "Phone")}</th>
+            <th>${t("المنطقة", "Area")}</th><th class="sig">${t("تسليم", "Signed")}</th>
+          </tr></thead>
+          <tbody>${sheetFor(d.stops)}</tbody>
+        </table>
+        <div class="ft">${t("استلمت البوكسات أعلاه", "Boxes above received")} — ${t("توقيع السائق", "Driver signature")}: ______________________</div>
+      </section>`).join("");
+
+    if (!pages) { toast({ title: t("لا محطات للطباعة", "Nothing to print") }); return; }
+
+    openPrintDoc(`<!doctype html><html dir="${isRtl ? "rtl" : "ltr"}"><head><meta charset="utf-8">
+      <title>driver-sheet-${date}</title><style>
+      *{box-sizing:border-box;font-family:'Cairo','Segoe UI',Tahoma,sans-serif}
+      body{margin:0;background:#fff;color:#0E2A4A;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pg{padding:10mm 8mm}
+      .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5px solid #0E76AC;padding-bottom:6px}
+      .brand{font-size:19px;font-weight:900;letter-spacing:.12em}
+      .brand small{display:block;font-size:7.5px;letter-spacing:.35em;font-weight:700;opacity:.7}
+      .meta{text-align:${isRtl ? "left" : "right"}}
+      .meta b{display:block;font-size:14px}
+      .meta span{font-size:11px;color:#47759c;font-weight:700}
+      .drv{margin:9px 0;background:#eaf3fb;border:1px solid #cfe4f3;border-radius:7px;padding:7px 12px;
+           display:flex;align-items:center;gap:10px;font-size:13px}
+      .drv b{font-size:19px;font-weight:900}
+      .drv span{font-size:11px;color:#47759c;font-weight:800}
+      .drv .cnt{margin-inline-start:auto;background:#0E76AC;color:#fff;border-radius:99px;padding:3px 12px;font-size:12px}
+      table{width:100%;border-collapse:collapse;font-size:12px}
+      th{background:#0E76AC;color:#fff;padding:6px 4px;font-size:10.5px;border:1px solid #0b5f8a}
+      td{border:1px solid #cfd9e4;padding:6px 5px;vertical-align:middle}
+      tr:nth-child(even) td{background:#f7fbfe}
+      .n{width:9mm;text-align:center;color:#94a3b8;font-size:10px}
+      .box{width:20mm;text-align:center;font-size:17px;font-weight:900;color:#0E76AC}
+      .nm{font-weight:800}
+      .ph{width:26mm;font-size:11px;color:#475569}
+      .ar{width:32mm;font-size:11px;color:#475569}
+      .sig{width:24mm}
+      .ft{margin-top:10px;font-size:11px;color:#64748b;font-weight:700}
+      @page{size:A4 portrait;margin:0}
+      @media print{tr{break-inside:avoid}thead{display:table-header-group}}
+      </style></head><body>${pages}</body></html>`,
+      { fileName: `driver-sheets-${date}`, isRtl, width: 860, height: 980, pageNumbers: false });
+  };
 
   const filtered = useMemo(() => {
     const s = search.trim().toLowerCase();
@@ -158,6 +233,10 @@ export default function DriverAssignments() {
                           <span className="font-black text-lg">{d.driver}</span>
                         </div>
                         <div className="flex items-center gap-3 text-sm font-black">
+                          <button onClick={() => printDriverSheet([d])} title={t("اطبع كشف التحميل", "Print loading sheet")}
+                            className="h-8 w-8 rounded-lg bg-white/15 hover:bg-white/25 grid place-items-center transition-colors">
+                            <Printer className="h-4 w-4" />
+                          </button>
                           <span className="text-emerald-300">✓ {d.delivered}</span>
                           <span className="text-cyan-200">🚚 {d.onTheWay}</span>
                           <span className="text-amber-200">⏳ {d.remaining}</span>
@@ -177,6 +256,7 @@ export default function DriverAssignments() {
                         return (
                           <div key={s.planId} className="px-3.5 py-2 flex items-center gap-2 text-sm">
                             <span className={cn("text-[10px] font-black rounded-full px-2 py-0.5 shrink-0", st.cls)}>{isRtl ? st.ar : st.en}</span>
+                            {s.boxNo ? <span className="text-[11px] font-black text-[#0E76AC] shrink-0 tabular-nums">#{s.boxNo}</span> : null}
                             <span className="font-bold text-slate-800 truncate">{s.customer}</span>
                             {s.area && <span className="text-[11px] text-slate-400 truncate hidden sm:block">· {s.area}</span>}
                             <span className="ms-auto text-[11px] text-slate-400 shrink-0" dir="ltr">{s.phone}</span>
@@ -190,6 +270,15 @@ export default function DriverAssignments() {
               );
             })}
           </div>
+
+          {board && board.drivers.length > 0 && (
+            <button onClick={() => printDriverSheet(board.drivers)}
+              className="w-full h-11 rounded-xl bg-[#0E2A4A] text-white font-black text-sm flex items-center justify-center gap-2">
+              <Printer className="h-4 w-4" />
+              {t(`اطبع كشوف التحميل — كل السواقين (${board.drivers.length})`,
+                 `Print loading sheets — all drivers (${board.drivers.length})`)}
+            </button>
+          )}
 
           {(!board || board.drivers.length === 0) && (
             <Card className="border-dashed"><CardContent className="py-10 text-center text-slate-400 font-bold">

@@ -329,6 +329,12 @@ export const driverBoard = query({
 
     const drivers = (await ctx.db.query("users").collect()).filter((u: any) => u.role === "DELIVERY" && u.isActive !== false);
     const byId = new Map(drivers.map((d: any) => [String(d._id), d]));
+    /* رقم البوكس المجمَّد لليوم (نفس ما يُطبع على الاستيكر) — السائق يطابق
+       الورقة بالبوكس الذي في يده، فلا يقرأ الأسماء واحداً واحداً. */
+    const boxNoBy = new Map<string, number>();
+    for (const b of await ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q: any) => q.eq("date", args.date)).collect()) {
+      boxNoBy.set(String((b as any).customerId), Number((b as any).boxNo) || 0);
+    }
 
     const board = new Map<string, any>();
     const ensure = (id: string, name: string) => {
@@ -345,8 +351,11 @@ export const driverBoard = query({
         customer: c?.fullName || (p as any).customerName || "—",
         phone: c?.phone || "",
         area: String(c?.address || "").split(/[,،\-|]/)[0].trim(),
+        address: c?.address || "",
         status: p.status,
         seq: (p as any).routeSeq || 0,
+        boxNo: c ? (boxNoBy.get(String(c._id)) || 0) : 0,
+        shift: p.deliveryTime,
       };
       const dId = (p as any).driverId ? String((p as any).driverId) : (c?.defaultDriverId ? String(c.defaultDriverId) : null);
       if (!dId || !byId.has(dId)) { unassigned++; unassignedStops.push(stop); continue; }
