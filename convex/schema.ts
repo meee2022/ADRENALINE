@@ -599,6 +599,11 @@ export default defineSchema({
     nearNotifiedAt: v.optional(v.number()),     // ختم إشعار "السائق قرّب"
     failedAt: v.optional(v.number()),           // ختم فشل التوصيل
     failReason: v.optional(v.string()),         // سبب الفشل (العميل غير موجود…)
+    failCode: v.optional(v.string()),           // كود سبب موحّد للتقارير
+    retryAction: v.optional(v.string()),        // الإجراء المطلوب: إعادة محاولة/مسائي/غد/CRM
+    recipientName: v.optional(v.string()),      // اسم مستلم الطلب عند التسليم
+    deliveredLat: v.optional(v.number()),       // موقع إثبات التسليم
+    deliveredLng: v.optional(v.number()),
   })
     .index("by_date", ["date"])
     .index("by_customerId", ["customerId"])

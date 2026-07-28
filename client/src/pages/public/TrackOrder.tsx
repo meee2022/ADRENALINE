@@ -8,7 +8,7 @@ import { useRoute } from "wouter";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { DeliveryMap } from "@/components/DeliveryMap";
-import { CheckCircle2, ChefHat, Truck, Home, Clock, MapPin, Loader2 } from "lucide-react";
+import { CheckCircle2, ChefHat, Truck, Home, Clock, MapPin, Loader2, Radio } from "lucide-react";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
@@ -48,6 +48,8 @@ export default function TrackOrder() {
   const stepIdx = ORDER[info.status] ?? 0;
   const stops = info.dest ? [{ id: "home", name: t("منزلك", "Your home"), lat: info.dest.lat, lng: info.dest.lng }] : [];
   const driver = info.driver && info.driver.lat != null ? { lat: info.driver.lat, lng: info.driver.lng } : null;
+  const locationAgeMinutes = info.driver?.updatedAt ? Math.max(0, Math.floor((Date.now() - info.driver.updatedAt) / 60000)) : null;
+  const locationIsStale = locationAgeMinutes != null && locationAgeMinutes >= 3;
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-50" style={{ fontFamily: "Cairo, sans-serif" }}>
@@ -76,6 +78,19 @@ export default function TrackOrder() {
                 <><p className="font-black text-[#0E2A4A]">{t("السائق في الطريق", "Driver on the way")}</p><p className="text-xs text-slate-400">{t("جارٍ تحديد الموقع…", "Locating…")}</p></>
               )}
             </div>
+          </div>
+        )}
+
+        {info.status === "OUT_FOR_DELIVERY" && (
+          <div className={`rounded-xl border px-4 py-3 flex items-center gap-2 text-xs font-bold ${
+            locationIsStale ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-white border-slate-100 text-slate-500"
+          }`}>
+            <Radio className={`h-4 w-4 shrink-0 ${locationIsStale ? "text-amber-600" : "text-emerald-500"}`} />
+            {locationAgeMinutes == null
+              ? t("لم يصل تحديث موقع من السائق بعد", "No driver location update yet")
+              : locationIsStale
+                ? t(`آخر تحديث للموقع منذ ${locationAgeMinutes} دقيقة`, `Location last updated ${locationAgeMinutes} min ago`)
+                : t("موقع السائق يتحدّث مباشرة", "Driver location is updating live")}
           </div>
         )}
 
@@ -168,6 +183,7 @@ export default function TrackOrder() {
               <img src={info.podPhotoUrl} alt={t("إثبات التسليم", "Delivery proof")} className="mt-3 mx-auto rounded-xl max-h-56 object-cover border border-emerald-200" />
             )}
             {info.podNote && <p className="text-xs text-emerald-600 mt-2">📝 {info.podNote}</p>}
+            {info.recipientName && <p className="text-xs text-emerald-700 mt-2">{t("استلمها:", "Received by:")} <strong>{info.recipientName}</strong></p>}
             <p className="text-xs text-slate-400 mt-2">{t("شكراً لاختيارك Adrenaline Healthy Food", "Thank you for choosing Adrenaline Healthy Food")}</p>
           </div>
         )}

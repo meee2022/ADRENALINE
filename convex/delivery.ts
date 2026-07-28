@@ -401,6 +401,7 @@ export const startDeliveryShift = mutation({
       .withIndex("by_date", (q: any) => q.eq("date", date))
       .collect();
     let started = 0;
+    const trackingLinks: Array<{ planId: string; customerName: string; phone: string | null; trackToken: string }> = [];
     for (const p of rows as any[]) {
       if (p.deliveryTime !== deliveryTime || p.status !== "PREPARED") continue;
       if (p.driverId) {
@@ -409,16 +410,36 @@ export const startDeliveryShift = mutation({
         const c: any = p.customerId ? await ctx.db.get(p.customerId) : null;
         if (String(c?.defaultDriverId || "") !== driverId) continue;
       }
+      const token = p.trackToken || newToken();
       await ctx.db.patch(p._id, {
         status: "OUT_FOR_DELIVERY",
         outForDeliveryAt: Date.now(),
-        trackToken: p.trackToken || newToken(),
+        trackToken: token,
         driverId: p.driverId || (staff.userId as any),
         updatedAt: Date.now(),
       });
+      const c: any = p.customerId ? await ctx.db.get(p.customerId) : null;
+      if (p.customerId) {
+        await ctx.db.insert("notifications", {
+          targetCustomerId: p.customerId,
+          type: "SYSTEM",
+          title: "طلبك في الطريق 🚚",
+          message: "بدأ السائق جولة التوصيل. يمكنك متابعة موقعه ووقت الوصول من رابط التتبع.",
+          link: `/track/${token}`,
+          relatedId: p._id,
+          isRead: false,
+          createdAt: Date.now(),
+        });
+      }
+      trackingLinks.push({
+        planId: String(p._id),
+        customerName: c?.fullName || p.customerName || "عميل",
+        phone: c?.phone || null,
+        trackToken: token,
+      });
       started++;
     }
-    return { started };
+    return { started, trackingLinks };
   },
 });
 
@@ -449,9 +470,12 @@ export const markDelivered = mutation({
     planId: v.id("dailyPlans"),
     podNote: v.optional(v.string()),
     podStorageId: v.optional(v.id("_storage")),
+    recipientName: v.optional(v.string()),
+    deliveredLat: v.optional(v.number()),
+    deliveredLng: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { planId, podNote, podStorageId, sessionToken }) => {
+  handler: async (ctx, { planId, podNote, podStorageId, recipientName, deliveredLat, deliveredLng, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
@@ -462,6 +486,9 @@ export const markDelivered = mutation({
       deliveredAt: Date.now(),
       podNote: podNote || plan.podNote,
       podStorageId: podStorageId || plan.podStorageId,
+      recipientName: recipientName?.trim() || plan.recipientName,
+      deliveredLat: Number.isFinite(deliveredLat) ? deliveredLat : plan.deliveredLat,
+      deliveredLng: Number.isFinite(deliveredLng) ? deliveredLng : plan.deliveredLng,
       updatedAt: Date.now(),
     });
     return { success: true };
@@ -472,10 +499,12 @@ export const markDelivered = mutation({
 export const markFailed = mutation({
   args: {
     planId: v.id("dailyPlans"),
+    failCode: v.string(),
     reason: v.string(),
+    retryAction: v.string(),
     sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { planId, reason, sessionToken }) => {
+  handler: async (ctx, { planId, failCode, reason, retryAction, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("المحطة غير موجودة");
@@ -486,7 +515,9 @@ export const markFailed = mutation({
     await ctx.db.patch(planId, {
       status: "FAILED",
       failedAt: Date.now(),
+      failCode: String(failCode || "OTHER").trim(),
       failReason: r,
+      retryAction: String(retryAction || "CONTACT_CUSTOMER").trim(),
       updatedAt: Date.now(),
     });
     return { success: true };
@@ -508,6 +539,8 @@ export const reschedule = mutation({
       outForDeliveryAt: undefined,
       failedAt: undefined,
       failReason: undefined,
+      failCode: undefined,
+      retryAction: undefined,
       updatedAt: Date.now(),
     });
     return { success: true };
@@ -617,6 +650,8 @@ export const myStops = query({
         trackToken: (p as any).trackToken || null,
         deliveredAt: (p as any).deliveredAt ?? null,
         failReason: (p as any).failReason ?? null,
+        failCode: (p as any).failCode ?? null,
+        retryAction: (p as any).retryAction ?? null,
       });
     }
     stops.sort((a, b) => a.seq - b.seq);
@@ -677,6 +712,8 @@ export const supervisorBoard = query({
         outForDeliveryAt: (p as any).outForDeliveryAt ?? null,
         deliveredAt: (p as any).deliveredAt ?? null,
         failReason: (p as any).failReason ?? null,
+        failCode: (p as any).failCode ?? null,
+        retryAction: (p as any).retryAction ?? null,
       });
     }
     stops.sort((a, b) => a.seq - b.seq);
@@ -717,7 +754,7 @@ export const tracking = query({
     const dest = (c as any)?.lat != null && (c as any)?.lng != null
       ? { lat: (c as any).lat, lng: (c as any).lng } : null;
 
-    let driver: { lat: number; lng: number; name: string | null } | null = null;
+    let driver: { lat: number; lng: number; name: string | null; updatedAt: number | null } | null = null;
     let driverPhone: string | null = null;
     let etaMin: number | null = null;
     let isNear = false;
@@ -729,14 +766,14 @@ export const tracking = query({
       const d = await ctx.db.get(plan.driverId);
       driverPhone = String((d as any)?.phone || "").trim() || null;
       if (loc && Date.now() - loc.updatedAt < 10 * 60 * 1000) {
-        driver = { lat: loc.lat, lng: loc.lng, name: (d as any)?.name || null };
+        driver = { lat: loc.lat, lng: loc.lng, name: (d as any)?.name || null, updatedAt: loc.updatedAt };
         if (dest) {
           const km = haversineKm(loc.lat, loc.lng, dest.lat, dest.lng);
           etaMin = etaMinutes(km);
           isNear = km <= NEAR_KM;
         }
       } else {
-        driver = { lat: NaN, lng: NaN, name: (d as any)?.name || null };
+        driver = { lat: NaN, lng: NaN, name: (d as any)?.name || null, updatedAt: loc?.updatedAt ?? null };
       }
     }
 
@@ -749,9 +786,10 @@ export const tracking = query({
       deliveredAt: (plan as any).deliveredAt ?? null,
       deliveryTime: plan.deliveryTime,
       store, dest,
-      driver: driver && Number.isFinite(driver.lat) ? driver : (driver ? { lat: null, lng: null, name: driver.name } : null),
+      driver: driver && Number.isFinite(driver.lat) ? driver : (driver ? { lat: null, lng: null, name: driver.name, updatedAt: driver.updatedAt } : null),
       driverPhone, etaMin, isNear,
       podNote: plan.status === "DELIVERED" ? ((plan as any).podNote || null) : null,
+      recipientName: plan.status === "DELIVERED" ? ((plan as any).recipientName || null) : null,
       podPhotoUrl: plan.status === "DELIVERED" && (plan as any).podStorageId
         ? await ctx.storage.getUrl((plan as any).podStorageId)
         : null,

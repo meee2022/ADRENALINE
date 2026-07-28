@@ -10,7 +10,8 @@ import { useStore } from "@/lib/store";
 import { format } from "date-fns";
 import {
   Truck, MapPin, Phone, Navigation, CheckCircle2, Radio, RadioTower,
-  Sun, Moon, Package, MessageCircle, Loader2,
+  Sun, Moon, Package, MessageCircle, Loader2, Camera, XCircle,
+  ChevronDown, ListChecks, AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { openWhatsApp, WhatsAppTemplates } from "@/lib/whatsapp";
@@ -30,6 +31,9 @@ export default function DriverApp() {
   const [shift, setShift] = useState<"MORNING" | "EVENING">(new Date().getHours() < 15 ? "MORNING" : "EVENING");
   const [busy, setBusy] = useState<string | null>(null);
   const [broadcasting, setBroadcasting] = useState(false);
+  const [lastLocationAt, setLastLocationAt] = useState<number | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [showGuide, setShowGuide] = useState(() => localStorage.getItem("driver-guide-seen") !== "1");
   const watchRef = useRef<number | null>(null);
   const lastSent = useRef(0);
 
@@ -45,6 +49,25 @@ export default function DriverApp() {
   const pendingPhoto = useRef<any>(null);
 
   const trackBase = typeof window !== "undefined" ? window.location.origin : "";
+  const [trackingQueue, setTrackingQueue] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("driver-tracking-queue") || "[]"); } catch { return []; }
+  });
+  const [failureForm, setFailureForm] = useState<{ planId: string; code: string; action: string; note: string } | null>(null);
+
+  const FAILURE_REASONS = [
+    ["NO_ANSWER", t("العميل لا يرد", "Customer not answering")],
+    ["NOT_HOME", t("العميل غير موجود", "Customer not home")],
+    ["WRONG_ADDRESS", t("العنوان غير صحيح", "Wrong address")],
+    ["REFUSED", t("رفض الاستلام", "Delivery refused")],
+    ["ORDER_ISSUE", t("مشكلة في الطلب", "Order issue")],
+    ["OTHER", t("سبب آخر", "Other")],
+  ];
+  const RETRY_ACTIONS = [
+    ["RETRY_TODAY", t("إعادة المحاولة اليوم", "Retry today")],
+    ["MOVE_EVENING", t("تحويل للمسائي", "Move to evening")],
+    ["RESCHEDULE_TOMORROW", t("إعادة الجدولة للغد", "Reschedule tomorrow")],
+    ["CONTACT_CUSTOMER", t("يتواصل معه المشرف", "Supervisor to contact")],
+  ];
 
   const counts = useMemo(() => {
     const s = stops || [];
@@ -57,13 +80,33 @@ export default function DriverApp() {
     };
   }, [stops]);
 
+  const visibleStops = useMemo(() => {
+    const all = stops || [];
+    return showCompleted ? all : all.filter((s) => s.status !== "DELIVERED" && s.status !== "FAILED");
+  }, [stops, showCompleted]);
+  const currentStopId = visibleStops.find((s) => s.status === "OUT_FOR_DELIVERY")?.planId
+    || visibleStops.find((s) => s.status === "PREPARED")?.planId;
+
+  useEffect(() => {
+    localStorage.setItem("driver-tracking-queue", JSON.stringify(trackingQueue));
+  }, [trackingQueue]);
+
   /* السائق يحمّل الرزمة ثم يتحرّك، فيعلّم جولته دفعة واحدة بدل فتح كل محطة.
      الجولة المفتوحة وحدها (صباحي/مسائي) — المسائي فترة أخرى لم تبدأ بعد. */
   const handleStartShift = async () => {
     if (startingShift || !counts.waiting) return;
+    const approved = await confirmDialog({
+      message: t(
+        `سيتم بدء الجولة وتحويل ${counts.waiting} محطة إلى «في الطريق». تأكد أنك استلمت كل الطلبات.`,
+        `This will start the route and mark ${counts.waiting} stops as out for delivery. Confirm all boxes are loaded.`,
+      ),
+    });
+    if (!approved) return;
     setStartingShift(true);
     try {
       const r: any = await startShift({ date: today, deliveryTime: shift, sessionToken });
+      setTrackingQueue((r.trackingLinks || []).filter((x: any) => x.phone));
+      if (!broadcasting) startBroadcast();
       toast({ title: t(`تم تعليم ${r.started} محطة كخارجة للتوصيل`, `${r.started} stop(s) marked out for delivery`) });
     } catch (e: any) {
       toast({ title: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || t("تعذّر التنفيذ", "Failed"), variant: "destructive" });
@@ -82,6 +125,7 @@ export default function DriverApp() {
         const now = Date.now();
         if (now - lastSent.current < 12000) return; // كل ~12ث لتوفير البطارية والشبكة
         lastSent.current = now;
+        setLastLocationAt(now);
         updateMyLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, sessionToken }).catch(() => {});
       },
       (err) => {
@@ -161,13 +205,24 @@ export default function DriverApp() {
   };
 
   const handleFail = async (stop: any) => {
-    const reason = prompt(t("سبب تعذّر التوصيل — مثال: العميل غير موجود / لا يرد / عنوان خاطئ:", "Reason delivery failed — e.g. customer not home / no answer / wrong address:"), "") ?? undefined;
-    if (reason === undefined) return;
+    if (!failureForm || failureForm.planId !== stop.planId) {
+      setFailureForm({ planId: stop.planId, code: "NO_ANSWER", action: "CONTACT_CUSTOMER", note: "" });
+      return;
+    }
+    const label = FAILURE_REASONS.find(([code]) => code === failureForm.code)?.[1] || t("تعذّر التوصيل", "Delivery failed");
+    const reason = failureForm.note.trim() ? `${label}: ${failureForm.note.trim()}` : label;
     setBusy(stop.planId);
     try {
-      const r: any = await markFailed({ planId: stop.planId, reason: reason || t("تعذّر التوصيل", "Delivery failed"), sessionToken });
+      const r: any = await markFailed({
+        planId: stop.planId,
+        failCode: failureForm.code,
+        reason,
+        retryAction: failureForm.action,
+        sessionToken,
+      });
       if (!r?.success) { toast({ title: r?.error || t("فشل", "Failed"), variant: "destructive" }); return; }
       toast({ title: t("سُجّل تعذّر التوصيل", "Marked as failed"), description: stop.customerName });
+      setFailureForm(null);
     } catch (e: any) {
       toast({ title: String(e?.message || e), variant: "destructive" });
     } finally { setBusy(null); }
@@ -235,8 +290,67 @@ export default function DriverApp() {
         </div>
       )}
 
+      {showGuide && (
+        <div className="mx-4 mt-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+          <div className="flex items-start gap-3">
+            <ListChecks className="h-5 w-5 text-[#0E76AC] shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-black text-[#0E2A4A]">{t("طريقة الجولة", "Route guide")}</p>
+              <ol className="mt-2 space-y-1.5 text-xs font-bold text-slate-700">
+                <li>1. {t("استلم الصناديق واضغط «خرجت للتوصيل».", "Load the boxes and tap “Out for delivery”.")}</li>
+                <li>2. {t("تأكد أن GPS يظهر «البث يعمل».", "Make sure GPS says “Broadcasting”.")}</li>
+                <li>3. {t("نفّذ المحطات بالترتيب وسجّل النتيجة.", "Follow the stops in order and record each result.")}</li>
+              </ol>
+            </div>
+            <button
+              onClick={() => { localStorage.setItem("driver-guide-seen", "1"); setShowGuide(false); }}
+              className="h-10 px-3 rounded-xl bg-white border border-cyan-200 text-[#0E76AC] text-xs font-black"
+            >
+              {t("فهمت", "Got it")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {broadcasting && counts.onWay > 0 && lastLocationAt && Date.now() - lastLocationAt > 90000 && (
+        <div className="mx-4 mt-3 rounded-xl bg-red-50 border border-red-200 text-red-800 text-xs font-bold p-3 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {t("تحديث الموقع متوقف. افتح إعدادات الموقع أو أعد تشغيل GPS.", "Location updates stopped. Check location access or restart GPS.")}
+        </div>
+      )}
+
       {/* Stops */}
       <div className="p-4 space-y-3 pb-24">
+        {trackingQueue.length > 0 && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-start gap-3">
+              <MessageCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-black text-emerald-900">{t("روابط التتبع جاهزة", "Tracking links are ready")}</p>
+                <p className="text-xs text-emerald-700 mt-1">{t(`أرسل الرسائل بالترتيب، متبقي ${trackingQueue.length}`, `Send messages in order, ${trackingQueue.length} remaining`)}</p>
+              </div>
+              <button
+                onClick={() => {
+                  const next = trackingQueue[0];
+                  openWhatsApp(next.phone, WhatsAppTemplates.outForDelivery(String(next.customerName).split(" ")[0], `${trackBase}/track/${next.trackToken}`));
+                  setTrackingQueue((q) => q.slice(1));
+                }}
+                className="h-11 px-4 rounded-xl bg-emerald-600 text-white font-black text-xs"
+              >
+                {t("إرسال التالي", "Send next")}
+              </button>
+            </div>
+          </div>
+        )}
+        {(counts.delivered > 0 || (stops || []).some((s) => s.status === "FAILED")) && (
+          <button
+            onClick={() => setShowCompleted((v) => !v)}
+            className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-black text-xs flex items-center justify-between"
+          >
+            <span>{showCompleted ? t("إخفاء المحطات المنتهية", "Hide completed stops") : t(`عرض المحطات المنتهية (${counts.delivered})`, `Show completed stops (${counts.delivered})`)}</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${showCompleted ? "rotate-180" : ""}`} />
+          </button>
+        )}
         {stops === undefined ? (
           <div className="py-20 text-center text-slate-400"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
         ) : stops.length === 0 ? (
@@ -245,13 +359,20 @@ export default function DriverApp() {
             <p className="text-slate-500 font-bold">{t("لا توجد محطات مسندة لك في هذه الجولة", "No stops assigned to you this shift")}</p>
             <p className="text-slate-400 text-xs mt-1">{t("المشرف يسند لك المحطات من صفحة التوصيل", "The supervisor assigns stops from the Delivery page")}</p>
           </div>
+        ) : visibleStops.length === 0 ? (
+          <div className="py-12 text-center rounded-2xl border border-emerald-200 bg-emerald-50">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
+            <p className="font-black text-emerald-900">{t("أنهيت كل محطات الجولة", "All route stops completed")}</p>
+            <p className="text-xs text-emerald-700 mt-1">{t("يمكنك عرض المحطات المنتهية من الزر بالأعلى.", "Use the button above to review completed stops.")}</p>
+          </div>
         ) : (
-          stops.map((s: any, i: number) => {
+          visibleStops.map((s: any, i: number) => {
             const done = s.status === "DELIVERED";
             const onWay = s.status === "OUT_FOR_DELIVERY";
             const failed = s.status === "FAILED";
+            const isCurrent = s.planId === currentStopId && !done && !failed;
             return (
-              <div key={s.planId} className={`rounded-2xl border bg-white overflow-hidden transition-all ${done ? "opacity-60 border-slate-100" : failed ? "border-red-200 bg-red-50/40" : onWay ? "border-[#3cc4f0] shadow-[0_8px_25px_rgba(60,196,240,.15)]" : "border-slate-100 shadow-sm"}`}>
+              <div key={s.planId} className={`rounded-2xl border bg-white overflow-hidden transition-all ${done ? "opacity-60 border-slate-100" : failed ? "border-red-200 bg-red-50/40" : isCurrent ? "border-[#3cc4f0] shadow-[0_8px_25px_rgba(60,196,240,.18)]" : "border-slate-100 shadow-sm"}`}>
                 <div className="p-4">
                   <div className="flex items-start gap-3">
                     <div className={`h-10 w-10 rounded-xl grid place-items-center font-black shrink-0 text-white ${done ? "bg-emerald-500" : failed ? "bg-red-500" : "bg-gradient-to-br from-[#3cc4f0] to-[#0E76AC]"}`}>
@@ -260,6 +381,7 @@ export default function DriverApp() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className={`font-black text-slate-900 ${done ? "line-through text-slate-500" : ""}`}>{s.customerName}</h3>
+                        {isCurrent && <span className="text-[10px] font-black text-[#0E76AC] bg-cyan-50 border border-cyan-200 rounded-full px-2 py-0.5">{t("المحطة الحالية", "Current stop")}</span>}
                         {onWay && <span className="text-[10px] font-black text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{t("في الطريق", "On the way")}</span>}
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">{s.mealsCount} {t("وجبة", "meals")}{s.address ? ` · ${s.address}` : ""}</p>
@@ -268,7 +390,7 @@ export default function DriverApp() {
                   </div>
 
                   {!done && (
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {s.phone && (
                         <a href={`tel:${s.phone}`} className="h-11 px-3 rounded-xl bg-slate-50 border border-slate-200 text-[#0E76AC] font-bold text-sm flex items-center gap-1.5">
                           <Phone className="h-4 w-4" /> {t("اتصال", "Call")}
@@ -291,16 +413,54 @@ export default function DriverApp() {
                           </button>
                           <button disabled={busy === s.planId} onClick={() => handlePhotoDeliver(s)}
                             title={t("تسليم مع صورة إثبات", "Deliver with proof photo")}
-                            className="h-11 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 font-black text-sm disabled:opacity-60">
-                            📷
+                            className="h-11 px-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 font-black text-xs disabled:opacity-60 flex items-center gap-1.5">
+                            <Camera className="h-4 w-4" /> {t("صورة إثبات", "Proof photo")}
                           </button>
                           <button disabled={busy === s.planId} onClick={() => handleFail(s)}
                             title={t("تعذّر التوصيل", "Couldn't deliver")}
-                            className="h-11 px-3 rounded-xl border border-red-200 bg-red-50 text-red-600 font-black text-sm disabled:opacity-60">
-                            ✕
+                            className="h-11 px-3 rounded-xl border border-red-200 bg-red-50 text-red-700 font-black text-xs disabled:opacity-60 flex items-center gap-1.5">
+                            <XCircle className="h-4 w-4" /> {t("تعذّر", "Failed")}
                           </button>
                         </>
                       )}
+                    </div>
+                  )}
+                  {failureForm?.planId === s.planId && onWay && (
+                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 space-y-3">
+                      <div>
+                        <label className="block text-xs font-black text-red-900 mb-1">{t("سبب تعذّر التوصيل", "Failure reason")}</label>
+                        <select
+                          value={failureForm?.code || "NO_ANSWER"}
+                          onChange={(e) => setFailureForm((prev) => prev ? { ...prev, code: e.target.value } : prev)}
+                          className="w-full h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold"
+                        >
+                          {FAILURE_REASONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-red-900 mb-1">{t("الإجراء المطلوب", "Next action")}</label>
+                        <select
+                          value={failureForm?.action || "CONTACT_CUSTOMER"}
+                          onChange={(e) => setFailureForm((prev) => prev ? { ...prev, action: e.target.value } : prev)}
+                          className="w-full h-11 rounded-xl border border-red-200 bg-white px-3 text-sm font-bold"
+                        >
+                          {RETRY_ACTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </div>
+                      <input
+                        value={failureForm?.note || ""}
+                        onChange={(e) => setFailureForm((prev) => prev ? { ...prev, note: e.target.value } : prev)}
+                        placeholder={t("ملاحظة إضافية، اختيارية", "Optional note")}
+                        className="w-full h-11 rounded-xl border border-red-200 bg-white px-3 text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={() => handleFail(s)} disabled={busy === s.planId} className="flex-1 h-11 rounded-xl bg-red-600 text-white font-black text-sm">
+                          {t("تأكيد التعذّر", "Confirm failure")}
+                        </button>
+                        <button onClick={() => setFailureForm(null)} className="h-11 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold text-sm">
+                          {t("إلغاء", "Cancel")}
+                        </button>
+                      </div>
                     </div>
                   )}
                   {done && s.deliveredAt && (
@@ -309,8 +469,7 @@ export default function DriverApp() {
                   {failed && (
                     <div className="flex items-center gap-2 mt-2">
                       <p className="text-[11px] text-red-600 font-bold flex-1">✕ {t("تعذّر التوصيل", "Delivery failed")}{s.failReason ? ` — ${s.failReason}` : ""}</p>
-                      <button disabled={busy === s.planId} onClick={() => handleStart(s)}
-                        className="text-[11px] font-black text-[#0E76AC] underline">{t("إعادة المحاولة", "Retry")}</button>
+                      <span className="text-[11px] font-black text-slate-500">{t("بانتظار إجراء المشرف", "Waiting for supervisor")}</span>
                     </div>
                   )}
                 </div>

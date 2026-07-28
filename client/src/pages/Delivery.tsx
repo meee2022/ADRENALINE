@@ -10,7 +10,7 @@ import { ar, enUS } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2, UserCog, Link2, Clock, Radio } from "lucide-react";
+import { CheckCircle2, MapPin, Phone, Map, Bell, Sun, Moon, Check, Printer, Truck, MapPinned, Loader2, UserCog, Link2, Clock, Radio, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { confirmDialog } from "@/lib/dialogs";
 import { cn } from "@/lib/utils";
@@ -69,6 +69,11 @@ export default function Delivery() {
 
   const boardByPlan: Record<string, any> = {};
   for (const s of (board?.stops || [])) boardByPlan[String(s.planId)] = s;
+  const exceptions = (board?.stops || []).filter((s: any) =>
+    s.status === "FAILED"
+    || !s.driverId
+    || (s.status === "OUT_FOR_DELIVERY" && s.outForDeliveryAt && Date.now() - s.outForDeliveryAt > 90 * 60 * 1000)
+  );
 
   const handleAssign = async () => {
     if (!selectedDriver) { toast({ title: isRtl ? "اختر سائقاً أولاً" : "Pick a driver", variant: "destructive" }); return; }
@@ -406,6 +411,45 @@ export default function Delivery() {
             </div>
           )}
 
+          {exceptions.length > 0 && (
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 overflow-hidden">
+              <div className="px-4 py-3 flex items-center justify-between border-b border-amber-200">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-700" />
+                  <div>
+                    <p className="text-sm font-black text-amber-950">{isRtl ? "تحتاج تدخل المسؤول" : "Needs supervisor attention"}</p>
+                    <p className="text-[11px] font-bold text-amber-700">{isRtl ? "ابدأ بهذه الحالات قبل مراجعة القائمة كاملة" : "Handle these before reviewing the full list"}</p>
+                  </div>
+                </div>
+                <span className="min-w-8 h-8 px-2 rounded-full bg-amber-200 text-amber-950 grid place-items-center text-xs font-black tabular-nums">{exceptions.length}</span>
+              </div>
+              <div className="divide-y divide-amber-200">
+                {exceptions.slice(0, 8).map((s: any) => {
+                  const reason = s.status === "FAILED"
+                    ? (isRtl ? `تعذّر: ${s.failReason || "بدون سبب"}` : `Failed: ${s.failReason || "No reason"}`)
+                    : !s.driverId
+                      ? (isRtl ? "لم يتم إسناد سائق" : "No driver assigned")
+                      : (isRtl ? "في الطريق منذ أكثر من 90 دقيقة" : "On the way for over 90 minutes");
+                  return (
+                    <div key={s.planId} className="px-4 py-3 flex items-center gap-3">
+                      <div className={`h-9 w-9 rounded-xl grid place-items-center shrink-0 ${s.status === "FAILED" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                        {s.status === "FAILED" ? "!" : <Clock className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-slate-900 truncate">{s.customerName}</p>
+                        <p className="text-[11px] font-bold text-slate-600">{reason}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {s.phone && <a href={`tel:${s.phone}`} className="h-10 px-3 rounded-xl bg-white border border-amber-200 text-[#0E76AC] text-xs font-black flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{isRtl ? "اتصال" : "Call"}</a>}
+                        {s.status === "FAILED" && <button onClick={() => handleReschedule(String(s.planId))} className="h-10 px-3 rounded-xl bg-[#0E76AC] text-white text-xs font-black">{isRtl ? "إعادة جدولة" : "Reschedule"}</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* تقدّم كل سائق */}
           {board?.analytics?.perDriver?.length > 0 && (
             <div className="mt-3 space-y-1.5">
@@ -517,7 +561,12 @@ export default function Delivery() {
                                 failed ? "bg-red-500 text-white" : onWay ? "bg-[#0E76AC] text-white" : "bg-[#e8f8fd] text-[#0E76AC]")}>
                                 {failed ? (isRtl ? "✕ تعذّر" : "✕ Failed") : onWay ? (isRtl ? "🚚 في الطريق" : "🚚 On the way") : (isRtl ? "جاهز" : "Ready")}
                               </Badge>
-                              {failed && bs?.failReason && <span className="text-[10px] text-red-500 font-bold max-w-[140px] text-left">{bs.failReason}</span>}
+                              {failed && bs?.failReason && (
+                                <span className="text-[10px] text-red-600 font-bold max-w-[220px] text-left">
+                                  {bs.failReason}
+                                  {bs.retryAction ? ` · ${bs.retryAction === "RETRY_TODAY" ? (isRtl ? "إعادة اليوم" : "Retry today") : bs.retryAction === "MOVE_EVENING" ? (isRtl ? "تحويل للمسائي" : "Move to evening") : bs.retryAction === "RESCHEDULE_TOMORROW" ? (isRtl ? "جدولة للغد" : "Tomorrow") : (isRtl ? "تواصل المشرف" : "Supervisor contact")}` : ""}
+                                </span>
+                              )}
                               {bs?.driverName && (
                                 <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                                   <Truck className="h-3 w-3" />{bs.driverName}
