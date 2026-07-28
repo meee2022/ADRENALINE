@@ -108,7 +108,7 @@ function Barcode({ value }: { value: string }) {
 /** الملصق نفسه — شاشة وطباعة. المقاس 58×39مم كطابعة الاستيكرات الحالية. */
 function SpiceLabel({ l }: { l: PantryLabel }) {
   return (
-    <div className="sp-label">
+    <div className="sp-label" dir="ltr">
       <div className="sp-name">{l.name || "—"}</div>
       <div className="sp-body">
         <div className="sp-facts">
@@ -331,6 +331,7 @@ export default function PantryLabels() {
       <style>{`
         .sp-label {
           width: 58mm; height: 39mm; box-sizing: border-box;
+          direction: ltr;
           background: #fff; color: #000;
           border: 0.5px solid #cbd5e1; border-radius: 1.5mm;
           padding: 1.6mm 2.4mm 1.2mm;
@@ -339,30 +340,30 @@ export default function PantryLabels() {
           overflow: hidden;
         }
         .sp-name {
-          text-align: center; font-weight: 900; font-size: 11px;
-          letter-spacing: 1px; text-transform: uppercase;
+          text-align: center; font-weight: 900; font-size: 12.5px;
+          letter-spacing: 1.2px; text-transform: uppercase;
           white-space: nowrap; overflow: hidden;
         }
-        .sp-body { flex: 1; display: flex; gap: 1.6mm; margin-top: 1mm; min-height: 0; }
-        .sp-facts { display: flex; flex-direction: column; justify-content: space-between; }
+        .sp-body { flex: 1; display: flex; gap: 2mm; margin-top: 0.8mm; min-height: 0; }
+        .sp-facts { display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
         .sp-fact { display: flex; align-items: center; gap: 1.2mm; }
-        .sp-k { font-size: 5.5px; font-weight: 900; line-height: 1.1; width: 8mm; }
+        .sp-k { font-size: 6px; font-weight: 900; line-height: 1.05; width: 8mm; }
         .sp-box {
-          border: 0.5px solid #000; padding: 0.4mm 1.4mm; min-width: 13mm;
-          font-size: 11px; font-weight: 900; text-align: center; letter-spacing: 0.5px;
+          border: 0.6px solid #000; padding: 0.5mm 1.4mm; min-width: 16mm;
+          font-size: 12.5px; font-weight: 900; text-align: center; letter-spacing: 0.5px;
         }
-        .sp-box-lg { font-size: 12.5px; min-width: 15mm; }
+        .sp-box-lg { font-size: 13.5px; }
         .sp-box i { font-style: normal; font-size: 6px; vertical-align: top; margin-inline-end: 0.6mm; }
         .sp-side { flex: 1; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
-        .sp-dates { font-size: 8.5px; font-weight: 900; display: flex; flex-direction: column; gap: 0.6mm; }
-        .sp-dates div { display: flex; gap: 1.6mm; justify-content: flex-end; }
-        .sp-dates b { font-size: 7px; }
+        .sp-dates { font-size: 11.5px; font-weight: 900; display: flex; flex-direction: column; gap: 0.9mm; }
+        .sp-dates div { display: flex; gap: 2mm; align-items: baseline; justify-content: flex-start; }
+        .sp-dates b { font-size: 8px; width: 6mm; }
         .sp-bc { text-align: center; }
         .sp-bc svg { max-width: 100%; height: 12.5mm; }
         .sp-bc span { display: block; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
         .sp-footer {
-          text-align: center; font-weight: 900; font-size: 8px;
-          letter-spacing: 2px; text-transform: uppercase; margin-top: 0.6mm;
+          text-align: center; font-weight: 900; font-size: 8.5px;
+          letter-spacing: 1.6px; text-transform: uppercase; margin-top: 0.5mm;
         }
         .sp-preview .sp-label { transform: scale(1.6); transform-origin: center; margin: 12mm 0; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 
