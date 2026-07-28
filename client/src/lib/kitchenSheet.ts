@@ -124,31 +124,36 @@ export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson
 const esc = (s: any) =>
   String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
 
+/* أعمدة الورقة المطبوعة (A4 بالطول): الهاتف والتواريخ والبرنامج والوردية
+   أسطرٌ صغيرة تحت الاسم في خانة واحدة — أربعة أعمدة وفّرناها لأعمدة الوجبات.
+   الإكسل يحتفظ بأعمدته الثلاثة عشر كاملة (HEADERS) — الفرز هناك يحتاجها. */
+const PRINT_HEADERS = [
+  "NO.", "Customer", "Allergies & Dislikes",
+  "Breakfast", "SNACK 1", "LUNCH", "SNACK 2", "DINNER", "MEAL 4",
+];
+
 function tableHtml(title: string, rows: KitchenPerson[], lang: Lang): string {
   if (!rows.length) return "";
-  const head = HEADERS.map((h) => `<th>${esc(h)}</th>`).join("");
+  const head = PRINT_HEADERS.map((h) => `<th>${esc(h)}</th>`).join("");
   const body = rows
     .map(
       (p) => `<tr>
       <td class="c">${p.no}</td>
-      <td class="c" dir="ltr">${esc(p.phone)}</td>
-      <td class="nm">${esc(p.name)}</td>
-      <td class="c sm">${esc(p.dates)}</td>
-      <td class="sm">${esc(p.remarks)}</td>
+      <td class="cust"><b>${esc(p.name)}</b><span class="ph" dir="ltr">${esc(p.phone)}</span><span class="dt">${esc(p.dates)}</span><span class="tg">${esc(p.remarks)}${p.remarks ? " · " : ""}${esc(timeLabel(p.time, lang))}</span></td>
       <td class="al">${esc(p.allergies)}</td>
       <td>${esc(p.breakfast)}</td>
       <td>${esc(p.snack1)}</td>
       <td>${esc(p.lunch)}</td>
       <td>${esc(p.snack2)}</td>
       <td>${esc(p.dinner)}</td>
-      <td>${esc(p.meal4)}</td>
-      <td class="c sm">${esc(timeLabel(p.time, lang))}</td>
+      <td class="m4">${esc(p.meal4)}</td>
     </tr>`,
     )
     .join("");
   return `<section class="sec">
     <div class="sec-t">${esc(title)} <span>${rows.length} ${esc(T(lang).customers)}</span></div>
-    <table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
+    <table><colgroup><col style="width:7mm"><col style="width:31mm"><col style="width:27mm"><col><col><col><col><col><col style="width:17mm"></colgroup>
+    <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
   </section>`;
 }
 
@@ -179,16 +184,21 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .sec-t{font-weight:900;font-size:13px;color:#0E2A4A;background:#eaf3fb;border:1px solid #cfe4f3;
              border-radius:8px;padding:6px 10px;margin-bottom:6px}
       .sec-t span{float:${lang === "ar" ? "left" : "right"};color:#0E76AC;font-size:11px}
-      table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
-      th{background:#0E76AC;color:#fff;padding:6px 4px;font-weight:800;border:1px solid #0b5f8a;font-size:11px}
-      td{padding:6px 6px;border:1px solid #cfd9e4;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere}
+      table{width:100%;border-collapse:collapse;font-size:9.5px;table-layout:fixed}
+      th{background:#0E76AC;color:#fff;padding:4px 2px;font-weight:800;border:1px solid #0b5f8a;font-size:8.5px}
+      td{padding:3.5px 4px;border:1px solid #cfd9e4;vertical-align:top;word-wrap:break-word;overflow-wrap:anywhere;line-height:1.3}
       tr:nth-child(even) td{background:#f7fbfe}
-      .c{text-align:center} .nm{font-weight:800;font-size:13px} .sm{font-size:10.5px;color:#47759c}
-      .al{color:#b45309;font-size:10.5px;font-weight:700}
+      .c{text-align:center;font-weight:900;color:#0E76AC}
+      .cust b{display:block;font-size:10px}
+      .cust .ph{display:block;font-size:8.5px;color:#475569}
+      .cust .dt{display:block;font-size:8px;color:#0E76AC;font-weight:700}
+      .cust .tg{display:block;font-size:8px;font-weight:900;color:#7c3aed}
+      .al{color:#b45309;font-size:9px;font-weight:800}
+      .m4{font-size:9px}
       .foot{margin:6px 16px 12px;font-size:11px;color:#94a3b8;text-align:center}
       /* ✅ ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
              فالاعتماد على حقن openPrintDoc (قاعدة ثانية) كان يُتجاهَل فلا يظهر رقم. */
-      @page{ size:A4 landscape; margin:6mm 6mm 12mm 6mm;
+      @page{ size:A4 portrait; margin:6mm 6mm 12mm 6mm;
         @bottom-center{content:"${lang === "ar" ? "صفحة" : "Page"} " counter(page);
           font-family:'Cairo','Segoe UI',Tahoma,sans-serif;font-size:9px;font-weight:700;color:#64748b;} }
       /* fallback للمتصفحات اللي مش بتدعم @page counters — سطر ثابت في الفوتر */
@@ -223,8 +233,8 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
   openPrintDoc(html, {
     fileName: `ADRENALINE-kitchen-${dateStr}`,
     isRtl: lang === "ar",
-    width: 1100,
-    height: 800,
+    width: 860,
+    height: 980,
     // الترقيم مُعرّف داخل @page الخاصة بالكشف — نوقف الحقن كي لا تتضارب قاعدتا @page
     pageNumbers: false,
   });
