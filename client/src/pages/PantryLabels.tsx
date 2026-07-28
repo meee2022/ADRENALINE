@@ -343,7 +343,9 @@ export default function PantryLabels() {
           overflow: hidden;
         }
         .sp-name {
-          text-align: center; font-weight: 900; font-size: 12.5px;
+          /* توسيط مفروض: قواعد RTL العامة في التطبيق كانت تُزيح الاسم لليمين
+             رغم أن الملصق نفسه LTR — والاسم في الأصل متوسّط أعلى الملصق. */
+          text-align: center !important; font-weight: 900; font-size: 12.5px;
           letter-spacing: 1.2px; text-transform: uppercase;
           white-space: nowrap; overflow: hidden;
         }
@@ -361,12 +363,15 @@ export default function PantryLabels() {
         .sp-dates { font-size: 11.5px; font-weight: 900; display: flex; flex-direction: column; gap: 0.9mm; }
         .sp-dates div { display: flex; gap: 2mm; align-items: baseline; justify-content: flex-start; }
         .sp-dates b { font-size: 8px; width: 6mm; }
-        .sp-bc { text-align: center; }
-        .sp-bc svg { max-width: 100%; height: 12.5mm; }
-        .sp-bc span { display: block; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
+        .sp-bc { text-align: center !important; line-height: 0; }
+        .sp-bc svg { display: block; margin: 0 auto; max-width: 100%; height: 12.5mm; }
+        .sp-bc span {
+          display: block; font-size: 9px; font-weight: 900; letter-spacing: 1.8px;
+          line-height: 1; margin-top: 0.2mm;
+        }
         .sp-footer {
-          text-align: center; font-weight: 900; font-size: 8.5px;
-          letter-spacing: 1.6px; text-transform: uppercase; margin-top: 0.5mm;
+          text-align: center !important; font-weight: 900; font-size: 11px;
+          letter-spacing: 1.4px; text-transform: uppercase; margin-top: 0.6mm;
         }
         .sp-preview .sp-label { transform: scale(1.6); transform-origin: center; margin: 12mm 0; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 
