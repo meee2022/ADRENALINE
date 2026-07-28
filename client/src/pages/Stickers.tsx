@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers, Search } from "lucide-react";
+import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers, Search, AlertTriangle } from "lucide-react";
 import { useStickers } from "@/lib/api";
 import { useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
@@ -123,6 +123,9 @@ export default function Stickers() {
   // ✅ أسماء الوجبات على الاستيكر إنجليزي دائماً (المطبخ/التغليف يقرأ إنجليزي)
   const data = useStickers({ date, deliveryTime, lang: "en" });
   const boxStickers = data?.boxStickers ?? [];
+  /* تدقيق الخادم: من يُطبع له استيكر وليس في كشف المطبخ (أو العكس). فارقٌ
+     واحد يعني بوكساً بلا أكل أو أكلاً بلا بوكس — يُرى قبل الطباعة لا بعد الطبخ. */
+  const audit = (data as any)?.audit as { onlyStickers: string[]; onlyKitchen: string[] } | undefined;
   const allMealStickers = data?.mealStickers ?? [];
   // ✅ فصل المخصّصين في تبويب مستقل (طلب المستخدم): تبويب «الوجبات» للعاديين فقط،
   //    وتبويب «المخصّصون» يعرضهم **مجمّعين بالعميل** — كل وجبات الشخص ورا بعض
@@ -338,6 +341,33 @@ export default function Stickers() {
 
       {/* ── Controls (hidden on print) ── */}
       <div className="print:hidden space-y-4">
+
+        {/* تحذير التطابق مع المطبخ — يظهر فقط عند وجود فارق فعلي */}
+        {audit && (audit.onlyStickers.length > 0 || audit.onlyKitchen.length > 0) && (
+          <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4">
+            <p className="text-sm font-black text-rose-800 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {isRtl ? "الاستيكرات لا تطابق كشف المطبخ لهذا اليوم"
+                     : "Stickers don't match the kitchen sheet for this day"}
+            </p>
+            {audit.onlyStickers.length > 0 && (
+              <p className="text-[12px] font-bold text-rose-700 mt-2">
+                {isRtl
+                  ? `⛔ ${audit.onlyStickers.length} سيُطبع لهم استيكر والمطبخ لا يطبخ لهم — لا تطبع قبل المراجعة: `
+                  : `⛔ ${audit.onlyStickers.length} would get stickers but the kitchen isn't cooking for them — check before printing: `}
+                <span className="font-black">{audit.onlyStickers.join(" · ")}</span>
+              </p>
+            )}
+            {audit.onlyKitchen.length > 0 && (
+              <p className="text-[12px] font-bold text-amber-800 mt-1.5">
+                {isRtl
+                  ? `⚠ ${audit.onlyKitchen.length} المطبخ يطبخ لهم بلا استيكر: `
+                  : `⚠ ${audit.onlyKitchen.length} are cooked for but get no sticker: `}
+                <span className="font-black">{audit.onlyKitchen.join(" · ")}</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Page header */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

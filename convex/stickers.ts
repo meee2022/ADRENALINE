@@ -12,9 +12,20 @@ type PlanStatus =
   | "DELIVERED"
   | "CANCELLED";
 
+/**
+ * حالات الخطة التي تُطبع لها استيكرات — **قائمة سماح** لا استبعاد.
+ *
+ * كانت «كل شيء عدا DRAFT وCANCELLED»، فحالة PAUSED التي أضافها التجميد مرّت
+ * دون أن ينتبه أحد: مريم التميمي ومحمد حسن جُمّدا اعتباراً من 29-7 وخطتاهما
+ * مؤرشفتان PAUSED، فاستبعدهما المطبخ وطبعت لهما الاستيكرات عشر وجبات
+ * وبوكسين — والمطبخ يعمل بالاستيكرات فطبخها. أي حالة جديدة تُضاف للنظام
+ * مستقبلاً لن تُطبع حتى تُذكر هنا صراحةً.
+ */
+const PRINTABLE_STATUSES = new Set([
+  "CONFIRMED", "PREPARED", "OUT_FOR_DELIVERY", "DELIVERED", "FAILED",
+]);
 function isPrintableStatus(s: any) {
-  const x = String(s || "").toUpperCase() as PlanStatus;
-  return x !== "DRAFT" && x !== "CANCELLED";
+  return PRINTABLE_STATUSES.has(String(s || "").toUpperCase());
 }
 
 function getEffectivePlanItems(planOrItems: any): any[] {
@@ -943,6 +954,34 @@ export const get = query({
     // ✅ إعادة الترتيب برقم البوكس بعد إضافة بوكسات المخصّصين (تُدفَع في آخر المصفوفة)
     boxStickers.sort((a: any, b: any) => (a.customerNo ?? 0) - (b.customerNo ?? 0));
 
-    return { boxStickers, mealStickers };
+    /* تحقّق تلقائي: من يُطبع له استيكر يجب أن يكون في كشف المطبخ، والعكس.
+       الشاشتان تقرآن الجداول نفسها بقواعد منفصلة، وانفراد إحداهما يعني طبخاً
+       بلا أكل أو أكلاً بلا طبخ — حدث فعلاً حين مرّت PAUSED للاستيكرات وحدها.
+       يُحسب هنا ويُعرض تحذيراً قبل الطباعة، لا يُكتشف بعد الطبخ. */
+    const kitchenIds = new Set(
+      plansAll
+        .filter((p: any) =>
+          (wantAll || String(p.deliveryTime || "") === args.deliveryTime) &&
+          (p.status === "CONFIRMED" || p.status === "PREPARED") &&
+          p.customerId && !tplCustomerIds.has(String(p.customerId)))
+        .map((p: any) => String(p.customerId)),
+    );
+    const stickerRegularIds = new Set(
+      mealStickers.filter((m: any) => String(m.goal || "").toUpperCase() !== "CUSTOMIZED").map((m: any) => String(m.customerId)),
+    );
+    const nameOf = async (id: string) => {
+      const c: any = customerMap.get(id) || (await ctx.db.get(id as any));
+      return String(c?.fullName || id);
+    };
+    const onlyStickers: string[] = [];
+    for (const id of stickerRegularIds) if (!kitchenIds.has(id)) onlyStickers.push(await nameOf(id));
+    const onlyKitchen: string[] = [];
+    for (const id of kitchenIds) if (!stickerRegularIds.has(id)) onlyKitchen.push(await nameOf(id));
+
+    return {
+      boxStickers,
+      mealStickers,
+      audit: { onlyStickers, onlyKitchen },
+    };
   },
 });
