@@ -536,7 +536,7 @@ export const consumeStock = mutation({
       .collect();
 
     // Sort by received date (oldest first for FIFO)
-    batches.sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+    batches.sort((a: any, b: any) => a.receivedAt.localeCompare(b.receivedAt));
 
     for (const batch of batches) {
       if (remaining <= 0) break;
@@ -948,11 +948,10 @@ export const getSupplierStats = query({
 
 // ===== تحضير خطة + خصم المخزون تلقائياً حسب الرسيبي (idempotent) =====
 // يستدعيه المطبخ عند تأكيد تحضير خطة اليوم. يخصم مكوّنات كل وجبة من المخزون.
-export const prepareAndConsume = mutation({
-  args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
-  handler: async (ctx, { planId, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
-    const plan = await ctx.db.get(planId);
+/** جوهر «تم التحضير»: خصم مكوّنات خطة واحدة وتعليمها PREPARED — idempotent.
+    يستدعى من زرّ الخطة الواحدة ومن زرّ «تحضير الكل» فلا يفترق سلوكهما. */
+async function prepareAndConsumeOne(ctx: any, planId: Id<"dailyPlans">) {
+    const plan: any = await ctx.db.get(planId);
     if (!plan) throw new Error("Plan not found");
 
     // idempotency: لو سبق خصم مكوّنات هذه الخطة، لا نكرّر الخصم
@@ -1003,9 +1002,9 @@ export const prepareAndConsume = mutation({
         let remaining = deduct;
         const batches = await ctx.db
           .query("inventoryBatches")
-          .withIndex("by_itemId", (q) => q.eq("itemId", item._id))
+          .withIndex("by_itemId", (q: any) => q.eq("itemId", item._id))
           .collect();
-        batches.sort((a, b) => a.receivedAt.localeCompare(b.receivedAt));
+        batches.sort((a: any, b: any) => a.receivedAt.localeCompare(b.receivedAt));
         for (const b of batches) {
           if (remaining <= 0) break;
           if (b.quantityRemaining <= 0) continue;
@@ -1021,6 +1020,41 @@ export const prepareAndConsume = mutation({
     await ctx.db.patch(planId, { status: "PREPARED", inventoryConsumedAt: now, updatedAt: now });
 
     return { alreadyConsumed: false, consumed };
+}
+
+export const prepareAndConsume = mutation({
+  args: { planId: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, { planId, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    return await prepareAndConsumeOne(ctx, planId);
+  },
+});
+
+/**
+ * «تحضير الكل»: يعلّم كل خطط اليوم المؤكدة PREPARED ويخصم مخزونها دفعة واحدة.
+ * المطبخ كان يفتح 90+ كرتاً واحداً واحداً بعد التغليف. يمس CONFIRMED فقط —
+ * المسودّة لم تُعتمد بعد، والمحضَّر أصلاً يتخطاه ختمُ الخصم داخل الجوهر نفسه.
+ */
+export const prepareAndConsumeAllForDate = mutation({
+  args: {
+    date: v.string(),
+    deliveryTime: v.optional(v.string()), // MORNING/EVENING — اختياري: وردية واحدة
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, deliveryTime, sessionToken }) => {
+    await requireStaff(ctx, sessionToken);
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_date", (q: any) => q.eq("date", date))
+      .collect();
+    let prepared = 0, skipped = 0;
+    for (const p of plans as any[]) {
+      if (p.status !== "CONFIRMED") { skipped++; continue; }
+      if (deliveryTime && String(p.deliveryTime) !== deliveryTime) { skipped++; continue; }
+      await prepareAndConsumeOne(ctx, p._id);
+      prepared++;
+    }
+    return { prepared, skipped };
   },
 });
 

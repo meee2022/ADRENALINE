@@ -20,7 +20,7 @@ import { ar, enUS } from "date-fns/locale";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
-import { alertDialog } from "@/lib/dialogs";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +40,7 @@ import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/l
 import { openPrintDoc } from "@/lib/printDoc";
 import { downloadChefSheetXlsx, type ChefRow } from "@/lib/kitchenSheet";
 import { getEffectivePlanItems } from "@/lib/planItems";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet, Check } from "lucide-react";
 
 import {
   Popover,
@@ -158,6 +158,8 @@ export default function Kitchen() {
   const { data: modifiers = [] } = useModifiers();
   const updatePlanMutation = useUpdateDailyPlan();
   const prepareAndConsume = usePrepareAndConsume();
+  const prepareAllMutation = useMutation(api.inventory.prepareAndConsumeAllForDate);
+  const [preparingAll, setPreparingAll] = useState(false);
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
@@ -1313,6 +1315,30 @@ export default function Kitchen() {
      });
   };
 
+  /* «تحضير الكل»: المطبخ يغلّف الرزمة كاملة ثم كان يفتح 90+ كرتاً ليضغط
+     «تم التحضير» واحداً واحداً. تأكيد واحد يعلّم كل خطط اليوم المؤكدة
+     PREPARED ويخصم مخزونها — نفس جوهر زرّ الكرت الواحد على الخادم. */
+  const handlePrepareAll = async () => {
+    if (preparingAll || !stats.today) return;
+    const ok = await confirmDialog({
+      message: isRtl
+        ? `اعتماد التحضير لكل خطط اليوم المؤكدة (${stats.today} خطة)؟
+سيُخصم المخزون حسب الرسيبي وتظهر للتوصيل.`
+        : `Mark all ${stats.today} confirmed plans as prepared?
+Inventory will be deducted and they'll appear for delivery.`,
+    });
+    if (!ok) return;
+    setPreparingAll(true);
+    try {
+      const r: any = await prepareAllMutation({ date: formattedDate, sessionToken: sessionTok } as any);
+      void alertDialog({ message: isRtl
+        ? `تم تحضير ${r.prepared} خطة ✓`
+        : `Prepared ${r.prepared} plan(s) ✓` });
+    } catch (e: any) {
+      void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "تعذّر التحضير" : "Couldn't prepare") });
+    } finally { setPreparingAll(false); }
+  };
+
   const handleMarkPrepared = async (planId: string) => {
     try {
       // يعلّم الخطة كمحضّرة + يخصم مكوّنات الرسيبي من المخزون تلقائياً (idempotent)
@@ -1375,6 +1401,14 @@ export default function Kitchen() {
             ]}
             actions={
               <>
+                {stats.today > 0 && (
+                  <button onClick={handlePrepareAll} disabled={preparingAll}
+                    className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 disabled:opacity-60"
+                    style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
+                    <Check className="h-4 w-4" />
+                    {preparingAll ? "…" : isRtl ? `تحضير الكل (${stats.today})` : `Prepare all (${stats.today})`}
+                  </button>
+                )}
                 {/* ✅ تبديل سريع: توصيل بكرة (الافتراضي) / اليوم — بدون ما الشيف يفتح التقويم */}
                 <div className="flex rounded-xl overflow-hidden border border-white/30 shrink-0">
                   <button onClick={() => jumpTo("TOMORROW")}
