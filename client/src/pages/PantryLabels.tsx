@@ -13,6 +13,7 @@ import JsBarcode from "jsbarcode";
 import { useLanguage } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Printer, Plus, Trash2, PackageOpen } from "lucide-react";
+import { openPrintDoc } from "@/lib/printDoc";
 
 type PantryLabel = {
   name: string;
@@ -189,7 +190,63 @@ export default function PantryLabels() {
     // احفظ/حدّث حسب الاسم ليعاد استعماله لاحقاً بتعديل التاريخ فقط
     const rest = saved.filter((s) => s.name.trim().toLowerCase() !== effective.name.trim().toLowerCase());
     persist([{ ...effective }, ...rest].slice(0, 60));
-    window.print();
+
+    /* الطباعة في مستند مستقل — كما يفعل كشف الشيف. طباعة الصفحة نفسها ظلّت
+       تُقسّم الملصق على ملصقين مهما ضُبطت قواعد @media print، لأن تنسيقات
+       التطبيق (اتجاه، حشو، تحويلات) تشارك في تخطيط الصفحة المطبوعة. هنا
+       المستند لا يحوي غير الملصقات وقواعدها. */
+    const esc = (x: any) => String(x ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
+    const l = effective;
+    const bars = document.querySelector(".sp-preview .sp-bc svg")?.outerHTML || "";
+    const one = `
+      <div class="pg"><div class="lbl">
+        <div class="nm">${esc(l.name)}</div>
+        <div class="bd">
+          <div class="fx">
+            <div class="ft"><span class="k">UNIT<br/>PRICE</span><span class="bx">${esc(l.unitPrice || "—")}</span></div>
+            <div class="ft"><span class="k">GROSS<br/>WEIGHT</span><span class="bx">${esc(l.grossWeight || "—")}<i class="u">KG</i></span></div>
+            <div class="ft"><span class="k">TOTAL<br/>PRICE</span><span class="bx lg"><i>QR</i>${esc(l.totalPrice || "—")}</span></div>
+          </div>
+          <div class="sd">
+            <div class="dt"><div><b>PRD</b><span>${esc(fmtDate(l.prodDate))}</span></div>
+              <div><b>EXP</b><span>${esc(fmtDate(l.expDate))}</span></div></div>
+            ${l.barcode ? `<div class="bc">${bars}<span>${esc(l.barcode)}</span></div>` : ""}
+          </div>
+        </div>
+        <div class="fo">${esc(l.footer)}</div>
+      </div></div>`;
+
+    openPrintDoc(`<!doctype html><html dir="ltr"><head><meta charset="utf-8">
+      <title>pantry-${esc(l.name)}</title><style>
+      *{box-sizing:border-box;margin:0;padding:0}
+      html,body{width:58mm;background:#fff;color:#000;
+        font-family:'Courier New',monospace;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+      .pg{width:58mm;height:39mm;overflow:hidden}
+      .lbl{width:58mm;height:39mm;padding:1.6mm 2.4mm 1.2mm;display:flex;flex-direction:column;overflow:hidden}
+      .nm{text-align:center;font-weight:900;font-size:12.5px;letter-spacing:1.2px;
+        text-transform:uppercase;white-space:nowrap;overflow:hidden}
+      .bd{flex:1;display:flex;gap:2mm;margin-top:.8mm;min-height:0}
+      .fx{display:flex;flex-direction:column;justify-content:space-between;flex-shrink:0}
+      .ft{display:flex;align-items:center;gap:1.2mm}
+      .k{font-size:6px;font-weight:900;line-height:1.05;width:8mm}
+      .bx{border:.6px solid #000;padding:.5mm 1.4mm;min-width:16mm;font-size:12.5px;
+        font-weight:900;text-align:center;letter-spacing:.5px}
+      .bx.lg{font-size:13.5px}
+      .bx i{font-style:normal;font-size:6px;vertical-align:top;margin-right:.6mm}
+      .bx .u{font-size:7px;font-weight:900;vertical-align:baseline;margin-left:1mm;margin-right:0;letter-spacing:.5px}
+      .sd{flex:1;display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+      .dt{font-size:11.5px;font-weight:900;display:flex;flex-direction:column;gap:.9mm}
+      .dt div{display:flex;gap:2mm;align-items:baseline}
+      .dt b{font-size:8px;width:6mm}
+      .bc{text-align:center;line-height:0}
+      .bc svg{display:block;margin:0 auto;max-width:100%;height:12.5mm}
+      .bc span{display:block;font-size:9px;font-weight:900;letter-spacing:1.8px;line-height:1;margin-top:.2mm}
+      .fo{text-align:center;font-weight:900;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin-top:.6mm}
+      @page{size:58mm 39mm;margin:0}
+      @media print{.pg{break-before:page;page-break-before:always;break-inside:avoid}
+        .pg:first-child{break-before:auto;page-break-before:auto}}
+      </style></head><body>${one.repeat(Math.max(1, l.copies))}</body></html>`,
+      { fileName: `pantry-${l.name}`, isRtl: false, width: 420, height: 700, pageNumbers: false });
   };
 
   return (
@@ -325,13 +382,6 @@ export default function PantryLabels() {
         </div>
       </div>
 
-      {/* ── نسخ الطباعة: كل نسخة صفحة 58×39مم ── */}
-      <div className="sp-print-run hidden print:block">
-        {Array.from({ length: effective.copies }, (_, i) => (
-          <div className="sp-page" key={i}><SpiceLabel l={effective} /></div>
-        ))}
-      </div>
-
       <style>{`
         .sp-label {
           width: 58mm; height: 39mm; box-sizing: border-box;
@@ -380,28 +430,6 @@ export default function PantryLabels() {
         }
         .sp-preview .sp-label { transform: scale(1.6); transform-origin: center; margin: 12mm 0; box-shadow: 0 4px 14px rgba(0,0,0,.15); }
 
-        @media print {
-          /* نفس آلية استيكرات المنافذ حرفياً — وهي التي تطبع صفحةً لكل ملصق.
-             الآلية السابقة كانت تُخفي الصفحة بـvisibility وتضع رزمة الطباعة
-             في وضع absolute، وكروم لا يُقسّم العنصر المطلق على الصفحات، فكان
-             السطر الأخير يفيض إلى الملصق التالي. الآن: بقيّة الصفحة مخفيّة
-             بـprint:hidden أصلاً، والرزمة كتلة عادية تُقسَّم قبل كل ملصق. */
-          @page { size: 58mm 39mm; margin: 0; }
-          html, body {
-            width: 58mm !important; margin: 0 !important; padding: 0 !important;
-            background: #fff !important;
-          }
-          .pantry-root {
-            padding: 0 !important; margin: 0 !important; max-width: none !important;
-          }
-          .sp-print-run { display: block !important; }
-          .sp-page {
-            width: 58mm; height: 39mm; overflow: hidden; margin: 0;
-            break-before: page; page-break-before: always; break-inside: avoid;
-          }
-          .sp-page:first-child { break-before: auto; page-break-before: auto; }
-          .sp-page .sp-label { border: 0 !important; border-radius: 0 !important; margin: 0 !important; }
-        }
       `}</style>
     </div>
   );
