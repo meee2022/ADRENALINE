@@ -36,8 +36,8 @@ const STORAGE_KEY = "adrenaline:pantry-labels:v1";
 const BASE_BARCODE = "9912539010102";
 /* أول سبعة أرقام من ملصق المورّد: بادئة الميزان وكود الصنف. */
 const BASE_PREFIX = BASE_BARCODE.slice(0, 7);
-/** النص الذي يعني «اطبع شعار أدرينالين» بدل سطر نصّي حرّ. */
-const DEFAULT_FOOTER = "ADRENALINE HEALTHY FOOD";
+/** الشركة المورّدة — تُطبع أسفل الملصق كما على ملصقها الأصلي. */
+const DEFAULT_FOOTER = "PRADMA QATAR FOOD";
 
 /** خانة تحقق EAN-13 لأول اثني عشر رقماً. */
 function eanCheckDigit(d12: string): number {
@@ -137,20 +137,8 @@ function SpiceLabel({ l }: { l: PantryLabel }) {
           ) : null}
         </div>
       </div>
-      {/* السطر الأخير = شعار استيكرات الوجبات نفسه (قلب + ADRENALINE + HEALTHY
-          FOOD)، فيخرج المخزن بنفس هوية باقي الملصقات. ولو كتب المخزن نصاً
-          آخر — اسم مورّد مثلاً — يُطبع نصّه كما هو بدل الشعار. */}
-      {String(l.footer || "").trim().toUpperCase() === DEFAULT_FOOTER ? (
-        <div className="sp-brand">
-          <img src="/heart-logo.png" alt="" className="sp-heart" />
-          <div className="sp-brand-txt">
-            <div className="sp-brand-name">ADRENALINE</div>
-            <div className="sp-brand-tag">HEALTHY FOOD</div>
-          </div>
-        </div>
-      ) : (
-        <div className="sp-footer">{l.footer}</div>
-      )}
+      {/* اسم الشركة المورّدة كما على ملصقها الأصلي — والخانة حرّة لتغييره. */}
+      <div className="sp-footer">{l.footer}</div>
     </div>
   );
 }
@@ -376,17 +364,6 @@ export default function PantryLabels() {
         .sp-bc { text-align: center; }
         .sp-bc svg { max-width: 100%; height: 12.5mm; }
         .sp-bc span { display: block; font-size: 8px; font-weight: 900; letter-spacing: 1.5px; }
-        .sp-brand {
-          display: flex; align-items: center; justify-content: center;
-          gap: 1.4mm; line-height: 1; margin-top: 0.4mm;
-        }
-        .sp-heart {
-          width: 4.6mm; height: 4.6mm; object-fit: contain; flex-shrink: 0;
-          -webkit-print-color-adjust: exact; print-color-adjust: exact;
-        }
-        .sp-brand-txt { display: flex; flex-direction: column; align-items: center; }
-        .sp-brand-name { font-size: 13px; font-weight: 900; letter-spacing: 1.5px; line-height: 1.02; }
-        .sp-brand-tag { font-size: 6px; font-weight: 900; letter-spacing: 2.6px; line-height: 1.1; }
         .sp-footer {
           text-align: center; font-weight: 900; font-size: 8.5px;
           letter-spacing: 1.6px; text-transform: uppercase; margin-top: 0.5mm;
