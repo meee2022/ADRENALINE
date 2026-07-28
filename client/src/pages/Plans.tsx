@@ -396,7 +396,7 @@ export default function PlansPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deliveryFilter, setDeliveryFilter] = useState<"ALL" | "MORNING" | "EVENING">("ALL");
   // ✅ فلتر الحالة: عرض الكل، أو اللي لسه محتاجين خطة، أو اللي خلصوا
-  const [planFilter, setPlanFilter] = useState<"ALL" | "PENDING" | "DONE">("ALL");
+  const [planFilter, setPlanFilter] = useState<"ALL" | "PENDING" | "DONE" | "DRAFT">("ALL");
   // ✅ فلتر البرنامج: مثل (FITNESS, DIET, BULK, CUSTOMIZED, etc.)
   const [programFilter, setProgramFilter] = useState<string | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Partial<DailyPlan> | null>(null);
@@ -1110,9 +1110,18 @@ export default function PlansPage() {
              نفسها، فتغيب عن «المراجعة النهائية» (تعرض المؤكد فقط) ولا يجدها
              أحد — حدث يوم 29-7: شاشة التخطيط 94/94 والمراجعة 92. المسودّة
              تُعلَّم بشارة كهرمانية «بانتظار التأكيد» فتُرى قبل يوم الطبخ. */
+          const shownIds = new Set(activeCustomers.map((c: any) => String(c._id)));
+          /* العدّ يقتصر على من تعرضهم هذه الشاشة: مسودّات المخصّصين ومن هم
+             خارج نطاق اليوم لا كروت لها هنا، فكان الرقم يعد ما لا يُرى (17
+             والظاهر أقل). */
           const draftCustomers = new Set(
-            dailyPlans.filter((p: any) => p.status === "DRAFT").map((p: any) => String(p.customerId)),
+            dailyPlans
+              .filter((p: any) => p.status === "DRAFT" && shownIds.has(String(p.customerId)))
+              .map((p: any) => String(p.customerId)),
           );
+          const draftsHidden = new Set(
+            dailyPlans.filter((p: any) => p.status === "DRAFT").map((p: any) => String(p.customerId)),
+          ).size - draftCustomers.size;
           const plannedCount = activeCustomers.filter((c: any) => customersWithPlans.has(String(c._id))).length;
           const pendingCount = activeCustomers.length - plannedCount;
           const morningCount = activeCustomers.filter((c: any) => c.deliveryTime === "MORNING").length;
@@ -1141,6 +1150,8 @@ export default function PlansPage() {
             filtered = filtered.filter((c: any) => !customersWithPlans.has(String(c._id)));
           } else if (planFilter === "DONE") {
             filtered = filtered.filter((c: any) => customersWithPlans.has(String(c._id)));
+          } else if (planFilter === "DRAFT") {
+            filtered = filtered.filter((c: any) => draftCustomers.has(String(c._id)));
           }
           // ✅ ترتيب: العملاء بدون خطة أولاً، ثم اللي خلصوا
           filtered = [...filtered].sort((a: any, b: any) => {
@@ -1436,11 +1447,23 @@ export default function PlansPage() {
                     style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)" }}>
                     <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <p className="flex-1 min-w-0 text-[12px] font-black" style={{ color: "#78350f" }}>
-                    {isRtl
-                      ? `${draftCustomers.size} خطة كاملة بانتظار التأكيد — لن تظهر في المراجعة النهائية قبل اعتمادها.`
-                      : `${draftCustomers.size} finished plan(s) still drafts — the final review won't show them until confirmed.`}
-                  </p>
+                  <button
+                    onClick={() => setPlanFilter(planFilter === "DRAFT" ? "ALL" : "DRAFT")}
+                    className="flex-1 min-w-0 text-start"
+                  >
+                    <p className="text-[12px] font-black underline decoration-dotted" style={{ color: "#78350f" }}>
+                      {isRtl
+                        ? `${draftCustomers.size} خطة كاملة بانتظار التأكيد — ${planFilter === "DRAFT" ? "اضغط لعرض الكل" : "اضغط لعرضهم"}.`
+                        : `${draftCustomers.size} finished plan(s) still drafts — ${planFilter === "DRAFT" ? "tap to show all" : "tap to list them"}.`}
+                    </p>
+                    {draftsHidden > 0 && (
+                      <p className="text-[11px] font-bold mt-0.5" style={{ color: "#a16207" }}>
+                        {isRtl
+                          ? `+ ${draftsHidden} مسودّة لمشتركين خارج هذه الشاشة (مخصّصون أو خارج نطاق اليوم).`
+                          : `+ ${draftsHidden} draft(s) for subscribers not listed here (customized or outside this day).`}
+                      </p>
+                    )}
+                  </button>
                   <button
                     onClick={async () => {
                       if (confirmingAll) return;
