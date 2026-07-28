@@ -204,6 +204,18 @@ export default function Kitchen() {
     return { today, prepared };
   }, [plans]);
 
+  /* «تحضير الكل» يشمل اليوم كاملاً بورديتيه، لكن stats.today معدود من تبويب
+     الوردية المفتوح فقط — فكان الزر يقول 57 (الصباحي) ويحضّر 94. العدّ هنا
+     من كل خطط اليوم مباشرة، مع تفصيلة الورديتين لعرضها في التأكيد. */
+  const dayConfirmed = useMemo(() => {
+    const all = dailyPlans.filter((p: any) => p.date === formattedDate && p.status === "CONFIRMED");
+    return {
+      total: all.length,
+      morning: all.filter((p: any) => p.deliveryTime === "MORNING").length,
+      evening: all.filter((p: any) => p.deliveryTime === "EVENING").length,
+    };
+  }, [dailyPlans, formattedDate]);
+
   const getCustomer = (id: string) => customers.find((c: any) => c._id === id);
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);
   const getCategory = (id: string) => categories.find((c: any) => c._id === id);
@@ -1319,7 +1331,7 @@ export default function Kitchen() {
      «تم التحضير» واحداً واحداً. تأكيد واحد يعلّم كل خطط اليوم المؤكدة
      PREPARED ويخصم مخزونها — نفس جوهر زرّ الكرت الواحد على الخادم. */
   const handlePrepareAll = async () => {
-    if (preparingAll || !stats.today) return;
+    if (preparingAll || !dayConfirmed.total) return;
     /* التاريخ واليوم بالنصّ داخل التأكيد: الشاشة تفتح على «بكرة» افتراضياً،
        وضُغط الزر مرة على 29-7 والمقصود يومها 28 — العدد وحده لا يكشف الخلط. */
     const dayName = format(date, "EEEE d MMMM", { locale: isRtl ? ar : enUS });
@@ -1331,10 +1343,10 @@ export default function Kitchen() {
     const ok = await confirmDialog({
       message: isRtl
         ? `⚠️ تحضير كل خطط ${dayName} (${whichDay})؟
-${stats.today} خطة مؤكدة ستتعلّم «تم التحضير» ويُخصم مخزونها وتظهر للتوصيل.
+${dayConfirmed.total} خطة مؤكدة (${dayConfirmed.morning} صباحي + ${dayConfirmed.evening} مسائي) ستتعلّم «تم التحضير» ويُخصم مخزونها وتظهر للتوصيل.
 لو كنت تقصد يوماً آخر بدّل Today/Tomorrow أعلى الشاشة أولاً.`
         : `⚠️ Prepare ALL plans of ${dayName} (${whichDay})?
-${stats.today} confirmed plans will be marked prepared, inventory deducted, and sent to delivery.
+${dayConfirmed.total} confirmed plans (${dayConfirmed.morning} morning + ${dayConfirmed.evening} evening) will be marked prepared, inventory deducted, and sent to delivery.
 If you meant another day, switch Today/Tomorrow first.`,
     });
     if (!ok) return;
@@ -1342,8 +1354,8 @@ If you meant another day, switch Today/Tomorrow first.`,
     try {
       const r: any = await prepareAllMutation({ date: formattedDate, sessionToken: sessionTok } as any);
       void alertDialog({ message: isRtl
-        ? `تم تحضير ${r.prepared} خطة ✓`
-        : `Prepared ${r.prepared} plan(s) ✓` });
+        ? `تم تحضير ${r.prepared} خطة (اليوم كاملاً بورديتيه) ✓`
+        : `Prepared ${r.prepared} plan(s) — the whole day, both shifts ✓` });
     } catch (e: any) {
       void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "تعذّر التحضير" : "Couldn't prepare") });
     } finally { setPreparingAll(false); }
@@ -1411,12 +1423,12 @@ If you meant another day, switch Today/Tomorrow first.`,
             ]}
             actions={
               <>
-                {stats.today > 0 && (
+                {dayConfirmed.total > 0 && (
                   <button onClick={handlePrepareAll} disabled={preparingAll}
                     className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 disabled:opacity-60"
                     style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
                     <Check className="h-4 w-4" />
-                    {preparingAll ? "…" : isRtl ? `تحضير الكل (${stats.today})` : `Prepare all (${stats.today})`}
+                    {preparingAll ? "…" : isRtl ? `تحضير الكل (${dayConfirmed.total})` : `Prepare all (${dayConfirmed.total})`}
                   </button>
                 )}
                 {/* ✅ تبديل سريع: توصيل بكرة (الافتراضي) / اليوم — بدون ما الشيف يفتح التقويم */}
