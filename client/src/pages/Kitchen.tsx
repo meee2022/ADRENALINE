@@ -201,6 +201,8 @@ export default function Kitchen() {
       });
   }, [dailyPlans, formattedDate, activeTab]);
 
+  /* بحث بالاسم: مع 100+ كرت لا يمكن العثور على شخص بالتمرير. */
+  const [personSearch, setPersonSearch] = useState("");
   const stats = useMemo(() => {
     const today = plans.filter((p: any) => p.status === "CONFIRMED").length;
     const prepared = plans.filter((p: any) => p.status === "PREPARED").length;
@@ -220,6 +222,14 @@ export default function Kitchen() {
   }, [dailyPlans, formattedDate]);
 
   const getCustomer = (id: string) => customers.find((c: any) => c._id === id);
+  const filteredPlans = useMemo(() => {
+    const q = personSearch.trim().toLowerCase();
+    if (!q) return plans;
+    return plans.filter((p: any) => {
+      const c: any = customers.find((x: any) => x._id === p.customerId);
+      return String(c?.fullName || p.customerName || "").toLowerCase().includes(q);
+    });
+  }, [plans, personSearch, customers]);
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);
   const getCategory = (id: string) => categories.find((c: any) => c._id === id);
 
@@ -1526,42 +1536,6 @@ If you meant another day, switch Today/Tomorrow first.`,
 
         {/* Content */}
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-          {/* ✅ قسم الوجبات المخصّصة — يظهر أعلى تبويبات التوصيل فقط؛ في "إجمالي الوجبات" يظهر أسفل القائمة */}
-          {(() => {
-            const custShown = activeTab === "SUMMARY" ? [] : customizedAll.filter((c) => c.deliveryTime === activeTab);
-            return custShown.length > 0 && (
-            <Card className="rounded-2xl border-2 border-[#0E76AC]/20 bg-[#f7fbfe]">
-              <CardContent className="p-4">
-                <h3 className="font-black text-[#0E2A4A] flex items-center gap-2 mb-3">
-                  <ChefHat className="h-5 w-5 text-[#0E76AC]" />
-                  {isRtl ? "الوجبات المخصّصة" : "Customized meals"}
-                  <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{custShown.length}</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {custShown.map((c, ci) => (
-                    <div key={ci} className="rounded-xl bg-white border border-slate-100 p-3.5">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-black text-[15px] text-[#0E2A4A]">{c.name}</span>
-                        <span className="text-[10px] font-bold text-slate-400">{c.deliveryTime === "EVENING" ? (isRtl ? "مسائي" : "Eve") : (isRtl ? "صباحي" : "Morn")}</span>
-                      </div>
-                      {c.allergies && (
-                        <p className="text-[11px] text-red-700 bg-red-50 rounded px-2 py-1 mb-2 font-bold">🚫 {c.allergies}</p>
-                      )}
-                      <ul className="divide-y divide-slate-100">
-                        {c.meals.map((m: any, i: number) => (
-                          <li key={i} className={cn("text-[14px] font-bold py-2", m.notset ? "text-amber-700" : "text-[#0f2438]")}>
-                            {m.text}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            );
-          })()}
-
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
@@ -1898,6 +1872,22 @@ If you meant another day, switch Today/Tomorrow first.`,
           ) : (
             /* ✅ تابات التوصيل (MORNING / EVENING) */
             <>
+              {/* شريط لاصق: يبقى البحث والعدّاد في متناول اليد مهما طال التمرير */}
+              <div className="sticky top-2 z-20 rounded-2xl bg-white/95 backdrop-blur border border-[#e8eef4] shadow-sm px-3 py-2.5 flex items-center gap-3">
+                <input
+                  value={personSearch}
+                  onChange={(e) => setPersonSearch(e.target.value)}
+                  placeholder={isRtl ? "🔍 ابحث باسم المشترك…" : "🔍 Search subscriber…"}
+                  className="flex-1 h-10 rounded-xl border border-[#e8eef4] bg-[#f7fbfe] px-3 text-sm font-bold outline-none focus:border-[#3cc4f0]"
+                />
+                <span className="text-xs font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 whitespace-nowrap">
+                  {stats.today} {isRtl ? "متبقٍّ" : "left"}
+                </span>
+                <span className="text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2.5 py-1.5 whitespace-nowrap">
+                  ✓ {stats.prepared}
+                </span>
+              </div>
+
               {plans.length === 0 ? (
               <Card className="rounded-2xl border-dashed" style={{ border: "1.5px dashed #e8eef4" }}>
                 <CardContent className="flex flex-col items-center justify-center py-12">
@@ -1907,7 +1897,8 @@ If you meant another day, switch Today/Tomorrow first.`,
                 </CardContent>
               </Card>
             ) : (
-              plans.map((plan: any) => {
+              <div className="grid lg:grid-cols-2 gap-3 items-start">
+              {filteredPlans.map((plan: any) => {
               const customer: any = getCustomer(plan.customerId);
               // ✅ إذا لم يوجد customer مربوط، نعرض الطلب بدون بيانات العميل المفصلة
               
@@ -1917,6 +1908,21 @@ If you meant another day, switch Today/Tomorrow first.`,
               // ✅ استخدام اسم احتياطي إذا لم يوجد customer
               const customerName = customer?.fullName || plan.customerName || (isRtl ? "عميل جديد" : "New Customer");
               const customerProgram = customer?.program || (isRtl ? "طلب من الموقع" : "Website Order");
+
+              /* المحضَّر انتهى دوره في المطبخ — سطر رفيع بدل كرت كامل،
+                 فيبقى التمرير للكروت التي تحتاج عملاً فقط. */
+              if (isPrepared) {
+                return (
+                  <div key={plan._id}
+                    className="rounded-xl bg-[#f4f8fb] border border-[#cbe8f5] px-4 py-2.5 flex items-center gap-2.5">
+                    <span className="h-6 w-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-black shrink-0">✓</span>
+                    <span className="font-black text-sm text-[#0E2A4A] truncate flex-1">{customerName}</span>
+                    <span className="text-[11px] font-bold text-cyan-700 flex items-center gap-1 shrink-0">
+                      <Truck className="h-3.5 w-3.5" />{isRtl ? "بانتظار التوصيل" : "Awaiting delivery"}
+                    </span>
+                  </div>
+                );
+              }
 
               return (
                 <Card
@@ -1941,15 +1947,15 @@ If you meant another day, switch Today/Tomorrow first.`,
                     </div>
                   )}
 
-                  <CardContent className="p-5">
+                  <CardContent className="p-4">
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                    <div className="flex items-start justify-between mb-3 gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-black text-gray-900 leading-tight truncate">
                           {customerName}
                         </h2>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                          <span>ID: #{plan._id.slice(-4)}</span>
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500">
+                          <span>#{plan._id.slice(-4)}</span>
                           <span>•</span>
                           <span>{customerProgram}</span>
                         </div>
@@ -1960,14 +1966,14 @@ If you meant another day, switch Today/Tomorrow first.`,
                           {isRtl ? "جاهز للتوصيل" : "Ready to Deliver"}
                         </Badge>
                       ) : (
-                        <Badge className="bg-amber-50 text-amber-700 border-0 text-sm px-4 py-1.5 rounded-full font-semibold">
+                        <Badge className="bg-amber-50 text-amber-700 border-0 text-[11px] px-2.5 py-1 rounded-full font-black shrink-0">
                           {isRtl ? "جاهز للتحضير" : "Ready to Prepare"}
                         </Badge>
                       )}
                     </div>
 
                     {/* Meals — مرتّبة حسب ترتيب الوجبة (فطور ← غداء ← عشاء ← سناك) لسهولة التحضير */}
-                    <div className="space-y-4 mb-4">
+                    <div className="space-y-2 mb-3">
                       {(() => {
                         const courseRank = (item: any) => {
                           const c = String(getCategory(item.categoryId)?.name || item.category || "").toUpperCase();
@@ -2016,11 +2022,11 @@ If you meant another day, switch Today/Tomorrow first.`,
                           return (
                             <div
                               key={idx}
-                              className={cn("rounded-xl p-4 transition-all", itemDone ? "bg-emerald-50/60" : "bg-[#f7fbfe]")}
+                              className={cn("rounded-lg px-3 py-2 transition-all", itemDone ? "bg-emerald-50/60" : "bg-[#f7fbfe]")}
                               style={{ border: itemDone ? "1px solid #a7f3d0" : "1px solid #e8eef4" }}
                             >
                               {/* رأس الوجبة: التصنيف يسارًا + زر التعليم كجاهزة يمينًا */}
-                              <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center justify-between gap-2 mb-1">
                                 <div className="flex items-center gap-2 min-w-0 flex-wrap">
                                   <Badge
                                     variant="outline"
@@ -2054,61 +2060,38 @@ If you meant another day, switch Today/Tomorrow first.`,
                               </div>
 
                               {/* اسم الوجبة */}
-                              <h3 className={cn("text-lg font-black mb-2 leading-snug", itemDone ? "text-emerald-600 line-through" : "text-[#0f1516]")}>
+                              <h3 className={cn("text-[13.5px] font-black mb-1 leading-snug", itemDone ? "text-emerald-600 line-through" : "text-[#0f1516]")}>
                                 {mealName}
                               </h3>
 
                               {/* Modifiers + customer dietary data */}
                               {(allAvoid.length > 0 || allPref.length > 0 || allPortions.length > 0) && (
-                                <div className="space-y-1.5">
-                                  {/* AVOID - Red boxes */}
+                                <div className="space-y-1">
                                   {allAvoid.length > 0 && (
-                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
+                                    <p className="rounded-md px-2 py-1 text-xs font-bold leading-snug text-red-800"
                                       style={{ background: "#fef2f2", border: "1px solid #ef444440" }}>
-                                      <span className="text-red-500 font-black text-sm flex-shrink-0">✕</span>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-red-600 uppercase tracking-wide">{isRtl ? "ممنوع" : "Avoid"}</p>
-                                        <p className="text-sm font-bold text-red-800 leading-tight mt-0.5">{allAvoid.join(isRtl ? "، " : ", ")}</p>
-                                      </div>
-                                    </div>
+                                      <span className="font-black text-red-600">✕ {isRtl ? "ممنوع:" : "Avoid:"}</span> {allAvoid.join(isRtl ? "، " : ", ")}
+                                    </p>
                                   )}
-
-                                  {/* PREF - Cyan */}
                                   {allPref.length > 0 && (
-                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
-                                      style={{ background: "#ecfeff", border: "1px solid #a5f3fc" }}>
-                                      <span className="font-black text-sm flex-shrink-0" style={{ color: "#0891b2" }}>★</span>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black uppercase tracking-wide" style={{ color: "#0891b2" }}>{isRtl ? "تفضيلات" : "Prefs"}</p>
-                                        <p className="text-sm font-semibold leading-tight mt-0.5" style={{ color: "#155e75" }}>{allPref.join(isRtl ? "، " : ", ")}</p>
-                                      </div>
-                                    </div>
+                                    <p className="rounded-md px-2 py-1 text-xs font-semibold leading-snug" style={{ background: "#ecfeff", border: "1px solid #a5f3fc", color: "#155e75" }}>
+                                      <span className="font-black" style={{ color: "#0891b2" }}>★ {isRtl ? "تفضيلات:" : "Prefs:"}</span> {allPref.join(isRtl ? "، " : ", ")}
+                                    </p>
                                   )}
-
-                                  {/* PORTION - Yellow */}
                                   {allPortions.length > 0 && (
-                                    <div className="rounded-lg px-3 py-2 flex items-start gap-2"
-                                      style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
-                                      <span className="text-[#47759c] font-black text-sm flex-shrink-0">⚖</span>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-[#47759c] uppercase tracking-wide">{isRtl ? "الكمية" : "Portion"}</p>
-                                        <p className="text-sm font-semibold text-[#0f1516] leading-tight mt-0.5">{allPortions.join(isRtl ? "، " : ", ")}</p>
-                                      </div>
-                                    </div>
+                                    <p className="rounded-md px-2 py-1 text-xs font-semibold leading-snug text-[#0f1516]" style={{ background: "#eaf1f7", border: "1px solid #47759c40" }}>
+                                      <span className="font-black text-[#47759c]">⚖ {isRtl ? "الكمية:" : "Portion:"}</span> {allPortions.join(isRtl ? "، " : ", ")}
+                                    </p>
                                   )}
                                 </div>
                               )}
 
                               {/* Special note for this specific meal */}
                               {itemNote && (
-                                <div className="mt-2 rounded-lg px-3 py-2 flex items-start gap-2"
+                                <p className="mt-1 rounded-md px-2 py-1 text-xs font-semibold leading-snug text-[#0f1516]"
                                   style={{ background: "#eaf1f7", border: "1px solid #47759c50" }}>
-                                  <span className="font-black text-sm flex-shrink-0 text-[#47759c]">📝</span>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-[10px] font-black text-[#47759c] uppercase tracking-wide">{isRtl ? "ملاحظة الوجبة" : "Note"}</p>
-                                    <p className="text-sm font-semibold text-[#0f1516] leading-tight mt-0.5">{itemNote}</p>
-                                  </div>
-                                </div>
+                                  <span className="font-black text-[#47759c]">📝 {isRtl ? "ملاحظة:" : "Note:"}</span> {itemNote}
+                                </p>
                               )}
                             </div>
                           );
@@ -2136,7 +2119,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                     {!isPrepared && (
                       <Button
                         onClick={() => handleMarkPrepared(plan._id)}
-                        className="w-full h-14 rounded-xl text-white font-bold text-lg shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
+                        className="w-full h-11 rounded-xl text-white font-black text-sm shadow-md" style={{background:"linear-gradient(135deg,#3cc4f0,#0E76AC)"}}
                       >
                         {isRtl ? 'تحديد ك "تم التحضير"' : 'Mark as "Prepared"'}
                       </Button>
@@ -2151,8 +2134,46 @@ If you meant another day, switch Today/Tomorrow first.`,
                   </CardContent>
                 </Card>
               );
-            })
+            })}
+              </div>
             )}
+
+                    {/* ✅ قسم الوجبات المخصّصة — آخر الصفحة بطلب المستخدم: العاديون أولاً ثم المخصصون */}
+          {(() => {
+            // داخل فرع الورديات أصلاً (تبويب الإجمالي له فرعه المنفصل)
+            const custShown = customizedAll.filter((c) => c.deliveryTime === activeTab);
+            return custShown.length > 0 && (
+            <Card className="rounded-2xl border-2 border-[#0E76AC]/20 bg-[#f7fbfe]">
+              <CardContent className="p-4">
+                <h3 className="font-black text-[#0E2A4A] flex items-center gap-2 mb-3">
+                  <ChefHat className="h-5 w-5 text-[#0E76AC]" />
+                  {isRtl ? "الوجبات المخصّصة" : "Customized meals"}
+                  <span className="text-[11px] font-bold text-white bg-[#0E76AC] rounded-full px-2 py-0.5">{custShown.length}</span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {custShown.map((c, ci) => (
+                    <div key={ci} className="rounded-xl bg-white border border-slate-100 p-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-black text-[15px] text-[#0E2A4A]">{c.name}</span>
+                        <span className="text-[10px] font-bold text-slate-400">{c.deliveryTime === "EVENING" ? (isRtl ? "مسائي" : "Eve") : (isRtl ? "صباحي" : "Morn")}</span>
+                      </div>
+                      {c.allergies && (
+                        <p className="text-[11px] text-red-700 bg-red-50 rounded px-2 py-1 mb-2 font-bold">🚫 {c.allergies}</p>
+                      )}
+                      <ul className="divide-y divide-slate-100">
+                        {c.meals.map((m: any, i: number) => (
+                          <li key={i} className={cn("text-[14px] font-bold py-2", m.notset ? "text-amber-700" : "text-[#0f2438]")}>
+                            {m.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            );
+          })()}
           </>
           )}
         </div>
