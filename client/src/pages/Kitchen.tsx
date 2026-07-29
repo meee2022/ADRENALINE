@@ -42,6 +42,7 @@ import { openPrintDoc } from "@/lib/printDoc";
 import { downloadChefSheetXlsx, type ChefRow } from "@/lib/kitchenSheet";
 import { getEffectivePlanItems } from "@/lib/planItems";
 import { Download, FileSpreadsheet, Check } from "lucide-react";
+import { Link } from "wouter";
 
 import {
   Popover,
@@ -162,6 +163,10 @@ export default function Kitchen() {
   const prepareAllMutation = useMutation(api.inventory.prepareAndConsumeAllForDate);
   const [preparingAll, setPreparingAll] = useState(false);
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
+  const productionAudit = useQuery(api.productionAudit.forDate, {
+    date: formattedDate,
+    sessionToken: sessionTok,
+  }) as any;
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
   // ✅ فتح الكشف يجمّد أرقام البوكس لليوم كمان — فالكشف والستيكر يبقوا مطابقين وثابتين
@@ -230,6 +235,16 @@ export default function Kitchen() {
       : `⛔ ${a.onlyStickers.length} have stickers but no cooking: ${a.onlyStickers.join(" · ")}`);
     return out;
   }, [stickerAudit, isRtl]);
+  const printAllowed = productionAudit?.canPrint === true && auditLines.length === 0;
+  const stopUnsafePrint = () => {
+    if (printAllowed) return false;
+    void alertDialog({
+      message: isRtl
+        ? "الطباعة متوقفة. افتح «تدقيق الإنتاج اليومي» وصحّح الأخطاء أولاً."
+        : "Printing is blocked. Open Daily Production Audit and resolve the issues first.",
+    });
+    return true;
+  };
 
   const dayConfirmed = useMemo(() => {
     const all = dailyPlans.filter((p: any) => p.date === formattedDate && p.status === "CONFIRMED");
@@ -874,6 +889,7 @@ export default function Kitchen() {
 
   const [exporting, setExporting] = useState<null | "xlsx" | "pdf">(null);
   const exportSheet = async (kind: "xlsx" | "pdf") => {
+    if (stopUnsafePrint()) return;
     // ✅ الكشف = العاديون ثم المخصّصون (كلٌّ يذهب لقسمه داخل الملف عبر flag customized)
     const people = [...kitchenPeople, ...customizedPeople];
     if (!people.length) {
@@ -894,6 +910,7 @@ export default function Kitchen() {
 
   // ✅ طباعة كشف الشيف — نافذة نظيفة A4 (إجمالي + أطباق مرتّبة + تعديلات مجمّعة + مخصّصين)
   const handlePrintLegacyChefSheet = () => {
+    if (stopUnsafePrint()) return;
     // ✅ كشف الشيف + الـPDF إنجليزي دائماً (الطاقم يقرأ إنجليزي) — نُظلّل isRtl داخل الدالة.
     const isRtl = false;
     const esc = (s: any) => String(s ?? "").replace(/[&<>]/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m] as string));
@@ -1139,6 +1156,7 @@ export default function Kitchen() {
 
   // الكشف الرسمي الموحّد: يستخدم نفس mealSummary وcustomizedAll دون تغيير حسابات المطبخ.
   const handlePrintChefSheet = () => {
+    if (stopUnsafePrint()) return;
     const esc = (value: unknown) => String(value ?? "").replace(/[&<>]/g, (char) => (
       { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[char] as string
     ));
@@ -1385,6 +1403,7 @@ export default function Kitchen() {
    * by one row per customized main meal. Customized sides stay in mealSummary.
    */
   const handlePrintProductionTotals = () => {
+    if (stopUnsafePrint()) return;
     const esc = (value: unknown) => String(value ?? "").replace(/[&<>"]/g, (char) => (
       { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char] as string
     ));
@@ -1527,6 +1546,7 @@ If you meant another day, switch Today/Tomorrow first.`,
   };
 
   const handlePrint = () => {
+    if (stopUnsafePrint()) return;
     window.print();
   };
 
@@ -1609,6 +1629,7 @@ If you meant another day, switch Today/Tomorrow first.`,
 
                 <Button
                   onClick={handlePrint}
+                  disabled={!printAllowed}
                   className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
                 >
                   <Printer className={cn("h-5 w-5", isRtl ? "ml-2" : "mr-2")} />
@@ -1685,6 +1706,28 @@ If you meant another day, switch Today/Tomorrow first.`,
 
         {/* Content */}
         <div className="max-w-[1500px] mx-auto px-3 sm:px-5 py-4 space-y-4">
+          {productionAudit && !productionAudit.canPrint && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-2 text-red-900">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-black">
+                      {isRtl ? "الطباعة متوقفة بسبب أخطاء في خطط اليوم" : "Printing is blocked by daily plan errors"}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-red-800">
+                      {isRtl
+                        ? `${productionAudit.blockerCount} خطأ مانع. راجع المشتركين قبل إرسال الكشف للمطبخ.`
+                        : `${productionAudit.blockerCount} blocker(s). Review customers before sending the sheet to production.`}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/production-audit" className="shrink-0 rounded-xl bg-red-700 px-4 py-2.5 text-center text-sm font-black text-white">
+                  {isRtl ? "فتح التدقيق" : "Open audit"}
+                </Link>
+              </div>
+            </div>
+          )}
           {/* من يطبخ له المطبخ بلا استيكر: طعام يخرج بلا بوكس. الشيف لا يفتح
               صفحة الاستيكرات، فالتحذير يلزم أن يصله هنا وفوق ورقه المطبوع. */}
           {auditLines.length > 0 && (
@@ -1724,7 +1767,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                     <div className="flex items-center gap-2 shrink-0 flex-wrap">
                       <button
                         onClick={() => exportSheet("xlsx")}
-                        disabled={exporting !== null}
+                        disabled={exporting !== null || !printAllowed}
                         title={isRtl ? "تحميل كشف اليوم Excel" : "Download today's sheet as Excel"}
                         className="h-10 px-3 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 font-black text-sm flex items-center gap-2 hover:bg-emerald-100 active:scale-95 transition-all disabled:opacity-60"
                       >
@@ -1733,7 +1776,7 @@ If you meant another day, switch Today/Tomorrow first.`,
                       </button>
                       <button
                         onClick={() => exportSheet("pdf")}
-                        disabled={exporting !== null}
+                        disabled={exporting !== null || !printAllowed}
                         title={isRtl ? "تحميل كشف اليوم PDF" : "Download today's sheet as PDF"}
                         className="h-10 px-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-black text-sm flex items-center gap-2 hover:bg-red-100 active:scale-95 transition-all disabled:opacity-60"
                       >
@@ -1742,15 +1785,17 @@ If you meant another day, switch Today/Tomorrow first.`,
                       </button>
                       <button
                         onClick={handlePrintChefSheet}
-                        className="h-10 px-4 rounded-lg bg-[#0E76AC] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#0a668f] active:scale-95 transition-all"
+                        disabled={!printAllowed}
+                        className="h-10 px-4 rounded-lg bg-[#0E76AC] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#0a668f] active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <Download className="h-4 w-4" />
                         {isRtl ? "قائمة الطلبات" : "Order List"}
                       </button>
                       <button
                         onClick={handlePrintProductionTotals}
+                        disabled={!printAllowed}
                         title={isRtl ? "كشف إجمالي الكميات المطلوبة للإنتاج" : "Compact totals for kitchen production"}
-                        className="h-10 px-4 rounded-lg bg-[#10283f] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#173b59] active:scale-95 transition-all"
+                        className="h-10 px-4 rounded-lg bg-[#10283f] text-white font-black text-sm flex items-center gap-2 shadow-sm hover:bg-[#173b59] active:scale-95 transition-all disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <FileSpreadsheet className="h-4 w-4" />
                         {isRtl ? "مجاميع الإنتاج" : "Production Totals"}

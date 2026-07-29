@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Printer, RotateCcw, Sun, Moon, Package, UtensilsCrossed, Layers, Search, AlertTriangle } from "lucide-react";
 import { useStickers } from "@/lib/api";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
+import { Link } from "wouter";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX" | "CUSTOM";
@@ -121,11 +122,15 @@ export default function Stickers() {
   );
 
   // ✅ أسماء الوجبات على الاستيكر إنجليزي دائماً (المطبخ/التغليف يقرأ إنجليزي)
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const productionAudit = useQuery(api.productionAudit.forDate, { date, sessionToken }) as any;
   const data = useStickers({ date, deliveryTime, lang: "en" });
   const boxStickers = data?.boxStickers ?? [];
   /* تدقيق الخادم: من يُطبع له استيكر وليس في كشف المطبخ (أو العكس). فارقٌ
      واحد يعني بوكساً بلا أكل أو أكلاً بلا بوكس — يُرى قبل الطباعة لا بعد الطبخ. */
   const audit = (data as any)?.audit as { onlyStickers: string[]; onlyKitchen: string[] } | undefined;
+  const mismatchCount = (audit?.onlyStickers?.length || 0) + (audit?.onlyKitchen?.length || 0);
+  const printAllowed = productionAudit?.canPrint === true && mismatchCount === 0;
   const allMealStickers = data?.mealStickers ?? [];
   // ✅ فصل المخصّصين في تبويب مستقل (طلب المستخدم): تبويب «الوجبات» للعاديين فقط،
   //    وتبويب «المخصّصون» يعرضهم **مجمّعين بالعميل** — كل وجبات الشخص ورا بعض
@@ -185,7 +190,6 @@ export default function Stickers() {
 
   // ✅ تجميد أرقام البوكس لهذا اليوم عند فتحه — فيبقى رقم كل مشترك ثابتاً طوال اليوم
   //    حتى لو أُضيف/عُدّل مشتركون بعد الطباعة (الجديد ياخد رقماً مُلحقاً فقط).
-  const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
   const saveCalorieOverride = useMutation(api.stickers.setCalorieOverride);
   const clearSavedCalorieOverrides = useMutation(api.stickers.clearCalorieOverrides);
@@ -294,11 +298,15 @@ export default function Stickers() {
 
   useEffect(() => {
     if (!pendingPrint) return;
+    if (!printAllowed) {
+      setPendingPrint(null);
+      return;
+    }
     // الـclass اتطبّق في هذا الرندر، نطبع ثم نصفّر
     window.print();
     const id = setTimeout(() => setPendingPrint(null), 300);
     return () => clearTimeout(id);
-  }, [pendingPrint]);
+  }, [pendingPrint, printAllowed]);
 
   const toggleOne = (idx: number) =>
     setSelected((s) => { const n = new Set(s); n.has(idx) ? n.delete(idx) : n.add(idx); return n; });
@@ -316,6 +324,7 @@ export default function Stickers() {
      يطبع الرزمة كلها. هذا الزر يفعل الاثنين معاً: التحديد ثم الطباعة — والتحديث
      يقع في نفس الدفعة فيكون الوسم على العناصر قبل أن يفتح مربع الطباعة. */
   const printRange = () => {
+    if (!printAllowed) return;
     const n = rangeSet();
     if (!n.size) return;
     setSelected(n);
@@ -343,6 +352,29 @@ export default function Stickers() {
       <div className="print:hidden space-y-4">
 
         {/* تحذير التطابق مع المطبخ — يظهر فقط عند وجود فارق فعلي */}
+        {productionAudit && !productionAudit.canPrint && (
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                <div>
+                  <p className="font-black">
+                    {isRtl ? "الطباعة متوقفة بسبب أخطاء في خطط اليوم" : "Printing is blocked by daily plan errors"}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {isRtl
+                      ? `${productionAudit.blockerCount} خطأ مانع. افتح التدقيق اليومي لمعرفة المشتركين والتفاصيل.`
+                      : `${productionAudit.blockerCount} blocking issue(s). Open the daily audit for customer details.`}
+                  </p>
+                </div>
+              </div>
+              <Link href="/production-audit" className="shrink-0 rounded-xl bg-red-700 px-4 py-2.5 text-center text-sm font-black text-white">
+                {isRtl ? "فتح التدقيق" : "Open audit"}
+              </Link>
+            </div>
+          </div>
+        )}
+
         {audit && (audit.onlyStickers.length > 0 || audit.onlyKitchen.length > 0) && (
           <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 p-4">
             <p className="text-sm font-black text-rose-800 flex items-center gap-2">
@@ -400,8 +432,9 @@ export default function Stickers() {
               ))}
             </div>
             <button
-              onClick={() => setPendingPrint("all")}
-              className="min-h-11 flex-1 px-5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 sm:flex-none"
+              onClick={() => printAllowed && setPendingPrint("all")}
+              disabled={!printAllowed}
+              className="min-h-11 flex-1 px-5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
               style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
             >
               <Printer className="h-4 w-4" />
@@ -550,7 +583,7 @@ export default function Stickers() {
               <button onClick={applyRange} className="h-9 px-3 rounded-lg text-xs font-bold border border-[#0E76AC] text-[#0E76AC] bg-white hover:bg-[#0E76AC]/5">
                 {isRtl ? "حدّد النطاق" : "Select range"}
               </button>
-              <button onClick={printRange} className="h-9 px-3 rounded-lg text-xs font-black text-white flex items-center gap-1.5"
+              <button onClick={printRange} disabled={!printAllowed} className="h-9 px-3 rounded-lg text-xs font-black text-white flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-40"
                 style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
                 <Printer className="h-3.5 w-3.5" />
                 {isRtl ? "اطبع النطاق" : "Print range"}
@@ -565,8 +598,8 @@ export default function Stickers() {
               </button>
             </div>
             <button
-              onClick={() => setPendingPrint("selected")}
-              disabled={selected.size === 0}
+              onClick={() => printAllowed && setPendingPrint("selected")}
+              disabled={selected.size === 0 || !printAllowed}
               className="h-9 px-4 rounded-lg text-xs font-black text-white flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}
             >

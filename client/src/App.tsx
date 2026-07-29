@@ -32,6 +32,7 @@ const StockTake = lazy(() => import("@/pages/StockTake"));
 const InventorySetup = lazy(() => import("@/pages/InventorySetup"));
 const Suppliers = lazy(() => import("@/pages/Suppliers"));
 const Kitchen = lazy(() => import("@/pages/Kitchen"));
+const DailyProductionAudit = lazy(() => import("@/pages/DailyProductionAudit"));
 const Delivery = lazy(() => import("@/pages/Delivery"));
 const DriverApp = lazy(() => import("@/pages/DriverApp"));
 const TrackOrder = lazy(() => import("@/pages/public/TrackOrder"));
@@ -267,6 +268,9 @@ function Router() {
       </Route>
       <Route path="/kitchen">
         <ProtectedRoute component={Kitchen} />
+      </Route>
+      <Route path="/production-audit">
+        <ProtectedRoute component={DailyProductionAudit} />
       </Route>
       <Route path="/meal-issuance">
         <ProtectedRoute component={MealIssuance} />

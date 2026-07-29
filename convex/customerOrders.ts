@@ -6,6 +6,7 @@ import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 // 🔒 قصر دورة الطلبات (approve/reject/updateStatus) على الأدوار المسؤولة
 const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
 import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf, rotationWeekAtDate } from "./lib/dates";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { loyaltyConfig } from "./loyalty";
 import { qatarTodayISO, validateCustomerOrderSelection } from "./lib/customerOrderRules";
 
@@ -581,7 +582,21 @@ export const approve = mutation({
     const deliveryTime: "MORNING" | "EVENING" =
       (linkedCustomer as any)?.deliveryTime === "EVENING" ? "EVENING" : "MORNING";
 
+    /* 🔒 الاعتماد لا يكتب خططاً في أيامٍ لا تُطعم أحداً. كان يبني على التاريخ
+       المحسوب من الطلب مهما كان: ثلاثة طلبات معلّقة تطلب البدء 30-6 و11-7 —
+       تواريخ فاتت — واعتمادها كان سيُنشئ خططاً في الماضي. والحارس الذي أضيف في
+       dailyPlans.create لا يحمي هذا المسار لأنه يكتب في الجدول مباشرةً.
+       يُتخطّى: اليوم الماضي، وما هو خارج كل فترات اشتراك العميل (المجدَّدة
+       محسوبة). ما يُتخطّى يُبلَّغ للأخصائية بدل أن يُهمَل بصمت. */
+    const approveTodayISO = qatarTodayISO(Date.now());
+    const skippedDates: string[] = [];
     for (const [date, dayMeals] of Object.entries(mealsByDate)) {
+      const dISO = String(date).slice(0, 10);
+      // اليوم الفائت لا يُطبخ: المطبخ يطبخ اليوم لتوصيل الغد، فما مضى مضى.
+      if (dISO < approveTodayISO) { skippedDates.push(`${dISO} (فات موعد طبخه)`); continue; }
+      if (linkedCustomer && !isWithinSubscription(linkedCustomer, dISO)) {
+        skippedDates.push(`${dISO} (خارج الاشتراك)`); continue;
+      }
       // ⛔ لا تُنشأ خطط داخل فترة تجميد المشترك — هذا المسار يكتب في dailyPlans
       //    مباشرةً، فلا يمرّ على الحارس الموجود في dailyPlans.create.
       const pausedFrom = (linkedCustomer as any)?.pausedFrom as string | undefined;
@@ -714,8 +729,11 @@ export const approve = mutation({
 
     return {
       success: true,
-      message: "تم اعتماد الطلب وإضافته للمطبخ",
+      message: skippedDates.length
+        ? `تم اعتماد الطلب ✓ — باقي الأيام أُنشئت. تُخطّي ${skippedDates.length} تاريخاً لا يمكن طبخها: ${skippedDates.join(" · ")}`
+        : "تم اعتماد الطلب وإضافته للمطبخ",
       replacedPlans, // خطط زائدة حُذفت لمنع ازدواج الأكل
+      skippedDates,  // أيام لم تُنشأ لها خطة — تراجعها الأخصائية
     };
   },
 });

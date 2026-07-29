@@ -61,6 +61,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
   KITCHEN: [
     "/",
     "/kitchen",
+    "/production-audit",
     "/stickers",
     "/outlet-labels",
     "/pantry-labels",    // استيكرات المخزن والبهارات
@@ -259,6 +260,8 @@ export const MENU_SECTIONS: MenuSection[] = [
     titleEn: "Operations",
     items: [
       { href: "/kitchen", iconKey: "kitchen", labelAr: "المطبخ", labelEn: "Kitchen",
+        roles: ["ADMIN", "KITCHEN"] },
+      { href: "/production-audit", iconKey: "audit", labelAr: "تدقيق الإنتاج اليومي", labelEn: "Production Audit",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/stickers", iconKey: "stickers", labelAr: "طباعة الستيكرات", labelEn: "Stickers Print",
         roles: ["ADMIN", "KITCHEN"] },
