@@ -105,7 +105,6 @@ import type * as subscriptionPause from "../subscriptionPause.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
 import type * as users from "../users.js";
-import type * as ztmp from "../ztmp.js";
 
 import type {
   ApiFromModules,
@@ -211,7 +210,6 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;
-  ztmp: typeof ztmp;
 }>;
 
 /**

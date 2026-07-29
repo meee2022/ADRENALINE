@@ -475,9 +475,22 @@ export const removeForce = mutation({
     // حساب الموقع
     const accts = await ctx.db.query("customerAccounts").withIndex("by_customerId", (q) => q.eq("customerId", id)).collect();
     for (const a of accts) { await ctx.db.delete(a._id); accountsDeleted++; }
+    /* القالب المخصّص كان يبقى بعد حذف صاحبه: خمسة قوالب يتيمة بمئتَي وجبة
+       تشير لمشتركين غير موجودين، تُربك كل فحص لاحق ولا يعرف أحد لمن هي.
+       يُحذف مع بقية بياناته. */
+    let templatesDeleted = 0;
+    for (const t of await ctx.db.query("customizedTemplates").collect()) {
+      if (String((t as any).customerId) === String(id)) { await ctx.db.delete(t._id); templatesDeleted++; }
+    }
+    // سجل تعديلات الحقول الحسّاسة لهذا المشترك
+    let changeLogDeleted = 0;
+    for (const ch of await ctx.db.query("customerFieldChanges")
+      .withIndex("by_customer", (q: any) => q.eq("customerId", id)).collect()) {
+      await ctx.db.delete(ch._id); changeLogDeleted++;
+    }
     // المشترك نفسه
     await ctx.db.delete(id);
-    return { ok: true, ordersDeleted, itemsDeleted, plansDeleted, accountsDeleted };
+    return { ok: true, ordersDeleted, itemsDeleted, plansDeleted, accountsDeleted, templatesDeleted, changeLogDeleted };
   },
 });
 
