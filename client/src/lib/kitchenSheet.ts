@@ -157,7 +157,13 @@ function tableHtml(title: string, rows: KitchenPerson[], lang: Lang): string {
   </section>`;
 }
 
-export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[], lang: Lang = "ar"): Promise<void> {
+export async function downloadKitchenPdf(
+  dateStr: string,
+  people: KitchenPerson[],
+  lang: Lang = "ar",
+  /** أسطر تحذير التطابق مع الاستيكرات — تُطبع أعلى الورقة قبل أي شيء. */
+  auditLines: string[] = [],
+): Promise<void> {
   const std = people.filter((p) => !p.customized);
   const cust = people.filter((p) => p.customized);
   const tr = T(lang);
@@ -196,6 +202,8 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
       .al{color:#b45309;font-size:9px;font-weight:800}
       .m4{font-size:9px}
       .foot{margin:6px 16px 12px;font-size:11px;color:#94a3b8;text-align:center}
+      .audit-warn{background:#fff1f2;border:2px solid #e11d48;border-radius:8px;padding:7px 11px;
+        margin:0 0 9px;font-size:11px;font-weight:800;color:#9f1239;line-height:1.7}
       /* ✅ ترقيم الصفحات داخل نفس قاعدة @page — كروم لا يدمج قاعدتَي @page منفصلتين،
              فالاعتماد على حقن openPrintDoc (قاعدة ثانية) كان يُتجاهَل فلا يظهر رقم. */
       @page{ size:A4 portrait; margin:6mm 6mm 12mm 6mm;
@@ -223,6 +231,7 @@ export async function downloadKitchenPdf(dateStr: string, people: KitchenPerson[
         </div>
       </div>
       <div class="kp-wrap">
+        ${auditLines.length ? `<div class="audit-warn">${auditLines.map(esc).join("<br/>")}</div>` : ""}
         ${tableHtml(tr.standard, std, lang)}
         ${tableHtml(tr.customizedSec, cust, lang)}
       </div>

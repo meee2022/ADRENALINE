@@ -213,6 +213,24 @@ export default function Kitchen() {
   /* «تحضير الكل» يشمل اليوم كاملاً بورديتيه، لكن stats.today معدود من تبويب
      الوردية المفتوح فقط — فكان الزر يقول 57 (الصباحي) ويحضّر 94. العدّ هنا
      من كل خطط اليوم مباشرة، مع تفصيلة الورديتين لعرضها في التأكيد. */
+  /* تدقيق التطابق نفسه الذي تعرضه صفحة الاستيكرات — يُقرأ هنا أيضاً لأن
+     الشيف لا يفتح تلك الصفحة: من يطبخ له المطبخ بلا استيكر يخرج طعامه بلا
+     بوكس ولا يعلم أحد. يُعرض على الشاشة وفوق كل ورقة تُطبع. */
+  const stickerAudit = (useQuery(api.stickers.get, {
+    date: formattedDate, deliveryTime: "ALL", lang: "en", sessionToken: sessionTok,
+  }) as any)?.audit as { onlyStickers: string[]; onlyKitchen: string[] } | undefined;
+  const auditLines = useMemo(() => {
+    const a = stickerAudit; if (!a) return [] as string[];
+    const out: string[] = [];
+    if (a.onlyKitchen?.length) out.push(isRtl
+      ? `⚠ ${a.onlyKitchen.length} يُطبخ لهم بلا استيكر: ${a.onlyKitchen.join(" · ")}`
+      : `⚠ ${a.onlyKitchen.length} cooked for with no sticker: ${a.onlyKitchen.join(" · ")}`);
+    if (a.onlyStickers?.length) out.push(isRtl
+      ? `⛔ ${a.onlyStickers.length} لهم استيكر بلا طبخ: ${a.onlyStickers.join(" · ")}`
+      : `⛔ ${a.onlyStickers.length} have stickers but no cooking: ${a.onlyStickers.join(" · ")}`);
+    return out;
+  }, [stickerAudit, isRtl]);
+
   const dayConfirmed = useMemo(() => {
     const all = dailyPlans.filter((p: any) => p.date === formattedDate && p.status === "CONFIRMED");
     return {
@@ -866,7 +884,7 @@ export default function Kitchen() {
     try {
       const lang = isRtl ? "ar" : "en";
       if (kind === "xlsx") await downloadKitchenXlsx(formattedDate, people, lang);
-      else await downloadKitchenPdf(formattedDate, people, lang);
+      else await downloadKitchenPdf(formattedDate, people, lang, auditLines);
     } catch (e: any) {
       void alertDialog({ message: (isRtl ? "تعذّر التحميل: " : "Download failed: ") + String(e?.message || e) });
     } finally {
@@ -1325,9 +1343,12 @@ export default function Kitchen() {
         tr{break-inside:avoid;page-break-inside:avoid}.customer-title{break-before:auto;break-after:avoid;page-break-after:avoid}
         .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:3px 8px;text-align:left;font-size:9px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
          @page{size:A4 portrait;margin:8mm 8mm 11mm}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}.preview-actions{display:none}}
+       .audit-warn{background:#fff1f2;border:2px solid #e11d48;border-radius:8px;padding:8px 12px;
+         margin:0 0 10px;font-size:12px;font-weight:800;color:#9f1239;line-height:1.7}
        </style></head><body>
          <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" onclick="window.opener && window.opener.postMessage('adr-chef-xlsx','*')">Download Excel</button><button type="button" class="close" onclick="window.close()">Close</button></div>
-         <div class="masthead"><div><h1>ADRENALINE · CHEF PRODUCTION SHEET</h1></div><div class="meta">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
+         ${auditLines.length ? `<div class="audit-warn">${auditLines.map((l) => esc(l)).join("<br/>")}</div>` : ""}
+        <div class="masthead"><div><h1>ADRENALINE · CHEF PRODUCTION SHEET</h1></div><div class="meta">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
         <div class="kpis">
           <div class="kpi"><b>${operationalTotal}</b><span>Operational portions</span></div>
           <div class="kpi"><b>${summaryPortions}</b><span>Grouped portions</span></div>
@@ -1664,6 +1685,20 @@ If you meant another day, switch Today/Tomorrow first.`,
 
         {/* Content */}
         <div className="max-w-[1500px] mx-auto px-3 sm:px-5 py-4 space-y-4">
+          {/* من يطبخ له المطبخ بلا استيكر: طعام يخرج بلا بوكس. الشيف لا يفتح
+              صفحة الاستيكرات، فالتحذير يلزم أن يصله هنا وفوق ورقه المطبوع. */}
+          {auditLines.length > 0 && (
+            <div className="rounded-2xl border-2 border-rose-300 bg-rose-50 px-4 py-3">
+              <p className="text-sm font-black text-rose-800 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                {isRtl ? "المطبخ والاستيكرات غير متطابقين لهذا اليوم"
+                       : "Kitchen and stickers don't match for this day"}
+              </p>
+              {auditLines.map((line, i) => (
+                <p key={i} className="text-[12px] font-bold text-rose-700 mt-1.5">{line}</p>
+              ))}
+            </div>
+          )}
           {activeTab === "SUMMARY" ? (
             /* ✅ تاب إجمالي الوجبات - تصميم مبسط للشيف */
             <>
