@@ -46,6 +46,7 @@ const ROLE_ALLOWED_PATHS: Record<Role, string[]> = {
   NUTRITIONIST: [
     "/",
     "/customers",
+    "/production-audit",
     "/plans",
     "/plans-management",
     "/plans-review/*",
@@ -262,7 +263,7 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/kitchen", iconKey: "kitchen", labelAr: "المطبخ", labelEn: "Kitchen",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/production-audit", iconKey: "audit", labelAr: "تدقيق الإنتاج اليومي", labelEn: "Production Audit",
-        roles: ["ADMIN", "KITCHEN"] },
+        roles: ["ADMIN", "NUTRITIONIST", "KITCHEN"] },
       { href: "/stickers", iconKey: "stickers", labelAr: "طباعة الستيكرات", labelEn: "Stickers Print",
         roles: ["ADMIN", "KITCHEN"] },
       { href: "/outlet-labels", iconKey: "outletLabels", labelAr: "استيكرات المنافذ", labelEn: "Outlet Labels",

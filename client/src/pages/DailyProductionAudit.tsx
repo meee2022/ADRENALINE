@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { Link } from "wouter";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   AlertTriangle,
+  ArrowUpLeft,
   CheckCircle2,
   ClipboardCheck,
   Printer,
@@ -25,6 +26,14 @@ const CODE_LABELS: Record<string, { ar: string; en: string }> = {
   MEAL_COUNT_MISMATCH: { ar: "عدد الوجبات غير مطابق", en: "Meal count mismatch" },
   EMPTY_PLAN: { ar: "خطة فارغة", en: "Empty plan" },
   DUPLICATE_CUSTOM_TEMPLATE: { ar: "قالب مخصص مكرر", en: "Duplicate custom template" },
+  DELIVERY_SHIFT_MISMATCH: { ar: "وردية غير مطابقة", en: "Shift mismatch" },
+  DUPLICATE_MEAL_SLOT: { ar: "خانة وجبة مكررة", en: "Duplicate meal slot" },
+  REPEATED_MAIN_MEAL: { ar: "وجبة رئيسية مكررة", en: "Repeated main meal" },
+  DUPLICATE_ROSTER_NAME: { ar: "اسم مكرر في الكشف", en: "Duplicate roster name" },
+  DUPLICATE_BOX_STICKER_NUMBER: { ar: "ترقيم بوكس مكرر للمشترك", en: "Duplicate customer box number" },
+  DUPLICATE_BOX_NUMBER: { ar: "رقم بوكس مكرر", en: "Duplicate box number" },
+  DUPLICATE_RENDERED_BOX_STICKER: { ar: "استيكر بوكس مكرر", en: "Duplicate box sticker" },
+  DUPLICATE_RENDERED_MEAL_STICKER: { ar: "استيكر وجبة مكرر", en: "Duplicate meal sticker" },
 };
 
 export default function DailyProductionAudit() {
@@ -32,6 +41,11 @@ export default function DailyProductionAudit() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [date, setDate] = useState(format(new Date(Date.now() + 86400000), "yyyy-MM-dd"));
   const sessionToken = useStore((state) => state.sessionToken) || undefined;
+  const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
+  useEffect(() => {
+    if (!date || !sessionToken) return;
+    ensureBoxNumbers({ date, sessionToken }).catch(() => undefined);
+  }, [date, sessionToken, ensureBoxNumbers]);
   const audit = useQuery(api.productionAudit.forDate, { date, sessionToken }) as any;
   const stickerData = useQuery(api.stickers.get, {
     date,
@@ -44,9 +58,45 @@ export default function DailyProductionAudit() {
     | undefined;
   const mismatchCount =
     (stickerMismatch?.onlyKitchen?.length || 0) + (stickerMismatch?.onlyStickers?.length || 0);
+  const stickerIssues = useMemo(() => {
+    const issues: any[] = [];
+    const boxes = stickerData?.boxStickers || [];
+    const meals = stickerData?.mealStickers || [];
+    const duplicateGroups = (rows: any[], keyOf: (row: any) => string) =>
+      Array.from(rows.reduce((map: Map<string, any[]>, row: any) => {
+        const key = keyOf(row);
+        if (!key) return map;
+        map.set(key, [...(map.get(key) || []), row]);
+        return map;
+      }, new Map<string, any[]>()).values()).filter((rows: any[]) => rows.length > 1);
+
+    for (const rows of duplicateGroups(boxes, (row) => String(row.customerId || ""))) {
+      issues.push({
+        code: "DUPLICATE_RENDERED_BOX_STICKER",
+        severity: "BLOCKER",
+        customerId: rows[0].customerId,
+        customerName: rows[0].customerName || "Unknown",
+        messageAr: `${rows.length} استيكرات بوكس ستُطبع لنفس المشترك`,
+        messageEn: `${rows.length} box stickers would print for the same customer`,
+      });
+    }
+    for (const rows of duplicateGroups(meals, (row) => String(row.stickerKey || ""))) {
+      issues.push({
+        code: "DUPLICATE_RENDERED_MEAL_STICKER",
+        severity: "BLOCKER",
+        customerId: rows[0].customerId,
+        customerName: rows[0].customerName || "Unknown",
+        messageAr: "نفس استيكر الوجبة سيتكرر في رزمة الطباعة",
+        messageEn: "The same meal sticker would be repeated in the print batch",
+      });
+    }
+    return issues;
+  }, [stickerData]);
   const loading = audit === undefined || stickerData === undefined;
-  const canPrint = !loading && audit?.canPrint && mismatchCount === 0;
-  const issues = audit?.issues || [];
+  const issues = [...(audit?.issues || []), ...stickerIssues];
+  const clientBlockers = stickerIssues.filter((issue) => issue.severity === "BLOCKER").length;
+  const blockerCount = (audit?.blockerCount || 0) + clientBlockers + mismatchCount;
+  const canPrint = !loading && audit?.canPrint && clientBlockers === 0 && mismatchCount === 0;
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-100">
@@ -114,8 +164,8 @@ export default function DailyProductionAudit() {
                 {!loading && (
                   <p className="mt-1 text-sm font-medium text-slate-700">
                     {isRtl
-                      ? `${audit?.uniqueCustomers || 0} مشترك، ${audit?.operationalPlans || 0} خطة تشغيلية، ${audit?.blockerCount || 0} خطأ مانع`
-                      : `${audit?.uniqueCustomers || 0} customers, ${audit?.operationalPlans || 0} operational plans, ${audit?.blockerCount || 0} blockers`}
+                      ? `${audit?.uniqueCustomers || 0} مشترك، ${audit?.operationalPlans || 0} خطة تشغيلية، ${blockerCount} خطأ مانع`
+                      : `${audit?.uniqueCustomers || 0} customers, ${audit?.operationalPlans || 0} operational plans, ${blockerCount} blockers`}
                   </p>
                 )}
               </div>
@@ -177,12 +227,44 @@ export default function DailyProductionAudit() {
             <div className="divide-y divide-slate-100">
               {issues.map((issue: any, index: number) => {
                 const label = CODE_LABELS[issue.code];
+                const warning = issue.severity === "WARNING";
+                const customerQuery = issue.customerId
+                  ? `/plans?customer=${encodeURIComponent(issue.customerId)}&date=${encodeURIComponent(date)}`
+                  : "";
+                const customerFileQuery = `/customers?search=${encodeURIComponent(issue.customerName || "")}`;
+                const stickerQuery = `/stickers?date=${encodeURIComponent(date)}&search=${encodeURIComponent(issue.customerName || "")}`;
+                const href = issue.code === "INACTIVE_OR_OUTSIDE_SUBSCRIPTION"
+                  || issue.code === "DUPLICATE_ROSTER_NAME"
+                  ? customerFileQuery
+                  : issue.code === "DUPLICATE_RENDERED_BOX_STICKER"
+                    || issue.code === "DUPLICATE_RENDERED_MEAL_STICKER"
+                    || issue.code === "DUPLICATE_BOX_STICKER_NUMBER"
+                    || issue.code === "DUPLICATE_BOX_NUMBER"
+                    ? stickerQuery
+                    : customerQuery || customerFileQuery;
+                const destination = issue.code === "INACTIVE_OR_OUTSIDE_SUBSCRIPTION"
+                  || issue.code === "DUPLICATE_ROSTER_NAME"
+                  ? isRtl ? "فتح ملف المشترك" : "Open customer"
+                  : issue.code === "DUPLICATE_RENDERED_BOX_STICKER"
+                    || issue.code === "DUPLICATE_RENDERED_MEAL_STICKER"
+                    || issue.code === "DUPLICATE_BOX_STICKER_NUMBER"
+                    || issue.code === "DUPLICATE_BOX_NUMBER"
+                    ? isRtl ? "فتح الاستيكرات" : "Open stickers"
+                    : isRtl ? "فتح الخطة وتصحيحها" : "Open and fix plan";
                 return (
-                  <div key={`${issue.code}-${issue.customerId || index}-${index}`} className="p-4 sm:px-5">
+                  <Link
+                    href={href}
+                    key={`${issue.code}-${issue.customerId || index}-${index}`}
+                    className="block p-4 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-inset sm:px-5"
+                  >
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-black text-red-700">
+                          <span className={`rounded-full border px-2.5 py-1 text-xs font-black ${
+                            warning
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-red-200 bg-red-50 text-red-700"
+                          }`}>
                             {isRtl ? label?.ar || issue.code : label?.en || issue.code}
                           </span>
                           <span className="font-black text-slate-950">{issue.customerName}</span>
@@ -191,18 +273,24 @@ export default function DailyProductionAudit() {
                           {isRtl ? issue.messageAr : issue.messageEn}
                         </p>
                       </div>
-                      {issue.expected !== undefined && (
-                        <div className="flex shrink-0 items-center gap-2 text-sm tabular-nums">
+                      <div className="flex shrink-0 items-center gap-2 text-sm tabular-nums">
+                        {issue.expected !== undefined && (
+                          <>
                           <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 font-bold text-slate-700">
                             {isRtl ? "الباقة" : "Expected"}: {issue.expected}
                           </span>
                           <span className="rounded-lg bg-red-50 px-2.5 py-1.5 font-black text-red-700">
                             {isRtl ? "الخطة" : "Plan"}: {issue.actual}
                           </span>
-                        </div>
-                      )}
+                          </>
+                        )}
+                        <span className="flex h-9 items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 font-black text-cyan-800">
+                          <span>{destination}</span>
+                          <ArrowUpLeft className={`h-4 w-4 ${isRtl ? "" : "rotate-90"}`} />
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

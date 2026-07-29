@@ -1,5 +1,5 @@
 // client/src/pages/Stickers.tsx
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -95,7 +95,12 @@ export default function Stickers() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
 
   // ✅ الاستيكرات تُطبع اليوم لتوصيل الغد — الافتراضي "بكرة" (زي المطبخ)
-  const [date, setDate] = useState<string>(format(new Date(Date.now() + 86400000), "yyyy-MM-dd"));
+  const [date, setDate] = useState<string>(() =>
+    typeof window === "undefined"
+      ? format(new Date(Date.now() + 86400000), "yyyy-MM-dd")
+      : new URLSearchParams(window.location.search).get("date")
+        || format(new Date(Date.now() + 86400000), "yyyy-MM-dd"),
+  );
   // «الكل» هو الافتراضي: الطباعة تتم لليوم كاملاً، والبدء على «صباحي» كان يُخفي
   // نصف الرزمة حتى ينتبه أحد لتبديلها.
   const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("ALL");
@@ -130,8 +135,17 @@ export default function Stickers() {
      واحد يعني بوكساً بلا أكل أو أكلاً بلا بوكس — يُرى قبل الطباعة لا بعد الطبخ. */
   const audit = (data as any)?.audit as { onlyStickers: string[]; onlyKitchen: string[] } | undefined;
   const mismatchCount = (audit?.onlyStickers?.length || 0) + (audit?.onlyKitchen?.length || 0);
-  const printAllowed = productionAudit?.canPrint === true && mismatchCount === 0;
   const allMealStickers = data?.mealStickers ?? [];
+  const renderedDuplicateCount = useMemo(() => {
+    const duplicateCount = (values: string[]) => values.length - new Set(values).size;
+    const boxKeys = boxStickers.map((row: any) => String(row.customerId || "")).filter(Boolean);
+    const mealKeys = allMealStickers.map((row: any) => String(row.stickerKey || "")).filter(Boolean);
+    return duplicateCount(boxKeys) + duplicateCount(mealKeys);
+  }, [boxStickers, allMealStickers]);
+  const printAllowed =
+    productionAudit?.canPrint === true &&
+    mismatchCount === 0 &&
+    renderedDuplicateCount === 0;
   // ✅ فصل المخصّصين في تبويب مستقل (طلب المستخدم): تبويب «الوجبات» للعاديين فقط،
   //    وتبويب «المخصّصون» يعرضهم **مجمّعين بالعميل** — كل وجبات الشخص ورا بعض
   //    بترتيب رقم البوكس، فالطباعة تطلع اسم ورا اسم بلا تشتيت.
@@ -169,10 +183,19 @@ export default function Stickers() {
   // تعديل خاص باستيكر هذا اليوم. يُحفظ منفصلًا عن بيانات الوجبة وخطة المشترك.
   const [calOverride, setCalOverride] = useState<CalorieOverrides>(readCalorieOverrides);
   // ✅ بحث بالاسم/الرقم للوصول السريع لستيكر شخص معيّن (بدل تصفّح المئات)
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : new URLSearchParams(window.location.search).get("search") || "",
+  );
   const [mealCategory, setMealCategory] = useState<MealCategoryFilter>("ALL");
+  const initialFiltersRef = useRef(true);
   // امسح أدوات العرض عند تبدّل القائمة، مع إبقاء تعديلات السعرات حتى انتهاء جلسة الطباعة.
   useEffect(() => {
+    if (initialFiltersRef.current) {
+      initialFiltersRef.current = false;
+      return;
+    }
     setSelected(new Set());
     setRangeFrom("");
     setRangeTo("");
@@ -352,7 +375,7 @@ export default function Stickers() {
       <div className="print:hidden space-y-4">
 
         {/* تحذير التطابق مع المطبخ — يظهر فقط عند وجود فارق فعلي */}
-        {productionAudit && !productionAudit.canPrint && (
+        {productionAudit && (!productionAudit.canPrint || renderedDuplicateCount > 0) && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-900">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-start gap-2">
@@ -363,8 +386,8 @@ export default function Stickers() {
                   </p>
                   <p className="mt-1 text-sm font-semibold">
                     {isRtl
-                      ? `${productionAudit.blockerCount} خطأ مانع. افتح التدقيق اليومي لمعرفة المشتركين والتفاصيل.`
-                      : `${productionAudit.blockerCount} blocking issue(s). Open the daily audit for customer details.`}
+                      ? `${productionAudit.blockerCount + renderedDuplicateCount} خطأ مانع. افتح التدقيق اليومي لمعرفة المشتركين والتفاصيل.`
+                      : `${productionAudit.blockerCount + renderedDuplicateCount} blocking issue(s). Open the daily audit for customer details.`}
                   </p>
                 </div>
               </div>

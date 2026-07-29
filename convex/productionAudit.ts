@@ -35,9 +35,10 @@ export const forDate = query({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const date = dateOnly(args.date);
-    const [dayPlans, templates] = await Promise.all([
+    const [dayPlans, templates, boxNumbers] = await Promise.all([
       ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect(),
       ctx.db.query("customizedTemplates").collect(),
+      ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q) => q.eq("date", date)).collect(),
     ]);
 
     const operational = dayPlans.filter(
@@ -121,6 +122,59 @@ export const forDate = query({
         });
       }
 
+      for (const plan of plans) {
+        const planShift = String(plan.deliveryTime || "").toUpperCase();
+        const customerShift = String(customer.deliveryTime || "").toUpperCase();
+        if (planShift && customerShift && planShift !== customerShift) {
+          issues.push({
+            code: "DELIVERY_SHIFT_MISMATCH",
+            severity: "BLOCKER",
+            customerId,
+            customerName: name,
+            messageAr: `وردية الخطة ${planShift} بينما وردية المشترك ${customerShift}`,
+            messageEn: `Plan shift is ${planShift} while customer shift is ${customerShift}`,
+            planIds: [String(plan._id)],
+          });
+        }
+
+        const items = (Array.isArray(plan.items) ? plan.items : []).filter((item: any) => !item?.isOff);
+        const slotIds = items.map((item: any) => String(item?.id || "")).filter(Boolean);
+        const duplicateSlotIds = slotIds.filter((id: string, index: number) => slotIds.indexOf(id) !== index);
+        if (duplicateSlotIds.length) {
+          issues.push({
+            code: "DUPLICATE_MEAL_SLOT",
+            severity: "BLOCKER",
+            customerId,
+            customerName: name,
+            messageAr: "نفس خانة الوجبة مكررة داخل الخطة",
+            messageEn: "The same meal slot is duplicated inside the plan",
+            planIds: [String(plan._id)],
+          });
+        }
+
+        const mainMealKeys = items
+          .filter((item: any) => {
+            const category = String(item?.category || item?.categoryName || "").toUpperCase();
+            return !category.includes("SNACK") && !category.includes("SALAD");
+          })
+          .map((item: any) => String(item?.publicMealId || item?.mealId || item?.menuItemId || ""))
+          .filter(Boolean);
+        const repeatedMain = mainMealKeys.filter(
+          (key: string, index: number) => mainMealKeys.indexOf(key) !== index,
+        );
+        if (repeatedMain.length) {
+          issues.push({
+            code: "REPEATED_MAIN_MEAL",
+            severity: "WARNING",
+            customerId,
+            customerName: name,
+            messageAr: "نفس الوجبة الرئيسية مختارة أكثر من مرة داخل خطة اليوم",
+            messageEn: "The same main meal is selected more than once in the daily plan",
+            planIds: [String(plan._id)],
+          });
+        }
+      }
+
       if (!customerRunsOnDate(customer, date)) {
         const pausedFrom = dateOnly(customer.pausedFrom);
         const reasonAr = pausedFrom && date >= pausedFrom
@@ -196,6 +250,70 @@ export const forDate = query({
           messageEn: `${rows.length} customized templates for the same customer`,
         });
       }
+    }
+
+    const rosterByName = new Map<string, Array<{ id: string; name: string }>>();
+    const rosterIds = new Set<string>(plansByCustomer.keys());
+    for (const [customerId] of templateGroups) {
+      const customer = customerById.get(customerId);
+      if (customerRunsOnDate(customer, date)) rosterIds.add(customerId);
+    }
+    for (const customerId of rosterIds) {
+      const customer = customerById.get(customerId);
+      if (!customer) continue;
+      const normalizedName = String(customer.fullName || "")
+        .trim()
+        .toLocaleUpperCase()
+        .replace(/\s+/g, " ");
+      if (!normalizedName) continue;
+      const rows = rosterByName.get(normalizedName) || [];
+      rows.push({ id: customerId, name: String(customer.fullName) });
+      rosterByName.set(normalizedName, rows);
+    }
+    for (const rows of rosterByName.values()) {
+      const uniqueIds = new Set(rows.map((row) => row.id));
+      if (uniqueIds.size > 1) {
+        issues.push({
+          code: "DUPLICATE_ROSTER_NAME",
+          severity: "BLOCKER",
+          customerName: rows[0].name,
+          messageAr: `الاسم نفسه يظهر لـ ${uniqueIds.size} مشتركين مختلفين في كشف اليوم`,
+          messageEn: `The same name belongs to ${uniqueIds.size} different customers in today's roster`,
+        });
+      }
+    }
+
+    const boxByCustomer = new Map<string, any[]>();
+    const boxByNumber = new Map<number, any[]>();
+    for (const row of boxNumbers as any[]) {
+      const customerRows = boxByCustomer.get(String(row.customerId)) || [];
+      customerRows.push(row);
+      boxByCustomer.set(String(row.customerId), customerRows);
+      const numberRows = boxByNumber.get(Number(row.boxNo)) || [];
+      numberRows.push(row);
+      boxByNumber.set(Number(row.boxNo), numberRows);
+    }
+    for (const [customerId, rows] of boxByCustomer) {
+      if (rows.length <= 1) continue;
+      const customer = customerById.get(customerId);
+      issues.push({
+        code: "DUPLICATE_BOX_STICKER_NUMBER",
+        severity: "BLOCKER",
+        customerId,
+        customerName: String(customer?.fullName || "Unknown"),
+        messageAr: `${rows.length} أرقام بوكس محفوظة لنفس المشترك في اليوم نفسه`,
+        messageEn: `${rows.length} saved box numbers for the same customer and date`,
+      });
+    }
+    for (const [boxNo, rows] of boxByNumber) {
+      if (rows.length <= 1) continue;
+      issues.push({
+        code: "DUPLICATE_BOX_NUMBER",
+        severity: "BLOCKER",
+        customerName: `Box #${boxNo}`,
+        messageAr: `رقم البوكس ${boxNo} مخصص لأكثر من مشترك`,
+        messageEn: `Box number ${boxNo} is assigned to more than one customer`,
+      });
     }
 
     const blockers = issues.filter((issue) => issue.severity === "BLOCKER");

@@ -329,7 +329,11 @@ export default function Customers() {
   const importCustomers = useImportCustomers();
   const { data: modifiers = [] } = useModifiers();
 
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : new URLSearchParams(window.location.search).get("search") || "",
+  );
   /** فلتر بطاقات الهيدر: الكل / النشطين / المجمّدين */
   const [viewFilter, setViewFilter] = useState<"all" | "active" | "paused">("all");
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);

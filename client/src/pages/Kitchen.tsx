@@ -167,6 +167,20 @@ export default function Kitchen() {
     date: formattedDate,
     sessionToken: sessionTok,
   }) as any;
+  const stickerData = useStickers({
+    date: formattedDate,
+    deliveryTime: "ALL",
+    lang: isRtl ? "ar" : "en",
+  }) as any;
+  const renderedStickerDuplicateCount = useMemo(() => {
+    const boxes = (stickerData?.boxStickers || [])
+      .map((row: any) => String(row.customerId || ""))
+      .filter(Boolean);
+    const meals = (stickerData?.mealStickers || [])
+      .map((row: any) => String(row.stickerKey || ""))
+      .filter(Boolean);
+    return (boxes.length - new Set(boxes).size) + (meals.length - new Set(meals).size);
+  }, [stickerData]);
   const toggleItemPrepared = useMutation(api.dailyPlans.toggleItemPrepared);
   const bulkTogglePrepared = useMutation(api.dailyPlans.bulkToggleItemsPrepared);
   // ✅ فتح الكشف يجمّد أرقام البوكس لليوم كمان — فالكشف والستيكر يبقوا مطابقين وثابتين
@@ -235,7 +249,10 @@ export default function Kitchen() {
       : `⛔ ${a.onlyStickers.length} have stickers but no cooking: ${a.onlyStickers.join(" · ")}`);
     return out;
   }, [stickerAudit, isRtl]);
-  const printAllowed = productionAudit?.canPrint === true && auditLines.length === 0;
+  const printAllowed =
+    productionAudit?.canPrint === true &&
+    auditLines.length === 0 &&
+    renderedStickerDuplicateCount === 0;
   const stopUnsafePrint = () => {
     if (printAllowed) return false;
     void alertDialog({
@@ -729,7 +746,6 @@ export default function Kitchen() {
   // ✅ رقم البوكس = **نفس رقم استيكر البوكس بالضبط** (المصدر الوحيد convex/stickers)
   //    حتى يطابق الكشفُ الستيكرَ الفيزيائي، فيعرف المطبخ بوكس كل مشترك. deliveryTime
   //    "ALL" يرقّم كل عملاء اليوم أبجدياً 1..N (نفس ما تُطبع به الستيكرات للكل).
-  const stickerData = useStickers({ date: formattedDate, deliveryTime: "ALL", lang: isRtl ? "ar" : "en" }) as any;
   const boxNoByCustomerId = useMemo(() => {
     const m = new Map<string, number>();
     (stickerData?.boxStickers || []).forEach((b: any) => {
@@ -1706,7 +1722,7 @@ If you meant another day, switch Today/Tomorrow first.`,
 
         {/* Content */}
         <div className="max-w-[1500px] mx-auto px-3 sm:px-5 py-4 space-y-4">
-          {productionAudit && !productionAudit.canPrint && (
+          {productionAudit && (!productionAudit.canPrint || renderedStickerDuplicateCount > 0) && (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-2 text-red-900">
@@ -1717,8 +1733,8 @@ If you meant another day, switch Today/Tomorrow first.`,
                     </p>
                     <p className="mt-1 text-sm font-semibold text-red-800">
                       {isRtl
-                        ? `${productionAudit.blockerCount} خطأ مانع. راجع المشتركين قبل إرسال الكشف للمطبخ.`
-                        : `${productionAudit.blockerCount} blocker(s). Review customers before sending the sheet to production.`}
+                        ? `${productionAudit.blockerCount + renderedStickerDuplicateCount} خطأ مانع. راجع المشتركين قبل إرسال الكشف للمطبخ.`
+                        : `${productionAudit.blockerCount + renderedStickerDuplicateCount} blocker(s). Review customers before sending the sheet to production.`}
                     </p>
                   </div>
                 </div>
