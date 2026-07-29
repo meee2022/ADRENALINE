@@ -49,6 +49,7 @@ import type * as lib_calories from "../lib/calories.js";
 import type * as lib_customerOrderRules from "../lib/customerOrderRules.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_phone from "../lib/phone.js";
+import type * as lib_subscriptionPeriods from "../lib/subscriptionPeriods.js";
 import type * as loyalty from "../loyalty.js";
 import type * as manager from "../manager.js";
 import type * as mealCategories from "../mealCategories.js";
@@ -152,6 +153,7 @@ declare const fullApi: ApiFromModules<{
   "lib/customerOrderRules": typeof lib_customerOrderRules;
   "lib/dates": typeof lib_dates;
   "lib/phone": typeof lib_phone;
+  "lib/subscriptionPeriods": typeof lib_subscriptionPeriods;
   loyalty: typeof loyalty;
   manager: typeof manager;
   mealCategories: typeof mealCategories;

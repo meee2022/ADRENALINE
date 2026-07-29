@@ -2,7 +2,7 @@
  * @file client/src/pages/Plans.tsx
  * @description إدارة الخطط اليومية - تعيين الوجبات للعملاء
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   useCustomers,
@@ -885,8 +885,16 @@ export default function PlansPage() {
     setCurrentPlan({ ...currentPlan, items: (currentPlan.items as any[])?.filter((i: any) => i.id !== itemId) });
   };
 
+  /* الزرّ لم يكن يُعطَّل أثناء الحفظ ولا حارس في الدالة، فضغطتان متتاليتان
+     أنشأتا خطتين متطابقتين بفارق ثانيتين (عبدالله المعلا 30-7). الخادم يمنع
+     التكرار الآن، وهذا يمنع الإرسال الثاني من أصله ويُري المستخدم أن شيئاً
+     يحدث — فلا يضغط ثانيةً لأنه لم يرَ استجابة. */
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState<null | "DRAFT" | "CONFIRMED">(null);
+
   const handleSave = async (status: "DRAFT" | "CONFIRMED") => {
     if (!currentPlan || !selectedCustomerId) return;
+    if (savingRef.current) return;
     if (status === "CONFIRMED") {
       const hasMeal = (currentPlan.items as any[])?.some((i: any) => !i.isOff && selectedMealId(i));
       if (!hasMeal) {
@@ -914,6 +922,8 @@ export default function PlansPage() {
       customerId: selectedCustomerId,
       status,
     });
+    savingRef.current = true;
+    setSaving(status);
     try {
       if ((currentPlan as any)._id) {
         await updatePlanMutation.mutateAsync({ id: (currentPlan as any)._id, data: payload });
@@ -939,6 +949,9 @@ export default function PlansPage() {
       }
     } catch (error: any) {
       toast({ title: isRtl ? "فشل الحفظ" : "Failed to save", description: error?.message, variant: "destructive" });
+    } finally {
+      savingRef.current = false;
+      setSaving(null);
     }
   };
 
@@ -2203,17 +2216,22 @@ ${r.skippedEmpty} with no meals left as drafts.` : ""}` });
             <div className="plans-action-primary grid grid-cols-2 gap-2.5">
               <button
                 onClick={() => handleSave("DRAFT")}
-                className="plans-draft-action h-11 rounded-lg text-sm font-semibold transition-colors"
+                disabled={saving !== null}
+                className="plans-draft-action h-11 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {isRtl ? "حفظ مسودة" : "Save Draft"}
+                {saving === "DRAFT" ? (isRtl ? "جارٍ الحفظ…" : "Saving…") : (isRtl ? "حفظ مسودة" : "Save Draft")}
               </button>
               <button
                 onClick={() => handleSave("CONFIRMED")}
-                className="plans-confirm-action h-11 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90"
+                disabled={saving !== null}
+                className="plans-confirm-action h-11 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{ background: "linear-gradient(135deg, #3cc4f0, #2bb0dc)", boxShadow: "0 4px 14px #3cc4f040" }}
               >
-                <Check className="h-4 w-4" />
-                {isRtl ? "تأكيد الخطة" : "Confirm Plan"}
+                {saving === "CONFIRMED" ? (
+                  <>{isRtl ? "جارٍ التأكيد…" : "Confirming…"}</>
+                ) : (
+                  <><Check className="h-4 w-4" />{isRtl ? "تأكيد الخطة" : "Confirm Plan"}</>
+                )}
               </button>
             </div>
           </div>

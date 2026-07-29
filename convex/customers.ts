@@ -6,6 +6,7 @@ import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
 import { normalizePhone } from "./lib/phone";
+import { qatarTodayISO } from "./lib/customerOrderRules";
 import { parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } from "./lib/dates";
 
 /* =========================
@@ -336,6 +337,82 @@ export const update = mutation({
     }
 
     await ctx.db.patch(id, patch);
+
+    /* سجل التعديلات الحسّاسة + مزامنة الوردية.
+       الوردية كانت منسوخة في كل خطة، ولا شيء يحدّثها عند تغييرها في الحساب:
+       فمن حُوِّل من صباحي لمسائي بقيت خططه على القديمة، فحسبها اعتمادُ الطلب
+       خانةً أخرى وأنشأ خطة ثانية — ستة مشتركين وثلاثون وجبة زائدة. الآن
+       الخطط المستقبلية تتبع الوردية الجديدة، وكل تغيير يُسجَّل بمن أجراه. */
+    const SENSITIVE = ["deliveryTime", "startDate", "endDate", "mealsPerDay", "snacksPerDay", "packageLabel", "isActive"];
+    const staff: any = await requireStaff(ctx, args.sessionToken);
+    const todayISO = qatarTodayISO(Date.now());
+
+    /* تجديد = البداية تُدفع للأمام بعد نهاية الفترة الحالية. نحفظ الفترة
+       المنتهية في السجل قبل أن تُمحى، فيبقى معلوماً أن العميل كان مشتركاً
+       فيها — وإلا قُرئت خططه المأكولة كأنها خارج الاشتراك. */
+    const oldStart = String(current.startDate || "").slice(0, 10);
+    const oldEnd = String(current.endDate || "").slice(0, 10);
+    const newStart = patch.startDate ? String(patch.startDate).slice(0, 10) : oldStart;
+    const isRenewal =
+      /^\d{4}-\d{2}-\d{2}$/.test(oldStart) && /^\d{4}-\d{2}-\d{2}$/.test(oldEnd) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(newStart) && newStart > oldStart && newStart > oldEnd;
+    if (isRenewal) {
+      const hist = Array.isArray(current.subscriptionHistory) ? current.subscriptionHistory : [];
+      const already = hist.some((h: any) => h.startDate === oldStart && h.endDate === oldEnd);
+      if (!already) {
+        await ctx.db.patch(id, {
+          subscriptionHistory: [...hist, {
+            startDate: oldStart,
+            endDate: oldEnd,
+            packageLabel: current.packageLabel || undefined,
+            mealsPerDay: current.mealsPerDay ?? undefined,
+            snacksPerDay: current.snacksPerDay ?? undefined,
+            renewedAt: Date.now(),
+            renewedByName: staff?.name || staff?.username || undefined,
+          }].slice(-24),
+        });
+        await ctx.db.insert("customerFieldChanges", {
+          customerId: id, customerName: current.fullName || undefined,
+          field: "subscriptionRenewal",
+          fromValue: `${oldStart} → ${oldEnd}`,
+          toValue: `${newStart} → ${patch.endDate ? String(patch.endDate).slice(0,10) : "?"}`,
+          byUserId: staff?.userId, byName: staff?.name || staff?.username || undefined,
+          effect: "حُفظت الفترة السابقة في سجل الاشتراكات",
+          at: Date.now(),
+        });
+      }
+    }
+    for (const field of SENSITIVE) {
+      if (patch[field] === undefined) continue;
+      const before = current[field];
+      if (String(before ?? "") === String(patch[field] ?? "")) continue;
+
+      let effect: string | undefined;
+      if (field === "deliveryTime") {
+        const future = (
+          await ctx.db.query("dailyPlans").withIndex("by_customerId", (q: any) => q.eq("customerId", id)).collect()
+        ).filter((pl: any) =>
+          String(pl.date).slice(0, 10) >= todayISO &&
+          pl.status !== "DELIVERED" && pl.status !== "CANCELLED" &&
+          pl.deliveryTime !== patch.deliveryTime);
+        for (const pl of future) {
+          await ctx.db.patch(pl._id, { deliveryTime: patch.deliveryTime, updatedAt: Date.now() });
+        }
+        if (future.length) effect = `حُدِّثت وردية ${future.length} خطة مستقبلية`;
+      }
+
+      await ctx.db.insert("customerFieldChanges", {
+        customerId: id,
+        customerName: current.fullName || undefined,
+        field,
+        fromValue: before === undefined || before === null ? undefined : String(before),
+        toValue: String(patch[field]),
+        byUserId: staff?.userId,
+        byName: staff?.name || staff?.username || undefined,
+        effect,
+        at: Date.now(),
+      });
+    }
     return true;
   },
 });

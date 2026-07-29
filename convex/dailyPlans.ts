@@ -7,6 +7,7 @@ import { mutation, query } from "./_generated/server";
 import { convertUnit } from "./units";
 import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
 type PlanStatus =
   | "DRAFT"
@@ -185,6 +186,37 @@ export const create = mutation({
     const pausedFrom = (customer as any)?.pausedFrom as string | undefined;
     if (pausedFrom && String(args.date).slice(0, 10) >= pausedFrom) {
       throw new Error("اشتراك هذا المشترك مجمّد — لا يمكن إنشاء خطة في فترة التجميد");
+    }
+    /* 🔒 ولا خطة خارج الاشتراك. كان الفحص للتجميد وحده، فمرّت خطط لمن لم يبدأ
+       اشتراكه بعد أو انتهى — والمطبخ يطبخها. الفترات المجدَّدة محسوبة، فمن
+       جدّد لا تُرفض أيامه القديمة التي أكلها. */
+    if (!isWithinSubscription(customer, String(args.date))) {
+      const c: any = customer;
+      throw new Error(
+        `التاريخ خارج مدة اشتراك هذا المشترك (${String(c?.startDate || "?").slice(0,10)} → ${String(c?.endDate || "?").slice(0,10)}) — راجع تواريخ الاشتراك أو جدّده`,
+      );
+    }
+
+    /* 🔒 خطة واحدة لكل (مشترك + تاريخ) — لا استثناء.
+       سبق أن تعايشت خطتان لليوم نفسه بطريقتين: ضغطة حفظ مزدوجة أنشأت نسختين
+       بفارق ثانيتين (عبدالله المعلا 30-7)، واختلافُ الوردية بين خطة قديمة
+       وأخرى من طلبٍ معتمد جعل النظام يحسبهما خانتين (خمسة مشتركين 1-8).
+       النتيجة في الحالتين: المطبخ يطبخ الضعف. الوردية ليست جزءاً من هوية
+       اليوم — العميل له يوم واحد ووجبات يوم واحد. */
+    const sameDay = (
+      await ctx.db.query("dailyPlans").withIndex("by_customerId", (q: any) => q.eq("customerId", args.customerId)).collect()
+    ).filter((p: any) => String(p.date).slice(0, 10) === String(args.date).slice(0, 10)
+      && p.status !== "CANCELLED");
+    if (sameDay.length) {
+      const live = sameDay[0] as any;
+      // إعادة الإرسال/الضغط المزدوج: نُحدّث القائمة بدل إنشاء ثانية بجوارها
+      await ctx.db.patch(live._id, {
+        items: args.items,
+        notes: args.notes ?? live.notes,
+        deliveryTime: args.deliveryTime,
+        updatedAt: Date.now(),
+      });
+      return live._id;
     }
 
     const requested = normalizeStatus(args.status);

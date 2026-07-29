@@ -47,6 +47,27 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   }).index("by_active", ["isActive"]),
 
+  /**
+   * سجل تعديل الحقول الحسّاسة في حساب المشترك (الوردية، التواريخ، عدد
+   * الوجبات، الباقة). `updatedAt` وحده لا يكفي: يُكتب فوقه في كل تعديل — حتى
+   * إضافة نقاط الولاء تدوس عليه — فلم نعرف من حوّل خمسة مشتركين من صباحي
+   * لمسائي ولا متى، واستغرق التحقيق ساعة. هنا: من، ماذا، من قيمة إلى قيمة.
+   */
+  customerFieldChanges: defineTable({
+    customerId: v.id("customers"),
+    customerName: v.optional(v.string()),
+    field: v.string(),          // deliveryTime | startDate | endDate | mealsPerDay …
+    fromValue: v.optional(v.string()),
+    toValue: v.optional(v.string()),
+    byUserId: v.optional(v.id("users")),
+    byName: v.optional(v.string()),
+    /** أثر جانبي طُبّق تلقائياً بسبب التعديل (مثل مزامنة خطط مستقبلية). */
+    effect: v.optional(v.string()),
+    at: v.number(),
+  })
+    .index("by_customer", ["customerId"])
+    .index("by_at", ["at"]),
+
   // ===== POS: sessions (PIN-based, للكاشير على شل POS المنفصل) =====
   posSessions: defineTable({
     token: v.string(),
@@ -402,6 +423,23 @@ export default defineSchema({
     // ✅ تجميد الاشتراك (سفر/ظرف طارئ) — الأيام المجمّدة تُعوَّض في آخر الاشتراك.
     //    التعويض يُحسب بأيام التوصيل (السبت→الأربعاء)، لا بالأيام التقويمية،
     //    لأن الخميس والجمعة إجازة أصلاً ولا يُخصمان من العميل.
+    /**
+     * فترات الاشتراك السابقة (التجديدات). التجديد كان يكتب البداية والنهاية
+     * الجديدتين فوق القديمتين فتُمحى الفترة المنتهية: ستة مشتركين انتهت
+     * فترتهم 30-7 وجدّدوا من 1-8، فصار سجلّهم يقول «يبدأ 1-8» وخططهم من 14-7
+     * إلى 30-7 — وقد أكلوها فعلاً — تُقرأ كأنها «قبل الاشتراك»، فكادت تُحذف.
+     * كل تجديد يدفع الفترة المنتهية هنا، فيبقى تاريخ العميل كاملاً.
+     */
+    subscriptionHistory: v.optional(v.array(v.object({
+      startDate: v.string(),
+      endDate: v.string(),
+      packageLabel: v.optional(v.string()),
+      mealsPerDay: v.optional(v.number()),
+      snacksPerDay: v.optional(v.number()),
+      renewedAt: v.number(),
+      renewedByName: v.optional(v.string()),
+    }))),
+
     pausedFrom: v.optional(v.string()),           // yyyy-MM-dd — أول يوم تجميد (غير موجود = نشط)
     pauseExpectedResume: v.optional(v.string()),  // yyyy-MM-dd — تاريخ رجوع متوقّع (اختياري)
     pauseHistory: v.optional(
