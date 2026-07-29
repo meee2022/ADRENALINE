@@ -6,6 +6,7 @@ import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
 import { DashboardHeader } from "@/components/DashboardHeader";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,14 +35,17 @@ const CODE_LABELS: Record<string, { ar: string; en: string }> = {
   DUPLICATE_BOX_NUMBER: { ar: "رقم بوكس مكرر", en: "Duplicate box number" },
   DUPLICATE_RENDERED_BOX_STICKER: { ar: "استيكر بوكس مكرر", en: "Duplicate box sticker" },
   DUPLICATE_RENDERED_MEAL_STICKER: { ar: "استيكر وجبة مكرر", en: "Duplicate meal sticker" },
+  SHARED_PHONE_NUMBER: { ar: "رقم هاتف مشترك", en: "Shared phone number" },
 };
 
 export default function DailyProductionAudit() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [date, setDate] = useState(format(new Date(Date.now() + 86400000), "yyyy-MM-dd"));
+  const [repairing, setRepairing] = useState(false);
   const sessionToken = useStore((state) => state.sessionToken) || undefined;
   const ensureBoxNumbers = useMutation(api.stickers.ensureBoxNumbers);
+  const repairDate = useMutation(api.productionAudit.repairDate);
   useEffect(() => {
     if (!date || !sessionToken) return;
     ensureBoxNumbers({ date, sessionToken }).catch(() => undefined);
@@ -97,6 +101,29 @@ export default function DailyProductionAudit() {
   const clientBlockers = stickerIssues.filter((issue) => issue.severity === "BLOCKER").length;
   const blockerCount = (audit?.blockerCount || 0) + clientBlockers + mismatchCount;
   const canPrint = !loading && audit?.canPrint && clientBlockers === 0 && mismatchCount === 0;
+  const runSafeRepair = async () => {
+    if (!sessionToken || repairing) return;
+    const confirmed = await confirmDialog({
+      message: isRtl
+        ? "سيتم إلغاء نسخ الخطط المؤكدة الزائدة، إيقاف الخطط غير الصالحة، وإعادة الخطط ذات العدد الخاطئ إلى «مسودة» لتصحيحها. لن تُحذف خطة ولن تتغير خطة تم تحضيرها. هل تريد المتابعة؟"
+        : "Confirmed duplicate plans will be cancelled, invalid plans paused, and count mismatches returned to Draft. No plan will be deleted and prepared plans will not be changed. Continue?",
+    });
+    if (!confirmed) return;
+    setRepairing(true);
+    try {
+      const result: any = await repairDate({ date, sessionToken });
+      await ensureBoxNumbers({ date, sessionToken });
+      void alertDialog({
+        message: isRtl
+          ? `تم الإصلاح الآمن: ${result.duplicatesCancelled} خطة زائدة أُلغيت، ${result.plansPaused} خطة أُوقفت، ${result.plansReturnedToDraft} خطة عادت للمراجعة، ${result.shiftsUpdated} وردية صُححت.`
+          : `Safe repair complete: ${result.duplicatesCancelled} duplicates cancelled, ${result.plansPaused} plans paused, ${result.plansReturnedToDraft} returned to review, ${result.shiftsUpdated} shifts corrected.`,
+      });
+    } catch (error: any) {
+      void alertDialog({ message: String(error?.message || error) });
+    } finally {
+      setRepairing(false);
+    }
+  };
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-slate-100">
@@ -171,6 +198,19 @@ export default function DailyProductionAudit() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
+              {!canPrint && !loading && (
+                <Button
+                  variant="destructive"
+                  className="h-10 gap-2"
+                  onClick={runSafeRepair}
+                  disabled={repairing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${repairing ? "animate-spin" : ""}`} />
+                  {repairing
+                    ? isRtl ? "جارٍ الإصلاح…" : "Repairing…"
+                    : isRtl ? "إصلاح الأخطاء الآمنة" : "Repair safe issues"}
+                </Button>
+              )}
               <Link href={`/kitchen?date=${date}`}>
                 <Button variant="outline" className="h-10 gap-2 bg-white">
                   <UtensilsCrossed className="h-4 w-4" />
@@ -186,6 +226,25 @@ export default function DailyProductionAudit() {
             </div>
           </div>
         </section>
+
+        {!loading && (
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 sm:grid-cols-5 sm:divide-y-0">
+              {[
+                { value: audit?.uniqueCustomers || 0, ar: "مشتركو الخطط", en: "Plan customers" },
+                { value: audit?.plannedMealItems || 0, ar: "وجبات الخطط", en: "Planned meals" },
+                { value: stickerData?.boxStickers?.length || 0, ar: "استيكرات البوكس", en: "Box stickers" },
+                { value: stickerData?.mealStickers?.length || 0, ar: "استيكرات الوجبات", en: "Meal stickers" },
+                { value: audit?.statusCounts?.PREPARED || 0, ar: "تم تحضيرهم", en: "Prepared" },
+              ].map((item) => (
+                <div key={item.en} className="px-4 py-4 text-center">
+                  <div className="text-2xl font-black tabular-nums text-slate-950">{item.value}</div>
+                  <div className="mt-1 text-xs font-bold text-slate-500">{isRtl ? item.ar : item.en}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {mismatchCount > 0 && (
           <section className="rounded-2xl border border-red-200 bg-red-50 p-5">
@@ -235,6 +294,7 @@ export default function DailyProductionAudit() {
                 const stickerQuery = `/stickers?date=${encodeURIComponent(date)}&search=${encodeURIComponent(issue.customerName || "")}`;
                 const href = issue.code === "INACTIVE_OR_OUTSIDE_SUBSCRIPTION"
                   || issue.code === "DUPLICATE_ROSTER_NAME"
+                  || issue.code === "SHARED_PHONE_NUMBER"
                   ? customerFileQuery
                   : issue.code === "DUPLICATE_RENDERED_BOX_STICKER"
                     || issue.code === "DUPLICATE_RENDERED_MEAL_STICKER"
@@ -244,6 +304,7 @@ export default function DailyProductionAudit() {
                     : customerQuery || customerFileQuery;
                 const destination = issue.code === "INACTIVE_OR_OUTSIDE_SUBSCRIPTION"
                   || issue.code === "DUPLICATE_ROSTER_NAME"
+                  || issue.code === "SHARED_PHONE_NUMBER"
                   ? isRtl ? "فتح ملف المشترك" : "Open customer"
                   : issue.code === "DUPLICATE_RENDERED_BOX_STICKER"
                     || issue.code === "DUPLICATE_RENDERED_MEAL_STICKER"

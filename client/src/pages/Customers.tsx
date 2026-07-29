@@ -617,6 +617,28 @@ export default function Customers() {
       }
 
       if (editingCustomer) {
+        const sensitiveLabels: Record<string, { ar: string; en: string }> = {
+          deliveryTime: { ar: "وردية التوصيل", en: "delivery shift" },
+          startDate: { ar: "بداية الاشتراك", en: "subscription start" },
+          endDate: { ar: "نهاية الاشتراك", en: "subscription end" },
+          mealsPerDay: { ar: "عدد الوجبات", en: "meal count" },
+          snacksPerDay: { ar: "عدد السناكات", en: "snack count" },
+          isActive: { ar: "حالة الاشتراك", en: "subscription status" },
+        };
+        const changedSensitive = Object.keys(sensitiveLabels).filter(
+          (field) => String((editingCustomer as any)[field] ?? "") !== String(payload[field] ?? ""),
+        );
+        if (changedSensitive.length) {
+          const changedText = changedSensitive
+            .map((field) => isRtl ? sensitiveLabels[field].ar : sensitiveLabels[field].en)
+            .join(isRtl ? "، " : ", ");
+          const proceed = await confirmDialog({
+            message: isRtl
+              ? `أنتِ تغيّرين: ${changedText}.\n\nسيقوم النظام تلقائيًا بإيقاف الخطط المستقبلية غير الصالحة، وتحديث الوردية، وإعادة أي خطة لا يطابق عددها الباقة إلى «مسودة» لمراجعتها. الخطط التي تم تحضيرها لن تتغير.\n\nهل تريدين الحفظ؟`
+              : `You are changing: ${changedText}.\n\nThe system will pause invalid future plans, update shifts, and return count mismatches to Draft for review. Prepared plans will not change.\n\nSave changes?`,
+          });
+          if (!proceed) return;
+        }
         await updateCustomerMutation.mutateAsync({
           id: (editingCustomer as any)._id,
           data: payload,

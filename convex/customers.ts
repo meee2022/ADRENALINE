@@ -8,6 +8,7 @@ import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./s
 import { normalizePhone } from "./lib/phone";
 import { qatarTodayISO } from "./lib/customerOrderRules";
 import { parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } from "./lib/dates";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
 /* =========================
    Date helpers (server)
@@ -253,6 +254,44 @@ export const create = mutation({
 });
 
 /**
+ * سجل تعديل الحقول الحسّاسة — للعرض في الواجهة.
+ *
+ * السجل كان يُكتب ولا يُقرأ من أي مكان، فلا يفيد إلا من يفتح قاعدة البيانات.
+ * وهو موجود لسؤال واحد: «من غيّر هذا ومتى؟» — الذي استغرقت الإجابة عنه ساعةً
+ * حين حُوِّل خمسة مشتركين من صباحي لمسائي ولم يُعرف الفاعل.
+ */
+export const fieldChanges = query({
+  args: {
+    customerId: v.optional(v.id("customers")),
+    limit: v.optional(v.number()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const cap = Math.min(500, Math.max(1, Number(args.limit) || 200));
+    const rows = args.customerId
+      ? await ctx.db.query("customerFieldChanges")
+          .withIndex("by_customer", (q) => q.eq("customerId", args.customerId!))
+          .collect()
+      : await ctx.db.query("customerFieldChanges").withIndex("by_at").order("desc").take(cap);
+    return rows
+      .sort((a: any, b: any) => b.at - a.at)
+      .slice(0, cap)
+      .map((r: any) => ({
+        id: String(r._id),
+        customerId: String(r.customerId),
+        customerName: r.customerName || "",
+        field: r.field,
+        fromValue: r.fromValue ?? null,
+        toValue: r.toValue ?? null,
+        byName: r.byName || null,
+        effect: r.effect || null,
+        at: r.at,
+      }));
+  },
+});
+
+/**
  * 🔒 تحديث عميل — قائمة بيضاء (whitelist) صارمة للحقول التشغيلية.
  *    الحقول المالية والداخلية (loyaltyPoints/loyaltyCredit/pausedFrom/
  *    pauseHistory/skippedDates/defaultDriverId/customerId links) لا تُقبل
@@ -345,6 +384,11 @@ export const update = mutation({
        الخطط المستقبلية تتبع الوردية الجديدة، وكل تغيير يُسجَّل بمن أجراه. */
     const SENSITIVE = ["deliveryTime", "startDate", "endDate", "mealsPerDay", "snacksPerDay", "packageLabel", "isActive"];
     const staff: any = await requireStaff(ctx, args.sessionToken);
+    /* الهوية تحمل userId والدور فقط — لا اسماً. كان السجل يكتب byName فارغاً
+       فيقول «تغيّر» ولا يقول «بواسطة من»، وهو نصف السؤال. نجلب الاسم مرة. */
+    const actor: any = staff?.userId ? await ctx.db.get(staff.userId) : null;
+    const actorName: string | undefined =
+      actor?.name || actor?.username || (staff?.role ? String(staff.role) : undefined);
     const todayISO = qatarTodayISO(Date.now());
 
     /* تجديد = البداية تُدفع للأمام بعد نهاية الفترة الحالية. نحفظ الفترة
@@ -368,7 +412,7 @@ export const update = mutation({
             mealsPerDay: current.mealsPerDay ?? undefined,
             snacksPerDay: current.snacksPerDay ?? undefined,
             renewedAt: Date.now(),
-            renewedByName: staff?.name || staff?.username || undefined,
+            renewedByName: actorName,
           }].slice(-24),
         });
         await ctx.db.insert("customerFieldChanges", {
@@ -376,7 +420,7 @@ export const update = mutation({
           field: "subscriptionRenewal",
           fromValue: `${oldStart} → ${oldEnd}`,
           toValue: `${newStart} → ${patch.endDate ? String(patch.endDate).slice(0,10) : "?"}`,
-          byUserId: staff?.userId, byName: staff?.name || staff?.username || undefined,
+          byUserId: staff?.userId, byName: actorName,
           effect: "حُفظت الفترة السابقة في سجل الاشتراكات",
           at: Date.now(),
         });
@@ -408,10 +452,69 @@ export const update = mutation({
         fromValue: before === undefined || before === null ? undefined : String(before),
         toValue: String(patch[field]),
         byUserId: staff?.userId,
-        byName: staff?.name || staff?.username || undefined,
+        byName: actorName,
         effect,
         at: Date.now(),
       });
+    }
+
+    /* مزامنة آمنة للخطط المستقبلية بعد تعديل الاشتراك:
+       - لا نلمس ما تم تحضيره أو توصيله.
+       - غير النشط/خارج الاشتراك يُوقَف قبل أن يصل للمطبخ.
+       - اختلاف عدد الوجبات يعيد الخطة إلى DRAFT لمراجعة الأخصائية، ولا نحذف وجبة تلقائياً.
+       - الوردية تتبع ملف المشترك. */
+    const affectsFuturePlans = ["deliveryTime", "startDate", "endDate", "mealsPerDay", "snacksPerDay", "isActive", "pausedFrom"]
+      .some((field) => patch[field] !== undefined && String(current[field] ?? "") !== String(patch[field] ?? ""));
+    if (affectsFuturePlans) {
+      const finalCustomer: any = await ctx.db.get(id);
+      const futurePlans = (
+        await ctx.db.query("dailyPlans").withIndex("by_customerId", (q: any) => q.eq("customerId", id)).collect()
+      ).filter((plan: any) =>
+        String(plan.date).slice(0, 10) >= todayISO &&
+        !["PREPARED", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"].includes(String(plan.status || "").toUpperCase()));
+      let paused = 0, review = 0, shifted = 0;
+      for (const plan of futurePlans as any[]) {
+        const planDate = String(plan.date).slice(0, 10);
+        const pausedFrom = String(finalCustomer?.pausedFrom || "").slice(0, 10);
+        const invalid = finalCustomer?.isActive === false
+          || (pausedFrom && planDate >= pausedFrom)
+          || !isWithinSubscription(finalCustomer, planDate);
+        if (invalid) {
+          if (String(plan.status).toUpperCase() !== "PAUSED") {
+            await ctx.db.patch(plan._id, { status: "PAUSED", updatedAt: Date.now() });
+            paused++;
+          }
+          continue;
+        }
+        const expected = Math.max(0, Number(finalCustomer?.mealsPerDay) || 0)
+          + Math.max(0, Number(finalCustomer?.snacksPerDay) || 0);
+        const actual = (Array.isArray(plan.items) ? plan.items : []).filter((item: any) => !item?.isOff).length;
+        const planPatch: any = { updatedAt: Date.now() };
+        let changed = false;
+        if (finalCustomer?.deliveryTime && plan.deliveryTime !== finalCustomer.deliveryTime) {
+          planPatch.deliveryTime = finalCustomer.deliveryTime;
+          shifted++;
+          changed = true;
+        }
+        if (expected > 0 && actual !== expected && String(plan.status).toUpperCase() !== "DRAFT") {
+          planPatch.status = "DRAFT";
+          review++;
+          changed = true;
+        }
+        if (changed) await ctx.db.patch(plan._id, planPatch);
+      }
+      if (paused || review || shifted) {
+        await ctx.db.insert("customerFieldChanges", {
+          customerId: id,
+          customerName: finalCustomer?.fullName || current.fullName || undefined,
+          field: "futurePlanSync",
+          toValue: `paused=${paused}; review=${review}; shifted=${shifted}`,
+          byUserId: staff?.userId,
+          byName: actorName,
+          effect: `Future plans synced: ${paused} paused, ${review} returned to review, ${shifted} shifts updated`,
+          at: Date.now(),
+        });
+      }
     }
     return true;
   },

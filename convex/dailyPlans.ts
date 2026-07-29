@@ -500,7 +500,8 @@ export const confirmAllDrafts = mutation({
     let confirmed = 0, skippedEmpty = 0;
     for (const p of plans as any[]) {
       if (normalizeStatus(p.status) !== "DRAFT") continue;
-      if (!Array.isArray(p.meals) || p.meals.length === 0) { skippedEmpty++; continue; }
+      const activeItems = (Array.isArray(p.items) ? p.items : []).filter((item: any) => !item?.isOff);
+      if (activeItems.length === 0) { skippedEmpty++; continue; }
       await ctx.db.patch(p._id, { status: "CONFIRMED" });
       confirmed++;
     }

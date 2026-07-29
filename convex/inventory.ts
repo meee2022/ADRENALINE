@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { convertUnit } from "./units";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
 import { dayNameOf, rotationWeekAtDate } from "./lib/dates";
@@ -1048,6 +1049,35 @@ export const prepareAndConsumeAllForDate = mutation({
       .query("dailyPlans")
       .withIndex("by_date", (q: any) => q.eq("date", date))
       .collect();
+    // حاجز خادمي: لا يكفي تعطيل الزر في الواجهة، لأن أي تبويب قديم أو استدعاء
+    // مباشر يجب ألا يجهّز يوماً فاشلاً في التدقيق.
+    const candidates = (plans as any[]).filter((p) =>
+      p.status === "CONFIRMED" &&
+      p.origin !== "CUSTOMIZED" &&
+      (!deliveryTime || String(p.deliveryTime) === deliveryTime));
+    const seenCustomers = new Set<string>();
+    for (const plan of candidates) {
+      const customerId = String(plan.customerId || "");
+      if (!customerId || seenCustomers.has(customerId)) {
+        throw new Error("فشل تدقيق الإنتاج: توجد خطة مكررة أو خطة بلا مشترك. افتح شاشة تدقيق الإنتاج اليومي.");
+      }
+      seenCustomers.add(customerId);
+      const customer: any = await ctx.db.get(plan.customerId);
+      if (!customer) throw new Error("فشل تدقيق الإنتاج: مشترك الخطة غير موجود.");
+      const pausedFrom = String(customer.pausedFrom || "").slice(0, 10);
+      if (customer.isActive === false || (pausedFrom && date >= pausedFrom) || !isWithinSubscription(customer, date)) {
+        throw new Error(`فشل تدقيق الإنتاج: اشتراك ${customer.fullName || "مشترك"} غير صالح لهذا اليوم.`);
+      }
+      const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
+        + Math.max(0, Number(customer.snacksPerDay) || 0);
+      const actual = (Array.isArray(plan.items) ? plan.items : []).filter((item: any) => !item?.isOff).length;
+      if (actual === 0 || (expected > 0 && actual !== expected)) {
+        throw new Error(`فشل تدقيق الإنتاج: عدد وجبات ${customer.fullName || "مشترك"} لا يطابق الباقة.`);
+      }
+      if (customer.deliveryTime && plan.deliveryTime !== customer.deliveryTime) {
+        throw new Error(`فشل تدقيق الإنتاج: وردية ${customer.fullName || "مشترك"} غير متطابقة.`);
+      }
+    }
     let prepared = 0, skipped = 0;
     for (const p of plans as any[]) {
       if (p.status !== "CONFIRMED") { skipped++; continue; }

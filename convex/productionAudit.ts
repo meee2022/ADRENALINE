@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
@@ -282,6 +282,26 @@ export const forDate = query({
         });
       }
     }
+    const rosterByPhone = new Map<string, Array<{ id: string; name: string }>>();
+    for (const customerId of rosterIds) {
+      const customer = customerById.get(customerId);
+      if (!customer?.phone) continue;
+      const phone = String(customer.phone).replace(/\D/g, "");
+      if (!phone) continue;
+      const rows = rosterByPhone.get(phone) || [];
+      rows.push({ id: customerId, name: String(customer.fullName || "Unknown") });
+      rosterByPhone.set(phone, rows);
+    }
+    for (const rows of rosterByPhone.values()) {
+      if (new Set(rows.map((row) => row.id)).size <= 1) continue;
+      issues.push({
+        code: "SHARED_PHONE_NUMBER",
+        severity: "WARNING",
+        customerName: rows.map((row) => row.name).join(" / "),
+        messageAr: "رقم الهاتف نفسه مرتبط بأكثر من مشترك في كشف اليوم؛ تأكدي من اختيار الحساب الصحيح",
+        messageEn: "The same phone number belongs to multiple customers in today's roster; verify the selected account",
+      });
+    }
 
     const boxByCustomer = new Map<string, any[]>();
     const boxByNumber = new Map<number, any[]>();
@@ -319,6 +339,11 @@ export const forDate = query({
     const blockers = issues.filter((issue) => issue.severity === "BLOCKER");
     const byCode: Record<string, number> = {};
     for (const issue of issues) byCode[issue.code] = (byCode[issue.code] || 0) + 1;
+    const statusCounts: Record<string, number> = {};
+    for (const plan of operational as any[]) {
+      const status = String(plan.status || "UNKNOWN").toUpperCase();
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    }
 
     return {
       date,
@@ -328,8 +353,128 @@ export const forDate = query({
       uniqueCustomers: plansByCustomer.size,
       blockerCount: blockers.length,
       warningCount: issues.length - blockers.length,
+      statusCounts,
+      plannedMealItems: operational.reduce((sum: number, plan: any) => sum + activeItemCount(plan), 0),
       byCode,
       issues,
+    };
+  },
+});
+
+/**
+ * إصلاحات آمنة وقابلة للمراجعة:
+ * لا تُحذف الخطط ولا تُعدّل خطة سبق تحضيرها. النسخ الزائدة تُلغى، والخطط
+ * غير الصالحة تُوقف، واختلاف العدد يعيدها لمسودة كي تصححها الأخصائية.
+ */
+export const repairDate = mutation({
+  args: {
+    date: v.string(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const staff: any = await requireStaff(ctx, args.sessionToken);
+    const date = dateOnly(args.date);
+    const plans = await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect();
+    const regular = plans.filter((plan: any) =>
+      plan.origin !== "CUSTOMIZED" &&
+      ["DRAFT", "CONFIRMED", "PAUSED"].includes(String(plan.status || "").toUpperCase()));
+    const ids = Array.from(new Set(regular.map((plan: any) => String(plan.customerId || "")).filter(Boolean)));
+    const customers = await Promise.all(ids.map((id) => ctx.db.get(id as any)));
+    const customerById = new Map(customers.filter(Boolean).map((customer: any) => [String(customer._id), customer]));
+
+    let duplicatesCancelled = 0;
+    let plansPaused = 0;
+    let plansReturnedToDraft = 0;
+    let shiftsUpdated = 0;
+    let duplicateBoxRowsRemoved = 0;
+
+    const groups = new Map<string, any[]>();
+    for (const plan of regular as any[]) {
+      const id = String(plan.customerId || "");
+      if (!id) continue;
+      const rows = groups.get(id) || [];
+      rows.push(plan);
+      groups.set(id, rows);
+    }
+
+    for (const [customerId, rows] of groups) {
+      const customer: any = customerById.get(customerId);
+      const ordered = [...rows].sort((a: any, b: any) =>
+        Number(b.updatedAt || b.createdAt || b._creationTime || 0)
+        - Number(a.updatedAt || a.createdAt || a._creationTime || 0));
+      const keep = ordered[0];
+      for (const duplicate of ordered.slice(1)) {
+        if (String(duplicate.status).toUpperCase() === "CONFIRMED") {
+          await ctx.db.patch(duplicate._id, {
+            status: "CANCELLED",
+            notes: [duplicate.notes, `Auto-cancelled duplicate on ${Date.now()}`].filter(Boolean).join(" | "),
+            updatedAt: Date.now(),
+          });
+          duplicatesCancelled++;
+        }
+      }
+      if (!customer || String(keep.status).toUpperCase() !== "CONFIRMED") continue;
+      if (!customerRunsOnDate(customer, date)) {
+        await ctx.db.patch(keep._id, { status: "PAUSED", updatedAt: Date.now() });
+        plansPaused++;
+        continue;
+      }
+      const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
+        + Math.max(0, Number(customer.snacksPerDay) || 0);
+      const actual = activeItemCount(keep);
+      const patch: any = { updatedAt: Date.now() };
+      let changed = false;
+      if (customer.deliveryTime && keep.deliveryTime !== customer.deliveryTime) {
+        patch.deliveryTime = customer.deliveryTime;
+        shiftsUpdated++;
+        changed = true;
+      }
+      if (actual === 0 || (expected > 0 && actual !== expected)) {
+        patch.status = "DRAFT";
+        plansReturnedToDraft++;
+        changed = true;
+      }
+      if (changed) await ctx.db.patch(keep._id, patch);
+    }
+
+    const boxRows = await ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q) => q.eq("date", date)).collect();
+    const seenCustomers = new Set<string>();
+    const seenNumbers = new Set<number>();
+    for (const row of [...boxRows].sort((a: any, b: any) => Number(a.createdAt || a._creationTime) - Number(b.createdAt || b._creationTime)) as any[]) {
+      const customerKey = String(row.customerId);
+      const numberKey = Number(row.boxNo);
+      if (seenCustomers.has(customerKey) || seenNumbers.has(numberKey)) {
+        await ctx.db.delete(row._id);
+        duplicateBoxRowsRemoved++;
+        continue;
+      }
+      seenCustomers.add(customerKey);
+      seenNumbers.add(numberKey);
+    }
+
+    await ctx.db.insert("auditLog", {
+      actorUserId: staff?.userId,
+      actorName: staff?.name || staff?.username || "Staff",
+      actorRole: staff?.role,
+      action: "PRODUCTION_AUDIT_REPAIR",
+      entityType: "dailyPlans",
+      entityId: date,
+      details: JSON.stringify({
+        duplicatesCancelled,
+        plansPaused,
+        plansReturnedToDraft,
+        shiftsUpdated,
+        duplicateBoxRowsRemoved,
+      }),
+      createdAt: Date.now(),
+    });
+
+    return {
+      duplicatesCancelled,
+      plansPaused,
+      plansReturnedToDraft,
+      shiftsUpdated,
+      duplicateBoxRowsRemoved,
     };
   },
 });

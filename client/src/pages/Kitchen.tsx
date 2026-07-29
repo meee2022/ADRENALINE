@@ -1515,6 +1515,7 @@ export default function Kitchen() {
      PREPARED ويخصم مخزونها — نفس جوهر زرّ الكرت الواحد على الخادم. */
   const handlePrepareAll = async () => {
     if (preparingAll || !dayConfirmed.total) return;
+    if (stopUnsafePrint()) return;
     /* التاريخ واليوم بالنصّ داخل التأكيد: الشاشة تفتح على «بكرة» افتراضياً،
        وضُغط الزر مرة على 29-7 والمقصود يومها 28 — العدد وحده لا يكشف الخلط. */
     const dayName = format(date, "EEEE d MMMM", { locale: isRtl ? ar : enUS });
@@ -1624,7 +1625,7 @@ If you meant another day, switch Today/Tomorrow first.`,
             actions={
               <>
                 {dayConfirmed.total > 0 && (
-                  <button onClick={handlePrepareAll} disabled={preparingAll}
+                  <button onClick={handlePrepareAll} disabled={preparingAll || !printAllowed}
                     className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 disabled:opacity-60"
                     style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
                     <Check className="h-4 w-4" />
