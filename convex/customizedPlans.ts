@@ -119,6 +119,12 @@ export const forDate = query({
       const pausedFrom = String(c.pausedFrom || "").slice(0, 10);
       if (pausedFrom) { if (d >= pausedFrom) continue; }
       else if (!c.isActive) continue;
+      /* اليوم المتخطّى (سفر يومٍ واحد) لا يُطبخ. التخطّي كان يعمل بحذف الخطة
+         اليومية — والمخصّص لا خطة له، وجباته تُقرأ من قالبه مباشرةً — فبقي
+         `skippedDates` مسجّلاً في حسابه ولا يقرؤه أحد: لطيفة الدوسري تخطّت
+         1-8 ونزلت وجباتها للمطبخ كأن شيئاً لم يكن. */
+      const skipped: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
+      if (skipped.some((x: any) => String(x).slice(0, 10) === d)) continue;
       out.push({
         customerId: String(tpl.customerId),
         customerName: c.fullName || "",

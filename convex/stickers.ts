@@ -144,6 +144,10 @@ function swapCaloriesDelta(modifierIds: string[] | undefined, modifiers: any[]):
 function countsOnDate(c: any, date: string): boolean {
   if (!c) return false;
   const d = String(date).slice(0, 10);
+  /* اليوم المتخطّى لا يُطبع له استيكر: التخطّي يحذف الخطة اليومية، والمخصّص
+     لا خطة له فبقي تخطّيه مهمَلاً — لطيفة الدوسري تخطّت 1-8 وطُبع لها. */
+  const skipped: string[] = Array.isArray(c.skippedDates) ? c.skippedDates : [];
+  if (skipped.some((x: any) => String(x).slice(0, 10) === d)) return false;
   const pausedFrom = String(c.pausedFrom || "").slice(0, 10);
   if (pausedFrom) return d < pausedFrom;
   return !!c.isActive;

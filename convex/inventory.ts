@@ -1065,7 +1065,9 @@ export const prepareAndConsumeAllForDate = mutation({
       const customer: any = await ctx.db.get(plan.customerId);
       if (!customer) throw new Error("فشل تدقيق الإنتاج: مشترك الخطة غير موجود.");
       const pausedFrom = String(customer.pausedFrom || "").slice(0, 10);
-      if (customer.isActive === false || (pausedFrom && date >= pausedFrom) || !isWithinSubscription(customer, date)) {
+      const skippedDates: string[] = Array.isArray(customer.skippedDates) ? customer.skippedDates : [];
+      const isSkipped = skippedDates.some((skippedDate: unknown) => String(skippedDate).slice(0, 10) === date);
+      if (isSkipped || customer.isActive === false || (pausedFrom && date >= pausedFrom) || !isWithinSubscription(customer, date)) {
         throw new Error(`فشل تدقيق الإنتاج: اشتراك ${customer.fullName || "مشترك"} غير صالح لهذا اليوم.`);
       }
       const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
@@ -1106,6 +1108,9 @@ export const prepareAndConsumeAllForDate = mutation({
       if (!c) continue;
       const pf = String(c.pausedFrom || "").slice(0, 10);
       if (pf ? date >= pf : !c.isActive) continue;
+      // اليوم المتخطّى لا يُوصَّل — نفس ما يُطبَّق في كشف المطبخ والاستيكرات
+      const skipped: string[] = Array.isArray(c.skippedDates) ? c.skippedDates : [];
+      if (skipped.some((x: any) => String(x).slice(0, 10) === String(date).slice(0, 10))) continue;
       if (c.startDate && String(c.startDate).slice(0, 10) > date) continue;
       if (c.endDate && String(c.endDate).slice(0, 10) < date) continue;
       const cTime = String(c.deliveryTime || "MORNING");

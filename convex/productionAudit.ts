@@ -21,6 +21,8 @@ function activeItemCount(plan: any): number {
 
 function customerRunsOnDate(customer: any, date: string): boolean {
   if (!customer) return false;
+  const skippedDates: string[] = Array.isArray(customer.skippedDates) ? customer.skippedDates : [];
+  if (skippedDates.some((skippedDate: unknown) => dateOnly(skippedDate) === date)) return false;
   const pausedFrom = dateOnly(customer.pausedFrom);
   if (pausedFrom && date >= pausedFrom) return false;
   if (customer.isActive === false && !pausedFrom) return false;
@@ -177,12 +179,18 @@ export const forDate = query({
 
       if (!customerRunsOnDate(customer, date)) {
         const pausedFrom = dateOnly(customer.pausedFrom);
-        const reasonAr = pausedFrom && date >= pausedFrom
+        const skippedDates: string[] = Array.isArray(customer.skippedDates) ? customer.skippedDates : [];
+        const isSkipped = skippedDates.some((skippedDate: unknown) => dateOnly(skippedDate) === date);
+        const reasonAr = isSkipped
+          ? `المشترك متخطٍ يوم ${date}`
+          : pausedFrom && date >= pausedFrom
           ? `الاشتراك مجمّد من ${pausedFrom}`
           : customer.isActive === false
             ? "المشترك غير نشط"
             : `التاريخ خارج الاشتراك (${dateOnly(customer.startDate)} إلى ${dateOnly(customer.endDate)})`;
-        const reasonEn = pausedFrom && date >= pausedFrom
+        const reasonEn = isSkipped
+          ? `Customer skipped ${date}`
+          : pausedFrom && date >= pausedFrom
           ? `Subscription paused from ${pausedFrom}`
           : customer.isActive === false
             ? "Customer is inactive"

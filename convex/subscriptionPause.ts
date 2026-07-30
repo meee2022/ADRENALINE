@@ -172,11 +172,30 @@ export const resume = mutation({
       restored++;
     }
 
+    /* أيام التجميد تُخطّى بأثرٍ دائم لا مؤقّت.
+     * الاستئناف كان يمحو `pausedFrom` فوراً، وكل الشاشات تفلتر به — فبمجرّد
+     * الضغط تعود أيام التجميد نفسها «نشطة» وتنزل وجباتها: منصور الكتبي جُمّد
+     * ثلاثة أيام ويرجع السبت، فاستئنافه الخميس أنزل وجبات الخميس أيضاً.
+     * فنُثبّت المدى [from, on) في `skippedDates` قبل رفع التجميد: الأيام
+     * المجمَّدة تبقى مستبعَدة من المطبخ والاستيكرات والتوصيل إلى الأبد، وهي
+     * معوَّضة أصلاً في `newEndDate` أعلاه. */
+    const frozenRange: string[] = [];
+    {
+      const cur = parseDate(from);
+      const end = parseDate(on);
+      for (let i = 0; i < 400 && cur.getTime() < end.getTime(); i++) {
+        const iso = fmtDate(cur);
+        if (isDeliveryDay(cur) && !skipped.includes(iso)) frozenRange.push(iso);
+        cur.setUTCDate(cur.getUTCDate() + 1);
+      }
+    }
+
     await ctx.db.patch(args.id, {
       pausedFrom: undefined,
       pauseExpectedResume: undefined,
       isActive: true,
       endDate: newEndDate,
+      skippedDates: Array.from(new Set([...skipped, ...frozenRange])).sort(),
       pauseHistory: [
         ...history,
         { from, to: on, deliveryDays: frozen, by: String(staff.userId ?? ""), at: Date.now() },
@@ -190,6 +209,8 @@ export const resume = mutation({
       oldEndDate: c.endDate,
       newEndDate,
       restoredPlans: restored,
+      // الأيام التي ثُبّتت متخطّاة كي لا تعود بمجرّد رفع التجميد
+      lockedSkippedDays: frozenRange.length,
     };
   },
 });

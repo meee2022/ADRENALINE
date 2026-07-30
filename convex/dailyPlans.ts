@@ -187,6 +187,13 @@ export const create = mutation({
     if (pausedFrom && String(args.date).slice(0, 10) >= pausedFrom) {
       throw new Error("اشتراك هذا المشترك مجمّد — لا يمكن إنشاء خطة في فترة التجميد");
     }
+    const planDate = String(args.date).slice(0, 10);
+    const skippedDates: string[] = Array.isArray((customer as any)?.skippedDates)
+      ? (customer as any).skippedDates
+      : [];
+    if (skippedDates.some((skippedDate: unknown) => String(skippedDate).slice(0, 10) === planDate)) {
+      throw new Error(`المشترك متخطٍ يوم ${planDate} — لا يمكن إنشاء خطة أو إرسال وجبات لهذا اليوم`);
+    }
     /* 🔒 ولا خطة خارج الاشتراك. كان الفحص للتجميد وحده، فمرّت خطط لمن لم يبدأ
        اشتراكه بعد أو انتهى — والمطبخ يطبخها. الفترات المجدَّدة محسوبة، فمن
        جدّد لا تُرفض أيامه القديمة التي أكلها. */
