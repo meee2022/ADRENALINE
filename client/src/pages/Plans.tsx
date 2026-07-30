@@ -20,6 +20,8 @@ import { useStore } from "@/lib/store";
 import { alertDialog } from "@/lib/dialogs";
 import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
 import { confirmDialog } from "@/lib/dialogs";
+import { matchesSearchQuery } from "@/lib/search";
+import { isWithinAnySubscriptionPeriod } from "@/lib/subscription";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -460,13 +462,10 @@ export default function PlansPage() {
         .filter((c: any) => !pausedOnTarget(c))
         // 🔀 المخصّصون لهم صفحتهم — نستبعدهم هنا لمنع ازدواج مصدر المطبخ
         .filter((c: any) => !isCustomizedCustomer(c))
-        .filter((c: any) => {
-          // لو مفيش startDate/endDate نعرضه (fallback)
-          if (!c?.startDate && !c?.endDate) return true;
-          if (c?.startDate && targetISO < String(c.startDate).slice(0, 10)) return false;
-          if (c?.endDate && targetISO > String(c.endDate).slice(0, 10)) return false;
-          return true;
-        })
+        // التجديد يحفظ الفترة القديمة في subscriptionHistory. الاعتماد على
+        // التواريخ الحالية وحدها أخفى لولوة يوم 1-8 رغم أن فترتها السابقة
+        // تنتهي في هذا اليوم، فظهر 106 هنا و107 في المراجعة النهائية.
+        .filter((c: any) => isWithinAnySubscriptionPeriod(c, targetISO))
         .sort((a: any, b: any) =>
           String(a?.fullName || "").toLowerCase().localeCompare(String(b?.fullName || "").toLowerCase())
         );
@@ -1152,10 +1151,8 @@ export default function PlansPage() {
             filtered = filtered.filter((c: any) => (c.program || "STANDARD").toUpperCase() === programFilter);
           }
           if (searchQ.trim()) {
-            const q = searchQ.trim().toLowerCase();
             filtered = filtered.filter((c: any) =>
-              String(c.fullName || "").toLowerCase().includes(q) ||
-              String(c.phone || "").includes(q)
+              matchesSearchQuery(searchQ, c.fullName, c.phone)
             );
           }
           // ✅ فلتر حالة الخطة

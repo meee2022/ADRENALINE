@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { CustomerCard } from "@/components/CustomerCard";
 import { SubscriptionPauseDialog } from "@/components/SubscriptionPauseDialog";
 import { CustomerMealPlanDialog } from "@/components/CustomerMealPlanDialog";
+import { matchesSearchQuery } from "@/lib/search";
 import {
   Table,
   TableBody,
@@ -471,10 +472,7 @@ export default function Customers() {
 
     // فلتر البحث
     if (q) {
-      base = base.filter((c: any) =>
-        String(c.fullName || "").toLowerCase().includes(q) ||
-        String(c.phone || "").includes(q)
-      );
+      base = base.filter((c: any) => matchesSearchQuery(q, c.fullName, c.phone));
     }
 
     return base.slice().sort((a: any, b: any) => {

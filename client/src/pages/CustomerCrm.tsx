@@ -5,6 +5,7 @@ import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
 import { Check, Clock3, MessageCircle, Phone, Plus, Save, Search, Send, ShieldCheck, TestTube2, WifiOff } from "lucide-react";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
+import { matchesSearchQuery } from "@/lib/search";
 
 export default function CustomerCrm() {
  const {sessionToken}=useStore(); const {language}=useLanguage(); const ar=language==="ar"; const t=(a:string,e:string)=>ar?a:e;
@@ -13,7 +14,7 @@ export default function CustomerCrm() {
  const automationLogs:any[]=useQuery(api.crm.automationLogs,{limit:30,sessionToken:sessionToken||undefined})||[];
  const [q,setQ]=useState(""); const [note,setNote]=useState(""); const [customer,setCustomer]=useState<any>(null); const [type,setType]=useState<"RENEWAL"|"DELIVERY_FAILURE"|"GENERAL">("GENERAL");
  const soon=useMemo(()=>!data?[]:data.customers.filter((c:any)=>{const d=new Date(c.endDate); const now=new Date(); return c.isActive&&d>=now&&d.getTime()-now.getTime()<=7*86400000;}),[data]);
- const customers=useMemo(()=>!data?[]:data.customers.filter((c:any)=>`${c.fullName} ${c.phone}`.toLowerCase().includes(q.toLowerCase())).slice(0,20),[data,q]);
+ const customers=useMemo(()=>!data?[]:data.customers.filter((c:any)=>matchesSearchQuery(q,c.fullName,c.phone)).slice(0,20),[data,q]);
  const add=async()=>{if(!customer||!note.trim())return; await create({customerId:customer._id,type,note,dueDate:undefined,sessionToken:sessionToken||undefined});setNote("");setCustomer(null)};
  const wa=(c:any, text:string)=>{const link=buildWhatsAppLink(c.phone,text); if(link) window.open(link,"_blank","noopener,noreferrer")};
  return <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6" dir={ar?"rtl":"ltr"}><header className="rounded-2xl bg-[#0e2a4a] p-6 text-white"><h1 className="text-2xl font-black">{t("متابعة العملاء", "Customer follow-up")}</h1><p className="mt-1 text-sm text-cyan-100">{t("التجديدات، ملاحظات التواصل، وحالات فشل التوصيل في مكان واحد.", "Renewals, contact notes, and failed deliveries in one place.")}</p></header>

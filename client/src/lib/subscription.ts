@@ -52,6 +52,31 @@ export function isExpired(endDate?: string | null): boolean {
   return subscriptionState(endDate).status === "expired";
 }
 
+/**
+ * هل التاريخ داخل الاشتراك الحالي أو إحدى الفترات السابقة المحفوظة عند التجديد؟
+ * يجب استخدامه في شاشات التشغيل بدل مقارنة startDate/endDate الحاليين فقط.
+ */
+export function isWithinAnySubscriptionPeriod(customer: any, dateISO: string): boolean {
+  const date = String(dateISO || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return true;
+  const periods: Array<{ start: string; end: string }> = [];
+  const addPeriod = (startValue: unknown, endValue: unknown) => {
+    const start = String(startValue || "").slice(0, 10);
+    const end = String(endValue || "").slice(0, 10);
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(start) &&
+      /^\d{4}-\d{2}-\d{2}$/.test(end) &&
+      end >= start
+    ) periods.push({ start, end });
+  };
+  addPeriod(customer?.startDate, customer?.endDate);
+  for (const history of Array.isArray(customer?.subscriptionHistory) ? customer.subscriptionHistory : []) {
+    addPeriod(history?.startDate, history?.endDate);
+  }
+  if (!periods.length) return true;
+  return periods.some(({ start, end }) => date >= start && date <= end);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════
  *  جدولة أيام الاشتراك — المصدر الوحيد للمنيو اليدوي والخطة الذكية معاً.
  *

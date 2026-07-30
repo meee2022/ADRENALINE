@@ -1111,8 +1111,7 @@ export const prepareAndConsumeAllForDate = mutation({
       // اليوم المتخطّى لا يُوصَّل — نفس ما يُطبَّق في كشف المطبخ والاستيكرات
       const skipped: string[] = Array.isArray(c.skippedDates) ? c.skippedDates : [];
       if (skipped.some((x: any) => String(x).slice(0, 10) === String(date).slice(0, 10))) continue;
-      if (c.startDate && String(c.startDate).slice(0, 10) > date) continue;
-      if (c.endDate && String(c.endDate).slice(0, 10) < date) continue;
+      if (!isWithinSubscription(c, date)) continue;
       const cTime = String(c.deliveryTime || "MORNING");
       if (deliveryTime && cTime !== deliveryTime) continue;
       const wk = t.slots?.weeks ? (t.slots.weeks[rot] || t.slots.weeks[String(rot)])?.days : null;

@@ -4,6 +4,7 @@ import { normalizePhone } from "./lib/phone";
 import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
 import { v } from "convex/values";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
 type PlanStatus =
   | "DRAFT"
@@ -149,8 +150,9 @@ function countsOnDate(c: any, date: string): boolean {
   const skipped: string[] = Array.isArray(c.skippedDates) ? c.skippedDates : [];
   if (skipped.some((x: any) => String(x).slice(0, 10) === d)) return false;
   const pausedFrom = String(c.pausedFrom || "").slice(0, 10);
-  if (pausedFrom) return d < pausedFrom;
-  return !!c.isActive;
+  if (pausedFrom && d >= pausedFrom) return false;
+  if (!pausedFrom && !c.isActive) return false;
+  return isWithinSubscription(c, d);
 }
 
 async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<string[]> {

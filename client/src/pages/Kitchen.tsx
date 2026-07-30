@@ -21,6 +21,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
+import { matchesSearchQuery } from "@/lib/search";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -274,11 +275,11 @@ export default function Kitchen() {
 
   const getCustomer = (id: string) => customers.find((c: any) => c._id === id);
   const filteredPlans = useMemo(() => {
-    const q = personSearch.trim().toLowerCase();
+    const q = personSearch.trim();
     if (!q) return plans;
     return plans.filter((p: any) => {
       const c: any = customers.find((x: any) => x._id === p.customerId);
-      return String(c?.fullName || p.customerName || "").toLowerCase().includes(q);
+      return matchesSearchQuery(q, c?.fullName || p.customerName, c?.phone);
     });
   }, [plans, personSearch, customers]);
   const getMenuItem = (id: string) => menuItems.find((m: any) => m._id === id);

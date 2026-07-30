@@ -8,6 +8,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
+import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
 /** عملاء البرنامج المخصّص + هل لهم قالب محفوظ. للموظفين. */
 export const listCustomized = query({
@@ -125,6 +126,7 @@ export const forDate = query({
          1-8 ونزلت وجباتها للمطبخ كأن شيئاً لم يكن. */
       const skipped: string[] = Array.isArray((c as any).skippedDates) ? (c as any).skippedDates : [];
       if (skipped.some((x: any) => String(x).slice(0, 10) === d)) continue;
+      if (!isWithinSubscription(c, d)) continue;
       out.push({
         customerId: String(tpl.customerId),
         customerName: c.fullName || "",

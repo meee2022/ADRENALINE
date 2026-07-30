@@ -204,6 +204,35 @@ export const forDate = query({
         }
       }
 
+      /* التجديد ينقل startDate/endDate إلى الفترة الجديدة ويحفظ القديمة في
+         subscriptionHistory. الخطة قد تكون صحيحة بسبب الفترة السابقة، لكن من
+         دون إظهار ذلك تبدو للأخصائية كخطة زائدة ويختلف العد بين الشاشات. */
+      const currentStart = dateOnly(customer.startDate);
+      const currentEnd = dateOnly(customer.endDate);
+      const inCurrentPeriod = !!(
+        currentStart && currentEnd && date >= currentStart && date <= currentEnd
+      );
+      const matchingHistory = (Array.isArray(customer.subscriptionHistory)
+        ? customer.subscriptionHistory
+        : []).find((period: any) => {
+          const start = dateOnly(period?.startDate);
+          const end = dateOnly(period?.endDate);
+          return start && end && date >= start && date <= end;
+        });
+      if (!inCurrentPeriod && matchingHistory) {
+        const historyStart = dateOnly(matchingHistory.startDate);
+        const historyEnd = dateOnly(matchingHistory.endDate);
+        issues.push({
+          code: "PLAN_IN_RENEWAL_HISTORY",
+          severity: "WARNING",
+          customerId,
+          customerName: name,
+          messageAr: `الخطة صحيحة ضمن فترة سابقة محفوظة بعد التجديد (${historyStart} إلى ${historyEnd})، والفترة الحالية ${currentStart} إلى ${currentEnd}`,
+          messageEn: `Valid plan from a previous subscription period (${historyStart} to ${historyEnd}); current period is ${currentStart} to ${currentEnd}`,
+          planIds: plans.map((p) => String(p._id)),
+        });
+      }
+
       if (!customerRunsOnDate(customer, date)) {
         const pausedFrom = dateOnly(customer.pausedFrom);
         const skippedDates: string[] = Array.isArray(customer.skippedDates) ? customer.skippedDates : [];

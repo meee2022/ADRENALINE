@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Save, UtensilsCrossed, Check, Copy, Trash2, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { matchesSearchQuery, normalizeSearchText } from "@/lib/search";
 
 type Slot = {
   key: string;
@@ -47,6 +48,7 @@ const CARB_OPTIONS = [
   { ar: "شوفان", en: "Oats" },
 ];
 const GRAM_PRESETS = [80, 100, 120, 150, 170, 200, 250];
+
 // أيام التوصيل (السبت → الخميس، الجمعة إجازة)
 const DAYS: { key: string; ar: string; en: string }[] = [
   { key: "saturday", ar: "السبت", en: "Sat" },
@@ -432,9 +434,11 @@ export default function Customized() {
     return s.length > 0 && s.every((x) => x.type === "OFF" || x.baseName);
   };
 
-  const filtered = customers.filter((c) =>
-    !search.trim() || String(c.fullName).includes(search) || String(c.phone || "").includes(search),
-  );
+  const normalizedSearch = normalizeSearchText(search);
+  const filtered = customers.filter((c) => {
+    if (!normalizedSearch) return true;
+    return matchesSearchQuery(normalizedSearch, c.fullName, c.phone);
+  });
 
   // ✅ حفظ اليوم الحالي فقط — لا يمسّ باقي أيام الأسبوع
   const [savingDay, setSavingDay] = useState(false);
