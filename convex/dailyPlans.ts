@@ -8,6 +8,7 @@ import { convertUnit } from "./units";
 import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { trail } from "./lib/trail";
 
 type PlanStatus =
   | "DRAFT"
@@ -176,7 +177,7 @@ export const create = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    const staff = await requireStaff(ctx, args.sessionToken);
     // ⚠️ sessionToken لا يُخزَّن — الـinsert أدناه يعمل ...fields وليس ...args
     const { sessionToken: _t, ...fields } = args;
 
@@ -233,11 +234,17 @@ export const create = mutation({
         ? "CONFIRMED"
         : requested;
 
-    return await ctx.db.insert("dailyPlans", {
+    const newPlanId = await ctx.db.insert("dailyPlans", {
       ...fields,
       status: safeStatus,
       createdAt: Date.now(),
     });
+    await trail(ctx, {
+      action: "PLAN_CREATED", entityType: "plan", entityId: String(newPlanId),
+      details: `خطة ${args.date} — ${(customer as any)?.fullName || "?"} — ${safeStatus}`,
+      staff: staff as any,
+    });
+    return newPlanId;
   },
 });
 
@@ -249,7 +256,7 @@ export const update = mutation({
   },
   handler: async (ctx, { id, data, sessionToken }) => {
     // انتقال الحالة إلى PREPARED يخصم المخزون ويُطلق إشعارات — موظفون فقط
-    await requireStaff(ctx, sessionToken);
+    const staffU = await requireStaff(ctx, sessionToken);
     const existing = await ctx.db.get(id);
     if (!existing) throw new Error("Daily plan not found");
 
@@ -268,6 +275,16 @@ export const update = mutation({
     safe.status = finalStatus;
 
     await ctx.db.patch(id, safe);
+    /* نسجّل انتقال الحالة وحده: تعديل الوجبات يقع عشرات المرات يومياً فيُغرق
+       السجل، أما الحالة فهي ما يُحاسَب عليه (طُبخ؟ خرج؟ أُلغي؟). */
+    if (finalStatus !== currentStatus) {
+      const c0: any = (existing as any).customerId ? await ctx.db.get((existing as any).customerId) : null;
+      await trail(ctx, {
+        action: `PLAN_${finalStatus}`, entityType: "plan", entityId: String(id),
+        details: `${(existing as any).date} — ${c0?.fullName || "?"} — ${currentStatus} ← ${finalStatus}`,
+        staff: staffU as any,
+      });
+    }
 
     // 🔔 إشعارات + خصم مخزون عند تغيير الحالة
     if (finalStatus !== currentStatus) {
@@ -519,8 +536,16 @@ export const confirmAllDrafts = mutation({
 export const remove = mutation({
   args: { id: v.id("dailyPlans"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    const staffD = await requireStaff(ctx, sessionToken);
+    /* الحذف لا رجعة فيه: نلتقط ما يكفي للإجابة لاحقاً عن «أين ذهبت خطة فلان؟» */
+    const gone: any = await ctx.db.get(id);
+    const gc: any = gone?.customerId ? await ctx.db.get(gone.customerId) : null;
     await ctx.db.delete(id);
+    await trail(ctx, {
+      action: "PLAN_DELETED", entityType: "plan", entityId: String(id),
+      details: `${gone?.date || "?"} — ${gc?.fullName || "?"} — ${gone?.status || "?"} — ${(gone?.items || []).length} وجبة`,
+      staff: staffD as any,
+    });
     return true;
   },
 });

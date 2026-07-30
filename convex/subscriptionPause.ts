@@ -15,6 +15,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
+import { trail } from "./lib/trail";
 
 /* ========== أدوات التاريخ — مصدر واحد في convex/lib/dates.ts ========== */
 import {
@@ -113,6 +114,13 @@ export const pause = mutation({
       updatedAt: Date.now(),
     });
 
+    await trail(ctx, {
+      action: "SUBSCRIPTION_PAUSED", entityType: "customer", entityId: String(args.id),
+      details: `${(c as any)?.fullName || "?"} — من ${from}`
+        + (args.expectedResume ? ` — رجوع متوقّع ${args.expectedResume}` : " — بلا تاريخ رجوع")
+        + ` — أُرشِفت ${removed} خطة`,
+      staff: staff as any,
+    });
     return { success: true, from, removedPlans: removed, by: staff.userId };
   },
 });
@@ -203,6 +211,12 @@ export const resume = mutation({
       updatedAt: Date.now(),
     });
 
+    await trail(ctx, {
+      action: "SUBSCRIPTION_RESUMED", entityType: "customer", entityId: String(args.id),
+      details: `${(c as any)?.fullName || "?"} — من ${from} إلى ${on} — `
+        + `${frozen} يوم عُوِّض (النهاية ${c.endDate} ← ${newEndDate}) — استُعيدت ${restored} خطة`,
+      staff: staff as any,
+    });
     return {
       success: true,
       frozenDeliveryDays: frozen,

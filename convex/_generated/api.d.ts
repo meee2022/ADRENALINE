@@ -50,6 +50,7 @@ import type * as lib_customerOrderRules from "../lib/customerOrderRules.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as lib_subscriptionPeriods from "../lib/subscriptionPeriods.js";
+import type * as lib_trail from "../lib/trail.js";
 import type * as loyalty from "../loyalty.js";
 import type * as manager from "../manager.js";
 import type * as mealCategories from "../mealCategories.js";
@@ -105,7 +106,6 @@ import type * as subscriptionPause from "../subscriptionPause.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
 import type * as users from "../users.js";
-import type * as ztmp from "../ztmp.js";
 
 import type {
   ApiFromModules,
@@ -156,6 +156,7 @@ declare const fullApi: ApiFromModules<{
   "lib/dates": typeof lib_dates;
   "lib/phone": typeof lib_phone;
   "lib/subscriptionPeriods": typeof lib_subscriptionPeriods;
+  "lib/trail": typeof lib_trail;
   loyalty: typeof loyalty;
   manager: typeof manager;
   mealCategories: typeof mealCategories;
@@ -211,7 +212,6 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;
-  ztmp: typeof ztmp;
 }>;
 
 /**

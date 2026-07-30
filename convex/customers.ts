@@ -7,6 +7,7 @@ import { v } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
 import { normalizePhone } from "./lib/phone";
 import { qatarTodayISO } from "./lib/customerOrderRules";
+import { trail } from "./lib/trail";
 import { parseDate, isDeliveryDay, addDeliveryDays, subDeliveryDays } from "./lib/dates";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
@@ -578,7 +579,9 @@ export const remove = mutation({
 export const removeForce = mutation({
   args: { id: v.id("customers"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { id, sessionToken }) => {
-    await requireAdmin(ctx, sessionToken);
+    const admin = await requireAdmin(ctx, sessionToken);
+    /* نلتقط بيانات المشترك قبل محوها — بعد الحذف لا يبقى ما يُسأل عنه. */
+    const doomed: any = await ctx.db.get(id);
     // 🔒 حماية مالية: فواتير POS تمنع الحذف القسري
     const posT = await ctx.db.query("posTickets").collect();
     if (posT.some((t: any) => String(t.customerId) === String(id))) {
@@ -616,6 +619,13 @@ export const removeForce = mutation({
     }
     // المشترك نفسه
     await ctx.db.delete(id);
+    /* الحذف يمحو المشترك وكل أثره، فلا يبقى ما يُسأل عنه إلا هذا السطر. */
+    await trail(ctx, {
+      action: "CUSTOMER_DELETED", entityType: "customer", entityId: String(id),
+      details: `${doomed?.fullName || "?"} — ${doomed?.phone || ""} — `
+        + `${plansDeleted} خطة · ${ordersDeleted} طلب · ${templatesDeleted} قالب`,
+      staff: admin as any,
+    });
     return { ok: true, ordersDeleted, itemsDeleted, plansDeleted, accountsDeleted, templatesDeleted, changeLogDeleted };
   },
 });

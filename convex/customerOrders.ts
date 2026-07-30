@@ -7,6 +7,7 @@ import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
 import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { trail } from "./lib/trail";
 import { loyaltyConfig } from "./loyalty";
 import { qatarTodayISO, validateCustomerOrderSelection } from "./lib/customerOrderRules";
 
@@ -482,7 +483,7 @@ export const approve = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides, sessionToken }) => {
-    await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
+    const approver = await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
@@ -727,6 +728,12 @@ export const approve = mutation({
       });
     }
 
+    await trail(ctx, {
+      action: "ORDER_APPROVED", entityType: "order", entityId: String(orderId),
+      details: `${order.orderNumber || ""} — ${order.customerName || ""} — ${Object.keys(mealsByDate).length} يوم`
+        + (skippedDates.length ? ` — تُخطّي ${skippedDates.length} تاريخاً` : ""),
+      staff: approver as any,
+    });
     return {
       success: true,
       message: skippedDates.length
@@ -757,6 +764,11 @@ export const reject = mutation({
       rejectionReason: reason,
       rejectedAt: Date.now(),
       updatedAt: Date.now(),
+    });
+    await trail(ctx, {
+      action: "ORDER_REJECTED", entityType: "order", entityId: String(orderId),
+      details: `${(order as any)?.orderNumber || ""} — ${(order as any)?.customerName || ""} — ${reason}`,
+      staff: null,
     });
 
     // 🔔 الطلب اتعامل معاه (رفض) → علّم إشعارات "طلب جديد" كمقروءة

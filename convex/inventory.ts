@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { trail } from "./lib/trail";
 import { convertUnit } from "./units";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
 import { dayNameOf, rotationWeekAtDate } from "./lib/dates";
@@ -1044,7 +1045,7 @@ export const prepareAndConsumeAllForDate = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, { date, deliveryTime, sessionToken }) => {
-    await requireStaff(ctx, sessionToken);
+    const preparer = await requireStaff(ctx, sessionToken);
     const plans = await ctx.db
       .query("dailyPlans")
       .withIndex("by_date", (q: any) => q.eq("date", date))
@@ -1129,6 +1130,14 @@ export const prepareAndConsumeAllForDate = mutation({
       });
       preparedCustomized++;
     }
+    /* أخطر عملية في اليوم: تعلّم عشرات الخطط وتخصم المخزون دفعة واحدة —
+       وقد ضُغطت مرةً على اليوم الخطأ. تُسجَّل بيومها وأعدادها ومن نفّذها. */
+    await trail(ctx, {
+      action: "PREPARE_ALL", entityType: "plan", entityId: date,
+      details: `${date}${deliveryTime ? ` (${deliveryTime})` : " (اليوم كاملاً)"} — `
+        + `${prepared} خطة محضَّرة · ${preparedCustomized} مخصّص للتوصيل · ${skipped} متخطّاة`,
+      staff: preparer as any,
+    });
     return { prepared, skipped, preparedCustomized };
   },
 });
