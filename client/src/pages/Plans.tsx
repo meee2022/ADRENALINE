@@ -473,12 +473,23 @@ export default function PlansPage() {
     [customers, formattedDate]
   );
 
-  /** عدد المخصّصين المستبعدين — نعرض لافتة إرشاد للأخصائية بدل إخفاء صامت. */
+  /** عدد المخصّصين المستبعدين — لافتة إرشاد للأخصائية بدل إخفاء صامت.
+   *
+   * كان يعدّ كل من له قالب وحسابه غير موقوف: 37 بينما النشطون في هذا اليوم
+   * 32 ومن له أكلٌ فيه 25 — رقمٌ يُقرأ كأنه عدد من يُطبخ لهم اليوم. يُقاس
+   * الآن بنفس قواعد بقية الشاشات: التجميد بتاريخه، والاشتراك بفتراته
+   * المجدَّدة، على اليوم المفتوح لا على اليوم الحالي. */
   const customizedCount = useMemo(
-    () => (customers || []).filter(
-      (c: any) => (c?.isActive !== false) && isCustomizedCustomer(c),
-    ).length,
-    [customers],
+    () => (customers || []).filter((c: any) => {
+      if (!isCustomizedCustomer(c)) return false;
+      const from = String(c?.pausedFrom || "").slice(0, 10);
+      if (from) { if (formattedDate >= from) return false; }
+      else if (c?.isActive === false) return false;
+      const skipped: string[] = Array.isArray(c?.skippedDates) ? c.skippedDates : [];
+      if (skipped.some((x) => String(x).slice(0, 10) === formattedDate)) return false;
+      return isWithinAnySubscriptionPeriod(c, formattedDate);
+    }).length,
+    [customers, formattedDate],
   );
 
   const sortedCategories = useMemo(
