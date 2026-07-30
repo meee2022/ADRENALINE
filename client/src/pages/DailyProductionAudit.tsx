@@ -115,8 +115,8 @@ export default function DailyProductionAudit() {
       await ensureBoxNumbers({ date, sessionToken });
       void alertDialog({
         message: isRtl
-          ? `تم الإصلاح الآمن: ${result.duplicatesCancelled} خطة زائدة أُلغيت، ${result.plansPaused} خطة أُوقفت، ${result.plansReturnedToDraft} خطة عادت للمراجعة، ${result.shiftsUpdated} وردية صُححت.`
-          : `Safe repair complete: ${result.duplicatesCancelled} duplicates cancelled, ${result.plansPaused} plans paused, ${result.plansReturnedToDraft} returned to review, ${result.shiftsUpdated} shifts corrected.`,
+          ? `تم الإصلاح الآمن: ${result.duplicatesCancelled} خطة زائدة أُلغيت، ${result.plansPaused} خطة أُوقفت، ${result.plansRestored || 0} خطة نشطة أُعيدت، ${result.plansReturnedToDraft} خطة عادت للمراجعة، ${result.shiftsUpdated} وردية صُححت.`
+          : `Safe repair complete: ${result.duplicatesCancelled} duplicates cancelled, ${result.plansPaused} plans paused, ${result.plansRestored || 0} active plans restored, ${result.plansReturnedToDraft} returned to review, ${result.shiftsUpdated} shifts corrected.`,
       });
     } catch (error: any) {
       void alertDialog({ message: String(error?.message || error) });

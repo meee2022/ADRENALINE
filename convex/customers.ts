@@ -491,6 +491,29 @@ export const update = mutation({
         const actual = (Array.isArray(plan.items) ? plan.items : []).filter((item: any) => !item?.isOff).length;
         const planPatch: any = { updatedAt: Date.now() };
         let changed = false;
+        // إذا عاد الحساب نشطًا فلا نترك خططه الصالحة مدفونة في PAUSED.
+        // نعيد المكتملة إلى CONFIRMED، وغير المكتملة إلى DRAFT للمراجعة.
+        if (String(plan.status).toUpperCase() === "PAUSED") {
+          let previousStatus = "";
+          try {
+            const parsed = plan.notes ? JSON.parse(plan.notes) : null;
+            previousStatus = String(parsed?.pausedPrevStatus || "").toUpperCase();
+          } catch { /* ملاحظات نصية عادية */ }
+          planPatch.status = ["DRAFT", "CONFIRMED"].includes(previousStatus)
+            ? previousStatus
+            : expected > 0 && actual === expected
+              ? "CONFIRMED"
+              : "DRAFT";
+          planPatch.notes = (() => {
+            try {
+              const parsed = plan.notes ? JSON.parse(plan.notes) : null;
+              return parsed?.prevNotes || undefined;
+            } catch {
+              return plan.notes;
+            }
+          })();
+          changed = true;
+        }
         if (finalCustomer?.deliveryTime && plan.deliveryTime !== finalCustomer.deliveryTime) {
           planPatch.deliveryTime = finalCustomer.deliveryTime;
           shifted++;

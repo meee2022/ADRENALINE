@@ -48,8 +48,16 @@ export const forDate = query({
         OPERATIONAL_STATUSES.has(String(plan.status || "").toUpperCase()) &&
         plan.origin !== "CUSTOMIZED",
     );
+    const pausedPlans = dayPlans.filter(
+      (plan: any) =>
+        String(plan.status || "").toUpperCase() === "PAUSED" &&
+        plan.origin !== "CUSTOMIZED",
+    );
     const customerIds = new Set<string>();
     for (const plan of operational as any[]) {
+      if (plan.customerId) customerIds.add(String(plan.customerId));
+    }
+    for (const plan of pausedPlans as any[]) {
       if (plan.customerId) customerIds.add(String(plan.customerId));
     }
     for (const template of templates as any[]) {
@@ -76,6 +84,25 @@ export const forDate = query({
       actual?: number;
     };
     const issues: Issue[] = [];
+
+    // الخطة PAUSED تكون صحيحة فقط إذا كان اليوم نفسه مجمّدًا/متخطًى أو خارج الاشتراك.
+    // إذا كان العميل نشطًا واليوم صالحًا فهي خطة "مدفونة": لا تظهر للمطبخ ولا كان
+    // التدقيق القديم يراها لأنه كان يبدأ من الحالات التشغيلية فقط.
+    for (const plan of pausedPlans as any[]) {
+      const customerId = String(plan.customerId || "");
+      const customer = customerById.get(customerId);
+      if (customer && customerRunsOnDate(customer, date)) {
+        issues.push({
+          code: "ORPHANED_PAUSED_PLAN",
+          severity: "BLOCKER",
+          customerId,
+          customerName: String(customer.fullName || plan.customerName || "Unknown"),
+          messageAr: "الخطة مدفونة بحالة PAUSED رغم أن الاشتراك نشط واليوم صالح — اضغط الإصلاح الآمن لإعادتها",
+          messageEn: "Plan is hidden as PAUSED although the subscription is active for this date",
+          planIds: [String(plan._id)],
+        });
+      }
+    }
 
     const plansByCustomer = new Map<string, any[]>();
     for (const plan of operational as any[]) {
@@ -392,6 +419,7 @@ export const repairDate = mutation({
 
     let duplicatesCancelled = 0;
     let plansPaused = 0;
+    let plansRestored = 0;
     let plansReturnedToDraft = 0;
     let shiftsUpdated = 0;
     let duplicateBoxRowsRemoved = 0;
@@ -421,10 +449,13 @@ export const repairDate = mutation({
           duplicatesCancelled++;
         }
       }
-      if (!customer || String(keep.status).toUpperCase() !== "CONFIRMED") continue;
+      if (!customer) continue;
+      const keepStatus = String(keep.status).toUpperCase();
       if (!customerRunsOnDate(customer, date)) {
-        await ctx.db.patch(keep._id, { status: "PAUSED", updatedAt: Date.now() });
-        plansPaused++;
+        if (keepStatus !== "PAUSED") {
+          await ctx.db.patch(keep._id, { status: "PAUSED", updatedAt: Date.now() });
+          plansPaused++;
+        }
         continue;
       }
       const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
@@ -432,6 +463,23 @@ export const repairDate = mutation({
       const actual = activeItemCount(keep);
       const patch: any = { updatedAt: Date.now() };
       let changed = false;
+      if (keepStatus === "PAUSED") {
+        let previousStatus = "";
+        try {
+          const parsed = keep.notes ? JSON.parse(keep.notes) : null;
+          previousStatus = String(parsed?.pausedPrevStatus || "").toUpperCase();
+        } catch { /* الملاحظات العادية لا تمنع الإصلاح */ }
+        patch.status = ["DRAFT", "CONFIRMED"].includes(previousStatus)
+          ? previousStatus
+          : expected > 0 && actual === expected
+            ? "CONFIRMED"
+            : "DRAFT";
+        if (patch.status === "CONFIRMED") plansRestored++;
+        else plansReturnedToDraft++;
+        changed = true;
+      } else if (keepStatus !== "CONFIRMED") {
+        continue;
+      }
       if (customer.deliveryTime && keep.deliveryTime !== customer.deliveryTime) {
         patch.deliveryTime = customer.deliveryTime;
         shiftsUpdated++;
@@ -470,6 +518,7 @@ export const repairDate = mutation({
       details: JSON.stringify({
         duplicatesCancelled,
         plansPaused,
+        plansRestored,
         plansReturnedToDraft,
         shiftsUpdated,
         duplicateBoxRowsRemoved,
@@ -480,9 +529,72 @@ export const repairDate = mutation({
     return {
       duplicatesCancelled,
       plansPaused,
+      plansRestored,
       plansReturnedToDraft,
       shiftsUpdated,
       duplicateBoxRowsRemoved,
     };
+  },
+});
+
+/** إصلاح موجّه لمشترك واحد؛ مفيد من رابط الخطأ ولا يلمس بقية كشف اليوم. */
+export const restoreActiveCustomerPausedPlans = mutation({
+  args: {
+    customerId: v.id("customers"),
+    fromDate: v.string(),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const staff: any = await requireStaff(ctx, args.sessionToken);
+    const customer: any = await ctx.db.get(args.customerId);
+    if (!customer) throw new Error("المشترك غير موجود");
+
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_customerId", (q) => q.eq("customerId", args.customerId))
+      .collect();
+    let restoredConfirmed = 0;
+    let restoredDraft = 0;
+    for (const plan of plans as any[]) {
+      const date = dateOnly(plan.date);
+      if (
+        date < dateOnly(args.fromDate) ||
+        String(plan.status || "").toUpperCase() !== "PAUSED" ||
+        !customerRunsOnDate(customer, date)
+      ) continue;
+
+      const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
+        + Math.max(0, Number(customer.snacksPerDay) || 0);
+      const actual = activeItemCount(plan);
+      let target = expected > 0 && actual === expected ? "CONFIRMED" : "DRAFT";
+      let notes = plan.notes;
+      try {
+        const parsed = plan.notes ? JSON.parse(plan.notes) : null;
+        if (["DRAFT", "CONFIRMED"].includes(String(parsed?.pausedPrevStatus || "").toUpperCase())) {
+          target = String(parsed.pausedPrevStatus).toUpperCase();
+        }
+        notes = parsed?.prevNotes || undefined;
+      } catch { /* ملاحظات نصية عادية */ }
+      await ctx.db.patch(plan._id, {
+        status: target,
+        notes,
+        deliveryTime: customer.deliveryTime || plan.deliveryTime,
+        updatedAt: Date.now(),
+      });
+      if (target === "CONFIRMED") restoredConfirmed++;
+      else restoredDraft++;
+    }
+
+    await ctx.db.insert("auditLog", {
+      actorUserId: staff?.userId,
+      actorName: staff?.name || staff?.username || "Staff",
+      actorRole: staff?.role,
+      action: "RESTORE_ORPHANED_PAUSED_PLANS",
+      entityType: "customers",
+      entityId: String(args.customerId),
+      details: JSON.stringify({ fromDate: dateOnly(args.fromDate), restoredConfirmed, restoredDraft }),
+      createdAt: Date.now(),
+    });
+    return { restoredConfirmed, restoredDraft };
   },
 });
