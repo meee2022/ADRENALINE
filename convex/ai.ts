@@ -397,6 +397,79 @@ export const chat = action({
   },
 });
 
+/** سقف الفطار: وجبة فطار واحدة في اليوم — نفس قاعدة المنيو اليدوي. */
+const BREAKFAST_MAX_PER_DAY = 1;
+
+/**
+ * يُكمل ما نقّصه النموذج من اختيار اليوم.
+ *
+ * النموذج يُطلب منه عدداً محدداً فيعود أحياناً بأقلّ منه — يعطي الوجبات
+ * الرئيسية وينسى الخفيفة مثلاً. فتخرج خطة يومٍ ناقصة بلا سبب في البيانات:
+ * فحصنا يوماً اشتكى منه مشترك فوجدنا الوجبات الخفيفة الثلاث متاحةً وغير
+ * محظورة، والنموذج ببساطة لم يخترها. وهذا يفسّر ما وصفه الطاقم: «مرة يولّد
+ * كله ومرة تبقى ناقصة» — تذبذب النموذج لا قاعدة ثابتة.
+ *
+ * وبما أن بوابة الإرسال تشترط اكتمال **كل** أيام الاشتراك، فيومٌ واحد ناقص
+ * من ثلاثة وعشرين يمنع الطلب كلّه. فنُكمل هنا من نفس المرشّحين المسموحين —
+ * وهم مُصفّون من الممنوعات قبل الوصول إلينا — بأعلى بروتين، محترمين سقف
+ * الفطار الواحد. لا يُضاف شيء خارج ما كان النموذج نفسه يختار منه.
+ */
+function topUpPicks(profile: any, candidates: any[], incoming: any[]): any[] {
+  let picks = incoming;
+  const need = Math.max(0, Math.floor(profile.mealsPerDay ?? 3));
+  const needSnacks = Math.max(0, Math.floor(profile.snacksPerDay ?? 0));
+  const isMain = (c: string) => ["breakfast", "lunch", "dinner"].includes(c);
+  const isSnack = (c: string) => ["snack", "salad"].includes(c);
+  /* النموذج لا يلتزم بعدد الباقة: رأيناه يعطي أربع وجبات رئيسية لمشترك باقته
+     ثلاث ثم ينقّص الخفيفة، ويعطي فطارين في اليوم عشر مرات في خطة واحدة. الزيادة
+     خسارةٌ للمطعم والنقص يمنع الإرسال. فنقتطع الفائض أولاً ثم نُكمل الناقص. */
+  const kept: any[] = [];
+  let bfSeen = 0, mainSeen = 0, snackSeen = 0;
+  for (const p of picks) {
+    if (isMain(p.category)) {
+      if (p.category === "breakfast") {
+        if (bfSeen >= BREAKFAST_MAX_PER_DAY) continue;
+        bfSeen++;
+      }
+      if (mainSeen >= need) continue;
+      mainSeen++;
+    } else if (isSnack(p.category)) {
+      if (snackSeen >= needSnacks) continue;
+      snackSeen++;
+    }
+    kept.push(p);
+  }
+  picks = kept;
+
+  const taken = new Set(picks.map((p: any) => p.id));
+  const out = [...picks];
+  let breakfasts = picks.filter((p: any) => p.category === "breakfast").length;
+
+  const pool = candidates
+    .filter((c: any) => !taken.has(c.id))
+    .sort((a: any, b: any) => (b.protein || 0) - (a.protein || 0));
+
+  const add = (c: any) => { out.push({ ...c, reason: "أُضيفت لاكتمال اليوم" }); taken.add(c.id); };
+
+  // الرئيسية: نراعي سقف الفطار الواحد كما في المنيو اليدوي.
+  let mains = picks.filter((p: any) => isMain(p.category)).length;
+  for (const c of pool) {
+    if (mains >= need) break;
+    if (!isMain(c.category) || taken.has(c.id)) continue;
+    if (c.category === "breakfast" && breakfasts >= BREAKFAST_MAX_PER_DAY) continue;
+    if (c.category === "breakfast") breakfasts++;
+    add(c); mains++;
+  }
+
+  let snacks = picks.filter((p: any) => isSnack(p.category)).length;
+  for (const c of pool) {
+    if (snacks >= needSnacks) break;
+    if (!isSnack(c.category) || taken.has(c.id)) continue;
+    add(c); snacks++;
+  }
+  return out;
+}
+
 // ─── fallback خوارزمي: اختيار وجبات تقرّب من السعرات المستهدفة ───
 function ruleBasedPlan(profile: any, candidates: any[]) {
   const target = targetCaloriesFor(profile.goal);
@@ -583,9 +656,9 @@ export const generateSmartPlan = action({
 
     // 🛡️ حاجز أمان: نتحقق أن كل ID موجود فعلاً في القائمة المتاحة
     const byId = new Map(candidates.map((c: any) => [c.id, c]));
-    const picks = (result.picks || [])
+    const picks = topUpPicks(profile, candidates, (result.picks || [])
       .filter((p: any) => byId.has(p.id))
-      .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
+      .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" })));
 
     return {
       ok: true,
@@ -753,9 +826,9 @@ export const generateWeeklyPlan = action({
             result = ruleBasedPlan(profile, candidates);
           }
           const byId = new Map(candidates.map((c: any) => [c.id, c]));
-          picks = (result.picks || [])
+          picks = topUpPicks(profile, candidates, (result.picks || [])
             .filter((p: any) => byId.has(p.id))
-            .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" }));
+            .map((p: any) => ({ ...byId.get(p.id), reason: p.reason || "" })));
           summary = result.summary;
           engine = result.engine;
         }
