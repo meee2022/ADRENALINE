@@ -5,7 +5,18 @@
  */
 import { MutationCtx, QueryCtx } from "./_generated/server";
 
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 يوم
+/**
+ * عمر الجلسة — مختلف بحسب من يجلس أمام الجهاز.
+ *
+ * كان ثلاثين يوماً للجميع: جهاز المطعم يتشارك عليه الطاقم، وجلسةٌ تبقى شهراً
+ * تعني أن من يترك العمل يظلّ جهازه مفتوحاً حتى تنتهي وحدها. سبعة أيام تكفي
+ * أسبوع عمل كاملاً ولا تُرهق أحداً بتسجيل يومي.
+ *
+ * أما العميل فيدخل من هاتفه الخاص ليتابع طلبه، وتقصير جلسته يطرده كل أسبوع
+ * بلا مقابل أمني — فيبقى على الثلاثين.
+ */
+const STAFF_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;      // 7 أيام — أجهزة مشتركة
+const CUSTOMER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 يوماً — هاتف شخصي
 
 export type Identity = {
   accountType: "staff" | "customer";
@@ -35,7 +46,7 @@ export async function createSession(
     customerAccountId: data.customerAccountId,
     role: data.role,
     createdAt: now,
-    expiresAt: now + SESSION_TTL_MS,
+    expiresAt: now + (data.accountType === "staff" ? STAFF_SESSION_TTL_MS : CUSTOMER_SESSION_TTL_MS),
   });
   return token;
 }

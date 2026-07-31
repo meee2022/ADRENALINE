@@ -17,6 +17,28 @@ export const report = mutation({
     userName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    /* 🔒 طفرة مفتوحة بلا تسجيل دخول — وهي كذلك بالضرورة: الخطأ قد يقع قبل
+       الدخول أصلاً. لكنها تكتب في القاعدة، فكان بالإمكان إغراقها بملايين
+       الصفوف من الخارج. نافذة الدقيقة تكفي أعطال المستخدم الحقيقي (يقع خطأ
+       أو خطآن) وتوقف الإغراق عند الستين. الفشل صامت — لا نُظهر للمستخدم
+       خطأً وهو أصلاً يبلّغ عن خطأ. */
+    const WINDOW_MS = 60 * 1000;
+    const CAP = 60;
+    const now = Date.now();
+    const bucket: any = await ctx.db
+      .query("rateLimits")
+      .withIndex("by_key", (q: any) => q.eq("key", "clientErrors.report"))
+      .first();
+    if (!bucket) {
+      await ctx.db.insert("rateLimits", { key: "clientErrors.report", count: 1, windowStart: now });
+    } else if (now - bucket.windowStart > WINDOW_MS) {
+      await ctx.db.patch(bucket._id, { count: 1, windowStart: now });
+    } else if (bucket.count >= CAP) {
+      return true;   // نتجاهل بصمت بدل رفضٍ يربك المستخدم
+    } else {
+      await ctx.db.patch(bucket._id, { count: bucket.count + 1 });
+    }
+
     await ctx.db.insert("clientErrors", {
       refCode: cap(args.refCode, 40),
       message: cap(args.message, 1000),
