@@ -189,6 +189,51 @@ export default function SmartPlan() {
       `Your plan is incomplete: short by ${parts.join(" and ")}${daysTxt}. Complete all your subscription days before sending, or contact the specialist: ${link}`,
     );
   };
+  /**
+   * نقص الخطة المعروضة، يوماً بيوم — يُحسب فور التوليد لا عند الإرسال.
+   *
+   * كان المشترك يرى خطةً تبدو تامّة، فيضغط «إرسال» فيُرفض بلا سبب مفهوم
+   * فيظنّ الصفحة معطّلة. هذا يُظهر النقص قبل المحاولة ويسمّي اليوم صراحةً.
+   */
+  const dayGaps = (days: any[] | null | undefined): string[] => {
+    const need = Number(subMeals) || 0, needS = Number(subSnacks) || 0;
+    if (!days || (!need && !needS)) return [];
+    const out: string[] = [];
+    for (const d of days) {
+      const picks = d?.picks || [];
+      const mains = picks.filter((m: any) => isMainCategory(m?.category)).length;
+      const snacks = picks.filter((m: any) => isSnackCategory(m?.category)).length;
+      const miss: string[] = [];
+      if (need > mains) miss.push(t(`${need - mains} وجبة رئيسية`, `${need - mains} main meal(s)`));
+      if (needS > snacks) miss.push(t(`${needS - snacks} وجبة خفيفة`, `${needS - snacks} snack(s)`));
+      if (miss.length) out.push(t(`${dayName(d.day)}: ${miss.join(" و")}`, `${dayName(d.day)}: ${miss.join(" and ")}`));
+    }
+    return out;
+  };
+
+  /** شريط التنبيه — لغة رسمية تُرشد إلى الإجراء المطلوب، لا مجرد إعلام بالخطأ. */
+  const GapNotice = ({ days }: { days: any[] | null | undefined }) => {
+    const gaps = dayGaps(days);
+    if (!gaps.length) return null;
+    return (
+      <div style={{
+        background: "#FFF7E6", border: "1px solid #F0C36D", borderRadius: 12,
+        padding: "12px 14px", marginBottom: 14, fontSize: 14, lineHeight: 1.8, color: "#7A5B12",
+      }}>
+        <strong style={{ display: "block", marginBottom: 4 }}>
+          {t("الخطة غير مكتملة", "Your plan is incomplete")}
+        </strong>
+        {t(
+          "تعذّر إدراج بعض الوجبات وفقاً للأصناف المستبعَدة في ملفك. يُرجى اختيار البدائل للأيام التالية قبل الإرسال:",
+          "Some meals could not be added given the items excluded in your profile. Please select alternatives for the following days before sending:",
+        )}
+        <ul style={{ margin: "6px 0 0", paddingInlineStart: 18 }}>
+          {gaps.map((g, i) => <li key={i}>{g}</li>)}
+        </ul>
+      </div>
+    );
+  };
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);   // خطة اليوم
   const [weekly, setWeekly] = useState<any>(null);    // خطة الأسبوع
@@ -710,6 +755,7 @@ export default function SmartPlan() {
         {/* Weekly Result */}
         {weekly && (
           <div>
+            <GapNotice days={weekly.days} />
             <div style={{
               display: "flex", justifyContent: "space-between", alignItems: "center",
               marginBottom: 14, flexWrap: "wrap", gap: 8,

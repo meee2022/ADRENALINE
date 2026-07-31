@@ -38,6 +38,38 @@ function targetCaloriesFor(goal: string | undefined): number {
 }
 
 // ─── هل الوجبة ممنوعة على العميل؟ (مطابقة نصية بسيطة) ───
+/**
+ * كلمات وصل/نفي لا تُعدّ مادةً محظورة بذاتها.
+ * مطابقة لـ`client/src/lib/mealRestrictions.ts` — وهي مرآة هذا المنطق.
+ */
+const STOPWORDS = new Set([
+  "no", "not", "without", "reduce", "less", "only", "add", "my", "choice",
+  "always", "put", "separate", "off", "and", "or", "the", "in", "with",
+  "high", "low", "extra", "please", "calories", "carb", "carbs",
+  "breakfast", "lunch", "dinner", "snack", "meal", "meals",
+]);
+
+/**
+ * يستخرج كلمات المنع من نصّي الممنوعات والحساسية.
+ *
+ * الطاقم يكتبها بالإنجليزية هكذا: «NO SALAD / NO CAKE». القسمة على المسافات
+ * وحدها كانت تجعل كل كلمة فلتراً — بما فيها «no» و«/» — و«no» تقع داخل
+ * كلماتٍ كثيرة (Noodles, Mono)، فتُحجب وجبات سليمة. عشرة مشتركين كانت خططهم
+ * الذكية تخرج ناقصة لهذا السبب وحده، ومنهم من لم يجد سناكاً واحداً في يومه.
+ *
+ * الواجهة تُسقِط هذه الكلمات منذ البداية؛ هذا يوحّد الخادم معها فلا يفترق
+ * المنيو اليدوي عن المولّد الذكي. تحقّقنا قبل التغيير: عشرة مشتركين تتحسّن
+ * خططهم، وصفر وجبة محظورة فعلاً تمرّ.
+ */
+function extractBlockWords(allergies?: string | null, avoid?: string | null): string[] {
+  const raw = `${allergies || ""} ${avoid || ""}`.toLowerCase();
+  const words = raw
+    .split(/[,،/.\s]+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+  return Array.from(new Set(words));
+}
+
 function isBlocked(meal: any, blockWords: string[]): boolean {
   if (blockWords.length === 0) return false;
   const hay = [
@@ -193,9 +225,8 @@ export const getSmartPlanData = query({
       ? all.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly && matchesToday(meal))
       : [];
 
-    // 4) استبعاد الممنوعات (حساسية + avoid)
-    const blockWords = `${profile.allergies} ${profile.avoid}`
-      .split(/[,،\s]+/).map((w) => w.trim().toLowerCase()).filter(Boolean);
+    // 4) استبعاد الممنوعات (حساسية + avoid) — بنفس قاعدة الواجهة
+    const blockWords = extractBlockWords(profile.allergies, profile.avoid);
 
     const candidates = await Promise.all(
       available
