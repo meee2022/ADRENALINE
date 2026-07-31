@@ -70,6 +70,25 @@ export const listUsers = query({
 /**
  * Create a new user (admin only)
  */
+/**
+ * إنهاء جلسات موظف قائمة.
+ *
+ * الجلسة تحمل الدور بداخلها وتُقرأ منه، ولا شيء كان يُنهيها عند تعطيل الحساب
+ * أو حذفه أو تغيير الدور: من يُفصل يبقى جهازه مفتوحاً حتى تنتهي الجلسة وحدها،
+ * ومن يُخفَّض دوره يظلّ يعمل بالدور القديم ما دامت جلسته حيّة. الفصل يجب أن
+ * يسري في اللحظة.
+ */
+async function killUserSessions(ctx: any, userId: any): Promise<number> {
+  const rows = await ctx.db.query("sessions").collect();
+  let n = 0;
+  for (const s of rows as any[]) {
+    if (String(s.userId || "") !== String(userId)) continue;
+    await ctx.db.delete(s._id);
+    n++;
+  }
+  return n;
+}
+
 export const createUser = mutation({
   args: {
     email: v.string(),
@@ -132,6 +151,9 @@ export const updateUserStatus = mutation({
       isActive: args.isActive,
       updatedAt: Date.now(),
     });
+    // التعطيل يسري فوراً: بلا هذا يظلّ جهاز الموظف المعطَّل يعمل حتى انتهاء جلسته.
+    const killed = args.isActive ? 0 : await killUserSessions(ctx, args.userId);
+    return { sessionsEnded: killed };
   },
 });
 
@@ -167,7 +189,10 @@ export const deleteUser = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
+    // الجلسة تعيش مستقلّة عن صفّ المستخدم — تُنهى وإلا بقي الجهاز يعمل بعد الحذف.
+    const killed = await killUserSessions(ctx, args.userId);
     await ctx.db.delete(args.userId);
+    return { sessionsEnded: killed };
   },
 });
 
@@ -204,5 +229,8 @@ export const updateUser = mutation({
     if (args.permissions !== undefined) updates.permissions = args.permissions;
 
     await ctx.db.patch(args.userId, updates);
+    /* الدور مخزّن داخل الجلسة، فتغييره لا يصل لمن هو مسجّل الآن — يظلّ
+       بصلاحيته القديمة. إنهاء جلساته يجبره على دخولٍ جديد بالدور الصحيح. */
+    if (args.role) await killUserSessions(ctx, args.userId);
   },
 });
