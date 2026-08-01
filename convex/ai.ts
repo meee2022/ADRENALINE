@@ -424,8 +424,13 @@ function topUpPicks(profile: any, candidates: any[], incoming: any[]): any[] {
      ثلاث ثم ينقّص الخفيفة، ويعطي فطارين في اليوم عشر مرات في خطة واحدة. الزيادة
      خسارةٌ للمطعم والنقص يمنع الإرسال. فنقتطع الفائض أولاً ثم نُكمل الناقص. */
   const kept: any[] = [];
+  const seen = new Set<any>();
   let bfSeen = 0, mainSeen = 0, snackSeen = 0;
   for (const p of picks) {
+    /* ولا يكرّر وجبةً واحدة في اليوم: النموذج قد يعيد نفس الصنف مرتين حين لا
+       يعجبه الباقي، فيأكل المشترك الشيء نفسه مرتين ويظنّ يومه مكتملاً. */
+    if (seen.has(p.id)) continue;
+    seen.add(p.id);
     if (isMain(p.category)) {
       if (p.category === "breakfast") {
         if (bfSeen >= BREAKFAST_MAX_PER_DAY) continue;
