@@ -1184,6 +1184,12 @@ export default function Kitchen() {
       if (program.includes("BULK")) return "BULK";
       return "STANDARD";
     };
+    /* الحساسية منفصلة عن الممنوعات — لا تُدمَج في نصّها.
+       الممنوع تفضيلٌ يُراعى، والحساسية خطرٌ يُتجنّب؛ فلو سالا في سطرٍ واحد
+       ضاع الفرق على من يطبخ. وكانت تُطبع في قسم المخصّصين وحده فلا يراها
+       الطاهي في الجدول المجمَّع — وهو أول ما يُقرأ عند التحضير. */
+    const allergyOf = (detail: any) => String(detail?.allergies || "").trim();
+
     // ⚠️ الاستبدال لا يدخل هنا — يُعرض كشارة مستقلة (swap-tag) بلون مميّز
     const modificationOf = (detail: any) => [
       detail?.avoid && `/NO ${detail.avoid}`,
@@ -1219,6 +1225,7 @@ export default function Kitchen() {
         names: string[];
         isCustomPortion: boolean;
         swap: string;
+        allergy: string;
       }>();
       const details = Array.isArray(meal?.details) ? meal.details : [];
 
@@ -1226,6 +1233,7 @@ export default function Kitchen() {
         const program = main ? programOf(detail?.program) : "STANDARD";
         const hasCustomGrams = main && (Number(detail?.carbGrams) > 0 || Number(detail?.proteinGrams) > 0);
         const label = detail?.isPlain ? "" : modificationOf(detail);
+        const allergy = detail?.isPlain ? "" : allergyOf(detail);
         const swap = detail?.isPlain ? "" : String(detail?.swap || "").trim();
         const carb = main
           ? (Number(detail?.carbGrams) > 0 ? Number(detail.carbGrams) : (programPortions as any)?.[program]?.carb ?? "")
@@ -1233,11 +1241,12 @@ export default function Kitchen() {
         const protein = main
           ? (Number(detail?.proteinGrams) > 0 ? Number(detail.proteinGrams) : (programPortions as any)?.[program]?.protein ?? "")
           : "";
-        const key = `${program}|${hasCustomGrams ? "CUSTOM" : "DEFAULT"}|${swap.toUpperCase()}|${label.toUpperCase()}|${carb}|${protein}`;
-        if (!groups.has(key)) groups.set(key, { program, label, qty: 0, carb, protein, names: [], isCustomPortion: hasCustomGrams, swap });
+        /* الحساسية جزءٌ من المفتاح: مَن يختلف تحسّسه لا يُجمَع في صفٍّ واحد. */
+        const key = `${program}|${hasCustomGrams ? "CUSTOM" : "DEFAULT"}|${swap.toUpperCase()}|${label.toUpperCase()}|${allergy.toUpperCase()}|${carb}|${protein}`;
+        if (!groups.has(key)) groups.set(key, { program, label, qty: 0, carb, protein, names: [], isCustomPortion: hasCustomGrams, swap, allergy });
         const group = groups.get(key)!;
         group.qty += 1;
-        if ((label || swap || hasCustomGrams) && detail?.customerName) group.names.push(String(detail.customerName));
+        if ((label || swap || allergy || hasCustomGrams) && detail?.customerName) group.names.push(String(detail.customerName));
       });
 
       if (groups.size === 0) {
@@ -1260,6 +1269,7 @@ export default function Kitchen() {
             names: [],
             isCustomPortion: false,
             swap: "",
+            allergy: "",   /* صفوف الاحتياط مجاميعُ بلا أشخاص، فلا حساسية لها. */
           });
         });
       }
@@ -1267,9 +1277,9 @@ export default function Kitchen() {
       const rows = [...groups.values()]
         .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
         .map((group) => `
-          <tr class="${[group.label ? "modified" : "", group.isCustomPortion ? "custom-portion" : "", group.swap ? "swap-row" : ""].filter(Boolean).join(" ")}">
+          <tr class="${[(group.label || group.allergy) ? "modified" : "", group.isCustomPortion ? "custom-portion" : "", group.swap ? "swap-row" : "", group.allergy ? "has-allergy" : ""].filter(Boolean).join(" ")}">
             <td${main ? "" : ' colspan="3"'}>
-              <div class="row-label"><strong>${esc(group.program)}</strong>${group.swap ? `<span class="swap-tag">&#8646; ${esc(group.swap)}</span>` : ""}${group.isCustomPortion ? '<span class="custom-tag">CUSTOM PORTION</span>' : ""}${group.label ? `<span class="change">${esc(group.label)}</span>` : ""}</div>
+              <div class="row-label"><strong>${esc(group.program)}</strong>${group.swap ? `<span class="swap-tag">&#8646; ${esc(group.swap)}</span>` : ""}${group.isCustomPortion ? '<span class="custom-tag">CUSTOM PORTION</span>' : ""}${group.label ? `<span class="change">${esc(group.label)}</span>` : ""}${group.allergy ? `<span class="allergy-tag">&#9888; ALLERGY: ${esc(group.allergy)}</span>` : ""}</div>
               ${group.names.length ? `<small>${esc(group.names.join(", "))}</small>` : ""}
             </td>
             <td class="number">${group.qty}</td>
@@ -1280,9 +1290,11 @@ export default function Kitchen() {
       [...groups.values()]
         .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
         .forEach((g) => xlsxRows.push({
-          kind: g.label || g.swap ? "modified" : "standard",
+          /* الحساسية تُلوَّن حمراء في الإكسل كما في المطبوع — ملفٌ واحد وقراءةٌ واحدة. */
+          kind: g.allergy ? "allergy" : (g.label || g.swap ? "modified" : "standard"),
           cells: [
             [g.program, g.swap ? `⇄ ${g.swap}` : "", g.isCustomPortion ? "CUSTOM PORTION" : "", g.label,
+             g.allergy ? `⚠ ALLERGY: ${g.allergy}` : "",
              g.names.length ? `— ${g.names.join(", ")}` : ""].filter(Boolean).join("  "),
             g.qty, main ? g.carb : "", main ? g.protein : "",
           ],
@@ -1374,6 +1386,10 @@ export default function Kitchen() {
         .swap-row .number{color:#0E2A4A}
         .customized-section td{background:#0e76ac;border-color:#0e76ac}.customer-title td{background:#d8edf8}.shift{text-align:center;font-size:11px!important;color:#0e76ac!important}
         .customized-start{break-before:page;page-break-before:always}
+        /* شارة الحساسية داخل الصفّ المجمَّع: أحمر صارخ وخطّ أصغر كي لا يطول السطر
+   حين تكثر الممنوعات معها — والحدّ الأحمر الجانبي يلفت العين قبل القراءة. */
+        .allergy-tag{display:inline-block;padding:2px 8px;border-radius:999px;background:#b91c1c;color:#fff;font-size:9px;font-weight:900;line-height:1.3;letter-spacing:.3px}
+        .has-allergy td:first-child{border-left:5px solid #b91c1c}
         .allergy td{background:#fff0f0;color:#b91c1c;font-weight:900;font-size:11px}.not-set td{background:#fff7ed;color:#c2410c;font-weight:800}
         tr{break-inside:avoid;page-break-inside:avoid}.customer-title{break-before:auto;break-after:avoid;page-break-after:avoid}
         .column-head td{background:#e9f2f7;border-color:#9cb2c2;padding:3px 8px;text-align:left;font-size:9px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.5px}.column-head td:not(:first-child){text-align:center}
