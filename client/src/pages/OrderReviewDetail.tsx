@@ -153,7 +153,8 @@ export default function OrderReviewDetail() {
   }, [orderData]);
 
   // تبديل وجبة اقترحها الـAI قبل الاعتماد
-  const allMeals: any[] = useQuery(api.publicMeals.listMeals, { sessionToken }) || [];
+  const queriedMeals = useQuery(api.publicMeals.listMeals, { sessionToken });
+  const allMeals: any[] = useMemo(() => queriedMeals || [], [queriedMeals]);
 
   // 🖼️ خريطة الصورة الحيّة لكل وجبة (mealId → imageUrl).
   //    عناصر الطلب تخزّن imageUrl لقطةً وقت الإنشاء، وكان أغلبها فارغاً لأن الصور
@@ -172,6 +173,56 @@ export default function OrderReviewDetail() {
   };
   const [swapTarget, setSwapTarget] = useState<any>(null);
   const [swapping, setSwapping] = useState(false);
+  const [swapScope, setSwapScope] = useState<"day" | "all">("day");
+  const [swapSearch, setSwapSearch] = useState("");
+  const [swapCategory, setSwapCategory] = useState("all");
+  useEffect(() => {
+    if (!swapTarget) return;
+    setSwapScope("day");
+    setSwapSearch("");
+    setSwapCategory("all");
+  }, [swapTarget]);
+
+  const activeMeals = useMemo(
+    // Match the subscriber-facing menu exactly. Staff queries also return
+    // outlet/gym and online-POS-only products, which must not leak into review.
+    () => allMeals.filter((m: any) => m?.isActive !== false && !m?.isGymOnly && !m?.isOnlineOnly),
+    [allMeals],
+  );
+  const swapCategories = useMemo(
+    () => Array.from(new Set(activeMeals.map((m: any) => String(m.category || "")).filter(Boolean))),
+    [activeMeals],
+  );
+  const isScheduledForTarget = useCallback((m: any) => {
+    if (!swapTarget) return false;
+    const wk = Number(swapTarget.week);
+    const dy = String(swapTarget.day || "").toLowerCase();
+    if (!wk || !dy) return true;
+    if (Array.isArray(m.schedule) && m.schedule.length) {
+      return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === dy);
+    }
+    const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
+    const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
+    return (weeks.length > 0 || days.length > 0) && weeks.includes(wk) && days.includes(dy);
+  }, [swapTarget]);
+  const swapCandidates = useMemo(() => {
+    if (!swapTarget) return [];
+    const needle = swapSearch.trim().toLowerCase();
+    return activeMeals
+      .filter((m: any) => String(m._id) !== String(swapTarget.mealId))
+      .filter((m: any) => swapScope === "all" || isScheduledForTarget(m))
+      .filter((m: any) => swapCategory === "all" || String(m.category) === swapCategory)
+      .filter((m: any) => !needle || String(m.nameAr || "").toLowerCase().includes(needle) || String(m.nameEn || "").toLowerCase().includes(needle))
+      .sort((a: any, b: any) => {
+        const aToday = isScheduledForTarget(a) ? 1 : 0;
+        const bToday = isScheduledForTarget(b) ? 1 : 0;
+        if (aToday !== bToday) return bToday - aToday;
+        const aSame = a.category === swapTarget.category ? 1 : 0;
+        const bSame = b.category === swapTarget.category ? 1 : 0;
+        return bSame - aSame;
+      });
+  }, [activeMeals, isScheduledForTarget, swapCategory, swapScope, swapSearch, swapTarget]);
+
   const doSwap = async (m: any) => {
     if (!swapTarget) return;
     setSwapping(true);
@@ -180,18 +231,12 @@ export default function OrderReviewDetail() {
         sessionToken,
         itemId: swapTarget._id,
         newMealId: m._id,
-        newMealNameAr: m.nameAr,
-        newMealNameEn: m.nameEn,
-        newCalories: m.calories ?? 0,
-        newProtein: m.protein ?? 0,
-        newCarbs: m.carbs ?? 0,
-        newFats: m.fats ?? 0,
-        newCategory: m.category ?? swapTarget.category,
-        newImageUrl: m.imageUrl,
-        newPriceQAR: m.priceQAR ?? m.price ?? swapTarget.priceQAR ?? 0,
       });
       setSwapTarget(null);
-    } catch (e) { console.error("swap failed", e); } finally { setSwapping(false); }
+    } catch (e: any) {
+      console.error("swap failed", e);
+      void alertDialog({ message: String(e?.message || e) });
+    } finally { setSwapping(false); }
   };
 
   /* ⚠️ كل الـhooks لازم تسبق الـearly return أدناه. كانت targetDates (useMemo)
@@ -762,6 +807,23 @@ export default function OrderReviewDetail() {
                               <h6 className="font-bold text-gray-900 text-[12.5px] leading-snug mb-1 line-clamp-2">
                                 {isRtl ? meal.mealNameAr : (meal.mealNameEn || meal.mealNameAr)}
                               </h6>
+                              {meal.modifiedAt && (
+                                <div className="mb-1.5 rounded-md border border-sky-200 bg-sky-50 px-1.5 py-1 text-[10px] leading-snug text-sky-800">
+                                  <p className="font-bold">
+                                    ✏️ {meal.modifiedByRole === "ADMIN"
+                                      ? t("تم التعديل بواسطة الإدارة", "Modified by administration")
+                                      : t("تم التعديل بواسطة الأخصائية", "Modified by nutritionist")}
+                                    {meal.modifiedByName ? ` — ${meal.modifiedByName}` : ""}
+                                  </p>
+                                  {(meal.originalMealNameAr || meal.originalMealNameEn) && (
+                                    <p className="mt-0.5 text-sky-700">
+                                      {t("الوجبة الأصلية:", "Original meal:")} {isRtl
+                                        ? (meal.originalMealNameAr || meal.originalMealNameEn)
+                                        : (meal.originalMealNameEn || meal.originalMealNameAr)}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
                               <div className="flex items-center justify-between text-[11px] text-gray-600 mb-2">
                                 <span>{meal.calories} {t("سعرة", "kcal")}</span>
                                 {meal.protein ? <span>🥩 {meal.protein}g</span> : null}
@@ -1150,35 +1212,59 @@ export default function OrderReviewDetail() {
                 </span>
               ) : null}
             </p>
+            <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setSwapScope("day")}
+                className={cn("rounded-lg px-3 py-2 text-sm font-bold transition-colors", swapScope === "day" ? "bg-white text-primary shadow-sm" : "text-gray-600")}
+              >
+                {t("وجبات نفس اليوم", "Same-day meals")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSwapScope("all")}
+                className={cn("rounded-lg px-3 py-2 text-sm font-bold transition-colors", swapScope === "all" ? "bg-white text-primary shadow-sm" : "text-gray-600")}
+              >
+                {t("المنيو الكامل", "Full menu")}
+              </button>
+            </div>
+            {swapScope === "all" && (
+              <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                {t("اختيار استثنائي بواسطة الأخصائية — تأكدي من توفر الوجبة في المطبخ.", "Specialist override — confirm that the meal is available in the kitchen.")}
+              </div>
+            )}
+            <div className="grid sm:grid-cols-[1fr_180px] gap-2 mb-4">
+              <input
+                value={swapSearch}
+                onChange={(e) => setSwapSearch(e.target.value)}
+                placeholder={t("ابحثي عن وجبة...", "Search meals...")}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-primary"
+              />
+              <select
+                value={swapCategory}
+                onChange={(e) => setSwapCategory(e.target.value)}
+                className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:border-primary"
+              >
+                <option value="all">{t("كل التصنيفات", "All categories")}</option>
+                {swapCategories.map((category) => (
+                  <option key={category} value={category}>{catName(category)}</option>
+                ))}
+              </select>
+            </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              {/* ✅ نعرض فقط وجبات نفس اليوم/الدورة التي تخص هذا العنصر —
-                  المطبخ يطبخ منيو ذلك اليوم، لا كل وجبات المطعم */}
-              {allMeals
-                .filter((m: any) => {
-                  const wk = Number(swapTarget.week);
-                  const dy = String(swapTarget.day || "").toLowerCase();
-                  if (!wk || !dy) return true; // عنصر بلا يوم/أسبوع: لا نفلتر
-                  if (Array.isArray(m.schedule) && m.schedule.length)
-                    return m.schedule.some((s: any) => Number(s.week) === wk && String(s.day).toLowerCase() === dy);
-                  // بيانات قديمة: لازم تطابق صريح للأسبوع واليوم (لا فراغ = مقبول)
-                  const weeks = Array.isArray(m.weeks) ? m.weeks.map(Number) : [];
-                  const days = Array.isArray(m.days) ? m.days.map((x: any) => String(x).toLowerCase()) : [];
-                  if (weeks.length || days.length) return weeks.includes(wk) && days.includes(dy);
-                  return false; // بلا جدولة → لا تظهر
-                })
-                .sort((a: any, b: any) => (a.category === swapTarget.category ? -1 : 0) - (b.category === swapTarget.category ? -1 : 0))
-                .map((m: any) => (
+              {swapCandidates.map((m: any) => (
                   <button key={m._id} onClick={() => doSwap(m)} disabled={swapping}
                     className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-primary transition-colors text-right disabled:opacity-50">
                     {m.imageUrl && <img src={m.imageUrl} alt={m.nameAr} className="w-14 h-14 rounded-lg object-cover shrink-0" />}
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-gray-900 text-sm truncate">{isRtl ? m.nameAr : (m.nameEn || m.nameAr)}</p>
                       <p className="text-xs text-gray-500">{catName(m.category)} · {m.calories || 0} {t("سعرة","kcal")}{m.priceQAR ? ` · ${m.priceQAR} ${t("ر.ق","QAR")}` : ""}</p>
+                      {isScheduledForTarget(m) && <span className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{t("متاحة اليوم", "Available today")}</span>}
                     </div>
                   </button>
                 ))}
             </div>
-            {allMeals.length === 0 && <p className="text-center text-gray-400 py-8">{t("لا توجد وجبات متاحة للتبديل","No meals available to swap")}</p>}
+            {swapCandidates.length === 0 && <p className="text-center text-gray-400 py-8">{t("لا توجد وجبات مطابقة للتبديل","No matching meals to swap")}</p>}
           </Card>
         </div>
       )}

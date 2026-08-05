@@ -1039,6 +1039,12 @@ export default defineSchema({
 
     // ✅ ملاحظة الأخصائية على الوجبة (إضافة/تعديل) — تمرّ للمطبخ والاستيكر
     specialNotes: v.optional(v.string()),
+    // Review-only provenance. Optional so existing orders remain valid.
+    originalMealNameAr: v.optional(v.string()),
+    originalMealNameEn: v.optional(v.string()),
+    modifiedByName: v.optional(v.string()),
+    modifiedByRole: v.optional(v.string()),
+    modifiedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()), // لتعديل الوجبة من الأدمن
   })

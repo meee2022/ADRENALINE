@@ -4,7 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
 // 🔒 قصر دورة الطلبات (approve/reject/updateStatus) على الأدوار المسؤولة
-const ORDER_REVIEW_ROLES = ["NUTRITIONIST"];
+const ORDER_REVIEW_ROLES = ["NUTRITIONIST", "ADMIN"];
 import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { trail } from "./lib/trail";
@@ -801,7 +801,13 @@ export const updateOrderItemNote = mutation({
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
+    const item = await ctx.db.get(args.itemId);
+    if (!item) throw new Error("الصنف غير موجود");
+    const order = await ctx.db.get(item.orderId);
+    if (!order || order.status !== "pending") {
+      throw new Error("لا يمكن تعديل وجبات الطلب بعد انتهاء المراجعة");
+    }
     await ctx.db.patch(args.itemId, {
       specialNotes: args.note.trim() || undefined,
       updatedAt: Date.now(),
@@ -814,37 +820,47 @@ export const updateOrderItemMeal = mutation({
   args: {
     itemId: v.id("customerOrderItems"),
     newMealId: v.id("publicMeals"),
-    newMealNameAr: v.string(),
-    newMealNameEn: v.optional(v.string()),
-    newCalories: v.number(),
-    newProtein: v.optional(v.number()),
-    newCarbs: v.optional(v.number()),
-    newFats: v.optional(v.number()),
-    newCategory: v.string(),
-    newImageUrl: v.optional(v.string()),
-    newPriceQAR: v.number(),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    const specialist = await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
+    const item = await ctx.db.get(args.itemId);
+    if (!item) throw new Error("الصنف غير موجود");
+    const order = await ctx.db.get(item.orderId);
+    if (!order || order.status !== "pending") {
+      throw new Error("لا يمكن تبديل وجبات الطلب بعد انتهاء المراجعة");
+    }
+    const meal = await ctx.db.get(args.newMealId);
+    if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) {
+      throw new Error("الوجبة المختارة ليست ضمن منيو المشتركين");
+    }
+    const oldMealName = item.mealNameAr || item.mealNameEn || String(item.mealId);
+    const specialistUser: any = specialist.userId
+      ? await ctx.db.get(specialist.userId as any)
+      : null;
+
+    // The catalogue is authoritative. Never trust nutrition or price snapshots
+    // supplied by the review UI.
     await ctx.db.patch(args.itemId, {
       mealId: args.newMealId,
-      mealNameAr: args.newMealNameAr,
-      mealNameEn: args.newMealNameEn,
-      calories: args.newCalories,
-      protein: args.newProtein,
-      carbs: args.newCarbs,
-      fats: args.newFats,
-      category: args.newCategory,
-      imageUrl: args.newImageUrl,
-      priceQAR: args.newPriceQAR,
+      mealNameAr: meal.nameAr,
+      mealNameEn: meal.nameEn,
+      calories: Number(meal.calories) || 0,
+      protein: Number(meal.protein) || 0,
+      carbs: Number(meal.carbs) || 0,
+      fats: Number(meal.fats) || 0,
+      category: meal.category,
+      imageUrl: meal.imageUrl,
+      priceQAR: Number(meal.priceQAR) || 0,
+      originalMealNameAr: item.originalMealNameAr || item.mealNameAr,
+      originalMealNameEn: item.originalMealNameEn || item.mealNameEn,
+      modifiedByName: specialistUser?.name || specialistUser?.username || undefined,
+      modifiedByRole: specialist.role || undefined,
+      modifiedAt: Date.now(),
       updatedAt: Date.now(),
     });
 
     // Recalculate order totals
-    const item = await ctx.db.get(args.itemId);
-    if (!item) return { success: false };
-
     const allItems = await ctx.db
       .query("customerOrderItems")
       .withIndex("by_orderId", (q) => q.eq("orderId", item.orderId))
@@ -860,6 +876,14 @@ export const updateOrderItemMeal = mutation({
       updatedAt: Date.now(),
     });
 
+    await trail(ctx, {
+      action: "ORDER_MEAL_REPLACED",
+      entityType: "order",
+      entityId: String(item.orderId),
+      details: `${oldMealName} → ${meal.nameAr} (${item.week}-${item.day})`,
+      staff: specialist,
+    });
+
     return { success: true };
   },
 });
@@ -871,11 +895,15 @@ export const updateOrderItemMeal = mutation({
 export const removeOrderItem = mutation({
   args: { itemId: v.id("customerOrderItems"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    await requireStaff(ctx, args.sessionToken);
+    const specialist = await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
     const item = await ctx.db.get(args.itemId);
     if (!item) return { success: false, error: "الصنف غير موجود" };
 
     const orderId = item.orderId;
+    const order = await ctx.db.get(orderId);
+    if (!order || order.status !== "pending") {
+      throw new Error("لا يمكن حذف وجبات الطلب بعد انتهاء المراجعة");
+    }
     await ctx.db.delete(args.itemId);
 
     const rest = await ctx.db
@@ -888,6 +916,14 @@ export const removeOrderItem = mutation({
       totalPrice: rest.reduce((s, i) => s + (i.priceQAR || 0), 0),
       totalMeals: rest.length,
       updatedAt: Date.now(),
+    });
+
+    await trail(ctx, {
+      action: "ORDER_MEAL_REMOVED",
+      entityType: "order",
+      entityId: String(orderId),
+      details: `${item.mealNameAr || item.mealNameEn} (${item.week}-${item.day})`,
+      staff: specialist,
     });
 
     return { success: true, remaining: rest.length };
