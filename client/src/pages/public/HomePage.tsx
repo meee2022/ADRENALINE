@@ -22,8 +22,9 @@ import { cn } from "@/lib/utils";
 /** صورة بطاقة الباقة — روابط Convex Storage القديمة المخزّنة على الباقات ترجع 404،
  *  فنستبدلها بالأصول الثابتة المرفقة (نفس منطق صفحة الخطط PublicPlansNew). */
 function planCardImage(plan: any): string {
+  if (!plan?.options || plan.options.length === 0) return "/custom-plan-meals.png";
   const source = String(plan?.imageUrl || "").trim();
-  if (source && !source.includes(".convex.cloud/api/storage/")) return source;
+  if (source) return source;
   const key = `${plan?.slug || ""} ${plan?.nameEn || ""}`.toLowerCase();
   if (key.includes("diet") || key.includes("tanshif")) return "/plan-tanshif-real.png";
   if (key.includes("fitness") || key.includes("liyaqa")) return "/plan-liyaqa-real.png";

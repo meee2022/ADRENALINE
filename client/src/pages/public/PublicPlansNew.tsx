@@ -55,10 +55,11 @@ export default function PublicPlansNew() {
   };
 
   const planImage = (plan: any) => {
+    if (!plan.options || plan.options.length === 0) return "/custom-plan-meals.png";
     const source = String(plan.imageUrl || "").trim();
-    // Old Convex Storage URLs in the current plan records return 404. Known
-    // packages use the bundled brand assets; external/custom images stay intact.
-    return !source || source.includes(".convex.cloud/api/storage/") ? fallbackPlanImage(plan) : source;
+    // Storage-backed images are resolved to a fresh URL by publicPlans queries.
+    // Broken legacy URLs still fall back through the image onError handler.
+    return source || fallbackPlanImage(plan);
   };
 
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
@@ -131,6 +132,7 @@ export default function PublicPlansNew() {
               .map((plan) => {
                 const isFeatured = plan.isFeatured;
                 const badge = plan.badge ? getBadgeLabel(plan.badge) : null;
+                const isCustom = !plan.options || plan.options.length === 0;
 
                 return (
                   <div
@@ -224,7 +226,6 @@ export default function PublicPlansNew() {
 
                       {/* CTA Button */}
                       {(() => {
-                        const isCustom = !plan.options || plan.options.length === 0;
                         return (
                           <Button
                             onClick={() => isCustom ? handleCustomContact(planName(plan)) : handleSubscribe(planName(plan), plan.options?.[0])}

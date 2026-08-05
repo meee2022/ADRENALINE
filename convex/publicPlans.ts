@@ -8,7 +8,11 @@ import { v } from "convex/values";
 
 export const list = query({
   handler: async (ctx) => {
-    return await ctx.db.query("publicPlans").collect();
+    const plans = await ctx.db.query("publicPlans").collect();
+    return Promise.all(plans.map(async (plan) => {
+      const imageUrl = plan.imageStorageId ? await ctx.storage.getUrl(plan.imageStorageId) : null;
+      return imageUrl ? { ...plan, imageUrl } : plan;
+    }));
   },
 });
 
@@ -17,17 +21,24 @@ export const listByDuration = query({
   handler: async (ctx, args) => {
     const all = await ctx.db.query("publicPlans").collect();
     // النشطة المطابقة للمدة + الباقات المخصّصة (بلا أسعار جاهزة) تظهر في كل التبويبات
-    return all.filter((p: any) =>
+    const filtered = all.filter((p) =>
       p.isActive !== false &&
       (p.duration === args.duration || !p.options || p.options.length === 0)
     );
+    return Promise.all(filtered.map(async (plan) => {
+      const imageUrl = plan.imageStorageId ? await ctx.storage.getUrl(plan.imageStorageId) : null;
+      return imageUrl ? { ...plan, imageUrl } : plan;
+    }));
   },
 });
 
 export const getById = query({
   args: { id: v.id("publicPlans") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const plan = await ctx.db.get(args.id);
+    if (!plan) return null;
+    const imageUrl = plan.imageStorageId ? await ctx.storage.getUrl(plan.imageStorageId) : null;
+    return imageUrl ? { ...plan, imageUrl } : plan;
   },
 });
 
@@ -39,6 +50,7 @@ export const create = mutation({
     descriptionAr: v.optional(v.string()),
     descriptionEn: v.optional(v.string()),
     imageUrl: v.string(),
+    imageStorageId: v.optional(v.id("_storage")),
     duration: v.union(v.literal("week"), v.literal("two_weeks"), v.literal("month")),
     options: v.array(
       v.object({
@@ -85,6 +97,7 @@ export const update = mutation({
     descriptionAr: v.optional(v.string()),
     descriptionEn: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
     duration: v.optional(v.union(v.literal("week"), v.literal("two_weeks"), v.literal("month"))),
     options: v.optional(
       v.array(

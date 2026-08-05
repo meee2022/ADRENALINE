@@ -458,8 +458,16 @@ export default function PlansPage() {
         const back = String(c?.pauseExpectedResume || "").slice(0, 10);
         return back ? targetISO < back : true;         // بلا تاريخ رجوع = مفتوح
       };
+      // تخطّي يوم محدد يوقف طعام ذلك اليوم فقط، من غير تحويل الاشتراك كله
+      // إلى مجمّد. الباك إند يمنع إنشاء الخطة بالفعل؛ هذا الفلتر يجعل بطاقات
+      // التخطيط تطابق المطبخ والاستيكرات ولا تعرض أعداد الباقة كأنها وجبات يومية.
+      const skippedOnTarget = (c: any) => {
+        const skipped: unknown[] = Array.isArray(c?.skippedDates) ? c.skippedDates : [];
+        return skipped.some((d) => String(d).slice(0, 10) === targetISO);
+      };
       return (customers || [])
         .filter((c: any) => !pausedOnTarget(c))
+        .filter((c: any) => !skippedOnTarget(c))
         // 🔀 المخصّصون لهم صفحتهم — نستبعدهم هنا لمنع ازدواج مصدر المطبخ
         .filter((c: any) => !isCustomizedCustomer(c))
         // التجديد يحفظ الفترة القديمة في subscriptionHistory. الاعتماد على

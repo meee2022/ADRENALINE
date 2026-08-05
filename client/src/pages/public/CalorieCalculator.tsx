@@ -308,7 +308,7 @@ export default function CalorieCalculator() {
                         {isMonthly && <div className="absolute inset-x-0 top-0 z-10 bg-[#3cc4f0] px-3 py-2 text-center text-[11px] font-black text-[#082a45]">{t("أفضل قيمة للاشتراك المنتظم", "Best value for a regular subscription")}</div>}
                         <div className={`grid grid-cols-[120px_1fr] ${isMonthly ? "pt-8" : ""}`}>
                           <div className="relative min-h-48 overflow-hidden bg-[#e8f4f8]">
-                            {plan.imageUrl ? <img src={plan.imageUrl} alt={isAr ? plan.nameAr : (plan.nameEn || plan.nameAr)} className="absolute inset-0 h-full w-full object-cover" /> : null}
+                            {(plan.imageUrl || !plan.options || plan.options.length === 0) ? <img src={(!plan.options || plan.options.length === 0) ? "/custom-plan-meals.png" : plan.imageUrl} alt={isAr ? plan.nameAr : (plan.nameEn || plan.nameAr)} className="absolute inset-0 h-full w-full object-cover" /> : null}
                           </div>
                           <div className="flex flex-col p-4">
                             <div className="flex items-center justify-between gap-2">

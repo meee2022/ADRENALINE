@@ -884,6 +884,7 @@ export default defineSchema({
     descriptionAr: v.optional(v.string()),
     descriptionEn: v.optional(v.string()),
     imageUrl: v.string(),
+    imageStorageId: v.optional(v.id("_storage")),
     duration: v.union(v.literal("week"), v.literal("two_weeks"), v.literal("month")),
     options: v.array(
       v.object({

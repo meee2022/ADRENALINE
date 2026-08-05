@@ -66,7 +66,7 @@ export default function PlansManagement() {
       const imageUrl = await convex.query(api.files.getFileUrl, { storageId, sessionToken });
 
       if (imageUrl) {
-        setFormData((prev) => ({ ...prev, imageUrl }));
+        setFormData((prev) => ({ ...prev, imageUrl, imageStorageId: storageId }));
         toast({
           title: isRtl ? "نجاح" : "Success",
           description: isRtl ? "تم رفع الصورة وتحديث الرابط بنجاح" : "Image uploaded and link updated successfully",
@@ -91,6 +91,7 @@ export default function PlansManagement() {
     descriptionAr: "",
     descriptionEn: "",
     imageUrl: "",
+    imageStorageId: undefined as Id<"_storage"> | undefined,
     duration: "week" as "week" | "two_weeks" | "month",
     options: [] as PlanOption[],
     features: [] as string[],
@@ -111,6 +112,7 @@ export default function PlansManagement() {
       descriptionAr: "",
       descriptionEn: "",
       imageUrl: "",
+      imageStorageId: undefined,
       duration: "week",
       options: [{ meals: 2, snacks: 2, priceQAR: 0 }],
       features: [],
@@ -131,6 +133,7 @@ export default function PlansManagement() {
       descriptionAr: plan.descriptionAr || "",
       descriptionEn: plan.descriptionEn || "",
       imageUrl: plan.imageUrl,
+      imageStorageId: plan.imageStorageId,
       duration: plan.duration,
       // تحويل من mealsCount/snacksCount إلى meals/snacks للفورم
       options: (plan.options || []).map((opt: any) => ({
@@ -166,7 +169,7 @@ export default function PlansManagement() {
   };
 
   const handleSave = async () => {
-    if (!formData.nameAr || !formData.slug || formData.options.length === 0) {
+    if (!formData.nameAr || !formData.slug) {
       toast({
         title: isRtl ? "خطأ" : "Error",
         description: isRtl ? "يرجى ملء الحقول المطلوبة" : "Please fill in the required fields",
@@ -183,6 +186,7 @@ export default function PlansManagement() {
         descriptionAr: formData.descriptionAr || undefined,
         descriptionEn: formData.descriptionEn || undefined,
         imageUrl: formData.imageUrl,
+        imageStorageId: formData.imageStorageId,
         duration: formData.duration,
         options: formData.options.map(opt => ({
           mealsCount: opt.meals,
@@ -383,7 +387,7 @@ export default function PlansManagement() {
               <div className="flex gap-2">
                 <Input
                   value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value, imageStorageId: undefined })}
                   placeholder="https://example.com/image.jpg"
                   dir="ltr"
                   className="flex-1"
