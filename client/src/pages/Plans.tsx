@@ -934,22 +934,56 @@ export default function PlansPage() {
       return { ...it, specialNotes: cleaned };
     }));
 
+    let approveCountMismatch = false;
+    if (
+      status === "CONFIRMED"
+      && String((currentPlan as any).status || "").toUpperCase() === "CONFIRMED"
+    ) {
+      const actualCount = cleanedItems.filter((item: any) => !item?.isOff).length;
+      const expectedCount = Math.max(0, Number((selectedCustomer as any)?.mealsPerDay) || 0)
+        + Math.max(0, Number((selectedCustomer as any)?.snacksPerDay) || 0);
+      if (expectedCount > 0 && actualCount > 0 && actualCount !== expectedCount) {
+        approveCountMismatch = await confirmDialog({
+          title: isRtl ? "اعتماد استثناء ليوم واحد" : "Approve one-day exception",
+          message: isRtl
+            ? `الباقة تسمح بـ${expectedCount} وجبات، والخطة تحتوي ${actualCount}. هل راجعتِ الطلب وتريدين اعتماد هذا العدد لهذا اليوم فقط؟`
+            : `The subscription allows ${expectedCount} items, while this plan contains ${actualCount}. Have you reviewed the request and want to approve this count for this day only?`,
+          confirmText: isRtl ? "نعم، اعتماد الاستثناء" : "Approve exception",
+          cancelText: isRtl ? "رجوع للمراجعة" : "Back to review",
+        });
+        if (!approveCountMismatch) return;
+      }
+    }
+
     const payload = stripSystemFields({
       ...currentPlan,
       items: cleanedItems,
       customerId: selectedCustomerId,
       status,
+      // التأكيد الثاني لخطة مؤكدة هو موافقة صريحة على اختلاف العدد الحالي.
+      // الخادم هو من يتحقق من الاختلاف ويكتب الختم؛ هذا العلم لا يُخزّن.
+      approveMealCountMismatch: approveCountMismatch,
     });
     savingRef.current = true;
     setSaving(status);
     try {
       if ((currentPlan as any)._id) {
-        await updatePlanMutation.mutateAsync({ id: (currentPlan as any)._id, data: payload });
+        const result: any = await updatePlanMutation.mutateAsync({ id: (currentPlan as any)._id, data: payload });
+        if (result?.mealCountOverrideApproved) {
+          toast({
+            title: isRtl ? "✓ تم اعتماد الاستثناء" : "Exception approved",
+            description: isRtl
+              ? `اعتمدت الأخصائية الخطة: ${result.actualCount} وجبات بدل ${result.expectedCount} لهذا اليوم فقط.`
+              : `The specialist approved ${result.actualCount} instead of ${result.expectedCount} items for this day only.`,
+          });
+        } else {
+          toast({ title: status === "CONFIRMED" ? (isRtl ? "✓ تم تأكيد الخطة" : "Plan confirmed") : (isRtl ? "✓ تم حفظ المسودة" : "Draft saved") });
+        }
       } else {
         const created = await createPlanMutation.mutateAsync(payload as any);
         setCurrentPlan({ ...currentPlan, _id: created } as any);
+        toast({ title: status === "CONFIRMED" ? (isRtl ? "✓ تم تأكيد الخطة" : "Plan confirmed") : (isRtl ? "✓ تم حفظ المسودة" : "Draft saved") });
       }
-      toast({ title: status === "CONFIRMED" ? (isRtl ? "✓ تم تأكيد الخطة" : "Plan confirmed") : (isRtl ? "✓ تم حفظ المسودة" : "Draft saved") });
 
       // ✅ بعد تأكيد الخطة، اسأل لو عاوز ينتقل لعميل آخر
       if (status === "CONFIRMED") {

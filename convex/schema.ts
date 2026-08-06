@@ -617,6 +617,15 @@ export default defineSchema({
     items: v.any(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
+    // استثناء يومي موثّق لعدد وجبات مختلف عن الباقة (مثلاً وجبة إضافية ليوم واحد).
+    // يرتبط بالعدد المتوقع والفعلي، لذلك لا يغطي أي تعديل لاحق تلقائياً.
+    mealCountOverride: v.optional(v.object({
+      expected: v.number(),
+      actual: v.number(),
+      approvedBy: v.id("users"),
+      approvedByName: v.optional(v.string()),
+      approvedAt: v.number(),
+    })),
     // ✅ تتبع المصدر — لو الخطة جاية من approve order، نحفظ orderId
     // عشان نمنع التكرار لو الـ approve اتنفذ أكثر من مرة لنفس الطلب
     sourceOrderId: v.optional(v.id("customerOrders")),

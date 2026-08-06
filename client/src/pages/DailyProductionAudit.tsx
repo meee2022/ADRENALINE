@@ -25,6 +25,7 @@ const CODE_LABELS: Record<string, { ar: string; en: string }> = {
   MISSING_CUSTOMER: { ar: "مشترك غير موجود", en: "Missing customer" },
   INACTIVE_OR_OUTSIDE_SUBSCRIPTION: { ar: "اشتراك غير صالح", en: "Invalid subscription" },
   MEAL_COUNT_MISMATCH: { ar: "عدد الوجبات غير مطابق", en: "Meal count mismatch" },
+  MEAL_COUNT_MISMATCH_APPROVED: { ar: "استثناء عدد معتمد", en: "Approved count exception" },
   EMPTY_PLAN: { ar: "خطة فارغة", en: "Empty plan" },
   DUPLICATE_CUSTOM_TEMPLATE: { ar: "قالب مخصص مكرر", en: "Duplicate custom template" },
   DELIVERY_SHIFT_MISMATCH: { ar: "وردية غير مطابقة", en: "Shift mismatch" },

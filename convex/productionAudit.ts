@@ -279,13 +279,21 @@ export const forDate = query({
             actual,
           });
         } else if (expected > 0 && actual !== expected) {
+          const override: any = plan.mealCountOverride;
+          const approved = override
+            && Number(override.expected) === expected
+            && Number(override.actual) === actual;
           issues.push({
-            code: "MEAL_COUNT_MISMATCH",
-            severity: "BLOCKER",
+            code: approved ? "MEAL_COUNT_MISMATCH_APPROVED" : "MEAL_COUNT_MISMATCH",
+            severity: approved ? "WARNING" : "BLOCKER",
             customerId,
             customerName: name,
-            messageAr: `الخطة تحتوي ${actual} بينما الباقة ${expected}`,
-            messageEn: `Plan contains ${actual} items while subscription allows ${expected}`,
+            messageAr: approved
+              ? `الخطة تحتوي ${actual} بينما الباقة ${expected} — استثناء معتمد بواسطة ${override.approvedByName || "الأخصائية"}`
+              : `الخطة تحتوي ${actual} بينما الباقة ${expected}`,
+            messageEn: approved
+              ? `Plan contains ${actual} items while subscription allows ${expected} — exception approved by ${override.approvedByName || "specialist"}`
+              : `Plan contains ${actual} items while subscription allows ${expected}`,
             planIds: [String(plan._id)],
             expected,
             actual,
@@ -490,6 +498,10 @@ export const repairDate = mutation({
       const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
         + Math.max(0, Number(customer.snacksPerDay) || 0);
       const actual = activeItemCount(keep);
+      const countOverride: any = keep.mealCountOverride;
+      const hasApprovedCountOverride = countOverride
+        && Number(countOverride.expected) === expected
+        && Number(countOverride.actual) === actual;
       const patch: any = { updatedAt: Date.now() };
       let changed = false;
       if (keepStatus === "PAUSED") {
@@ -514,7 +526,7 @@ export const repairDate = mutation({
         shiftsUpdated++;
         changed = true;
       }
-      if (actual === 0 || (expected > 0 && actual !== expected)) {
+      if (actual === 0 || (expected > 0 && actual !== expected && !hasApprovedCountOverride)) {
         patch.status = "DRAFT";
         plansReturnedToDraft++;
         changed = true;

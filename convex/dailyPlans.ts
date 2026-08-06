@@ -71,6 +71,9 @@ function stripSystemFields(obj: any) {
   delete safe._id;
   delete safe._creationTime;
   delete safe.createdAt;
+  // ختم الاستثناء يكتبه الخادم فقط بعد إعادة تأكيد صريحة من موظف.
+  delete safe.mealCountOverride;
+  delete safe.approveMealCountMismatch;
   return safe;
 }
 
@@ -271,10 +274,64 @@ export const update = mutation({
       ? requestedStatus
       : currentStatus;
 
+    const approveMealCountMismatch = data?.approveMealCountMismatch === true;
     const safe = stripSystemFields(data || {});
     safe.status = finalStatus;
 
+    /* أول تأكيد لخطة بعدد مختلف يظل خطأً مانعاً في تدقيق الإنتاج. إذا فتح
+       الموظف الخطة المؤكدة وراجعها ثم ضغط «تأكيد» مرة ثانية، نختم الاستثناء
+       لهذا العدد بعينه. تغيير العدد أو الرجوع لمسودة يلغي صلاحية الختم، ولا
+       يمكن لهذا المسار تجاوز أي خطأ آخر في تدقيق الإنتاج. */
+    const proposedItems = Object.prototype.hasOwnProperty.call(safe, "items")
+      ? safe.items
+      : (existing as any).items;
+    const actualCount = (Array.isArray(proposedItems) ? proposedItems : [])
+      .filter((item: any) => !item?.isOff).length;
+    const customer: any = (existing as any).customerId
+      ? await ctx.db.get((existing as any).customerId)
+      : null;
+    const expectedCount = Math.max(0, Number(customer?.mealsPerDay) || 0)
+      + Math.max(0, Number(customer?.snacksPerDay) || 0);
+    const previousOverride: any = (existing as any).mealCountOverride;
+    const overrideStillMatches = previousOverride
+      && Number(previousOverride.expected) === expectedCount
+      && Number(previousOverride.actual) === actualCount;
+    let overrideApproved = false;
+    if (
+      approveMealCountMismatch
+      && currentStatus === "CONFIRMED"
+      && finalStatus === "CONFIRMED"
+      && expectedCount > 0
+      && actualCount > 0
+      && actualCount !== expectedCount
+    ) {
+      const approverRole = String(staffU?.role || "").toUpperCase();
+      if (approverRole !== "ADMIN" && approverRole !== "NUTRITIONIST") {
+        throw new Error("اعتماد اختلاف عدد الوجبات متاح للأخصائية أو المدير فقط");
+      }
+      const approver: any = staffU?.userId ? await ctx.db.get(staffU.userId as any) : null;
+      safe.mealCountOverride = {
+        expected: expectedCount,
+        actual: actualCount,
+        approvedBy: staffU.userId,
+        approvedByName: approver?.name || approver?.username || undefined,
+        approvedAt: Date.now(),
+      };
+      overrideApproved = true;
+    } else if (finalStatus !== "CONFIRMED" || !overrideStillMatches) {
+      safe.mealCountOverride = undefined;
+    }
+
     await ctx.db.patch(id, safe);
+    if (overrideApproved) {
+      await trail(ctx, {
+        action: "PLAN_MEAL_COUNT_OVERRIDE_APPROVED",
+        entityType: "plan",
+        entityId: String(id),
+        details: `${(existing as any).date} — ${customer?.fullName || "?"} — الباقة ${expectedCount} / الخطة ${actualCount}`,
+        staff: staffU as any,
+      });
+    }
     /* نسجّل انتقال الحالة وحده: تعديل الوجبات يقع عشرات المرات يومياً فيُغرق
        السجل، أما الحالة فهي ما يُحاسَب عليه (طُبخ؟ خرج؟ أُلغي؟). */
     if (finalStatus !== currentStatus) {
@@ -398,7 +455,7 @@ export const update = mutation({
       }
     }
 
-    return true;
+    return { success: true, mealCountOverrideApproved: overrideApproved, expectedCount, actualCount };
   },
 });
 
