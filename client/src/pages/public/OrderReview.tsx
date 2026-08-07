@@ -4,7 +4,7 @@ import { ChevronRight, Package } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
-import { getVerifiedPhone } from "@/lib/customerIdentity";
+import { getVerifiedCustomerId, getVerifiedPhone } from "@/lib/customerIdentity";
 import { subscriptionShortfall, orderedSubscriptionSlots, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor } from "@/lib/mealSchedule";
 import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
@@ -84,7 +84,12 @@ export default function OrderReview() {
     api.customers.findPublicByPhone,
     customerPhone ? { phone: customerPhone } : "skip"
   );
-  const findCustomerByPhone = matchesByPhone?.[0] ?? null;
+  const verifiedCustomerId = getVerifiedCustomerId();
+  // الرقم قد يخص أكثر من مشترك في العائلة؛ نحترم الحساب الذي اختاره العميل
+  // في بوابة المنيو، ونرجع للأول فقط مع البيانات القديمة التي لا تحمل معرّفاً.
+  const findCustomerByPhone = matchesByPhone?.find(
+    (customer: any) => String(customer._id) === String(verifiedCustomerId),
+  ) ?? matchesByPhone?.[0] ?? null;
   const settings = useQuery(api.restaurantSettings.get);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -185,12 +190,6 @@ export default function OrderReview() {
       void alertDialog({ message: t("يرجى إدخال رقم الجوال", "Please enter your phone number") });
       return;
     }
-    // الاسم مطلوب فقط لو لا حساب مربوط بالرقم؛ المربوط يكفيه customerId.
-    if (!customerName && !findCustomerByPhone) {
-      void alertDialog({ message: t("يرجى إدخال الاسم", "Please enter your name") });
-      return;
-    }
-
     if (selectedMeals.length === 0) {
       void alertDialog({ message: t("يرجى اختيار وجبات أولاً", "Please select meals first") });
       return;
@@ -236,6 +235,16 @@ export default function OrderReview() {
          المعروفة، ونعرض نص الخادم لغيرها بدل التعمية. */
       const raw = String(error?.message || "").replace(/^\[CONVEX .*?\]\s*/, "").replace(/\s*Called by client$/, "");
       const code = raw.match(/ORDER_VALIDATION:([A-Z_]+)/)?.[1];
+      let validationDetails: any = null;
+      if (code) {
+        const marker = `ORDER_VALIDATION:${code}:`;
+        const start = raw.indexOf(marker);
+        if (start >= 0) {
+          const detailLine = raw.slice(start + marker.length).split(/\r?\n/, 1)[0].trim();
+          try { validationDetails = JSON.parse(detailLine); }
+          catch { /* الرسالة العامة تظل متاحة لو تعذّر تحليل التفاصيل */ }
+        }
+      }
       const known: Record<string, [string, string]> = {
         SUBSCRIPTION_PAUSED: ["اشتراكك متوقف حالياً — تواصل مع الفريق لتفعيله ثم أعد الإرسال.", "Your subscription is currently stopped — contact the team to activate it, then resend."],
         SUBSCRIPTION_EXPIRED: ["انتهت مدة اشتراكك — جدّد الاشتراك ثم أعد إرسال خطتك.", "Your subscription has ended — renew it, then resend your plan."],
@@ -251,7 +260,14 @@ export default function OrderReview() {
         INVALID_CATEGORY: ["إحدى الوجبات تصنيفها غير صالح للخطة — احذفها واختر بديلاً.", "One meal's category isn't valid for a plan — remove it and pick another."],
         INVALID_SLOT: ["أحد الاختيارات على يوم غير صالح — أعد بناء الخطة من المنيو.", "One pick sits on an invalid day — rebuild the plan from the menu."],
       };
-      const msg = code && known[code]
+      const scheduledMealMessage = code === "MEAL_NOT_SCHEDULED" && validationDetails
+        ? t(
+            `❌ الوجبة «${validationDetails.mealNameAr || validationDetails.mealNameEn || "غير معروفة"}» لم تعد مجدولة في الأسبوع ${validationDetails.week}، يوم ${dayName(String(validationDetails.day || ""))}. ارجع للمنيو واستبدل هذه الوجبة ثم أعد الإرسال.`,
+            `❌ “${validationDetails.mealNameEn || validationDetails.mealNameAr || "Unknown meal"}” is no longer scheduled in week ${validationDetails.week}, ${dayName(String(validationDetails.day || ""))}. Return to the menu, replace this meal, then resend.`,
+          )
+        : null;
+      const msg = scheduledMealMessage
+        || (code && known[code]
         ? t(`❌ ${known[code][0]}`, `❌ ${known[code][1]}`)
         : code
           /* كود تحقّق لم يُترجَم بعد: لا يُعرض خاماً للمشترك — لا يفهمه ولا
@@ -260,7 +276,7 @@ export default function OrderReview() {
               "❌ Your plan couldn't be sent due to a setting on your subscription — contact the team and we'll fix it.")
         : raw && !/^ORDER_VALIDATION:/.test(raw)
           ? t(`❌ تعذّر إرسال الطلب: ${raw}`, `❌ Couldn't send the order: ${raw}`)
-          : t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again.");
+          : t("❌ حدث خطأ أثناء إرسال الطلب. يرجى المحاولة مرة أخرى.", "❌ An error occurred while sending the order. Please try again."));
       void alertDialog({ message: msg });
     } finally {
       setIsSubmitting(false);
@@ -469,9 +485,7 @@ export default function OrderReview() {
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 {t("الاسم الكامل", "Full name")}{" "}
-                {findCustomerByPhone
-                  ? <span className="text-slate-400 text-xs">({t("اختياري", "optional")})</span>
-                  : <span className="text-red-500">*</span>}
+                <span className="text-slate-400 text-xs">({t("اختياري", "optional")})</span>
               </label>
               <input
                 type="text"
@@ -481,7 +495,6 @@ export default function OrderReview() {
                 placeholder={findCustomerByPhone
                   ? t("مربوط بحسابك — لا حاجة لكتابته", "Linked to your account — no need")
                   : t("أدخل اسمك الكامل", "Enter your full name")}
-                required={!findCustomerByPhone}
               />
             </div>
 
@@ -608,7 +621,7 @@ export default function OrderReview() {
 
           <button
             onClick={handleSubmit}
-            disabled={isSubmitting || isShort || !customerPhone || (!customerName && !findCustomerByPhone)}
+            disabled={isSubmitting || isShort || !customerPhone}
             className="w-full bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (

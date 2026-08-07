@@ -66,9 +66,7 @@ export const create = mutation({
     // 🔒 التحقق: على الأقل وجبة واحدة، حد أقصى معقول (يمنع abuse)
     if (args.items.length === 0) throw new Error("يجب اختيار وجبة واحدة على الأقل");
     if (args.items.length > 500) throw new Error("عدد الوجبات كبير جداً");
-    if (!args.customerName.trim() || !args.customerPhone.trim()) {
-      throw new Error("الاسم ورقم الهاتف مطلوبان");
-    }
+    if (!args.customerPhone.trim()) throw new Error("رقم الهاتف مطلوب");
 
     // 🔒 Idempotency: لو المفتاح متكرر، رجّع نفس الطلب الأصلي
     if (args.idempotencyKey) {
@@ -120,6 +118,11 @@ export const create = mutation({
         .withIndex("by_phone", (q) => q.eq("phone", phone))
         .first();
     }
+    // الاسم اختياري في شاشة العميل: الحساب المعروف يُؤخذ اسمه من قاعدة البيانات،
+    // والزائر الذي يتركه فارغاً يظهر للطاقم برقمه بدل تعطيل إرسال الخطة.
+    const effectiveCustomerName = args.customerName.trim()
+      || String(subscriptionCustomer?.fullName || "").trim()
+      || phone;
 
     const todayISO = qatarTodayISO(now);
     let startRotationWeek = 1;
@@ -173,7 +176,7 @@ export const create = mutation({
 
     // Create order (Server-computed totals)
     const orderId = await ctx.db.insert("customerOrders", {
-      customerName: args.customerName.trim(),
+      customerName: effectiveCustomerName,
       customerPhone: phone,
       customerEmail: args.customerEmail?.trim(),
       customerId: args.customerId,
@@ -214,7 +217,7 @@ export const create = mutation({
       targetRole: "NUTRITIONIST",
       type: "NEW_ORDER",
       title: "طلب جديد للمراجعة",
-      message: `${args.customerName} - ${serverItems.length} وجبة (${orderNumber})`,
+      message: `${effectiveCustomerName} - ${serverItems.length} وجبة (${orderNumber})`,
       link: `/orders/review/${orderId}`,
       relatedId: orderId,
       isRead: false,
@@ -224,7 +227,7 @@ export const create = mutation({
       targetRole: "ADMIN",
       type: "NEW_ORDER",
       title: "طلب جديد على الموقع",
-      message: `${args.customerName} - ${args.customerPhone}`,
+      message: `${effectiveCustomerName} - ${args.customerPhone}`,
       link: `/orders/review/${orderId}`,
       relatedId: orderId,
       isRead: false,

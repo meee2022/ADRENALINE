@@ -1044,7 +1044,7 @@ Is that what you want?`,
   useEffect(() => {
     if (showAutoSelect && matchingCustomers && matchingCustomers[0]) {
       setVerifiedCustomerId(String(matchingCustomers[0]._id));
-      localStorage.setItem("menu_customer_id", String(matchingCustomers[0]._id));
+      saveVerifiedCustomerId(String(matchingCustomers[0]._id));
     }
   }, [showAutoSelect, matchingCustomers]);
 

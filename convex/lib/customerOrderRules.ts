@@ -90,8 +90,11 @@ export function orderableSubscriptionSlots(
   return slots;
 }
 
-function fail(code: string): never {
-  throw new Error(`ORDER_VALIDATION:${code}`);
+function fail(code: string, details?: Record<string, unknown>): never {
+  // تفاصيل آمنة ومحدودة تساعد العميل على العثور على الاختيار المخالف وسط خطة
+  // كبيرة. لا نرسل حقول الوجبة كاملة ولا أي بيانات اشتراك حساسة.
+  const suffix = details ? `:${JSON.stringify(details)}` : "";
+  throw new Error(`ORDER_VALIDATION:${code}${suffix}`);
 }
 
 /**
@@ -113,7 +116,14 @@ export function validateCustomerOrderSelection(args: {
     const meal = item.meal;
     if (!Number.isInteger(week) || week < 1 || week > 4 || !DELIVERY_DAY_SET.has(day)) fail("INVALID_SLOT");
     if (!meal?.isActive || meal?.isGymOnly || meal?.isOnlineOnly) fail("INVALID_MEAL_CHANNEL");
-    if (!mealScheduledFor(meal, week, day)) fail("MEAL_NOT_SCHEDULED");
+    if (!mealScheduledFor(meal, week, day)) {
+      fail("MEAL_NOT_SCHEDULED", {
+        mealNameAr: String(meal?.nameAr || meal?.nameEn || "").slice(0, 120),
+        mealNameEn: String(meal?.nameEn || meal?.nameAr || "").slice(0, 120),
+        week,
+        day,
+      });
+    }
 
     const category = norm(meal.category);
     if (!isMainCategory(category) && !isSnackCategory(category)) fail("INVALID_CATEGORY");
