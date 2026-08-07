@@ -260,6 +260,38 @@ export type ChefRow = {
   cells: (string | number)[];
 };
 
+const CHEF_BODY_FONT_SIZE = 10;
+const CHEF_TEXT_WIDTH_CHARS = 73;
+
+/**
+ * Excel does not automatically expand wrapped rows written by SheetJS,
+ * especially when the description cell is merged. Estimate the rendered
+ * line count so long allergy/modification notes never overlap the next row.
+ */
+export function chefRowHeight(kind: ChefRow["kind"], value: string | number): number {
+  const minimum = kind === "modified" ? 29
+    : kind === "section" ? 22
+    : kind === "dish" || kind === "customer" ? 21
+    : kind === "head" || kind === "total" ? 20
+    : 18;
+
+  if (kind === "section" || kind === "head" || kind === "total") return minimum;
+
+  const text = String(value ?? "");
+  const lines = text.split(/\r?\n/).reduce((count, line) => {
+    // Wide Latin capitals occupy slightly more space than the nominal Excel
+    // character width, so keep a conservative allowance for kitchen notes.
+    const visualLength = Array.from(line).reduce(
+      (length, char) => length + (/[A-Z]/.test(char) ? 1.08 : 1),
+      0,
+    );
+    return count + Math.max(1, Math.ceil(visualLength / CHEF_TEXT_WIDTH_CHARS));
+  }, 0);
+
+  const wrappedHeight = 8 + lines * (CHEF_BODY_FONT_SIZE + 5);
+  return Math.max(minimum, Math.min(92, wrappedHeight));
+}
+
 const CHEF_COLORS: Record<ChefRow["kind"], { bg?: string; fg: string; bold: boolean }> = {
   section:  { bg: "0D3B5F", fg: "FFFFFF", bold: true },   // كحلي — رأس القسم
   head:     { bg: "E9F2F7", fg: "54738A", bold: true },   // رمادي فاتح — أسماء الأعمدة
@@ -285,9 +317,9 @@ export async function downloadChefSheetXlsx(
   const baseStyle = (kind: ChefRow["kind"]): any => {
     const c = CHEF_COLORS[kind];
     return {
-      font: { name: "Arial", bold: c.bold, color: { rgb: c.fg }, sz: kind === "section" ? 12 : 10 },
+      font: { name: "Arial", bold: c.bold, color: { rgb: c.fg }, sz: kind === "section" ? 12 : CHEF_BODY_FONT_SIZE },
       border,
-      alignment: { vertical: "center", wrapText: true },
+      alignment: { vertical: kind === "section" || kind === "head" ? "center" : "top", wrapText: true },
       fill: { patternType: "solid", fgColor: { rgb: c.bg || "FFFFFF" } },
     };
   };
@@ -379,13 +411,7 @@ export async function downloadChefSheetXlsx(
       }
     }
     aoa.push(out);
-    rowHeights.push(
-      r.kind === "modified" ? 29
-        : r.kind === "section" ? 22
-        : r.kind === "dish" || r.kind === "customer" ? 21
-        : r.kind === "head" || r.kind === "total" ? 20
-        : 18,
-    );
+    rowHeights.push(chefRowHeight(r.kind, out[0]?.v ?? r.cells[0] ?? ""));
   }
 
   const blankStyle = { fill: { patternType: "solid", fgColor: { rgb: "FFFFFF" } } };
@@ -394,8 +420,28 @@ export async function downloadChefSheetXlsx(
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws["!merges"] = merges;
-  ws["!cols"] = [{ wch: 24 }, { wch: 19 }, { wch: 19 }, { wch: 11 }, { wch: 11 }, { wch: 12 }];
+  // The first five physical columns form the wide preparation/notes field.
+  // Widen it slightly before wrapping to keep the production sheet compact.
+  ws["!cols"] = [{ wch: 28 }, { wch: 20 }, { wch: 20 }, { wch: 11 }, { wch: 11 }, { wch: 13 }];
   ws["!rows"] = rowHeights.map((hpt) => ({ hpt }));
+
+  // xlsx-js-style stores formatting per physical cell. Merged cells therefore
+  // need the same fill/border on every cell, not only on their top-left value.
+  for (let ri = 7; ri < aoa.length; ri++) {
+    const rowKind = rows[ri - 7]?.kind;
+    if (!rowKind) continue;
+    const rowStyle = baseStyle(rowKind);
+    for (let ci = 0; ci < 6; ci++) {
+      const ref = XLSX.utils.encode_cell({ r: ri, c: ci });
+      const existing = ws[ref] || { t: "s", v: "" };
+      ws[ref] = {
+        ...existing,
+        s: existing.s && existing.v !== ""
+          ? { ...rowStyle, ...existing.s, border }
+          : rowStyle,
+      };
+    }
+  }
   ws["!freeze"] = { xSplit: 0, ySplit: 7 };
   ws["!autofilter"] = { ref: `A7:F${aoa.length}` };
   ws["!margins"] = { left: 0.25, right: 0.25, top: 0.35, bottom: 0.45, header: 0.15, footer: 0.2 };
