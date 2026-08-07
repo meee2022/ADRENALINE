@@ -960,9 +960,9 @@ export default function PlansPage() {
       items: cleanedItems,
       customerId: selectedCustomerId,
       status,
-      // التأكيد الثاني لخطة مؤكدة هو موافقة صريحة على اختلاف العدد الحالي.
-      // الخادم هو من يتحقق من الاختلاف ويكتب الختم؛ هذا العلم لا يُخزّن.
-      approveMealCountMismatch: approveCountMismatch,
+      // هذا العلم يخص تحديث خطة موجودة فقط؛ إرساله إلى create يرفضه validator.
+      // الخادم هو من يتحقق من الاختلاف ويكتب الختم، والعلم نفسه لا يُخزّن.
+      ...((currentPlan as any)._id ? { approveMealCountMismatch: approveCountMismatch } : {}),
     });
     savingRef.current = true;
     setSaving(status);
