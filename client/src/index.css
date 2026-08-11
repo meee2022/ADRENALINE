@@ -1651,15 +1651,54 @@
   }
 
   .plans-filter-panel > div:not(:first-child) {
-    flex-wrap: nowrap !important;
-    overflow-x: auto;
-    padding-bottom: 0.25rem;
-    scrollbar-width: thin;
+    overflow: visible;
   }
 
   .plans-filter-panel > div:not(:first-child) > * {
-    flex: 0 0 auto;
     min-height: 40px;
+  }
+
+  .plans-filter-delivery {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem !important;
+  }
+
+  .plans-filter-group {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem !important;
+    padding: 0.625rem !important;
+  }
+
+  .plans-filter-label {
+    grid-column: 1 / -1;
+    min-height: 0 !important;
+    min-width: 0 !important;
+    padding: 0 0.125rem 0.125rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .plans-filter-choice {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-inline: 0.5rem !important;
+  }
+
+  .plans-filter-restaurants > button:first-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .plans-filter-status {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .plans-filter-choice > span:not(:last-child) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .plan-customer-card {
@@ -1696,6 +1735,24 @@
 
   .meal-card-visual {
     height: 76px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .plans-filter-panel {
+    padding: 0.625rem !important;
+  }
+
+  .plans-filter-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plans-filter-status > button:last-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .plans-filter-choice {
+    font-size: 0.6875rem !important;
   }
 }
 

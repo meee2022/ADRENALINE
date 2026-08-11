@@ -15,6 +15,7 @@ import { openPrintDoc } from "./printDoc";
 
 export type KitchenPerson = {
   no: number;
+  restaurantKey: "ADRENALINE" | "NUTRI_RESET";
   phone: string;
   name: string;
   /** "28-6 END 25-7" */
@@ -37,7 +38,7 @@ export type KitchenPerson = {
 export type Lang = "ar" | "en";
 
 const HEADERS = [
-  "NO.", "Phone", "Customer Name", "START/LAST Day", "Remarks",
+  "NO.", "Phone", "Customer Name", "Restaurant", "START/LAST Day", "Remarks",
   "Allergies & Dislikes", "Breakfast", "SNACK 1", "LUNCH", "SNACK 2",
   "DINNER", "MEAL 4", "Time",
 ];
@@ -56,7 +57,7 @@ const timeLabel = (t: string, lang: Lang) =>
   t === "MORNING" ? T(lang).morning : T(lang).evening;
 
 const rowArray = (p: KitchenPerson, lang: Lang): (string | number)[] => [
-  p.no, p.phone, p.name, p.dates, p.remarks, p.allergies,
+  p.no, p.phone, p.name, p.restaurantKey === "NUTRI_RESET" ? "NUTRI RESET" : "ADRENALINE", p.dates, p.remarks, p.allergies,
   p.breakfast, p.snack1, p.lunch, p.snack2, p.dinner, p.meal4, timeLabel(p.time, lang),
 ];
 
@@ -84,7 +85,7 @@ export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson
   const altStyle = { ...cellStyle, fill: { fgColor: { rgb: "F5F9FC" } } };
 
   const cols = [
-    { wch: 5 }, { wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 24 },
+    { wch: 5 }, { wch: 12 }, { wch: 22 }, { wch: 15 }, { wch: 16 }, { wch: 12 }, { wch: 24 },
     { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 18 }, { wch: 20 }, { wch: 16 }, { wch: 10 },
   ];
 
@@ -107,6 +108,17 @@ export async function downloadKitchenXlsx(dateStr: string, people: KitchenPerson
         else if (r === 1) ws[ref].s = headerStyle;
         else ws[ref].s = (r % 2 === 0) ? cellStyle : altStyle;
       }
+      if (r >= 2) {
+        const restaurantRef = XLSX.utils.encode_cell({ r, c: 3 });
+        const isNutriReset = ws[restaurantRef]?.v === "NUTRI RESET";
+        ws[restaurantRef].s = {
+          ...ws[restaurantRef].s,
+          fill: { fgColor: { rgb: isNutriReset ? "E8F8F7" : "EAF8FD" } },
+          font: { bold: true, sz: 9, color: { rgb: isNutriReset ? "087E87" : "0E76AC" } },
+          alignment: { horizontal: "center", vertical: "center", wrapText: true },
+          border,
+        };
+      }
     }
     ws["!rows"] = [{ hpt: 22 }, { hpt: 20 }];
     return ws;
@@ -128,7 +140,7 @@ const esc = (s: any) =>
    أسطرٌ صغيرة تحت الاسم في خانة واحدة — أربعة أعمدة وفّرناها لأعمدة الوجبات.
    الإكسل يحتفظ بأعمدته الثلاثة عشر كاملة (HEADERS) — الفرز هناك يحتاجها. */
 const PRINT_HEADERS = [
-  "NO.", "Customer", "Allergies & Dislikes",
+  "NO.", "Customer", "Restaurant", "Allergies & Dislikes",
   "Breakfast", "SNACK 1", "LUNCH", "SNACK 2", "DINNER", "MEAL 4",
 ];
 
@@ -140,6 +152,7 @@ function tableHtml(title: string, rows: KitchenPerson[], lang: Lang): string {
       (p) => `<tr>
       <td class="c">${p.no}</td>
       <td class="cust"><b>${esc(p.name)}</b><span class="ph" dir="ltr">${esc(p.phone)}</span><span class="dt">${esc(p.dates)}</span><span class="tg">${esc(p.remarks)}${p.remarks ? " · " : ""}${esc(timeLabel(p.time, lang))}</span></td>
+      <td class="restaurant"><span class="restaurant-tag ${p.restaurantKey === "NUTRI_RESET" ? "nutri" : "adrenaline"}">${p.restaurantKey === "NUTRI_RESET" ? "NUTRI RESET" : "ADRENALINE"}</span></td>
       <td class="al">${esc(p.allergies)}</td>
       <td>${esc(p.breakfast)}</td>
       <td>${esc(p.snack1)}</td>
@@ -152,7 +165,7 @@ function tableHtml(title: string, rows: KitchenPerson[], lang: Lang): string {
     .join("");
   return `<section class="sec">
     <div class="sec-t">${esc(title)} <span>${rows.length} ${esc(T(lang).customers)}</span></div>
-    <table><colgroup><col style="width:7mm"><col style="width:31mm"><col style="width:27mm"><col><col><col><col><col><col style="width:17mm"></colgroup>
+    <table><colgroup><col style="width:6mm"><col style="width:27mm"><col style="width:18mm"><col style="width:23mm"><col><col><col><col><col><col style="width:16mm"></colgroup>
     <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>
   </section>`;
 }
@@ -199,6 +212,10 @@ export async function downloadKitchenPdf(
       .cust .ph{display:block;font-size:8.5px;color:#475569}
       .cust .dt{display:block;font-size:8px;color:#0E76AC;font-weight:700}
       .cust .tg{display:block;font-size:8px;font-weight:900;color:#7c3aed}
+      .restaurant{text-align:center;vertical-align:middle;padding:3px 2px}
+      .restaurant-tag{display:inline-block;border-radius:4px;padding:3px 4px;font-size:7.5px;font-weight:900;line-height:1.15}
+      .restaurant-tag.nutri{background:#e8f8f7;color:#087e87;border:1px solid #8ed8d5}
+      .restaurant-tag.adrenaline{background:#eaf8fd;color:#0e76ac;border:1px solid #b9e6f5}
       .al{color:#b45309;font-size:9px;font-weight:800}
       .m4{font-size:9px}
       .foot{margin:6px 16px 12px;font-size:11px;color:#94a3b8;text-align:center}
@@ -310,6 +327,7 @@ export async function downloadChefSheetXlsx(
   dateStr: string,
   rows: ChefRow[],
   kpis: Array<{ label: string; value: number }>,
+  restaurantSources?: { adrenaline: number; nutriReset: number },
 ): Promise<void> {
   const XLSX = (await import("xlsx-js-style")).default as any;
   const thin = { style: "thin", color: { rgb: "9CB2C2" } };
@@ -346,6 +364,9 @@ export async function downloadChefSheetXlsx(
     { s: { r: 4, c: 0 }, e: { r: 4, c: 1 } },
     { s: { r: 4, c: 2 }, e: { r: 4, c: 3 } },
     { s: { r: 4, c: 4 }, e: { r: 4, c: 5 } },
+    { s: { r: 5, c: 0 }, e: { r: 5, c: 1 } },
+    { s: { r: 5, c: 2 }, e: { r: 5, c: 3 } },
+    { s: { r: 5, c: 4 }, e: { r: 5, c: 5 } },
   ];
   const titleStyle = {
     font: { name: "Arial", bold: true, sz: 16, color: { rgb: "0D3B5F" } },
@@ -368,8 +389,31 @@ export async function downloadChefSheetXlsx(
     aoa[3][col] = cell(k.value, { ...card, font: { name: "Arial", bold: true, sz: 17, color: { rgb: "0E76AC" } }, alignment: { vertical: "center" } });
     aoa[4][col] = cell(k.label.toUpperCase(), { ...card, font: { name: "Arial", bold: true, sz: 9, color: { rgb: "54738A" } }, alignment: { vertical: "center" } });
   });
+  const sourceBase = {
+    border,
+    alignment: { horizontal: "center", vertical: "center" },
+  };
+  aoa[5][0] = cell("ORDER SOURCE", {
+    ...sourceBase,
+    fill: { patternType: "solid", fgColor: { rgb: "F1F6F9" } },
+    font: { name: "Arial", bold: true, sz: 9, color: { rgb: "54738A" } },
+  });
+  if (restaurantSources?.adrenaline) {
+    aoa[5][2] = cell(`ADRENALINE  ·  ${restaurantSources.adrenaline} ${restaurantSources.adrenaline === 1 ? "ORDER" : "ORDERS"}`, {
+      ...sourceBase,
+      fill: { patternType: "solid", fgColor: { rgb: "E8F6FC" } },
+      font: { name: "Arial", bold: true, sz: 9, color: { rgb: "075F8E" } },
+    });
+  }
+  if (restaurantSources?.nutriReset) {
+    aoa[5][4] = cell(`NUTRI RESET  ·  ${restaurantSources.nutriReset} ${restaurantSources.nutriReset === 1 ? "ORDER" : "ORDERS"}`, {
+      ...sourceBase,
+      fill: { patternType: "solid", fgColor: { rgb: "FFF2E7" } },
+      font: { name: "Arial", bold: true, sz: 9, color: { rgb: "A84708" } },
+    });
+  }
 
-  const rowHeights = [22, 22, 7, 25, 19, 7, 7];
+  const rowHeights = [22, 22, 7, 25, 19, 20, 7];
   let currentSection = "";
   for (const r of rows) {
     const out = Array(6).fill(null);

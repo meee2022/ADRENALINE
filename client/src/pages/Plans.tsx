@@ -401,6 +401,8 @@ export default function PlansPage() {
   const [planFilter, setPlanFilter] = useState<"ALL" | "PENDING" | "DONE" | "DRAFT">("ALL");
   // ✅ فلتر البرنامج: مثل (FITNESS, DIET, BULK, CUSTOMIZED, etc.)
   const [programFilter, setProgramFilter] = useState<string | null>(null);
+  // فلتر مصدر الطلب للعرض فقط؛ لا يغيّر الخطة أو ترتيبها أو اعتمادها.
+  const [restaurantFilter, setRestaurantFilter] = useState<"ALL" | "ADRENALINE" | "NUTRI_RESET">("ALL");
   const [currentPlan, setCurrentPlan] = useState<Partial<DailyPlan> | null>(null);
 
   const { data: customers = EMPTY } = useCustomers();
@@ -1191,12 +1193,25 @@ export default function PlansPage() {
           const pendingCount = activeCustomers.length - plannedCount;
           const morningCount = activeCustomers.filter((c: any) => c.deliveryTime === "MORNING").length;
           const eveningCount = activeCustomers.filter((c: any) => c.deliveryTime === "EVENING").length;
+          const restaurantOf = (customer: any): "ADRENALINE" | "NUTRI_RESET" => {
+            const plan = dailyPlans.find(
+              (item: any) => String(item.customerId) === String(customer._id) && item.date === formattedDate,
+            );
+            return String(plan?.restaurantKey || customer.restaurantKey || "ADRENALINE") === "NUTRI_RESET"
+              ? "NUTRI_RESET"
+              : "ADRENALINE";
+          };
+          const adrenalineCount = activeCustomers.filter((c: any) => restaurantOf(c) === "ADRENALINE").length;
+          const nutriResetCount = activeCustomers.filter((c: any) => restaurantOf(c) === "NUTRI_RESET").length;
 
           // Filter
           const [filterTime, setFilterTime] = [deliveryFilter, setDeliveryFilter];
           const [searchQ, setSearchQ] = [searchQuery, setSearchQuery];
 
           let filtered = activeCustomers;
+          if (restaurantFilter !== "ALL") {
+            filtered = filtered.filter((c: any) => restaurantOf(c) === restaurantFilter);
+          }
           if (filterTime !== "ALL") {
             filtered = filtered.filter((c: any) => c.deliveryTime === filterTime);
           }
@@ -1271,38 +1286,35 @@ export default function PlansPage() {
                     </div>
                   </div>
 
-                  {/* Stats inline pills */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="rounded-xl px-3 py-2 backdrop-blur-sm flex items-center gap-2"
-                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                      <div className="h-7 w-7 rounded-lg bg-white/25 flex items-center justify-center">
-                        <Check className="h-3.5 w-3.5 text-white" />
+                  {/* شريط إحصائيات موحّد: الأرقام هي العنصر الأساسي والفواصل تنظّم القراءة. */}
+                  <div
+                    className="plans-overview-metrics grid grid-cols-3 w-full sm:w-auto sm:min-w-[410px] overflow-hidden rounded-2xl"
+                    style={{
+                      background: "rgba(255,255,255,0.96)",
+                      border: "1px solid rgba(255,255,255,0.72)",
+                      boxShadow: "0 8px 24px rgba(7,69,104,0.16), inset 0 1px 0 rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    {[
+                      { value: plannedCount, label: isRtl ? "خطط جاهزة" : "Plans ready", color: "#059669", soft: "#ecfdf5", icon: <Check className="h-4 w-4" /> },
+                      { value: pendingCount, label: isRtl ? "بانتظار الخطة" : "Need a plan", color: "#d97706", soft: "#fffbeb", icon: <Clock className="h-4 w-4" /> },
+                      { value: activeCustomers.length, label: isRtl ? "إجمالي المشتركين" : "Total subscribers", color: "#0e76ac", soft: "#eaf8fd", icon: <User className="h-4 w-4" /> },
+                    ].map((metric, index) => (
+                      <div
+                        key={metric.label}
+                        className="min-w-0 px-2.5 sm:px-4 py-3.5 flex items-center justify-center gap-2 sm:gap-3"
+                        style={index > 0 ? { borderInlineStart: "1px solid #dbe7ef" } : undefined}
+                      >
+                        <div className="hidden sm:flex h-10 w-10 rounded-xl items-center justify-center flex-shrink-0"
+                          style={{ background: metric.soft, color: metric.color }}>
+                          {metric.icon}
+                        </div>
+                        <div className="min-w-0 text-center sm:text-start">
+                          <p className="text-[26px] font-black tabular-nums leading-none tracking-tight" style={{ color: metric.color }}>{metric.value}</p>
+                          <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1.5 whitespace-nowrap truncate">{metric.label}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xl font-black text-white tabular-nums leading-none">{plannedCount}</p>
-                        <p className="text-[10px] text-white/80 mt-0.5">{isRtl ? "خطط جاهزة" : "Planned"}</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl px-3 py-2 backdrop-blur-sm flex items-center gap-2"
-                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                      <div className="h-7 w-7 rounded-lg bg-white/25 flex items-center justify-center">
-                        <Clock className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xl font-black text-white tabular-nums leading-none">{pendingCount}</p>
-                        <p className="text-[10px] text-white/80 mt-0.5">{isRtl ? "معلقة" : "Pending"}</p>
-                      </div>
-                    </div>
-                    <div className="rounded-xl px-3 py-2 backdrop-blur-sm flex items-center gap-2"
-                      style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}>
-                      <div className="h-7 w-7 rounded-lg bg-white/25 flex items-center justify-center">
-                        <User className="h-3.5 w-3.5 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xl font-black text-white tabular-nums leading-none">{activeCustomers.length}</p>
-                        <p className="text-[10px] text-white/80 mt-0.5">{isRtl ? "إجمالي" : "Total"}</p>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1331,8 +1343,8 @@ export default function PlansPage() {
               )}
 
               {/* ─── Search + Filters ─── */}
-              <div className="plans-filter-panel bg-white rounded-2xl p-4 space-y-3"
-                style={{ boxShadow: "0 2px 14px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.05)" }}>
+              <div className="plans-filter-panel rounded-2xl p-4 space-y-3.5"
+                style={{ background: "#fbfdff", boxShadow: "0 2px 14px rgba(14,118,172,0.07)", border: "1px solid #dbe8f1" }}>
                 {/* Search bar */}
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -1352,7 +1364,7 @@ export default function PlansPage() {
                 </div>
 
                 {/* Filter chips */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="plans-filter-delivery flex items-center gap-2 flex-wrap rounded-xl bg-white p-2 border border-slate-100">
                   {[
                     { key: "ALL",     label: isRtl ? "الكل" : "All",     icon: null,                       count: activeCustomers.length },
                     { key: "MORNING", label: isRtl ? "صباحي" : "Morning", icon: <Sun className="h-3.5 w-3.5" />,  count: morningCount },
@@ -1364,7 +1376,7 @@ export default function PlansPage() {
                         key={f.key}
                         onClick={() => setFilterTime(f.key as any)}
                         className={cn(
-                          "h-9 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all",
+                          "plans-filter-choice h-9 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all",
                           active ? "text-white" : "text-gray-500 hover:bg-gray-50"
                         )}
                         style={active
@@ -1385,9 +1397,42 @@ export default function PlansPage() {
                   })}
                 </div>
 
+                {/* ─── Restaurant source filter ─── */}
+                <div className="plans-filter-group plans-filter-restaurants flex items-center gap-2.5 flex-wrap rounded-xl bg-white p-2 border border-slate-100">
+                  <span className="plans-filter-label min-w-[72px] text-[11px] font-black text-slate-600 px-2">{isRtl ? "المطعم" : "Restaurant"}</span>
+                  {[
+                    { key: "ALL", label: isRtl ? "كل المطاعم" : "All restaurants", color: "#47759c", count: activeCustomers.length },
+                    { key: "ADRENALINE", label: "ADRENALINE", color: "#0e76ac", count: adrenalineCount },
+                    { key: "NUTRI_RESET", label: "NUTRI RESET", color: "#f97316", count: nutriResetCount },
+                  ].map((f) => {
+                    const active = restaurantFilter === f.key;
+                    return (
+                      <button
+                        key={f.key}
+                        onClick={() => setRestaurantFilter(f.key as "ALL" | "ADRENALINE" | "NUTRI_RESET")}
+                        className={cn(
+                          "plans-filter-choice h-9 px-3.5 rounded-xl text-xs font-black flex items-center gap-2 transition-all tracking-wide",
+                          active ? "text-white" : "text-gray-500 hover:bg-gray-50",
+                        )}
+                        style={active
+                          ? { background: f.color, boxShadow: `0 3px 9px ${f.color}40` }
+                          : { background: "#f8fafc", border: "1px solid #e2e8f0" }}
+                      >
+                        <span>{f.label}</span>
+                        <span className={cn(
+                          "min-w-6 text-center text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
+                          active ? "bg-white/25 text-white" : "bg-slate-100 text-slate-700",
+                        )}>
+                          {f.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {/* ─── Plan status filter chips ─── */}
-                <div className="flex items-center gap-2 flex-wrap pt-1">
-                  <span className="text-[11px] font-semibold text-gray-400 mr-1">{isRtl ? "الحالة:" : "Status:"}</span>
+                <div className="plans-filter-group plans-filter-status flex items-center gap-2.5 flex-wrap rounded-xl bg-white p-2 border border-slate-100">
+                  <span className="plans-filter-label min-w-[72px] text-[11px] font-black text-slate-600 px-2">{isRtl ? "الحالة" : "Status"}</span>
                   {[
                     { key: "PENDING", label: isRtl ? "محتاج خطة" : "Pending", color: "#f59e0b", count: pendingCount, icon: <Clock className="h-3 w-3" /> },
                     { key: "DONE",    label: isRtl ? "خلصت"      : "Done",    color: "#10b981", count: plannedCount, icon: <Check className="h-3 w-3" /> },
@@ -1399,7 +1444,7 @@ export default function PlansPage() {
                         key={f.key}
                         onClick={() => setPlanFilter(f.key as any)}
                         className={cn(
-                          "h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                          "plans-filter-choice h-9 px-3.5 rounded-xl text-[11px] font-black flex items-center gap-2 transition-all",
                           active ? "text-white" : "text-gray-500 hover:bg-gray-50"
                         )}
                         style={active
@@ -1410,8 +1455,8 @@ export default function PlansPage() {
                         {f.icon}
                         <span>{f.label}</span>
                         <span className={cn(
-                          "text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
-                          active ? "bg-white/25" : "bg-white"
+                          "min-w-6 text-center text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
+                          active ? "bg-white/25 text-white" : "bg-slate-100 text-slate-700"
                         )}>
                           {f.count}
                         </span>
@@ -1421,8 +1466,8 @@ export default function PlansPage() {
                 </div>
 
                 {/* ─── Program Filter Chips ─── */}
-                <div className="flex items-center gap-2 flex-wrap pt-1">
-                  <span className="text-[11px] font-semibold text-gray-400 mr-1">{isRtl ? "البرنامج:" : "Program:"}</span>
+                <div className="plans-filter-group plans-filter-programs flex items-center gap-2.5 flex-wrap rounded-xl bg-white p-2 border border-slate-100">
+                  <span className="plans-filter-label min-w-[72px] text-[11px] font-black text-slate-600 px-2">{isRtl ? "البرنامج" : "Program"}</span>
                   {[
                     // ℹ️ «مخصص» اتشال — المخصّصون لهم صفحتهم (الوجبات المخصّصة)
                     { key: null, label: isRtl ? "الكل" : "All", color: "#47759c" },
@@ -1444,7 +1489,7 @@ export default function PlansPage() {
                         key={String(f.key)}
                         onClick={() => setProgramFilter(f.key)}
                         className={cn(
-                          "h-8 px-3 rounded-xl text-[11px] font-bold flex items-center gap-1.5 transition-all",
+                          "plans-filter-choice h-9 px-3.5 rounded-xl text-[11px] font-black flex items-center gap-2 transition-all",
                           active ? "text-white" : "text-gray-500 hover:bg-gray-50"
                         )}
                         style={active
@@ -1454,8 +1499,8 @@ export default function PlansPage() {
                       >
                         <span>{f.label}</span>
                         <span className={cn(
-                          "text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
-                          active ? "bg-white/25" : "bg-white"
+                          "min-w-6 text-center text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums",
+                          active ? "bg-white/25 text-white" : "bg-slate-100 text-slate-700"
                         )}>
                           {count}
                         </span>
@@ -1567,6 +1612,10 @@ ${r.skippedEmpty} with no meals left as drafts.` : ""}` });
                 <div className="plans-customer-grid grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 280px), 1fr))" }}>
                   {filtered.map((customer: any) => {
                     const hasPlan = customersWithPlans.has(String(customer._id));
+                    const customerPlan = dailyPlans.find(
+                      (plan: any) => String(plan.customerId) === String(customer._id) && plan.date === formattedDate,
+                    );
+                    const isNutriReset = String(customerPlan?.restaurantKey || customer.restaurantKey || "ADRENALINE") === "NUTRI_RESET";
                     const meals = customer.mealsPerDay ?? 0;
                     const snacks = customer.snacksPerDay ?? 0;
                     const isMorn = customer.deliveryTime === "MORNING";
@@ -1626,6 +1675,14 @@ ${r.skippedEmpty} with no meals left as drafts.` : ""}` });
                         <div className="plan-customer-identity p-4 flex items-start gap-3">
                           <div className="flex-1 min-w-0 text-right">
                             <div className="flex items-center gap-1.5 justify-end mb-1 flex-wrap">
+                              <span
+                                className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-wide"
+                                style={isNutriReset
+                                  ? { background: "#e8f8f7", color: "#087e87", border: "1px solid #8ed8d5" }
+                                  : { background: "#eaf8fd", color: "#0e76ac", border: "1px solid #b9e6f5" }}
+                              >
+                                {isNutriReset ? "NUTRI RESET" : "ADRENALINE"}
+                              </span>
                               {hasAllergy && (
                                 <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md flex items-center gap-1"
                                   style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
@@ -1748,7 +1805,25 @@ ${r.skippedEmpty} with no meals left as drafts.` : ""}` });
                   {(selectedCustomer as any)?.fullName?.charAt(0).toUpperCase() || "?"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="plans-selected-name text-sm font-bold truncate">{(selectedCustomer as any)?.fullName}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="plans-selected-name text-sm font-bold truncate">{(selectedCustomer as any)?.fullName}</p>
+                    {(() => {
+                      const selectedPlan = dailyPlans.find(
+                        (plan: any) => String(plan.customerId) === String(selectedCustomerId) && plan.date === formattedDate,
+                      );
+                      const isNutriReset = String(selectedPlan?.restaurantKey || (selectedCustomer as any)?.restaurantKey || "ADRENALINE") === "NUTRI_RESET";
+                      return (
+                        <span
+                          className="text-[9px] font-black px-2 py-0.5 rounded-md tracking-wide flex-shrink-0"
+                          style={isNutriReset
+                            ? { background: "#e8f8f7", color: "#087e87", border: "1px solid #8ed8d5" }
+                            : { background: "#eaf8fd", color: "#0e76ac", border: "1px solid #b9e6f5" }}
+                        >
+                          {isNutriReset ? "NUTRI RESET" : "ADRENALINE"}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <p className="plans-selected-phone text-xs" dir="ltr">{(selectedCustomer as any)?.phone}</p>
                 </div>
                 <Popover open={isCustomerOpen} onOpenChange={setIsCustomerOpen}>

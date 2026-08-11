@@ -945,6 +945,12 @@ export default function Stickers() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
+          /* شعار Nutri Reset أصله رمادي وملوّن؛ نرفعه لأسود واضح على الرأس الحراري
+             مع إبقاء ألوان ملف الشعار نفسه كما هي خارج الطباعة. */
+          .label .nutri-brand-logo {
+            filter: grayscale(1) contrast(2.4) brightness(0.72) !important;
+            -webkit-filter: grayscale(1) contrast(2.4) brightness(0.72) !important;
+          }
           /* خط اللوجو أثقل وأوضح للطباعة الحرارية */
           .label .brand-name {
             font-weight: 900 !important;
@@ -1023,6 +1029,27 @@ export default function Stickers() {
           display: flex;
           flex-direction: column;
           align-items: center;
+        }
+        /* ملف Nutri Reset يحتوي فراغاً أبيض داخلياً يقارب ربع الصورة من كل جهة.
+           الإطار يقص الفراغ بصرياً فقط، فلا نغيّر أصل الصورة المستخدم في الموقع. */
+        .nutri-brand-frame {
+          width: 36mm;
+          height: 8.5mm;
+          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          background: #fff;
+        }
+        .nutri-brand-logo {
+          display: block;
+          width: auto;
+          height: 15mm;
+          max-width: none;
+          object-fit: contain;
+          mix-blend-mode: multiply;
+          flex-shrink: 0;
         }
         .brand-name {
           font-size: 16px;
@@ -1418,7 +1445,7 @@ function MealSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <img src="/nutri-reset-logo.png" alt="Nutri Reset" className="h-[34px] w-auto max-w-[150px] object-contain" /> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
@@ -1488,7 +1515,7 @@ function BoxSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <img src="/nutri-reset-logo.png" alt="Nutri Reset" className="h-[34px] w-auto max-w-[150px] object-contain" /> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>

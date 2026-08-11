@@ -833,6 +833,9 @@ export default function Kitchen() {
       const no = boxNoByCustomerId.get(String(plan.customerId)) ?? (++fallbackNo);
       rows.push({
         no,
+        restaurantKey: String(plan.restaurantKey || customer?.restaurantKey || "ADRENALINE") === "NUTRI_RESET"
+          ? "NUTRI_RESET"
+          : "ADRENALINE",
         phone: customer?.phone || plan.customerPhone || "",
         name: customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer"),
         dates:
@@ -885,6 +888,7 @@ export default function Kitchen() {
       const col = (i: number) => texts[i] || "";
       return {
         no,
+        restaurantKey: String(c?.restaurantKey || "ADRENALINE") === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE",
         phone: c?.phone || "",
         name: p.name,
         dates: c?.startDate || c?.endDate ? `${shortDate(c?.startDate)} END ${shortDate(c?.endDate)}` : "",
@@ -1362,6 +1366,18 @@ export default function Kitchen() {
       sum + (person.meals || []).filter((meal: any) => !meal.notset && !meal.isSide).length
     ), 0);
     const operationalTotal = summaryPortions + customizedMainPortions;
+    // تعريف بصري فقط بمصدر الطلبات داخل كشف الشيف؛ لا يدخل في أي حساب أو تجميع.
+    const chefPeople = [...kitchenPeople, ...customizedPeople];
+    const adrenalineOrders = chefPeople.filter((person) => person.restaurantKey !== "NUTRI_RESET").length;
+    const nutriResetOrders = chefPeople.filter((person) => person.restaurantKey === "NUTRI_RESET").length;
+    const restaurantSourceHtml = [
+      adrenalineOrders > 0
+        ? `<span class="source-pill adrenaline"><b>ADRENALINE</b><em>${adrenalineOrders} ${adrenalineOrders === 1 ? "order" : "orders"}</em></span>`
+        : "",
+      nutriResetOrders > 0
+        ? `<span class="source-pill nutri"><b>NUTRI RESET</b><em>${nutriResetOrders} ${nutriResetOrders === 1 ? "order" : "orders"}</em></span>`
+        : "",
+    ].filter(Boolean).join("");
 
     const html = `<!doctype html><html lang="en" dir="ltr"><head><meta charset="utf-8"><title>Unified Chef Sheet Preview ${esc(formattedDate)}</title>
       <style>
@@ -1371,6 +1387,7 @@ export default function Kitchen() {
         h1{margin:0;color:#0d3b5f;font-size:17px;letter-spacing:.2px}.meta{font-size:12px;color:#54738a;font-weight:700;text-align:right}
          .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:7px}
          .kpi{border:1px solid #cfe0eb;border-radius:6px;padding:4px 8px;background:#f7fbfd}.kpi b{display:block;font-size:17px;color:#0e76ac}.kpi span{font-size:9px;font-weight:800;color:#54738a;text-transform:uppercase;letter-spacing:.6px}
+         .restaurant-source{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 7px;padding:5px 7px;border:1px solid #d6e4ed;border-radius:6px;background:#f8fbfd}.source-title{font-size:8.5px;font-weight:900;color:#54738a;letter-spacing:.55px;text-transform:uppercase;margin-right:2px}.source-pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 8px;font-size:8.5px;font-style:normal;font-weight:900;letter-spacing:.25px}.source-pill em{font-style:normal;font-weight:800;opacity:.78}.source-pill.adrenaline{color:#075f8e;background:#e8f6fc;border:1px solid #9fd9ef}.source-pill.nutri{color:#a84708;background:#fff2e7;border:1px solid #fdba74}
          .preview-actions{position:sticky;top:0;z-index:10;display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px;padding:8px 0;background:rgba(255,255,255,.96)}.preview-actions button{border:0;border-radius:6px;padding:9px 14px;background:#0e76ac;color:#fff;font:800 12px 'Segoe UI',Tahoma,sans-serif;cursor:pointer;box-shadow:0 8px 22px rgba(13,59,95,.18)}.preview-actions .close{background:#fff;color:#0d3b5f;border:1px solid #bdd3e1;box-shadow:none}
         table{width:100%;border-collapse:collapse;table-layout:fixed}col.name{width:auto}col.qty{width:64px}col.portion{width:80px}col.portion{width:80px}
         td{border:1px solid #9cb2c2;padding:2.5px 7px;vertical-align:top;line-height:1.18}
@@ -1402,6 +1419,7 @@ export default function Kitchen() {
          <div class="preview-actions"><button type="button" onclick="window.print()">Print / Save PDF</button><button type="button" onclick="window.opener && window.opener.postMessage('adr-chef-xlsx','*')">Download Excel</button><button type="button" class="close" onclick="window.close()">Close</button></div>
          ${auditLines.length ? `<div class="audit-warn">${auditLines.map((l) => esc(l)).join("<br/>")}</div>` : ""}
         <div class="masthead"><div><h1>ADRENALINE · CHEF PRODUCTION SHEET</h1></div><div class="meta">Production date<br><strong>${esc(formattedDate)}</strong></div></div>
+        <div class="restaurant-source"><span class="source-title">Order source</span>${restaurantSourceHtml}</div>
         <div class="kpis">
           <div class="kpi"><b>${operationalTotal}</b><span>Operational portions</span></div>
           <div class="kpi"><b>${summaryPortions}</b><span>Grouped portions</span></div>
@@ -1420,7 +1438,10 @@ export default function Kitchen() {
         { label: "Operational portions", value: operationalTotal },
         { label: "Grouped portions", value: summaryPortions },
         { label: "Customized main portions", value: customizedMainPortions },
-      ]);
+      ], {
+        adrenaline: adrenalineOrders,
+        nutriReset: nutriResetOrders,
+      });
     };
     window.addEventListener("message", onMsg);
     window.setTimeout(() => window.removeEventListener("message", onMsg), 10 * 60 * 1000);
