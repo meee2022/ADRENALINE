@@ -88,6 +88,7 @@ export const getSmartPlanData = query({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     todayDay: v.optional(v.string()),
     todayDate: v.optional(v.string()),
     overrideRotationWeek: v.optional(v.number()),
@@ -114,13 +115,18 @@ export const getSmartPlanData = query({
 
     // 1) جلب اشتراك العميل
     let customer: any = null;
+    const restaurantKey = args.restaurantKey === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
     if (args.customerId) {
       customer = await ctx.db.get(args.customerId);
+      if (customer && String(customer.restaurantKey || "ADRENALINE") !== restaurantKey) customer = null;
     } else if (args.phone) {
-      customer = await ctx.db
+      const phoneCustomers = await ctx.db
         .query("customers")
         .withIndex("by_phone", (q) => q.eq("phone", args.phone!))
-        .first();
+        .collect();
+      customer = phoneCustomers.find(
+        (entry: any) => String(entry.restaurantKey || "ADRENALINE") === restaurantKey,
+      ) || null;
     }
 
     /* 2) بناء بروفايل.
@@ -591,6 +597,7 @@ export const generateSmartPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     // ✅ targetDate (yyyy-MM-dd) — تاريخ اليوم المطلوب (عادةً بكرة).
     //     يحسبه العميل بالتوقيت المحلي لتفادي مشاكل UTC.
     //     غير مضبوط ⇒ السيرفر يستخدم "الآن UTC" (سلوك رجعي).
@@ -635,6 +642,7 @@ export const generateSmartPlan = action({
     const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
       customerId: args.customerId,
       phone: args.phone,
+      restaurantKey: args.restaurantKey,
       todayDay,
       todayDate,
     });
@@ -692,6 +700,7 @@ export const getPlanSuggestions = query({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     // 🔒 sessionToken اختياري — لو موجود ومعتمد، نمرّره لـgetSmartPlanData
     //    فترجع تواريخ الاشتراك. غير معتمد → null (لا تسريب وجود اشتراك).
     sessionToken: v.optional(v.string()),
@@ -703,6 +712,7 @@ export const getPlanSuggestions = query({
     const { meta, profile } = await ctx.runQuery(api.ai.getSmartPlanData, {
       customerId: args.customerId,
       phone: args.phone,
+      restaurantKey: args.restaurantKey,
       todayDay: wd,
       todayDate: dateStr,
       sessionToken: args.sessionToken,
@@ -733,6 +743,7 @@ export const generateWeeklyPlan = action({
   args: {
     customerId: v.optional(v.id("customers")),
     phone: v.optional(v.string()),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     startDate: v.optional(v.string()),
     weeks: v.optional(v.number()),
     startRotationWeek: v.optional(v.number()),
@@ -813,6 +824,7 @@ export const generateWeeklyPlan = action({
         const { profile, candidates, meta } = await ctx.runQuery(api.ai.getSmartPlanData, {
           customerId: args.customerId,
           phone: args.phone,
+          restaurantKey: args.restaurantKey,
           todayDay: dayName,
           todayDate: dateStr,
           overrideRotationWeek: rotWeek, // ✅ الدورة الحقيقية لهذا اليوم

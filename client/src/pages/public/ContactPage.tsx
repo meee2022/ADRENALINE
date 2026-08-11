@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/public/PageHeader";
 import { PremiumFooter } from "@/components/public/PremiumSections";
 import { useLanguage } from "@/lib/i18n";
 import { useSeo } from "@/lib/seo";
+import { useLocation } from "wouter";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import {
@@ -18,13 +19,17 @@ import {
 
 export default function ContactPage() {
   const { language, dir } = useLanguage();
+  const [location] = useLocation();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const isSupportRoute = location === "/support";
   useSeo({
-    title: isRtl ? "تواصل معنا | أدرينالين للوجبات الصحية" : "Contact Us | Adrenaline Healthy Meals",
+    title: isSupportRoute
+      ? (isRtl ? "الدعم | أدرينالين للوجبات الصحية" : "Support | Adrenaline Healthy Meals")
+      : (isRtl ? "تواصل معنا | أدرينالين للوجبات الصحية" : "Contact Us | Adrenaline Healthy Meals"),
     description: isRtl
       ? "تواصل مع أدرينالين للوجبات الصحية — استفسارات الاشتراك والتوصيل في قطر."
       : "Contact Adrenaline Healthy Meals — subscription and delivery inquiries in Qatar.",
-    path: "/public/contact",
+    path: isSupportRoute ? "/support" : "/public/contact",
   });
   const settings = useQuery(api.restaurantSettings.get);
   const phoneClean = String(settings?.phone || "+97412345678").replace(/\D/g, "");

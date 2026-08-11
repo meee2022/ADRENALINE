@@ -5,7 +5,7 @@ import { useLocation } from "wouter";
 import { useState } from "react";
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { ClipboardList, CheckCircle2, ChefHat } from "lucide-react";
+import { ClipboardList, CheckCircle2, ChefHat, Store, Sparkles, UtensilsCrossed, Hash, Flame, Clock3, Phone, ChevronLeft } from "lucide-react";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -23,6 +23,12 @@ const STATUS_LABEL: Record<string, { ar: string; en: string; cls: string }> = {
   completed: { ar: "مكتمل",        en: "Completed", cls: "bg-slate-100 text-slate-700" },
   cancelled: { ar: "ملغي",         en: "Cancelled", cls: "bg-red-50 text-red-700" },
 };
+
+const isSmartPlanOrder = (notes: unknown) =>
+  /smart meal generator|smart plan|مول[ّ]?د الوجبات الذكي|الخطة الذكية/i.test(String(notes || ""));
+
+const isSmartPlanSystemNote = (notes: unknown) =>
+  /^(weekly plan from the smart meal generator|order from the smart meal generator)$/i.test(String(notes || "").trim());
 
 export default function OrdersPending() {
   const [, navigate] = useLocation();
@@ -173,12 +179,20 @@ export default function OrdersPending() {
       ) : (
         <div className="grid gap-4">
           {orders.map((order) => {
+            const isNutriResetOrder = (order as any).restaurantKey === "NUTRI_RESET";
+            const isSmartOrder = isSmartPlanOrder(order.notes);
             const createdDate = (() => {
               const d = order.createdAt ? new Date(order.createdAt) : null;
               return d && !isNaN(d.getTime())
                 ? format(d, "dd MMMM yyyy - hh:mm a", { locale: isRtl ? ar : enUS })
                 : t("غير محدد", "Not specified");
             })();
+            const orderStats = [
+              { label: t("رقم الطلب", "Order number"), value: order.orderNumber, icon: Hash },
+              { label: t("إجمالي الوجبات", "Total meals"), value: `${order.totalMeals} ${t("وجبة", "meals")}`, icon: UtensilsCrossed },
+              { label: t("إجمالي السعرات", "Total calories"), value: `${order.totalCalories.toLocaleString()} ${t("سعرة", "kcal")}`, icon: Flame },
+              { label: t("وقت إرسال الطلب", "Submitted on"), value: createdDate, icon: Clock3 },
+            ];
 
             return (
               <Card
@@ -187,75 +201,82 @@ export default function OrdersPending() {
                 style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
                 onClick={() => navigate(`/orders/review/${order._id}`)}
               >
-                <div className="flex items-start justify-between">
-                  {/* Right Side - Customer Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl" style={{ background: "linear-gradient(135deg,#3cc4f0,#0E76AC)" }}>
-                        {order.customerName?.[0]?.toUpperCase() || "؟"}
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                          {order.customerName}
-                          <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black",
-                            (order as any).restaurantKey === "NUTRI_RESET"
-                              ? "bg-[#E9F9FB] text-[#16899A]"
-                              : "bg-sky-50 text-[#0E76AC]")}
-                          >{(order as any).restaurantKey === "NUTRI_RESET" ? "Nutri Reset" : "Adrenaline"}</span>
-                          {order.notes?.includes("مولّد الوجبات الذكي") && (
-                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
-                              style={{ background: "linear-gradient(135deg,#3AC7F4,#0E76AC)" }}>
-                              {t("✨ خطة ذكية — راجِع", "✨ Smart plan — review")}
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {order.customerPhone}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">{t("رقم الطلب", "Order No.")}</p>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {order.orderNumber}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">{t("عدد الوجبات", "Meals count")}</p>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {order.totalMeals} {t("وجبة", "meals")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">{t("السعرات الكلية", "Total calories")}</p>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {order.totalCalories.toLocaleString()} {t("سعرة", "kcal")}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 mb-1">{t("تاريخ الإرسال", "Submitted on")}</p>
-                        <p className="font-semibold text-gray-900 text-sm">
-                          {createdDate}
-                        </p>
-                      </div>
+                <div className={cn(
+                  "-mx-6 -mt-6 mb-5 flex min-h-16 flex-wrap items-center justify-between gap-3 rounded-t-2xl px-5 py-3 text-white",
+                  isNutriResetOrder ? "bg-[#079AA5]" : "bg-[#0E76AC]",
+                )}>
+                  <div className="flex items-center gap-3">
+                    <span className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                      isNutriResetOrder ? "bg-[#F47721]" : "bg-[#3AC7F4]",
+                    )}>
+                      <Store className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold leading-none text-white/80">
+                        {t("مصدر الطلب", "Order restaurant")}
+                      </p>
+                      <p className="mt-1 text-lg font-black leading-none tracking-wide">
+                        {isNutriResetOrder ? "NUTRI RESET" : "ADRENALINE"}
+                      </p>
                     </div>
                   </div>
-
-                  {/* Left Side - Status Badge */}
-                  <div className="mr-4">
+                  <span className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black",
+                    isSmartOrder ? "border-violet-200 bg-violet-50 text-violet-800" : "border-emerald-200 bg-emerald-50 text-emerald-800",
+                  )}>
+                    {isSmartOrder ? <Sparkles className="h-4 w-4" /> : <UtensilsCrossed className="h-4 w-4" />}
+                    {isSmartOrder
+                      ? t("خطة ذكية مولّدة تلقائيًا", "AI-generated smart plan")
+                      : t("خطة باختيار يدوي من المشترك", "Customer-selected manual plan")}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className={cn(
-                      "px-4 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap",
-                      STATUS_LABEL[order.status]?.cls || "bg-slate-100 text-slate-700",
+                      "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white",
+                      isNutriResetOrder ? "bg-[#079AA5]" : "bg-[#0E76AC]",
                     )}>
-                      {(isRtl ? STATUS_LABEL[order.status]?.ar : STATUS_LABEL[order.status]?.en) || order.status}
+                      {order.customerName?.[0]?.toUpperCase() || "؟"}
                     </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-xl font-black text-slate-900">{order.customerName}</h3>
+                      <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-slate-500" dir="ltr">
+                        <Phone className="h-3.5 w-3.5" />
+                        {order.customerPhone}
+                      </p>
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "rounded-full border px-4 py-2 text-sm font-black whitespace-nowrap",
+                    STATUS_LABEL[order.status]?.cls || "border-slate-200 bg-slate-100 text-slate-700",
+                  )}>
+                    {(isRtl ? STATUS_LABEL[order.status]?.ar : STATUS_LABEL[order.status]?.en) || order.status}
                   </div>
                 </div>
 
+                <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  {orderStats.map((stat) => {
+                    const Icon = stat.icon;
+                    return (
+                      <div key={stat.label} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3.5">
+                        <span className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                          isNutriResetOrder ? "bg-[#E6F7F6] text-[#087E87]" : "bg-sky-100 text-[#0E76AC]",
+                        )}>
+                          <Icon className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[11px] font-bold text-slate-500">{stat.label}</p>
+                          <p className="mt-0.5 truncate text-sm font-black text-slate-900" title={String(stat.value)}>{stat.value}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 {/* Notes */}
-                {order.notes && (
+                {order.notes && !isSmartPlanSystemNote(order.notes) && (
                   <div className="mt-4 p-3 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500 mb-1">{t("ملاحظات العميل:", "Customer notes:")}</p>
                     <p className="text-sm text-gray-700">{order.notes}</p>
@@ -263,10 +284,11 @@ export default function OrdersPending() {
                 )}
 
                 {/* Action Hint */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-sm text-[#47759c] font-semibold text-center">
+                <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                  <p className="text-sm font-black text-[#47759c]">
                     {order.status === "pending" ? t("اضغط للمراجعة التفصيلية", "Tap for detailed review") : t("اضغط لعرض التفاصيل", "Tap to view details")}
                   </p>
+                  <ChevronLeft className={cn("h-4 w-4 text-[#47759c]", !isRtl && "rotate-180")} />
                 </div>
               </Card>
             );

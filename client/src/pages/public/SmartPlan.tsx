@@ -32,13 +32,35 @@ const WEEKDAYS_EN: Record<string,string> = {
 };
 
 
-const B = {
+const ADRENALINE_THEME = {
   brand: "#3AC7F4", accent: "#0E76AC", ink: "#0E2A4A",
-  ink2: "#2D4A67", line: "#D9E6F1", surf: "#F7FBFE", bg2: "#EAF3FB",
+  highlight: "#0E76AC", ink2: "#2D4A67", line: "#D9E6F1", surf: "#F7FBFE", bg2: "#EAF3FB", soft: "#F2FBFF", disabled: "#9CC5DB",
+};
+
+const NUTRI_RESET_THEME = {
+  brand: "#079AA5", accent: "#087E87", ink: "#354F51",
+  highlight: "#F47721", ink2: "#55565A", line: "#C8E3E3", surf: "#F7FCFB", bg2: "#E3F4F3", soft: "#EDF9F8", disabled: "#9AC9CB",
 };
 
 export default function SmartPlan() {
   const restaurant = restaurantFromPath();
+  const isNutriReset = restaurant.key === "NUTRI_RESET";
+  const B = isNutriReset ? NUTRI_RESET_THEME : ADRENALINE_THEME;
+  const chip: React.CSSProperties = {
+    fontSize: 11, fontWeight: 700, color: B.ink,
+    background: B.bg2, borderRadius: 50, padding: "3px 10px",
+  };
+  const pill: React.CSSProperties = {
+    fontSize: 12, fontWeight: 800, color: B.ink2,
+    background: B.surf, border: `1px solid ${B.line}`,
+    borderRadius: 50, padding: "4px 12px",
+  };
+  const btnPrimary = (disabled: boolean): React.CSSProperties => ({
+    background: disabled ? B.disabled : B.accent, color: "#fff",
+    border: "none", borderRadius: 12, padding: "12px 26px",
+    fontFamily: "'Cairo',sans-serif", fontSize: 15, fontWeight: 800,
+    cursor: disabled ? "default" : "pointer",
+  });
   const { language, dir } = useLanguage();
   useSeo({
     title: `خطتي الذكية | ${restaurant.nameAr}`,
@@ -82,9 +104,9 @@ export default function SmartPlan() {
   const suggestions = useQuery(
     (api.ai as any).getPlanSuggestions,
     currentCustomer?.customerId
-      ? { customerId: currentCustomer.customerId as any }
+      ? { customerId: currentCustomer.customerId as any, restaurantKey: restaurant.key }
       : phone.trim().length >= 6
-        ? { phone: phone.trim() }
+        ? { phone: phone.trim(), restaurantKey: restaurant.key }
         : "skip",
   ) as any;
 
@@ -339,6 +361,12 @@ export default function SmartPlan() {
       if (!items.length) { setError(t("لا توجد وجبات في الخطة.", "No meals in the plan.")); setOrdering(false); return; }
       const sfMsg = shortfallGuard(items);
       if (sfMsg) { setError(sfMsg); setOrdering(false); return; }
+      // Keep the exact calendar anchor used to generate the plan. The review
+      // screen needs it to map rotation-week/day slots back to real dates.
+      const preferredStartDate = (weekly.days || [])
+        .map((d: any) => String(d?.date || ""))
+        .filter((date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        .sort()[0];
       // 🔒 نبعت IDs فقط — الأسعار والسعرات محسوبة على الخادم
       const idem = `sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
@@ -346,11 +374,18 @@ export default function SmartPlan() {
         ...orderIdentity(),
         items: items.map((i: any) => ({ mealId: i.mealId, week: i.week, day: i.day })),
         notes: "Weekly plan from the smart meal generator",
+        preferredStartDate: preferredStartDate || undefined,
         idempotencyKey: idem,
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
-    } catch (e) {
-      setError(t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
+    } catch (e: any) {
+      const raw = String(e?.message || e || "");
+      setError(raw.includes("ORDER_VALIDATION:SUBSCRIPTION_COUNT_MISMATCH")
+        ? t(
+            "هذه الخطة القديمة لا تطابق عدد وجبات اشتراكك الحالي. أعد توليد الخطة ثم أرسلها مرة أخرى.",
+            "This older plan does not match your current subscription counts. Regenerate it, then send it again.",
+          )
+        : t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -370,11 +405,20 @@ export default function SmartPlan() {
         ...orderIdentity(),
         items,
         notes: "Order from the smart meal generator",
+        preferredStartDate: /^\d{4}-\d{2}-\d{2}$/.test(String(result?.meta?.date || ""))
+          ? String(result.meta.date)
+          : undefined,
         idempotencyKey: idem,
       });
       setOrderNo(res?.orderNumber || t("تم", "Done"));
-    } catch (e) {
-      setError(t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
+    } catch (e: any) {
+      const raw = String(e?.message || e || "");
+      setError(raw.includes("ORDER_VALIDATION:SUBSCRIPTION_COUNT_MISMATCH")
+        ? t(
+            "هذه الخطة القديمة لا تطابق عدد وجبات اشتراكك الحالي. أعد توليد الخطة ثم أرسلها مرة أخرى.",
+            "This older plan does not match your current subscription counts. Regenerate it, then send it again.",
+          )
+        : t("تعذّر إنشاء الطلب، يُرجى المحاولة مرة أخرى.", "Could not create the order, please try again."));
     } finally { setOrdering(false); }
   };
 
@@ -398,7 +442,9 @@ export default function SmartPlan() {
       ),
       duration: 8000,
     });
-    const source = useLogin ? { customerId: loggedInId as any } : { phone: phone.trim() };
+    const source = useLogin
+      ? { customerId: loggedInId as any, restaurantKey: restaurant.key }
+      : { phone: phone.trim(), restaurantKey: restaurant.key };
     try {
       // 🔒 التوليد الأسبوعي يستلزم جلسة (منع استنزاف رصيد AI من الزوار)
       const sessionToken = useStore.getState().sessionToken || undefined;
@@ -456,8 +502,9 @@ export default function SmartPlan() {
   return (
     <PublicLayout>
       <PageHeader
+        variant={isNutriReset ? "nutri-reset" : "default"}
         eyebrowAr="مدعوم بالذكاء الاصطناعي" eyebrowEn="AI-POWERED"
-        icon={<Sparkles className="w-3.5 h-3.5" style={{ color: "#3AC7F4" }} />}
+        icon={<Sparkles className="w-3.5 h-3.5" style={{ color: isNutriReset ? "#FFB575" : B.brand }} />}
         titleAr="خطة وجباتك الذكية" titleEn="Your Smart Meal Plan"
         subtitleAr="اختر خطة يوم أو أسبوع — تُختار وجباتك من المتاح وفق هدفك وتفضيلاتك، ويعتمدها أخصائي التغذية."
         subtitleEn="Pick a daily or weekly plan — we choose from available meals by your goal and preferences."
@@ -487,7 +534,7 @@ export default function SmartPlan() {
             <div style={{
               display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center",
               padding: "12px 14px", borderRadius: 12, marginBottom: 14,
-              background: "#F2FBFF", border: `1px solid ${B.line}`,
+              background: B.soft, border: `1px solid ${B.line}`,
             }}>
               {whoName && (
                 <span style={{ fontWeight: 900, color: B.ink, fontSize: 14 }}>👤 {whoName}</span>
@@ -496,7 +543,7 @@ export default function SmartPlan() {
                   ("4 وجبات + 2 سناك يومياً")، وهما اللي الخطة تُبنى عليهم فعلاً،
                   فلازم يبانوا هنا كمان. */}
               {subMeals != null && (
-                <span style={{ ...pill, background: "#0E2A4A", color: "#fff", border: "none" }}>
+                <span style={{ ...pill, background: isNutriReset ? B.highlight : B.ink, color: "#fff", border: "none" }}>
                   {t(
                     `${subMeals} ${subMeals === 2 ? "وجبتان" : subMeals === 1 ? "وجبة" : "وجبات"}${subSnacks ? ` + ${subSnacks} ${subSnacks === 2 ? "سناك" : "سناك"}` : ""} يومياً`,
                     `${subMeals} meal${subMeals === 1 ? "" : "s"}${subSnacks ? ` + ${subSnacks} snack${subSnacks === 1 ? "" : "s"}` : ""} daily`,
@@ -509,7 +556,7 @@ export default function SmartPlan() {
                 <span style={pill}>{t(`المدة: ${suggestions.durationWeeks} أسابيع`, `${suggestions.durationWeeks} weeks`)}</span>
               )}
               {startRotInfo?.rotationWeek && (
-                <span style={{ ...pill, background: "#0E76AC", color: "#fff", border: "none" }}>
+                <span style={{ ...pill, background: B.accent, color: "#fff", border: "none" }}>
                   {t(`دورة المطبخ لاشتراكك: ${startRotInfo.rotationWeek}`, `Your rotation: ${startRotInfo.rotationWeek}`)}
                 </span>
               )}
@@ -615,13 +662,13 @@ export default function SmartPlan() {
           {mode === "week" && (
             <div style={{
               display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16,
-              padding: 14, borderRadius: 12, background: "#F2FBFF", border: `1px solid ${B.line}`,
+              padding: 14, borderRadius: 12, background: B.soft, border: `1px solid ${B.line}`,
             }}>
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
                   {t("عدد الأسابيع", "Number of weeks")}
                   {suggestions?.durationWeeks ? (
-                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                    <span style={{ fontWeight: 600, color: isNutriReset ? B.highlight : B.accent }}>
                       {" "}{t(`(اشتراكه ${suggestions.durationWeeks})`, `(sub: ${suggestions.durationWeeks})`)}
                     </span>
                   ) : null}
@@ -640,8 +687,8 @@ export default function SmartPlan() {
                           fontFamily: "'Cairo',sans-serif",
                           cursor: blocked ? "not-allowed" : "pointer",
                           opacity: blocked ? 0.4 : 1,
-                          border: `1.5px solid ${effWeeks === n ? "#0E76AC" : B.line}`,
-                          background: effWeeks === n ? "#0E76AC" : "#fff",
+                          border: `1.5px solid ${effWeeks === n ? B.accent : B.line}`,
+                          background: effWeeks === n ? B.accent : "#fff",
                           color: effWeeks === n ? "#fff" : B.ink2,
                         }}>
                         {n}
@@ -663,11 +710,11 @@ export default function SmartPlan() {
                 <label style={{ fontSize: 12, fontWeight: 800, color: B.ink2, display: "block", marginBottom: 6 }}>
                   {t("يبدأ من دورة الأسبوع", "Start rotation week")}
                   {startRotInfo?.rotationWeek ? (
-                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                    <span style={{ fontWeight: 600, color: isNutriReset ? B.highlight : B.accent }}>
                       {" "}{t(`(اشتراكك يبدأ من ${startRotInfo.rotationWeek})`, `(sub starts at ${startRotInfo.rotationWeek})`)}
                     </span>
                   ) : suggestions?.currentRotationWeek ? (
-                    <span style={{ fontWeight: 600, color: "#0E76AC" }}>
+                    <span style={{ fontWeight: 600, color: isNutriReset ? B.highlight : B.accent }}>
                       {" "}{t(`(المطبخ الآن ${suggestions.currentRotationWeek})`, `(kitchen now ${suggestions.currentRotationWeek})`)}
                     </span>
                   ) : null}
@@ -682,8 +729,8 @@ export default function SmartPlan() {
                       style={{
                         flex: 1, padding: "8px 0", borderRadius: 9, cursor: locked ? "not-allowed" : "pointer",
                         fontWeight: 900, fontSize: 14, fontFamily: "'Cairo',sans-serif",
-                        border: `1.5px solid ${effStartRot === n ? "#0E76AC" : B.line}`,
-                        background: effStartRot === n ? "#0E76AC" : locked ? "#f3f4f6" : "#fff",
+                        border: `1.5px solid ${effStartRot === n ? (isNutriReset ? B.highlight : B.accent) : B.line}`,
+                        background: effStartRot === n ? (isNutriReset ? B.highlight : B.accent) : locked ? "#f3f4f6" : "#fff",
                         color: effStartRot === n ? "#fff" : locked ? "#cbd5e1" : B.ink2,
                       }}>
                       {n}
@@ -790,7 +837,7 @@ export default function SmartPlan() {
                 {showWeekHeader && (
                   <div style={{
                     margin: di === 0 ? "0 0 10px" : "18px 0 10px", padding: "8px 14px", borderRadius: 10,
-                    background: "#EAF3FB", border: "1px solid #CFE4F3", color: "#0E2A4A",
+                    background: B.bg2, border: `1px solid ${B.line}`, color: B.ink,
                     fontWeight: 900, fontSize: 14,
                   }}>
                     {t(`الأسبوع (دورة ${d.rotationWeek})`, `Week (rotation ${d.rotationWeek})`)}
@@ -823,7 +870,7 @@ export default function SmartPlan() {
                                 onClick={() => setSwap({ src: "weekly", di, i, week: d.rotationWeek || 1, day: d.day, meal: m })}
                                 style={{
                                   marginTop: 6, width: "100%", padding: "4px 8px", borderRadius: 8, cursor: "pointer",
-                                  border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
+                                  border: `1px solid ${B.line}`, background: B.soft, color: B.accent,
                                   fontFamily: "'Cairo',sans-serif", fontSize: 11, fontWeight: 800,
                                 }}
                               >
@@ -980,7 +1027,7 @@ export default function SmartPlan() {
                         onClick={() => setSwap({ src: "day", i, week: result.meta?.rotationWeek || 1, day: result.meta?.day || WEEKDAYS[new Date().getDay()], meal: m })}
                         style={{
                           marginTop: 10, width: "100%", padding: "6px 10px", borderRadius: 10, cursor: "pointer",
-                          border: "1px solid #CFE4F3", background: "#F2FBFF", color: "#0E76AC",
+                          border: `1px solid ${B.line}`, background: B.soft, color: B.accent,
                           fontFamily: "'Cairo',sans-serif", fontSize: 12.5, fontWeight: 800,
                         }}
                       >
@@ -1076,7 +1123,7 @@ export default function SmartPlan() {
                 <h3 style={{ fontFamily: "'Cairo',sans-serif", fontSize: 17, fontWeight: 800, color: B.ink, margin: 0 }}>
                   {swap.add
                     ? <>➕ {t(swap.need === "snack" ? "أضف سناك" : "أضف وجبة رئيسية", swap.need === "snack" ? "Add snack" : "Add main meal")}</>
-                    : <>🔁 {t("تبديل:", "Swap:")} <span style={{ color: "#0E76AC" }}>{isRtl ? swap.meal?.nameAr : (swap.meal?.nameEn || swap.meal?.nameAr)}</span></>}
+                    : <>🔁 {t("تبديل:", "Swap:")} <span style={{ color: B.accent }}>{isRtl ? swap.meal?.nameAr : (swap.meal?.nameEn || swap.meal?.nameAr)}</span></>}
                 </h3>
                 <button onClick={() => setSwap(null)} style={{ border: "none", background: "none", fontSize: 24, color: "#94a3b8", cursor: "pointer", lineHeight: 1 }}>×</button>
               </div>
@@ -1131,11 +1178,6 @@ export default function SmartPlan() {
   );
 }
 
-const chip: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, color: "#0E2A4A",
-  background: "#EAF3FB", borderRadius: 50, padding: "3px 10px",
-};
-
 /**
  * صيغة عدد الأسابيع بالعربية الفصحى — العربية فيها مفرد ومثنّى وجمع،
  * فـ"2 أسابيع" خطأ نحوي والصواب "أسبوعان". النطاق هنا 1..4 (دورة المطبخ).
@@ -1144,19 +1186,4 @@ function arWeeks(n: number): string {
   if (n === 1) return "أسبوعاً واحداً";
   if (n === 2) return "أسبوعين";
   return `${n} أسابيع`;
-}
-
-const pill: React.CSSProperties = {
-  fontSize: 12, fontWeight: 800, color: "#2D4A67",
-  background: "#F7FBFE", border: "1px solid #D9E6F1",
-  borderRadius: 50, padding: "4px 12px",
-};
-
-function btnPrimary(disabled: boolean): React.CSSProperties {
-  return {
-    background: disabled ? "#9CC5DB" : "#0E76AC", color: "#fff",
-    border: "none", borderRadius: 12, padding: "12px 26px",
-    fontFamily: "'Cairo',sans-serif", fontSize: 15, fontWeight: 800,
-    cursor: disabled ? "default" : "pointer",
-  };
 }

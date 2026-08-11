@@ -83,8 +83,13 @@ export default function PublicMenuPage() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const isNutriReset = restaurant.key === "NUTRI_RESET";
   const customerBrandName = restaurant.nameEn;
-  const customerAccent = isNutriReset ? "#20AFC0" : "#3CC4F0";
-  const customerAccentDark = isNutriReset ? "#148C9B" : "#47759C";
+  const customerAccent = isNutriReset ? "#079AA5" : "#3CC4F0";
+  const customerAccentDark = isNutriReset ? "#087E87" : "#47759C";
+  const customerInk = isNutriReset ? "#354F51" : "#0E2A4A";
+  const customerMuted = isNutriReset ? "#55565A" : "#47759C";
+  const customerSoft = isNutriReset ? "#EDF9F8" : "#F2FBFF";
+  const customerLine = isNutriReset ? "#C8E3E3" : "#D9E6F1";
+  const customerGradient = `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`;
   const [, setLocation] = useLocation();
   
   // Cart State
@@ -1087,7 +1092,7 @@ Is that what you want?`,
               <div className="relative">
                 {/* Restaurant identity */}
                 {isNutriReset ? (
-                  <div className="mx-auto mb-5 flex h-20 w-40 items-center justify-center rounded-2xl border border-[#20AFC0]/20 bg-white px-4 shadow-[0_8px_24px_rgba(32,175,192,0.16)]">
+                  <div className="mx-auto mb-5 flex h-20 w-40 items-center justify-center rounded-2xl border border-[#079AA5]/20 bg-white px-4 shadow-[0_8px_24px_rgba(7,154,165,0.16)]">
                     <img src={restaurant.logo} alt={restaurant.nameEn} className="max-h-14 w-full object-contain" />
                   </div>
                 ) : (
@@ -1163,7 +1168,7 @@ Is that what you want?`,
                     <button
                       onClick={handleBrowseOnly}
                       className="w-full mt-3 h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
-                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
+                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: customerMuted }}
                     >
                       {isRtl ? "تصفّح قائمة الوجبات فقط" : "Just Browse Menu"}
                     </button>
@@ -1227,7 +1232,7 @@ Is that what you want?`,
                     <button
                       onClick={handleBrowseOnly}
                       className="w-full h-11 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all hover:bg-gray-50"
-                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: "#47759C" }}
+                      style={{ background: "transparent", border: "1.5px solid #e2e8f0", color: customerMuted }}
                     >
                       {isRtl ? "تصفّح قائمة الوجبات فقط" : "Just Browse Menu"}
                     </button>
@@ -1261,7 +1266,7 @@ Is that what you want?`,
                         style={{ border: "1.5px solid #e2e8f0" }}
                       >
                         <div className="h-11 w-11 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-black text-white"
-                          style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                          style={{ background: customerGradient }}>
                           {c.fullName?.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0 text-right">
@@ -1347,7 +1352,7 @@ Is that what you want?`,
         <div className="sticky top-[73px] z-50 border-b px-4 py-3"
           style={{
             background: isNutriReset
-              ? "linear-gradient(110deg, #128A98 0%, #20AFC0 58%, #167985 100%)"
+              ? "linear-gradient(110deg, #087E87 0%, #079AA5 58%, #066F77 100%)"
               : "linear-gradient(135deg, #3CC4F0 0%, #47759C 100%)",
             borderColor: isNutriReset ? "#F47721" : "transparent",
             boxShadow: isNutriReset
@@ -1478,27 +1483,27 @@ Is that what you want?`,
 
       {/* Restaurant-specific identity header */}
       {restaurant.key === "NUTRI_RESET" ? (
-        <section className="relative overflow-hidden border-b border-[#22AEC0]/25 bg-white" dir={isRtl ? "rtl" : "ltr"}>
-          <div className="pointer-events-none absolute -start-20 -top-24 h-56 w-56 rounded-full border-[13px] border-[#22AEC0] opacity-90" />
+        <section className="relative overflow-hidden border-b border-[#079AA5]/25 bg-white" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="pointer-events-none absolute -start-20 -top-24 h-56 w-56 rounded-full border-[13px] border-[#079AA5] opacity-90" />
           <div className="pointer-events-none absolute -start-28 -top-32 h-52 w-52 rounded-full border-[10px] border-[#F47721]" />
           <div className="mx-auto grid min-h-[500px] max-w-7xl items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1.08fr_.92fr] lg:gap-12 lg:py-14">
             <div className="relative z-10 flex flex-col justify-center lg:px-5">
               <img src={restaurant.logo} alt="Nutri Reset" className="mb-7 h-auto w-full max-w-[390px] object-contain" />
               <p className="mb-2 text-sm font-black uppercase tracking-[.16em] text-[#55565a]">Reset your body. Rebalance your life.</p>
-              <h1 className="max-w-xl text-4xl font-black leading-tight text-[#22AEC0] sm:text-5xl">
+              <h1 className="max-w-xl text-4xl font-black leading-tight text-[#079AA5] sm:text-5xl">
                 {isRtl ? "تغذية مخصصة، نتائج حقيقية" : "Personalized Nutrition. Real Results."}
               </h1>
               <p className="mt-5 max-w-xl text-base font-semibold leading-8 text-[#55565a]">
                 {isRtl ? "نصمم خطة غذائية تناسب أهدافك وأسلوب حياتك وجسمك، بوجبات صحية ومكونات حقيقية تصل إلى بابك." : "We create nutrition plans that fit your goals, lifestyle, and body, with healthy meals and real ingredients delivered to your door."}
               </p>
               <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#subscriber-menu" className="rounded-full bg-[#22AEC0] px-6 py-3 text-sm font-black text-white shadow-[0_10px_24px_-14px_rgba(34,174,192,.9)]">{isRtl ? "اختر وجباتك" : "Choose your meals"}</a>
+                <a href="#subscriber-menu" className="rounded-full bg-[#079AA5] px-6 py-3 text-sm font-black text-white shadow-[0_10px_24px_-14px_rgba(7,154,165,.9)]">{isRtl ? "اختر وجباتك" : "Choose your meals"}</a>
                 <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} className="rounded-full border-2 border-[#F47721] px-6 py-3 text-sm font-black text-[#E66C18]">{isRtl ? "تواصل معنا" : "Contact us"}</a>
               </div>
             </div>
             <div className="relative mx-auto w-full max-w-[410px]">
               <div className="absolute -inset-3 translate-x-3 translate-y-3 rounded-[2rem] bg-[#F47721]/15" />
-              <div className="absolute -inset-3 -translate-x-3 -translate-y-3 rounded-[2rem] border-2 border-[#20AFC0]/35" />
+              <div className="absolute -inset-3 -translate-x-3 -translate-y-3 rounded-[2rem] border-2 border-[#079AA5]/35" />
               <div className="relative aspect-[502/625] overflow-hidden rounded-[1.7rem] bg-[#F8FBF8] shadow-[0_22px_55px_-28px_rgba(31,76,82,.42)]">
                 <img
                   src="/nutri-reset-woman-meal.png"
@@ -1521,32 +1526,33 @@ Is that what you want?`,
       {!isVisitor && (
       <section id="subscriber-menu" className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 py-5" dir={isRtl ? "rtl" : "ltr"}>
-          <p className="text-center text-sm font-bold text-[#47759C] mb-3">
+          <p className="text-center text-sm font-bold mb-3" style={{ color: customerMuted }}>
             {isRtl ? "اختر طريقتك:" : "Choose how to order:"}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Manual */}
-            <div className="rounded-2xl border-2 border-[#3CC4F0] bg-[#3CC4F0]/5 p-4 flex items-center gap-3">
-              <div className="h-11 w-11 rounded-xl bg-[#3CC4F0]/15 flex items-center justify-center shrink-0">
-                <UtensilsCrossed className="h-5 w-5 text-[#0E76AC]" />
+            <div className="rounded-2xl border-2 p-4 flex items-center gap-3" style={{ borderColor: customerAccent, background: customerSoft }}>
+              <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${customerAccent}20` }}>
+                <UtensilsCrossed className="h-5 w-5" style={{ color: customerAccentDark }} />
               </div>
               <div className="min-w-0">
-                <div className="font-black text-[#0E2A4A]">{isRtl ? "اختيار يدوي" : "Manual Pick"}</div>
-                <div className="text-xs text-[#47759C]">{isRtl ? "تصفّح القائمة واختر وجباتك بنفسك (أنت هنا)" : "Browse and pick your meals (you're here)"}</div>
+                <div className="font-black" style={{ color: customerInk }}>{isRtl ? "اختيار يدوي" : "Manual Pick"}</div>
+                <div className="text-xs" style={{ color: customerMuted }}>{isRtl ? "تصفّح القائمة واختر وجباتك بنفسك (أنت هنا)" : "Browse and pick your meals (you're here)"}</div>
               </div>
             </div>
             {/* Smart */}
             <button
               onClick={() => setLocation(restaurant.key === "NUTRI_RESET" ? "/customer/smart-plan?restaurant=NUTRI_RESET" : "/customer/smart-plan")}
-              className="rounded-2xl border border-[#D9E6F1] hover:border-[#0E76AC] hover:shadow-md transition-all p-4 flex items-center gap-3 text-start"
+              className="rounded-2xl border hover:shadow-md transition-all p-4 flex items-center gap-3 text-start"
+              style={{ borderColor: customerLine }}
             >
               <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: "linear-gradient(145deg,#3AC7F4,#0E76AC)" }}>
+                style={{ background: isNutriReset ? "#F47721" : customerGradient }}>
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div className="min-w-0">
-                <div className="font-black text-[#0E2A4A]">{isRtl ? "خطة ذكية ✨" : "Smart Plan ✨"}</div>
-                <div className="text-xs text-[#47759C]">{isRtl ? "دع الاختيار لنا — تقترح الخطة الذكية وجبات يوم أو أسبوع" : "Let AI pick for you (day or week)"}</div>
+                <div className="font-black" style={{ color: customerInk }}>{isRtl ? "خطة ذكية ✨" : "Smart Plan ✨"}</div>
+                <div className="text-xs" style={{ color: customerMuted }}>{isRtl ? "دع الاختيار لنا — تقترح الخطة الذكية وجبات يوم أو أسبوع" : "Let AI pick for you (day or week)"}</div>
               </div>
             </button>
           </div>
@@ -1791,7 +1797,7 @@ Is that what you want?`,
                 "w-full mb-4 rounded-2xl px-4 py-3 flex items-center justify-center gap-2 font-black text-white transition-all",
                 autoFilling ? "opacity-70 cursor-wait" : "hover:brightness-110 active:scale-[0.99]",
               )}
-              style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}
+              style={{ background: customerGradient }}
             >
               <Sparkles className="h-5 w-5" />
               {autoFilling
@@ -1825,7 +1831,7 @@ Is that what you want?`,
             return (
               <div className="space-y-4">
                 {/* هيرو اليوم + التقدم الكلي */}
-                <div className="rounded-2xl p-4 text-white" style={{ background: "linear-gradient(135deg,#0E76AC,#3CC4F0)" }}>
+                <div className="rounded-2xl p-4 text-white" style={{ background: customerGradient }}>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div>
                       <p className="text-[11px] font-bold opacity-85">{isRtl ? "خطة وجباتك" : "Your meal plan"}</p>
@@ -1868,11 +1874,12 @@ Is that what you want?`,
                         }}
                         className={cn(
                           "shrink-0 min-w-[84px] rounded-2xl px-3 py-2 text-center text-xs font-black transition-all border",
-                          cur ? "bg-[#0E76AC] text-white border-[#0E76AC] shadow-md"
+                          cur ? "text-white shadow-md"
                             : done ? "bg-emerald-50 text-emerald-700 border-emerald-300"
                             : allowed ? "bg-white text-gray-700 border-gray-200 hover:border-[#3CC4F0]"
                             : "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed",
-                        )}>
+                        )}
+                        style={cur ? { background: customerAccentDark, borderColor: customerAccentDark } : undefined}>
                         <div>{lbl} {done ? "✓" : !allowed ? "🔒" : ""}</div>
                         <div className={cn("text-[10px] mt-0.5 font-semibold", cur ? "text-white/80" : "text-gray-400")}>{dateLblOf(s.week, s.day)}</div>
                       </button>
@@ -1896,14 +1903,15 @@ Is that what you want?`,
                           }}
                           className={cn(
                             "flex-1 min-w-[110px] rounded-2xl border-2 p-2.5 text-start transition-all",
-                            active ? "border-[#3CC4F0] bg-[#eefafe] shadow-sm"
+                            active ? "shadow-sm"
                               : sc.item ? "border-emerald-200 bg-emerald-50/60"
                               : "border-gray-200 bg-white",
-                          )}>
+                          )}
+                          style={active ? { borderColor: customerAccent, background: customerSoft } : undefined}>
                           <p className={cn("text-[10px] font-black", sc.item ? "text-emerald-600" : "text-gray-500")}>
                             {sc.kind === "main" ? "🍽️" : "🍎"} {sc.label} {sc.item && <Check className="inline h-3 w-3" />}
                           </p>
-                          <p className={cn("text-[12px] font-black mt-0.5 leading-tight", sc.item ? "text-[#0E2A4A]" : "text-gray-300")}>
+                          <p className={cn("text-[12px] font-black mt-0.5 leading-tight", !sc.item && "text-gray-300")} style={sc.item ? { color: customerInk } : undefined}>
                             {sc.item ? (isRtl ? sc.item.nameAr : (sc.item.nameEn || sc.item.nameAr)) : (isRtl ? "اضغط للاختيار" : "Tap to pick")}
                           </p>
                         </button>
@@ -1914,7 +1922,7 @@ Is that what you want?`,
 
                 {/* حالة اليوم + إرشاد الاختيار */}
                 {selectedDay && (
-                  <div className="flex items-center justify-between flex-wrap gap-2 text-[12px] font-bold text-[#47759C]">
+                  <div className="flex items-center justify-between flex-wrap gap-2 text-[12px] font-bold" style={{ color: customerMuted }}>
                     <span>
                       {isRtl
                         ? `اختر ${pathKind === "snack" ? "سناك" : "وجبة"} ${curLbl} من القائمة بالأسفل — ${mainMealsToday}${hasMealLimit ? `/${mealsPerDay}` : ""} وجبة · ${snacksToday}${hasSnackLimit ? `/${snacksPerDay}` : ""} سناك`
@@ -1932,7 +1940,7 @@ Is that what you want?`,
           })() : (<>
           {/* Week Tabs */}
           <div className="mb-4">
-            <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
+            <h3 className="text-sm font-bold mb-3" style={{ color: customerMuted }}>{isRtl ? "اختر الأسبوع" : "Choose Week"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {weeks
                 // ✅ لو للعميل اشتراك محدد، نعرض فقط الأسابيع الفعلية للاشتراك
@@ -1973,11 +1981,12 @@ Is that what you want?`,
                   className={cn(
                     "px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap transition-all flex items-center gap-1.5",
                     selectedWeek === week.value
-                      ? "bg-[#3CC4F0] text-white shadow-md scale-105"
+                      ? "text-white shadow-md scale-105"
                       : isWeekAllowed(week.value)
                         ? "bg-white text-[#47759C] border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5"
                         : "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed" // 🔒 مقفول حتى يكمل ما قبله
                   )}
+                  style={selectedWeek === week.value ? { background: customerAccent } : undefined}
                 >
                   {week.label}
                   {!isWeekAllowed(week.value) && selectedWeek !== week.value && <span className="text-[11px]">🔒</span>}
@@ -1999,7 +2008,7 @@ Is that what you want?`,
 
           {/* Day Chips */}
           <div className="mb-4">
-            <h3 className="text-sm font-bold text-[#47759C] mb-3">{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
+            <h3 className="text-sm font-bold mb-3" style={{ color: customerMuted }}>{isRtl ? "اختر اليوم" : "Choose Day"}</h3>
             <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {days
                 // ✅ نعرض أيام هذا الأسبوع الواقعة فعلاً داخل نافذة الاشتراك (من بكرة
@@ -2054,7 +2063,7 @@ Is that what you want?`,
                     className={cn(
                       "px-5 py-2 rounded-2xl text-sm font-bold whitespace-nowrap transition-all flex flex-col items-center leading-tight",
                       isSel
-                        ? "bg-[#3CC4F0] text-white shadow-md"
+                        ? "text-white shadow-md"
                         : prog.complete
                           ? "bg-emerald-50 text-emerald-700 border border-emerald-300"
                           : !isSlotAllowed(selectedWeek, day.value)
@@ -2062,6 +2071,7 @@ Is that what you want?`,
                             ? "bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed"
                             : "bg-white text-gray-700 border border-gray-200 hover:border-[#3CC4F0] hover:bg-[#3CC4F0]/5",
                     )}
+                    style={isSel ? { background: customerAccent } : undefined}
                   >
                     <span className="flex items-center gap-1.5">
                       {day.label}
@@ -2099,20 +2109,20 @@ Is that what you want?`,
           {selectedDay && (
             <div className="rounded-2xl p-4"
               style={{
-                background: "linear-gradient(135deg, #ecfeff, #f0f9ff)",
-                border: "1.5px solid #a5f3fc",
+                background: customerSoft,
+                border: `1.5px solid ${customerLine}`,
               }}>
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)" }}>
+                    style={{ background: customerGradient }}>
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide" style={{ color: "#0891b2" }}>
                       {isRtl ? "اختياراتك لهذا اليوم" : "Today's Selection"}
                     </p>
-                    <p className="text-[11px] text-[#47759C] mt-0.5">
+                    <p className="text-[11px] mt-0.5" style={{ color: customerMuted }}>
                       {isRtl
                         ? `${days.find((d) => d.value === selectedDay)?.label} - الأسبوع ${selectedWeek}`
                         : `${days.find((d) => d.value === selectedDay)?.label} - Week ${selectedWeek}`}
@@ -2122,10 +2132,10 @@ Is that what you want?`,
                 <div className="flex items-center gap-2">
                   {/* Meals counter */}
                   <div className="rounded-xl px-3 py-2 bg-white"
-                    style={{ border: `2px solid ${mainMealsToday >= mealsPerDay ? "#10b981" : "#3CC4F0"}` }}>
-                    <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "الوجبات" : "Meals"}</p>
+                    style={{ border: `2px solid ${mainMealsToday >= mealsPerDay ? "#10b981" : customerAccent}` }}>
+                    <p className="text-[10px] font-bold leading-none" style={{ color: customerMuted }}>{isRtl ? "الوجبات" : "Meals"}</p>
                     <p className="text-lg font-black tabular-nums leading-none mt-1"
-                      style={{ color: mainMealsToday >= mealsPerDay ? "#10b981" : "#3CC4F0" }}>
+                      style={{ color: mainMealsToday >= mealsPerDay ? "#10b981" : customerAccent }}>
                       {mainMealsToday}
                       {hasMealLimit && <span className="text-xs text-gray-400">/{mealsPerDay}</span>}
                     </p>
@@ -2133,7 +2143,7 @@ Is that what you want?`,
                   {/* Snacks counter */}
                   <div className="rounded-xl px-3 py-2 bg-white"
                     style={{ border: `2px solid ${snacksToday >= snacksPerDay ? "#10b981" : "#10b981"}` }}>
-                    <p className="text-[10px] text-[#47759C] font-bold leading-none">{isRtl ? "السناك" : "Snacks"}</p>
+                    <p className="text-[10px] font-bold leading-none" style={{ color: customerMuted }}>{isRtl ? "السناك" : "Snacks"}</p>
                     <p className="text-lg font-black tabular-nums leading-none mt-1 text-emerald-600">
                       {snacksToday}
                       {hasSnackLimit && <span className="text-xs text-gray-400">/{snacksPerDay}</span>}
@@ -2186,7 +2196,7 @@ Is that what you want?`,
         <div className={cn("max-w-6xl mx-auto px-4", pathMode ? "py-3" : "py-6")}>
           {/* Search Bar */}
           <div className={cn("relative", pathMode ? "mb-0" : "mb-6")}>
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#47759C]" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: customerMuted }} />
             <Input
               type="text"
               placeholder={isRtl ? "ابحث عن وجبة..." : "Search for a meal..."}
@@ -2206,9 +2216,10 @@ Is that what you want?`,
                 className={cn(
                   "px-6 py-2 rounded-full font-medium transition-all",
                   activeCategory === cat.id
-                    ? "bg-[#3CC4F0] text-white shadow-md"
+                    ? "text-white shadow-md"
                     : "bg-gray-100 text-[#47759C] hover:bg-gray-200"
                 )}
+                style={activeCategory === cat.id ? { background: customerAccent } : undefined}
               >
                 {isRtl ? cat.labelAr : cat.labelEn}
               </button>
@@ -2219,7 +2230,7 @@ Is that what you want?`,
           {uiClassic && orderedSubSlots.length > 0 && (
             <div className="text-center mt-3">
               <button onClick={() => setUiMode(false)}
-                className="text-xs font-black text-[#0E76AC] underline hover:opacity-80">
+                className="text-xs font-black underline hover:opacity-80" style={{ color: customerAccentDark }}>
                 ✨ {isRtl ? "جرّب الواجهة الجديدة (مسار الأيام)" : "Try the new day-path view"}
               </button>
             </div>
@@ -2232,7 +2243,7 @@ Is that what you want?`,
         <div className="max-w-7xl mx-auto px-4">
           {meals.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-xl text-[#47759C]">
+              <p className="text-xl" style={{ color: customerMuted }}>
                 {isRtl ? "لا توجد وجبات متاحة" : "No meals available"}
               </p>
             </div>
@@ -2595,11 +2606,12 @@ Is that what you want?`,
         <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
           <Button
             onClick={() => setLocation(restaurant.reviewPath)}
-            className="h-14 px-8 rounded-full bg-gradient-to-l from-[#3CC4F0] to-[#47759C] hover:from-[#47759C] hover:to-[#3CC4F0] text-white font-bold shadow-2xl flex items-center gap-3"
+            className="h-14 px-8 rounded-full text-white font-bold shadow-2xl flex items-center gap-3"
+            style={{ background: customerGradient }}
           >
             <ShoppingCart className="h-5 w-5" />
             <span>{isRtl ? "مراجعة الطلب" : "Review Order"}</span>
-            <div className="bg-white text-[#3CC4F0] rounded-full h-6 w-6 flex items-center justify-center text-sm font-bold">
+            <div className="bg-white rounded-full h-6 w-6 flex items-center justify-center text-sm font-bold" style={{ color: customerAccent }}>
               {getTotalMeals()}
             </div>
           </Button>

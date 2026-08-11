@@ -9,7 +9,7 @@ import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Printer, Share2 } from "lucide-react";
+import { CalendarIcon, Printer, Share2, Store, Sparkles, UtensilsCrossed } from "lucide-react";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
@@ -35,6 +35,12 @@ const categoryNameAr: Record<string, string> = {
   snack: "سناك",
   salad: "سلطة",
 };
+
+const isSmartPlanOrder = (notes: unknown) =>
+  /smart meal generator|smart plan|مول[ّ]?د الوجبات الذكي|الخطة الذكية/i.test(String(notes || ""));
+
+const isSmartPlanSystemNote = (notes: unknown) =>
+  /^(weekly plan from the smart meal generator|order from the smart meal generator)$/i.test(String(notes || "").trim());
 const dayNameEn: Record<string, string> = {
   saturday: "Saturday", sunday: "Sunday", monday: "Monday", tuesday: "Tuesday",
   wednesday: "Wednesday", thursday: "Thursday", friday: "Friday",
@@ -408,6 +414,25 @@ export default function OrderReviewDetail() {
       effectiveStartDate = localISO(startDate);
     } else if (firstDayOverride) {
       effectiveStartDate = firstDayOverride;
+    } else if (/smart meal generator/i.test(String((orderData as any)?.notes || ""))) {
+      // Backward-compatible repair for smart-plan orders created before their
+      // generated calendar anchor was stored. Rebuild the same anchor used by
+      // SmartPlan: max(subscription start, day after order creation).
+      const createdAt = Number((orderData as any)?.createdAt);
+      if (Number.isFinite(createdAt) && createdAt > 0) {
+        const nextDay = new Date(createdAt);
+        nextDay.setHours(0, 0, 0, 0);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const generatedStart = localISO(nextDay);
+        const phoneDigits = String((orderData as any)?.customerPhone || "").replace(/\D/g, "").slice(-8);
+        const matchingCustomer = (customers as any[]).find((c: any) =>
+          String(c?.phone || c?.mobile || c?.whatsapp || "").replace(/\D/g, "").slice(-8) === phoneDigits
+        );
+        const subscriptionStart = String(matchingCustomer?.startDate || "").slice(0, 10);
+        effectiveStartDate = /^\d{4}-\d{2}-\d{2}$/.test(subscriptionStart) && subscriptionStart > generatedStart
+          ? subscriptionStart
+          : generatedStart;
+      }
     }
 
     if (!effectiveStartDate) {
@@ -592,6 +617,35 @@ export default function OrderReviewDetail() {
         </div>
       </div>
 
+      <div className={cn(
+        "flex min-h-20 items-center justify-between gap-4 rounded-2xl px-5 py-4 text-white shadow-sm",
+        (order as any).restaurantKey === "NUTRI_RESET" ? "bg-[#079AA5]" : "bg-[#0E76AC]",
+      )}>
+        <div className="flex items-center gap-4">
+          <span className={cn(
+            "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl",
+            (order as any).restaurantKey === "NUTRI_RESET" ? "bg-[#F47721]" : "bg-[#3AC7F4]",
+          )}>
+            <Store className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-xs font-bold text-white/80">{t("هذا الطلب تابع لمطعم", "This order belongs to")}</p>
+            <p className="mt-1 text-xl font-black tracking-wide sm:text-2xl">
+              {(order as any).restaurantKey === "NUTRI_RESET" ? "NUTRI RESET" : "ADRENALINE"}
+            </p>
+          </div>
+        </div>
+        <span className={cn(
+          "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black sm:text-sm",
+          isSmartPlanOrder(order.notes) ? "border-violet-200 bg-violet-50 text-violet-800" : "border-emerald-200 bg-emerald-50 text-emerald-800",
+        )}>
+          {isSmartPlanOrder(order.notes) ? <Sparkles className="h-4 w-4" /> : <UtensilsCrossed className="h-4 w-4" />}
+          {isSmartPlanOrder(order.notes)
+            ? t("خطة ذكية مولّدة تلقائيًا", "AI-generated smart plan")
+            : t("خطة باختيار يدوي من المشترك", "Customer-selected manual plan")}
+        </span>
+      </div>
+
       {/* Subscriber Header Card */}
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-cyan-50 border-primary/20">
         <div className="flex items-start justify-between mb-4">
@@ -603,10 +657,6 @@ export default function OrderReviewDetail() {
               <h2 className="text-2xl font-bold text-gray-900">
                 {order.customerName}
               </h2>
-              <span className={(order as any).restaurantKey === "NUTRI_RESET"
-                ? "mt-1 inline-flex rounded-full bg-[#E9F9FB] px-3 py-1 text-xs font-black text-[#16899A]"
-                : "mt-1 inline-flex rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-[#0E76AC]"}
-              >{(order as any).restaurantKey === "NUTRI_RESET" ? "Nutri Reset" : "Adrenaline"}</span>
               <p className="text-gray-600">{order.customerPhone}</p>
               {order.customerEmail && (
                 <p className="text-sm text-gray-500">{order.customerEmail}</p>
@@ -665,7 +715,7 @@ export default function OrderReviewDetail() {
           </div>
         )}
 
-        {order.notes && (
+        {order.notes && !isSmartPlanSystemNote(order.notes) && (
           <div className="mt-4 p-4 bg-white rounded-lg">
             <p className="text-xs text-gray-500 mb-2">📝 {t("ملاحظات العميل:", "Customer notes:")}</p>
             <p className="text-gray-700">{order.notes}</p>

@@ -5,7 +5,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
-import { validateSession, requireStaffOrAccountOwner } from "./sessions";
+import { destroyAllSessionsFor, validateSession, requireStaffOrAccountOwner } from "./sessions";
 
 /**
  * Simple hash function (same as users.ts)
@@ -193,6 +193,32 @@ export const updateProfile = mutation({
     if (args.phone) updates.phone = args.phone;
 
     await ctx.db.patch(args.accountId, updates);
+  },
+});
+
+/**
+ * Delete the signed-in customer's app account.
+ *
+ * This deliberately does not delete the linked subscription/customer record or
+ * financial records. Those records belong to the restaurant's fulfilment and
+ * accounting workflow and may have to be retained. The login account itself,
+ * its credentials, and every active session are removed immediately.
+ */
+export const deleteMyAccount = mutation({
+  args: { sessionToken: v.string() },
+  handler: async (ctx, args) => {
+    const identity = await validateSession(ctx, args.sessionToken);
+    if (!identity || identity.accountType !== "customer" || !identity.customerAccountId) {
+      throw new Error("غير مصرّح — سجّل الدخول من جديد");
+    }
+
+    const accountId = identity.customerAccountId as any;
+    const account = await ctx.db.get(accountId);
+    if (!account) throw new Error("الحساب غير موجود");
+
+    await destroyAllSessionsFor(ctx, { customerAccountId: String(accountId) });
+    await ctx.db.delete(accountId);
+    return { success: true };
   },
 });
 

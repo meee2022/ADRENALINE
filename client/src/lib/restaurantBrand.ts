@@ -20,7 +20,7 @@ export const RESTAURANTS = {
     menuPath: "/nutri-reset/menu",
     reviewPath: "/nutri-reset/order-review",
     logo: "/nutri-reset-logo.png",
-    primary: "#22AEC0",
+    primary: "#079AA5",
     accent: "#F47721",
   },
 } as const;

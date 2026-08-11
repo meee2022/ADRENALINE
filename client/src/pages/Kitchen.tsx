@@ -1289,16 +1289,18 @@ export default function Kitchen() {
       xlsxRows.push({ kind: "dish", cells: [meal.name, meal.count, main ? "CARB" : "", main ? "PROTEIN" : ""] });
       [...groups.values()]
         .sort((a, b) => (programOrder[a.program] ?? 9) - (programOrder[b.program] ?? 9) || b.qty - a.qty)
-        .forEach((g) => xlsxRows.push({
+        .forEach((g) => {
+          xlsxRows.push({
           /* الحساسية تُلوَّن حمراء في الإكسل كما في المطبوع — ملفٌ واحد وقراءةٌ واحدة. */
-          kind: g.allergy ? "allergy" : (g.label || g.swap ? "modified" : "standard"),
-          cells: [
-            [g.program, g.swap ? `⇄ ${g.swap}` : "", g.isCustomPortion ? "CUSTOM PORTION" : "", g.label,
-             g.allergy ? `⚠ ALLERGY: ${g.allergy}` : "",
-             g.names.length ? `— ${g.names.join(", ")}` : ""].filter(Boolean).join("  "),
-            g.qty, main ? g.carb : "", main ? g.protein : "",
-          ],
-        }));
+            kind: g.allergy ? "allergy" : (g.label || g.swap ? "modified" : "standard"),
+            cells: [
+              [g.program, g.swap ? `⇄ ${g.swap}` : "", g.isCustomPortion ? "CUSTOM PORTION" : "", g.label,
+               g.allergy ? `⚠ ALLERGY: ${g.allergy}` : "",
+               g.names.length ? `\nCUSTOMER: ${g.names.join(", ")}` : ""].filter(Boolean).join("  "),
+              g.qty, main ? g.carb : "", main ? g.protein : "",
+            ],
+          });
+        });
       xlsxRows.push({ kind: "total", cells: ["Total portions", meal.count, "", ""] });
 
       return `

@@ -319,7 +319,10 @@ export async function downloadChefSheetXlsx(
     return {
       font: { name: "Arial", bold: c.bold, color: { rgb: c.fg }, sz: kind === "section" ? 12 : CHEF_BODY_FONT_SIZE },
       border,
-      alignment: { vertical: kind === "section" || kind === "head" ? "center" : "top", wrapText: true },
+      alignment: {
+        vertical: kind === "section" || kind === "head" ? "center" : "top",
+        wrapText: true,
+      },
       fill: { patternType: "solid", fgColor: { rgb: c.bg || "FFFFFF" } },
     };
   };
@@ -392,7 +395,22 @@ export async function downloadChefSheetXlsx(
       }
     } else if (r.kind === "allergy") {
       out[0] = cell(String(r.cells[0] || ""), style);
-      merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 5 } });
+      if (isCustomized) {
+        // Customer-level allergy notice: informational row with no quantity.
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 5 } });
+      } else if (isMain) {
+        // Aggregated main-meal allergy rows still carry their real quantity
+        // and portion columns; never merge over those values.
+        out[3] = cell(r.cells[1] ?? "", qtyStyle(style));
+        out[4] = cell(r.cells[2] ?? "", centered({ ...style, font: { ...style.font, color: { rgb: "0E76AC" } } }));
+        out[5] = cell(r.cells[3] ?? "", centered({ ...style, font: { ...style.font, color: { rgb: "0E76AC" } } }));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 2 } });
+      } else {
+        // Breakfast/snack allergy rows use the same quantity column as every
+        // other preparation row. The previous full-row merge hid this number.
+        out[5] = cell(r.cells[1] ?? "", qtyStyle(style));
+        merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 4 } });
+      }
     } else if (r.kind === "customer") {
       out[0] = cell(String(r.cells[0] || ""), style);
       out[5] = cell(String(r.cells[1] || ""), { ...centered(style), font: { ...style.font, color: { rgb: "0E76AC" } } });
@@ -425,6 +443,20 @@ export async function downloadChefSheetXlsx(
   ws["!cols"] = [{ wch: 28 }, { wch: 20 }, { wch: 20 }, { wch: 11 }, { wch: 11 }, { wch: 13 }];
   ws["!rows"] = rowHeights.map((hpt) => ({ hpt }));
 
+  // Propagate the style through every physical cell of the merged title/date
+  // and KPI cards. Excel otherwise renders only part of their border/fill.
+  for (const merge of merges.filter((m) => m.e.r <= 4)) {
+    const anchorRef = XLSX.utils.encode_cell(merge.s);
+    const anchorStyle = ws[anchorRef]?.s;
+    if (!anchorStyle) continue;
+    for (let ri = merge.s.r; ri <= merge.e.r; ri++) {
+      for (let ci = merge.s.c; ci <= merge.e.c; ci++) {
+        const ref = XLSX.utils.encode_cell({ r: ri, c: ci });
+        ws[ref] = { ...(ws[ref] || { t: "s", v: "" }), s: anchorStyle };
+      }
+    }
+  }
+
   // xlsx-js-style stores formatting per physical cell. Merged cells therefore
   // need the same fill/border on every cell, not only on their top-left value.
   for (let ri = 7; ri < aoa.length; ri++) {
@@ -443,7 +475,6 @@ export async function downloadChefSheetXlsx(
     }
   }
   ws["!freeze"] = { xSplit: 0, ySplit: 7 };
-  ws["!autofilter"] = { ref: `A7:F${aoa.length}` };
   ws["!margins"] = { left: 0.25, right: 0.25, top: 0.35, bottom: 0.45, header: 0.15, footer: 0.2 };
   ws["!pageSetup"] = { paperSize: 9, orientation: "portrait", fitToWidth: 1, fitToHeight: 0 };
   ws["!printHeader"] = [0, 6];

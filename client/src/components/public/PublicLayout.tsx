@@ -4,7 +4,7 @@
  */
 import { ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles, Calculator } from "lucide-react";
+import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles, Calculator, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
@@ -12,6 +12,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import ChatBot from "@/components/public/ChatBot";
 import { restaurantFromPath } from "@/lib/restaurantBrand";
+import { setBrowseOnly } from "@/lib/customerIdentity";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -34,30 +35,47 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
   if (restaurant.key === "NUTRI_RESET") {
     const smartPath = "/customer/smart-plan?restaurant=NUTRI_RESET";
+    const openBrowseMenu = () => setBrowseOnly();
     return (
-      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-[#fbfdfd] text-[#55565a]">
-        <header className="sticky top-0 z-50 border-b border-[#22AEC0]/25 bg-white/95 shadow-[0_10px_30px_-22px_rgba(34,174,192,.8)] backdrop-blur-xl">
-          <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-            <a href={restaurant.menuPath} className="shrink-0">
-              <img src={restaurant.logo} alt="Nutri Reset" className="h-12 w-auto max-w-[190px] object-contain sm:h-14 sm:max-w-[230px]" />
+      <div dir={isRtl ? "rtl" : "ltr"} className="nutri-reset-theme min-h-screen bg-[#fbfdfd] text-[#55565a]">
+        <header className="sticky top-0 z-50 border-b-[3px] border-[#079AA5] bg-[linear-gradient(115deg,#d85b0b_0%,#f47721_58%,#ff8c3d_100%)] shadow-[0_14px_35px_-22px_rgba(180,72,5,.85)]">
+          <div className="mx-auto flex min-h-[84px] max-w-7xl items-center justify-between gap-3 px-3 sm:min-h-[96px] sm:px-6">
+            <a href={restaurant.menuPath} onClick={openBrowseMenu} className="shrink-0 rounded-2xl border border-white/50 bg-white px-3 py-1.5 shadow-[0_10px_26px_-18px_rgba(0,0,0,.65)] outline-none transition-transform hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-white">
+              <img src={restaurant.logo} alt="Nutri Reset" className="h-12 w-auto max-w-[190px] object-contain sm:h-16 sm:max-w-[260px] lg:h-[68px] lg:max-w-[300px]" />
             </a>
             <nav className="hidden items-center gap-1 md:flex">
-              <a href={restaurant.menuPath} className="rounded-xl px-4 py-2 text-sm font-black text-[#55565a] hover:bg-[#eaf9fb] hover:text-[#16899A]">{isRtl ? "قائمة الوجبات" : "Meals"}</a>
-              <a href={smartPath} className="rounded-xl px-4 py-2 text-sm font-black text-[#55565a] hover:bg-[#eaf9fb] hover:text-[#16899A]">{isRtl ? "الخطة الذكية" : "Smart plan"}</a>
+              <a href={restaurant.menuPath} onClick={openBrowseMenu} className="rounded-xl px-4 py-2.5 text-sm font-black text-white transition-colors hover:bg-white/15">{isRtl ? "تصفح قائمة الوجبات" : "Browse meals"}</a>
+              <a href={smartPath} className="rounded-xl px-4 py-2.5 text-sm font-black text-white transition-colors hover:bg-white/15">{isRtl ? "الخطة الذكية" : "Smart plan"}</a>
             </nav>
             <div className="flex items-center gap-2">
               <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
-                className="rounded-full bg-[#F47721] px-4 py-2.5 text-xs font-black text-white shadow-[0_8px_20px_-12px_rgba(244,119,33,.9)] sm:text-sm">
+                className="hidden rounded-full border border-white/70 bg-white px-4 py-2.5 text-xs font-black text-[#D85B0B] shadow-[0_8px_20px_-12px_rgba(88,34,2,.75)] transition-colors hover:bg-[#fff7f1] sm:inline-flex sm:text-sm">
                 {isRtl ? "تواصل معنا" : "Contact"}
               </a>
-              <Button onClick={toggleLanguage} variant="ghost" size="icon" className="rounded-full text-[#16899A] hover:bg-[#eaf9fb]">
+              <Button onClick={toggleLanguage} variant="ghost" size="icon" className="rounded-full border border-white/25 text-white hover:bg-white/15 hover:text-white">
                 <Globe className="h-5 w-5" />
               </Button>
             </div>
           </div>
         </header>
         <main className="public-safe-content pb-20 md:pb-0">{children}</main>
-        <footer className="mt-16 border-t border-[#22AEC0]/25 bg-[#22AEC0] text-white">
+        <nav aria-label={isRtl ? "التنقل السريع" : "Quick navigation"} className="fixed inset-x-0 bottom-0 z-[70] border-t border-[#079AA5]/20 bg-white/95 px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_32px_-20px_rgba(7,154,165,.65)] backdrop-blur-xl md:hidden">
+          <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
+            <a href={restaurant.menuPath} onClick={openBrowseMenu} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black text-[#087E87] transition-colors hover:bg-[#edf9f8]">
+              <UtensilsCrossed className="h-5 w-5" />
+              <span>{isRtl ? "تصفح الوجبات" : "Browse meals"}</span>
+            </a>
+            <a href={smartPath} className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-[#edf9f8] text-[11px] font-black text-[#087E87] transition-colors hover:bg-[#dff5f3]">
+              <Sparkles className="h-5 w-5" />
+              <span>{isRtl ? "الخطة الذكية" : "Smart plan"}</span>
+            </a>
+            <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[11px] font-black text-[#F47721] transition-colors hover:bg-[#fff4ec]">
+              <MessageCircle className="h-5 w-5" />
+              <span>{isRtl ? "تواصل معنا" : "Contact"}</span>
+            </a>
+          </div>
+        </nav>
+        <footer className="mt-16 border-t border-[#079AA5]/25 bg-[#079AA5] text-white">
           <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.2fr_.8fr] md:items-end">
             <div>
               <img src={restaurant.logo} alt="Nutri Reset" className="mb-4 h-16 w-auto max-w-[260px] rounded-xl bg-white px-3 py-2 object-contain" />

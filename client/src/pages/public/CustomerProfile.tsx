@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
-import { alertDialog } from "@/lib/dialogs";
+import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,8 @@ import {
   Copy,
   Award,
   Ban,
+  Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { convex } from "@/lib/convex";
 import { useQuery, useMutation } from "convex/react";
@@ -67,7 +69,9 @@ export default function CustomerProfile() {
   const toggleSkipMut = useMutation(api.customers.toggleSkipDay);
   const markAllReadMut = useMutation(api.notifications.markAllAsReadForCustomer);
   const redeemMut = useMutation(api.loyalty.redeem);
+  const deleteAccountMut = useMutation(api.customerAuth.deleteMyAccount);
   const loyaltyCfg = useQuery(api.loyalty.config, {}) as any;
+  const restaurantSettings = useQuery(api.restaurantSettings.get, {}) as any;
 
   const loadProfile = async () => {
     if (!currentCustomer) return;
@@ -124,6 +128,37 @@ export default function CustomerProfile() {
   const markAllRead = async () => {
     if (!profile?.subscription?.id) return;
     try { await markAllReadMut({ customerId: profile.subscription.id, sessionToken }); } catch (e) { console.error(e); }
+  };
+
+  const deleteAccount = async () => {
+    if (!sessionToken || busy) return;
+    const confirmed = await confirmDialog({
+      title: isRtl ? "حذف حساب التطبيق نهائيًا" : "Permanently delete app account",
+      message: isRtl
+        ? "سيتم حذف بيانات تسجيل الدخول وإغلاق جميع جلساتك فورًا، ولن تتمكن من الدخول بهذا الحساب مرة أخرى.\n\nلن يؤدي ذلك إلى إلغاء اشتراك قائم أو حذف السجلات المالية التي يجب الاحتفاظ بها. تواصل مع الدعم أولًا إذا كنت تريد إلغاء الاشتراك أو طلب حذف بيانات إضافية."
+        : "Your login credentials will be deleted and all sessions will close immediately. You will not be able to sign in with this account again.\n\nThis does not cancel an active subscription or remove financial records that must be retained. Contact support first to cancel a subscription or request deletion of additional data.",
+      confirmText: isRtl ? "نعم، احذف حسابي" : "Yes, delete my account",
+      cancelText: isRtl ? "رجوع" : "Go back",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    setBusy(true);
+    try {
+      await deleteAccountMut({ sessionToken });
+      useStore.getState().customerLogout();
+      await alertDialog({
+        title: isRtl ? "تم حذف الحساب" : "Account deleted",
+        message: isRtl
+          ? "تم حذف حساب التطبيق وإغلاق جلساتك بنجاح."
+          : "Your app account and active sessions were deleted successfully.",
+      });
+      window.location.href = "/";
+    } catch (e: any) {
+      void alertDialog({ message: e?.message || (isRtl ? "تعذر حذف الحساب" : "Account deletion failed") });
+    } finally {
+      setBusy(false);
+    }
   };
   const upcomingDays: string[] = (() => {
     const sub = profile?.subscription;
@@ -594,22 +629,46 @@ export default function CustomerProfile() {
                 <Button
                   variant="outline"
                   className="flex-1 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0]/10"
-                  onClick={() => (window.location.href = "tel:+97412345678")}
+                  onClick={() => (window.location.href = `tel:${restaurantSettings?.phone || "+97412345678"}`)}
                 >
                   <Phone className="h-4 w-4 mr-2" />
-                  +974 1234 5678
+                  {restaurantSettings?.phone || "+974 1234 5678"}
                 </Button>
                 <Button
                   variant="outline"
                   className="flex-1 border-[#3CC4F0] text-[#3CC4F0] hover:bg-[#3CC4F0]/10"
-                  onClick={() => (window.location.href = "mailto:info@adrenaline.qa")}
+                  onClick={() => (window.location.href = `mailto:${restaurantSettings?.email || "info@adrenaline.qa"}`)}
                 >
                   <Mail className="h-4 w-4 mr-2" />
-                  info@adrenaline.qa
+                  {restaurantSettings?.email || "info@adrenaline.qa"}
                 </Button>
               </div>
+              <a href="/support" className="mt-3 flex min-h-10 items-center justify-center gap-2 text-sm font-bold text-[#0E76AC] hover:underline">
+                {isRtl ? "فتح صفحة الدعم" : "Open support page"}<ExternalLink className="size-4" />
+              </a>
             </CardContent>
           </Card>
+
+          {/* App account deletion: required for customer-created accounts. */}
+          <section className="rounded-2xl border border-red-200 bg-red-50/60 px-5 py-5" aria-labelledby="delete-account-title">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="max-w-2xl">
+                <h2 id="delete-account-title" className="flex items-center gap-2 text-base font-extrabold text-red-900">
+                  <Trash2 className="size-5" />
+                  {isRtl ? "حذف حساب التطبيق" : "Delete app account"}
+                </h2>
+                <p className="mt-1.5 text-sm leading-6 text-red-800/80">
+                  {isRtl
+                    ? "يحذف بيانات الدخول ويغلق جميع الجلسات. لإلغاء اشتراك قائم أو طلب حذف سجلات أخرى، تواصل مع الدعم أولًا."
+                    : "Deletes login credentials and closes every session. To cancel an active subscription or request removal of other records, contact support first."}
+                </p>
+              </div>
+              <Button type="button" variant="destructive" disabled={busy} onClick={deleteAccount} className="min-h-11 shrink-0 rounded-xl px-5 font-bold">
+                <Trash2 className="me-2 size-4" />
+                {busy ? (isRtl ? "جارٍ التنفيذ..." : "Working...") : (isRtl ? "حذف حسابي" : "Delete my account")}
+              </Button>
+            </div>
+          </section>
         </div>
       </div>
     </PublicLayout>
