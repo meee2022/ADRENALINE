@@ -23,6 +23,7 @@ export interface CustomerInfo {
 }
 
 interface CartState {
+  restaurantKey: "ADRENALINE" | "NUTRI_RESET";
   // Cart Items
   items: CartMeal[];
 
@@ -38,6 +39,7 @@ interface CartState {
   clearCart: () => void;
   updateCustomerInfo: (info: CustomerInfo) => void;
   setPreferredStartDate: (date: string) => void;
+  setRestaurantContext: (restaurantKey: "ADRENALINE" | "NUTRI_RESET") => void;
   
   // Computed
   getTotalMeals: () => number;
@@ -51,10 +53,14 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      restaurantKey: "ADRENALINE",
       customerInfo: null,
       preferredStartDate: null,
 
       setPreferredStartDate: (date) => set({ preferredStartDate: date }),
+      setRestaurantContext: (restaurantKey) => set((state) => state.restaurantKey === restaurantKey
+        ? state
+        : { restaurantKey, items: [], customerInfo: null, preferredStartDate: null }),
 
       // ✅ يُسمح بتكرار نفس الوجبة في نفس اليوم (يختارها المشترك مرتين) — السقف
       //    اليومي محسوب في المنيو (handleAddToCart) فلا يتجاوز عدد الاشتراك.

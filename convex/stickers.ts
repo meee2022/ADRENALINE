@@ -576,6 +576,7 @@ export const get = query({
         const customerNo = customerNoById.get(customerId) ?? 0;
 
         return {
+          restaurantKey: String((p as any).restaurantKey || (c as any).restaurantKey || "ADRENALINE"),
           customerId,
           customerNo,
           customerName: c.fullName || "",
@@ -772,6 +773,7 @@ export const get = query({
         );
         const stickerKey = `plan:${String((p as any)._id)}:${sourceItemKey}:${mealIndex}`;
         const stk = {
+          restaurantKey: String((p as any).restaurantKey || (c as any).restaurantKey || "ADRENALINE"),
           customerId,
           customerNo,
           customerName: c.fullName || "",
@@ -869,6 +871,7 @@ export const get = query({
         //    وجباتهم في القوالب، فكانوا بلا أي استيكر بوكس (29 عميلاً). نضيفه هنا
         //    بنفس شكل العاديين ليطبعه التغليف.
         boxStickers.push({
+          restaurantKey: String(c.restaurantKey || "ADRENALINE"),
           customerId: String(c._id),
           customerNo,
           slNo: customerNo,
@@ -905,6 +908,7 @@ export const get = query({
             : rawCal;
           const stickerKey = `custom:${String((tpl as any)._id)}:${mIdx}`;
           mealStickers.push(withStoredCalorieOverride({
+            restaurantKey: String(c.restaurantKey || "ADRENALINE"),
             customerId: String(c._id),
             customerNo,
             customerName: c.fullName || "",

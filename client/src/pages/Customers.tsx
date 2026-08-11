@@ -337,6 +337,8 @@ export default function Customers() {
   );
   /** فلتر بطاقات الهيدر: الكل / النشطين / المجمّدين */
   const [viewFilter, setViewFilter] = useState<"all" | "active" | "paused">("all");
+  const [restaurantFilter, setRestaurantFilter] = useState<"ALL" | "ADRENALINE" | "NUTRI_RESET">("ALL");
+  const [newCustomerRestaurant, setNewCustomerRestaurant] = useState<"ADRENALINE" | "NUTRI_RESET">("ADRENALINE");
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
@@ -456,6 +458,10 @@ export default function Customers() {
 
     let base = customers as any[];
 
+    if (restaurantFilter !== "ALL") {
+      base = base.filter((c: any) => String(c.restaurantKey || "ADRENALINE") === restaurantFilter);
+    }
+
     // فلتر بطاقات الهيدر
     if (viewFilter === "paused") {
       base = base.filter((c: any) => Boolean(c.pausedFrom));
@@ -487,7 +493,7 @@ export default function Customers() {
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm, selectedProgram, viewFilter]);
+  }, [customers, searchTerm, selectedProgram, viewFilter, restaurantFilter]);
 
   const selectedPlan = sitePlans.find((p: any) => String(p._id) === planId);
   const planOptions: any[] = selectedPlan?.options ?? [];
@@ -604,6 +610,7 @@ export default function Customers() {
           .map((o) => ({ meal: String(o.meal || "").trim(), calories: Number(o.calories) || 0 }))
           .filter((o) => o.meal && o.calories > 0),
       };
+      if (!editingCustomer) payload.restaurantKey = newCustomerRestaurant;
 
       if (payload.price !== undefined && payload.price !== null) {
         const disc = payload.discount ?? 0;
@@ -966,6 +973,20 @@ export default function Customers() {
 
       {/* Search and Filter Row */}
       <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          {([
+            ["ALL", isRtl ? "كل المطاعم" : "All restaurants"],
+            ["ADRENALINE", "Adrenaline"],
+            ["NUTRI_RESET", "Nutri Reset"],
+          ] as const).map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setRestaurantFilter(key)}
+              className={cn("rounded-xl border px-4 py-2 text-xs font-black",
+                restaurantFilter === key
+                  ? key === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#22AEC0] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                  : "border-slate-200 bg-white text-slate-600")}
+            >{label}</button>
+          ))}
+        </div>
         {/* Search Bar */}
         <div className="relative">
           <Search className={cn("absolute top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400", isRtl ? "right-4" : "left-4")} />
@@ -1099,6 +1120,17 @@ export default function Customers() {
                   isRtl ? "text-right" : "text-left",
                 )}
               >
+                {!editingCustomer && (
+                  <div className="space-y-2">
+                    <Label>{isRtl ? "المطعم التابع له المشترك" : "Subscriber restaurant"}</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => setNewCustomerRestaurant("ADRENALINE")}
+                        className={cn("rounded-xl border p-3 text-sm font-black", newCustomerRestaurant === "ADRENALINE" ? "border-[#0E76AC] bg-sky-50 text-[#0E76AC]" : "border-slate-200")}>Adrenaline</button>
+                      <button type="button" onClick={() => setNewCustomerRestaurant("NUTRI_RESET")}
+                        className={cn("rounded-xl border p-3 text-sm font-black", newCustomerRestaurant === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#E9F9FB] text-[#16899A]" : "border-slate-200")}>Nutri Reset</button>
+                    </div>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="fullName">{t("customers.fullname")}</Label>

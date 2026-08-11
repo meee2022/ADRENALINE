@@ -42,6 +42,7 @@ async function markOrderNotificationsRead(ctx: any, orderId: string): Promise<vo
 // ===== CREATE ORDER =====
 export const create = mutation({
   args: {
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     customerName: v.string(),
     customerPhone: v.string(),
     customerEmail: v.optional(v.string()),
@@ -62,6 +63,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    const restaurantKey = args.restaurantKey === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
 
     // 🔒 التحقق: على الأقل وجبة واحدة، حد أقصى معقول (يمنع abuse)
     if (args.items.length === 0) throw new Error("يجب اختيار وجبة واحدة على الأقل");
@@ -112,11 +114,18 @@ export const create = mutation({
       if (!subscriptionCustomer || normalizedPhone(subscriptionCustomer.phone) !== normalizedPhone(phone)) {
         throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
       }
+      const customerRestaurant = String((subscriptionCustomer as any).restaurantKey || "ADRENALINE");
+      if (customerRestaurant !== restaurantKey) {
+        throw new Error("ORDER_VALIDATION:RESTAURANT_MISMATCH");
+      }
     } else {
-      subscriptionCustomer = await ctx.db
+      const phoneCustomers = await ctx.db
         .query("customers")
         .withIndex("by_phone", (q) => q.eq("phone", phone))
-        .first();
+        .collect();
+      subscriptionCustomer = phoneCustomers.find(
+        (customer: any) => String(customer.restaurantKey || "ADRENALINE") === restaurantKey,
+      ) || null;
     }
     // الاسم اختياري في شاشة العميل: الحساب المعروف يُؤخذ اسمه من قاعدة البيانات،
     // والزائر الذي يتركه فارغاً يظهر للطاقم برقمه بدل تعطيل إرسال الخطة.
@@ -176,6 +185,7 @@ export const create = mutation({
 
     // Create order (Server-computed totals)
     const orderId = await ctx.db.insert("customerOrders", {
+      restaurantKey,
       customerName: effectiveCustomerName,
       customerPhone: phone,
       customerEmail: args.customerEmail?.trim(),
@@ -400,18 +410,21 @@ export const getByOrderNumber = query({
 export const list = query({
   args: {
     status: v.optional(v.string()),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     limit: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
   },
-  handler: async (ctx, { status, limit = 50, sessionToken }) => {
+  handler: async (ctx, { status, restaurantKey, limit = 50, sessionToken }) => {
     await requireStaff(ctx, sessionToken);
+    const matchesRestaurant = (order: any) => !restaurantKey
+      || String(order.restaurantKey || "ADRENALINE") === restaurantKey;
     if (status) {
       const orders = await ctx.db
         .query("customerOrders")
         .withIndex("by_status", (q) => q.eq("status", status as any))
         .order("desc")
         .take(limit);
-      return orders;
+      return orders.filter(matchesRestaurant);
     }
 
     const orders = await ctx.db
@@ -419,7 +432,7 @@ export const list = query({
       .order("desc")
       .take(limit);
 
-    return orders;
+    return orders.filter(matchesRestaurant);
   },
 });
 
@@ -651,6 +664,7 @@ export const approve = mutation({
       if (duplicatePlan) {
         // ✅ تحديث الـ plan الموجودة بدل إنشاء جديدة
         await ctx.db.patch(duplicatePlan._id, {
+          restaurantKey: String((order as any).restaurantKey || "ADRENALINE"),
           items: planItems,
           notes: notes || "",
           status: "CONFIRMED",
@@ -667,6 +681,7 @@ export const approve = mutation({
       } else {
         // إنشاء plan جديدة
         await ctx.db.insert("dailyPlans", {
+          restaurantKey: String((order as any).restaurantKey || "ADRENALINE"),
           customerId: effectiveCustomerId || undefined,
           customerName: order.customerName,
           date,

@@ -32,6 +32,7 @@ import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfas
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
 import { restrictionWords, matchedRestriction } from "@/lib/mealRestrictions";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
+import { restaurantFromPath } from "@/lib/restaurantBrand";
 import {
   getVerifiedPhone,
   getVerifiedCustomerId,
@@ -77,12 +78,18 @@ function nextDeliveryDateISO(): string {
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
-  useSeo({ title: "قائمة الوجبات | أدرينالين للوجبات الصحية", description: "تصفّح قائمة وجبات أدرينالين الصحية مع عرض واضح للسعرات والمغذيات الكبرى، بما يشمل الفطور والغداء والعشاء والوجبات الخفيفة.", path: "/public/menu" });
+  const restaurant = restaurantFromPath();
+  useSeo({ title: `قائمة الوجبات | ${restaurant.nameAr}`, description: `قائمة وجبات ${restaurant.nameAr} الصحية للمشتركين.`, path: restaurant.menuPath });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const isNutriReset = restaurant.key === "NUTRI_RESET";
+  const customerBrandName = restaurant.nameEn;
+  const customerAccent = isNutriReset ? "#20AFC0" : "#3CC4F0";
+  const customerAccentDark = isNutriReset ? "#148C9B" : "#47759C";
   const [, setLocation] = useLocation();
   
   // Cart State
-  const { items, addItem, removeItem, getTotalMeals, setPreferredStartDate } = useCartStore();
+  const { items, addItem, removeItem, getTotalMeals, setPreferredStartDate, setRestaurantContext } = useCartStore();
+  useEffect(() => { setRestaurantContext(restaurant.key); }, [restaurant.key, setRestaurantContext]);
   const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -122,7 +129,7 @@ export default function PublicMenuPage() {
   //    أي زائر يقرأ كل الأسماء والهواتف والعناوين والأسعار من DevTools.
   const matchingCustomers = useQuery(
     api.customers.findPublicByPhone,
-    verifiedPhone ? { phone: verifiedPhone } : "skip"
+    verifiedPhone ? { phone: verifiedPhone, restaurantKey: restaurant.key } : "skip"
   );
 
   const verifiedCustomer = useMemo(() => {
@@ -142,7 +149,7 @@ export default function PublicMenuPage() {
 
   // Restaurant settings (for WhatsApp)
   const settings = useQuery(api.restaurantSettings.get);
-  const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
+  const phoneRaw = (isNutriReset ? restaurant.phone : (settings?.phone || "+97412345678")).replace(/\D/g, "");
   const whatsappLink = (msg: string) =>
     `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
 
@@ -178,8 +185,8 @@ export default function PublicMenuPage() {
 
   const handleSignupViaWhatsApp = () => {
     const msg = isRtl
-      ? `مرحباً 👋\nأرغب في الاشتراك في خطط أدرينالين الصحية.\nرقمي: ${phoneInput || verifiedPhone}`
-      : `Hello 👋\nI'd like to subscribe to Adrenaline plans.\nMy phone: ${phoneInput || verifiedPhone}`;
+      ? `مرحباً 👋\nأرغب في الاشتراك في خطط ${restaurant.nameAr}.\nرقمي: ${phoneInput || verifiedPhone}`
+      : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn} plans.\nMy phone: ${phoneInput || verifiedPhone}`;
     window.location.href = whatsappLink(msg);
   };
 
@@ -1063,7 +1070,7 @@ Is that what you want?`,
               }}>
               {/* Decorative glow */}
               <div className="absolute -top-20 -right-20 w-40 h-40 rounded-full opacity-20 blur-2xl"
-                style={{ background: "radial-gradient(circle, #3CC4F0, transparent)" }} />
+                style={{ background: `radial-gradient(circle, ${customerAccent}, transparent)` }} />
 
               {/* Reset button — always visible, fixed top corner */}
               {verifiedPhone && (
@@ -1078,21 +1085,27 @@ Is that what you want?`,
               )}
 
               <div className="relative">
-                {/* Icon */}
-                <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
-                  style={{
-                    background: "linear-gradient(135deg, #3CC4F0, #47759C)",
-                    boxShadow: "0 8px 24px rgba(60,196,240,0.4)",
-                  }}>
-                  <Phone className="h-7 w-7 text-white" />
-                </div>
+                {/* Restaurant identity */}
+                {isNutriReset ? (
+                  <div className="mx-auto mb-5 flex h-20 w-40 items-center justify-center rounded-2xl border border-[#20AFC0]/20 bg-white px-4 shadow-[0_8px_24px_rgba(32,175,192,0.16)]">
+                    <img src={restaurant.logo} alt={restaurant.nameEn} className="max-h-14 w-full object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl mx-auto mb-5 flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`,
+                      boxShadow: "0 8px 24px rgba(60,196,240,0.4)",
+                    }}>
+                    <Phone className="h-7 w-7 text-white" />
+                  </div>
+                )}
 
                 <h2 className="text-2xl font-black text-[#0F1516] text-center mb-2 tracking-tight">
-                  {showPhonePrompt && (isRtl ? "أهلاً بك في أدرينالين" : "Welcome to Adrenaline")}
+                  {showPhonePrompt && (isRtl ? `أهلاً بك في ${customerBrandName}` : `Welcome to ${customerBrandName}`)}
                   {showNotRegistered && (isRtl ? "رقمك غير مسجل" : "Phone Not Registered")}
                   {showCustomerPicker && (isRtl ? "من المستلم؟" : "Who's the recipient?")}
                 </h2>
-                <p className="text-sm text-[#47759C] text-center mb-6 leading-relaxed">
+                <p className="text-sm text-center mb-6 leading-relaxed" style={{ color: customerAccentDark }}>
                   {showPhonePrompt && (isRtl ? "أدخل رقم هاتفك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals")}
                   {showNotRegistered && (isRtl ? "هذا الرقم غير مسجل لدينا. تواصل عبر واتساب للاشتراك" : "This number isn't registered. Contact us via WhatsApp to subscribe")}
                   {showCustomerPicker && (isRtl ? "هذا الرقم مسجل لأكثر من مشترك. اختر اسمك للمتابعة" : "This number has multiple subscribers. Pick your name to continue")}
@@ -1111,7 +1124,7 @@ Is that what you want?`,
                       >
                         {/* Country code prefix block */}
                         <div className="flex items-center justify-center px-4 gap-2 border-l"
-                          style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", borderColor: "#e2e8f0", minWidth: "90px" }}>
+                          style={{ background: `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`, borderColor: "#e2e8f0", minWidth: "90px" }}>
                           <Phone className="h-5 w-5 text-white" />
                           <span className="text-base font-black text-white tabular-nums">+974</span>
                         </div>
@@ -1138,7 +1151,7 @@ Is that what you want?`,
                         onClick={handleVerifyPhone}
                         className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
                         style={{
-                          background: "linear-gradient(135deg, #3CC4F0, #2bb0dc)",
+                          background: `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`,
                           boxShadow: "0 6px 20px rgba(60,196,240,0.4)",
                         }}
                       >
@@ -1331,14 +1344,20 @@ Is that what you want?`,
 
       {/* ═══ Customer Info Banner (Sticky top) ═══ */}
       {isPhoneVerified && (
-        <div className="sticky top-[73px] z-50 px-4 py-3"
+        <div className="sticky top-[73px] z-50 border-b px-4 py-3"
           style={{
-            background: "linear-gradient(135deg, #3CC4F0 0%, #47759C 100%)",
-            boxShadow: "0 4px 14px rgba(60,196,240,0.3)",
+            background: isNutriReset
+              ? "linear-gradient(110deg, #128A98 0%, #20AFC0 58%, #167985 100%)"
+              : "linear-gradient(135deg, #3CC4F0 0%, #47759C 100%)",
+            borderColor: isNutriReset ? "#F47721" : "transparent",
+            boxShadow: isNutriReset
+              ? "0 5px 18px rgba(18,138,152,0.22)"
+              : "0 4px 14px rgba(60,196,240,0.3)",
           }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-black text-[#3CC4F0] bg-white">
+              <div className="h-11 w-11 rounded-xl flex-shrink-0 flex items-center justify-center text-base font-black bg-white shadow-sm"
+                style={{ color: isNutriReset ? "#E66C18" : "#3CC4F0" }}>
                 {cust?.fullName?.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -1374,7 +1393,7 @@ Is that what you want?`,
               </button>
               {/* الرجوع للرئيسية */}
               <button
-                onClick={() => setLocation("/")}
+                onClick={() => setLocation(restaurant.menuPath)}
                 className="text-[11px] font-bold text-white px-3 py-1.5 rounded-full hover:bg-white/30 transition-colors flex items-center gap-1"
                 style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
               >
@@ -1457,18 +1476,50 @@ Is that what you want?`,
         </div>
       )}
 
-      {/* Unified compact header */}
-      <PageHeader
+      {/* Restaurant-specific identity header */}
+      {restaurant.key === "NUTRI_RESET" ? (
+        <section className="relative overflow-hidden border-b border-[#22AEC0]/25 bg-white" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="pointer-events-none absolute -start-20 -top-24 h-56 w-56 rounded-full border-[13px] border-[#22AEC0] opacity-90" />
+          <div className="pointer-events-none absolute -start-28 -top-32 h-52 w-52 rounded-full border-[10px] border-[#F47721]" />
+          <div className="mx-auto grid min-h-[500px] max-w-7xl items-center gap-8 px-5 py-10 sm:px-8 lg:grid-cols-[1.08fr_.92fr] lg:gap-12 lg:py-14">
+            <div className="relative z-10 flex flex-col justify-center lg:px-5">
+              <img src={restaurant.logo} alt="Nutri Reset" className="mb-7 h-auto w-full max-w-[390px] object-contain" />
+              <p className="mb-2 text-sm font-black uppercase tracking-[.16em] text-[#55565a]">Reset your body. Rebalance your life.</p>
+              <h1 className="max-w-xl text-4xl font-black leading-tight text-[#22AEC0] sm:text-5xl">
+                {isRtl ? "تغذية مخصصة، نتائج حقيقية" : "Personalized Nutrition. Real Results."}
+              </h1>
+              <p className="mt-5 max-w-xl text-base font-semibold leading-8 text-[#55565a]">
+                {isRtl ? "نصمم خطة غذائية تناسب أهدافك وأسلوب حياتك وجسمك، بوجبات صحية ومكونات حقيقية تصل إلى بابك." : "We create nutrition plans that fit your goals, lifestyle, and body, with healthy meals and real ingredients delivered to your door."}
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <a href="#subscriber-menu" className="rounded-full bg-[#22AEC0] px-6 py-3 text-sm font-black text-white shadow-[0_10px_24px_-14px_rgba(34,174,192,.9)]">{isRtl ? "اختر وجباتك" : "Choose your meals"}</a>
+                <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} className="rounded-full border-2 border-[#F47721] px-6 py-3 text-sm font-black text-[#E66C18]">{isRtl ? "تواصل معنا" : "Contact us"}</a>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-[410px]">
+              <div className="absolute -inset-3 translate-x-3 translate-y-3 rounded-[2rem] bg-[#F47721]/15" />
+              <div className="absolute -inset-3 -translate-x-3 -translate-y-3 rounded-[2rem] border-2 border-[#20AFC0]/35" />
+              <div className="relative aspect-[502/625] overflow-hidden rounded-[1.7rem] bg-[#F8FBF8] shadow-[0_22px_55px_-28px_rgba(31,76,82,.42)]">
+                <img
+                  src="/nutri-reset-woman-meal.png"
+                  alt={isRtl ? "وجبات صحية مخصصة من Nutri Reset" : "Nutri Reset personalized healthy meals"}
+                  className="h-full w-full object-cover object-center"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : <PageHeader
         eyebrowAr="قائمتنا" eyebrowEn="OUR MENU"
         titleAr="قائمة الوجبات" titleEn="Our Menu"
         subtitleAr="اكتشف مجموعتنا المتنوعة من الوجبات الصحية واللذيذة"
         subtitleEn="Discover our diverse collection of healthy and delicious meals"
         image={menuHeaderImage}
-      />
+      />}
 
       {/* Choose: manual selection vs AI smart plan — أداة مشترك، تُخفى عن الزائر */}
       {!isVisitor && (
-      <section className="bg-white border-b border-gray-100">
+      <section id="subscriber-menu" className="bg-white border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 py-5" dir={isRtl ? "rtl" : "ltr"}>
           <p className="text-center text-sm font-bold text-[#47759C] mb-3">
             {isRtl ? "اختر طريقتك:" : "Choose how to order:"}
@@ -1486,7 +1537,7 @@ Is that what you want?`,
             </div>
             {/* Smart */}
             <button
-              onClick={() => setLocation("/customer/smart-plan")}
+              onClick={() => setLocation(restaurant.key === "NUTRI_RESET" ? "/customer/smart-plan?restaurant=NUTRI_RESET" : "/customer/smart-plan")}
               className="rounded-2xl border border-[#D9E6F1] hover:border-[#0E76AC] hover:shadow-md transition-all p-4 flex items-center gap-3 text-start"
             >
               <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
@@ -1543,8 +1594,8 @@ Is that what you want?`,
               size="sm"
               onClick={() => {
                 const msg = isRtl
-                  ? "مرحباً 👋\nأرغب في الاشتراك في أدرينالين."
-                  : "Hello 👋\nI'd like to subscribe to Adrenaline.";
+                  ? `مرحباً 👋\nأرغب في الاشتراك في ${restaurant.nameAr}.`
+                  : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.`;
                 window.location.href = whatsappLink(msg);
               }}
               className="h-9 rounded-full px-4 font-bold text-white"
@@ -2317,8 +2368,8 @@ Is that what you want?`,
                           onClick={(e) => {
                             e?.stopPropagation();
                             const msg = isRtl
-                              ? `مرحباً 👋\nأرغب في الاشتراك في أدرينالين.\nأعجبتني وجبة: ${meal.nameAr}`
-                              : `Hello 👋\nI'd like to subscribe to Adrenaline.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
+                              ? `مرحباً 👋\nأرغب في الاشتراك في ${restaurant.nameAr}.\nأعجبتني وجبة: ${meal.nameAr}`
+                              : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
                             window.location.href = whatsappLink(msg);
                           }}
                           className="h-9 px-4 rounded-full font-bold text-white flex items-center gap-1.5"
@@ -2543,7 +2594,7 @@ Is that what you want?`,
       {getTotalMeals() > 0 && (
         <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
           <Button
-            onClick={() => setLocation("/public/order-review")}
+            onClick={() => setLocation(restaurant.reviewPath)}
             className="h-14 px-8 rounded-full bg-gradient-to-l from-[#3CC4F0] to-[#47759C] hover:from-[#47759C] hover:to-[#3CC4F0] text-white font-bold shadow-2xl flex items-center gap-3"
           >
             <ShoppingCart className="h-5 w-5" />

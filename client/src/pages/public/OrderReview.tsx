@@ -11,6 +11,7 @@ import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/me
 import { AlertTriangle, MessageCircle } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
+import { restaurantFromPath } from "@/lib/restaurantBrand";
 
 const dayNameAr: Record<string, string> = {
   saturday: "السبت",
@@ -47,6 +48,7 @@ const B = {
 const DAY_ORDER = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
 
 export default function OrderReview() {
+  const restaurant = restaurantFromPath();
   const [, setLocation] = useLocation();
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
@@ -64,6 +66,7 @@ export default function OrderReview() {
     addItem,
     removeItem,
     preferredStartDate,
+    restaurantKey: cartRestaurantKey,
   } = useCartStore();
   
   // بيانات العميل — نملأ الرقم تلقائياً من الذي أدخله في المنيو
@@ -82,7 +85,7 @@ export default function OrderReview() {
   //    العائلات قد تتشارك رقماً واحداً، فنأخذ أول مطابق كما كان السلوك سابقاً.
   const matchesByPhone = useQuery(
     api.customers.findPublicByPhone,
-    customerPhone ? { phone: customerPhone } : "skip"
+    customerPhone ? { phone: customerPhone, restaurantKey: restaurant.key } : "skip"
   );
   const verifiedCustomerId = getVerifiedCustomerId();
   // الرقم قد يخص أكثر من مشترك في العائلة؛ نحترم الحساب الذي اختاره العميل
@@ -144,7 +147,7 @@ export default function OrderReview() {
     });
     if (!ok) return;
     clearCart();
-    setLocation("/public/menu");
+    setLocation(restaurant.menuPath);
   };
   const subSlots = orderedSubscriptionSlots(subStartDate, subEndDate, startRotForSub);
   const shortfall = subscriptionShortfall(
@@ -186,6 +189,10 @@ export default function OrderReview() {
   }, {} as Record<number, Record<string, typeof selectedMeals>>);
 
   const handleSubmit = async () => {
+    if (cartRestaurantKey !== restaurant.key) {
+      void alertDialog({ message: t("السلة تخص مطعمًا آخر. ارجع إلى قائمة المطعم واختر وجباتك مرة أخرى.", "This cart belongs to another restaurant. Return to the restaurant menu and choose again.") });
+      return;
+    }
     if (!customerPhone) {
       void alertDialog({ message: t("يرجى إدخال رقم الجوال", "Please enter your phone number") });
       return;
@@ -210,6 +217,7 @@ export default function OrderReview() {
     try {
       // ✅ نبعت فقط IDs + الجدولة. الأسعار والسعرات وأسماء الوجبات تُحسب على الخادم من قاعدة البيانات.
       const result = await createOrder({
+        restaurantKey: restaurant.key,
         // الاسم للطاقم فقط: لو تركه العميل فارغاً واسمه معروف بالحساب، نبعث اسم
         // الحساب حتى يراه الطاقم — دون أن يظهر في شاشة العميل (سرية).
         customerName: customerName || findCustomerByPhone?.fullName || "",
@@ -292,7 +300,7 @@ export default function OrderReview() {
           <h2 className="text-2xl font-bold text-slate-900 mb-2">{t("السلة فارغة", "Your cart is empty")}</h2>
           <p className="text-slate-500 mb-6">{t("لم تقم باختيار أي وجبات بعد", "You haven't selected any meals yet")}</p>
           <button
-            onClick={() => setLocation("/public/menu")}
+            onClick={() => setLocation(restaurant.menuPath)}
             className="px-6 py-3 bg-gradient-to-l from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold rounded-xl transition-all"
           >
             {t("تصفّح قائمة الوجبات", "Browse Menu")}
@@ -310,7 +318,7 @@ export default function OrderReview() {
           <button
             // 🔙 صفحة عميل — الرجوع للمنيو العام (/public/menu) لا لإدارة القائمة
             //    (/menu) وهي شاشة طاقم. باقي روابط هذه الصفحة تستخدم /public/menu.
-            onClick={() => setLocation("/public/menu")}
+            onClick={() => setLocation(restaurant.menuPath)}
             className="text-slate-600 hover:text-slate-900 flex items-center gap-2"
           >
             <ChevronRight className="h-5 w-5" />
@@ -598,7 +606,7 @@ export default function OrderReview() {
                   </ul>
                   <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => setLocation("/public/menu")}
+                      onClick={() => setLocation(restaurant.menuPath)}
                       className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-lg transition-all"
                     >
                       <ChevronRight className="h-5 w-5" />

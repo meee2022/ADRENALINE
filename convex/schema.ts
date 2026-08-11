@@ -373,6 +373,7 @@ export default defineSchema({
 
   // ===== Customer Accounts (for public login) =====
   customerAccounts: defineTable({
+    restaurantKey: v.optional(v.string()),
     email: v.string(),
     passwordHash: v.string(),
     phone: v.string(),
@@ -387,6 +388,7 @@ export default defineSchema({
     .index("by_customerId", ["customerId"]),
 
   customers: defineTable({
+    restaurantKey: v.optional(v.string()),
     fullName: v.string(),
     phone: v.string(),
     gender: v.optional(v.union(v.literal("MALE"), v.literal("FEMALE"))),
@@ -608,6 +610,7 @@ export default defineSchema({
     .index("by_active", ["isActive"]),
 
   dailyPlans: defineTable({
+    restaurantKey: v.optional(v.string()),
     date: v.string(), // yyyy-MM-dd or ISO
     customerId: v.optional(v.id("customers")), // ✅ اختياري - قد يكون عميل جديد
     customerName: v.optional(v.string()), // ✅ اسم العميل (للطلبات الجديدة بدون ربط)
@@ -983,6 +986,7 @@ export default defineSchema({
 
   // ===== Customer Orders (from public website) =====
   customerOrders: defineTable({
+    restaurantKey: v.optional(v.string()),
     // Customer Info
     customerName: v.string(),
     customerPhone: v.string(),

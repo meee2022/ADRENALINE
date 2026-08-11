@@ -14,6 +14,7 @@ import { useLanguage } from "@/lib/i18n";
 
 /** التبويبات: قيد المراجعة / المعتمدة / الكل */
 type Tab = "pending" | "confirmed" | "all";
+type RestaurantFilter = "ALL" | "ADRENALINE" | "NUTRI_RESET";
 
 const STATUS_LABEL: Record<string, { ar: string; en: string; cls: string }> = {
   pending:   { ar: "قيد المراجعة", en: "Pending",   cls: "bg-amber-50 text-amber-700" },
@@ -27,10 +28,12 @@ export default function OrdersPending() {
   const [, navigate] = useLocation();
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const [tab, setTab] = useState<Tab>("pending");
+  const [restaurantFilter, setRestaurantFilter] = useState<RestaurantFilter>("ALL");
 
   // status: undefined = كل الطلبات؛ وإلا يفلتر على السيرفر
   const orders = useQuery(api.customerOrders.list, {
     status: tab === "all" ? undefined : tab,
+    restaurantKey: restaurantFilter === "ALL" ? undefined : restaurantFilter,
     limit: 200,
     sessionToken,
   });
@@ -92,6 +95,20 @@ export default function OrdersPending() {
               </span>
             )}
           </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-2" aria-label={t("تصفية الطلبات حسب المطعم", "Filter orders by restaurant")}>
+        {([
+          ["ALL", t("كل المطاعم", "All restaurants")],
+          ["ADRENALINE", "Adrenaline"],
+          ["NUTRI_RESET", "Nutri Reset"],
+        ] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setRestaurantFilter(key)}
+            className={cn("rounded-xl border px-4 py-2 text-xs font-black transition-colors",
+              restaurantFilter === key
+                ? key === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#22AEC0] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                : "border-slate-200 bg-white text-slate-600 hover:border-sky-300")}
+          >{label}</button>
         ))}
       </div>
 
@@ -180,6 +197,11 @@ export default function OrdersPending() {
                       <div>
                         <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                           {order.customerName}
+                          <span className={cn("rounded-full px-2.5 py-1 text-[10px] font-black",
+                            (order as any).restaurantKey === "NUTRI_RESET"
+                              ? "bg-[#E9F9FB] text-[#16899A]"
+                              : "bg-sky-50 text-[#0E76AC]")}
+                          >{(order as any).restaurantKey === "NUTRI_RESET" ? "Nutri Reset" : "Adrenaline"}</span>
                           {order.notes?.includes("مولّد الوجبات الذكي") && (
                             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full text-white"
                               style={{ background: "linear-gradient(135deg,#3AC7F4,#0E76AC)" }}>

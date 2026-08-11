@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
 import { mealScheduledFor, localISO, customerCategoryLabel, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY } from "@/lib/mealSchedule";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
+import { restaurantFromPath } from "@/lib/restaurantBrand";
 
 const WEEKDAYS = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 const WEEKDAYS_AR: Record<string,string> = {
@@ -37,8 +38,13 @@ const B = {
 };
 
 export default function SmartPlan() {
+  const restaurant = restaurantFromPath();
   const { language, dir } = useLanguage();
-  useSeo({ title: "خطتي الذكية | أدرينالين للوجبات الصحية", description: "خطة وجبات تُبنى وفق هدفك وسعراتك المستهدفة، مع استبعاد ما لديك من حساسية وما لا تفضّله — ويراجعها أخصائي التغذية قبل اعتمادها.", path: "/customer/smart-plan" });
+  useSeo({
+    title: `خطتي الذكية | ${restaurant.nameAr}`,
+    description: `خطة وجبات ${restaurant.nameAr} تُبنى وفق هدفك وسعراتك المستهدفة، مع تطبيق الحساسية وعدم التفضيل ومراجعة أخصائي التغذية.`,
+    path: restaurant.key === "NUTRI_RESET" ? "/customer/smart-plan?restaurant=NUTRI_RESET" : "/customer/smart-plan",
+  });
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (ar: string, en: string) => (isRtl ? ar : en);
   const dayName = (d: string) => isRtl ? (WEEKDAYS_AR[d] || d) : (WEEKDAYS_EN[d] || d);
@@ -68,7 +74,7 @@ export default function SmartPlan() {
    */
   const matchesByPhone = useQuery(
     api.customers.findPublicByPhone,
-    !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim() } : "skip",
+    !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim(), restaurantKey: restaurant.key } : "skip",
   ) as any[] | undefined;
   const matchedCustomer = matchesByPhone?.[0] ?? null;
 
@@ -336,6 +342,7 @@ export default function SmartPlan() {
       // 🔒 نبعت IDs فقط — الأسعار والسعرات محسوبة على الخادم
       const idem = `sp_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
+        restaurantKey: restaurant.key,
         ...orderIdentity(),
         items: items.map((i: any) => ({ mealId: i.mealId, week: i.week, day: i.day })),
         notes: "Weekly plan from the smart meal generator",
@@ -359,6 +366,7 @@ export default function SmartPlan() {
       const items = result.picks.map((m: any) => ({ mealId: m.id, week, day }));
       const idem = `sp_daily_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
       const res: any = await createOrder({
+        restaurantKey: restaurant.key,
         ...orderIdentity(),
         items,
         notes: "Order from the smart meal generator",
@@ -457,7 +465,7 @@ export default function SmartPlan() {
       <div dir={isRtl ? "rtl" : "ltr"} style={{ maxWidth: 980, margin: "0 auto", padding: "32px 18px" }}>
         {/* 🏠 الرجوع للرئيسية */}
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate(restaurant.menuPath)}
           style={{
             display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14,
             padding: "7px 14px", borderRadius: 999, cursor: "pointer",

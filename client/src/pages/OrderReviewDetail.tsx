@@ -603,6 +603,10 @@ export default function OrderReviewDetail() {
               <h2 className="text-2xl font-bold text-gray-900">
                 {order.customerName}
               </h2>
+              <span className={(order as any).restaurantKey === "NUTRI_RESET"
+                ? "mt-1 inline-flex rounded-full bg-[#E9F9FB] px-3 py-1 text-xs font-black text-[#16899A]"
+                : "mt-1 inline-flex rounded-full bg-sky-50 px-3 py-1 text-xs font-black text-[#0E76AC]"}
+              >{(order as any).restaurantKey === "NUTRI_RESET" ? "Nutri Reset" : "Adrenaline"}</span>
               <p className="text-gray-600">{order.customerPhone}</p>
               {order.customerEmail && (
                 <p className="text-sm text-gray-500">{order.customerEmail}</p>
@@ -1144,7 +1148,8 @@ export default function OrderReviewDetail() {
                 // تأكد إن الرقم بصيغة دولية (لو رقم قطر بدون code، ضيف 974)
                 const fullPhone = phone.startsWith("974") || phone.length > 8 ? phone : `974${phone}`;
                 const customerName = linkedCust?.fullName || (order as any).customerName || "";
-                const msg = `مرحباً ${customerName} 👋\n\nبخصوص طلبك رقم ${(order as any).orderNumber || ""} في أدرينالين، نود التواصل معك للمراجعة.`;
+                const orderRestaurant = (order as any).restaurantKey === "NUTRI_RESET" ? "Nutri Reset" : "أدرينالين";
+                const msg = `مرحباً ${customerName} 👋\n\nبخصوص طلبك رقم ${(order as any).orderNumber || ""} في ${orderRestaurant}، نود التواصل معك للمراجعة.`;
                 const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(msg)}`;
                 window.open(url, "_blank");
               }}

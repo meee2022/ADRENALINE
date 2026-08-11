@@ -1395,6 +1395,7 @@ function MealSticker({ s, seq }: any) {
      الخط يتدرّج مع الطول فيظل كل شيء داخل حدوده، والأسماء العادية كما هي. */
   const mealLen = String(mealName || "").length;
   const mealFont = mealLen > 100 ? 7 : mealLen > 70 ? 7.5 : mealLen > 45 ? 8.5 : 10.5;
+  const isNutriReset = s.restaurantKey === "NUTRI_RESET";
 
   // ✅ ابني سطر الماكروز
   const macrosLine = (() => {
@@ -1417,11 +1418,11 @@ function MealSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        <div className="brand-text">
+        {isNutriReset ? <img src="/nutri-reset-logo.png" alt="Nutri Reset" className="h-[34px] w-auto max-w-[150px] object-contain" /> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
-        <img src="/heart-logo.png" alt="" className="brand-heart" />
+        <img src="/heart-logo.png" alt="" className="brand-heart" /></>}
       </div>
       <div className="brand-rule" />
 
@@ -1479,6 +1480,7 @@ function MealSticker({ s, seq }: any) {
 }
 
 function BoxSticker({ s, seq }: any) {
+  const isNutriReset = s.restaurantKey === "NUTRI_RESET";
   return (
     <div className="label label-box">
       <div className="seq-mark">{seq}</div>
@@ -1486,11 +1488,11 @@ function BoxSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        <div className="brand-text">
+        {isNutriReset ? <img src="/nutri-reset-logo.png" alt="Nutri Reset" className="h-[34px] w-auto max-w-[150px] object-contain" /> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
-        <img src="/heart-logo.png" alt="" className="brand-heart" />
+        <img src="/heart-logo.png" alt="" className="brand-heart" /></>}
       </div>
       <div className="brand-rule" />
 

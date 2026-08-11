@@ -11,6 +11,7 @@ import { useStore } from "@/lib/store";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import ChatBot from "@/components/public/ChatBot";
+import { restaurantFromPath } from "@/lib/restaurantBrand";
 
 interface PublicLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ interface PublicLayoutProps {
 }
 
 export function PublicLayout({ children }: PublicLayoutProps) {
+  const restaurant = restaurantFromPath();
   const { language, setLanguage, dir, t } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -29,6 +31,50 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   const toggleLanguage = () => {
     setLanguage(language === "ar" ? "en" : "ar");
   };
+
+  if (restaurant.key === "NUTRI_RESET") {
+    const smartPath = "/customer/smart-plan?restaurant=NUTRI_RESET";
+    return (
+      <div dir={isRtl ? "rtl" : "ltr"} className="min-h-screen bg-[#fbfdfd] text-[#55565a]">
+        <header className="sticky top-0 z-50 border-b border-[#22AEC0]/25 bg-white/95 shadow-[0_10px_30px_-22px_rgba(34,174,192,.8)] backdrop-blur-xl">
+          <div className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+            <a href={restaurant.menuPath} className="shrink-0">
+              <img src={restaurant.logo} alt="Nutri Reset" className="h-12 w-auto max-w-[190px] object-contain sm:h-14 sm:max-w-[230px]" />
+            </a>
+            <nav className="hidden items-center gap-1 md:flex">
+              <a href={restaurant.menuPath} className="rounded-xl px-4 py-2 text-sm font-black text-[#55565a] hover:bg-[#eaf9fb] hover:text-[#16899A]">{isRtl ? "قائمة الوجبات" : "Meals"}</a>
+              <a href={smartPath} className="rounded-xl px-4 py-2 text-sm font-black text-[#55565a] hover:bg-[#eaf9fb] hover:text-[#16899A]">{isRtl ? "الخطة الذكية" : "Smart plan"}</a>
+            </nav>
+            <div className="flex items-center gap-2">
+              <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"
+                className="rounded-full bg-[#F47721] px-4 py-2.5 text-xs font-black text-white shadow-[0_8px_20px_-12px_rgba(244,119,33,.9)] sm:text-sm">
+                {isRtl ? "تواصل معنا" : "Contact"}
+              </a>
+              <Button onClick={toggleLanguage} variant="ghost" size="icon" className="rounded-full text-[#16899A] hover:bg-[#eaf9fb]">
+                <Globe className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </header>
+        <main className="public-safe-content pb-20 md:pb-0">{children}</main>
+        <footer className="mt-16 border-t border-[#22AEC0]/25 bg-[#22AEC0] text-white">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.2fr_.8fr] md:items-end">
+            <div>
+              <img src={restaurant.logo} alt="Nutri Reset" className="mb-4 h-16 w-auto max-w-[260px] rounded-xl bg-white px-3 py-2 object-contain" />
+              <p className="max-w-xl text-sm font-semibold leading-7 text-white/90">
+                {isRtl ? "خطط غذائية تناسب أهدافك وأسلوب حياتك، بوجبات صحية ومكونات حقيقية تصل إلى بابك." : "Nutrition plans built around your goals and lifestyle, with healthy meals and real ingredients delivered to your door."}
+              </p>
+            </div>
+            <div className="md:text-end">
+              <p className="text-xs font-black uppercase tracking-[.18em] text-white/75">Reset your body. Rebalance your life.</p>
+              <a href={`https://wa.me/${restaurant.phone.replace(/\D/g, "")}`} className="mt-3 inline-flex rounded-full bg-[#F47721] px-5 py-2.5 text-sm font-black text-white">{restaurant.phone}</a>
+              <p className="mt-4 text-xs text-white/70">© {new Date().getFullYear()} Nutri Reset</p>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className="public-site-shell min-h-screen bg-white">
@@ -324,10 +370,17 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="pb-20 md:pb-0">{children}</main>
+      <main className="public-safe-content pb-20 md:pb-0">{children}</main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom)",
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
         <div className="flex items-center justify-around py-2">
           {/* Show Dashboard button for logged in users */}
           {currentUser ? (
@@ -538,10 +591,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   : `© ${new Date().getFullYear()} Adrenaline Healthy Food. All rights reserved.`}
               </p>
               <div className="flex items-center gap-4">
-                <a href={restaurantSettings?.privacyPolicyUrl || "#privacy"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
+                <a href={restaurantSettings?.privacyPolicyUrl || "/privacy"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
                   {isRtl ? "سياسة الخصوصية" : "Privacy Policy"}
                 </a>
-                <a href={restaurantSettings?.termsUrl || "#terms"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
+                <a href={restaurantSettings?.termsUrl || "/terms"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
                   {isRtl ? "الشروط والأحكام" : "Terms & Conditions"}
                 </a>
               </div>

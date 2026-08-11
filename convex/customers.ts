@@ -76,6 +76,7 @@ function publicCustomerView(c: any) {
     startDate: c.startDate,
     endDate: c.endDate,
     durationWeeks: c.durationWeeks,
+    restaurantKey: c.restaurantKey || "ADRENALINE",
   };
 }
 
@@ -87,8 +88,8 @@ function publicCustomerView(c: any) {
  *    كاملة (أسماء/عناوين/أسعار/حساسية) لأي زائر يفتح DevTools.
  */
 export const findPublicByPhone = query({
-  args: { phone: v.string() },
-  handler: async (ctx, { phone }) => {
+  args: { phone: v.string(), restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))) },
+  handler: async (ctx, { phone, restaurantKey }) => {
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) return [];
 
@@ -97,7 +98,10 @@ export const findPublicByPhone = query({
       .withIndex("by_phone", (q) => q.eq("phone", normalizedPhone))
       .collect();
 
-    return customers.map(publicCustomerView);
+    const expectedRestaurant = restaurantKey === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
+    return customers
+      .filter((c: any) => String(c.restaurantKey || "ADRENALINE") === expectedRestaurant)
+      .map(publicCustomerView);
   },
 });
 
@@ -171,6 +175,7 @@ function deriveProgram(goals?: string, packageLabel?: string): string | undefine
 
 export const create = mutation({
   args: {
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     fullName: v.string(),
     phone: v.string(),
     gender: v.optional(v.union(v.literal("MALE"), v.literal("FEMALE"))),
@@ -223,8 +228,10 @@ export const create = mutation({
       .query("customers")
       .withIndex("by_phone", (q) => q.eq("phone", phone))
       .collect();
+    const expectedRestaurant = args.restaurantKey === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
     if (samePhone.some((c: any) =>
       normalizeCustomerName(c.fullName) === normalizeCustomerName(args.fullName)
+      && String(c.restaurantKey || "ADRENALINE") === expectedRestaurant
     )) {
       throw new Error("يوجد مشترك بنفس الاسم ورقم الهاتف بالفعل / Customer already exists");
     }
@@ -242,6 +249,7 @@ export const create = mutation({
 
     return await ctx.db.insert("customers", {
       ...fields,
+      restaurantKey: expectedRestaurant,
       snacksPerDay,
       program,
       phone,

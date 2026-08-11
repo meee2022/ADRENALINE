@@ -83,12 +83,15 @@ const SmartPlan = lazy(() => import("@/pages/public/SmartPlan"));
 const HowToSubscribe = lazy(() => import("@/pages/public/HowToSubscribe"));
 const ContactPage = lazy(() => import("@/pages/public/ContactPage"));
 const CalorieCalculator = lazy(() => import("@/pages/public/CalorieCalculator"));
+const PrivacyPolicy = lazy(() => import("@/pages/public/LegalPages").then((m) => ({ default: m.PrivacyPolicy })));
+const TermsAndConditions = lazy(() => import("@/pages/public/LegalPages").then((m) => ({ default: m.TermsAndConditions })));
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useStore } from "@/lib/store";
 import { LanguageProvider, useLanguage } from "@/lib/i18n";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { installGlobalErrorHandlers } from "@/lib/logger";
+import { isNutriResetHost } from "@/lib/restaurantBrand";
 
 if (typeof window !== "undefined") {
   installGlobalErrorHandlers();
@@ -163,19 +166,28 @@ function PageLoader() {
   );
 }
 
+function DomainHome() {
+  return isNutriResetHost() ? <PublicMenu /> : <HomePage />;
+}
+
 function Router() {
   return (
     <Switch>
       {/* ===== Public Routes (No Auth Required) ===== */}
-      <Route path="/" component={HomePage} />
+      <Route path="/" component={DomainHome} />
       <Route path="/public/plans" component={PublicPlans} />
       <Route path="/public/menu" component={PublicMenu} />
+      <Route path="/nutri-reset/menu" component={PublicMenu} />
       <Route path="/public/menu-v2" component={MenuV2Demo} />
       <Route path="/public/meal/:slug" component={MealDetails} />
       <Route path="/public/order-review" component={OrderReview} />
+      <Route path="/nutri-reset/order-review" component={OrderReview} />
       <Route path="/public/about" component={AboutPage} />
       <Route path="/public/contact" component={ContactPage} />
       <Route path="/public/calorie-calculator" component={CalorieCalculator} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsAndConditions} />
+      <Route path="/support" component={ContactPage} />
       <Route path="/customer/auth" component={CustomerAuth} />
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/smart-plan" component={SmartPlan} />
