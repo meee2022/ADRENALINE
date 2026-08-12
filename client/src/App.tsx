@@ -81,6 +81,8 @@ const OrderReview = lazy(() => import("@/pages/public/OrderReview"));
 const AboutPage = lazy(() => import("@/pages/public/AboutPage"));
 const SmartPlan = lazy(() => import("@/pages/public/SmartPlan"));
 const HowToSubscribe = lazy(() => import("@/pages/public/HowToSubscribe"));
+const PayLaterCheckout = lazy(() => import("@/pages/public/PayLaterCheckout"));
+const PayLaterResult = lazy(() => import("@/pages/public/PayLaterResult"));
 const ContactPage = lazy(() => import("@/pages/public/ContactPage"));
 const CalorieCalculator = lazy(() => import("@/pages/public/CalorieCalculator"));
 const PrivacyPolicy = lazy(() => import("@/pages/public/LegalPages").then((m) => ({ default: m.PrivacyPolicy })));
@@ -192,6 +194,8 @@ function Router() {
       <Route path="/customer/profile" component={CustomerProfile} />
       <Route path="/customer/smart-plan" component={SmartPlan} />
       <Route path="/public/how-to-subscribe" component={HowToSubscribe} />
+      <Route path="/public/paylater" component={PayLaterCheckout} />
+      <Route path="/public/paylater/result" component={PayLaterResult} />
       {/* تتبّع الطلب — عام برابط سرّي */}
       <Route path="/track/:token" component={TrackOrder} />
       <Route path="/plan/:token" component={PublicMealPlan} />

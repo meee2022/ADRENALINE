@@ -75,6 +75,8 @@ import type * as outletLabels from "../outletLabels.js";
 import type * as outletScan from "../outletScan.js";
 import type * as passwordReset from "../passwordReset.js";
 import type * as passwords from "../passwords.js";
+import type * as payLater from "../payLater.js";
+import type * as payLaterNode from "../payLaterNode.js";
 import type * as payroll from "../payroll.js";
 import type * as pettyCash from "../pettyCash.js";
 import type * as pos from "../pos.js";
@@ -181,6 +183,8 @@ declare const fullApi: ApiFromModules<{
   outletScan: typeof outletScan;
   passwordReset: typeof passwordReset;
   passwords: typeof passwords;
+  payLater: typeof payLater;
+  payLaterNode: typeof payLaterNode;
   payroll: typeof payroll;
   pettyCash: typeof pettyCash;
   pos: typeof pos;

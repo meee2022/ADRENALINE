@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nutri Reset">
+  <rect width="512" height="512" rx="104" fill="#f8fbfa"/>
+  <path d="M42 104c65-55 125-69 190-30" fill="none" stroke="#20aab5" stroke-width="18" stroke-linecap="round"/>
+  <path d="M280 438c73-5 126-38 172-105" fill="none" stroke="#f47721" stroke-width="18" stroke-linecap="round"/>
+  <text x="256" y="238" text-anchor="middle" fill="#555759" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" letter-spacing="6">NUTRI</text>
+  <text x="256" y="326" text-anchor="middle" fill="#555759" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" letter-spacing="2">RESET</text>
+  <path d="M204 274h38" stroke="#20aab5" stroke-width="12" stroke-linecap="round"/>
+  <path d="M248 274h38" stroke="#f47721" stroke-width="12" stroke-linecap="round"/>
+  <path d="M292 274h38" stroke="#58a978" stroke-width="12" stroke-linecap="round"/>
+</svg>

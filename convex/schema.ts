@@ -924,6 +924,27 @@ export default defineSchema({
     .index("by_sortOrder", ["sortOrder"])
     .index("by_active", ["isActive"]),
 
+  payLaterPayments: defineTable({
+    orderId: v.string(),
+    checkoutToken: v.string(),
+    planId: v.id("publicPlans"),
+    planName: v.string(),
+    optionIndex: v.number(),
+    amount: v.number(),
+    currency: v.literal("QAR"),
+    customerName: v.string(),
+    customerPhone: v.string(),
+    customerEmail: v.optional(v.string()),
+    environment: v.union(v.literal("sandbox"), v.literal("production")),
+    status: v.union(v.literal("created"), v.literal("pending"), v.literal("success"), v.literal("failed")),
+    payLaterOrderId: v.optional(v.string()),
+    paymentLinkUrl: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_orderId", ["orderId"])
+    .index("by_checkoutToken", ["checkoutToken"]),
+
   publicMeals: defineTable({
     nameAr: v.string(),
     nameEn: v.optional(v.string()),

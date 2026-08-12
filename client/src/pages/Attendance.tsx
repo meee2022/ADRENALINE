@@ -48,7 +48,9 @@ function normTime(s: string): string | null {
 }
 
 /** مُحلّل مخصّص لتقرير iVMS-4200 "Attendance Details" (أعمدة Name/Date/Check-In/Check-out). */
-function parseIvmsReport(text: string): { name: string; date: string; time: string }[] | null {
+type AttendancePunch = { name: string; date: string; time: string; kind?: "in" | "out" };
+
+function parseIvmsReport(text: string): AttendancePunch[] | null {
   const lines = text.split(/\r?\n/);
   const hi = lines.findIndex((l) => /person\s*id/i.test(l) && /name/i.test(l) && /check.?in/i.test(l));
   if (hi < 0) return null;
@@ -56,7 +58,7 @@ function parseIvmsReport(text: string): { name: string; date: string; time: stri
   const idx = (names: string[]) => cols.findIndex((c) => names.some((n) => c === n || c.includes(n)));
   const iName = idx(["name"]), iDate = idx(["date"]), iIn = idx(["check-in", "check in", "checkin"]), iOut = idx(["check-out", "check out", "checkout"]);
   if (iName < 0 || iDate < 0 || iIn < 0) return null;
-  const out: { name: string; date: string; time: string }[] = [];
+  const out: AttendancePunch[] = [];
   for (let i = hi + 1; i < lines.length; i++) {
     const parts = lines[i].split(",");
     const date = (parts[iDate] || "").trim();
@@ -64,17 +66,17 @@ function parseIvmsReport(text: string): { name: string; date: string; time: stri
     const name = (parts[iName] || "").trim();
     if (!name) continue;
     const ci = normTime(parts[iIn] || ""), co = iOut >= 0 ? normTime(parts[iOut] || "") : null;
-    if (ci) out.push({ name, date, time: ci });
-    if (co && co !== ci) out.push({ name, date, time: co });
+    if (ci) out.push({ name, date, time: ci, kind: "in" });
+    if (co && co !== ci) out.push({ name, date, time: co, kind: "out" });
   }
   return out.length ? out : null;
 }
 
 /** يحلّل نص/ملف الحضور إلى نقاط بصمة {name, date, time}. يكتشف تقرير iVMS تلقائيًا، وإلا يستخدم المُحلّل العام. */
-function parsePunches(text: string): { name: string; date: string; time: string }[] {
+function parsePunches(text: string): AttendancePunch[] {
   const ivms = parseIvmsReport(text);
   if (ivms) return ivms;
-  const out: { name: string; date: string; time: string }[] = [];
+  const out: AttendancePunch[] = [];
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;

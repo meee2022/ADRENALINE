@@ -73,6 +73,47 @@
     <meta name="apple-mobile-web-app-title" content="Adrenaline" />
     <meta name="application-name" content="Adrenaline" />
 
+    <!-- The two public domains share one deployment, but keep separate browser/PWA identities. -->
+    <script>
+      (function () {
+        var host = window.location.hostname.toLowerCase().replace(/^www\./, "");
+        if (host !== "nutrireset.online") return;
+        var title = "Nutri Reset | Personalized Nutrition";
+        var logo = "/nutri-reset-favicon.svg";
+        var fullLogo = "https://nutrireset.online/nutri-reset-logo.png";
+        document.title = title;
+        document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(function (link) {
+          link.setAttribute("href", logo);
+          link.setAttribute("type", "image/svg+xml");
+        });
+        document.querySelectorAll('link[rel="apple-touch-icon"]').forEach(function (link) {
+          link.setAttribute("href", "/nutri-reset-logo.png");
+        });
+        var manifest = document.getElementById("app-manifest");
+        if (manifest) manifest.setAttribute("href", "/nutri-reset-manifest.webmanifest");
+        var values = {
+          'meta[name="title"]': title,
+          'meta[name="author"]': "Nutri Reset",
+          'meta[name="application-name"]': "Nutri Reset",
+          'meta[name="apple-mobile-web-app-title"]': "Nutri Reset",
+          'meta[name="theme-color"]': "#079AA5",
+          'meta[property="og:site_name"]': "Nutri Reset",
+          'meta[property="og:title"]': title,
+          'meta[property="og:image"]': fullLogo,
+          'meta[property="og:image:alt"]': "Nutri Reset",
+          'meta[name="twitter:title"]': title,
+          'meta[name="twitter:image"]': fullLogo,
+          'meta[name="twitter:image:alt"]': "Nutri Reset"
+        };
+        Object.keys(values).forEach(function (selector) {
+          var element = document.querySelector(selector);
+          if (element) element.setAttribute("content", values[selector]);
+        });
+        var canonical = document.querySelector('link[rel="canonical"]');
+        if (canonical) canonical.setAttribute("href", "https://nutrireset.online/");
+      })();
+    </script>
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

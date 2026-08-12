@@ -3,7 +3,7 @@
  * @description حساب ساعات العمل ومطابقة أسماء جهاز البصمة — يؤثران مباشرةً على الرواتب.
  */
 import { describe, it, expect } from "vitest";
-import { computeHours, lev } from "../convex/attendance";
+import { buildShifts, computeHours, lev } from "../convex/attendance";
 import { normalizePhone } from "../convex/lib/phone";
 
 describe("computeHours", () => {
@@ -38,6 +38,38 @@ describe("computeHours", () => {
   it("خروج بعد منتصف الليل بدقيقة يُحسب يوماً كاملاً تقريباً لا سالباً", () => {
     const r = computeHours("23:59", "00:01");
     expect(r.workedHours).toBeCloseTo(0.03, 2);
+  });
+});
+
+describe("buildShifts", () => {
+  it("does not shift every later day after a missing checkout", () => {
+    expect(buildShifts([
+      { name: "Shakib", date: "2026-07-10", time: "13:22" },
+      { name: "Shakib", date: "2026-07-11", time: "00:50" },
+      { name: "Shakib", date: "2026-07-11", time: "13:18" },
+      { name: "Shakib", date: "2026-07-11", time: "21:56" },
+    ])).toEqual([
+      { name: "Shakib", date: "2026-07-10", checkIn: "13:22", checkOut: undefined },
+      { name: "Shakib", date: "2026-07-11", checkIn: "00:50", checkOut: "21:56" },
+    ]);
+  });
+
+  it("uses Hikvision in/out direction when it is available", () => {
+    expect(buildShifts([
+      { name: "Night", date: "2026-07-11", time: "13:18", kind: "out" },
+      { name: "Night", date: "2026-07-11", time: "21:56", kind: "in" },
+    ])).toEqual([
+      { name: "Night", date: "2026-07-11", checkIn: "21:56", checkOut: "13:18" },
+    ]);
+  });
+
+  it("attaches an explicitly shifted after-midnight checkout to the prior work date", () => {
+    expect(buildShifts([
+      { name: "Night", date: "2026-08-10", time: "16:03", kind: "in" },
+      { name: "Night", date: "2026-08-10", time: "02:34", kind: "out" },
+    ])).toEqual([
+      { name: "Night", date: "2026-08-10", checkIn: "16:03", checkOut: "02:34" },
+    ]);
   });
 });
 

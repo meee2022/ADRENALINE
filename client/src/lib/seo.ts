@@ -7,12 +7,14 @@
 import { useEffect } from "react";
 import { useLanguage } from "@/lib/i18n";
 
-const SITE = "https://adrenalinehealthy.com";
+const IS_NUTRI_RESET = typeof window !== "undefined"
+  && window.location.hostname.toLowerCase().replace(/^www\./, "") === "nutrireset.online";
+const SITE = IS_NUTRI_RESET ? "https://nutrireset.online" : "https://adrenalinehealthy.com";
 const DEFAULT_DESC_AR =
   "وجبات صحية ولذيذة محسوبة السعرات تُحضَّر يومياً بإشراف أخصائيي تغذية وتوصَّل في كل أنحاء قطر.";
 const DEFAULT_DESC_EN =
   "Fresh, calorie-tracked healthy meals prepared daily by our dietitians and delivered anywhere in Qatar.";
-const DEFAULT_IMG = SITE + "/adrenaline-logo-full.png";
+const DEFAULT_IMG = SITE + (IS_NUTRI_RESET ? "/nutri-reset-logo.png" : "/adrenaline-logo-full.png");
 
 function upsertMeta(key: { name?: string; property?: string }, content: string) {
   const sel = key.name ? `meta[name="${key.name}"]` : `meta[property="${key.property}"]`;
@@ -60,7 +62,7 @@ export function useSeo(opts: SeoOpts) {
       if (typeof v === "string") return v;
       return isAr ? v.ar : v.en;
     };
-    const t = pick(title, "Adrenaline Healthy Food");
+    const t = pick(title, IS_NUTRI_RESET ? "Nutri Reset" : "Adrenaline Healthy Food");
     const desc = pick(description, isAr ? DEFAULT_DESC_AR : DEFAULT_DESC_EN);
     const url = SITE + (path || (typeof window !== "undefined" ? window.location.pathname : "/"));
     const img = image || DEFAULT_IMG;

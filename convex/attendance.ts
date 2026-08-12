@@ -5,7 +5,7 @@
  *   يوم العمل القياسي 9 ساعات؛ الأوفرتايم = max(0, ساعات العمل − 9).
  */
 import { v } from "convex/values";
-import { dateToDays } from "./lib/dates";
+import { addDays, dateToDays, fmtDate, parseDate } from "./lib/dates";
 import { mutation, query } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
 
@@ -43,6 +43,10 @@ function isRestDay(m: Map<string, WorkSetting>, name: string, date: string): boo
 
 const r2 = (n: number) => Math.round(n * 100) / 100;
 const monthOf = (date: string) => (date || "").slice(0, 7);
+const normEmployeeKey = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const NIGHT_SHIFT_EMPLOYEES = new Set([
+  "Shariful Islam", "Shourub Hussain", "Akram Abdulla", "Mohammed Wagiealla", "Arif Mohamed", "Arif Mohammed", "Arif Mphammed", "Muhammed Rashed",
+].map(normEmployeeKey));
 
 /** "HH:mm" أو "HH:mm:ss" → دقائق منذ منتصف الليل. */
 function timeToMin(t?: string): number | null {
@@ -69,7 +73,7 @@ export function computeHours(
 
 // أقصى مدة شيفت (12 ساعة + هامش). يفصل خروج الشيفت عن دخول الشيفت اللي بعده،
 // وبيسمح للشيفت الليلي يعدّي منتصف الليل من غير ما يتلغبط مع اليوم الجديد.
-const MAX_SHIFT_MIN = 16 * 60;
+type Punch = { name: string; date: string; time: string; kind?: "in" | "out" };
 
 /** "YYYY-MM-DD" → عدد الأيام منذ حقبة (لحساب زمن مطلق يعدّي منتصف الليل). */
 
@@ -79,8 +83,8 @@ const MAX_SHIFT_MIN = 16 * 60;
  * (فبصمة 3 الفجر تُقرن كخروج للشيفت اللي بدأ 3 العصر إمبارح، مش دخول يوم جديد).
  * الشيفتات اللي ليها نفس يوم الدخول تُدمج (أول دخول/آخر خروج) لمعالجة فترات الراحة.
  */
-function buildShifts(raw: { name: string; date: string; time: string }[]) {
-  const byEmp = new Map<string, { date: string; time: string; abs: number }[]>();
+export function buildShifts(raw: Punch[]) {
+  const byEmp = new Map<string, { date: string; time: string; abs: number; kind?: "in" | "out" }[]>();
   for (const p of raw) {
     const name = (p.name || "").trim();
     const date = (p.date || "").trim();
@@ -88,58 +92,92 @@ function buildShifts(raw: { name: string; date: string; time: string }[]) {
     if (!name || !/^\d{4}-\d{2}-\d{2}$/.test(date) || tm == null) continue;
     let arr = byEmp.get(name);
     if (!arr) { arr = []; byEmp.set(name, arr); }
-    arr.push({ date, time: p.time.trim(), abs: dateToDays(date) * 1440 + tm });
+    arr.push({ date, time: p.time.trim(), abs: dateToDays(date) * 1440 + tm, kind: p.kind });
   }
-  // name|يوم-الدخول → مُجمّع الشيفت
-  const acc = new Map<string, { name: string; date: string; inAbs: number; inTime: string; outAbs: number | null; outTime: string | null }>();
+  const shifts: { name: string; date: string; checkIn?: string; checkOut?: string }[] = [];
   for (const [name, list] of byEmp) {
     list.sort((a, b) => a.abs - b.abs);
     // إزالة البصمات المكررة القريبة (أقل من دقيقتين)
     const dd: typeof list = [];
     for (const p of list) if (!dd.length || p.abs - dd[dd.length - 1].abs >= 2) dd.push(p);
-    let i = 0;
-    while (i < dd.length) {
-      const inn = dd[i];
-      const nxt = dd[i + 1];
-      let out: typeof inn | null = null;
-      if (nxt && nxt.abs - inn.abs <= MAX_SHIFT_MIN) { out = nxt; i += 2; } else { i += 1; }
-      const key = name + "|" + inn.date;
-      const cur = acc.get(key);
-      if (!cur) acc.set(key, { name, date: inn.date, inAbs: inn.abs, inTime: inn.time, outAbs: out ? out.abs : null, outTime: out ? out.time : null });
-      else {
-        if (inn.abs < cur.inAbs) { cur.inAbs = inn.abs; cur.inTime = inn.time; }
-        if (out && (cur.outAbs == null || out.abs > cur.outAbs)) { cur.outAbs = out.abs; cur.outTime = out.time; }
+    const byDate = new Map<string, typeof dd>();
+    for (const p of dd) {
+      const day = byDate.get(p.date) ?? [];
+      day.push(p);
+      byDate.set(p.date, day);
+    }
+    for (const [date, day] of byDate) {
+      const explicitIn = day.find((p) => p.kind === "in");
+      const explicitOut = day.slice().reverse().find((p) => p.kind === "out");
+      if (explicitIn || explicitOut) {
+        shifts.push({ name, date, checkIn: explicitIn?.time, checkOut: explicitOut?.time });
+      } else {
+        // Without a direction from the device, keep punches inside their calendar
+        // day. Pairing blindly across dates makes one missed punch shift the rest
+        // of the month (an out becomes the next in, and so on).
+        shifts.push({
+          name,
+          date,
+          checkIn: day[0]?.time,
+          checkOut: day.length > 1 ? day[day.length - 1].time : undefined,
+        });
       }
     }
   }
-  return Array.from(acc.values()).map((s) => ({ name: s.name, date: s.date, checkIn: s.inTime, checkOut: s.outTime || undefined }));
+  return shifts.sort((a, b) => a.date === b.date ? a.name.localeCompare(b.name) : a.date.localeCompare(b.date));
 }
 
 /** يكتب شيفتات البصمة، ويحذف سجلّات البصمة القديمة على أيام لم تعُد يوم دخول (خروج شيفت ليلي). */
 async function applyShifts(
   ctx: any,
-  shifts: { name: string; date: string; checkIn: string; checkOut?: string }[],
+  shifts: { name: string; date: string; checkIn?: string; checkOut?: string }[],
   rawKeys: Set<string>,
 ) {
-  const shiftKeys = new Set(shifts.map((s) => s.name + "|" + s.date));
-  for (const key of rawKeys) {
-    if (shiftKeys.has(key)) continue;
-    const [name, date] = key.split("|");
-    const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", date)).first();
-    if (ex && ex.source === "biometric") await ctx.db.delete(ex._id);
-  }
+  // Never delete a previously valid biometric day merely because a partial
+  // polling window could not rebuild it. A later complete pull may update it.
   const wsMap = await buildWorkSettingsMap(ctx);
   for (const s of shifts) {
-    const { workedHours, otHours } = computeHours(s.checkIn, s.checkOut, stdFor(wsMap, s.name), isRestDay(wsMap, s.name, s.date));
+    // Historical imports before the night-shift fix stored a 00:00-04:00
+    // checkout as the next day's check-in. Remove that stale next-day row when
+    // the same punch is now correctly attached to the prior work date.
+    const outMin = timeToMin(s.checkOut);
+    if (s.checkOut && outMin != null && outMin <= 4 * 60) {
+      const nextDate = fmtDate(addDays(parseDate(s.date), 1));
+      const stale = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", nextDate)).first();
+      if (stale && stale.source === "biometric" && stale.checkIn === s.checkOut) await ctx.db.delete(stale._id);
+    }
+    const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", s.date)).first();
+    const checkIn = s.checkIn ?? (ex?.source === "biometric" ? ex.checkIn : undefined);
+    const checkOut = s.checkOut ?? (ex?.source === "biometric" ? ex.checkOut : undefined);
+    const { workedHours, otHours } = computeHours(checkIn, checkOut, stdFor(wsMap, s.name), isRestDay(wsMap, s.name, s.date));
     const doc = {
       name: s.name, date: s.date, month: monthOf(s.date), status: "present" as const,
-      checkIn: s.checkIn, checkOut: s.checkOut, workedHours, otHours, source: "biometric" as const,
+      checkIn, checkOut, workedHours, otHours, source: "biometric" as const,
     };
-    const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", s.date)).first();
     if (ex) await ctx.db.patch(ex._id, { ...doc, updatedAt: Date.now() });
     else await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() });
   }
   return { ok: true, days: shifts.length, employees: new Set(shifts.map((s) => s.name)).size };
+}
+
+async function reconcileHistoricalAbsences(ctx: any, from: string, to: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) return 0;
+  let inserted = 0;
+  for (let cur = parseDate(from), guard = 0; fmtDate(cur) <= to && guard < 370; cur = addDays(cur, 1), guard++) {
+    const date = fmtDate(cur);
+    const month = monthOf(date);
+    const payroll = await ctx.db.query("payroll").withIndex("by_month", (q: any) => q.eq("month", month)).collect();
+    const names = Array.from(new Set(payroll.filter((p: any) => !p.isVoid).map((p: any) => String(p.name || "").trim()).filter(Boolean))) as string[];
+    for (const name of names) {
+      const existing = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", date)).first();
+      if (existing) continue;
+      await ctx.db.insert("attendance", {
+        name, date, month, status: "absent", source: "biometric", note: "Historical reconciliation: no biometric punch", createdAt: Date.now(),
+      });
+      inserted++;
+    }
+  }
+  return inserted;
 }
 
 /** مسافة ليفنشتاين (لمطابقة الأسماء التقريبية). */
@@ -460,7 +498,7 @@ export const bulkUpsert = mutation({
  */
 export const importPunches = mutation({
   args: {
-    punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string() })),
+    punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string(), kind: v.optional(v.union(v.literal("in"), v.literal("out"))) })),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -483,7 +521,9 @@ export const importPunches = mutation({
 export const importPunchesDevice = mutation({
   args: {
     key: v.string(),
-    punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string() })),
+    punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string(), kind: v.optional(v.union(v.literal("in"), v.literal("out"))) })),
+    reconcileFrom: v.optional(v.string()),
+    reconcileTo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const expected = process.env.DEVICE_BRIDGE_KEY;
@@ -491,12 +531,253 @@ export const importPunchesDevice = mutation({
     // ✅ يطابق أسماء البصمة بأسماء الرواتب تلقائيًا ويتجاهل غير المسجّلين (شركة تانية إلخ)
     const resolve = await buildPayrollResolver(ctx);
     const resolved = args.punches
-      .map((p) => ({ name: resolve((p.name || "").trim()) || "", date: (p.date || "").trim(), time: p.time }))
+      .map((p) => {
+        const name = resolve((p.name || "").trim()) || "";
+        let date = (p.date || "").trim();
+        let kind = p.kind;
+        const tm = timeToMin(p.time);
+        // Some Hikvision users return no attendanceStatus even though their
+        // names resolve correctly in payroll. Apply the night rule after name
+        // resolution so spelling aliases cannot bypass it. An early punch with
+        // no direction is still on the device's next calendar day, so move it
+        // back one work date. Already-adjusted bridge punches have kind="out"
+        // and must not be shifted a second time.
+        if (name && NIGHT_SHIFT_EMPLOYEES.has(normEmployeeKey(name)) && tm != null) {
+          if (tm <= 4 * 60 && !kind) {
+            date = fmtDate(addDays(parseDate(date), -1));
+            kind = "out";
+          } else if (tm >= 22 * 60) kind = "out";
+          else if (tm >= 14 * 60 + 30 && tm <= 18 * 60) kind = "in";
+        }
+        return { name, date, time: p.time, kind };
+      })
       .filter((p) => p.name && p.date);
     const rawKeys = new Set<string>();
     for (const p of resolved) rawKeys.add(p.name + "|" + p.date);
     const shifts = buildShifts(resolved);
-    return await applyShifts(ctx, shifts, rawKeys);
+    const result = await applyShifts(ctx, shifts, rawKeys);
+    const absences = args.reconcileFrom && args.reconcileTo
+      ? await reconcileHistoricalAbsences(ctx, args.reconcileFrom, args.reconcileTo)
+      : 0;
+    return { ...result, absences };
+  },
+});
+
+/** One-time data repair: collapse historical spellings of Arif into the roster name. */
+export const mergeArifAttendanceAliases = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const canonical = "Arif Mohamed";
+    const aliases = new Set([canonical, "Arif Mohammed", "Arif Mphammed"]);
+    const rows = (await ctx.db.query("attendance").collect()).filter((r) => aliases.has(r.name));
+    const byDate = new Map<string, typeof rows>();
+    for (const row of rows) {
+      const group = byDate.get(row.date) ?? [];
+      group.push(row);
+      byDate.set(row.date, group);
+    }
+
+    let renamed = 0, deleted = 0;
+    for (const group of byDate.values()) {
+      // Prefer a complete, believable shift; then prefer the most recently updated row.
+      const score = (r: any) => {
+        const complete = r.checkIn && r.checkOut ? 100 : (r.checkIn || r.checkOut ? 20 : 0);
+        const believable = typeof r.workedHours === "number" && r.workedHours <= 14 ? 30 : 0;
+        return complete + believable + Number(r.updatedAt ?? r.createdAt ?? 0) / 1e15;
+      };
+      group.sort((a, b) => score(b) - score(a));
+      const winner = group[0];
+      if (winner.name !== canonical) {
+        await ctx.db.patch(winner._id, { name: canonical, updatedAt: Date.now() });
+        renamed++;
+      }
+      for (const duplicate of group.slice(1)) {
+        await ctx.db.delete(duplicate._id);
+        deleted++;
+      }
+    }
+    return { canonical, dates: byDate.size, renamed, deleted };
+  },
+});
+
+/**
+ * Repair rows produced by the legacy day-boundary bug. A row such as
+ * 01:10 -> 16:00 is not one 15-hour shift: 01:10 is yesterday's checkout
+ * and 16:00 is today's check-in. Only biometric rows matching that exact
+ * shape are touched; genuinely missing punches remain incomplete.
+ */
+export const repairLegacyShiftChains = mutation({
+  args: { dryRun: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const allowedMonths = new Set(["2026-07", "2026-08"]);
+    const rows = (await ctx.db.query("attendance").collect())
+      .filter((r) => allowedMonths.has(r.month) && r.source === "biometric");
+    const byNameDate = new Map(rows.map((r) => [`${r.name}\u0000${r.date}`, r]));
+    const wsMap = await buildWorkSettingsMap(ctx);
+    const fixes: Array<{ name: string; date: string; from: string; to: string; previousDate: string }> = [];
+
+    for (const row of rows) {
+      const a = timeToMin(row.checkIn), b = timeToMin(row.checkOut);
+      if (a == null || b == null || b <= a) continue;
+      const sameDayHours = (b - a) / 60;
+      const isKnownNight = NIGHT_SHIFT_EMPLOYEES.has(normEmployeeKey(row.name));
+      const threshold = isKnownNight ? 14 : 16;
+      if (a > 8 * 60 || b < 14 * 60 || sameDayHours < threshold) continue;
+
+      const previousDate = fmtDate(addDays(parseDate(row.date), -1));
+      const previous = byNameDate.get(`${row.name}\u0000${previousDate}`);
+      fixes.push({ name: row.name, date: row.date, from: `${row.checkIn}-${row.checkOut}`, to: `${row.checkOut}-`, previousDate });
+      if (args.dryRun) continue;
+
+      // Current row keeps the afternoon punch as its check-in.
+      await ctx.db.patch(row._id, {
+        checkIn: row.checkOut,
+        checkOut: undefined,
+        workedHours: undefined,
+        otHours: undefined,
+        updatedAt: Date.now(),
+      });
+
+      if (previous) {
+        const checkIn = previous.checkIn;
+        const checkOut = row.checkIn;
+        const hours = computeHours(checkIn, checkOut, stdFor(wsMap, row.name), isRestDay(wsMap, row.name, previousDate));
+        await ctx.db.patch(previous._id, { checkOut, ...hours, updatedAt: Date.now() });
+      } else {
+        const hours = computeHours(undefined, row.checkIn, stdFor(wsMap, row.name), isRestDay(wsMap, row.name, previousDate));
+        const inserted: any = {
+          name: row.name, date: previousDate, month: monthOf(previousDate), status: "present" as const,
+          checkOut: row.checkIn, ...hours, source: "biometric" as const, createdAt: Date.now(),
+        };
+        const id = await ctx.db.insert("attendance", inserted);
+        byNameDate.set(`${row.name}\u0000${previousDate}`, { ...inserted, _id: id });
+      }
+    }
+    return { dryRun: !!args.dryRun, candidates: fixes.length, fixes };
+  },
+});
+
+/** Remove impossible near-24h totals left by two consecutive early-morning punches. */
+export const sanitizeImpossibleLegacyHours = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const months = new Set(["2026-07", "2026-08"]);
+    const rows = (await ctx.db.query("attendance").collect()).filter((r) =>
+      months.has(r.month) && r.source === "biometric" && (r.workedHours ?? 0) > 16,
+    );
+    const fixed: Array<{ name: string; date: string; keptCheckout?: string }> = [];
+    for (const row of rows) {
+      await ctx.db.patch(row._id, {
+        checkIn: undefined,
+        workedHours: undefined,
+        otHours: undefined,
+        note: row.note ? `${row.note} | Legacy biometric pair requires review` : "Legacy biometric pair requires review",
+        updatedAt: Date.now(),
+      });
+      fixed.push({ name: row.name, date: row.date, keptCheckout: row.checkOut });
+    }
+    return { fixed: fixed.length, rows: fixed };
+  },
+});
+
+/** Replace 1-7 July legacy timezone rows from the original iVMS report. */
+export const repairJulyFirstWeekFromDeviceReport = mutation({
+  args: {
+    rows: v.array(v.object({
+      name: v.string(), date: v.string(),
+      checkIn: v.optional(v.string()), checkOut: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const resolveName = await buildPayrollResolver(ctx);
+    const wsMap = await buildWorkSettingsMap(ctx);
+    let updated = 0, inserted = 0, skipped = 0;
+    for (const source of args.rows) {
+      if (!/^2026-07-0[1-7]$/.test(source.date) || (!source.checkIn && !source.checkOut)) { skipped++; continue; }
+      const name = resolveName(source.name);
+      if (!name) { skipped++; continue; }
+      const checkIn = source.checkIn?.slice(0, 5);
+      const checkOut = source.checkOut?.slice(0, 5);
+      const hours = computeHours(checkIn, checkOut, stdFor(wsMap, name), isRestDay(wsMap, name, source.date));
+      const existing = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", source.date)).first();
+      const doc = {
+        name, date: source.date, month: "2026-07", status: "present" as const,
+        checkIn, checkOut, ...hours, source: "biometric" as const,
+        note: "Corrected from original iVMS July report", updatedAt: Date.now(),
+      };
+      if (existing) { await ctx.db.patch(existing._id, doc); updated++; }
+      else { await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() }); inserted++; }
+    }
+    return { updated, inserted, skipped };
+  },
+});
+
+/** Apply the legacy iVMS +08:00 to Qatar +03:00 correction for 1-9 July. */
+export const repairJuly1To9Timezone = mutation({
+  args: {
+    rows: v.array(v.object({
+      name: v.string(), date: v.string(),
+      checkIn: v.optional(v.string()), checkOut: v.optional(v.string()),
+    })),
+  },
+  handler: async (ctx, args) => {
+    const resolveName = await buildPayrollResolver(ctx);
+    const wsMap = await buildWorkSettingsMap(ctx);
+    const convert = (date: string, time?: string) => {
+      const mins = timeToMin(time);
+      if (mins == null) return null;
+      const shifted = mins - 5 * 60;
+      return shifted < 0
+        ? { date: fmtDate(addDays(parseDate(date), -1)), time: `${String(Math.floor((shifted + 1440) / 60)).padStart(2, "0")}:${String((shifted + 1440) % 60).padStart(2, "0")}` }
+        : { date, time: `${String(Math.floor(shifted / 60)).padStart(2, "0")}:${String(shifted % 60).padStart(2, "0")}` };
+    };
+    let updated = 0, inserted = 0, moved = 0, skipped = 0;
+    for (const source of args.rows) {
+      if (!/^2026-07-0[1-9]$/.test(source.date) || (!source.checkIn && !source.checkOut)) { skipped++; continue; }
+      const name = resolveName(source.name);
+      if (!name) { skipped++; continue; }
+      const cin = convert(source.date, source.checkIn);
+      const cout = convert(source.date, source.checkOut);
+      const workDate = cin?.date ?? cout?.date ?? source.date;
+      const checkIn = cin?.time;
+      const checkOut = cout?.time;
+      const hours = computeHours(checkIn, checkOut, stdFor(wsMap, name), isRestDay(wsMap, name, workDate));
+
+      // Remove the temporary unshifted row created by the previous repair.
+      if (workDate !== source.date) {
+        const stale = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", source.date)).first();
+        if (stale?.note === "Corrected from original iVMS July report") await ctx.db.delete(stale._id);
+        moved++;
+      }
+
+      const existing = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", name).eq("date", workDate)).first();
+      const doc = {
+        name, date: workDate, month: monthOf(workDate), status: "present" as const,
+        checkIn, checkOut, ...hours, source: "biometric" as const,
+        note: "Manually corrected iVMS timezone (-5h), source 1-9 July", updatedAt: Date.now(),
+      };
+      if (existing) { await ctx.db.patch(existing._id, doc); updated++; }
+      else { await ctx.db.insert("attendance", { ...doc, createdAt: Date.now() }); inserted++; }
+    }
+    return { updated, inserted, moved, skipped };
+  },
+});
+
+/** Remove unshifted July 9 copies whose source punches moved to July 8 after -5h. */
+export const cleanupJuly9UnshiftedCopies = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const affected = new Set([
+      "Arif Mohamed", "Arman Hussain", "Aziz", "Mohammed Wagiealla", "Nadir", "Shariful Islam",
+    ]);
+    const rows = await ctx.db.query("attendance").withIndex("by_date", (q: any) => q.eq("date", "2026-07-09")).collect();
+    const removed: string[] = [];
+    for (const row of rows) {
+      if (row.source !== "biometric" || !affected.has(row.name) || row.note?.startsWith("Manually corrected iVMS timezone")) continue;
+      await ctx.db.delete(row._id);
+      removed.push(row.name);
+    }
+    return { removed: removed.length, names: removed.sort() };
   },
 });
 

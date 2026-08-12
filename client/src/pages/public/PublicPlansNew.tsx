@@ -64,13 +64,8 @@ export default function PublicPlansNew() {
 
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
 
-  const handleSubscribe = (planName: string, option: any) => {
-    const mealsCount = option?.mealsCount || 0;
-    const snacksCount = option?.snacksCount || 0;
-    const msg = `مرحباً 👋\nأرغب في الاشتراك في خطة *${planName}*\n\nالباقة: ${mealsCount} وجبات + ${snacksCount} سناك\n\nمن فضلك أرسلوا لي تفاصيل الاشتراك.`;
-    const url = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
-    // نحوّل في نفس التبويب حتى لا يبقى تبويب فارغ خلف واتساب على الجوال
-    window.location.href = url;
+  const handleSubscribe = (planId: string, optionIndex: number) => {
+    window.location.href = `/public/paylater?plan=${encodeURIComponent(planId)}&option=${optionIndex}`;
   };
 
   // ✅ باقة مخصّصة (بلا أسعار جاهزة): تواصل مع الأخصائية لتحديد الكميات والوجبات
@@ -228,14 +223,14 @@ export default function PublicPlansNew() {
                       {(() => {
                         return (
                           <Button
-                            onClick={() => isCustom ? handleCustomContact(planName(plan)) : handleSubscribe(planName(plan), plan.options?.[0])}
+                            onClick={() => isCustom ? handleCustomContact(planName(plan)) : handleSubscribe(plan._id, 0)}
                             className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
                               isFeatured
                                 ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
                                 : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
                             }`}
                           >
-                            {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "اختر الباقة" : "Choose Plan")}
+                            {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "ادفع مع PayLater" : "Pay with PayLater")}
                           </Button>
                         );
                       })()}

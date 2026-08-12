@@ -68,3 +68,6 @@ backups/
 # سجلّات تشغيل محلية — ليست من المشروع
 .codex-runtime/
 zt.json
+outputs/
+.codex-dev-server*.log
+.nutri-dev.*.log

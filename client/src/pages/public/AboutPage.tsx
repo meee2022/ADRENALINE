@@ -25,13 +25,14 @@ const B = {
 const SD = "0 1px 2px rgba(14,42,74,.05),0 10px 22px -10px rgba(14,42,74,.16),0 34px 64px -26px rgba(14,42,74,.24)";
 
 /* ─── Featured meals (from DB with real images) ─── */
+const storageUrl = (id: string) => `${import.meta.env.VITE_CONVEX_URL}/api/storage/${id}`;
 const FEATURED_MEALS = [
-  { ar:"سالمون بالعسل",            en:"Honey Glaze Salmon",      img:"https://rightful-parakeet-660.convex.cloud/api/storage/5d494195-917b-44fc-b2a7-2573b3ffd6ca", cat:"dinner" },
-  { ar:"ستيك بزبدة الثوم والبطاطس", en:"Garlic Butter Steak",      img:"https://rightful-parakeet-660.convex.cloud/api/storage/17dcbea2-0aa6-47ab-9cd2-bba090d64205", cat:"dinner" },
-  { ar:"باستا الدجاج بالكاجون",     en:"Cajun Chicken Pasta",      img:"https://rightful-parakeet-660.convex.cloud/api/storage/6bda1293-d64c-4aa8-a524-f2a1e8bcc9c0", cat:"lunch"  },
-  { ar:"سلطة الشمندر",              en:"Beetroot Salad",           img:"https://rightful-parakeet-660.convex.cloud/api/storage/38637c50-d1c6-4d13-afaa-64a8cfe67fe5", cat:"snack"  },
-  { ar:"بودينغ بذور الشيا",          en:"Chia Seed Pudding",        img:"https://rightful-parakeet-660.convex.cloud/api/storage/ac88bf51-c62d-4cd8-946c-824ffcba1e9c", cat:"snack"  },
-  { ar:"باستا السلمون بالبيستو",     en:"Salmon Pesto Pasta",       img:"https://rightful-parakeet-660.convex.cloud/api/storage/16814a87-75da-4553-9310-9e7bd9c42b9e", cat:"dinner" },
+  { ar:"سالمون بالعسل",            en:"Honey Glaze Salmon",      img:storageUrl("5d494195-917b-44fc-b2a7-2573b3ffd6ca"), cat:"dinner" },
+  { ar:"ستيك بزبدة الثوم والبطاطس", en:"Garlic Butter Steak",      img:storageUrl("17dcbea2-0aa6-47ab-9cd2-bba090d64205"), cat:"dinner" },
+  { ar:"باستا الدجاج بالكاجون",     en:"Cajun Chicken Pasta",      img:storageUrl("6bda1293-d64c-4aa8-a524-f2a1e8bcc9c0"), cat:"lunch"  },
+  { ar:"سلطة الشمندر",              en:"Beetroot Salad",           img:storageUrl("38637c50-d1c6-4d13-afaa-64a8cfe67fe5"), cat:"snack"  },
+  { ar:"بودينغ بذور الشيا",          en:"Chia Seed Pudding",        img:storageUrl("ac88bf51-c62d-4cd8-946c-824ffcba1e9c"), cat:"snack"  },
+  { ar:"باستا السلمون بالبيستو",     en:"Salmon Pesto Pasta",       img:storageUrl("16814a87-75da-4553-9310-9e7bd9c42b9e"), cat:"dinner" },
 ];
 
 /* ─── i18n helper ─── */

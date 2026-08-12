@@ -1,6 +1,8 @@
 import { ConvexReactClient } from "convex/react";
 
-const convexUrl = "https://rightful-parakeet-660.convex.cloud";
-console.log("Convex URL:", convexUrl);
+const convexUrl = import.meta.env.VITE_CONVEX_URL;
+if (!convexUrl) {
+  throw new Error("VITE_CONVEX_URL is required. Refusing to start with an unknown database deployment.");
+}
 
 export const convex = new ConvexReactClient(convexUrl);

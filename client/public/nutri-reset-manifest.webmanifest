@@ -1,0 +1,32 @@
+{
+  "name": "Nutri Reset",
+  "short_name": "Nutri Reset",
+  "description": "Personalized nutrition and healthy meal plans",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fbfa",
+  "theme_color": "#079AA5",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/nutri-reset-favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "قائمة الوجبات",
+      "url": "/nutri-reset/menu",
+      "icons": [{ "src": "/nutri-reset-favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "الخطة الذكية",
+      "url": "/customer/smart-plan?restaurant=NUTRI_RESET",
+      "icons": [{ "src": "/nutri-reset-favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

@@ -48,4 +48,23 @@ http.route({
   }),
 });
 
+http.route({
+  path: "/paylater/webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    let payload: unknown;
+    try { payload = await request.json(); }
+    catch {
+      return new Response(JSON.stringify({ ok: false, error: "invalid_json" }), {
+        status: 400, headers: { "content-type": "application/json" },
+      });
+    }
+    const result = await ctx.runAction(internal.payLaterNode.verifyWebhook, { payload });
+    return new Response(JSON.stringify(result), {
+      status: result.ok ? 200 : 403,
+      headers: { "content-type": "application/json" },
+    });
+  }),
+});
+
 export default http;
