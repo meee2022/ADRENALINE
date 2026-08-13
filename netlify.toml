@@ -7,13 +7,61 @@
 
 # SPA routing — redirect all routes to index.html
 [[redirects]]
-  from = "https://nutrireset.online/*"
+  from = "https://nutrireset.online/"
   to = "/nutri-reset.html"
   status = 200
   force = true
 
 [[redirects]]
-  from = "https://www.nutrireset.online/*"
+  from = "https://nutrireset.online/nutri-reset/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://nutrireset.online/customer/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://nutrireset.online/public/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://nutrireset.online/plan/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.nutrireset.online/"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.nutrireset.online/nutri-reset/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.nutrireset.online/customer/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.nutrireset.online/public/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://www.nutrireset.online/plan/*"
   to = "/nutri-reset.html"
   status = 200
   force = true
