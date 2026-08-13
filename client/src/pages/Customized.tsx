@@ -14,7 +14,7 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Save, UtensilsCrossed, Check, Copy, Trash2, Plus } from "lucide-react";
+import { Search, Save, UtensilsCrossed, Check, Copy, Trash2, Plus, PencilLine, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { matchesSearchQuery, normalizeSearchText } from "@/lib/search";
 
@@ -273,6 +273,8 @@ export default function Customized() {
   const [activeDay, setActiveDay] = useState<string>(defaultDay);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [editingMealKey, setEditingMealKey] = useState<string | null>(null);
+  const [copiedNotice, setCopiedNotice] = useState("");
 
   // خانات افتراضية فارغة من عدد وجبات/سناكات المشترك
   const blankSlots = (): Slot[] => {
@@ -411,6 +413,34 @@ export default function Customized() {
       DAYS.forEach((dy) => { d[dy.key] = src.map((s) => ({ ...s })); });
       return { ...prev, [activeWeek]: d };
     });
+  };
+
+  // نسخ يوم العمل السابق لنفس العميل. الجمعة إجازة، لذلك السبت ينسخ الخميس
+  // من أسبوع الدورة السابق مع الالتفاف من الأسبوع 1 إلى الأسبوع 4.
+  const copyPreviousWorkday = async () => {
+    const dayIndex = DAYS.findIndex((d) => d.key === activeDay);
+    const sourceDay = dayIndex > 0 ? DAYS[dayIndex - 1] : DAYS[DAYS.length - 1];
+    const sourceWeek = dayIndex > 0 ? activeWeek : (activeWeek === 1 ? 4 : activeWeek - 1);
+    const source = weekSlots[sourceWeek]?.[sourceDay.key] || [];
+    if (!source.length || !source.some((slot) => slot.type !== "OFF" && slot.baseName)) {
+      await alertDialog({ message: t("لا توجد خطة محفوظة في يوم العمل السابق لنسخها.", "The previous workday has no plan to copy.") });
+      return;
+    }
+    const sourceLabel = isRtl ? sourceDay.ar : sourceDay.en;
+    if (!(await confirmDialog({
+      message: t(
+        `سيتم استبدال وجبات اليوم الحالي بنسخة من ${sourceLabel}، أسبوع ${sourceWeek}. هل تريد المتابعة؟`,
+        `Replace this day's meals with a copy of ${sourceLabel}, week ${sourceWeek}?`,
+      ),
+    }))) return;
+    setWeekSlots((prev) => ({
+      ...prev,
+      [activeWeek]: {
+        ...(prev[activeWeek] || {}),
+        [activeDay]: source.map((slot) => ({ ...slot })),
+      },
+    }));
+    setCopiedNotice(t(`تم النسخ من ${sourceLabel}، اضغط حفظ اليوم لتثبيت التغيير.`, `Copied from ${sourceLabel}. Save this day to keep the change.`));
   };
 
   // نسخ هذا الأسبوع بالكامل لباقي أسابيع الدورة (لعميل يأكل نفس الشيء كل أسبوع)
@@ -594,7 +624,21 @@ export default function Customized() {
                   className="px-3 py-1.5 rounded-lg text-xs font-black text-[#0E76AC] border border-dashed border-[#0E76AC]/40 hover:bg-[#f2fbff] flex items-center gap-1">
                   <Copy className="h-3.5 w-3.5" /> {t("طبّق هذا اليوم على أيام الأسبوع", "Apply day to week")}
                 </button>
+                <button onClick={copyPreviousWorkday}
+                  className="min-h-10 px-3 py-1.5 rounded-lg text-xs font-black text-emerald-700 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 flex items-center gap-1.5">
+                  <Copy className="h-3.5 w-3.5" /> {t("نسخ خطة أمس", "Copy yesterday's plan")}
+                </button>
               </div>
+
+              {copiedNotice && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 flex items-center justify-between gap-3" role="status">
+                  <span>{copiedNotice}</span>
+                  <button type="button" onClick={() => setCopiedNotice("")} aria-label={t("إغلاق", "Dismiss")}
+                    className="h-10 w-10 shrink-0 grid place-items-center rounded-lg hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
 
               {/* ✅ بانر واضح: بتملّي وجبات أي يوم فعليًا (يمنع غلط ملء اليوم الخطأ) */}
               {(() => {
@@ -664,6 +708,35 @@ export default function Customized() {
                         })}
                         onPick={(m) => patchSlot(i, { baseMealId: m?._id, baseName: m ? (isRtl ? m.nameAr : (m.nameEn || m.nameAr)) : undefined })}
                       />
+
+                      {s.baseName && (
+                        editingMealKey === `${activeWeek}:${activeDay}:${s.key}` ? (
+                          <div className="rounded-xl border border-[#3CC4F0]/40 bg-[#ECFEFF] p-2.5">
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                              <label htmlFor={`meal-name-${activeWeek}-${activeDay}-${i}`} className="text-[11px] font-black text-[#0E2A4A]">
+                                {t("عدّل اسم أو كمية الوجبة المختارة", "Edit the selected meal name or quantity")}
+                              </label>
+                              <button type="button" onClick={() => setEditingMealKey(null)}
+                                className="min-h-10 px-2.5 rounded-lg text-[11px] font-black text-[#0E76AC] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]/40">
+                                <Check className="inline h-3.5 w-3.5 me-1" />{t("تم", "Done")}
+                              </button>
+                            </div>
+                            <Input id={`meal-name-${activeWeek}-${activeDay}-${i}`} autoFocus value={s.baseName}
+                              onChange={(e) => patchSlot(i, { baseName: e.target.value })}
+                              placeholder={t("مثال: دجاج مشوي 100 جم", "Example: Grilled chicken 100g")}
+                              className="h-10 bg-white font-bold" />
+                            <p className="mt-1.5 text-[10px] font-semibold text-[#47759C]">
+                              {t("التعديل يخص هذا العميل وهذا اليوم فقط، ولا يغيّر الوجبة الأصلية في المنيو.", "This changes only this customer and day, not the original menu dish.")}
+                            </p>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => setEditingMealKey(`${activeWeek}:${activeDay}:${s.key}`)}
+                            className="min-h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-start text-xs font-black text-[#0E76AC] hover:border-[#3CC4F0] hover:bg-[#ECFEFF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]/30 flex items-center gap-2">
+                            <PencilLine className="h-4 w-4 shrink-0" />
+                            <span>{t("تعديل الوجبة المختارة أو الكمية المكتوبة داخل اسمها", "Edit the selected meal or quantity in its name")}</span>
+                          </button>
+                        )
+                      )}
 
                       {s.type === "MAIN" && (
                         <div className="grid sm:grid-cols-2 gap-2.5">
