@@ -61,6 +61,10 @@ export default defineConfig({
     //    لا تُستخدم إلا في لوحة التحكم. اتركهما لتقسيم Vite التلقائي
     //    ليُحمَّلا مع الصفحة الكسولة التي تستوردهما.
     rollupOptions: {
+      input: {
+        main: path.resolve(import.meta.dirname, "client", "index.html"),
+        "nutri-reset": path.resolve(import.meta.dirname, "client", "nutri-reset.html"),
+      },
       output: {
         manualChunks: {
           "vendor-react": ["react", "react-dom", "wouter"],
