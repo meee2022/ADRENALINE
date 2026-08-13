@@ -28,7 +28,8 @@ export const employeeNames = query({
     const id = await validateSession(ctx, args.sessionToken);
     if (!id || id.accountType !== "staff") return [];
     const pay = await ctx.db.query("payroll").collect();
-    return Array.from(new Set(pay.map((p) => p.name))).sort();
+    const latestMonth = pay.filter((p: any) => !p.isVoid).map((p: any) => p.month).sort().at(-1);
+    return Array.from(new Set(pay.filter((p: any) => !p.isVoid && p.month === latestMonth).map((p) => p.name))).sort();
   },
 });
 

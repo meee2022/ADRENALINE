@@ -69,6 +69,7 @@ import type * as menuSync from "../menuSync.js";
 import type * as modifiers from "../modifiers.js";
 import type * as nameStyle from "../nameStyle.js";
 import type * as notifications from "../notifications.js";
+import type * as officialRosterMigration from "../officialRosterMigration.js";
 import type * as onlineOrders from "../onlineOrders.js";
 import type * as onlinePriceList from "../onlinePriceList.js";
 import type * as outletLabels from "../outletLabels.js";
@@ -177,6 +178,7 @@ declare const fullApi: ApiFromModules<{
   modifiers: typeof modifiers;
   nameStyle: typeof nameStyle;
   notifications: typeof notifications;
+  officialRosterMigration: typeof officialRosterMigration;
   onlineOrders: typeof onlineOrders;
   onlinePriceList: typeof onlinePriceList;
   outletLabels: typeof outletLabels;

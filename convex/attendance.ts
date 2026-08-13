@@ -45,7 +45,8 @@ const r2 = (n: number) => Math.round(n * 100) / 100;
 const monthOf = (date: string) => (date || "").slice(0, 7);
 const normEmployeeKey = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
 const NIGHT_SHIFT_EMPLOYEES = new Set([
-  "Shariful Islam", "Shourub Hussain", "Akram Abdulla", "Mohammed Wagiealla", "Arif Mohamed", "Arif Mohammed", "Arif Mphammed", "Muhammed Rashed",
+  "Shariful Islam", "Shorub Hossan", "Shourub Hussain", "Akram Abdulla", "Mohamed Wagiealla", "Mohammed Wagiealla",
+  "Arif Mohammad", "Arif Mohamed", "Arif Mohammed", "Arif Mphammed", "Muhammed Rashed",
 ].map(normEmployeeKey));
 
 /** "HH:mm" أو "HH:mm:ss" → دقائق منذ منتصف الليل. */
@@ -191,7 +192,9 @@ export function lev(a: string, b: string): number {
 /** يبني دالة تطابق اسم جهاز البصمة باسم من الرواتب (توحيد التهجئة) أو null لو مش مسجّل. */
 async function buildPayrollResolver(ctx: any) {
   const pay = await ctx.db.query("payroll").collect();
-  const names = Array.from(new Set(pay.map((p: any) => p.name).filter(Boolean))) as string[];
+  const activeMonths = pay.filter((p: any) => !p.isVoid).map((p: any) => p.month).filter(Boolean);
+  const latestMonth = activeMonths.sort().at(-1);
+  const names = Array.from(new Set(pay.filter((p: any) => !p.isVoid && p.month === latestMonth).map((p: any) => p.name).filter(Boolean))) as string[];
   const nm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const toks = (s: string) => String(s || "").toLowerCase().split(/\s+/).map(nm).filter((t) => t.length >= 3);
   const payNorm = names.map((n) => ({ n, k: nm(n), t: toks(n) }));
@@ -391,7 +394,9 @@ export const employeeNames = query({
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
     if (!id || id.accountType !== "staff") return [];
-    const pay = await ctx.db.query("payroll").collect();
+    const all = await ctx.db.query("payroll").collect();
+    const latestMonth = all.filter((p: any) => !p.isVoid).map((p: any) => p.month).sort().at(-1);
+    const pay = all.filter((p: any) => !p.isVoid && p.month === latestMonth);
     const seen = new Map<string, string>();
     for (const p of pay) if (!seen.has(p.name)) seen.set(p.name, p.designation || "");
     return Array.from(seen.entries()).map(([name, designation]) => ({ name, designation })).sort((a, b) => a.name.localeCompare(b.name));
