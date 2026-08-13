@@ -7,11 +7,16 @@
 
 # SPA routing — redirect all routes to index.html
 [[redirects]]
-  from = "/*"
+  from = "https://nutrireset.online/*"
   to = "/nutri-reset.html"
   status = 200
   force = true
-  conditions = {Host = ["nutrireset.online", "www.nutrireset.online"]}
+
+[[redirects]]
+  from = "https://www.nutrireset.online/*"
+  to = "/nutri-reset.html"
+  status = 200
+  force = true
 
 [[redirects]]
   from = "/*"
