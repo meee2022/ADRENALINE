@@ -1008,11 +1008,12 @@ export default function Stickers() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* نسخة Nutri للطباعة متجهة وسوداء خالصة: بلا رمادي أو خلفية تُحوَّل
-             إلى شبكة نقط على الرأس الحراري. */
+          /* نستخدم الشعار الرسمي نفسه، ونحوّله للطباعة فقط إلى أسود/أبيض حاد.
+             خفض السطوع أولاً يُبقي الخطوط الثلاثة جزءاً من الشعار، ثم التباين
+             العالي يزيل الرمادي والتنقيط من دون تغيير رسم اللوجو. */
           .label .nutri-brand-logo {
-            filter: none !important;
-            -webkit-filter: none !important;
+            filter: grayscale(1) brightness(0.68) contrast(12) !important;
+            -webkit-filter: grayscale(1) brightness(0.68) contrast(12) !important;
           }
           .label.nutri-label .cust-line,
           .label.nutri-label .meal-line,
@@ -1101,10 +1102,11 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
         }
-        /* شعار مخصص للطابعة الحرارية: SVG أسود خالص بلا خلفية أو تدرجات. */
+        /* ملف الشعار الرسمي واسع وبه مساحة بيضاء؛ نكبّره داخل نافذة الرأس
+           حتى يظهر الرسم الحقيقي بوضوح من دون ضغط أو تشويه. */
         .nutri-brand-frame {
-          width: 30mm;
-          height: 8.8mm;
+          width: 36mm;
+          height: 8.5mm;
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -1114,12 +1116,12 @@ export default function Stickers() {
         }
         .nutri-brand-logo {
           display: block;
-          width: 30mm;
-          height: 8.8mm;
-          max-width: 100%;
+          width: auto;
+          height: 15mm;
+          max-width: none;
           object-fit: contain;
           flex-shrink: 0;
-          color: #000;
+          mix-blend-mode: multiply;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
@@ -1517,7 +1519,7 @@ function MealSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo-thermal.svg" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
@@ -1587,7 +1589,7 @@ function BoxSticker({ s, seq }: any) {
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo-thermal.svg" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
