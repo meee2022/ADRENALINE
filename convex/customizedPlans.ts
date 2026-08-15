@@ -130,6 +130,7 @@ export const forDate = query({
       out.push({
         customerId: String(tpl.customerId),
         customerName: c.fullName || "",
+        restaurantKey: String(c.restaurantKey || "ADRENALINE") === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE",
         phone: c.phone || "",
         deliveryTime: c.deliveryTime || "MORNING",
         allergies: c.allergies || "",

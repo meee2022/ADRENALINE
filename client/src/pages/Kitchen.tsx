@@ -60,6 +60,7 @@ import {
 } from "@/components/ui/dialog";
 
 type ModifierGroup = "AVOID" | "PREF" | "PORTION";
+type RestaurantFilter = "ALL" | "ADRENALINE" | "NUTRI_RESET";
 
 // ✅ ترجمة أسماء البروتين/الكارب للمخصّص (القالب قد يكون محفوظاً بالعربي) — لعرض
 //    كشف الشيف بالكامل بلغة الواجهة. القيم مطابقة لقوائم شاشة الوجبات المخصّصة.
@@ -140,6 +141,7 @@ export default function Kitchen() {
   const tomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); return d; };
   const [date, setDate] = useState(tomorrow());
   const [activeTab, setActiveTab] = useState<"MORNING" | "EVENING" | "SUMMARY">("MORNING");
+  const [restaurantFilter, setRestaurantFilter] = useState<RestaurantFilter>("ALL");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   // هل التاريخ المختار = بكرة / النهاردة (لعرض العنوان)
   const iso = (d: Date) => format(d, "yyyy-MM-dd");
@@ -159,6 +161,17 @@ export default function Kitchen() {
   const { data: menuItems = [] } = useMenuItems();
   const { data: categories = [] } = useCategories();
   const { data: modifiers = [] } = useModifiers();
+  const customerById = useMemo(
+    () => new Map(customers.map((customer: any) => [String(customer._id), customer])),
+    [customers],
+  );
+  const restaurantKeyFor = (record: any): Exclude<RestaurantFilter, "ALL"> => {
+    const customer = record?.customerId ? customerById.get(String(record.customerId)) as any : undefined;
+    return String(record?.restaurantKey || customer?.restaurantKey || "ADRENALINE").toUpperCase() === "NUTRI_RESET"
+      ? "NUTRI_RESET"
+      : "ADRENALINE";
+  };
+  const matchesRestaurant = (record: any) => restaurantFilter === "ALL" || restaurantKeyFor(record) === restaurantFilter;
   const updatePlanMutation = useUpdateDailyPlan();
   const prepareAndConsume = usePrepareAndConsume();
   const prepareAllMutation = useMutation(api.inventory.prepareAndConsumeAllForDate);
@@ -210,6 +223,7 @@ export default function Kitchen() {
         (p: any) =>
           p.date === formattedDate &&
           p.deliveryTime === activeTab &&
+          matchesRestaurant(p) &&
           // صفوف المخصّصين التشغيلية (تُولد عند «تحضير الكل» للتوصيل فقط) لا
           // تظهر هنا — المطبخ يقرأ وجباتهم من قسم القوالب أعلاه.
           (p as any).origin !== "CUSTOMIZED" &&
@@ -220,7 +234,7 @@ export default function Kitchen() {
         if (a.status === "PREPARED" && b.status === "CONFIRMED") return 1;
         return 0;
       });
-  }, [dailyPlans, formattedDate, activeTab]);
+  }, [dailyPlans, formattedDate, activeTab, restaurantFilter, customerById]);
 
   /* بحث بالاسم: مع 100+ كرت لا يمكن العثور على شخص بالتمرير. */
   const [personSearch, setPersonSearch] = useState("");
@@ -273,7 +287,7 @@ export default function Kitchen() {
     };
   }, [dailyPlans, formattedDate]);
 
-  const getCustomer = (id: string) => customers.find((c: any) => c._id === id);
+  const getCustomer = (id: string) => customerById.get(String(id)) as any;
   const filteredPlans = useMemo(() => {
     const q = personSearch.trim();
     if (!q) return plans;
@@ -346,7 +360,7 @@ export default function Kitchen() {
   // ✅ حساب إجمالي الوجبات لليوم (كل فترات التوصيل)
   const mealSummary = useMemo(() => {
     const allPlansToday = dailyPlans.filter(
-      (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
+      (p: any) => p.date === formattedDate && matchesRestaurant(p) && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
     // ✅ يوم الخميس فقط: العميل المفعّل (fridayDouble) وجباته تُطبخ ×2 (نسخة الجمعة).
     const isThursday = new Date(String(formattedDate) + "T00:00:00Z").getUTCDay() === 4;
@@ -575,7 +589,7 @@ export default function Kitchen() {
       count: 0, plainCount: 0, modifiedCount: 0, dietCount: 0, fitnessCount: 0, bulkCount: 0,
       customizedCount: 0, standardCount: 0, category, locations: [] as any[], preparedCount: 0, details: [] as any[],
     });
-    (customized || []).forEach((c: any) => {
+    (customized || []).filter(matchesRestaurant).forEach((c: any) => {
       (c.items || []).forEach((it: any) => {
         if (it?.isOff) return;
         if (String(it?.type || "").toUpperCase() === "MAIN") return; // الرئيسي يبقى في بوكس الشخص
@@ -639,16 +653,16 @@ export default function Kitchen() {
     return Object.entries(summary)
       .map(([name, data]) => ({ name, ...data, catRank: catRank(data.category), modGroups: buildModGroups(data.details) }))
       .sort((a, b) => (a.catRank - b.catRank) || (b.count - a.count));
-  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, categories, modifiers, isRtl, customized]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, categories, modifiers, isRtl, customized, restaurantFilter, customerById]);
 
   // ✅ المشتركون المخصّصون مجمّعون باسم كل عميل (بوكس كامل للشخص) — زي كشف الأخصائية
   const customizedByPerson = useMemo(() => {
     const allPlansToday = dailyPlans.filter(
-      (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
+      (p: any) => p.date === formattedDate && matchesRestaurant(p) && (p.status === "CONFIRMED" || p.status === "PREPARED")
     );
     // 🔀 من بُني له قالب مصدره القالب — نستبعد خطته اليومية القديمة هنا
     const tplNames = new Set((customized || []).map((c: any) => c.customerName));
-    const byPerson: Record<string, { name: string; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string; type: string }> }> = {};
+    const byPerson: Record<string, { name: string; restaurantKey: Exclude<RestaurantFilter, "ALL">; deliveryTime: string; allergies: string; items: Array<{ meal: string; note: string; type: string }> }> = {};
     allPlansToday.forEach((plan: any) => {
       const customer: any = getCustomer(plan.customerId);
       const program = (customer?.program || plan.program || "").toUpperCase();
@@ -657,7 +671,7 @@ export default function Kitchen() {
       const name = customer?.fullName || plan.customerName || (isRtl ? "عميل" : "Customer");
       const key = name + "|" + plan.deliveryTime;
       if (!byPerson[key]) byPerson[key] = {
-        name, deliveryTime: plan.deliveryTime,
+        name, restaurantKey: restaurantKeyFor(plan), deliveryTime: plan.deliveryTime,
         // ✅ الممنوعات/الحساسية مرّة واحدة على مستوى البوكس (مش مكرّرة مع كل وجبة)
         allergies: [customer?.allergies, customer?.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
         items: [],
@@ -675,7 +689,7 @@ export default function Kitchen() {
       });
     });
     return Object.values(byPerson).sort((a, b) => a.name.localeCompare(b.name));
-  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl, customized]);
+  }, [dailyPlans, formattedDate, customers, menuItems, publicMealsList, isRtl, customized, restaurantFilter, customerById]);
 
   /**
    * ✅ مصدر موحّد للمخصّصين (شاشة + كشف).
@@ -686,7 +700,7 @@ export default function Kitchen() {
    */
   type CustMeal = { text: string; isSide: boolean; notset: boolean };
   const customizedAll = useMemo(() => {
-    const list: { name: string; deliveryTime: string; allergies: string; meals: CustMeal[] }[] = [];
+    const list: { name: string; restaurantKey: Exclude<RestaurantFilter, "ALL">; deliveryTime: string; allergies: string; meals: CustMeal[] }[] = [];
     const seen = new Set<string>();
     // أسماء الأصناف القياسية غير الرئيسية كما هي في المنيو — مصدر الحقيقة للطيّ في الإجمالي
     const normName = (x: string) =>
@@ -726,9 +740,10 @@ export default function Kitchen() {
     };
     // 1) القوالب أولاً — المصدر المعتمد
     for (const c of (customized || [])) {
+      if (!matchesRestaurant(c)) continue;
       seen.add(c.customerName);
       list.push({
-        name: c.customerName, deliveryTime: c.deliveryTime,
+        name: c.customerName, restaurantKey: restaurantKeyFor(c), deliveryTime: c.deliveryTime,
         allergies: [c.allergies, c.avoid].map((x: any) => String(x || "").trim()).filter(Boolean).join(" • "),
         meals: (c.items || []).map((it: any) => asMeal(composeCustItem(it), it.type)).filter(Boolean) as CustMeal[],
       });
@@ -737,12 +752,12 @@ export default function Kitchen() {
     for (const p of customizedByPerson) {
       if (seen.has(p.name)) continue;
       list.push({
-        name: p.name, deliveryTime: p.deliveryTime, allergies: p.allergies,
+        name: p.name, restaurantKey: p.restaurantKey, deliveryTime: p.deliveryTime, allergies: p.allergies,
         meals: p.items.map((it: any) => asMeal(it.note ? `${it.meal} — ${it.note}` : it.meal, it.type)).filter(Boolean) as CustMeal[],
       });
     }
     return list.filter((p) => p.meals.length).sort((a, b) => a.name.localeCompare(b.name));
-  }, [customizedByPerson, customized, publicMealsList]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [customizedByPerson, customized, publicMealsList, restaurantFilter, customerById]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ✅ رقم البوكس = **نفس رقم استيكر البوكس بالضبط** (المصدر الوحيد convex/stickers)
   //    حتى يطابق الكشفُ الستيكرَ الفيزيائي، فيعرف المطبخ بوكس كل مشترك. deliveryTime
@@ -767,6 +782,7 @@ export default function Kitchen() {
   const dayTotals = useMemo(() => {
     const reg = dailyPlans.filter(
       (p: any) => p.date === formattedDate && (p as any).origin !== "CUSTOMIZED"
+        && matchesRestaurant(p)
         && (p.status === "CONFIRMED" || p.status === "PREPARED"),
     );
     const cnt = (rows: any[], shift: string) => rows.filter((r: any) => r.deliveryTime === shift).length;
@@ -777,7 +793,21 @@ export default function Kitchen() {
       morning: cnt(reg, "MORNING") + cnt(customizedAll as any[], "MORNING"),
       evening: cnt(reg, "EVENING") + cnt(customizedAll as any[], "EVENING"),
     };
-  }, [dailyPlans, formattedDate, customizedAll]);
+  }, [dailyPlans, formattedDate, customizedAll, restaurantFilter, customerById]);
+
+  const restaurantCounts = useMemo(() => {
+    const people = new Map<string, Exclude<RestaurantFilter, "ALL">>();
+    dailyPlans
+      .filter((plan: any) => plan.date === formattedDate && (plan.status === "CONFIRMED" || plan.status === "PREPARED"))
+      .forEach((plan: any) => people.set(String(plan.customerId || plan.customerName || plan._id), restaurantKeyFor(plan)));
+    (customized || []).forEach((person: any) => people.set(String(person.customerId || person.customerName), restaurantKeyFor(person)));
+    const values = [...people.values()];
+    return {
+      ALL: values.length,
+      ADRENALINE: values.filter((key) => key === "ADRENALINE").length,
+      NUTRI_RESET: values.filter((key) => key === "NUTRI_RESET").length,
+    };
+  }, [dailyPlans, formattedDate, customized, customerById]);
 
   /**
    * ✅ صفوف كشف المطبخ (مصفوفة زي الإكسيل): صف لكل عميل، وجباته في أعمدة
@@ -785,7 +815,7 @@ export default function Kitchen() {
    */
   const kitchenPeople = useMemo<KitchenPerson[]>(() => {
     const allPlansToday = dailyPlans.filter(
-      (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED"),
+      (p: any) => p.date === formattedDate && matchesRestaurant(p) && (p.status === "CONFIRMED" || p.status === "PREPARED"),
     );
 
     // "2026-07-11" → "11-7"
@@ -858,7 +888,7 @@ export default function Kitchen() {
     // ترتيب الكشف حسب رقم البوكس (نفس ترتيب الستيكرات) — أوضح للمطبخ.
     rows.sort((a, b) => a.no - b.no);
     return rows;
-  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl, boxNoByCustomerId]);
+  }, [dailyPlans, formattedDate, customers, menuItems, categories, isRtl, boxNoByCustomerId, restaurantFilter, customerById]);
 
   /**
    * ✅ صفوف المخصّصين للكشف اليومي المُصدَّر (Excel/PDF).
@@ -888,7 +918,7 @@ export default function Kitchen() {
       const col = (i: number) => texts[i] || "";
       return {
         no,
-        restaurantKey: String(c?.restaurantKey || "ADRENALINE") === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE",
+        restaurantKey: p.restaurantKey,
         phone: c?.phone || "",
         name: p.name,
         dates: c?.startDate || c?.endDate ? `${shortDate(c?.startDate)} END ${shortDate(c?.endDate)}` : "",
@@ -1758,6 +1788,32 @@ If you meant another day, switch Today/Tomorrow first.`,
                 {isRtl ? "إجمالي الوجبات" : "Meal Summary"}
               </button>
             </div>
+            <div className="mt-2 grid grid-cols-1 gap-1.5 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm sm:grid-cols-3" role="group" aria-label={isRtl ? "تصفية المطبخ حسب العلامة" : "Filter kitchen by brand"}>
+              {([
+                { key: "ALL" as RestaurantFilter, ar: "كل الطلبات", en: "All orders" },
+                { key: "ADRENALINE" as RestaurantFilter, ar: "أدرينالين", en: "Adrenaline" },
+                { key: "NUTRI_RESET" as RestaurantFilter, ar: "نيوتري ريسيت", en: "Nutri Reset" },
+              ]).map(({ key, ar, en }) => {
+                const active = restaurantFilter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRestaurantFilter(key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "min-h-11 rounded-xl border px-3 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]/30",
+                      active
+                        ? key === "NUTRI_RESET" ? "border-[#087E87] bg-[#087E87] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                        : "border-transparent bg-slate-50 text-slate-600 hover:border-[#3CC4F0] hover:bg-white",
+                    )}
+                  >
+                    {isRtl ? ar : en}
+                    <span className={cn("ms-2 rounded-md px-1.5 py-0.5 text-xs tabular-nums", active ? "bg-white/20" : "bg-white text-slate-500")}>{restaurantCounts[key]}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -2494,7 +2550,7 @@ If you meant another day, switch Today/Tomorrow first.`,
         {(() => {
           // ✅ في الطباعة: استخدم كل خطط اليوم
           const allPlansToday = dailyPlans.filter(
-            (p: any) => p.date === formattedDate && (p.status === "CONFIRMED" || p.status === "PREPARED")
+            (p: any) => p.date === formattedDate && matchesRestaurant(p) && (p.status === "CONFIRMED" || p.status === "PREPARED")
           );
           const totalMeals = allPlansToday.reduce(
             (sum: number, p: any) => sum + getEffectivePlanItems(p).filter((i: any) => !i.isOff).length,

@@ -13,6 +13,12 @@ import { Link } from "wouter";
 
 type DeliveryTime = "MORNING" | "EVENING" | "ALL";
 type TabKey = "MEALS" | "BOX" | "CUSTOM";
+type RestaurantFilter = "ALL" | "ADRENALINE" | "NUTRI_RESET";
+
+const stickerRestaurant = (sticker: any): Exclude<RestaurantFilter, "ALL"> =>
+  String(sticker?.restaurantKey || "ADRENALINE").toUpperCase() === "NUTRI_RESET"
+    ? "NUTRI_RESET"
+    : "ADRENALINE";
 
 /** استيكر مشترك مخصّص؟ الباك إند يضع goal="CUSTOMIZED" لاستيكرات القوالب. */
 const isCustomizedSticker = (s: any) =>
@@ -104,6 +110,7 @@ export default function Stickers() {
   // «الكل» هو الافتراضي: الطباعة تتم لليوم كاملاً، والبدء على «صباحي» كان يُخفي
   // نصف الرزمة حتى ينتبه أحد لتبديلها.
   const [deliveryTime, setDeliveryTime] = useState<DeliveryTime>("ALL");
+  const [restaurantFilter, setRestaurantFilter] = useState<RestaurantFilter>("ALL");
   const [activeTab, setActiveTab] = useState<TabKey>("MEALS");
   // وضع الطباعة: "label" = طابعة استيكرات (كل استيكر صفحة بمقاسه) · "sheet" = ورقة A4 شبكة
   const [printerMode, setPrinterMode] = useState<"label" | "sheet">("label");
@@ -130,12 +137,33 @@ export default function Stickers() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const productionAudit = useQuery(api.productionAudit.forDate, { date, sessionToken }) as any;
   const data = useStickers({ date, deliveryTime, lang: "en" });
-  const boxStickers = data?.boxStickers ?? [];
+  const allBoxStickers = useMemo(() => data?.boxStickers ?? [], [data]);
   /* تدقيق الخادم: من يُطبع له استيكر وليس في كشف المطبخ (أو العكس). فارقٌ
      واحد يعني بوكساً بلا أكل أو أكلاً بلا بوكس — يُرى قبل الطباعة لا بعد الطبخ. */
   const audit = (data as any)?.audit as { onlyStickers: string[]; onlyKitchen: string[] } | undefined;
   const mismatchCount = (audit?.onlyStickers?.length || 0) + (audit?.onlyKitchen?.length || 0);
-  const allMealStickers = data?.mealStickers ?? [];
+  const allUnfilteredMealStickers = useMemo(() => data?.mealStickers ?? [], [data]);
+  const brandCounts = useMemo(() => {
+    const customerBrands = new Map<string, Exclude<RestaurantFilter, "ALL">>();
+    [...allBoxStickers, ...allUnfilteredMealStickers].forEach((sticker: any) => {
+      const key = String(sticker.customerId || sticker.customerName || sticker.customerNo || "");
+      if (key) customerBrands.set(key, stickerRestaurant(sticker));
+    });
+    const values = [...customerBrands.values()];
+    return {
+      ALL: values.length,
+      ADRENALINE: values.filter((value) => value === "ADRENALINE").length,
+      NUTRI_RESET: values.filter((value) => value === "NUTRI_RESET").length,
+    };
+  }, [allBoxStickers, allUnfilteredMealStickers]);
+  const boxStickers = useMemo(
+    () => allBoxStickers.filter((sticker: any) => restaurantFilter === "ALL" || stickerRestaurant(sticker) === restaurantFilter),
+    [allBoxStickers, restaurantFilter],
+  );
+  const allMealStickers = useMemo(
+    () => allUnfilteredMealStickers.filter((sticker: any) => restaurantFilter === "ALL" || stickerRestaurant(sticker) === restaurantFilter),
+    [allUnfilteredMealStickers, restaurantFilter],
+  );
   const renderedDuplicateCount = useMemo(() => {
     const duplicateCount = (values: string[]) => values.length - new Set(values).size;
     const boxKeys = boxStickers.map((row: any) => String(row.customerId || "")).filter(Boolean);
@@ -201,7 +229,7 @@ export default function Stickers() {
     setRangeTo("");
     setSearch("");
     setMealCategory("ALL");
-  }, [activeTab, date, deliveryTime]);
+  }, [activeTab, date, deliveryTime, restaurantFilter]);
 
   useEffect(() => {
     try {
@@ -513,6 +541,41 @@ export default function Stickers() {
                 })}
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              {isRtl ? "العلامة التجارية" : "Brand"}
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label={isRtl ? "تصفية الاستيكرات حسب العلامة" : "Filter stickers by brand"}>
+              {([
+                { key: "ALL" as RestaurantFilter, ar: "الكل", en: "All brands" },
+                { key: "ADRENALINE" as RestaurantFilter, ar: "أدرينالين", en: "Adrenaline" },
+                { key: "NUTRI_RESET" as RestaurantFilter, ar: "نيوتري ريسيت", en: "Nutri Reset" },
+              ]).map(({ key, ar, en }) => {
+                const active = restaurantFilter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRestaurantFilter(key)}
+                    aria-pressed={active}
+                    className={cn(
+                      "min-h-11 rounded-xl border px-3 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]/30",
+                      active
+                        ? key === "NUTRI_RESET" ? "border-[#087E87] bg-[#087E87] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:border-[#3CC4F0] hover:bg-white",
+                    )}
+                  >
+                    {isRtl ? ar : en}
+                    <span className={cn("ms-2 rounded-md px-1.5 py-0.5 text-xs tabular-nums", active ? "bg-white/20" : "bg-white text-slate-500")}>{brandCounts[key]}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] font-semibold text-slate-500">
+              {isRtl ? "الطباعة الحالية ستشمل العلامة المختارة فقط." : "Print actions include only the selected brand."}
+            </p>
           </div>
 
           {/* Sticker dimensions */}
