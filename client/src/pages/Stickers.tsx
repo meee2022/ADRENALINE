@@ -1008,11 +1008,19 @@ export default function Stickers() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* شعار Nutri Reset أصله رمادي وملوّن؛ نرفعه لأسود واضح على الرأس الحراري
-             مع إبقاء ألوان ملف الشعار نفسه كما هي خارج الطباعة. */
+          /* نسخة Nutri للطباعة متجهة وسوداء خالصة: بلا رمادي أو خلفية تُحوَّل
+             إلى شبكة نقط على الرأس الحراري. */
           .label .nutri-brand-logo {
-            filter: grayscale(1) contrast(2.4) brightness(0.72) !important;
-            -webkit-filter: grayscale(1) contrast(2.4) brightness(0.72) !important;
+            filter: none !important;
+            -webkit-filter: none !important;
+          }
+          .label.nutri-label .cust-line,
+          .label.nutri-label .meal-line,
+          .label.nutri-label .date-value,
+          .label.nutri-label .macros-text,
+          .label.nutri-label .plan-txt {
+            font-weight: 900 !important;
+            -webkit-text-stroke: 0.18px #000;
           }
           /* خط اللوجو أثقل وأوضح للطباعة الحرارية */
           .label .brand-name {
@@ -1093,11 +1101,10 @@ export default function Stickers() {
           flex-direction: column;
           align-items: center;
         }
-        /* ملف Nutri Reset يحتوي فراغاً أبيض داخلياً يقارب ربع الصورة من كل جهة.
-           الإطار يقص الفراغ بصرياً فقط، فلا نغيّر أصل الصورة المستخدم في الموقع. */
+        /* شعار مخصص للطابعة الحرارية: SVG أسود خالص بلا خلفية أو تدرجات. */
         .nutri-brand-frame {
-          width: 36mm;
-          height: 8.5mm;
+          width: 30mm;
+          height: 8.8mm;
           overflow: hidden;
           display: flex;
           align-items: center;
@@ -1107,12 +1114,14 @@ export default function Stickers() {
         }
         .nutri-brand-logo {
           display: block;
-          width: auto;
-          height: 15mm;
-          max-width: none;
+          width: 30mm;
+          height: 8.8mm;
+          max-width: 100%;
           object-fit: contain;
-          mix-blend-mode: multiply;
           flex-shrink: 0;
+          color: #000;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         .brand-name {
           font-size: 16px;
@@ -1501,14 +1510,14 @@ function MealSticker({ s, seq }: any) {
   })();
 
   return (
-    <div className="label">
+    <div className={`label${isNutriReset ? " nutri-label" : ""}`}>
       <div className="seq-mark">{seq}</div>
       {/* Brand header — heart icon + ADRENALINE logo + HEALTHY FOOD tag */}
       {/* القلب يمين الاسم (كالاستيكر القديم)، ورقم البوكس شمالَه في إطار —
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo-thermal.svg" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
@@ -1572,13 +1581,13 @@ function MealSticker({ s, seq }: any) {
 function BoxSticker({ s, seq }: any) {
   const isNutriReset = s.restaurantKey === "NUTRI_RESET";
   return (
-    <div className="label label-box">
+    <div className={`label label-box${isNutriReset ? " nutri-label" : ""}`}>
       <div className="seq-mark">{seq}</div>
       {/* القلب يمين الاسم (كالاستيكر القديم)، ورقم البوكس شمالَه في إطار —
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">
         <span className="box-no-top">{s.customerNo}</span>
-        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo.png" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
+        {isNutriReset ? <span className="nutri-brand-frame"><img src="/nutri-reset-logo-thermal.svg" alt="Nutri Reset" className="nutri-brand-logo" /></span> : <><div className="brand-text">
           <div className="brand-name">ADRENALINE</div>
           <div className="brand-tag">HEALTHY FOOD</div>
         </div>
