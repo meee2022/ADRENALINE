@@ -252,6 +252,7 @@ export default function Customized() {
   const fmtDM = (d: Date | null) => d ? `${d.getUTCDate()}/${d.getUTCMonth() + 1}` : "";
 
   const [search, setSearch] = useState("");
+  const [restaurantFilter, setRestaurantFilter] = useState<"ALL" | "ADRENALINE" | "NUTRI_RESET">("ALL");
   const [selectedId, setSelectedId] = useState<string>("");
   const template = useQuery(
     api.customizedPlans.getTemplate,
@@ -466,6 +467,10 @@ export default function Customized() {
 
   const normalizedSearch = normalizeSearchText(search);
   const filtered = customers.filter((c) => {
+    /* المطعمان يتشاركان هذه الشاشة. بلا فصلٍ ظاهر يبني الطاقم قالباً لمشترك
+       مطعمٍ آخر يحمل اسماً مشابهاً — والقالب هو ما يُطبخ ويُلصق. */
+    if (restaurantFilter !== "ALL"
+      && String(c.restaurantKey || "ADRENALINE") !== restaurantFilter) return false;
     if (!normalizedSearch) return true;
     return matchesSearchQuery(normalizedSearch, c.fullName, c.phone);
   });
@@ -520,6 +525,20 @@ export default function Customized() {
               placeholder={t("ابحث بالاسم أو الرقم", "Search name or phone")}
               className={isRtl ? "pr-9" : "pl-9"} />
           </div>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {([
+              ["ALL", t("الكل", "All")],
+              ["ADRENALINE", "Adrenaline"],
+              ["NUTRI_RESET", "Nutri Reset"],
+            ] as const).map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setRestaurantFilter(key)}
+                className={cn("rounded-lg border px-2.5 py-1.5 text-[11px] font-black",
+                  restaurantFilter === key
+                    ? key === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#22AEC0] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                    : "border-slate-200 bg-white text-slate-600")}
+              >{label}</button>
+            ))}
+          </div>
           <p className="text-[11px] font-bold text-slate-400 mb-2">{filtered.length} {t("عميل مخصّص", "customized")}</p>
           <div className="space-y-1.5 max-h-[70vh] overflow-y-auto">
             {filtered.map((c) => (
@@ -528,6 +547,9 @@ export default function Customized() {
                   selectedId === c._id ? "border-[#0E76AC] bg-[#f2fbff]" : "border-slate-100 hover:border-slate-200")}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-bold text-sm text-slate-800 truncate">{c.fullName}</span>
+                  {String(c.restaurantKey || "ADRENALINE") === "NUTRI_RESET" && (
+                    <span className="text-[8px] font-black text-white bg-[#22AEC0] rounded px-1 py-0.5 shrink-0">NUTRI</span>
+                  )}
                   {c.hasTemplate
                     ? <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 rounded px-1.5 py-0.5 shrink-0">✓ {c.slotCount}</span>
                     : <span className="text-[9px] font-black text-amber-600 bg-amber-50 rounded px-1.5 py-0.5 shrink-0">{t("جديد", "new")}</span>}

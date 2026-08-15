@@ -40,6 +40,9 @@ export const listCustomized = query({
     return custom
       .map((c: any) => ({
         _id: c._id,
+        /* المطعمان يتشاركان الشاشة، فبلا هذا المفتاح يختلط مخصّصو أدرينالين
+           بمخصّصي نيوتري ريست وتُبنى قوالبُ لأصحابها الخطأ. */
+        restaurantKey: c.restaurantKey || "ADRENALINE",
         fullName: c.fullName,
         phone: c.phone,
         deliveryTime: c.deliveryTime,
