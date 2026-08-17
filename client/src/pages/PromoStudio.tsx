@@ -308,7 +308,9 @@ export default function PromoStudio() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("معاينة مباشرة", "Live preview")}</p>
-              <p className="mt-1 text-xs font-bold text-slate-500">{isRtl ? SIZES[size].ar : SIZES[size].en} · {SIZES[size].w} × {SIZES[size].h}</p>
+              <p className="mt-1 text-xs font-bold text-slate-500">
+                {isRtl ? SIZES[size].ar : SIZES[size].en} · <bdi dir="ltr">{SIZES[size].w} × {SIZES[size].h}</bdi>
+              </p>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-emerald-700 shadow-sm">
               <ShieldCheck className="h-3.5 w-3.5" />{t("PNG عالي الجودة", "High-quality PNG")}
@@ -414,7 +416,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
     ? (ar ? "قوّتك تبدأ من طبقك" : "Strength starts on your plate")
     : (ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today");
   g.fillStyle = B.ink;
-  wrapText(g, p.headline || defaultHeadline, startX, story ? 750 : 605, copyWidth, trainers ? (story ? 58 : 48) : (story ? 62 : 54), 1.18, 900, ar ? "right" : "left", 2);
+  wrapText(g, p.headline || defaultHeadline, startX, story ? 750 : 605, copyWidth, trainers ? (story ? 58 : 48) : (story ? 62 : 54), 1.18, 900, ar ? "right" : "left", story ? 3 : 2);
 
   const panelH = h - panelY - 62;
   roundRect(g, 58, panelY, w - 116, panelH, trainers ? 30 : 40);
@@ -504,15 +506,34 @@ function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number,
 
 function wrapText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number,
   size: number, lineRatio: number, weight: number, align: CanvasTextAlign, maxLines: number) {
-  g.textAlign = align; g.font = font(size, weight);
-  const words = text.trim().split(/\s+/); const lines: string[] = []; let line = "";
-  for (const word of words) {
-    const candidate = line ? `${line} ${word}` : word;
-    if (g.measureText(candidate).width > maxWidth && line) {
-      lines.push(line); line = word;
-      if (lines.length === maxLines - 1) break;
-    } else line = candidate;
+  const content = text.trim();
+  if (!content) return;
+
+  const buildLines = (fontSize: number) => {
+    g.font = font(fontSize, weight);
+    const words = content.split(/\s+/); const result: string[] = []; let line = "";
+    for (const word of words) {
+      const candidate = line ? `${line} ${word}` : word;
+      if (g.measureText(candidate).width > maxWidth && line) {
+        result.push(line); line = word;
+      } else line = candidate;
+    }
+    if (line) result.push(line);
+    return result;
+  };
+
+  let fittedSize = size;
+  let lines = buildLines(fittedSize);
+  const minimumSize = Math.round(size * .64);
+  while (lines.length > maxLines && fittedSize > minimumSize) {
+    fittedSize -= 2;
+    lines = buildLines(fittedSize);
   }
-  if (line && lines.length < maxLines) lines.push(line);
-  lines.forEach((item, index) => g.fillText(item, x, y + index * size * lineRatio));
+
+  if (lines.length > maxLines) {
+    lines = [...lines.slice(0, maxLines - 1), lines.slice(maxLines - 1).join(" ")];
+  }
+
+  g.textAlign = align; g.font = font(fittedSize, weight);
+  lines.forEach((item, index) => g.fillText(item, x, y + index * fittedSize * lineRatio, maxWidth));
 }
