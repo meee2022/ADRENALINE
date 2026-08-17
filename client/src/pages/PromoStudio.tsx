@@ -26,9 +26,9 @@ const BRANDS: Record<Brand, {
   ADRENALINE: {
     name: "ADRENALINE", logo: "/adrenaline-logo-full.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
     images: [
-      { src: "/plan-liyaqa-real.png", ar: "تشكيلة الوجبات", en: "Meal collection" },
-      { src: "/plan-tanshif-real.png", ar: "الباقة الصحية", en: "Healthy package" },
-      { src: "/plan-tadkhim-real.jpg", ar: "تجربة أدرينالين", en: "Adrenaline experience" },
+      { src: "/promo-adrenaline-protein.png", ar: "وجبة بروتين فاخرة", en: "Premium protein meal" },
+      { src: "/promo-adrenaline-plans.png", ar: "باقات الوجبات", en: "Meal plan collection" },
+      { src: "/promo-adrenaline-lifestyle.png", ar: "أسلوب حياة رياضي", en: "Active lifestyle" },
     ],
   },
   NUTRI_RESET: {
