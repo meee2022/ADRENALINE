@@ -89,10 +89,22 @@ export default function PromoStudio() {
     setImageSrc(BRANDS[nextBrand].images[0].src);
   }, [coupon, couponBrand]);
 
+  /**
+   * رابط الحملة يُبنى من دومين المطعم لا من عنوان المتصفح.
+   *
+   * كان يأخذ `window.location.origin`، فالبوستر المُصمَّم على جهاز التطوير
+   * يحمل رمزاً يفتح `localhost` — لا يعمل عند أحد سوى من صنعه. والملصق
+   * يُطبع ويُنشر ولا يُراجَع بعدها، فخطأٌ كهذا لا يُكتشف إلا من زبون.
+   *
+   * ولكل علامةٍ دومينها، فيتبع الرابطُ العلامةَ المختارة لا الصفحة المفتوحة.
+   */
   const campaignLink = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    return `${origin}/public/plans${code.trim() ? `?promo=${encodeURIComponent(code.trim().toUpperCase())}` : ""}`;
-  }, [code]);
+    const origin = brand === "NUTRI_RESET"
+      ? "https://nutrireset.online"
+      : "https://adrenalinehealthy.com";
+    const promo = code.trim() ? `?promo=${encodeURIComponent(code.trim().toUpperCase())}` : "";
+    return `${origin}/public/plans${promo}`;
+  }, [brand, code]);
 
   useEffect(() => {
     let cancelled = false;
