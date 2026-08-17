@@ -32,7 +32,7 @@ const BRANDS: Record<Brand, {
       { src: "/promo-adrenaline-lifestyle.png", ar: "أسلوب حياة رياضي", en: "Active lifestyle" },
       { src: "/promo-coach-male-kraft.png", ar: "مدرب مع طبق أدرينالين", en: "Coach with Adrenaline meal" },
       { src: "/promo-coach-female-kraft.png", ar: "مدربة مع طبق أدرينالين", en: "Female coach with meal" },
-      { src: "/promo-coach-community-kraft.png", ar: "المدربون وأطباق المطعم", en: "Coaches & restaurant meals" },
+      { src: "/promo-coach-community-kraft.png", ar: "مجتمع الأداء والوجبات", en: "Performance community" },
       { src: "/pos-meals/Adrenaline Healthy Majboos مجبوس صحي.jpg", ar: "مجبوس أدرينالين الصحي", en: "Healthy Majboos" },
       { src: "/pos-meals/Greek Chicken دجاج يوناني.jpg", ar: "الدجاج اليوناني", en: "Greek Chicken" },
       { src: "/pos-meals/Beef Kofta with Safran Rice كفتة لحم البقر مع أرز الزعفران.jpg", ar: "كفتة وأرز الزعفران", en: "Kofta & Saffron Rice" },
@@ -265,7 +265,7 @@ export default function PromoStudio() {
               {(["TRAINERS", "GENERAL"] as Audience[]).map((item) => (
                 <button key={item} type="button" onClick={() => setAudience(item)}
                   className={cn("rounded-lg px-3 py-2 text-xs font-black transition", audience === item ? "bg-white text-[#0E76AC] shadow-sm" : "text-slate-500")}>
-                  {item === "TRAINERS" ? t("المدربون والمدربات", "Coaches") : t("جمهور عام", "General")}
+                  {item === "TRAINERS" ? t("حملة الأداء الرياضي", "Performance campaign") : t("جمهور عام", "General")}
                 </button>
               ))}
             </div>
@@ -273,7 +273,7 @@ export default function PromoStudio() {
               <Label>{t("العنوان الرئيسي (اختياري)", "Headline (optional)")}</Label>
               <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
                 placeholder={audience === "TRAINERS"
-                  ? (posterLanguage === "AR" ? "خصم لك ولمتدربيك" : "Save for you and your clients")
+                  ? (posterLanguage === "AR" ? "قوّتك تبدأ من طبقك" : "Strength starts on your plate")
                   : (posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine")} />
             </div>
             <div className="space-y-2">
@@ -390,7 +390,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   roundRect(g, 64, 58, brand === "NUTRI_RESET" ? 310 : 370, 116, 28);
   g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
   drawContain(g, logo, 86, 75, brand === "NUTRI_RESET" ? 266 : 326, 80);
-  pill(g, trainers ? (ar ? "عرض المدربين" : "COACH OFFER") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, 25);
+  pill(g, trainers ? (ar ? "عرض حصري" : "EXCLUSIVE OFFER") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, 25);
 
   g.direction = ar ? "rtl" : "ltr";
   g.textAlign = ar ? "right" : "left";
@@ -401,7 +401,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const big = isPercent ? `${discountValue || 25}%` : `${discountValue || 200}`;
   if (trainers) {
     g.fillStyle = "rgba(246,251,254,.72)"; g.font = font(story ? 31 : 27, 800);
-    g.fillText(ar ? "عرض خاص للمدربين والمدربات" : "EXCLUSIVE FOR COACHES", startX, story ? 285 : 235);
+    g.fillText(ar ? "اختيارات أذكى. نتائج أقوى." : "SMARTER FUEL. STRONGER RESULTS.", startX, story ? 285 : 235);
   }
   g.fillStyle = B.ink; g.font = font(trainers ? (story ? 218 : 180) : (story ? 238 : 205), 900);
   g.fillText(big, startX, story ? 530 : 430);
@@ -410,7 +410,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   g.fillText(isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
 
   const defaultHeadline = trainers
-    ? (ar ? "خصم لك ولمتدربيك" : "Save for you and your clients")
+    ? (ar ? "قوّتك تبدأ من طبقك" : "Strength starts on your plate")
     : (ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today");
   g.fillStyle = B.ink;
   wrapText(g, p.headline || defaultHeadline, startX, story ? 750 : 605, copyWidth, trainers ? (story ? 58 : 48) : (story ? 62 : 54), 1.18, 900, ar ? "right" : "left", 2);
@@ -441,14 +441,14 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   g.fillStyle = B.deep; g.font = font(ctaSize, 900);
   g.fillText(
     trainers
-      ? (ar ? "اشترك وشارك كودك اليوم" : "SUBSCRIBE. SHARE. INSPIRE.")
+      ? (ar ? "خطتك جاهزة. ابدأ الآن" : "YOUR PLAN IS READY")
       : (ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE."),
     contentX, panelY + 74,
   );
   g.fillStyle = "#526574"; g.font = font(story ? 25 : 22, 700);
   wrapText(g,
     trainers
-      ? (ar ? "امسح الرمز، ثم أرسل الكود لمتدربيك" : "Scan, then share your code with your clients")
+      ? (ar ? "امسح الرمز واختر باقتك" : "Scan the code and choose your plan")
       : (ar ? "الخصم ينتقل تلقائيًا إلى صفحة الدفع" : "Your discount is applied automatically at checkout"),
     contentX, panelY + 116, contentWidth, story ? 25 : 22, 1.3, 700, ar ? "right" : "left", 2,
   );
