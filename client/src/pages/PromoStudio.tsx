@@ -1,321 +1,447 @@
 /**
  * @file client/src/pages/PromoStudio.tsx
- * @description مولّد صور الحملات — كود خصمٍ يصير منشوراً جاهزاً للنشر.
- *
- * لماذا الرسم على Canvas لا لقطة شاشة لعنصر HTML:
- * جُرّبت html2canvas في هذا المشروع من قبل فكسرت تشكيل العربي وقطّعت الحروف.
- * والـCanvas يخطّ النصّ بمُشكِّل النظام نفسه، ويعطي مقاساً بالبكسل بالضبط
- * (١٠٨٠×١٠٨٠ لا أقلّ ولا أكثر) — وهو ما تطلبه إنستجرام.
+ * @description مولّد صور حملات الخصم بمقاسات إنستجرام الجاهزة للنشر.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
-import { Card, CardContent } from "@/components/ui/card";
+import { DashboardHeader } from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Download, QrCode, Copy, Check } from "lucide-react";
+import { Check, Copy, Download, ImagePlus, Megaphone, QrCode, ShieldCheck } from "lucide-react";
 import QRCode from "qrcode";
 
 type Brand = "ADRENALINE" | "NUTRI_RESET";
-type Size = "SQUARE" | "STORY";
+type Size = "POST" | "STORY";
+type PosterLanguage = "AR" | "EN";
 
-const BRANDS: Record<Brand, { name: string; from: string; to: string; ink: string; accent: string }> = {
-  ADRENALINE:  { name: "ADRENALINE",  from: "#0E2A4A", to: "#0E76AC", ink: "#FFFFFF", accent: "#3CC4F0" },
-  NUTRI_RESET: { name: "NUTRI RESET", from: "#0A4E57", to: "#22AEC0", ink: "#FFFFFF", accent: "#7FE7DE" },
+const BRANDS: Record<Brand, {
+  name: string; logo: string; ink: string; accent: string; deep: string;
+  images: Array<{ src: string; ar: string; en: string }>;
+}> = {
+  ADRENALINE: {
+    name: "ADRENALINE", logo: "/adrenaline-logo-full.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
+    images: [
+      { src: "/plan-liyaqa-real.png", ar: "تشكيلة الوجبات", en: "Meal collection" },
+      { src: "/plan-tanshif-real.png", ar: "الباقة الصحية", en: "Healthy package" },
+      { src: "/plan-tadkhim-real.jpg", ar: "تجربة أدرينالين", en: "Adrenaline experience" },
+    ],
+  },
+  NUTRI_RESET: {
+    name: "NUTRI RESET", logo: "/nutri-reset-logo.png", ink: "#F5FFFD", accent: "#7FE7DE", deep: "#063A42",
+    images: [
+      { src: "/nutri-reset-woman-meal.png", ar: "أسلوب حياة", en: "Lifestyle" },
+      { src: "/nutri-reset-hero-original.png", ar: "نيوتري ريست", en: "Nutri Reset" },
+    ],
+  },
 };
-const SIZES: Record<Size, { w: number; h: number; label: string }> = {
-  SQUARE: { w: 1080, h: 1080, label: "1080 × 1080" },
-  STORY:  { w: 1080, h: 1920, label: "1080 × 1920" },
+
+const SIZES: Record<Size, { w: number; h: number; ar: string; en: string }> = {
+  POST: { w: 1080, h: 1350, ar: "منشور إنستجرام", en: "Instagram post" },
+  STORY: { w: 1080, h: 1920, ar: "ستوري إنستجرام", en: "Instagram story" },
 };
 
 export default function PromoStudio() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
-  const t = (a: string, e: string) => (isRtl ? a : e);
+  const t = (ar: string, en: string) => (isRtl ? ar : en);
   const sessionToken = useStore((s: any) => s.sessionToken) || undefined;
-  const coupons = (useQuery(api.coupons.list, { sessionToken }) as any[] | undefined) || [];
+  const couponRows = useQuery(api.coupons.list, { sessionToken }) as any[] | undefined;
+  const coupons = useMemo(() => couponRows || [], [couponRows]);
+  const queryCode = new URLSearchParams(window.location.search).get("code")?.trim().toUpperCase() || "";
 
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(queryCode);
   const [brand, setBrand] = useState<Brand>("ADRENALINE");
-  const [size, setSize] = useState<Size>("SQUARE");
+  const [size, setSize] = useState<Size>("POST");
+  const [posterLanguage, setPosterLanguage] = useState<PosterLanguage>("AR");
   const [headline, setHeadline] = useState("");
-  const [sub, setSub] = useState("");
+  const [footer, setFooter] = useState("");
+  const [imageSrc, setImageSrc] = useState(BRANDS.ADRENALINE.images[0].src);
+  const [customImage, setCustomImage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [renderError, setRenderError] = useState("");
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const active = useMemo(
-    () => coupons.find((c) => String(c.code).toUpperCase() === code.toUpperCase()),
+  const coupon = useMemo(
+    () => coupons.find((item) => String(item.code).toUpperCase() === code.trim().toUpperCase()),
     [coupons, code],
   );
-
-  /** الرابط الذي يفتحه الرمز: الباقات وقد سبقه كودُه مطبَّقاً. */
-  const link = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const base = brand === "NUTRI_RESET" ? "/public/plans" : "/public/plans";
-    return `${origin}${base}${code ? `?promo=${encodeURIComponent(code.toUpperCase())}` : ""}`;
-  }, [brand, code]);
-
-  /** عبارةُ الخصم كما يقرؤها الناس: «خصم ٢٥٪» أو «خصم ٢٠٠ ر.ق». */
-  const offerText = useMemo(() => {
-    if (!active) return "";
-    return active.discountType === "PERCENT"
-      ? `${active.discountValue}% ${isRtl ? "خصم" : "OFF"}`
-      : `${active.discountValue} ${isRtl ? "ر.ق خصم" : "QAR OFF"}`;
-  }, [active, isRtl]);
+  const couponBrand = (coupon?.restaurantKey || "ADRENALINE") as Brand;
+  const usable = Boolean(coupon?.isActive) && (!coupon?.expiresAt || coupon.expiresAt >= qatarToday());
 
   useEffect(() => {
-    const cv = canvasRef.current;
-    if (!cv) return;
-    const { w, h } = SIZES[size];
-    cv.width = w; cv.height = h;
-    const g = cv.getContext("2d");
-    if (!g) return;
-    const B = BRANDS[brand];
-    const story = size === "STORY";
+    if (!coupon) return;
+    const nextBrand = couponBrand === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
+    setBrand(nextBrand);
+    setCustomImage(null);
+    setImageSrc(BRANDS[nextBrand].images[0].src);
+  }, [coupon, couponBrand]);
 
-    (async () => {
-      // ── الأرضية: تدرّجٌ قطريّ من داكن العلامة إلى فاتحها ──
-      const grad = g.createLinearGradient(0, 0, w, h);
-      grad.addColorStop(0, B.from); grad.addColorStop(1, B.to);
-      g.fillStyle = grad; g.fillRect(0, 0, w, h);
+  const campaignLink = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return `${origin}/public/plans${code.trim() ? `?promo=${encodeURIComponent(code.trim().toUpperCase())}` : ""}`;
+  }, [code]);
 
-      // هالةٌ خفيفة تكسر استواء الخلفية
-      const halo = g.createRadialGradient(w * 0.8, h * 0.12, 10, w * 0.8, h * 0.12, w * 0.7);
-      halo.addColorStop(0, `${B.accent}33`); halo.addColorStop(1, "#00000000");
-      g.fillStyle = halo; g.fillRect(0, 0, w, h);
-
-      const cx = w / 2;
-      const F = (px: number, weight = 900) => `${weight} ${px}px Cairo, Tahoma, "Segoe UI", sans-serif`;
-      g.textAlign = "center";
-      g.direction = isRtl ? "rtl" : "ltr";
-
-      // ── اسم العلامة ──
-      let y = story ? 210 : 130;
-      g.fillStyle = `${B.ink}CC`;
-      g.font = F(story ? 46 : 40, 800);
-      g.fillText(B.name, cx, y);
-
-      // ── العنوان الرئيسي ──
-      y += story ? 150 : 120;
-      g.fillStyle = B.ink;
-      const title = headline.trim() || (isRtl ? "خصم على الاشتراك الشهري" : "Save on your monthly plan");
-      wrap(g, title, cx, y, w - 160, story ? 92 : 84, (px) => F(px, 900), story ? 108 : 96);
-
-      // ── قيمة الخصم: أبرز ما في الصورة ──
-      y += story ? 300 : 250;
-      if (offerText) {
-        g.fillStyle = B.accent;
-        g.font = F(story ? 150 : 128, 900);
-        g.fillText(offerText, cx, y);
-      }
-
-      // ── الرمز ──
-      const qrSize = story ? 480 : 400;
-      const qrY = y + (story ? 110 : 80);
-      if (code.trim()) {
-        const url = await QRCode.toDataURL(link, {
-          margin: 1, width: qrSize, errorCorrectionLevel: "M",
-          color: { dark: "#0F1516", light: "#FFFFFF" },
+  useEffect(() => {
+    let cancelled = false;
+    const render = async () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dimensions = SIZES[size];
+      canvas.width = dimensions.w;
+      canvas.height = dimensions.h;
+      const g = canvas.getContext("2d");
+      if (!g) return;
+      g.imageSmoothingEnabled = true;
+      g.imageSmoothingQuality = "high";
+      setRenderError("");
+      try {
+        await document.fonts.ready;
+        const [photo, logo, qr] = await Promise.all([
+          loadImage(customImage || imageSrc),
+          loadImage(BRANDS[brand].logo),
+          code.trim()
+            ? QRCode.toDataURL(campaignLink, {
+                margin: 1, width: 900, errorCorrectionLevel: "H",
+                color: { dark: BRANDS[brand].deep, light: "#FFFFFF" },
+              }).then(loadImage)
+            : Promise.resolve(null),
+        ]);
+        if (cancelled) return;
+        drawCampaign(g, {
+          w: dimensions.w, h: dimensions.h, size, brand, posterLanguage,
+          photo, logo, qr, code: code.trim().toUpperCase(), coupon,
+          headline: headline.trim(), footer: footer.trim(),
         });
-        const img = new Image();
-        await new Promise((res) => { img.onload = res; img.src = url; });
-        const pad = 26;
-        roundRect(g, cx - qrSize / 2 - pad, qrY - pad, qrSize + pad * 2, qrSize + pad * 2, 34);
-        g.fillStyle = "#FFFFFF"; g.fill();
-        g.drawImage(img, cx - qrSize / 2, qrY, qrSize, qrSize);
+      } catch {
+        if (!cancelled) setRenderError(isRtl ? "تعذّر تحميل صورة المعاينة" : "Unable to load the preview image");
       }
+    };
+    void render();
+    return () => { cancelled = true; };
+  }, [brand, campaignLink, code, coupon, customImage, footer, headline, imageSrc, isRtl, posterLanguage, size]);
 
-      // ── الكود مكتوباً: لمن يقرأ ولا يمسح ──
-      let ty = qrY + qrSize + (story ? 130 : 105);
-      if (code.trim()) {
-        g.fillStyle = `${B.ink}B3`;
-        g.font = F(story ? 40 : 34, 700);
-        g.fillText(isRtl ? "امسح الرمز أو استخدم الكود" : "Scan the code or use", cx, ty - (story ? 62 : 52));
-        const label = code.toUpperCase();
-        g.font = F(story ? 86 : 74, 900);
-        const tw = g.measureText(label).width;
-        roundRect(g, cx - tw / 2 - 40, ty - (story ? 70 : 60), tw + 80, story ? 106 : 92, 26);
-        g.fillStyle = `${B.ink}1F`; g.fill();
-        g.lineWidth = 4; g.strokeStyle = `${B.accent}AA`; g.stroke();
-        g.fillStyle = B.ink;
-        g.fillText(label, cx, ty);
-      }
+  const chooseBrand = (next: Brand) => {
+    if (coupon && next !== couponBrand) return;
+    setBrand(next);
+    setCustomImage(null);
+    setImageSrc(BRANDS[next].images[0].src);
+  };
 
-      // ── سطر ختامي ──
-      if (sub.trim()) {
-        g.fillStyle = `${B.ink}B3`;
-        g.font = F(story ? 42 : 36, 700);
-        wrap(g, sub.trim(), cx, h - (story ? 150 : 90), w - 200, story ? 42 : 36, (px) => F(px, 700), story ? 56 : 48);
-      }
-    })();
-  }, [brand, size, headline, sub, code, link, offerText, isRtl]);
+  const uploadImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file?.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = () => setCustomImage(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
 
-  const download = (name: string, data: string) => {
+  const downloadPoster = () => {
+    if (!usable || !canvasRef.current) return;
     const a = document.createElement("a");
-    a.href = data; a.download = name; a.click();
+    a.href = canvasRef.current.toDataURL("image/png", 1);
+    a.download = `${brand.toLowerCase()}-${code.toLowerCase()}-${size.toLowerCase()}.png`;
+    a.click();
   };
-  const savePoster = () => {
-    const cv = canvasRef.current; if (!cv) return;
-    download(`promo-${code || "adrenaline"}-${size.toLowerCase()}.png`, cv.toDataURL("image/png"));
-  };
-  const saveQr = async () => {
-    if (!code.trim()) return;
-    const url = await QRCode.toDataURL(link, { margin: 1, width: 1200, errorCorrectionLevel: "M" });
-    download(`qr-${code.toUpperCase()}.png`, url);
+
+  const downloadQr = async () => {
+    if (!usable) return;
+    const data = await QRCode.toDataURL(campaignLink, { margin: 2, width: 1600, errorCorrectionLevel: "H" });
+    const a = document.createElement("a");
+    a.href = data;
+    a.download = `qr-${code.toLowerCase()}.png`;
+    a.click();
   };
 
   return (
-    <div className="p-4 md:p-6" dir={isRtl ? "rtl" : "ltr"}>
-      <div className="mb-5">
-        <h1 className="text-2xl font-black text-[#0E2A4A]">{t("استوديو الحملات", "Promo Studio")}</h1>
-        <p className="text-sm font-bold text-slate-500">
-          {t("حوّل كود الخصم إلى منشور جاهز للنشر", "Turn a discount code into a ready-to-post image")}
-        </p>
-      </div>
+    <div className="space-y-6" dir={isRtl ? "rtl" : "ltr"}>
+      <DashboardHeader
+        icon={<Megaphone className="h-6 w-6 sm:h-7 sm:w-7" />}
+        titleAr="استوديو الحملات" titleEn="Promo Studio"
+        subtitleAr="صمّم إعلان خصم جاهزًا لإنستجرام مع رابط وQR يعملان فعليًا"
+        subtitleEn="Create a polished Instagram campaign with a working link and QR code"
+      />
 
-      <div className="grid gap-5 lg:grid-cols-[380px_1fr]">
-        <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="space-y-2">
-              <Label>{t("كود الخصم", "Discount code")}</Label>
-              {coupons.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {coupons.filter((c) => c.isActive).map((c) => (
-                    <button key={c._id} type="button" onClick={() => setCode(String(c.code))}
-                      className={cn("rounded-lg border px-2.5 py-1.5 text-[11px] font-black",
-                        code.toUpperCase() === String(c.code).toUpperCase()
-                          ? "border-[#0E76AC] bg-[#0E76AC] text-white"
-                          : "border-slate-200 bg-white text-slate-600")}>
-                      {c.code}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <Input dir="ltr" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="ABF91" className="font-black tracking-widest" />
-              {code.trim() && !active && (
-                <p className="text-xs font-bold text-amber-600">
-                  {t("الكود غير موجود — الصورة ستُنشأ لكن لن يعمل عند الدفع",
-                     "Code not found — the image will render but won't work at checkout")}
-                </p>
+      <div className="grid items-start gap-6 xl:grid-cols-[410px_minmax(0,1fr)]">
+        <section className="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_12px_36px_-24px_rgba(14,42,74,.35)]">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("1. العرض", "1. Offer")}</p>
+            <h2 className="mt-1 text-lg font-black text-[#0F1516]">{t("اختر كوبونًا فعّالًا", "Choose an active coupon")}</h2>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t("كود الخصم", "Discount code")}</Label>
+            <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto rounded-2xl bg-slate-50 p-2.5">
+              {coupons.filter((item) => item.isActive).map((item) => (
+                <button key={item._id} type="button" onClick={() => setCode(String(item.code))}
+                  className={cn("rounded-xl border px-3 py-2 text-xs font-black transition-colors",
+                    code === String(item.code)
+                      ? "border-[#0E76AC] bg-[#0E76AC] text-white"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-[#3CC4F0]")}>
+                  {item.code} · {item.discountValue}{item.discountType === "PERCENT" ? "%" : " QAR"}
+                </button>
+              ))}
+              {!coupons.some((item) => item.isActive) && (
+                <p className="px-2 py-3 text-xs font-bold text-slate-500">{t("أنشئ كوبونًا وفعّله أولًا", "Create and activate a coupon first")}</p>
               )}
             </div>
+            <Input dir="ltr" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="WELCOME25" className="h-11 rounded-xl font-black tracking-widest" />
+            {code.trim() && !coupon && <Validation tone="danger" text={t("هذا الكود غير موجود ولن يعمل عند الدفع", "This code does not exist and will not work at checkout")} />}
+            {coupon && !coupon.isActive && <Validation tone="danger" text={t("الكوبون متوقف؛ فعّله قبل النشر", "The coupon is disabled; activate it before publishing")} />}
+            {coupon?.expiresAt && coupon.expiresAt < qatarToday() && <Validation tone="danger" text={t("الكوبون منتهي الصلاحية", "The coupon has expired")} />}
+            {usable && <Validation tone="success" text={t("الكوبون صالح والرابط جاهز للنشر", "Coupon is valid and the campaign link is ready")} />}
+          </div>
 
-            <div className="space-y-2">
-              <Label>{t("العنوان", "Headline")}</Label>
-              <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
-                placeholder={t("خصم على الاشتراك الشهري", "Save on your monthly plan")} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t("سطر ختامي (اختياري)", "Footer line (optional)")}</Label>
-              <Input value={sub} onChange={(e) => setSub(e.target.value)}
-                placeholder={t("توصيل يومي في قطر", "Daily delivery across Qatar")} />
-            </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Segmented label={t("لغة الصورة", "Poster language")}
+              items={[{ key: "AR", label: "عربي" }, { key: "EN", label: "English" }]}
+              value={posterLanguage} onChange={(value) => setPosterLanguage(value as PosterLanguage)} />
+            <Segmented label={t("المقاس", "Format")}
+              items={[{ key: "POST", label: t("منشور", "Post") }, { key: "STORY", label: t("ستوري", "Story") }]}
+              value={size} onChange={(value) => setSize(value as Size)} />
+          </div>
 
-            <div className="space-y-2">
-              <Label>{t("الهوية", "Brand")}</Label>
-              <div className="flex gap-2">
-                {(Object.keys(BRANDS) as Brand[]).map((k) => (
-                  <button key={k} type="button" onClick={() => setBrand(k)}
-                    className={cn("flex-1 rounded-xl border px-2 py-2 text-xs font-black",
-                      brand === k
-                        ? k === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#22AEC0] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
-                        : "border-slate-200 bg-white text-slate-600")}>
-                    {BRANDS[k].name}
-                  </button>
-                ))}
-              </div>
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("2. الهوية والصورة", "2. Brand & image")}</p>
+              <p className="mt-1 text-xs font-bold text-slate-500">{t("الهوية تتطابق تلقائيًا مع المطعم المرتبط بالكوبون", "Brand is matched automatically to the coupon restaurant")}</p>
             </div>
-
-            <div className="space-y-2">
-              <Label>{t("المقاس", "Size")}</Label>
-              <div className="flex gap-2">
-                {(Object.keys(SIZES) as Size[]).map((k) => (
-                  <button key={k} type="button" onClick={() => setSize(k)}
-                    className={cn("flex-1 rounded-xl border px-2 py-2 text-xs font-black",
-                      size === k ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-600")}>
-                    {k === "SQUARE" ? t("منشور", "Post") : t("ستوري", "Story")}
-                    <span className="block text-[10px] font-bold opacity-70">{SIZES[k].label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <Label className="text-[11px]">{t("الرابط الذي يفتحه الرمز", "Link behind the code")}</Label>
-              <p dir="ltr" className="mt-1 break-all text-[11px] font-bold text-slate-600">{link}</p>
-              <Button variant="outline" size="sm" className="mt-2 h-8 w-full text-xs font-black"
-                onClick={() => { navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
-                {copied ? <Check className="me-1.5 h-3.5 w-3.5" /> : <Copy className="me-1.5 h-3.5 w-3.5" />}
-                {copied ? t("تم النسخ", "Copied") : t("انسخ الرابط", "Copy link")}
-              </Button>
-            </div>
-
             <div className="grid grid-cols-2 gap-2">
-              <Button onClick={savePoster} className="h-11 bg-[#0E76AC] font-black hover:bg-[#0a668f]">
-                <Download className="me-1.5 h-4 w-4" />{t("نزّل الصورة", "Download image")}
-              </Button>
-              <Button variant="outline" onClick={saveQr} disabled={!code.trim()} className="h-11 font-black">
-                <QrCode className="me-1.5 h-4 w-4" />{t("الرمز فقط", "QR only")}
-              </Button>
+              {(["ADRENALINE", "NUTRI_RESET"] as Brand[]).map((item) => (
+                <button key={item} type="button" onClick={() => chooseBrand(item)}
+                  disabled={Boolean(coupon && couponBrand !== item)}
+                  className={cn("h-11 rounded-xl border text-xs font-black disabled:cursor-not-allowed disabled:opacity-40",
+                    brand === item ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-600")}>
+                  {BRANDS[item].name}
+                </button>
+              ))}
             </div>
-            <p className="text-[11px] font-bold leading-relaxed text-slate-400">
-              {t("«الرمز فقط» يُنزّل QR بدقة عالية للمصمّم ليضعه في تصميمه الخاص.",
-                 "\"QR only\" downloads a high-resolution code for your designer to place in their own artwork.")}
-            </p>
-          </CardContent>
-        </Card>
+            <div className="grid grid-cols-3 gap-2">
+              {BRANDS[brand].images.map((item) => (
+                <button key={item.src} type="button" onClick={() => { setCustomImage(null); setImageSrc(item.src); }}
+                  className={cn("overflow-hidden rounded-xl border-2 bg-slate-100 text-start",
+                    !customImage && imageSrc === item.src ? "border-[#3CC4F0]" : "border-transparent")}>
+                  <img src={item.src} alt="" className="aspect-[4/3] w-full object-cover" />
+                  <span className="block truncate px-2 py-1.5 text-[10px] font-black text-slate-600">{t(item.ar, item.en)}</span>
+                </button>
+              ))}
+              <label className={cn("flex aspect-[4/3] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed text-center",
+                customImage ? "border-[#3CC4F0] bg-cyan-50 text-[#0E76AC]" : "border-slate-300 text-slate-500")}>
+                <ImagePlus className="h-5 w-5" />
+                <span className="mt-1 px-1 text-[10px] font-black">{t("ارفع صورتك", "Upload yours")}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={uploadImage} />
+              </label>
+            </div>
+          </div>
 
-        <Card>
-          <CardContent className="flex items-start justify-center p-4">
-            <canvas ref={canvasRef}
-              className="max-h-[70vh] w-auto rounded-2xl shadow-lg"
-              style={{ maxWidth: "100%" }} />
-          </CardContent>
-        </Card>
+          <div className="space-y-3 border-t border-slate-100 pt-5">
+            <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("3. الرسالة", "3. Message")}</p>
+            <div className="space-y-2">
+              <Label>{t("العنوان الرئيسي (اختياري)", "Headline (optional)")}</Label>
+              <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
+                placeholder={posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine"} />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("السطر الختامي (اختياري)", "Footer line (optional)")}</Label>
+              <Input value={footer} onChange={(e) => setFooter(e.target.value)}
+                placeholder={posterLanguage === "AR" ? "وجبات محسوبة وتوصيل يومي في قطر" : "Calorie-counted meals, delivered daily"} />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-700"><QrCode className="h-4 w-4 text-[#0E76AC]" />{t("الرابط داخل QR", "QR destination")}</div>
+            <p dir="ltr" className="mt-1 break-all text-[10px] font-bold leading-5 text-slate-500">{campaignLink}</p>
+            <Button variant="outline" size="sm" className="mt-2 h-8 w-full rounded-lg text-xs font-black"
+              onClick={() => { navigator.clipboard.writeText(campaignLink); setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
+              {copied ? <Check className="me-1.5 h-3.5 w-3.5" /> : <Copy className="me-1.5 h-3.5 w-3.5" />}
+              {copied ? t("تم النسخ", "Copied") : t("نسخ رابط الحملة", "Copy campaign link")}
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button onClick={downloadPoster} disabled={!usable || Boolean(renderError)} className="h-12 rounded-xl bg-[#0E76AC] font-black hover:bg-[#095f89]">
+              <Download className="me-2 h-4 w-4" />{t("تنزيل الصورة", "Download poster")}
+            </Button>
+            <Button variant="outline" onClick={downloadQr} disabled={!usable} className="h-12 rounded-xl font-black">
+              <QrCode className="me-2 h-4 w-4" />{t("تنزيل QR", "Download QR")}
+            </Button>
+          </div>
+        </section>
+
+        <section className="sticky top-20 rounded-3xl border border-slate-200 bg-[#E9F0F5] p-4 md:p-7">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("معاينة مباشرة", "Live preview")}</p>
+              <p className="mt-1 text-xs font-bold text-slate-500">{isRtl ? SIZES[size].ar : SIZES[size].en} · {SIZES[size].w} × {SIZES[size].h}</p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-emerald-700 shadow-sm">
+              <ShieldCheck className="h-3.5 w-3.5" />{t("PNG عالي الجودة", "High-quality PNG")}
+            </span>
+          </div>
+          <div className="flex min-h-[520px] items-start justify-center overflow-hidden rounded-2xl bg-[#DCE7EE] p-3 md:p-5">
+            <canvas ref={canvasRef} className="block max-h-[74vh] max-w-full rounded-xl shadow-[0_24px_70px_-30px_rgba(7,30,49,.65)]" />
+          </div>
+          {renderError && <p className="mt-3 text-center text-sm font-bold text-red-600">{renderError}</p>}
+        </section>
       </div>
     </div>
   );
 }
 
-/** مستطيلٌ بأركانٍ دائرية — يُترك المسار مفتوحاً ليملأه المستدعي أو يحدّه. */
-function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  g.beginPath();
-  g.moveTo(x + r, y);
-  g.arcTo(x + w, y, x + w, y + h, r);
-  g.arcTo(x + w, y + h, x, y + h, r);
-  g.arcTo(x, y + h, x, y, r);
-  g.arcTo(x, y, x + w, y, r);
-  g.closePath();
+function Segmented({ label, items, value, onChange }: { label: string; items: Array<{ key: string; label: string }>; value: string; onChange: (key: string) => void }) {
+  return <div className="space-y-2"><Label>{label}</Label><div className="flex gap-1 rounded-xl bg-slate-100 p-1">
+    {items.map((item) => <button key={item.key} type="button" onClick={() => onChange(item.key)}
+      className={cn("h-9 flex-1 rounded-lg text-[11px] font-black", value === item.key ? "bg-white text-[#0E76AC] shadow-sm" : "text-slate-500")}>{item.label}</button>)}
+  </div></div>;
 }
 
-/**
- * يلفّ النصّ على أسطر داخل عرضٍ محدّد، ويصغّر الخطّ إن طال حتى لا يتجاوز
- * ثلاثة أسطر — فالعنوان الطويل يبقى داخل الصورة بدل أن يقتطعه إطارها.
- */
-function wrap(
-  g: CanvasRenderingContext2D, text: string, cx: number, y: number,
-  maxW: number, px: number, font: (p: number) => string, lineH: number,
-) {
-  let sizePx = px;
-  let lines: string[] = [];
-  for (let attempt = 0; attempt < 6; attempt++) {
-    g.font = font(sizePx);
-    lines = [];
-    let line = "";
-    for (const word of text.split(/\s+/)) {
-      const probe = line ? `${line} ${word}` : word;
-      if (g.measureText(probe).width > maxW && line) { lines.push(line); line = word; }
-      else line = probe;
-    }
-    if (line) lines.push(line);
-    if (lines.length <= 3) break;
-    sizePx = Math.round(sizePx * 0.86);
-    lineH = Math.round(lineH * 0.86);
+function Validation({ tone, text }: { tone: "success" | "danger"; text: string }) {
+  return <p className={cn("flex items-center gap-1.5 text-xs font-bold", tone === "success" ? "text-emerald-700" : "text-red-600")}>
+    {tone === "success" ? <Check className="h-3.5 w-3.5" /> : null}{text}
+  </p>;
+}
+
+function qatarToday() { return new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10); }
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function drawCampaign(g: CanvasRenderingContext2D, p: {
+  w: number; h: number; size: Size; brand: Brand; posterLanguage: PosterLanguage;
+  photo: HTMLImageElement; logo: HTMLImageElement; qr: HTMLImageElement | null;
+  code: string; coupon: any; headline: string; footer: string;
+}) {
+  const { w, h, brand, posterLanguage, photo, logo, qr, code, coupon } = p;
+  const B = BRANDS[brand];
+  const ar = posterLanguage === "AR";
+  const story = p.size === "STORY";
+  const topArea = story ? 1140 : 790;
+  const panelY = story ? 1220 : 865;
+
+  drawCover(g, photo, 0, 0, w, h);
+  const shade = g.createLinearGradient(0, 0, 0, h);
+  shade.addColorStop(0, "rgba(4,18,29,.10)");
+  shade.addColorStop(story ? .48 : .40, "rgba(4,18,29,.38)");
+  shade.addColorStop(story ? .68 : .60, `${B.deep}F2`);
+  shade.addColorStop(1, B.deep);
+  g.fillStyle = shade; g.fillRect(0, 0, w, h);
+
+  const glow = g.createRadialGradient(w * .83, topArea * .25, 10, w * .83, topArea * .25, 680);
+  glow.addColorStop(0, `${B.accent}66`); glow.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = glow; g.fillRect(0, 0, w, topArea);
+
+  roundRect(g, 64, 58, brand === "NUTRI_RESET" ? 310 : 370, 116, 28);
+  g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
+  drawContain(g, logo, 86, 75, brand === "NUTRI_RESET" ? 266 : 326, 80);
+  pill(g, ar ? "عرض محدود" : "LIMITED OFFER", w - 300, 76, 228, 58, B.accent, B.deep, 25);
+
+  g.direction = ar ? "rtl" : "ltr";
+  g.textAlign = ar ? "right" : "left";
+  const startX = ar ? w - 72 : 72;
+  const discountValue = Number(coupon?.discountValue || 0);
+  const isPercent = coupon?.discountType !== "FIXED";
+  const big = isPercent ? `${discountValue || 25}%` : `${discountValue || 200}`;
+  g.fillStyle = B.ink; g.font = font(story ? 238 : 205, 900);
+  g.fillText(big, startX, story ? 530 : 430);
+
+  g.fillStyle = B.accent; g.font = font(story ? 76 : 64, 900);
+  g.fillText(isPercent ? (ar ? "خصم على الباقات" : "OFF SUBSCRIPTION PLANS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
+
+  const defaultHeadline = ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today";
+  g.fillStyle = B.ink;
+  wrapText(g, p.headline || defaultHeadline, startX, story ? 760 : 615, w - 144, story ? 62 : 54, 1.18, 900, ar ? "right" : "left", 2);
+
+  const panelH = h - panelY - 62;
+  roundRect(g, 58, panelY, w - 116, panelH, 40);
+  g.fillStyle = "rgba(247,251,252,.97)"; g.fill();
+
+  const qrSize = story ? 286 : 250;
+  const qrX = ar ? w - 92 - qrSize : 92;
+  const qrY = panelY + (panelH - qrSize) / 2;
+  if (qr) {
+    roundRect(g, qrX - 12, qrY - 12, qrSize + 24, qrSize + 24, 24);
+    g.fillStyle = "#FFFFFF"; g.fill();
+    g.drawImage(qr, qrX, qrY, qrSize, qrSize);
   }
-  lines.forEach((l, i) => g.fillText(l, cx, y + i * lineH));
+
+  const contentLeft = ar ? 92 : qrX + qrSize + 52;
+  const contentRight = ar ? qrX - 52 : w - 92;
+  const contentX = ar ? contentRight : contentLeft;
+  const contentWidth = contentRight - contentLeft;
+  g.textAlign = ar ? "right" : "left"; g.direction = ar ? "rtl" : "ltr";
+  g.fillStyle = B.deep; g.font = font(story ? 39 : 34, 900);
+  g.fillText(ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE.", contentX, panelY + 74);
+  g.fillStyle = "#526574"; g.font = font(story ? 25 : 22, 700);
+  wrapText(g, ar ? "الخصم ينتقل تلقائيًا إلى صفحة الدفع" : "Your discount is applied automatically at checkout", contentX, panelY + 116, contentWidth, story ? 25 : 22, 1.3, 700, ar ? "right" : "left", 2);
+
+  const codeBoxY = panelY + (story ? 190 : 166);
+  roundRect(g, contentLeft, codeBoxY, contentWidth, story ? 96 : 88, 22);
+  g.fillStyle = B.deep; g.fill();
+  g.textAlign = "center"; g.direction = "ltr"; g.fillStyle = B.accent; g.font = font(story ? 48 : 44, 900);
+  g.fillText(code || "YOURCODE", contentLeft + contentWidth / 2, codeBoxY + (story ? 65 : 60));
+
+  g.direction = ar ? "rtl" : "ltr"; g.textAlign = ar ? "right" : "left";
+  g.fillStyle = "#536877"; g.font = font(19, 800);
+  const expiry = coupon?.expiresAt
+    ? (ar ? `صالح حتى ${coupon.expiresAt}` : `Valid until ${coupon.expiresAt}`)
+    : (ar ? "تُطبّق الشروط والأحكام" : "Terms and conditions apply");
+  g.fillText(expiry, contentX, panelY + panelH - 34);
+
+  if (p.footer) {
+    g.textAlign = "center"; g.fillStyle = "rgba(246,251,254,.86)"; g.font = font(20, 800);
+    g.fillText(p.footer, w / 2, panelY - 28);
+  }
+}
+
+function font(size: number, weight = 900) { return `${weight} ${size}px Cairo, Tahoma, "Segoe UI", sans-serif`; }
+
+function drawCover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+  const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+  const sw = w / scale; const sh = h / scale;
+  g.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, x, y, w, h);
+}
+
+function drawContain(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+  const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight);
+  const dw = img.naturalWidth * scale; const dh = img.naturalHeight * scale;
+  g.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+}
+
+function pill(g: CanvasRenderingContext2D, text: string, x: number, y: number, w: number, h: number, bg: string, fg: string, size: number) {
+  roundRect(g, x, y, w, h, h / 2); g.fillStyle = bg; g.fill();
+  g.direction = "ltr"; g.textAlign = "center"; g.fillStyle = fg; g.font = font(size, 900);
+  g.fillText(text, x + w / 2, y + h * .67);
+}
+
+function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const radius = Math.min(r, w / 2, h / 2);
+  g.beginPath(); g.moveTo(x + radius, y); g.arcTo(x + w, y, x + w, y + h, radius);
+  g.arcTo(x + w, y + h, x, y + h, radius); g.arcTo(x, y + h, x, y, radius);
+  g.arcTo(x, y, x + w, y, radius); g.closePath();
+}
+
+function wrapText(g: CanvasRenderingContext2D, text: string, x: number, y: number, maxWidth: number,
+  size: number, lineRatio: number, weight: number, align: CanvasTextAlign, maxLines: number) {
+  g.textAlign = align; g.font = font(size, weight);
+  const words = text.trim().split(/\s+/); const lines: string[] = []; let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (g.measureText(candidate).width > maxWidth && line) {
+      lines.push(line); line = word;
+      if (lines.length === maxLines - 1) break;
+    } else line = candidate;
+  }
+  if (line && lines.length < maxLines) lines.push(line);
+  lines.forEach((item, index) => g.fillText(item, x, y + index * size * lineRatio));
 }

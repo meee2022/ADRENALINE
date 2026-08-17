@@ -196,6 +196,7 @@ export interface MenuItemDef {
     | "reports"
     | "analytics"
     | "coupons"
+    | "promoStudio"
     | "payroll"
     | "leaves"
     | "attendance"
@@ -309,6 +310,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/banners", iconKey: "banners", labelAr: "السلايدر (البانرات)", labelEn: "Banners",
         roles: ["ADMIN"] },
       { href: "/coupons", iconKey: "coupons", labelAr: "كوبونات الخصم", labelEn: "Coupons",
+        roles: ["ADMIN"] },
+      { href: "/promo-studio", iconKey: "promoStudio", labelAr: "استوديو الحملات", labelEn: "Promo Studio",
         roles: ["ADMIN"] },
       { href: "/loyalty-ratings", iconKey: "ratings", labelAr: "الولاء والتقييمات", labelEn: "Loyalty & Ratings",
         roles: ["ADMIN"] },

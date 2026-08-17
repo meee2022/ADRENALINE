@@ -25,6 +25,7 @@ import {
   FileText,
   ScrollText,
   Tag,
+  Megaphone,
   Star,
   Banknote,
   CalendarCheck,
@@ -84,6 +85,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   reports: FileText,
   analytics: BarChart3,
   coupons: Tag,
+  promoStudio: Megaphone,
   finance: Landmark,
   ratings: Star,
 };

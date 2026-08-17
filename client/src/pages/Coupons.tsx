@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
+import { Plus, Tag, Trash2, Power, Copy, Image } from "lucide-react";
 import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -154,6 +154,15 @@ export default function Coupons() {
                           title={t("تفعيل/إيقاف","Enable/Disable")}
                         >
                           <Power className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => { window.location.href = `/promo-studio?code=${encodeURIComponent(c.code)}`; }}
+                          title={t("تصميم إعلان", "Design campaign")}
+                          className="text-[#0E76AC]"
+                        >
+                          <Image className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
