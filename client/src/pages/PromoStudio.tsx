@@ -18,6 +18,7 @@ import QRCode from "qrcode";
 type Brand = "ADRENALINE" | "NUTRI_RESET";
 type Size = "POST" | "STORY";
 type PosterLanguage = "AR" | "EN";
+type Audience = "TRAINERS" | "GENERAL";
 
 const BRANDS: Record<Brand, {
   name: string; logo: string; ink: string; accent: string; deep: string;
@@ -29,6 +30,9 @@ const BRANDS: Record<Brand, {
       { src: "/promo-adrenaline-protein.png", ar: "وجبة بروتين فاخرة", en: "Premium protein meal" },
       { src: "/promo-adrenaline-plans.png", ar: "باقات الوجبات", en: "Meal plan collection" },
       { src: "/promo-adrenaline-lifestyle.png", ar: "أسلوب حياة رياضي", en: "Active lifestyle" },
+      { src: "/promo-coach-male.png", ar: "مدرب ومتدرب", en: "Coach & trainee" },
+      { src: "/promo-coach-female.png", ar: "مدربة ومتدربة", en: "Female coach" },
+      { src: "/promo-coach-community.png", ar: "مجتمع المدربين", en: "Coach community" },
     ],
   },
   NUTRI_RESET: {
@@ -58,6 +62,7 @@ export default function PromoStudio() {
   const [brand, setBrand] = useState<Brand>("ADRENALINE");
   const [size, setSize] = useState<Size>("POST");
   const [posterLanguage, setPosterLanguage] = useState<PosterLanguage>("AR");
+  const [audience, setAudience] = useState<Audience>("TRAINERS");
   const [headline, setHeadline] = useState("");
   const [footer, setFooter] = useState("");
   const [imageSrc, setImageSrc] = useState(BRANDS.ADRENALINE.images[0].src);
@@ -115,7 +120,7 @@ export default function PromoStudio() {
         drawCampaign(g, {
           w: dimensions.w, h: dimensions.h, size, brand, posterLanguage,
           photo, logo, qr, code: code.trim().toUpperCase(), coupon,
-          headline: headline.trim(), footer: footer.trim(),
+          headline: headline.trim(), footer: footer.trim(), audience,
         });
       } catch {
         if (!cancelled) setRenderError(isRtl ? "تعذّر تحميل صورة المعاينة" : "Unable to load the preview image");
@@ -123,7 +128,7 @@ export default function PromoStudio() {
     };
     void render();
     return () => { cancelled = true; };
-  }, [brand, campaignLink, code, coupon, customImage, footer, headline, imageSrc, isRtl, posterLanguage, size]);
+  }, [audience, brand, campaignLink, code, coupon, customImage, footer, headline, imageSrc, isRtl, posterLanguage, size]);
 
   const chooseBrand = (next: Brand) => {
     if (coupon && next !== couponBrand) return;
@@ -241,10 +246,20 @@ export default function PromoStudio() {
 
           <div className="space-y-3 border-t border-slate-100 pt-5">
             <p className="text-xs font-black uppercase tracking-[.14em] text-[#0E76AC]">{t("3. الرسالة", "3. Message")}</p>
+            <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+              {(["TRAINERS", "GENERAL"] as Audience[]).map((item) => (
+                <button key={item} type="button" onClick={() => setAudience(item)}
+                  className={cn("rounded-lg px-3 py-2 text-xs font-black transition", audience === item ? "bg-white text-[#0E76AC] shadow-sm" : "text-slate-500")}>
+                  {item === "TRAINERS" ? t("المدربون والمدربات", "Coaches") : t("جمهور عام", "General")}
+                </button>
+              ))}
+            </div>
             <div className="space-y-2">
               <Label>{t("العنوان الرئيسي (اختياري)", "Headline (optional)")}</Label>
               <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
-                placeholder={posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine"} />
+                placeholder={audience === "TRAINERS"
+                  ? (posterLanguage === "AR" ? "عرض حصري للمدربين والمدربات" : "An exclusive offer for coaches")
+                  : (posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine")} />
             </div>
             <div className="space-y-2">
               <Label>{t("السطر الختامي (اختياري)", "Footer line (optional)")}</Label>
@@ -320,7 +335,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function drawCampaign(g: CanvasRenderingContext2D, p: {
   w: number; h: number; size: Size; brand: Brand; posterLanguage: PosterLanguage;
   photo: HTMLImageElement; logo: HTMLImageElement; qr: HTMLImageElement | null;
-  code: string; coupon: any; headline: string; footer: string;
+  code: string; coupon: any; headline: string; footer: string; audience: Audience;
 }) {
   const { w, h, brand, posterLanguage, photo, logo, qr, code, coupon } = p;
   const B = BRANDS[brand];
@@ -358,7 +373,9 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   g.fillStyle = B.accent; g.font = font(story ? 76 : 64, 900);
   g.fillText(isPercent ? (ar ? "خصم على الباقات" : "OFF SUBSCRIPTION PLANS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
 
-  const defaultHeadline = ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today";
+  const defaultHeadline = p.audience === "TRAINERS"
+    ? (ar ? "عرض حصري للمدربين والمدربات" : "An exclusive offer for coaches")
+    : (ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today");
   g.fillStyle = B.ink;
   wrapText(g, p.headline || defaultHeadline, startX, story ? 760 : 615, w - 144, story ? 62 : 54, 1.18, 900, ar ? "right" : "left", 2);
 
@@ -380,10 +397,21 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const contentX = ar ? contentRight : contentLeft;
   const contentWidth = contentRight - contentLeft;
   g.textAlign = ar ? "right" : "left"; g.direction = ar ? "rtl" : "ltr";
-  g.fillStyle = B.deep; g.font = font(story ? 39 : 34, 900);
-  g.fillText(ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE.", contentX, panelY + 74);
+  const ctaSize = p.audience === "TRAINERS" && !ar ? (story ? 30 : 25) : (story ? 39 : 34);
+  g.fillStyle = B.deep; g.font = font(ctaSize, 900);
+  g.fillText(
+    p.audience === "TRAINERS"
+      ? (ar ? "كودك يدعمك ويدعم متدربيك" : "ONE CODE FOR YOU & YOUR CLIENTS")
+      : (ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE."),
+    contentX, panelY + 74,
+  );
   g.fillStyle = "#526574"; g.font = font(story ? 25 : 22, 700);
-  wrapText(g, ar ? "الخصم ينتقل تلقائيًا إلى صفحة الدفع" : "Your discount is applied automatically at checkout", contentX, panelY + 116, contentWidth, story ? 25 : 22, 1.3, 700, ar ? "right" : "left", 2);
+  wrapText(g,
+    p.audience === "TRAINERS"
+      ? (ar ? "اشترك وشارك الخصم مع متدربيك" : "Subscribe and share the saving with your clients")
+      : (ar ? "الخصم ينتقل تلقائيًا إلى صفحة الدفع" : "Your discount is applied automatically at checkout"),
+    contentX, panelY + 116, contentWidth, story ? 25 : 22, 1.3, 700, ar ? "right" : "left", 2,
+  );
 
   const codeBoxY = panelY + (story ? 190 : 166);
   roundRect(g, contentLeft, codeBoxY, contentWidth, story ? 96 : 88, 22);
