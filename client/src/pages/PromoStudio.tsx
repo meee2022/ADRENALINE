@@ -357,16 +357,16 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const ar = posterLanguage === "AR";
   const story = p.size === "STORY";
   const trainers = p.audience === "TRAINERS";
-  const topArea = story ? 1140 : 790;
-  const panelY = story ? 1220 : 865;
+  const panelY = trainers ? (story ? 1400 : 930) : (story ? 1220 : 865);
+  const topArea = panelY - (story ? 80 : 75);
 
-  drawCover(g, photo, 0, 0, w, h);
+  drawCover(g, photo, 0, 0, w, h, trainers ? .58 : .5);
   if (trainers) {
     const sideShade = g.createLinearGradient(0, 0, w, 0);
-    sideShade.addColorStop(0, `${B.deep}F5`);
-    sideShade.addColorStop(.46, `${B.deep}CC`);
-    sideShade.addColorStop(.72, `${B.deep}44`);
-    sideShade.addColorStop(1, "rgba(4,18,29,.04)");
+    sideShade.addColorStop(0, `${B.deep}D9`);
+    sideShade.addColorStop(.42, `${B.deep}9E`);
+    sideShade.addColorStop(.66, `${B.deep}24`);
+    sideShade.addColorStop(1, "rgba(4,18,29,0)");
     g.fillStyle = sideShade; g.fillRect(0, 0, w, topArea + 150);
 
     const bottomShade = g.createLinearGradient(0, h * .48, 0, h);
@@ -394,8 +394,8 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
 
   g.direction = ar ? "rtl" : "ltr";
   g.textAlign = ar ? "right" : "left";
-  const startX = trainers && ar ? 590 : (ar ? w - 72 : 72);
-  const copyWidth = trainers ? 520 : w - 144;
+  const startX = trainers && ar ? 520 : (ar ? w - 72 : 72);
+  const copyWidth = trainers ? 440 : w - 144;
   const discountValue = Number(coupon?.discountValue || 0);
   const isPercent = coupon?.discountType !== "FIXED";
   const big = isPercent ? `${discountValue || 25}%` : `${discountValue || 200}`;
@@ -474,10 +474,12 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
 
 function font(size: number, weight = 900) { return `${weight} ${size}px Cairo, Tahoma, "Segoe UI", sans-serif`; }
 
-function drawCover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
+function drawCover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focalY = .5) {
   const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
   const sw = w / scale; const sh = h / scale;
-  g.drawImage(img, (img.naturalWidth - sw) / 2, (img.naturalHeight - sh) / 2, sw, sh, x, y, w, h);
+  const maxSourceY = Math.max(0, img.naturalHeight - sh);
+  const sourceY = Math.max(0, Math.min(maxSourceY, img.naturalHeight * focalY - sh / 2));
+  g.drawImage(img, (img.naturalWidth - sw) / 2, sourceY, sw, sh, x, y, w, h);
 }
 
 function drawContain(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
