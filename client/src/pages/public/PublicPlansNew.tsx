@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useSearch } from "wouter";
 import { api } from "@/../../convex/_generated/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
@@ -64,8 +65,40 @@ export default function PublicPlansNew() {
 
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");
 
+  /* كود الحملة يصل مع الرابط (‏?promo=ABF91) فيمضي مع المشترك إلى صفحة الدفع
+     وإلى رسالة الأخصائية — القادم من إعلانٍ لا يُطالَب بكتابة شيء. */
+  const promoCode = (new URLSearchParams(useSearch())).get("promo")?.trim().toUpperCase() || "";
+
   const handleSubscribe = (planId: string, optionIndex: number) => {
-    window.location.href = `/public/paylater?plan=${encodeURIComponent(planId)}&option=${optionIndex}`;
+    const q = `plan=${encodeURIComponent(planId)}&option=${optionIndex}`
+      + (promoCode ? `&promo=${encodeURIComponent(promoCode)}` : "");
+    window.location.href = `/public/paylater?${q}`;
+  };
+
+  /**
+   * الاشتراك عبر الأخصائية — ليس كل مشترك يدفع إلكترونياً؛ ومن يدفع نقداً
+   * كان الطريق أمامه مقطوعاً في الباقات ذات السعر الجاهز، فيخرج من الصفحة.
+   * فصار لكل باقة بابان، والرسالة تحمل ما يكفي الأخصائية للمتابعة بلا سؤال:
+   * الباقة والخيار والسعر والكود وقيمة الحسم.
+   */
+  const handlePlanContact = (planNameTxt: string, opt: any) => {
+    const price = Number(opt?.priceQAR) || 0;
+    const optTxt = opt
+      ? (isRtl ? `${opt.mealsCount} وجبات + ${opt.snacksCount} سناك` : `${opt.mealsCount} meals + ${opt.snacksCount} snacks`)
+      : "";
+    const lines = isRtl
+      ? [`السلام عليكم`, `أرغب في الاشتراك في *${planNameTxt}*`,
+         optTxt && `الخيار: ${optTxt}`,
+         price ? `السعر: ${price} ر.ق` : "",
+         promoCode && `كود الخصم: *${promoCode}*`,
+         `طريقة الدفع: نقداً`, `أرجو التواصل معي لإتمام الاشتراك. وشكرًا.`]
+      : [`Hello,`, `I'd like to subscribe to *${planNameTxt}*`,
+         optTxt && `Option: ${optTxt}`,
+         price ? `Price: ${price} QAR` : "",
+         promoCode && `Promo code: *${promoCode}*`,
+         `Payment: cash`, `Please contact me to complete the subscription. Thank you.`];
+    const msg = lines.filter(Boolean).join("\n");
+    window.location.href = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(msg)}`;
   };
 
   // ✅ باقة مخصّصة (بلا أسعار جاهزة): تواصل مع الأخصائية لتحديد الكميات والوجبات
@@ -80,6 +113,28 @@ export default function PublicPlansNew() {
 
   return (
     <PublicLayout>
+      {promoCode && (
+        /* شريط الحملة: من جاء من إعلانٍ يرى كودَه مطبَّقاً فيطمئنّ أنه في
+           المكان الصحيح، ولا يبحث عن خانةٍ يكتبه فيها. */
+        <div className="px-4 pt-4" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="mx-auto max-w-3xl rounded-2xl px-4 py-3 text-center shadow-sm"
+            style={{ background: "linear-gradient(120deg,#0E76AC,#3CC4F0)" }}>
+            <span className="inline-flex flex-wrap items-center justify-center gap-2 text-white">
+              <Tag className="h-4 w-4" />
+              <span className="text-sm font-black">
+                {isRtl ? "كود الخصم مُفعَّل" : "Discount code applied"}
+              </span>
+              <span className="rounded-lg bg-white/20 px-2 py-0.5 text-sm font-black tracking-wider">
+                {promoCode}
+              </span>
+              <span className="text-xs font-bold opacity-90">
+                {isRtl ? "يُحتسب عند الدفع" : "applied at checkout"}
+              </span>
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Unified compact header */}
       <PageHeader
         eyebrowAr="باقات الاشتراك" eyebrowEn="SUBSCRIPTION PLANS"
@@ -219,21 +274,30 @@ export default function PublicPlansNew() {
                         </ul>
                       )}
 
-                      {/* CTA Button */}
-                      {(() => {
-                        return (
+                      {/* CTA — بابان لكل باقة: الدفع الإلكتروني، والاشتراك نقداً عبر الأخصائية */}
+                      <div className="mt-auto space-y-2">
+                        <Button
+                          onClick={() => isCustom
+                            ? handleCustomContact(planName(plan))
+                            : handleSubscribe(plan._id, 0)}
+                          className={`w-full h-12 text-base font-bold rounded-full transition-all ${
+                            isFeatured
+                              ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
+                              : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
+                          }`}
+                        >
+                          {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "ادفع مع PayLater" : "Pay with PayLater")}
+                        </Button>
+                        {!isCustom && (
                           <Button
-                            onClick={() => isCustom ? handleCustomContact(planName(plan)) : handleSubscribe(plan._id, 0)}
-                            className={`w-full h-12 text-base font-bold rounded-full transition-all mt-auto ${
-                              isFeatured
-                                ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
-                                : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
-                            }`}
+                            variant="outline"
+                            onClick={() => handlePlanContact(planName(plan), plan.options?.[0])}
+                            className="w-full h-11 text-sm font-bold rounded-full border-2 border-[#25D366] text-[#128C4A] hover:bg-[#25D366]/10"
                           >
-                            {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "ادفع مع PayLater" : "Pay with PayLater")}
+                            {isRtl ? "أو اشترك نقداً عبر الأخصائية" : "Or subscribe by cash via our nutritionist"}
                           </Button>
-                        );
-                      })()}
+                        )}
+                      </div>
                     </div>
                   </div>
                 );

@@ -931,6 +931,12 @@ export default defineSchema({
     planName: v.string(),
     optionIndex: v.number(),
     amount: v.number(),
+    /* أثر الخصم: السعر قبله، والكود، وقيمة الحسم. يُحفظ مع الدفعة نفسها
+       فيُعرف لاحقاً ما جلبته كل حملة، ولا يُحتسب الاستخدام إلا بنجاح الدفع. */
+    originalAmount: v.optional(v.number()),
+    couponCode: v.optional(v.string()),
+    couponDiscount: v.optional(v.number()),
+    couponCounted: v.optional(v.boolean()),
     currency: v.literal("QAR"),
     customerName: v.string(),
     customerPhone: v.string(),
@@ -1172,6 +1178,11 @@ export default defineSchema({
 
   // ===== Coupons =====
   coupons: defineTable({
+    /* المطعم الذي يسري عليه الكود. غيابه = أدرينالين، فالكوبونات القديمة
+       تبقى كما كانت ولا ينفتح خصمُ مطعمٍ على الآخر. */
+    restaurantKey: v.optional(v.string()),
+    /* حدٌّ أدنى لقيمة الاشتراك كي يسري الكود — تُترك فارغة فيسري على الكل. */
+    minOrderQAR: v.optional(v.number()),
     code: v.string(),
     discountType: v.union(v.literal("PERCENT"), v.literal("FIXED")),
     discountValue: v.number(),

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Tag, Trash2, Power, Copy } from "lucide-react";
@@ -37,6 +38,8 @@ export default function Coupons() {
     discountValue: "",
     maxUses: "",
     expiresAt: "",
+    minOrderQAR: "",
+    restaurantKey: "ADRENALINE" as "ADRENALINE" | "NUTRI_RESET",
   });
 
   const handleCreate = async () => {
@@ -51,10 +54,12 @@ export default function Coupons() {
         discountValue: parseFloat(form.discountValue),
         maxUses: form.maxUses ? parseInt(form.maxUses) : undefined,
         expiresAt: form.expiresAt || undefined,
+        minOrderQAR: form.minOrderQAR ? parseFloat(form.minOrderQAR) : undefined,
+        restaurantKey: form.restaurantKey,
         sessionToken,
       });
       toast({ title: t("تم الإنشاء","Created"), description: `${t("كود","Code")} ${form.code} ${t("جاهز للاستخدام","is ready to use")}` });
-      setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "" });
+      setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "", minOrderQAR: "", restaurantKey: "ADRENALINE" });
       setDialogOpen(false);
     } catch (e: any) {
       toast({ title: t("خطأ","Error"), description: e.message, variant: "destructive" });
@@ -232,6 +237,34 @@ export default function Coupons() {
                   value={form.expiresAt}
                   onChange={(e) => setForm({ ...form, expiresAt: e.target.value })}
                 />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>{t("أقل قيمة اشتراك (اختياري)","Minimum subscription (optional)")}</Label>
+                <Input
+                  type="number"
+                  value={form.minOrderQAR}
+                  onChange={(e) => setForm({ ...form, minOrderQAR: e.target.value })}
+                  placeholder={t("مثال: 1000","e.g. 1000")}
+                />
+              </div>
+              <div className="space-y-2">
+                {/* الكود يسري على مطعمٍ واحد: خصمُ حملةٍ لأدرينالين لا يُصرف على
+                    باقات نيوتري ريست ولو كتبه المشترك هناك. */}
+                <Label>{t("المطعم","Restaurant")}</Label>
+                <div className="flex gap-2">
+                  {(["ADRENALINE", "NUTRI_RESET"] as const).map((k) => (
+                    <button key={k} type="button"
+                      onClick={() => setForm({ ...form, restaurantKey: k })}
+                      className={cn("flex-1 rounded-xl border px-2 py-2 text-xs font-black",
+                        form.restaurantKey === k
+                          ? k === "NUTRI_RESET" ? "border-[#22AEC0] bg-[#22AEC0] text-white" : "border-[#0E76AC] bg-[#0E76AC] text-white"
+                          : "border-slate-200 bg-white text-slate-600")}>
+                      {k === "NUTRI_RESET" ? "Nutri Reset" : "Adrenaline"}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

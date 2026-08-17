@@ -1,5 +1,6 @@
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { judgeCoupon } from "./coupons";
 import { v } from "convex/values";
 
 const UAT = "https://connect.uat.paylaterapp.com";
@@ -28,7 +29,10 @@ async function accessToken(c: ReturnType<typeof config>) {
 export const saveAttempt = internalMutation({
   args: {
     orderId: v.string(), checkoutToken: v.string(), planId: v.id("publicPlans"), planName: v.string(),
-    optionIndex: v.number(), amount: v.number(), customerName: v.string(), customerPhone: v.string(),
+    optionIndex: v.number(), amount: v.number(),
+    originalAmount: v.optional(v.number()), couponCode: v.optional(v.string()),
+    couponDiscount: v.optional(v.number()),
+    customerName: v.string(), customerPhone: v.string(),
     customerEmail: v.optional(v.string()), environment: v.union(v.literal("sandbox"), v.literal("production")),
     paymentLinkUrl: v.string(),
   },
@@ -43,6 +47,17 @@ export const applyStatus = internalMutation({
     const row = await ctx.db.query("payLaterPayments").withIndex("by_orderId", q => q.eq("orderId", a.orderId)).unique();
     if (!row) return false;
     await ctx.db.patch(row._id, { status: a.status, payLaterOrderId: a.payLaterOrderId, updatedAt: Date.now() });
+
+    /* الاستخدام يُحتسب عند نجاح الدفع وحده — لا عند كتابة الكود، وإلا أحرقه
+       من جرّبه ولم يشترِ. و`couponCounted` يمنع تكرار الاحتساب لو استُعلم عن
+       حالة الدفعة أكثر من مرة (والصفحة تستعلم عند كل فتح). */
+    if (a.status === "success" && row.couponCode && !row.couponCounted) {
+      const c = await ctx.db.query("coupons")
+        .withIndex("by_code", (q) => q.eq("code", String(row.couponCode).toUpperCase()))
+        .first();
+      if (c) await ctx.db.patch(c._id, { usedCount: Number(c.usedCount || 0) + 1 });
+      await ctx.db.patch(row._id, { couponCounted: true });
+    }
     return true;
   },
 });
@@ -51,13 +66,34 @@ export const createCheckout = action({
   args: {
     planId: v.id("publicPlans"), optionIndex: v.number(), customerName: v.string(), customerPhone: v.string(),
     customerEmail: v.optional(v.string()), returnOrigin: v.string(),
+    couponCode: v.optional(v.string()),
   },
   handler: async (ctx, a): Promise<any> => {
     const plan: any = await ctx.runQuery(internal.payLater.getPlanInternal, { planId: a.planId });
     if (!plan || plan.isActive === false) throw new Error("Plan is not available");
     const option = plan.options?.[a.optionIndex];
-    const amount = Number(option?.priceQAR);
-    if (!Number.isFinite(amount) || amount < 300 || amount > 25000) throw new Error("This plan is outside PayLater's allowed amount range");
+    const listPrice = Number(option?.priceQAR);
+    if (!Number.isFinite(listPrice)) throw new Error("This plan has no price");
+
+    /* الخصم يُحسب هنا لا في المتصفح: الصفحة ترسل الكود وحده، والمبلغ الذاهب
+       إلى بوّابة الدفع يُشتقّ من سعر الباقة المخزَّن. فلو بُعث خصمٌ مصنوع
+       من جهة العميل لم يُقرأ أصلاً. */
+    let amount = listPrice;
+    let couponCode: string | undefined;
+    let couponDiscount = 0;
+    if (a.couponCode && a.couponCode.trim()) {
+      const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
+      const j = judgeCoupon(coupon, listPrice, "ADRENALINE");
+      if (!j.valid) throw new Error(j.error);
+      amount = j.finalTotal;
+      couponDiscount = j.discount;
+      couponCode = String(coupon.code);
+    }
+    if (amount < 300 || amount > 25000) {
+      throw new Error(couponCode
+        ? `المبلغ بعد الخصم (${amount} ر.ق) خارج حدود الدفع الإلكتروني — تواصل مع أخصائية التغذية لإتمام الاشتراك`
+        : "This plan is outside PayLater's allowed amount range");
+    }
     const origin = new URL(a.returnOrigin);
     if (origin.protocol !== "https:" && origin.hostname !== "localhost") throw new Error("Invalid return URL");
     const c = config();
@@ -73,7 +109,8 @@ export const createCheckout = action({
     if (!res.ok || !json.paymentLinkUrl) throw new Error(json.error || `PayLater checkout failed (${res.status})`);
     await ctx.runMutation(internal.payLater.saveAttempt, {
       orderId, checkoutToken, planId: a.planId, planName: plan.nameEn || plan.nameAr, optionIndex: a.optionIndex,
-      amount, customerName: a.customerName.trim(), customerPhone: a.customerPhone.trim(), customerEmail: a.customerEmail?.trim() || undefined,
+      amount, originalAmount: listPrice, couponCode, couponDiscount: couponDiscount || undefined,
+      customerName: a.customerName.trim(), customerPhone: a.customerPhone.trim(), customerEmail: a.customerEmail?.trim() || undefined,
       environment: c.environment, paymentLinkUrl: json.paymentLinkUrl,
     });
     return { paymentLinkUrl: json.paymentLinkUrl, checkoutToken };
