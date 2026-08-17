@@ -410,7 +410,12 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   g.fillText(big, startX, story ? 530 : 430);
 
   g.fillStyle = B.accent; g.font = font(trainers ? (story ? 56 : 45) : (story ? 76 : 64), 900);
-  g.fillText(isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
+  g.fillText(
+    isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"),
+    startX,
+    story ? 625 : 510,
+    copyWidth,
+  );
 
   const defaultHeadline = trainers
     ? (ar ? "قوّتك تبدأ من طبقك" : "Strength starts on your plate")
