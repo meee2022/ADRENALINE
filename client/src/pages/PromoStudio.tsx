@@ -391,9 +391,23 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   glow.addColorStop(0, `${B.accent}66`); glow.addColorStop(1, "rgba(0,0,0,0)");
   g.fillStyle = glow; g.fillRect(0, 0, w, topArea);
 
-  roundRect(g, 64, 58, brand === "NUTRI_RESET" ? 310 : 370, 116, 28);
-  g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
-  drawContain(g, logo, 86, 75, brand === "NUTRI_RESET" ? 266 : 326, 80);
+  if (brand === "NUTRI_RESET") {
+    roundRect(g, 64, 58, 310, 116, 28);
+    g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
+    drawContain(g, logo, 86, 75, 266, 80);
+  } else {
+    const logoCropH = Math.max(1, Math.round(logo.naturalHeight * .78));
+    const logoScale = Math.min(340 / logo.naturalWidth, 68 / logoCropH);
+    const logoW = logo.naturalWidth * logoScale;
+    const logoH = logoCropH * logoScale;
+    const logoX = 64 + (370 - logoW) / 2;
+    g.save();
+    g.shadowColor = "rgba(0,0,0,.42)"; g.shadowBlur = 12; g.shadowOffsetY = 3;
+    g.drawImage(logo, 0, 0, logo.naturalWidth, logoCropH, logoX, 70, logoW, logoH);
+    g.restore();
+    g.fillStyle = "rgba(246,251,254,.94)"; g.font = font(15, 800);
+    drawTrackedCentered(g, "HEALTHY FOOD", 249, 151, 4.2);
+  }
   pill(g, trainers ? (ar ? "لأول مرة" : "FOR THE FIRST TIME") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, trainers && !ar ? 18 : 25);
 
   g.direction = ar ? "rtl" : "ltr";
@@ -482,6 +496,18 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
 }
 
 function font(size: number, weight = 900) { return `${weight} ${size}px Cairo, Tahoma, "Segoe UI", sans-serif`; }
+
+function drawTrackedCentered(g: CanvasRenderingContext2D, text: string, centerX: number, y: number, tracking: number) {
+  g.save(); g.direction = "ltr"; g.textAlign = "left";
+  const widths = [...text].map((character) => g.measureText(character).width);
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, text.length - 1) * tracking;
+  let cursorX = centerX - totalWidth / 2;
+  [...text].forEach((character, index) => {
+    g.fillText(character, cursorX, y);
+    cursorX += widths[index] + tracking;
+  });
+  g.restore();
+}
 
 function drawCover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focalY = .5) {
   const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
