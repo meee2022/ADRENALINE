@@ -414,12 +414,12 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
     g.fillStyle = "rgba(246,251,254,.72)"; g.font = font(story ? 31 : 27, 800);
     g.fillText(ar ? "العرض الأقوى من أدرينالين" : "ADRENALINE'S STRONGEST OFFER", startX, story ? 285 : 235);
   }
-  g.fillStyle = B.ink; g.font = font(trainers ? (story ? 218 : 180) : (story ? 238 : 205), 900);
+  g.fillStyle = B.ink; g.font = font(trainers ? (story ? 190 : 156) : (story ? 238 : 205), trainers ? 800 : 900);
   g.fillText(big, startX, story ? 530 : 430);
 
   g.fillStyle = B.accent; g.font = font(trainers ? (story ? 56 : 45) : (story ? 76 : 64), 900);
   g.fillText(
-    isPercent ? (ar ? "خصم على باقاتك الصحية" : "OFF YOUR HEALTHY MEAL PLAN") : (ar ? "ر.ق خصم" : "QAR OFF"),
+    isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"),
     startX,
     story ? 625 : 510,
     copyWidth,
