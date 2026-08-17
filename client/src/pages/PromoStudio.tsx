@@ -390,7 +390,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   roundRect(g, 64, 58, brand === "NUTRI_RESET" ? 310 : 370, 116, 28);
   g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
   drawContain(g, logo, 86, 75, brand === "NUTRI_RESET" ? 266 : 326, 80);
-  pill(g, trainers ? (ar ? "عرض حصري" : "EXCLUSIVE OFFER") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, 25);
+  pill(g, trainers ? (ar ? "لأول مرة" : "FOR THE FIRST TIME") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, trainers && !ar ? 18 : 25);
 
   g.direction = ar ? "rtl" : "ltr";
   g.textAlign = ar ? "right" : "left";
@@ -401,7 +401,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const big = isPercent ? `${discountValue || 25}%` : `${discountValue || 200}`;
   if (trainers) {
     g.fillStyle = "rgba(246,251,254,.72)"; g.font = font(story ? 31 : 27, 800);
-    g.fillText(ar ? "اختيارات أذكى. نتائج أقوى." : "SMARTER FUEL. STRONGER RESULTS.", startX, story ? 285 : 235);
+    g.fillText(ar ? "العرض الأقوى من أدرينالين" : "ADRENALINE'S STRONGEST OFFER", startX, story ? 285 : 235);
   }
   g.fillStyle = B.ink; g.font = font(trainers ? (story ? 218 : 180) : (story ? 238 : 205), 900);
   g.fillText(big, startX, story ? 530 : 430);
