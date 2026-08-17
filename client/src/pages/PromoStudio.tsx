@@ -25,7 +25,7 @@ const BRANDS: Record<Brand, {
   images: Array<{ src: string; ar: string; en: string }>;
 }> = {
   ADRENALINE: {
-    name: "ADRENALINE", logo: "/adrenaline-logo-full.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
+    name: "ADRENALINE", logo: "/adrenaline-logo-dark.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
     images: [
       { src: "/promo-adrenaline-protein.png", ar: "وجبة بروتين فاخرة", en: "Premium protein meal" },
       { src: "/promo-adrenaline-plans.png", ar: "باقات الوجبات", en: "Meal plan collection" },
@@ -396,17 +396,10 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
     g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
     drawContain(g, logo, 86, 75, 266, 80);
   } else {
-    const logoCropH = Math.max(1, Math.round(logo.naturalHeight * .78));
-    const logoScale = Math.min(340 / logo.naturalWidth, 68 / logoCropH);
-    const logoW = logo.naturalWidth * logoScale;
-    const logoH = logoCropH * logoScale;
-    const logoX = 64 + (370 - logoW) / 2;
     g.save();
     g.shadowColor = "rgba(0,0,0,.42)"; g.shadowBlur = 12; g.shadowOffsetY = 3;
-    g.drawImage(logo, 0, 0, logo.naturalWidth, logoCropH, logoX, 70, logoW, logoH);
+    drawContain(g, logo, 64, 62, 370, 104);
     g.restore();
-    g.fillStyle = "rgba(246,251,254,.94)"; g.font = font(15, 800);
-    drawTrackedCentered(g, "HEALTHY FOOD", 249, 151, 4.2);
   }
   pill(g, trainers ? (ar ? "لأول مرة" : "FOR THE FIRST TIME") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, trainers && !ar ? 18 : 25);
 
@@ -496,18 +489,6 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
 }
 
 function font(size: number, weight = 900) { return `${weight} ${size}px Cairo, Tahoma, "Segoe UI", sans-serif`; }
-
-function drawTrackedCentered(g: CanvasRenderingContext2D, text: string, centerX: number, y: number, tracking: number) {
-  g.save(); g.direction = "ltr"; g.textAlign = "left";
-  const widths = [...text].map((character) => g.measureText(character).width);
-  const totalWidth = widths.reduce((sum, width) => sum + width, 0) + Math.max(0, text.length - 1) * tracking;
-  let cursorX = centerX - totalWidth / 2;
-  [...text].forEach((character, index) => {
-    g.fillText(character, cursorX, y);
-    cursorX += widths[index] + tracking;
-  });
-  g.restore();
-}
 
 function drawCover(g: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number, focalY = .5) {
   const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
