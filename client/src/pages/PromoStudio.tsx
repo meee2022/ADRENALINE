@@ -33,6 +33,9 @@ const BRANDS: Record<Brand, {
       { src: "/promo-coach-male.png", ar: "مدرب ومتدرب", en: "Coach & trainee" },
       { src: "/promo-coach-female.png", ar: "مدربة ومتدربة", en: "Female coach" },
       { src: "/promo-coach-community.png", ar: "مجتمع المدربين", en: "Coach community" },
+      { src: "/pos-meals/Adrenaline Healthy Majboos مجبوس صحي.jpg", ar: "مجبوس أدرينالين الصحي", en: "Healthy Majboos" },
+      { src: "/pos-meals/Greek Chicken دجاج يوناني.jpg", ar: "الدجاج اليوناني", en: "Greek Chicken" },
+      { src: "/pos-meals/Beef Kofta with Safran Rice كفتة لحم البقر مع أرز الزعفران.jpg", ar: "كفتة وأرز الزعفران", en: "Kofta & Saffron Rice" },
     ],
   },
   NUTRI_RESET: {
