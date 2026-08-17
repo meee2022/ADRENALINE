@@ -426,7 +426,7 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
 
   g.fillStyle = B.accent; g.font = font(trainers ? (story ? 56 : 45) : (story ? 76 : 64), 900);
   g.fillText(
-    isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"),
+    isPercent ? (ar ? "خصم على باقاتك الصحية" : "OFF YOUR HEALTHY MEAL PLAN") : (ar ? "ر.ق خصم" : "QAR OFF"),
     startX,
     story ? 625 : 510,
     copyWidth,
