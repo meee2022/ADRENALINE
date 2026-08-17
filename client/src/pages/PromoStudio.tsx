@@ -258,7 +258,7 @@ export default function PromoStudio() {
               <Label>{t("العنوان الرئيسي (اختياري)", "Headline (optional)")}</Label>
               <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
                 placeholder={audience === "TRAINERS"
-                  ? (posterLanguage === "AR" ? "عرض حصري للمدربين والمدربات" : "An exclusive offer for coaches")
+                  ? (posterLanguage === "AR" ? "خصم لك ولمتدربيك" : "Save for you and your clients")
                   : (posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine")} />
             </div>
             <div className="space-y-2">
@@ -341,16 +341,32 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const B = BRANDS[brand];
   const ar = posterLanguage === "AR";
   const story = p.size === "STORY";
+  const trainers = p.audience === "TRAINERS";
   const topArea = story ? 1140 : 790;
   const panelY = story ? 1220 : 865;
 
   drawCover(g, photo, 0, 0, w, h);
-  const shade = g.createLinearGradient(0, 0, 0, h);
-  shade.addColorStop(0, "rgba(4,18,29,.10)");
-  shade.addColorStop(story ? .48 : .40, "rgba(4,18,29,.38)");
-  shade.addColorStop(story ? .68 : .60, `${B.deep}F2`);
-  shade.addColorStop(1, B.deep);
-  g.fillStyle = shade; g.fillRect(0, 0, w, h);
+  if (trainers) {
+    const sideShade = g.createLinearGradient(0, 0, w, 0);
+    sideShade.addColorStop(0, `${B.deep}F5`);
+    sideShade.addColorStop(.46, `${B.deep}CC`);
+    sideShade.addColorStop(.72, `${B.deep}44`);
+    sideShade.addColorStop(1, "rgba(4,18,29,.04)");
+    g.fillStyle = sideShade; g.fillRect(0, 0, w, topArea + 150);
+
+    const bottomShade = g.createLinearGradient(0, h * .48, 0, h);
+    bottomShade.addColorStop(0, "rgba(4,18,29,0)");
+    bottomShade.addColorStop(.56, `${B.deep}E8`);
+    bottomShade.addColorStop(1, B.deep);
+    g.fillStyle = bottomShade; g.fillRect(0, h * .45, w, h * .55);
+  } else {
+    const shade = g.createLinearGradient(0, 0, 0, h);
+    shade.addColorStop(0, "rgba(4,18,29,.10)");
+    shade.addColorStop(story ? .48 : .40, "rgba(4,18,29,.38)");
+    shade.addColorStop(story ? .68 : .60, `${B.deep}F2`);
+    shade.addColorStop(1, B.deep);
+    g.fillStyle = shade; g.fillRect(0, 0, w, h);
+  }
 
   const glow = g.createRadialGradient(w * .83, topArea * .25, 10, w * .83, topArea * .25, 680);
   glow.addColorStop(0, `${B.accent}66`); glow.addColorStop(1, "rgba(0,0,0,0)");
@@ -359,29 +375,38 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   roundRect(g, 64, 58, brand === "NUTRI_RESET" ? 310 : 370, 116, 28);
   g.fillStyle = "rgba(248,252,253,.96)"; g.fill();
   drawContain(g, logo, 86, 75, brand === "NUTRI_RESET" ? 266 : 326, 80);
-  pill(g, ar ? "عرض محدود" : "LIMITED OFFER", w - 300, 76, 228, 58, B.accent, B.deep, 25);
+  pill(g, trainers ? (ar ? "عرض المدربين" : "COACH OFFER") : (ar ? "عرض محدود" : "LIMITED OFFER"), w - 300, 76, 228, 58, B.accent, B.deep, 25);
 
   g.direction = ar ? "rtl" : "ltr";
   g.textAlign = ar ? "right" : "left";
-  const startX = ar ? w - 72 : 72;
+  const startX = trainers && ar ? 590 : (ar ? w - 72 : 72);
+  const copyWidth = trainers ? 520 : w - 144;
   const discountValue = Number(coupon?.discountValue || 0);
   const isPercent = coupon?.discountType !== "FIXED";
   const big = isPercent ? `${discountValue || 25}%` : `${discountValue || 200}`;
-  g.fillStyle = B.ink; g.font = font(story ? 238 : 205, 900);
+  if (trainers) {
+    g.fillStyle = "rgba(246,251,254,.72)"; g.font = font(story ? 31 : 27, 800);
+    g.fillText(ar ? "عرض خاص للمدربين والمدربات" : "EXCLUSIVE FOR COACHES", startX, story ? 285 : 235);
+  }
+  g.fillStyle = B.ink; g.font = font(trainers ? (story ? 218 : 180) : (story ? 238 : 205), 900);
   g.fillText(big, startX, story ? 530 : 430);
 
-  g.fillStyle = B.accent; g.font = font(story ? 76 : 64, 900);
-  g.fillText(isPercent ? (ar ? "خصم على الباقات" : "OFF SUBSCRIPTION PLANS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
+  g.fillStyle = B.accent; g.font = font(trainers ? (story ? 56 : 45) : (story ? 76 : 64), 900);
+  g.fillText(isPercent ? (ar ? "على اشتراكات الوجبات" : "OFF MEAL SUBSCRIPTIONS") : (ar ? "ر.ق خصم" : "QAR OFF"), startX, story ? 625 : 510);
 
-  const defaultHeadline = p.audience === "TRAINERS"
-    ? (ar ? "عرض حصري للمدربين والمدربات" : "An exclusive offer for coaches")
+  const defaultHeadline = trainers
+    ? (ar ? "خصم لك ولمتدربيك" : "Save for you and your clients")
     : (ar ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine today");
   g.fillStyle = B.ink;
-  wrapText(g, p.headline || defaultHeadline, startX, story ? 760 : 615, w - 144, story ? 62 : 54, 1.18, 900, ar ? "right" : "left", 2);
+  wrapText(g, p.headline || defaultHeadline, startX, story ? 750 : 605, copyWidth, trainers ? (story ? 58 : 48) : (story ? 62 : 54), 1.18, 900, ar ? "right" : "left", 2);
 
   const panelH = h - panelY - 62;
-  roundRect(g, 58, panelY, w - 116, panelH, 40);
+  roundRect(g, 58, panelY, w - 116, panelH, trainers ? 30 : 40);
   g.fillStyle = "rgba(247,251,252,.97)"; g.fill();
+  if (trainers) {
+    roundRect(g, 82, panelY + 22, w - 164, 7, 4);
+    g.fillStyle = B.accent; g.fill();
+  }
 
   const qrSize = story ? 286 : 250;
   const qrX = ar ? w - 92 - qrSize : 92;
@@ -400,15 +425,15 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   const ctaSize = p.audience === "TRAINERS" && !ar ? (story ? 30 : 25) : (story ? 39 : 34);
   g.fillStyle = B.deep; g.font = font(ctaSize, 900);
   g.fillText(
-    p.audience === "TRAINERS"
-      ? (ar ? "كودك يدعمك ويدعم متدربيك" : "ONE CODE FOR YOU & YOUR CLIENTS")
+    trainers
+      ? (ar ? "اشترك وشارك كودك اليوم" : "SUBSCRIBE. SHARE. INSPIRE.")
       : (ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE."),
     contentX, panelY + 74,
   );
   g.fillStyle = "#526574"; g.font = font(story ? 25 : 22, 700);
   wrapText(g,
-    p.audience === "TRAINERS"
-      ? (ar ? "اشترك وشارك الخصم مع متدربيك" : "Subscribe and share the saving with your clients")
+    trainers
+      ? (ar ? "امسح الرمز، ثم أرسل الكود لمتدربيك" : "Scan, then share your code with your clients")
       : (ar ? "الخصم ينتقل تلقائيًا إلى صفحة الدفع" : "Your discount is applied automatically at checkout"),
     contentX, panelY + 116, contentWidth, story ? 25 : 22, 1.3, 700, ar ? "right" : "left", 2,
   );
