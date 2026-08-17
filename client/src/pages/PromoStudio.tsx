@@ -31,6 +31,7 @@ const BRANDS: Record<Brand, {
       { src: "/promo-adrenaline-plans.png", ar: "باقات الوجبات", en: "Meal plan collection" },
       { src: "/promo-adrenaline-lifestyle.png", ar: "أسلوب حياة رياضي", en: "Active lifestyle" },
       { src: "/promo-coach-box-adrenaline.png", ar: "مدرب مع بوكس أدرينالين", en: "Coach with Adrenaline box" },
+      { src: "/promo-gulf-coach-box-adrenaline.png", ar: "مدرب خليجي مع بوكس أدرينالين", en: "Gulf coach with Adrenaline box" },
       { src: "/promo-coach-female-kraft.png", ar: "مدربة مع طبق أدرينالين", en: "Female coach with meal" },
       { src: "/promo-coach-community-kraft.png", ar: "مجتمع الأداء والوجبات", en: "Performance community" },
       { src: "/pos-meals/Adrenaline Healthy Majboos مجبوس صحي.jpg", ar: "مجبوس أدرينالين الصحي", en: "Healthy Majboos" },
