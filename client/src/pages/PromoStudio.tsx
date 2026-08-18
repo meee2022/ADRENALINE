@@ -13,13 +13,46 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Check, Copy, Download, ImagePlus, Megaphone, QrCode, ShieldCheck } from "lucide-react";
+import { Check, Copy, Download, ImagePlus, Megaphone, QrCode, ShieldCheck, Sparkles } from "lucide-react";
 import QRCode from "qrcode";
 
 type Brand = "ADRENALINE" | "NUTRI_RESET";
 type Size = "POST" | "STORY";
 type PosterLanguage = "AR" | "EN";
 type Audience = "TRAINERS" | "GENERAL";
+type CopyCategory = "PERFORMANCE" | "RESULTS" | "CONVENIENCE" | "PREMIUM" | "URGENCY";
+
+type MarketingCopy = {
+  category: CopyCategory;
+  audience: Audience | "ALL";
+  ar: { headline: string; footer: string };
+  en: { headline: string; footer: string };
+};
+
+const COPY_CATEGORIES: Array<{ key: CopyCategory; ar: string; en: string }> = [
+  { key: "PERFORMANCE", ar: "الأداء", en: "Performance" },
+  { key: "RESULTS", ar: "النتائج", en: "Results" },
+  { key: "CONVENIENCE", ar: "السهولة", en: "Convenience" },
+  { key: "PREMIUM", ar: "القيمة", en: "Premium" },
+  { key: "URGENCY", ar: "عرض محدود", en: "Limited offer" },
+];
+
+const MARKETING_COPY: MarketingCopy[] = [
+  { category: "PERFORMANCE", audience: "TRAINERS", ar: { headline: "قوّتك تبدأ من طبقك", footer: "وجبات محسوبة لأداء أقوى كل يوم" }, en: { headline: "Strength starts on your plate", footer: "Calorie-counted meals for stronger daily performance" } },
+  { category: "PERFORMANCE", audience: "ALL", ar: { headline: "غذاؤك وقود إنجازك", footer: "توازن محسوب يدعم يومك وهدفك" }, en: { headline: "Fuel the progress you want", footer: "Balanced meals built around your goals" } },
+  { category: "PERFORMANCE", audience: "ALL", ar: { headline: "أداؤك يستحق تغذية أذكى", footer: "بروتين محسوب ووجبات جاهزة يوميًا" }, en: { headline: "Your performance deserves smarter nutrition", footer: "Protein-focused meals, ready every day" } },
+  { category: "RESULTS", audience: "ALL", ar: { headline: "كل وجبة خطوة نحو هدفك", footer: "خطة واضحة. التزام أسهل. نتائج أقرب." }, en: { headline: "Every meal moves you closer", footer: "A clear plan. Easier consistency. Better results." } },
+  { category: "RESULTS", audience: "ALL", ar: { headline: "هدفك أقرب مما تتخيل", footer: "ابدأ بخطة وجبات تناسب يومك" }, en: { headline: "Your goal is closer than you think", footer: "Start with a meal plan made for your routine" } },
+  { category: "RESULTS", audience: "TRAINERS", ar: { headline: "نتائجك تبدأ من التزامك", footer: "وجبات محسوبة تساعدك تحافظ على المسار" }, en: { headline: "Results begin with consistency", footer: "Counted meals that keep you on track" } },
+  { category: "CONVENIENCE", audience: "ALL", ar: { headline: "خطتك جاهزة. ابدأ الآن", footer: "وجبات يومية محسوبة تصل إلى بابك" }, en: { headline: "Your plan is ready. Start now", footer: "Daily calorie-counted meals delivered to you" } },
+  { category: "CONVENIENCE", audience: "ALL", ar: { headline: "أكل محسوب. وقت أكثر. نتائج أفضل", footer: "نحضّر وجباتك لتتفرغ لهدفك" }, en: { headline: "Counted meals. More time. Better results", footer: "We prep your meals so you can focus on your goal" } },
+  { category: "CONVENIENCE", audience: "ALL", ar: { headline: "اختصر الحيرة وابدأ صح", footer: "اختر باقتك ودعنا نهتم بالباقي" }, en: { headline: "Skip the guesswork. Start right", footer: "Choose your plan and leave the rest to us" } },
+  { category: "PREMIUM", audience: "ALL", ar: { headline: "جودة تذوقها. فرق تشعر به", footer: "مكونات مختارة ووجبات محسوبة بعناية" }, en: { headline: "Taste the quality. Feel the difference", footer: "Selected ingredients, carefully counted meals" } },
+  { category: "PREMIUM", audience: "ALL", ar: { headline: "لأن هدفك يستحق الأفضل", footer: "تغذية يومية بمستوى يليق بطموحك" }, en: { headline: "Because your goal deserves better", footer: "Daily nutrition made to match your ambition" } },
+  { category: "URGENCY", audience: "ALL", ar: { headline: "العرض الأقوى لأول مرة في أدرينالين", footer: "استخدم الكود وابدأ خطتك اليوم" }, en: { headline: "Our strongest offer, for the first time", footer: "Use the code and start your plan today" } },
+  { category: "URGENCY", audience: "ALL", ar: { headline: "خصم يستحق البداية", footer: "عرض محدود على اشتراكات الوجبات" }, en: { headline: "A discount worth starting for", footer: "Limited-time savings on meal subscriptions" } },
+  { category: "URGENCY", audience: "ALL", ar: { headline: "لا تؤجل هدفك أكثر", footer: "امسح الرمز واستفد من العرض الآن" }, en: { headline: "Do not put your goal on hold", footer: "Scan the code and claim the offer now" } },
+];
 
 const BRANDS: Record<Brand, {
   name: string; logo: string; ink: string; accent: string; deep: string;
@@ -72,6 +105,7 @@ export default function PromoStudio() {
   const [audience, setAudience] = useState<Audience>("TRAINERS");
   const [headline, setHeadline] = useState("");
   const [footer, setFooter] = useState("");
+  const [copyCategory, setCopyCategory] = useState<CopyCategory>("PERFORMANCE");
   const [imageSrc, setImageSrc] = useState(BRANDS.ADRENALINE.images[0].src);
   const [customImage, setCustomImage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -84,6 +118,16 @@ export default function PromoStudio() {
   );
   const couponBrand = (coupon?.restaurantKey || "ADRENALINE") as Brand;
   const usable = Boolean(coupon?.isActive) && (!coupon?.expiresAt || coupon.expiresAt >= qatarToday());
+  const copySuggestions = useMemo(
+    () => MARKETING_COPY.filter((item) => item.category === copyCategory && (item.audience === "ALL" || item.audience === audience)),
+    [audience, copyCategory],
+  );
+
+  const applyMarketingCopy = (item: MarketingCopy) => {
+    const copy = posterLanguage === "AR" ? item.ar : item.en;
+    setHeadline(copy.headline);
+    setFooter(copy.footer);
+  };
 
   useEffect(() => {
     if (!coupon) return;
@@ -290,15 +334,50 @@ export default function PromoStudio() {
                 </button>
               ))}
             </div>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-[#0E76AC]" />
+                  {t("مكتبة العبارات التسويقية", "Marketing copy library")}
+                </Label>
+                <span className="text-[10px] font-bold text-slate-400">{t("اضغط لتطبيقها", "Tap to apply")}</span>
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-1" role="tablist" aria-label={t("تصنيف العبارات", "Copy categories")}>
+                {COPY_CATEGORIES.map((category) => (
+                  <button key={category.key} type="button" role="tab" aria-selected={copyCategory === category.key}
+                    onClick={() => setCopyCategory(category.key)}
+                    className={cn("min-h-10 shrink-0 rounded-full border px-3 text-[11px] font-black transition-colors",
+                      copyCategory === category.key
+                        ? "border-[#0E76AC] bg-[#0E76AC] text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-[#3CC4F0] hover:text-[#0E76AC]")}
+                  >{t(category.ar, category.en)}</button>
+                ))}
+              </div>
+              <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-2xl bg-slate-50 p-2">
+                {copySuggestions.map((item, index) => {
+                  const copy = posterLanguage === "AR" ? item.ar : item.en;
+                  const selected = headline === copy.headline && footer === copy.footer;
+                  return (
+                    <button key={`${item.category}-${index}`} type="button" onClick={() => applyMarketingCopy(item)}
+                      className={cn("w-full rounded-xl border p-3 text-start transition-colors",
+                        selected ? "border-[#3CC4F0] bg-cyan-50" : "border-transparent bg-white hover:border-slate-200")}
+                    >
+                      <span className="block text-sm font-black leading-6 text-[#0F1516]">{copy.headline}</span>
+                      <span className="mt-0.5 block text-[11px] font-bold leading-5 text-slate-500">{copy.footer}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label>{t("العنوان الرئيسي (اختياري)", "Headline (optional)")}</Label>
+              <Label>{t("العنوان الرئيسي", "Headline")}</Label>
               <Input value={headline} onChange={(e) => setHeadline(e.target.value)}
                 placeholder={audience === "TRAINERS"
                   ? (posterLanguage === "AR" ? "قوّتك تبدأ من طبقك" : "Strength starts on your plate")
                   : (posterLanguage === "AR" ? "ابدأ رحلتك الصحية اليوم" : "Start your healthier routine")} />
             </div>
             <div className="space-y-2">
-              <Label>{t("السطر الختامي (اختياري)", "Footer line (optional)")}</Label>
+              <Label>{t("السطر الداعم", "Supporting line")}</Label>
               <Input value={footer} onChange={(e) => setFooter(e.target.value)}
                 placeholder={posterLanguage === "AR" ? "وجبات محسوبة وتوصيل يومي في قطر" : "Calorie-counted meals, delivered daily"} />
             </div>
