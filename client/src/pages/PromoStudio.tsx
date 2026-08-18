@@ -52,7 +52,13 @@ const MARKETING_COPY: MarketingCopy[] = [
   { category: "URGENCY", audience: "ALL", ar: { headline: "العرض الأقوى لأول مرة في أدرينالين", footer: "استخدم الكود وابدأ خطتك اليوم" }, en: { headline: "Our strongest offer, for the first time", footer: "Use the code and start your plan today" } },
   { category: "URGENCY", audience: "ALL", ar: { headline: "خصم يستحق البداية", footer: "عرض محدود على اشتراكات الوجبات" }, en: { headline: "A discount worth starting for", footer: "Limited-time savings on meal subscriptions" } },
   { category: "URGENCY", audience: "ALL", ar: { headline: "لا تؤجل هدفك أكثر", footer: "امسح الرمز واستفد من العرض الآن" }, en: { headline: "Do not put your goal on hold", footer: "Scan the code and claim the offer now" } },
+  { category: "URGENCY", audience: "ALL", ar: { headline: "خصم {discount} يقرّبك من هدفك", footer: "لفترة محدودة على باقات {brand}" }, en: { headline: "{discount} off gets you closer to your goal", footer: "Limited time on {brand} meal plans" } },
 ];
+
+const CTA_COPY = {
+  AR: ["ابدأ خطتك الآن", "امسح الرمز واختر باقتك", "احصل على خصمك اليوم", "اختر هدفك ودعنا نهتم بالباقي"],
+  EN: ["START YOUR PLAN NOW", "SCAN AND CHOOSE YOUR PLAN", "CLAIM YOUR SAVINGS TODAY", "CHOOSE YOUR GOAL. WE HANDLE THE REST."],
+} as const;
 
 const BRANDS: Record<Brand, {
   name: string; logo: string; ink: string; accent: string; deep: string;
@@ -105,6 +111,7 @@ export default function PromoStudio() {
   const [audience, setAudience] = useState<Audience>("TRAINERS");
   const [headline, setHeadline] = useState("");
   const [footer, setFooter] = useState("");
+  const [cta, setCta] = useState("");
   const [copyCategory, setCopyCategory] = useState<CopyCategory>("PERFORMANCE");
   const [imageSrc, setImageSrc] = useState(BRANDS.ADRENALINE.images[0].src);
   const [customImage, setCustomImage] = useState<string | null>(null);
@@ -123,10 +130,20 @@ export default function PromoStudio() {
     [audience, copyCategory],
   );
 
+  const discountLabel = useMemo(() => {
+    const value = Number(coupon?.discountValue || 0);
+    if (!value) return posterLanguage === "AR" ? "خاص" : "SPECIAL";
+    return coupon?.discountType === "FIXED" ? `${value} QAR` : `${value}%`;
+  }, [coupon, posterLanguage]);
+
+  const resolveMarketingText = (value: string) => value
+    .replaceAll("{discount}", discountLabel)
+    .replaceAll("{brand}", BRANDS[brand].name);
+
   const applyMarketingCopy = (item: MarketingCopy) => {
     const copy = posterLanguage === "AR" ? item.ar : item.en;
-    setHeadline(copy.headline);
-    setFooter(copy.footer);
+    setHeadline(resolveMarketingText(copy.headline));
+    setFooter(resolveMarketingText(copy.footer));
   };
 
   useEffect(() => {
@@ -184,6 +201,7 @@ export default function PromoStudio() {
           w: dimensions.w, h: dimensions.h, size, brand, posterLanguage,
           photo, logo, qr, code: code.trim().toUpperCase(), coupon,
           headline: headline.trim(), footer: footer.trim(), audience,
+          cta: cta.trim(),
         });
       } catch {
         if (!cancelled) setRenderError(isRtl ? "تعذّر تحميل صورة المعاينة" : "Unable to load the preview image");
@@ -191,7 +209,7 @@ export default function PromoStudio() {
     };
     void render();
     return () => { cancelled = true; };
-  }, [audience, brand, campaignLink, code, coupon, customImage, footer, headline, imageSrc, isRtl, posterLanguage, size]);
+  }, [audience, brand, campaignLink, code, coupon, cta, customImage, footer, headline, imageSrc, isRtl, posterLanguage, size]);
 
   const chooseBrand = (next: Brand) => {
     if (coupon && next !== couponBrand) return;
@@ -355,7 +373,8 @@ export default function PromoStudio() {
               </div>
               <div className="max-h-52 space-y-1.5 overflow-y-auto rounded-2xl bg-slate-50 p-2">
                 {copySuggestions.map((item, index) => {
-                  const copy = posterLanguage === "AR" ? item.ar : item.en;
+                  const rawCopy = posterLanguage === "AR" ? item.ar : item.en;
+                  const copy = { headline: resolveMarketingText(rawCopy.headline), footer: resolveMarketingText(rawCopy.footer) };
                   const selected = headline === copy.headline && footer === copy.footer;
                   return (
                     <button key={`${item.category}-${index}`} type="button" onClick={() => applyMarketingCopy(item)}
@@ -368,6 +387,22 @@ export default function PromoStudio() {
                   );
                 })}
               </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <Label>{t("دعوة الإجراء داخل التصميم", "Call to action")}</Label>
+                <span className="text-[10px] font-bold text-slate-400">{t("تظهر بجوار QR", "Shown beside the QR")}</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {CTA_COPY[posterLanguage].map((item) => (
+                  <button key={item} type="button" onClick={() => setCta(item)}
+                    className={cn("min-h-10 rounded-xl border px-3 py-2 text-[11px] font-black transition-colors",
+                      cta === item ? "border-[#0E76AC] bg-cyan-50 text-[#0E76AC]" : "border-slate-200 bg-white text-slate-600 hover:border-[#3CC4F0]")}
+                  >{item}</button>
+                ))}
+              </div>
+              <Input value={cta} onChange={(e) => setCta(e.target.value)}
+                placeholder={posterLanguage === "AR" ? "ابدأ خطتك الآن" : "START YOUR PLAN NOW"} />
             </div>
             <div className="space-y-2">
               <Label>{t("العنوان الرئيسي", "Headline")}</Label>
@@ -498,7 +533,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function drawCampaign(g: CanvasRenderingContext2D, p: {
   w: number; h: number; size: Size; brand: Brand; posterLanguage: PosterLanguage;
   photo: HTMLImageElement; logo: HTMLImageElement; qr: HTMLImageElement | null;
-  code: string; coupon: any; headline: string; footer: string; audience: Audience;
+  code: string; coupon: any; headline: string; footer: string; cta: string; audience: Audience;
 }) {
   const { w, h, brand, posterLanguage, photo, logo, qr, code, coupon } = p;
   const B = BRANDS[brand];
@@ -599,11 +634,11 @@ function drawCampaign(g: CanvasRenderingContext2D, p: {
   g.textAlign = ar ? "right" : "left"; g.direction = ar ? "rtl" : "ltr";
   const ctaSize = p.audience === "TRAINERS" && !ar ? (story ? 30 : 25) : (story ? 39 : 34);
   g.fillStyle = B.deep; g.font = font(ctaSize, 900);
-  g.fillText(
-    trainers
+  wrapText(g,
+    p.cta || (trainers
       ? (ar ? "خطتك جاهزة. ابدأ الآن" : "YOUR PLAN IS READY")
-      : (ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE."),
-    contentX, panelY + 74,
+      : (ar ? "امسح الرمز واختر باقتك" : "SCAN. CHOOSE. SAVE.")),
+    contentX, panelY + 68, contentWidth, ctaSize, 1.12, 900, ar ? "right" : "left", 2,
   );
   g.fillStyle = "#526574"; g.font = font(story ? 25 : 22, 700);
   wrapText(g,
