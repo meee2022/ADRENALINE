@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
+import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ export default function PromoStudio() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const t = (ar: string, en: string) => (isRtl ? ar : en);
+  const { toast } = useToast();
   const sessionToken = useStore((s: any) => s.sessionToken) || undefined;
   const couponRows = useQuery(api.coupons.list, { sessionToken }) as any[] | undefined;
   const coupons = useMemo(() => couponRows || [], [couponRows]);
@@ -162,21 +164,38 @@ export default function PromoStudio() {
     reader.readAsDataURL(file);
   };
 
-  const downloadPoster = () => {
+  const downloadPoster = async () => {
     if (!usable || !canvasRef.current) return;
-    const a = document.createElement("a");
-    a.href = canvasRef.current.toDataURL("image/png", 1);
-    a.download = `${brand.toLowerCase()}-${code.toLowerCase()}-${size.toLowerCase()}.png`;
-    a.click();
+    try {
+      const filename = `${brand.toLowerCase()}-${code.toLowerCase()}-${size.toLowerCase()}.png`;
+      const result = await savePng(canvasRef.current.toDataURL("image/png", 1), filename);
+      if (result === "downloaded") {
+        toast({ title: t("تم تنزيل الصورة", "Poster downloaded") });
+      }
+    } catch {
+      toast({
+        title: t("تعذّر حفظ الصورة", "Unable to save the image"),
+        description: t("جرّب فتح الصفحة في Safari أو Chrome ثم اضغط مرة أخرى", "Open the page in Safari or Chrome and try again"),
+        variant: "destructive",
+      });
+    }
   };
 
   const downloadQr = async () => {
     if (!usable) return;
-    const data = await QRCode.toDataURL(campaignLink, { margin: 2, width: 1600, errorCorrectionLevel: "H" });
-    const a = document.createElement("a");
-    a.href = data;
-    a.download = `qr-${code.toLowerCase()}.png`;
-    a.click();
+    try {
+      const data = await QRCode.toDataURL(campaignLink, { margin: 2, width: 1600, errorCorrectionLevel: "H" });
+      const result = await savePng(data, `qr-${code.toLowerCase()}.png`);
+      if (result === "downloaded") {
+        toast({ title: t("تم تنزيل رمز QR", "QR code downloaded") });
+      }
+    } catch {
+      toast({
+        title: t("تعذّر حفظ رمز QR", "Unable to save the QR code"),
+        description: t("جرّب فتح الصفحة في Safari أو Chrome ثم اضغط مرة أخرى", "Open the page in Safari or Chrome and try again"),
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -325,6 +344,52 @@ export default function PromoStudio() {
       </div>
     </div>
   );
+}
+
+type SaveResult = "shared" | "downloaded";
+
+/**
+ * Mobile Safari ignores synthetic downloads for large data URLs. Convert the
+ * image to a real file and use the phone's native share/save sheet when it is
+ * available, while keeping a regular browser download for desktop.
+ */
+async function savePng(dataUrl: string, filename: string): Promise<SaveResult> {
+  const blob = dataUrlToBlob(dataUrl);
+  const file = new File([blob], filename, { type: "image/png" });
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;
+  const mobileDevice = navigator.maxTouchPoints > 0 || coarsePointer;
+  const shareData: ShareData = { files: [file], title: filename };
+
+  if (mobileDevice && navigator.share && navigator.canShare?.(shareData)) {
+    try {
+      await navigator.share(shareData);
+      return "shared";
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return "shared";
+      // Fall through to a normal download if the native share sheet fails.
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.rel = "noopener";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+  return "downloaded";
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, encoded = ""] = dataUrl.split(",", 2);
+  const mime = /data:([^;]+)/.exec(header)?.[1] || "image/png";
+  const bytes = atob(encoded);
+  const buffer = new Uint8Array(bytes.length);
+  for (let index = 0; index < bytes.length; index += 1) buffer[index] = bytes.charCodeAt(index);
+  return new Blob([buffer], { type: mime });
 }
 
 function Segmented({ label, items, value, onChange }: { label: string; items: Array<{ key: string; label: string }>; value: string; onChange: (key: string) => void }) {
