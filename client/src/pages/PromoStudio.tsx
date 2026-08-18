@@ -62,11 +62,15 @@ const CTA_COPY = {
 
 const BRANDS: Record<Brand, {
   name: string; logo: string; ink: string; accent: string; deep: string;
-  images: Array<{ src: string; ar: string; en: string }>;
+  images: Array<{ src: string; ar: string; en: string; lang?: PosterLanguage }>;
 }> = {
   ADRENALINE: {
     name: "ADRENALINE", logo: "/adrenaline-logo-dark.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
     images: [
+      { src: "/promo-ar-female-coach-box-v1.png", ar: "مدربة خليجية مع بوكس", en: "Gulf female coach with box", lang: "AR" },
+      { src: "/promo-ar-women-meals-v1.png", ar: "صديقتان مع وجبات أدرينالين", en: "Friends enjoying Adrenaline meals", lang: "AR" },
+      { src: "/promo-en-female-coach-meal-v1.png", ar: "مدربة مع الوجبة والبوكس", en: "Female coach with meal and box", lang: "EN" },
+      { src: "/promo-en-women-community-v1.png", ar: "مجتمع رياضي نسائي", en: "Women's fitness community", lang: "EN" },
       { src: "/promo-adrenaline-protein.png", ar: "وجبة بروتين فاخرة", en: "Premium protein meal" },
       { src: "/promo-adrenaline-plans.png", ar: "باقات الوجبات", en: "Meal plan collection" },
       { src: "/promo-adrenaline-lifestyle.png", ar: "أسلوب حياة رياضي", en: "Active lifestyle" },
@@ -129,6 +133,10 @@ export default function PromoStudio() {
     () => MARKETING_COPY.filter((item) => item.category === copyCategory && (item.audience === "ALL" || item.audience === audience)),
     [audience, copyCategory],
   );
+  const visibleBrandImages = useMemo(
+    () => BRANDS[brand].images.filter((item) => !item.lang || item.lang === posterLanguage),
+    [brand, posterLanguage],
+  );
 
   const discountLabel = useMemo(() => {
     const value = Number(coupon?.discountValue || 0);
@@ -153,6 +161,15 @@ export default function PromoStudio() {
     setCustomImage(null);
     setImageSrc(BRANDS[nextBrand].images[0].src);
   }, [coupon, couponBrand]);
+
+  useEffect(() => {
+    if (customImage) return;
+    const selected = BRANDS[brand].images.find((item) => item.src === imageSrc);
+    if (selected?.lang && selected.lang !== posterLanguage) {
+      const languageImage = BRANDS[brand].images.find((item) => item.lang === posterLanguage);
+      if (languageImage) setImageSrc(languageImage.src);
+    }
+  }, [brand, customImage, imageSrc, posterLanguage]);
 
   /**
    * رابط الحملة يُبنى من دومين المطعم لا من عنوان المتصفح.
@@ -325,11 +342,14 @@ export default function PromoStudio() {
               ))}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {BRANDS[brand].images.map((item) => (
+              {visibleBrandImages.map((item) => (
                 <button key={item.src} type="button" onClick={() => { setCustomImage(null); setImageSrc(item.src); }}
                   className={cn("overflow-hidden rounded-xl border-2 bg-slate-100 text-start",
                     !customImage && imageSrc === item.src ? "border-[#3CC4F0]" : "border-transparent")}>
-                  <img src={item.src} alt="" className="aspect-[4/3] w-full object-cover" />
+                  <div className="relative">
+                    <img src={item.src} alt="" className="aspect-[4/3] w-full object-cover object-top" />
+                    {item.lang && <span className="absolute end-1.5 top-1.5 rounded-md bg-slate-950/75 px-1.5 py-0.5 text-[9px] font-black text-white">{item.lang}</span>}
+                  </div>
                   <span className="block truncate px-2 py-1.5 text-[10px] font-black text-slate-600">{t(item.ar, item.en)}</span>
                 </button>
               ))}
