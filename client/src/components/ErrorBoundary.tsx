@@ -9,6 +9,7 @@ import { isAuthError } from "@/lib/authError";
 import { useStore } from "@/lib/store";
 import { convex } from "@/lib/convex";
 import { api } from "../../../convex/_generated/api";
+import { recoverLatestApplication } from "@/lib/appVersion";
 
 interface Props {
   children: ReactNode;
@@ -17,6 +18,7 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  recovering?: boolean;
   error?: Error;
   refCode?: string; // ✅ رقم مرجعي يعرضه المستخدم لفريق الدعم بدل الرسالة الخام
 }
@@ -85,11 +87,31 @@ function isRecoverableRuntimeError(error?: Error): boolean {
   return staleChunk || staleDevReact;
 }
 
+function friendlyError(error?: Error) {
+  const message = error?.message || "";
+  if (/CONVEX|Server Error|Failed to fetch|NetworkError|network request/i.test(message)) {
+    return {
+      title: tr("تعذّر تحميل بيانات الصفحة", "Page data could not be loaded"),
+      description: tr(
+        "قد تكون الجلسة قديمة أو أن الاتصال بالخدمة انقطع مؤقتًا. بياناتك محفوظة، ويمكنك تحميل أحدث نسخة أو تسجيل الدخول من جديد.",
+        "Your session may be stale or the service was temporarily unreachable. Your data is safe; load the latest version or sign in again.",
+      ),
+    };
+  }
+  return {
+    title: tr("تعذّر إكمال تحميل الصفحة", "This page could not finish loading"),
+    description: tr(
+      "تم حفظ رقم مرجعي للمشكلة. سنحاول أولًا تشغيل أحدث نسخة بدون التأثير على بياناتك.",
+      "A reference was saved for this issue. We will first try the latest version without affecting your data.",
+    ),
+  };
+}
+
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, refCode: makeRefCode() };
+    return { hasError: true, recovering: false, error, refCode: makeRefCode() };
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
@@ -136,19 +158,33 @@ export class ErrorBoundary extends Component<Props, State> {
       userName,
       at: Date.now(),
     });
+
+    // One automatic recovery for unexpected production failures. The guard is
+    // stored per path so a real code defect cannot create an endless reload
+    // loop. If it repeats, the user gets the clear fallback below.
+    const recoveryKey = `unexpected-recovery:${window.location.pathname}`;
+    let shouldRecover = true;
+    try {
+      const lastRecovery = Number(sessionStorage.getItem(recoveryKey) || 0);
+      shouldRecover = Date.now() - lastRecovery > 60_000;
+      if (shouldRecover) sessionStorage.setItem(recoveryKey, String(Date.now()));
+    } catch {
+      // Private browsing can reject storage; allow one in-memory recovery.
+    }
+    if (shouldRecover) {
+      this.setState({ recovering: true });
+      window.setTimeout(() => void recoverLatestApplication(), 700);
+    }
   }
 
-  handleReset = () => {
-    this.setState({ hasError: false, error: undefined });
-  };
-
   handleReload = () => {
-    window.location.reload();
+    this.setState({ recovering: true });
+    void recoverLatestApplication();
   };
 
   render() {
     if (this.state.hasError) {
-      if (isRecoverableRuntimeError(this.state.error)) {
+      if (isRecoverableRuntimeError(this.state.error) || this.state.recovering) {
         return (
           <div
             dir={isRtlLang() ? "rtl" : "ltr"}
@@ -162,12 +198,12 @@ export class ErrorBoundary extends Component<Props, State> {
               <RefreshCw className="h-5 w-5 animate-spin text-[#0E76AC]" />
               <div>
                 <p className="text-sm font-extrabold text-slate-800">
-                  {tr("جاري تحديث التطبيق", "Updating the application")}
+                  {tr("جاري تشغيل أحدث نسخة", "Loading the latest version")}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   {tr(
-                    "لحظات وسيتم تحميل أحدث نسخة تلقائيًا.",
-                    "The latest version will load automatically.",
+                    "لن تتأثر بياناتك، وسيتم فتح الصفحة تلقائيًا خلال لحظات.",
+                    "Your data will not be affected. The page will reopen automatically.",
                   )}
                 </p>
               </div>
@@ -189,41 +225,46 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.fallback) return this.props.fallback;
 
+      const explanation = friendlyError(this.state.error);
+
       return (
         <div
           dir={isRtlLang() ? "rtl" : "ltr"}
-          className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-red-50 via-white to-orange-50"
+          className="min-h-screen flex items-center justify-center bg-slate-100 p-5"
         >
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-            <div className="h-16 w-16 rounded-full bg-red-100 mx-auto flex items-center justify-center mb-4">
-              <AlertTriangle className="h-8 w-8 text-red-600" />
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 text-center shadow-[0_16px_45px_-30px_rgba(15,21,22,.35)] sm:p-8">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 ring-1 ring-amber-200">
+              <AlertTriangle className="h-7 w-7 text-amber-600" />
             </div>
-            <h1 className="text-2xl font-extrabold text-slate-800 mb-2">
-              {tr("عذراً، حدث خطأ غير متوقع", "Sorry, an unexpected error occurred")}
+            <p className="mb-2 text-xs font-extrabold text-[#0E76AC]">
+              {tr("الموقع يعمل، لكن هذه الصفحة تحتاج إعادة تحميل", "The site is online; this page needs to reload")}
+            </p>
+            <h1 className="mb-3 text-2xl font-black text-slate-900">
+              {explanation.title}
             </h1>
-            <p className="text-sm text-slate-600 mb-4">
-              {tr("تم تسجيل المشكلة. حاول مجددًا أو حدّث الصفحة. إذا استمر الخطأ، فأرسل الرقم المرجعي إلى فريق الدعم.", "The issue has been logged. Try again or refresh the page. If it persists, send the reference code to support.")}
+            <p className="mx-auto mb-5 max-w-sm text-sm font-medium leading-7 text-slate-600">
+              {explanation.description}
             </p>
             {/* 🔒 لا نعرض error.message للمستخدم النهائي (قد يحتوي أسماء دوال داخلية).
                 نعرض رقماً مرجعياً مختصراً يقرأه الدعم لربطه بالسجل. */}
             {this.state.refCode && (
-              <p className="text-xs text-slate-500 bg-slate-50 rounded-lg p-3 mb-4 font-mono break-words select-all">
-                {tr("الرقم المرجعي:", "Reference code:")} <span className="font-bold text-slate-700">{this.state.refCode}</span>
+              <p className="mb-5 rounded-xl bg-slate-50 px-3 py-2.5 font-mono text-[11px] text-slate-500 ring-1 ring-slate-200/70 break-words select-all">
+                {tr("مرجع الدعم:", "Support reference:")} <span className="font-bold text-slate-700">{this.state.refCode}</span>
               </p>
             )}
-            <div className="flex gap-2 justify-center">
-              <button
-                onClick={this.handleReset}
-                className="px-4 py-2 bg-cyan-600 text-white rounded-lg font-medium hover:bg-cyan-700 transition-colors flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                {tr("المحاولة مجدداً", "Try again")}
-              </button>
+            <div className="grid gap-2 sm:grid-cols-2">
               <button
                 onClick={this.handleReload}
-                className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors"
+                className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0E76AC] px-4 py-2.5 text-sm font-extrabold text-white transition-colors hover:bg-[#095f89] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200"
               >
-                {tr("تحديث الصفحة", "Refresh page")}
+                <RefreshCw className="h-4 w-4" />
+                {tr("تحميل أحدث نسخة", "Load latest version")}
+              </button>
+              <button
+                onClick={() => window.location.assign("/login")}
+                className="min-h-11 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-extrabold text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
+              >
+                {tr("تسجيل الدخول من جديد", "Sign in again")}
               </button>
             </div>
           </div>

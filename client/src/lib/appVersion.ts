@@ -38,8 +38,41 @@ async function applyVersion(version: string) {
   } catch {
     // Private browsing may reject storage; cache cleanup still remains useful.
   }
-  await clearAppCaches();
+  try {
+    await clearAppCaches();
+  } catch {
+    // Cache APIs differ between browsers; a failed cleanup must not prevent
+    // the cache-busted navigation that actually loads the new build.
+  }
   reloadWithVersion(version);
+}
+
+/**
+ * Clears obsolete app assets and reloads the newest deployed build. This is
+ * also used by the global error boundary as a one-time self-healing step.
+ */
+export async function recoverLatestApplication() {
+  let version = __APP_BUILD_ID__;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 3500);
+
+  try {
+    const response = await fetch(`${VERSION_ENDPOINT}?t=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+      signal: controller.signal,
+    });
+    if (response.ok) {
+      const payload = await response.json();
+      if (typeof payload?.version === "string" && payload.version) version = payload.version;
+    }
+  } catch {
+    // Even while offline, clearing stale local assets and reloading is useful.
+  } finally {
+    window.clearTimeout(timeout);
+  }
+
+  await applyVersion(version);
 }
 
 async function checkForRemoteVersion() {
