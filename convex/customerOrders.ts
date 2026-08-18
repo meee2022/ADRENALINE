@@ -21,6 +21,29 @@ function generateOrderNumber(): string {
   return `ORD-${year}${month}${day}-${random}`;
 }
 
+/** Qatar phone numbers arrive from public forms in several equivalent shapes
+ * (`55981998`, `+97455981998`, `974 5598 1998`).  Database indexes compare
+ * strings literally, so identity checks must use one canonical value. */
+function canonicalPhone(value: unknown): string {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 11 && digits.startsWith("974") ? digits.slice(3) : digits;
+}
+
+async function findRestaurantCustomerByPhone(ctx: any, phone: unknown, restaurantKey: string) {
+  const wanted = canonicalPhone(phone);
+  if (!wanted) return null;
+  // The table is small, and a normalized comparison is required because old
+  // rows predate canonical phone storage and therefore cannot use by_phone.
+  const matches = (await ctx.db.query("customers").collect()).filter((customer: any) =>
+    canonicalPhone(customer.phone) === wanted
+    && String(customer.restaurantKey || "ADRENALINE") === restaurantKey,
+  );
+  if (matches.length > 1) {
+    throw new Error("ORDER_VALIDATION:DUPLICATE_CUSTOMER_PHONE");
+  }
+  return matches[0] || null;
+}
+
 /**
  * 🔔 يعلّم إشعارات "طلب جديد" (NEW_ORDER) الخاصة بطلب معيّن كمقروءة — يُستدعى
  *    عند اعتماد أو رفض الطلب، فيقلّ عدّاد الجرس بدل أن يتراكم بلا نهاية.
@@ -107,11 +130,10 @@ export const create = mutation({
 
     // Server-side mirror of the manual/smart-plan guards. This only rejects an
     // invalid new request; approval dates and existing kitchen plans are untouched.
-    const normalizedPhone = (value: unknown) => String(value || "").replace(/\D/g, "");
     let subscriptionCustomer: any = null;
     if (args.customerId) {
       subscriptionCustomer = await ctx.db.get(args.customerId);
-      if (!subscriptionCustomer || normalizedPhone(subscriptionCustomer.phone) !== normalizedPhone(phone)) {
+      if (!subscriptionCustomer || canonicalPhone(subscriptionCustomer.phone) !== canonicalPhone(phone)) {
         throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
       }
       const customerRestaurant = String((subscriptionCustomer as any).restaurantKey || "ADRENALINE");
@@ -119,13 +141,7 @@ export const create = mutation({
         throw new Error("ORDER_VALIDATION:RESTAURANT_MISMATCH");
       }
     } else {
-      const phoneCustomers = await ctx.db
-        .query("customers")
-        .withIndex("by_phone", (q) => q.eq("phone", phone))
-        .collect();
-      subscriptionCustomer = phoneCustomers.find(
-        (customer: any) => String(customer.restaurantKey || "ADRENALINE") === restaurantKey,
-      ) || null;
+      subscriptionCustomer = await findRestaurantCustomerByPhone(ctx, phone, restaurantKey);
     }
     // الاسم اختياري في شاشة العميل: الحساب المعروف يُؤخذ اسمه من قاعدة البيانات،
     // والزائر الذي يتركه فارغاً يظهر للطاقم برقمه بدل تعطيل إرسال الخطة.
@@ -189,7 +205,9 @@ export const create = mutation({
       customerName: effectiveCustomerName,
       customerPhone: phone,
       customerEmail: args.customerEmail?.trim(),
-      customerId: args.customerId,
+      // Persist the server-resolved customer too. Previously this wrote only
+      // args.customerId, losing a valid phone match and creating orphan plans.
+      customerId: args.customerId || subscriptionCustomer?._id,
       status: "pending",
       totalMeals: serverItems.length,
       totalPrice,
@@ -503,6 +521,20 @@ export const approve = mutation({
     const order = await ctx.db.get(orderId);
     if (!order) throw new Error("Order not found");
 
+    const restaurantKey = String((order as any).restaurantKey || "ADRENALINE");
+    let effectiveCustomerId: any = customerId || order.customerId;
+    let linkedCustomer: any = effectiveCustomerId ? await ctx.db.get(effectiveCustomerId) : null;
+    if (!linkedCustomer) {
+      linkedCustomer = await findRestaurantCustomerByPhone(ctx, order.customerPhone, restaurantKey);
+      effectiveCustomerId = linkedCustomer?._id;
+    }
+    if (!linkedCustomer || !effectiveCustomerId) {
+      throw new Error("ORDER_VALIDATION:CUSTOMER_LINK_REQUIRED");
+    }
+    if (canonicalPhone(linkedCustomer.phone) !== canonicalPhone(order.customerPhone)) {
+      throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
+    }
+
     // ✅ idempotency: لا نعتمد الطلب أكثر من مرة (يمنع تكرار الخطط/النقاط/الإشعارات)
     if (order.status !== "pending") {
       return { success: true, alreadyApproved: true };
@@ -511,7 +543,7 @@ export const approve = mutation({
     // 1. تحديث حالة الطلب + ربط المشترك
     await ctx.db.patch(orderId, {
       status: "confirmed",
-      customerId: customerId || order.customerId, // ✅ حفظ المشترك المربوط
+      customerId: effectiveCustomerId, // ✅ حفظ المشترك المربوط أو المكتشف بالهاتف
       approvedAt: Date.now(),
       approvalNotes: notes,
       updatedAt: Date.now(),
@@ -527,10 +559,6 @@ export const approve = mutation({
       .collect();
 
     // ✅ جلب بيانات المشترك (للتفضيلات/الممنوعات/الكميات)
-    const linkedCustomer = customerId || order.customerId 
-      ? await ctx.db.get((customerId || order.customerId)!)
-      : null;
-
     // 3. تجميع الوجبات حسب التاريخ (date) - بناءً على startDate من الأخصائية.
     //
     // ⚠️ item.week هو أسبوع الدورة (1..4) الذي اختاره العميل، وليس ترتيباً من
@@ -592,7 +620,6 @@ export const approve = mutation({
 
     // 4. إنشاء/تحديث خطة يومية لكل تاريخ
     // ✅ الاعتماد يستبدل أي خطة قائمة لنفس (عميل + تاريخ + وقت) — يدوية أو من طلب أقدم.
-    const effectiveCustomerId = customerId || order.customerId;
     let replacedPlans = 0; // كم خطة زائدة حُذفت (تكرار سابق) — نُرجعها للواجهة
     // ✅ وقت التوصيل من اشتراك العميل نفسه (صباحي/مسائي) بدل MORNING الثابت —
     //    وإلا كل طلب معتمد يذهب للجولة الصباحية فقط، فالخدمة المسائية تُكسر.
