@@ -62,7 +62,12 @@ export const listForRole = query({
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
     const role = roleFromIdentity(id);
-    if (!role) throw new Error(AUTH_ERR);
+    // Queries used by the global notification bell must never take down the
+    // current page when a laptop wakes with a stale persisted session. Convex
+    // intentionally hides server error details in production, so throwing
+    // here reaches React as a generic error that the auth guard cannot
+    // identify. An unauthenticated user simply has no staff notifications.
+    if (!role) return [];
     const all = await ctx.db
       .query("notifications")
       .withIndex("by_createdAt")
