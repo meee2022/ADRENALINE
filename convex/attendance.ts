@@ -596,6 +596,40 @@ export const importPunchesDevice = mutation({
         return { name, date, time: p.time, kind };
       })
       .filter((p) => p.name && p.date);
+
+    /* ── الخروج بعد منتصف الليل: بالسياق لا بقائمة أسماء ──
+     *
+     * القاعدة القديمة تسأل «هل اسمه في قائمة الليل؟» فتُخطئ من وجهين: من يعمل
+     * ليلاً وليس فيها تُحسب بصمةُ خروجه دخولاً ليومٍ جديد (بكري يبصم 02:41
+     * فيُفتح له يوم)، ومن فيها يخرج بعد الرابعة فجراً لا تمسكه (رمشيد يخرج
+     * 06:20 والحدّ عند 04:00). ورفعُ الحدّ يكسر رمشيد نفسه: هو يداوم صباحاً
+     * أيضاً ويدخل 06:22 — فلا وقتَ يفصل بين الحالتين.
+     *
+     * والفاصل ليس الوقت ولا الاسم، بل هل ترك شيفتاً مفتوحاً بالأمس. فإن كان
+     * له دخولٌ بلا خروج، وبصمتُه هذه تقع داخل مدّة شيفتٍ معقولة منه، فهي
+     * خروجُه. وإلا فهي بداية يومٍ جديد.
+     *
+     * تُطبَّق على من لا يحمل إشارةً صريحة من الجهاز، فلا تنقض ما جزم به. */
+    const OPEN_SHIFT_MAX_MIN = 16 * 60;
+    for (const p of resolved) {
+      if (p.kind) continue;
+      const tm = timeToMin(p.time);
+      if (tm == null || tm >= 12 * 60) continue;   // الظهيرة فما بعدها ليست خروجَ ليل
+      const prev = fmtDate(addDays(parseDate(p.date), -1));
+      const row = await ctx.db
+        .query("attendance")
+        .withIndex("by_name_date", (q) => q.eq("name", p.name).eq("date", prev))
+        .unique()
+        .catch(() => null);
+      if (!row || !row.checkIn || row.checkOut) continue;
+      const inMin = timeToMin(row.checkIn);
+      if (inMin == null) continue;
+      const span = (dateToDays(p.date) * 1440 + tm) - (dateToDays(prev) * 1440 + inMin);
+      if (span <= 0 || span > OPEN_SHIFT_MAX_MIN) continue;
+      p.kind = "out";
+      p.date = prev;
+    }
+
     const rawKeys = new Set<string>();
     for (const p of resolved) rawKeys.add(p.name + "|" + p.date);
     const shifts = buildShifts(resolved);
