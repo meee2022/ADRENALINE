@@ -113,6 +113,38 @@ export default function Attendance() {
 
   const rows = (useQuery(api.attendance.listByDate, { date, sessionToken }) as any[] | undefined) || [];
   const summary = useQuery(api.attendance.summary, { date, month, sessionToken }) as any;
+  /* مفارقات الأسماء: تُقرأ دائماً وتُعرض فقط حين توجد — لا تشغل الشاشة في
+     الأيام السليمة، ولا تنتظر أن يفتح أحدٌ صفحةً ليكتشفها. */
+  const nameGaps = useQuery(api.attendance.nameMismatches, { sessionToken }) as any;
+  const mergeName = useMutation(api.attendance.mergeName);
+  const [merging, setMerging] = useState("");
+
+  const runMerge = async (from: string, to: string) => {
+    if (!to) return;
+    setMerging(from);
+    try {
+      const pre: any = await mergeName({ from, to, dryRun: true, sessionToken });
+      const ok = await confirmDialog({
+        title: t("توحيد الاسم", "Merge name"),
+        message: t(
+          `سيُنقل ${pre.rows} سجلاً من «${from}» إلى «${to}».`
+            + (pre.dropped ? ` منها ${pre.dropped} يوماً موجوداً بالاسمين — تُبقى الحصّة الأتمّ وتُحذف الأخرى.` : "")
+            + " هل تريد المتابعة؟",
+          `${pre.rows} records will move from "${from}" to "${to}".`
+            + (pre.dropped ? ` ${pre.dropped} of them share a date — the fuller shift is kept.` : "")
+            + " Continue?",
+        ),
+        confirmText: t("وحّد", "Merge"),
+      });
+      if (!ok) return;
+      const res: any = await mergeName({ from, to, dryRun: false, sessionToken });
+      void alertDialog({ message: t(
+        `تم — ${res.renamed} سجلاً أُعيدت تسميته${res.dropped ? ` و${res.dropped} يوماً مكرراً عولج` : ""}.`,
+        `Done — ${res.renamed} renamed${res.dropped ? `, ${res.dropped} duplicate days resolved` : ""}.`) });
+    } catch (e: any) {
+      void alertDialog({ message: e?.message || t("فشل التوحيد", "Merge failed") });
+    } finally { setMerging(""); }
+  };
   const emps = (useQuery(api.attendance.employeeNames, { sessionToken }) as { name: string; designation: string }[] | undefined) || [];
 
   const upsertM = useMutation(api.attendance.upsert);
@@ -634,6 +666,53 @@ export default function Attendance() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* توحيد الأسماء — يظهر فقط عند وجود اسمٍ في الحضور بلا مقابلٍ في الكشف */}
+      {isAdmin && nameGaps?.unmatched?.length > 0 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+          <h3 className="mb-1 flex items-center gap-2 text-sm font-black text-amber-800">
+            <Users className="h-4 w-4" />
+            {t("أسماء لا يقابلها اسم في كشف الرواتب", "Names with no payroll match")}
+            <span className="rounded-md bg-amber-200 px-1.5 py-0.5 text-[11px]">{nameGaps.unmatched.length}</span>
+          </h3>
+          <p className="mb-3 text-[12px] font-bold leading-relaxed text-amber-700">
+            {t(
+              `كشف ${nameGaps.payrollMonth || ""}: ${nameGaps.rosterCount} اسم · الحضور: ${nameGaps.attendanceNames} اسم · متطابق: ${nameGaps.matched}. الاسم غير المتطابق تُحسب ساعاته ولا تصل صاحبها في الرواتب.`,
+              `Payroll ${nameGaps.payrollMonth || ""}: ${nameGaps.rosterCount} · attendance: ${nameGaps.attendanceNames} · matched: ${nameGaps.matched}. Unmatched names never reach payroll.`,
+            )}
+          </p>
+          <div className="space-y-2">
+            {nameGaps.unmatched.map((u: any) => (
+              <div key={u.name} className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-white p-2.5">
+                <span className="font-black text-sm text-[#0F1516]">{u.name}</span>
+                <span className="text-[11px] font-bold text-slate-400">
+                  {u.rows} {t("سجل", "records")} · {u.first} → {u.last}
+                </span>
+                <select
+                  defaultValue={u.suggestion || ""}
+                  onChange={(e) => void runMerge(u.name, e.target.value)}
+                  disabled={merging === u.name}
+                  className="ms-auto h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold"
+                >
+                  <option value="">{t("اختر الاسم الصحيح…", "Pick the correct name…")}</option>
+                  {nameGaps.roster.map((r: string) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {u.suggestion && (
+                  <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">
+                    {t("مقترح", "suggested")}: {u.suggestion}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] font-bold text-amber-600">
+            {t("لو الاسم لموظفٍ ليس في كشف هذا الشهر (ترك العمل مثلاً) فاتركه كما هو.",
+               "If the person is simply not on this month's payroll, leave it as is.")}
+          </p>
         </div>
       )}
 

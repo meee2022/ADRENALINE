@@ -607,6 +607,132 @@ export const importPunchesDevice = mutation({
   },
 });
 
+/**
+ * أسماءُ الحضور التي لا يقابلها اسمٌ في كشف الرواتب.
+ *
+ * الاسم يعيش في ثلاثة مواضع: جهاز البصمة، وجدول الحضور، وكشف الرواتب. وحين
+ * يختلف حرفٌ واحد بينها ينفصل حضورُ الموظف عن راتبه بلا أن يشتكي أحد — لا
+ * رسالة خطأ، فقط ساعاتٌ لا تصل إلى صاحبها. وقد وقع هذا فعلاً: اسمٌ كُتب
+ * «Fakhereidin» على ورق و«Fakheredin» على الجهاز.
+ *
+ * فتُعرض المفارقة بدل انتظار اكتشافها في يوم الرواتب.
+ */
+export const nameMismatches = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await validateSession(ctx, args.sessionToken);
+    if (!id || id.accountType !== "staff") return null;
+    const norm = (x: any) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const pay = (await ctx.db.query("payroll").collect()).filter((p: any) => !p.isVoid);
+    const latest = pay.map((p: any) => p.month).sort().at(-1);
+    const roster = new Map<string, string>();
+    for (const p of pay.filter((p: any) => p.month === latest)) {
+      if (!roster.has(norm(p.name))) roster.set(norm(p.name), p.name);
+    }
+
+    const att = await ctx.db.query("attendance").collect();
+    const seen = new Map<string, { name: string; rows: number; first: string; last: string }>();
+    for (const a of att) {
+      const k = norm(a.name);
+      if (!seen.has(k)) seen.set(k, { name: a.name, rows: 0, first: a.date, last: a.date });
+      const e = seen.get(k)!;
+      e.rows++;
+      if (a.date < e.first) e.first = a.date;
+      if (a.date > e.last) e.last = a.date;
+    }
+
+    /* اقتراحُ المطابقة: أقربُ اسمٍ في الكشف بمسافة تحرير صغيرة نسبةً لطوله —
+       يمسك اختلاف الحرف والحرفين، ولا يخلط اسمين مختلفين حقاً. */
+    const dist = (a: string, b: string) => {
+      const dp = Array.from({ length: b.length + 1 }, (_, j) => j);
+      for (let i = 1; i <= a.length; i++) {
+        let prev = dp[0]; dp[0] = i;
+        for (let j = 1; j <= b.length; j++) {
+          const tmp = dp[j];
+          dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+          prev = tmp;
+        }
+      }
+      return dp[b.length];
+    };
+
+    const unmatched = [...seen.entries()]
+      .filter(([k]) => !roster.has(k))
+      .map(([k, v]) => {
+        let best: { name: string; d: number } | null = null;
+        for (const [rk, rn] of roster) {
+          const d = dist(k, rk);
+          if (!best || d < best.d) best = { name: rn, d };
+        }
+        const limit = Math.max(2, Math.floor(k.length * 0.25));
+        return { ...v, suggestion: best && best.d <= limit ? best.name : null, distance: best?.d ?? 99 };
+      })
+      .sort((a, b) => a.distance - b.distance);
+
+    return {
+      payrollMonth: latest ?? null,
+      rosterCount: roster.size,
+      attendanceNames: seen.size,
+      matched: seen.size - unmatched.length,
+      unmatched,
+      roster: [...roster.values()].sort((a, b) => a.localeCompare(b)),
+    };
+  },
+});
+
+/**
+ * يوحّد اسماً في جدول الحضور تحت اسم الكشف.
+ *
+ * ولا يكتفي بإعادة التسمية: لو صادف الاسمان اليومَ نفسه صار للموظف صفّان في
+ * يومٍ واحد — فتُبقى الحصّةُ الأتمّ وتُحذف الأخرى، وإلا حُسب اليوم مرّتين في
+ * الرواتب. ويُطلب `dryRun` أولاً فيقول ماذا سيحدث قبل أن يحدث.
+ */
+export const mergeName = mutation({
+  args: {
+    from: v.string(), to: v.string(),
+    dryRun: v.boolean(), sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const norm = (x: any) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const from = norm(args.from), to = norm(args.to);
+    if (!from || !to) throw new Error("حدّد الاسمين");
+    if (from === to) throw new Error("الاسمان متطابقان");
+
+    const all = await ctx.db.query("attendance").collect();
+    const src = all.filter((r) => norm(r.name) === from);
+    if (!src.length) throw new Error("لا سجلّات بهذا الاسم");
+    const dstByDate = new Map<string, any>();
+    for (const r of all) if (norm(r.name) === to) dstByDate.set(r.date, r);
+
+    /* الحصّة الأتمّ: دخولٌ وخروجٌ أولاً، ثم ساعاتٌ معقولة، ثم الأحدث تعديلاً. */
+    const score = (r: any) => {
+      const complete = r.checkIn && r.checkOut ? 100 : (r.checkIn || r.checkOut ? 20 : 0);
+      const believable = typeof r.workedHours === "number" && r.workedHours > 0 && r.workedHours <= 14 ? 30 : 0;
+      return complete + believable + Number(r.updatedAt ?? r.createdAt ?? 0) / 1e15;
+    };
+
+    let renamed = 0, merged = 0, dropped = 0;
+    for (const r of src) {
+      const clash = dstByDate.get(r.date);
+      if (!clash) { renamed++; if (!args.dryRun) await ctx.db.patch(r._id, { name: args.to, updatedAt: Date.now() }); continue; }
+      merged++;
+      if (score(r) > score(clash)) {
+        if (!args.dryRun) {
+          await ctx.db.patch(r._id, { name: args.to, updatedAt: Date.now() });
+          await ctx.db.delete(clash._id);
+        }
+        dstByDate.set(r.date, r);
+      } else if (!args.dryRun) {
+        await ctx.db.delete(r._id);
+      }
+      dropped++;
+    }
+    return { from: args.from, to: args.to, rows: src.length, renamed, merged, dropped, dryRun: args.dryRun };
+  },
+});
+
 /** One-time data repair: collapse historical spellings of Arif into the roster name. */
 export const mergeArifAttendanceAliases = mutation({
   args: {},
