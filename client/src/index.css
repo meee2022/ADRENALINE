@@ -2028,3 +2028,11 @@
     max-width: 100%;
   }
 }
+
+
+/* بطاقات الأرقام أعلى الشاشات: عمودان على الهاتف مهما كان عددها. */
+@media (max-width: 640px) {
+  .dash-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

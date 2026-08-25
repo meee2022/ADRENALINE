@@ -79,8 +79,10 @@ export function DashboardHeader({ icon, titleAr, titleEn, subtitleAr, subtitleEn
 
       {kpis && kpis.length > 0 && (
         <div
-          className="relative grid gap-3 mt-5"
-          style={{ gridTemplateColumns: `repeat(${Math.min(kpis.length, 4)}, minmax(0, 1fr))`, maxWidth: kpis.length <= 2 ? 480 : undefined }}
+          /* dash-kpis: على الهاتف تصير عمودين — خمسةُ أرقامٍ في صفٍّ واحد على
+             شاشةٍ بعرض ٣٧٥ بكسلاً تبلغ ثلاثةً وستين بكسلاً للرقم، فلا يُقرأ. */
+          className="relative grid gap-3 mt-5 dash-kpis"
+          style={{ gridTemplateColumns: `repeat(${Math.min(kpis.length, 5)}, minmax(0, 1fr))`, maxWidth: kpis.length <= 2 ? 480 : undefined }}
         >
           {kpis.map((k, i) => {
             const clickable = typeof k.onClick === "function";

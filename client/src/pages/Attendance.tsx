@@ -522,6 +522,10 @@ export default function Attendance() {
         titleAr="الحضور اليومي" titleEn="Attendance"
         subtitleAr="حضور الموظفين والأوفرتايم — يدوي أو من جهاز البصمة" subtitleEn="Employee attendance & overtime — manual or biometric"
         kpis={summary ? [
+          /* العدد الكلّي أولاً: هو المرجع الذي تُقاس عليه بقيةُ الأرقام. وحين
+             لا تجتمع الحاضر والغائب والإجازة عليه، فالفرق بصماتٌ لم تصل —
+             وهذا ما كان يمرّ دون أن يلاحظه أحد. */
+          { value: summary.staffCount ?? 0, labelAr: "إجمالي الموظفين", labelEn: "Total staff" },
           { value: summary.day.present, labelAr: "حاضر اليوم", labelEn: "Present" },
           { value: summary.day.absent, labelAr: "غائب", labelEn: "Absent" },
           { value: summary.day.leave, labelAr: "إجازة", labelEn: "Leave" },

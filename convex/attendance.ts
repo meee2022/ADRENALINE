@@ -198,11 +198,44 @@ async function buildPayrollResolver(ctx: any) {
   const nm = (s: string) => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const toks = (s: string) => String(s || "").toLowerCase().split(/\s+/).map(nm).filter((t) => t.length >= 3);
   const payNorm = names.map((n) => ({ n, k: nm(n), t: toks(n) }));
+  // Device names are sometimes intentionally short. Keep an explicit,
+  // auditable mapping so a roster update cannot silently drop their punches.
+  // Only return the alias when its canonical employee exists in latest payroll.
+  const explicitAliases: Record<string, string> = {
+    [nm("Shakib")]: "Abu Sayed Shakib",
+    [nm("Bilal Abdul Basser")]: "Billal Abulbassar",
+    [nm("Arman Hussain")]: "Arman Hossan",
+    [nm("Shorub Hussain")]: "Shorub Hossan",
+    [nm("Mohammed Rashed")]: "Muhammed Rashed",
+    [nm("Hanan")]: "Amal Hanan",
+    [nm("Saidul Islam Shiblu")]: "Saidul Islam Nurul",
+    [nm("Mohammed Wagiealla")]: "Mohamed Wagiealla",
+    [nm("Mosaab")]: "Mosab Eltahir",
+    [nm("Arif Mohamed")]: "Arif Mohammad",
+    [nm("Bakri")]: "Bakri Mirghani Mustafa Elhassan",
+    [nm("Ratul")]: "MD Ratul Islam",
+    [nm("Sifatullah")]: "Sifatullah",
+    [nm("Abdulaziz")]: "Abdelaziz Mohamed",
+    [nm("Mohanad Elbadwi")]: "Mohanad Elbadwi",
+    [nm("Ramsheed")]: "Ramsheed Majeed",
+    [nm("Siddig")]: "Siddig Mohamed",
+    [nm("Fakhereidin Ashraf Sabir Eisa")]: "Fakheredin Ashraf Sabir Eisa",
+    [nm("Fakheredin Ashraf Sabir Eisa")]: "Fakheredin Ashraf Sabir Eisa",
+    [nm("Fakrudheen")]: "Fakheredin Ashraf Sabir Eisa",
+    [nm("Md Robin Md Nasir Sheikh")]: "Md Robin Md Nasir Sheikh",
+    [nm("Yasin")]: "Md Robin Md Nasir Sheikh",
+  };
+  const payrollNameSet = new Set(names);
   const ratio = (a: string, b: string) => lev(a, b) / Math.max(a.length, b.length, 1);
   const cache = new Map<string, string | null>();
   return (name: string): string | null => {
     const k = nm(name);
     if (cache.has(k)) return cache.get(k)!;
+    const explicit = explicitAliases[k];
+    if (explicit && payrollNameSet.has(explicit)) {
+      cache.set(k, explicit);
+      return explicit;
+    }
     const dt = toks(name);
     let best: string | null = null, bestScore = 0;
     for (const p of payNorm) {
@@ -265,6 +298,9 @@ export const summary = query({
       half: dayRows.filter((x) => x.status === "half").length,
       late: dayRows.filter((x) => x.late).length,
       otHours: r2(dayRows.reduce((s, x) => s + (x.otHours || 0), 0)),
+      /* عدد من له سجلٌّ في هذا اليوم — يكشف النقص: لو كان أقلّ من عدّة الشهر
+         فثمّة من لم تصل بصمته أصلاً، لا من حضر وغاب. */
+      recorded: dayRows.length,
     };
 
     // ملخّص الشهر لكل موظف
@@ -272,6 +308,9 @@ export const summary = query({
       ? await ctx.db.query("attendance").withIndex("by_month", (q) => q.eq("month", args.month!)).collect()
       : [];
     const byName: Record<string, any> = {};
+    /* عدّة الشهر: كل اسمٍ ظهر ولو مرّةً واحدة. الأدقّ من عدّ اليوم لأن الغائب
+       والمُجاز يبقيان من الطاقم، ومن لم تصل بصمته لا يُسقَط من العدد. */
+    const staffCount = new Set(monthRows.map((x) => String(x.name || "").trim())).size;
     for (const x of monthRows) {
       const b = (byName[x.name] ??= { name: x.name, present: 0, absent: 0, leave: 0, half: 0, late: 0, otHours: 0 });
       if (x.status === "present") b.present++;
@@ -300,7 +339,7 @@ export const summary = query({
     const all = await ctx.db.query("attendance").collect();
     const months = Array.from(new Set(all.map((x) => x.month))).sort().reverse();
 
-    return { day, employees, months };
+    return { day, employees, months, staffCount };
   },
 });
 
