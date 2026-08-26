@@ -737,10 +737,13 @@ export default function AboutPage() {
             background:B.surf, minHeight:260, display:"flex",
             alignItems:"center", justifyContent:"center", position:"relative" }}
             className="story-logo-box">
-            <img src="/adrenaline-logo.png" alt="Adrenaline"
-              style={{ width:"65%", opacity:0.1 }}/>
-            <div style={{ position:"absolute", inset:0,
-              background:`linear-gradient(135deg,${B.brand}15,${B.accent}10)` }}/>
+            <img src="/adrenaline-story-meals.jpeg"
+              alt={isAr ? "وجبات أدرينالين الصحية بتغليفها المميز" : "Adrenaline healthy meals in signature packaging"}
+              loading="lazy"
+              style={{ width:"100%", height:320, objectFit:"cover", objectPosition:"center", display:"block" }}/>
+            <div aria-hidden="true" style={{ position:"absolute", inset:0,
+              background:"linear-gradient(180deg,transparent 62%,rgba(14,42,74,.18) 100%)",
+              pointerEvents:"none" }}/>
           </div>
         </div>
       </Sec>
