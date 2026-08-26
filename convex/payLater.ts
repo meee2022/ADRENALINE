@@ -149,3 +149,10 @@ export const publicStatus = query({
     return p ? { status: p.status, orderId: p.orderId, amount: p.amount, planName: p.planName, environment: p.environment } : null;
   },
 });
+
+// Expose only the non-sensitive environment label so the checkout UI never
+// shows a sandbox warning while the backend is configured for live payments.
+export const publicEnvironment = query({
+  args: {},
+  handler: () => ({ environment: config().environment }),
+});

@@ -15,6 +15,7 @@ export default function PayLaterCheckout() {
   const planId = params.get("plan") as any;
   const optionIndex = Math.max(0, Number(params.get("option") || 0));
   const plan = useQuery(api.publicPlans.getById, planId ? { id: planId } : "skip");
+  const payLaterEnvironment = useQuery(api.payLater.publicEnvironment);
   const createCheckout = useAction(api.payLater.createCheckout);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -120,7 +121,11 @@ export default function PayLaterCheckout() {
           className="mt-3 block w-full rounded-full border-2 border-[#25D366] py-3 text-center text-sm font-black text-[#128C4A] hover:bg-[#25D366]/10">
           {ar ? "أو اشترك نقداً عبر أخصائية التغذية" : "Or subscribe by cash via our nutritionist"}
         </a>
-        <p className="mt-4 text-center text-xs text-slate-500">{ar ? "بيئة اختبار حاليًا — لا تستخدم بطاقة حقيقية" : "Sandbox mode — do not use a real card"}</p>
+        {payLaterEnvironment?.environment === "sandbox" && (
+          <p className="mt-4 text-center text-xs text-slate-500">
+            {ar ? "بيئة اختبار حاليًا — لا تستخدم بطاقة حقيقية" : "Sandbox mode — do not use a real card"}
+          </p>
+        )}
       </>}
     </section>
   </main></PublicLayout>;
