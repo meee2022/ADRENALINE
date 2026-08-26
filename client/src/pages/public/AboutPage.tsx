@@ -24,15 +24,14 @@ const B = {
 };
 const SD = "0 1px 2px rgba(14,42,74,.05),0 10px 22px -10px rgba(14,42,74,.16),0 34px 64px -26px rgba(14,42,74,.24)";
 
-/* ─── Featured meals (from DB with real images) ─── */
-const storageUrl = (id: string) => `${import.meta.env.VITE_CONVEX_URL}/api/storage/${id}`;
+/* ─── Featured meals (stable local assets, safe on Netlify and in print) ─── */
 const FEATURED_MEALS = [
-  { ar:"سالمون بالعسل",            en:"Honey Glaze Salmon",      img:storageUrl("5d494195-917b-44fc-b2a7-2573b3ffd6ca"), cat:"dinner" },
-  { ar:"ستيك بزبدة الثوم والبطاطس", en:"Garlic Butter Steak",      img:storageUrl("17dcbea2-0aa6-47ab-9cd2-bba090d64205"), cat:"dinner" },
-  { ar:"باستا الدجاج بالكاجون",     en:"Cajun Chicken Pasta",      img:storageUrl("6bda1293-d64c-4aa8-a524-f2a1e8bcc9c0"), cat:"lunch"  },
-  { ar:"سلطة الشمندر",              en:"Beetroot Salad",           img:storageUrl("38637c50-d1c6-4d13-afaa-64a8cfe67fe5"), cat:"snack"  },
-  { ar:"بودينغ بذور الشيا",          en:"Chia Seed Pudding",        img:storageUrl("ac88bf51-c62d-4cd8-946c-824ffcba1e9c"), cat:"snack"  },
-  { ar:"باستا السلمون بالبيستو",     en:"Salmon Pesto Pasta",       img:storageUrl("16814a87-75da-4553-9310-9e7bd9c42b9e"), cat:"dinner" },
+  { ar:"سالمون بالعسل",            en:"Honey Glaze Salmon",      img:"/profile/assets/b04419be-2c9d-4dd5-9fa4-c73da87b9067.jpg", cat:"dinner" },
+  { ar:"ستيك بزبدة الثوم والبطاطس", en:"Garlic Butter Steak",      img:"/profile/assets/268845a5-f45e-47dc-9cd8-5649da5dcbf1.jpg", cat:"dinner" },
+  { ar:"باستا الدجاج بالكاجون",     en:"Cajun Chicken Pasta",      img:"/profile/assets/689035a6-1726-48eb-808b-3eaa52674f7e.jpg", cat:"lunch"  },
+  { ar:"سلطة الشمندر",              en:"Beetroot Salad",           img:"/profile/assets/b0e8807a-5ba2-404a-9580-61ca7b00f117.jpg", cat:"snack"  },
+  { ar:"سلطة الدجاج",                en:"Chicken Salad",             img:"/profile/assets/f166aaba-8787-44f0-a49b-02190459f903.jpg", cat:"snack"  },
+  { ar:"راب الدجاج",                 en:"Chicken Wrap",              img:"/profile/assets/b2812f93-9a05-41cd-be8b-f15e3fdc43be.jpg", cat:"dinner" },
 ];
 
 /* ─── i18n helper ─── */
@@ -140,7 +139,19 @@ export default function AboutPage() {
   const { language } = useLanguage();
   useSeo({ title: "من نحن | أدرينالين للوجبات الصحية", description: "أدرينالين — مطبخ وجبات صحية في قطر يقدّم أكل لذيذ محسوب السعرات بإشراف أخصائيي تغذية.", path: "/public/about" });
   const [isAr, setIsAr] = React.useState(language === "ar");
+  const [showAllMeals, setShowAllMeals] = React.useState(false);
   const settings = useQuery(api.restaurantSettings.get);
+  const publicMeals = useQuery(api.publicMeals.list, {});
+  const mealsWithImages = React.useMemo(
+    () => (publicMeals || [])
+      .filter((meal: any) => Boolean(meal.imageUrl))
+      .sort((a: any, b: any) =>
+        Number(a.sortOrder ?? 9999) - Number(b.sortOrder ?? 9999)
+        || String(a.nameEn || a.nameAr || "").localeCompare(String(b.nameEn || b.nameAr || ""))
+      ),
+    [publicMeals],
+  );
+  const displayedMeals = showAllMeals ? mealsWithImages : mealsWithImages.slice(0, 12);
   const phone = String(settings?.phone || "97451144366").replace(/\D/g, "");
   const waLink = `https://wa.me/${phone}?text=${encodeURIComponent(isAr ? "مرحباً 👋\nأرغب في الاستفسار عن خدمات أدرينالين." : "Hello 👋\nI'd like to inquire about Adrenaline services.")}`;
 
@@ -149,7 +160,9 @@ export default function AboutPage() {
     // Preload meal + branch photos before printing to avoid blank images in Chrome
     const srcs = [
       ...FEATURED_MEALS.map(m => m.img),
-      "/store-front.jpg", "/store-counter.jpg", "/store-fridge.jpg",
+      "/promo-adrenaline-lifestyle.png",
+      "/profile/assets/b04419be-2c9d-4dd5-9fa4-c73da87b9067.jpg",
+      "/profile/assets/268845a5-f45e-47dc-9cd8-5649da5dcbf1.jpg",
     ];
     const imgPromises = srcs.map(src => new Promise<void>(resolve => {
       const img = new Image();
@@ -172,7 +185,7 @@ export default function AboutPage() {
     { n:"08", ar:"برامج الاشتراكات",      en:"Subscription Plans",   id:"plans"    },
     { n:"09", ar:"من مطبخنا إليك",        en:"From Kitchen to You",  id:"process"  },
     { n:"10", ar:"مواقعنا",               en:"Our Locations",        id:"locations"},
-    { n:"11", ar:"من داخل فرعنا",         en:"Inside Our Branch",    id:"gallery"  },
+    { n:"11", ar:"من مطبخنا",             en:"From Our Kitchen",     id:"gallery"  },
     { n:"12", ar:"لماذا أدرينالين",       en:"Why Adrenaline",       id:"why"      },
     { n:"13", ar:"تواصل معنا",            en:"Contact Us",           id:"contact"  },
   ];
@@ -594,11 +607,11 @@ export default function AboutPage() {
               style={{ width:120, opacity:0.15, filter:"brightness(0) invert(1)" }}/>
           </div>
         </div>
-        {/* Storefront photo — framed band, shows on screen + print */}
+        {/* Stable local lifestyle photo — framed band, shows on screen + print */}
         <div className="ab-cover-photo" style={{ width:"100%", maxWidth:640, margin:"34px auto 0",
           borderRadius:18, overflow:"hidden", border:"1px solid rgba(255,255,255,0.22)",
           boxShadow:"0 18px 50px -20px rgba(0,0,0,0.55)" }}>
-          <img src="/store-front.jpg" alt="Adrenaline storefront" crossOrigin="anonymous"
+          <img src="/promo-adrenaline-lifestyle.png" alt={isAr ? "أسلوب حياة صحي مع أدرينالين" : "Healthy lifestyle with Adrenaline"}
             style={{ width:"100%", height:230, objectFit:"cover", display:"block" }}
             onError={(e)=>{ const w=e.currentTarget.closest('.ab-cover-photo') as HTMLElement|null; if(w) w.style.display="none"; }}/>
         </div>
@@ -896,44 +909,62 @@ export default function AboutPage() {
         </div>
       </Sec>
 
-      {/* ══ 09 FROM OUR MENU (real meal images) ══ */}
+      {/* ══ 09 FROM OUR MENU (live names + images from the public menu) ══ */}
       <Sec id="menu">
         <CentreHead eyeAr="مختارات" eyeEn="HIGHLIGHTS"
-          titleAr="من قائمتنا" titleEn="From Our Menu"
-          subAr="وجبات من مطبخنا — متوازنة ولذيذة"
-          subEn="Meals from our kitchen — balanced and delicious"
+          titleAr="قائمة وجباتنا" titleEn="Our Meal Menu"
+          subAr={mealsWithImages.length ? `${mealsWithImages.length} وجبة بصورها وأسمائها الفعلية` : "وجبات من مطبخنا، متوازنة ولذيذة"}
+          subEn={mealsWithImages.length ? `${mealsWithImages.length} real meals with their actual names and photos` : "Meals from our kitchen, balanced and delicious"}
           isAr={isAr}/>
         <div className="ab-grid-3" style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:20 }}>
-          {FEATURED_MEALS.map((m,i)=>(
-            <div key={i} style={{ borderRadius:18, overflow:"hidden",
+          {(publicMeals === undefined ? FEATURED_MEALS : displayedMeals).map((m:any,i:number)=>(
+            <div key={m._id || m.slug || `${m.en}-${i}`} style={{ borderRadius:18, overflow:"hidden",
               background:"linear-gradient(158deg,#fff 0%,#ECF5FC 100%)",
               border:`1px solid ${B.line}`, boxShadow:SD }}>
               <div style={{ height:180, overflow:"hidden", position:"relative" }}>
-                <img src={m.img} alt={m.en} loading="eager" crossOrigin="anonymous"
+                <img src={m.imageUrl || m.img} alt={isAr ? (m.nameAr || m.ar) : (m.nameEn || m.en)} loading="lazy" crossOrigin="anonymous"
                   style={{ width:"100%", height:"100%", objectFit:"cover",
                     transition:"transform .4s" }}
                   onMouseEnter={e=>(e.currentTarget.style.transform="scale(1.06)")}
-                  onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}/>
+                  onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}
+                  onError={(e)=>{
+                    const fallback = FEATURED_MEALS[i % FEATURED_MEALS.length].img;
+                    if (e.currentTarget.src.endsWith(fallback)) return;
+                    e.currentTarget.src = fallback;
+                  }}/>
                 <div style={{ position:"absolute", top:10, right:10,
                   background:`${B.brand}`, color:"#fff", borderRadius:50,
                   padding:"3px 11px", fontFamily:"'Cairo',sans-serif",
                   fontSize:11, fontWeight:700 }}>
-                  {catLabel(m.cat)}
+                  {catLabel(m.category || m.cat)}
                 </div>
               </div>
               <div style={{ padding:"16px 18px" }}>
                 <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:15,
                   fontWeight:800, color:B.ink, marginBottom:3 }}>
-                  {isAr ? m.ar : m.en}
+                  {isAr ? (m.nameAr || m.ar) : (m.nameEn || m.en)}
                 </div>
                 <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:12,
                   color:B.muted }}>
-                  {isAr ? m.en : m.ar}
+                  {isAr ? (m.nameEn || m.en) : (m.nameAr || m.ar)}
                 </div>
               </div>
             </div>
           ))}
         </div>
+        {publicMeals !== undefined && mealsWithImages.length > 12 && (
+          <div style={{ display:"flex", justifyContent:"center", marginTop:32 }}>
+            <button type="button" onClick={() => setShowAllMeals((value) => !value)}
+              style={{ minHeight:44, padding:"10px 24px", borderRadius:999,
+                border:`1px solid ${B.brand}`, background:showAllMeals ? B.surf : B.brand,
+                color:showAllMeals ? B.accent : "#fff", cursor:"pointer",
+                fontFamily:"'Cairo',sans-serif", fontSize:14, fontWeight:800 }}>
+              {showAllMeals
+                ? (isAr ? "عرض المختارات فقط" : "Show highlights only")
+                : (isAr ? `عرض كل الوجبات (${mealsWithImages.length})` : `Show all meals (${mealsWithImages.length})`)}
+            </button>
+          </div>
+        )}
       </Sec>
 
       {/* ══ 10 PLANS ══ */}
@@ -1101,18 +1132,18 @@ export default function AboutPage() {
         </div>
       </Sec>
 
-      {/* ══ GALLERY — real branch photos ══ */}
+      {/* ══ GALLERY — real Adrenaline meal photography ══ */}
       <Sec id="gallery">
-        <CentreHead eyeAr="من أرض الواقع" eyeEn="ON THE GROUND"
-          titleAr="من داخل فرعنا" titleEn="Inside Our Branch"
-          subAr="لمحة من تجربة العميل داخل فرع أدرينالين"
-          subEn="A glimpse of the customer experience inside Adrenaline"
+        <CentreHead eyeAr="من مطبخنا" eyeEn="FROM OUR KITCHEN"
+          titleAr="جودة تراها في كل طبق" titleEn="Quality You Can See"
+          subAr="صور حقيقية من أطباق أدرينالين التي نحضّرها بعناية"
+          subEn="Real Adrenaline dishes, prepared with care"
           isAr={isAr}/>
         <div className="ab-grid-2 ab-gallery" style={{ display:"grid",
           gridTemplateColumns:"1fr 1fr", gap:20 }}>
           {[
-            { src:"/store-counter.jpg", cap:{ar:"كاونتر الاستقبال والعرض", en:"Reception & display counter"} },
-            { src:"/store-fridge.jpg",  cap:{ar:"ثلاجة العرض — وجبات طازجة يوميًا", en:"Display fridge — fresh meals daily"} },
+            { src:"/profile/assets/b04419be-2c9d-4dd5-9fa4-c73da87b9067.jpg", cap:{ar:"مكونات طازجة وتقديم متوازن", en:"Fresh ingredients, balanced presentation"} },
+            { src:"/profile/assets/268845a5-f45e-47dc-9cd8-5649da5dcbf1.jpg", cap:{ar:"بروتين محسوب وخضروات يومية", en:"Portioned protein and daily vegetables"} },
           ].map((g,i)=>(
             <figure key={i} style={{ margin:0, borderRadius:18, overflow:"hidden",
               border:`1px solid ${B.line}`, boxShadow:SD, background:B.surf }}>
