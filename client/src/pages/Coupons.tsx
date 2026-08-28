@@ -40,6 +40,7 @@ export default function Coupons() {
     expiresAt: "",
     minOrderQAR: "",
     restaurantKey: "ADRENALINE" as "ADRENALINE" | "NUTRI_RESET",
+    durations: [] as string[],
   });
 
   const handleCreate = async () => {
@@ -56,10 +57,11 @@ export default function Coupons() {
         expiresAt: form.expiresAt || undefined,
         minOrderQAR: form.minOrderQAR ? parseFloat(form.minOrderQAR) : undefined,
         restaurantKey: form.restaurantKey,
+        durations: form.durations.length ? form.durations : undefined,
         sessionToken,
       });
       toast({ title: t("تم الإنشاء","Created"), description: `${t("كود","Code")} ${form.code} ${t("جاهز للاستخدام","is ready to use")}` });
-      setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "", minOrderQAR: "", restaurantKey: "ADRENALINE" });
+      setForm({ code: "", discountType: "PERCENT", discountValue: "", maxUses: "", expiresAt: "", minOrderQAR: "", restaurantKey: "ADRENALINE", durations: [] });
       setDialogOpen(false);
     } catch (e: any) {
       toast({ title: t("خطأ","Error"), description: e.message, variant: "destructive" });
@@ -257,6 +259,31 @@ export default function Coupons() {
                   onChange={(e) => setForm({ ...form, minOrderQAR: e.target.value })}
                   placeholder={t("مثال: 1000","e.g. 1000")}
                 />
+              </div>
+              <div className="space-y-2">
+                {/* مُدد الاشتراك التي يسري عليها الكود. فارغةٌ = كل المدد.
+                    الحملة قد تُوجَّه للشهري وحده لأن هامشه يحتمل الخصم. */}
+                <Label>{t("يسري على","Applies to")}</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {([["month","الشهرية","Monthly"],["two_weeks","أسبوعين","2 weeks"],["week","أسبوع","1 week"]] as const).map(([key,ar,en]) => {
+                    const on = form.durations.includes(key);
+                    return (
+                      <button key={key} type="button"
+                        onClick={() => setForm({ ...form, durations: on
+                          ? form.durations.filter((d) => d !== key)
+                          : [...form.durations, key] })}
+                        className={cn("rounded-lg border px-2.5 py-2 text-[11px] font-black",
+                          on ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-600")}>
+                        {t(ar, en)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] font-bold text-slate-400">
+                  {form.durations.length
+                    ? t("يسري على المحدَّد فقط", "Applies only to the selected")
+                    : t("لم تحدّد شيئاً — يسري على كل المدد", "Nothing selected — applies to all durations")}
+                </p>
               </div>
               <div className="space-y-2">
                 {/* الكود يسري على مطعمٍ واحد: خصمُ حملةٍ لأدرينالين لا يُصرف على

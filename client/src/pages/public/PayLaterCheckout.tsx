@@ -31,7 +31,7 @@ export default function PayLaterCheckout() {
   const check = useQuery(
     api.coupons.validate,
     code.trim() && listPrice
-      ? { code: code.trim().toUpperCase(), orderTotal: listPrice, restaurantKey: "ADRENALINE" }
+      ? { code: code.trim().toUpperCase(), orderTotal: listPrice, restaurantKey: "ADRENALINE", duration: plan?.duration }
       : "skip",
   ) as any;
   const discount = check?.valid ? Number(check.discount) : 0;

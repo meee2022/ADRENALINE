@@ -18,6 +18,7 @@ export function judgeCoupon(
   coupon: any,
   amount: number,
   restaurantKey = "ADRENALINE",
+  duration?: string,
 ): { valid: false; error: string } | { valid: true; discount: number; finalTotal: number; coupon: any } {
   if (!coupon) return { valid: false, error: "الكود غير موجود" };
   if (!coupon.isActive) return { valid: false, error: "الكود غير مفعّل" };
@@ -32,6 +33,16 @@ export function judgeCoupon(
        كودٌ منتهٍ أو يُرفض ساري. */
     const today = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
     if (today > coupon.expiresAt) return { valid: false, error: "الكود منتهي الصلاحية" };
+  }
+  /* المدّة تُفحص حين تُعرف: الاستعلام العام قد يُنادى بلا باقة (المشترك يكتب
+     الكود قبل أن يختار)، فلا يُردّ حينها بل يُترك للحظة الدفع حيث تُعرف. */
+  const allowed: string[] = Array.isArray(coupon.durations) ? coupon.durations : [];
+  if (allowed.length && duration && !allowed.includes(duration)) {
+    const label: Record<string, string> = {
+      week: "الأسبوعية", two_weeks: "النصف شهرية", month: "الشهرية",
+    };
+    const names = allowed.map((d) => label[d] || d).join(" و");
+    return { valid: false, error: `الكود يسري على الاشتراكات ${names} فقط` };
   }
   if (coupon.minOrderQAR && amount < Number(coupon.minOrderQAR)) {
     return { valid: false, error: `الكود يسري على الاشتراكات من ${coupon.minOrderQAR} ر.ق فأكثر` };
@@ -86,6 +97,7 @@ export const create = mutation({
     expiresAt: v.optional(v.string()),
     restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
     minOrderQAR: v.optional(v.number()),
+    durations: v.optional(v.array(v.string())),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -105,6 +117,7 @@ export const create = mutation({
       expiresAt: args.expiresAt,
       restaurantKey: args.restaurantKey || "ADRENALINE",
       minOrderQAR: args.minOrderQAR,
+      durations: args.durations?.length ? args.durations : undefined,
       isActive: true,
       createdAt: Date.now(),
     });
@@ -138,13 +151,14 @@ export const validate = query({
     code: v.string(),
     orderTotal: v.number(),
     restaurantKey: v.optional(v.string()),
+    duration: v.optional(v.string()),
   },
-  handler: async (ctx, { code, orderTotal, restaurantKey }) => {
+  handler: async (ctx, { code, orderTotal, restaurantKey, duration }) => {
     const coupon = await ctx.db
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
       .first();
-    const j = judgeCoupon(coupon, orderTotal, restaurantKey || "ADRENALINE");
+    const j = judgeCoupon(coupon, orderTotal, restaurantKey || "ADRENALINE", duration);
     if (!j.valid) return { valid: false, error: j.error };
     return {
       valid: true,

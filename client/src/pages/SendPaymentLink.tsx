@@ -60,7 +60,7 @@ export default function SendPaymentLink() {
   const check = useQuery(
     api.coupons.validate,
     code.trim() && basePrice
-      ? { code: code.trim().toUpperCase(), orderTotal: basePrice, restaurantKey: "ADRENALINE" }
+      ? { code: code.trim().toUpperCase(), orderTotal: basePrice, restaurantKey: "ADRENALINE", duration: plan?.duration }
       : "skip",
   ) as any;
   const discount = check?.valid ? Number(check.discount) : 0;

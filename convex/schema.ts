@@ -1196,6 +1196,10 @@ export default defineSchema({
     restaurantKey: v.optional(v.string()),
     /* حدٌّ أدنى لقيمة الاشتراك كي يسري الكود — تُترك فارغة فيسري على الكل. */
     minOrderQAR: v.optional(v.number()),
+    /* مُدد الاشتراك التي يسري عليها الكود: week | two_weeks | month.
+       فارغةٌ = كل المدد. الحملة قد تُوجَّه للشهري وحده لأن هامشه يحتمل الخصم،
+       والحدّ الأدنى للمبلغ لا يكفي بديلاً: باقةُ أسبوعين قد تتجاوزه. */
+    durations: v.optional(v.array(v.string())),
     code: v.string(),
     discountType: v.union(v.literal("PERCENT"), v.literal("FIXED")),
     discountValue: v.number(),

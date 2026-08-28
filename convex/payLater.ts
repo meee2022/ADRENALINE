@@ -119,7 +119,7 @@ export const createCheckout = action({
     let couponDiscount = 0;
     if (a.couponCode && a.couponCode.trim()) {
       const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
-      const j = judgeCoupon(coupon, listPrice, "ADRENALINE");
+      const j = judgeCoupon(coupon, listPrice, "ADRENALINE", plan.duration);
       if (!j.valid) throw new Error(j.error);
       amount = j.finalTotal;
       couponDiscount = j.discount;
@@ -302,7 +302,7 @@ export const createStaffLink = action({
     let couponDiscount = 0;
     if (a.couponCode && a.couponCode.trim()) {
       const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
-      const j = judgeCoupon(coupon, base, "ADRENALINE");
+      const j = judgeCoupon(coupon, base, "ADRENALINE", plan.duration);
       if (!j.valid) throw new Error(j.error);
       amount = j.finalTotal;
       couponDiscount = j.discount;
