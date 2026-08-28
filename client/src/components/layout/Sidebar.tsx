@@ -27,6 +27,7 @@ import {
   Tag,
   Megaphone,
   CreditCard,
+  Link2,
   Star,
   Banknote,
   CalendarCheck,
@@ -88,6 +89,7 @@ const ICON_MAP: Record<MenuItemDef["iconKey"], React.ComponentType<any>> = {
   coupons: Tag,
   promoStudio: Megaphone,
   payLaterPayments: CreditCard,
+  sendPaymentLink: Link2,
   finance: Landmark,
   ratings: Star,
 };

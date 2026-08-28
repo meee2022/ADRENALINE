@@ -65,6 +65,7 @@ const OrderTracking = lazy(() => import("@/pages/public/OrderTracking"));
 const Coupons = lazy(() => import("@/pages/Coupons"));
 const PromoStudio = lazy(() => import("@/pages/PromoStudio"));
 const PayLaterPayments = lazy(() => import("@/pages/PayLaterPayments"));
+const SendPaymentLink = lazy(() => import("@/pages/SendPaymentLink"));
 const Finance = lazy(() => import("@/pages/Finance"));
 const AdminActionCenter = lazy(() => import("@/pages/AdminActionCenter"));
 const LoyaltyRatings = lazy(() => import("@/pages/LoyaltyRatings"));
@@ -369,6 +370,9 @@ function Router() {
       </Route>
       <Route path="/paylater-payments">
         <ProtectedRoute component={PayLaterPayments} />
+      </Route>
+      <Route path="/send-payment-link">
+        <ProtectedRoute component={SendPaymentLink} />
       </Route>
 
       <Route component={NotFound} />
