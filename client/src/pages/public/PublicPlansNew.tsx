@@ -41,6 +41,9 @@ export default function PublicPlansNew() {
     return d === "two_weeks" || d === "month" ? d : "week";
   })();
   const [selectedDuration, setSelectedDuration] = useState<"week" | "two_weeks" | "month">(initialDuration);
+  // لكل باقة أكثر من تركيبة (وجبات/سناكات). حفظ الاختيار هنا يمنع زر
+  // PayLater من إرسال أول تركيبة تلقائياً مهما كان ما اختاره العميل.
+  const [selectedOptionByPlan, setSelectedOptionByPlan] = useState<Record<string, number>>({});
   const plans = useQuery(api.publicPlans.listByDuration, { duration: selectedDuration }) || [];
   const settings = useQuery(api.restaurantSettings.get);
   const meals = useQuery(api.publicMeals.list, {}) || [];
@@ -183,6 +186,11 @@ export default function PublicPlansNew() {
                 const isFeatured = plan.isFeatured;
                 const badge = plan.badge ? getBadgeLabel(plan.badge) : null;
                 const isCustom = !plan.options || plan.options.length === 0;
+                const selectedOptionIndex = Math.min(
+                  Math.max(selectedOptionByPlan[plan._id] ?? 0, 0),
+                  Math.max((plan.options?.length || 1) - 1, 0),
+                );
+                const selectedOption = plan.options?.[selectedOptionIndex];
 
                 return (
                   <div
@@ -228,20 +236,39 @@ export default function PublicPlansNew() {
 
                       {/* Pricing options — each meal-count with its price */}
                       {plan.options && plan.options.length > 0 ? (
-                        <div className="space-y-1.5 py-1">
+                        <div className="space-y-2 py-1" role="radiogroup" aria-label={isRtl ? `اختر خيار ${planName(plan)}` : `Choose ${planName(plan)} option`}>
+                          {plan.options.length > 1 && (
+                            <p className="px-1 text-xs font-bold text-[#47759C]">
+                              {isRtl ? "اختر عدد الوجبات المناسب لك" : "Choose the meal plan that suits you"}
+                            </p>
+                          )}
                           {plan.options.map((opt: any, oi: number) => (
-                            <div key={oi}
-                              className="flex items-center justify-between px-3 py-2 rounded-xl"
-                              style={{ background: "#3cc4f00d", border: "1px solid #3cc4f026" }}>
-                              <span className="text-xs font-bold text-[#47759C]">
-                                {isRtl
-                                  ? `${opt.mealsCount} وجبات + ${opt.snacksCount} سناك`
-                                  : `${opt.mealsCount} meals + ${opt.snacksCount} snacks`}
+                            <button
+                              key={oi}
+                              type="button"
+                              role="radio"
+                              aria-checked={selectedOptionIndex === oi}
+                              onClick={() => setSelectedOptionByPlan((current) => ({ ...current, [plan._id]: oi }))}
+                              className={`flex min-h-11 w-full items-center justify-between rounded-xl border px-3 py-2 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0] focus-visible:ring-offset-2 ${
+                                selectedOptionIndex === oi
+                                  ? "border-[#3CC4F0] bg-[#ECFEFF] shadow-sm"
+                                  : "border-[#3cc4f026] bg-[#3cc4f00d] hover:border-[#3CC4F0]/50 hover:bg-[#ECFEFF]/60"
+                              }`}
+                            >
+                              <span className="flex items-center gap-2">
+                                <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${selectedOptionIndex === oi ? "border-[#0E76AC] bg-[#0E76AC]" : "border-[#94A3B8] bg-white"}`} aria-hidden="true">
+                                  {selectedOptionIndex === oi && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                                </span>
+                                <span className="text-xs font-bold text-[#47759C]">
+                                  {isRtl
+                                    ? `${opt.mealsCount} وجبات + ${opt.snacksCount} سناك`
+                                    : `${opt.mealsCount} meals + ${opt.snacksCount} snacks`}
+                                </span>
                               </span>
-                              <span className="text-sm font-black" style={{ color: "#0E76AC" }}>
+                              <span className="text-sm font-black tabular-nums" style={{ color: "#0E76AC" }}>
                                 {opt.priceQAR} {isRtl ? "ر.ق" : "QAR"}
                               </span>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       ) : (
@@ -279,19 +306,23 @@ export default function PublicPlansNew() {
                         <Button
                           onClick={() => isCustom
                             ? handleCustomContact(planName(plan))
-                            : handleSubscribe(plan._id, 0)}
+                            : handleSubscribe(plan._id, selectedOptionIndex)}
                           className={`w-full h-12 text-base font-bold rounded-full transition-all ${
                             isFeatured
                               ? "bg-[#3CC4F0] hover:bg-[#2ab3df] text-white shadow-md"
                               : "bg-[#0F1516] hover:bg-[#1a1f20] text-white"
                           }`}
                         >
-                          {isCustom ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist") : (isRtl ? "ادفع مع PayLater" : "Pay with PayLater")}
+                          {isCustom
+                            ? (isRtl ? "تواصل مع أخصائية التغذية" : "Contact our nutritionist")
+                            : (isRtl
+                              ? `ادفع ${selectedOption?.priceQAR ?? ""} ر.ق مع PayLater`
+                              : `Pay ${selectedOption?.priceQAR ?? ""} QAR with PayLater`)}
                         </Button>
                         {!isCustom && (
                           <Button
                             variant="outline"
-                            onClick={() => handlePlanContact(planName(plan), plan.options?.[0])}
+                            onClick={() => handlePlanContact(planName(plan), selectedOption)}
                             className="w-full h-11 text-sm font-bold rounded-full border-2 border-[#25D366] text-[#128C4A] hover:bg-[#25D366]/10"
                           >
                             {isRtl ? "أو اشترك نقداً عبر الأخصائية" : "Or subscribe by cash via our nutritionist"}
