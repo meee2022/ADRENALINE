@@ -197,6 +197,7 @@ export interface MenuItemDef {
     | "analytics"
     | "coupons"
     | "promoStudio"
+    | "payLaterPayments"
     | "payroll"
     | "leaves"
     | "attendance"
@@ -312,6 +313,8 @@ export const MENU_SECTIONS: MenuSection[] = [
       { href: "/coupons", iconKey: "coupons", labelAr: "كوبونات الخصم", labelEn: "Coupons",
         roles: ["ADMIN"] },
       { href: "/promo-studio", iconKey: "promoStudio", labelAr: "استوديو الحملات", labelEn: "Promo Studio",
+        roles: ["ADMIN"] },
+      { href: "/paylater-payments", iconKey: "payLaterPayments", labelAr: "مدفوعات PayLater", labelEn: "PayLater Payments",
         roles: ["ADMIN"] },
       { href: "/loyalty-ratings", iconKey: "ratings", labelAr: "الولاء والتقييمات", labelEn: "Loyalty & Ratings",
         roles: ["ADMIN"] },

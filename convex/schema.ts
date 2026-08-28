@@ -937,6 +937,8 @@ export default defineSchema({
     couponCode: v.optional(v.string()),
     couponDiscount: v.optional(v.number()),
     couponCounted: v.optional(v.boolean()),
+    /* ختمُ إبلاغ الطاقم — يُكتب مرّةً فلا يتكرّر الإشعار مع كل استعلامٍ عن الحالة. */
+    staffNotifiedAt: v.optional(v.number()),
     currency: v.literal("QAR"),
     customerName: v.string(),
     customerPhone: v.string(),

@@ -1,6 +1,7 @@
 import { action, internalMutation, internalQuery, query } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { judgeCoupon } from "./coupons";
+import { requireStaff } from "./sessions";
 import { v } from "convex/values";
 
 const UAT = "https://connect.uat.paylaterapp.com";
@@ -51,6 +52,27 @@ export const applyStatus = internalMutation({
     /* الاستخدام يُحتسب عند نجاح الدفع وحده — لا عند كتابة الكود، وإلا أحرقه
        من جرّبه ولم يشترِ. و`couponCounted` يمنع تكرار الاحتساب لو استُعلم عن
        حالة الدفعة أكثر من مرة (والصفحة تستعلم عند كل فتح). */
+    /* الدفعة الناجحة تُخبر الطاقم.
+     *
+     * الرسالة للعميل تقول «أكمل بياناتك مع الأخصائية»، ولم تكن الأخصائية تُبلَّغ
+     * بشيء: يدفع المشترك ولا يعلم أحدٌ في المطعم حتى يتّصل هو. ووُجد في قاعدة
+     * البيانات دفعُ يومٍ كامل لم يره أحد. */
+    if (a.status === "success" && !row.staffNotifiedAt) {
+      await ctx.db.insert("notifications", {
+        targetRole: "ADMIN",
+        type: "SYSTEM",
+        title: "دفعة اشتراك جديدة",
+        message: `${row.customerName} — ${row.planName} — ${row.amount} ر.ق`
+          + (row.couponCode ? ` (كود ${row.couponCode})` : "")
+          + ` — ${row.customerPhone}`,
+        link: "/paylater-payments",
+        relatedId: String(row._id),
+        isRead: false,
+        createdAt: Date.now(),
+      } as any);
+      await ctx.db.patch(row._id, { staffNotifiedAt: Date.now() });
+    }
+
     if (a.status === "success" && row.couponCode && !row.couponCounted) {
       const c = await ctx.db.query("coupons")
         .withIndex("by_code", (q) => q.eq("code", String(row.couponCode).toUpperCase()))
@@ -155,4 +177,62 @@ export const publicStatus = query({
 export const publicEnvironment = query({
   args: {},
   handler: () => ({ environment: config().environment }),
+});
+
+
+/**
+ * سجلّ المدفوعات للطاقم.
+ *
+ * لم تكن في التطبيق شاشةٌ تقرأ هذا الجدول أصلاً: المال يدخل ولا يراه أحد،
+ * والدفعةُ المعلّقة لا تُميَّز عن المهجورة إلا بسؤال البوّابة عنها.
+ */
+export const listPayments = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireStaff(ctx, args.sessionToken);
+    const rows = await ctx.db.query("payLaterPayments").order("desc").collect();
+    return rows.map((r: any) => ({
+      _id: r._id,
+      orderId: r.orderId,
+      checkoutToken: r.checkoutToken,
+      planName: r.planName,
+      amount: r.amount,
+      originalAmount: r.originalAmount ?? null,
+      couponCode: r.couponCode ?? null,
+      couponDiscount: r.couponDiscount ?? null,
+      customerName: r.customerName,
+      customerPhone: r.customerPhone,
+      customerEmail: r.customerEmail ?? null,
+      status: r.status,
+      environment: r.environment,
+      payLaterOrderId: r.payLaterOrderId ?? null,
+      staffNotifiedAt: r.staffNotifiedAt ?? null,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt ?? r.createdAt,
+    }));
+  },
+});
+
+/**
+ * يسأل البوّابة عن حالة دفعةٍ بعينها — للطاقم.
+ *
+ * الدفعة تبقى «معلّقة» في حالتين لا يفرّق بينهما الجدول: مشترٍ فتح صفحة الدفع
+ * ولم يُكملها، ومشترٍ دفع ثم أغلق المتصفح قبل أن يعود فلم يصل الخبر. والفرق
+ * بينهما مالٌ قُبض ولا يعلم به أحد — فيُسأل المصدرُ نفسه بدل الانتظار.
+ */
+export const refreshOne = action({
+  args: { checkoutToken: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, a): Promise<any> => {
+    await ctx.runQuery(internal.payLater.assertStaff, { sessionToken: a.sessionToken });
+    return await ctx.runAction(api.payLater.refreshStatus, { checkoutToken: a.checkoutToken });
+  },
+});
+
+/** حارسٌ داخلي: الإجراءات لا تصل قاعدة البيانات مباشرةً لتتحقّق من الجلسة. */
+export const assertStaff = internalQuery({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, a) => {
+    await requireStaff(ctx, a.sessionToken);
+    return true;
+  },
 });
