@@ -39,6 +39,8 @@ export const verifyWebhook = internalAction({
       orderId,
       status,
       payLaterOrderId: payload.payLaterOrderId ? String(payload.payLaterOrderId) : undefined,
+      gatewayStatus: rawStatus,
+      gatewayRaw: JSON.stringify(payload),
     });
     return { ok: true, updated };
   },

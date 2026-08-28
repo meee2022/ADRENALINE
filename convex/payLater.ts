@@ -43,11 +43,21 @@ export const saveAttempt = internalMutation({
 });
 
 export const applyStatus = internalMutation({
-  args: { orderId: v.string(), status: v.union(v.literal("pending"), v.literal("success"), v.literal("failed")), payLaterOrderId: v.optional(v.string()) },
+  args: {
+    orderId: v.string(),
+    status: v.union(v.literal("pending"), v.literal("success"), v.literal("failed")),
+    payLaterOrderId: v.optional(v.string()),
+    gatewayStatus: v.optional(v.string()),
+    gatewayRaw: v.optional(v.string()),
+  },
   handler: async (ctx, a) => {
     const row = await ctx.db.query("payLaterPayments").withIndex("by_orderId", q => q.eq("orderId", a.orderId)).unique();
     if (!row) return false;
-    await ctx.db.patch(row._id, { status: a.status, payLaterOrderId: a.payLaterOrderId, updatedAt: Date.now() });
+    await ctx.db.patch(row._id, {
+      status: a.status, payLaterOrderId: a.payLaterOrderId, updatedAt: Date.now(),
+      ...(a.gatewayStatus ? { gatewayStatus: a.gatewayStatus } : {}),
+      ...(a.gatewayRaw ? { gatewayRaw: a.gatewayRaw.slice(0, 900) } : {}),
+    });
 
     /* الاستخدام يُحتسب عند نجاح الدفع وحده — لا عند كتابة الكود، وإلا أحرقه
        من جرّبه ولم يشترِ. و`couponCounted` يمنع تكرار الاحتساب لو استُعلم عن
@@ -150,7 +160,11 @@ export const refreshStatus = action({
     if (!res.ok) throw new Error(`Unable to verify payment (${res.status})`);
     const json: any = await res.json();
     const status = json.status === 2 ? "success" : json.status === 3 ? "failed" : "pending";
-    await ctx.runMutation(internal.payLater.applyStatus, { orderId: payment.orderId, status, payLaterOrderId: json.payLaterOrderId });
+    await ctx.runMutation(internal.payLater.applyStatus, {
+      orderId: payment.orderId, status, payLaterOrderId: json.payLaterOrderId,
+      gatewayStatus: String(json.status ?? ""),
+      gatewayRaw: JSON.stringify(json),
+    });
     return { status, orderId: payment.orderId, amount: payment.amount, planName: payment.planName, environment: payment.environment };
   },
 });
@@ -206,6 +220,8 @@ export const listPayments = query({
       status: r.status,
       environment: r.environment,
       payLaterOrderId: r.payLaterOrderId ?? null,
+      gatewayStatus: r.gatewayStatus ?? null,
+      gatewayRaw: r.gatewayRaw ?? null,
       staffNotifiedAt: r.staffNotifiedAt ?? null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt ?? r.createdAt,

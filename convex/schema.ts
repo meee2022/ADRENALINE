@@ -939,6 +939,11 @@ export default defineSchema({
     couponCounted: v.optional(v.boolean()),
     /* ختمُ إبلاغ الطاقم — يُكتب مرّةً فلا يتكرّر الإشعار مع كل استعلامٍ عن الحالة. */
     staffNotifiedAt: v.optional(v.number()),
+    /* ردّ البوّابة كما ورد. الكود يعرف رمزين — ٢ نجاحاً و٣ فشلاً — وما عداهما
+       يقع في «معلّقة». فلو ردّت برمزٍ آخر لرفض بطاقةٍ مثلاً، ظهرت الدفعة
+       معلّقةً وهي مرفوضة، ولا شيء يدلّ على السبب. فيُحفظ الأصل ليُقرأ. */
+    gatewayStatus: v.optional(v.string()),
+    gatewayRaw: v.optional(v.string()),
     currency: v.literal("QAR"),
     customerName: v.string(),
     customerPhone: v.string(),

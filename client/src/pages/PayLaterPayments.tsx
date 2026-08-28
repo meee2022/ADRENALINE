@@ -149,6 +149,19 @@ export default function PayLaterPayments() {
                   )}
                 </div>
 
+                {/* رمزُ البوّابة يظهر حين لا يوافق الحالةَ المعروضة: الكود يعرف
+                    ٢ و٣ فقط، وما عداهما يقع في «معلّقة» — فيُرى الأصل بدل الظنّ. */}
+                {r.gatewayStatus && !["2", "3"].includes(String(r.gatewayStatus)) && (
+                  <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5">
+                    <span className="text-[11px] font-black text-amber-800">
+                      {t("ردّ البوّابة", "Gateway replied")}:{" "}
+                      <span dir="ltr" className="font-mono">{r.gatewayStatus}</span>
+                      {" — "}
+                      {t("رمز غير معروف، أبلغ المطوّر ليُضاف", "unknown code — report it to be mapped")}
+                    </span>
+                  </div>
+                )}
+
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span dir="ltr" className="truncate text-[11px] font-bold text-slate-400">{r.orderId}</span>
                   <div className="ms-auto flex gap-2">
