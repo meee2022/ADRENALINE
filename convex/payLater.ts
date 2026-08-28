@@ -159,6 +159,10 @@ export const refreshStatus = action({
     const res = await fetch(`${c.baseUrl}/api/paylater/merchant-portal/v2/web-checkout/status?order_id=${encodeURIComponent(payment.orderId)}`, { headers: { authorization: `Bearer ${token}` } });
     if (!res.ok) throw new Error(`Unable to verify payment (${res.status})`);
     const json: any = await res.json();
+    /* رموز البوّابة كما لوحظت حيًّا: ١ معلّق، ٢ ناجح، ٣ فاشل.
+       ورفضُ البطاقة لا يجعل الطلب فاشلاً عندهم — يبقى معلّقاً ليجرّب المشتري
+       بطاقةً أخرى، حتى تنقضي مهلة الثلاثين دقيقة. فالمعلّق حالتان: من لم يبدأ
+       الدفع، ومن رُفضت بطاقته ومهلته قائمة. */
     const status = json.status === 2 ? "success" : json.status === 3 ? "failed" : "pending";
     await ctx.runMutation(internal.payLater.applyStatus, {
       orderId: payment.orderId, status, payLaterOrderId: json.payLaterOrderId,

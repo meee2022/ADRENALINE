@@ -151,7 +151,7 @@ export default function PayLaterPayments() {
 
                 {/* رمزُ البوّابة يظهر حين لا يوافق الحالةَ المعروضة: الكود يعرف
                     ٢ و٣ فقط، وما عداهما يقع في «معلّقة» — فيُرى الأصل بدل الظنّ. */}
-                {r.gatewayStatus && !["2", "3"].includes(String(r.gatewayStatus)) && (
+                {r.gatewayStatus && !["1", "2", "3"].includes(String(r.gatewayStatus)) && (
                   <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5">
                     <span className="text-[11px] font-black text-amber-800">
                       {t("ردّ البوّابة", "Gateway replied")}:{" "}
