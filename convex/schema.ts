@@ -944,6 +944,12 @@ export default defineSchema({
        معلّقةً وهي مرفوضة، ولا شيء يدلّ على السبب. فيُحفظ الأصل ليُقرأ. */
     gatewayStatus: v.optional(v.string()),
     gatewayRaw: v.optional(v.string()),
+    /* رابطٌ صنعه موظّف بسعرٍ يخالف سعر الباقة (إضافات أو ترتيبٌ خاص). يُحفظ
+       من غيّره ولماذا، فالسعر المخالف يُسأل عنه لاحقاً ولا يُفسَّر بالحدس. */
+    customPrice: v.optional(v.boolean()),
+    createdByUserId: v.optional(v.id("users")),
+    createdByName: v.optional(v.string()),
+    priceNote: v.optional(v.string()),
     currency: v.literal("QAR"),
     customerName: v.string(),
     customerPhone: v.string(),

@@ -31,13 +31,17 @@ export default function SendPaymentLink() {
 
   const plans = (useQuery(api.publicPlans.list, {}) as any[] | undefined) || [];
   const coupons = (useQuery(api.coupons.list, { sessionToken }) as any[] | undefined) || [];
-  const createCheckout = useAction(api.payLater.createCheckout);
+  const createLink = useAction(api.payLater.createStaffLink);
 
   const [planId, setPlanId] = useState("");
   const [optionIndex, setOptionIndex] = useState(0);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
+  /* السعر يبدأ من سعر الباقة ويقبل التعديل: المشتري قد يطلب إضافةً أو ترتيباً
+     خاصاً، والباقةُ سعرٌ استرشادي لا حدّ. والنصّ فارغٌ يعني «اتبع الباقة». */
+  const [priceInput, setPriceInput] = useState("");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -49,16 +53,19 @@ export default function SendPaymentLink() {
   const plan = sellable.find((p) => String(p._id) === planId);
   const option = plan?.options?.[optionIndex];
   const listPrice = Number(option?.priceQAR) || 0;
+  const typed = Number(priceInput);
+  const basePrice = priceInput.trim() && Number.isFinite(typed) && typed > 0 ? Math.round(typed) : listPrice;
+  const edited = basePrice !== listPrice;
 
   const check = useQuery(
     api.coupons.validate,
-    code.trim() && listPrice
-      ? { code: code.trim().toUpperCase(), orderTotal: listPrice, restaurantKey: "ADRENALINE" }
+    code.trim() && basePrice
+      ? { code: code.trim().toUpperCase(), orderTotal: basePrice, restaurantKey: "ADRENALINE" }
       : "skip",
   ) as any;
   const discount = check?.valid ? Number(check.discount) : 0;
-  const finalPrice = Math.max(0, listPrice - discount);
-  const tooLow = listPrice > 0 && finalPrice < MIN_QAR;
+  const finalPrice = Math.max(0, basePrice - discount);
+  const tooLow = basePrice > 0 && finalPrice < MIN_QAR;
   const tooHigh = finalPrice > MAX_QAR;
 
   const create = async () => {
@@ -70,15 +77,15 @@ export default function SendPaymentLink() {
     setBusy(true);
     setLink("");
     try {
-      const res: any = await createCheckout({
+      const res: any = await createLink({
         planId: plan._id,
         optionIndex,
+        amount: basePrice,
         customerName: name.trim(),
         customerPhone: phone.trim(),
-        /* دومين الموقع لا عنوان جهاز الموظّف: الرابط يعود إليه المشتري بعد
-           الدفع، ورابطٌ محليّ لا يفتح عنده. */
-        returnOrigin: "https://adrenalinehealthy.com",
         couponCode: code.trim() ? code.trim().toUpperCase() : undefined,
+        priceNote: note.trim() || undefined,
+        sessionToken,
       });
       setLink(res.paymentLinkUrl);
     } catch (e: any) {
@@ -95,7 +102,7 @@ export default function SendPaymentLink() {
       `مرحباً ${name.trim()}`,
       `رابط دفع اشتراكك في *${plan ? (isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)) : ""}*`,
       option ? `الخيار: ${option.mealsCount} وجبات + ${option.snacksCount} سناك` : "",
-      discount > 0 ? `السعر: ${listPrice} ر.ق — بعد الخصم *${finalPrice} ر.ق*` : `المبلغ: ${finalPrice} ر.ق`,
+      discount > 0 ? `السعر: ${basePrice} ر.ق — بعد الخصم *${finalPrice} ر.ق*` : `المبلغ: ${finalPrice} ر.ق`,
       "",
       link,
       "",
@@ -121,7 +128,7 @@ export default function SendPaymentLink() {
             <Label>{t("الباقة", "Plan")}</Label>
             <select
               value={planId}
-              onChange={(e) => { setPlanId(e.target.value); setOptionIndex(0); reset(); }}
+              onChange={(e) => { setPlanId(e.target.value); setOptionIndex(0); setPriceInput(""); reset(); }}
               className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold"
             >
               <option value="">{t("اختر الباقة…", "Choose a plan…")}</option>
@@ -139,7 +146,7 @@ export default function SendPaymentLink() {
               <div className="flex flex-wrap gap-2">
                 {plan.options.map((o: any, i: number) => (
                   <button key={i} type="button"
-                    onClick={() => { setOptionIndex(i); reset(); }}
+                    onClick={() => { setOptionIndex(i); setPriceInput(""); reset(); }}
                     className={cn("rounded-xl border px-3 py-2 text-xs font-black",
                       optionIndex === i ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-600")}>
                     {o.mealsCount} + {o.snacksCount}
@@ -160,6 +167,35 @@ export default function SendPaymentLink() {
               <Input dir="ltr" value={phone} onChange={(e) => { setPhone(e.target.value); reset(); }} placeholder="33xxxxxx" />
             </div>
           </div>
+
+          {plan && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t("المبلغ (ر.ق)", "Amount (QAR)")}</Label>
+                <Input dir="ltr" type="number" inputMode="numeric"
+                  value={priceInput}
+                  onChange={(e) => { setPriceInput(e.target.value); reset(); }}
+                  placeholder={String(listPrice)}
+                  className={cn("font-black", edited && "border-amber-400 bg-amber-50")} />
+                <p className="text-[11px] font-bold text-slate-400">
+                  {edited
+                    ? t(`سعر الباقة ${listPrice} ر.ق — أنت غيّرته`, `Plan price is ${listPrice} — you changed it`)
+                    : t("اتركه فارغاً ليتبع سعر الباقة", "Leave empty to use the plan price")}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("سبب تغيير السعر", "Reason for the change")}</Label>
+                <Input value={note} onChange={(e) => setNote(e.target.value)}
+                  placeholder={t("مثال: إضافة وجبتين", "e.g. two extra meals")}
+                  disabled={!edited} />
+                {edited && !note.trim() && (
+                  <p className="text-[11px] font-bold text-amber-600">
+                    {t("يُستحسن كتابة السبب — يُحفظ مع الدفعة", "Worth noting — it is saved with the payment")}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>{t("كود خصم (اختياري)", "Discount code (optional)")}</Label>
@@ -196,8 +232,13 @@ export default function SendPaymentLink() {
                 <p className="text-xs font-bold text-slate-500">
                   {option?.mealsCount} {t("وجبات", "meals")} + {option?.snacksCount} {t("سناك", "snacks")}
                 </p>
+                {edited && (
+                  <p className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-black text-amber-800">
+                    {t(`سعر مخصّص — الباقة ${listPrice} ر.ق`, `Custom price — plan is ${listPrice}`)}
+                  </p>
+                )}
                 <div className="mt-2 flex flex-wrap items-baseline gap-2">
-                  {discount > 0 && <span className="text-sm font-bold text-slate-400 line-through">{listPrice}</span>}
+                  {discount > 0 && <span className="text-sm font-bold text-slate-400 line-through">{basePrice}</span>}
                   <span className="text-2xl font-black text-[#0E76AC]">{finalPrice}</span>
                   <span className="text-xs font-bold text-slate-500">{t("ر.ق", "QAR")}</span>
                   {discount > 0 && (
@@ -218,7 +259,7 @@ export default function SendPaymentLink() {
               )}
 
               {!link ? (
-                <Button onClick={() => void create()} disabled={busy || tooLow || tooHigh || !option}
+                <Button onClick={() => void create()} disabled={busy || tooLow || tooHigh || !option || basePrice <= 0}
                   className="h-12 w-full rounded-xl bg-[#0E76AC] font-black hover:bg-[#0a668f]">
                   <Send className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
                   {busy ? t("جارٍ الإنشاء…", "Creating…") : t("أنشئ رابط الدفع", "Create payment link")}

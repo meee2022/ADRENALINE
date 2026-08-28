@@ -33,6 +33,10 @@ export const saveAttempt = internalMutation({
     optionIndex: v.number(), amount: v.number(),
     originalAmount: v.optional(v.number()), couponCode: v.optional(v.string()),
     couponDiscount: v.optional(v.number()),
+    customPrice: v.optional(v.boolean()),
+    createdByUserId: v.optional(v.id("users")),
+    createdByName: v.optional(v.string()),
+    priceNote: v.optional(v.string()),
     customerName: v.string(), customerPhone: v.string(),
     customerEmail: v.optional(v.string()), environment: v.union(v.literal("sandbox"), v.literal("production")),
     paymentLinkUrl: v.string(),
@@ -226,6 +230,9 @@ export const listPayments = query({
       payLaterOrderId: r.payLaterOrderId ?? null,
       gatewayStatus: r.gatewayStatus ?? null,
       gatewayRaw: r.gatewayRaw ?? null,
+      customPrice: r.customPrice ?? false,
+      createdByName: r.createdByName ?? null,
+      priceNote: r.priceNote ?? null,
       staffNotifiedAt: r.staffNotifiedAt ?? null,
       createdAt: r.createdAt,
       updatedAt: r.updatedAt ?? r.createdAt,
@@ -252,7 +259,89 @@ export const refreshOne = action({
 export const assertStaff = internalQuery({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, a) => {
-    await requireStaff(ctx, a.sessionToken);
-    return true;
+    const id = await requireStaff(ctx, a.sessionToken);
+    const u: any = id.userId ? await ctx.db.get(id.userId as any) : null;
+    return { userId: id.userId ?? null, name: u?.name || u?.username || null };
+  },
+});
+
+/**
+ * رابط دفعٍ ينشئه موظّف — وله وحده أن يخالف سعر الباقة.
+ *
+ * المسار العام يشتقّ المبلغ من الباقة المخزَّنة ولا يقرأ رقماً من المتصفح،
+ * وهذا ما يمنع التلاعب بالسعر. لكنّ المشتري قد يطلب إضافةً أو ترتيباً خاصاً
+ * فيختلف المبلغ عن سعر الباقة — فيُفتح للطاقم بابٌ ثانٍ، مشروطٌ بجلسةٍ
+ * موثّقة، ويُسجَّل معه من غيّر السعر وسببه.
+ *
+ * والكوبون يُحتسب على المبلغ المُدخَل لا على سعر الباقة: هو ما سيدفعه المشتري.
+ */
+export const createStaffLink = action({
+  args: {
+    planId: v.id("publicPlans"),
+    optionIndex: v.number(),
+    amount: v.number(),
+    customerName: v.string(),
+    customerPhone: v.string(),
+    customerEmail: v.optional(v.string()),
+    couponCode: v.optional(v.string()),
+    priceNote: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, a): Promise<any> => {
+    const who: any = await ctx.runQuery(internal.payLater.assertStaff, { sessionToken: a.sessionToken });
+
+    const plan: any = await ctx.runQuery(internal.payLater.getPlanInternal, { planId: a.planId });
+    if (!plan || plan.isActive === false) throw new Error("الباقة غير متاحة");
+    const listPrice = Number(plan.options?.[a.optionIndex]?.priceQAR) || 0;
+
+    const base = Math.round(Number(a.amount));
+    if (!Number.isFinite(base) || base <= 0) throw new Error("أدخل مبلغاً صحيحاً");
+
+    let amount = base;
+    let couponCode: string | undefined;
+    let couponDiscount = 0;
+    if (a.couponCode && a.couponCode.trim()) {
+      const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
+      const j = judgeCoupon(coupon, base, "ADRENALINE");
+      if (!j.valid) throw new Error(j.error);
+      amount = j.finalTotal;
+      couponDiscount = j.discount;
+      couponCode = String(coupon.code);
+    }
+    if (amount < 300 || amount > 25000) {
+      throw new Error(`المبلغ (${amount} ر.ق) خارج حدود الدفع الإلكتروني — من 300 إلى 25000`);
+    }
+
+    const c = config();
+    const token = await accessToken(c);
+    const orderId = `ADR-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    const checkoutToken = crypto.randomUUID();
+    const resultUrl = `https://adrenalinehealthy.com/public/paylater/result?token=${encodeURIComponent(checkoutToken)}`;
+    const res = await fetch(`${c.baseUrl}/api/paylater/merchant-portal/v2/web-checkout`, {
+      method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({
+        outlet_id: c.outletId, currency: "QAR", amount, order_id: orderId,
+        success_redirect_url: `${resultUrl}&result=success`,
+        fail_redirect_url: `${resultUrl}&result=failed`,
+        expiry_duration: 30,
+      }),
+    });
+    const json: any = await res.json();
+    if (!res.ok || !json.paymentLinkUrl) throw new Error(json.error || `تعذّر إنشاء الرابط (${res.status})`);
+
+    await ctx.runMutation(internal.payLater.saveAttempt, {
+      orderId, checkoutToken, planId: a.planId,
+      planName: plan.nameEn || plan.nameAr, optionIndex: a.optionIndex,
+      amount, originalAmount: base,
+      couponCode, couponDiscount: couponDiscount || undefined,
+      customPrice: base !== listPrice,
+      createdByUserId: who?.userId || undefined,
+      createdByName: who?.name || undefined,
+      priceNote: a.priceNote?.trim() || undefined,
+      customerName: a.customerName.trim(), customerPhone: a.customerPhone.trim(),
+      customerEmail: a.customerEmail?.trim() || undefined,
+      environment: c.environment, paymentLinkUrl: json.paymentLinkUrl,
+    });
+    return { paymentLinkUrl: json.paymentLinkUrl, checkoutToken, amount, listPrice, couponDiscount };
   },
 });

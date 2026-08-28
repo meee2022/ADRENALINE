@@ -149,6 +149,17 @@ export default function PayLaterPayments() {
                   )}
                 </div>
 
+                {/* السعر المخالف لسعر الباقة يُسأل عنه لاحقاً، فيُعرض من غيّره وسببه. */}
+                {r.customPrice && (
+                  <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5">
+                    <span className="text-[11px] font-black text-sky-800">
+                      {t("سعر مخصّص", "Custom price")}
+                      {r.createdByName ? ` — ${r.createdByName}` : ""}
+                      {r.priceNote ? ` — ${r.priceNote}` : ""}
+                    </span>
+                  </div>
+                )}
+
                 {/* رمزُ البوّابة يظهر حين لا يوافق الحالةَ المعروضة: الكود يعرف
                     ٢ و٣ فقط، وما عداهما يقع في «معلّقة» — فيُرى الأصل بدل الظنّ. */}
                 {r.gatewayStatus && !["1", "2", "3"].includes(String(r.gatewayStatus)) && (
