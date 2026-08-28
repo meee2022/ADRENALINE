@@ -19,6 +19,14 @@ import { cn } from "@/lib/utils";
 import { alertDialog } from "@/lib/dialogs";
 import { Check, Copy, Link2, MessageCircle, Send } from "lucide-react";
 
+/* أسماء الباقات تتكرّر: «باقة التنحيف» ثلاثاً، واحدةٌ لكل مدّة. فالاسم وحده
+   لا يميّز، وتُقلَّب القائمة حتى يُصادَف المطلوب. فتُلحق المدّة به. */
+const DURATION: Record<string, { ar: string; en: string; order: number }> = {
+  week: { ar: "أسبوع", en: "1 week", order: 1 },
+  two_weeks: { ar: "أسبوعان", en: "2 weeks", order: 2 },
+  month: { ar: "شهر", en: "1 month", order: 3 },
+};
+
 /** الحدّان اللذان تفرضهما البوّابة على المبلغ — يُفحصان قبل الإنشاء لا بعده. */
 const MIN_QAR = 300;
 const MAX_QAR = 25000;
@@ -47,9 +55,22 @@ export default function SendPaymentLink() {
   const [copied, setCopied] = useState(false);
 
   const sellable = useMemo(
-    () => plans.filter((p) => p.isActive !== false && (p.options || []).length > 0),
+    () => plans
+      .filter((p) => p.isActive !== false && (p.options || []).length > 0)
+      /* تُرتَّب بالهدف ثم بالمدّة، فالمتشابهةُ اسماً تتجاور وتُقرأ مدّتُها. */
+      .sort((a, b) => String(a.nameAr).localeCompare(String(b.nameAr), "ar")
+        || (DURATION[a.duration]?.order ?? 9) - (DURATION[b.duration]?.order ?? 9)),
     [plans],
   );
+
+  /** اسمٌ يميّز: الباقة ومدّتها وأرخص أسعارها. */
+  const planLabel = (p: any) => {
+    const base = isRtl ? p.nameAr : (p.nameEn || p.nameAr);
+    const d = DURATION[p.duration];
+    const from = Math.min(...(p.options || []).map((o: any) => Number(o.priceQAR) || 0));
+    const price = Number.isFinite(from) && from > 0 ? ` · ${from}${t("+ ر.ق", "+ QAR")}` : "";
+    return d ? `${base} — ${t(d.ar, d.en)}${price}` : `${base}${price}`;
+  };
   const plan = sellable.find((p) => String(p._id) === planId);
   const option = plan?.options?.[optionIndex];
   const listPrice = Number(option?.priceQAR) || 0;
@@ -100,7 +121,8 @@ export default function SendPaymentLink() {
     const to = digits.length === 8 ? `974${digits}` : digits;
     const lines = [
       `مرحباً ${name.trim()}`,
-      `رابط دفع اشتراكك في *${plan ? (isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)) : ""}*`,
+      `رابط دفع اشتراكك في *${plan ? plan.nameAr : ""}*`
+        + (plan && DURATION[plan.duration] ? ` (${DURATION[plan.duration].ar})` : ""),
       option ? `الخيار: ${option.mealsCount} وجبات + ${option.snacksCount} سناك` : "",
       discount > 0 ? `السعر: ${basePrice} ر.ق — بعد الخصم *${finalPrice} ر.ق*` : `المبلغ: ${finalPrice} ر.ق`,
       "",
@@ -133,9 +155,7 @@ export default function SendPaymentLink() {
             >
               <option value="">{t("اختر الباقة…", "Choose a plan…")}</option>
               {sellable.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {isRtl ? p.nameAr : (p.nameEn || p.nameAr)}
-                </option>
+                <option key={p._id} value={p._id}>{planLabel(p)}</option>
               ))}
             </select>
           </div>
@@ -228,7 +248,14 @@ export default function SendPaymentLink() {
           ) : (
             <>
               <div className="rounded-xl bg-slate-50 p-3">
-                <p className="font-black text-[#0F1516]">{isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)}</p>
+                <p className="font-black text-[#0F1516]">
+                  {isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)}
+                  {DURATION[plan.duration] && (
+                    <span className="ms-2 rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-black text-slate-700">
+                      {t(DURATION[plan.duration].ar, DURATION[plan.duration].en)}
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs font-bold text-slate-500">
                   {option?.mealsCount} {t("وجبات", "meals")} + {option?.snacksCount} {t("سناك", "snacks")}
                 </p>
