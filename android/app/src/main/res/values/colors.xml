@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- قالب Capacitor يشير إلى هذه الألوان في styles.xml ولا ينشئ ملفها،
+     فبناء الإصدار يفشل بلا هذا الملف. والقيم هي هوية أدرينالين نفسها. -->
+<resources>
+    <color name="colorPrimary">#3CC4F0</color>
+    <color name="colorPrimaryDark">#0E76AC</color>
+    <color name="colorAccent">#3CC4F0</color>
+</resources>

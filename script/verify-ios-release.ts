@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-const file = path.resolve(process.cwd(), ".env.ios.local");
+/* Vite's root is client/, so that is where it reads .env.<mode>.local from —
+   checking the repo root would verify a file the build never loads. */
+const file = path.resolve(process.cwd(), "client", ".env.ios.local");
 
 function parseEnv(source: string): Record<string, string> {
   const result: Record<string, string> = {};
@@ -22,7 +24,7 @@ try {
   env = parseEnv(await readFile(file, "utf8"));
 } catch {
   throw new Error(
-    "Missing .env.ios.local. Copy config/ios.env.example, set the production Convex URL, and confirm the release environment.",
+    "Missing client/.env.ios.local. Copy config/ios.env.example, set the production Convex URL, and confirm the release environment.",
   );
 }
 

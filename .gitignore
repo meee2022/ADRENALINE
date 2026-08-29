@@ -71,3 +71,17 @@ zt.json
 outputs/
 .codex-dev-server*.log
 .nutri-dev.*.log
+
+# Android release signing — فقدان المفتاح يعني أنك لن تستطيع تحديث التطبيق أبداً
+android/keystore.properties
+*.jks
+*.keystore
+
+# Android build output
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/local.properties
+android/.idea/

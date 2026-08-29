@@ -10,6 +10,14 @@ const config: CapacitorConfig = {
     preferredContentMode: "mobile",
     scrollEnabled: true,
   },
+  android: {
+    backgroundColor: "#FFFFFF",
+    /* المتجر يرفض النصّ المكشوف؛ والتطبيق كلّه يخاطب Convex عبر HTTPS
+       فلا حاجة إليه أصلاً. */
+    allowMixedContent: false,
+    captureInput: true,
+    webContentsDebuggingEnabled: false,
+  },
 };
 
 export default config;
