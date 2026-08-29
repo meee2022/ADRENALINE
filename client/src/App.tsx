@@ -140,7 +140,7 @@ function ProtectedRoute({
   }
   if (!canAccessUser(currentUser, location)) {
     // ✅ نحوّل لصفحة يقدر المستخدم يوصلها فعلاً — نتجنّب حلقة التحويل اللا نهائية
-    //    (مثلاً سائق صلاحيته /driver فقط، لكن ROLE_HOME لدوره /delivery غير مسموحة له → بياض).
+    //    (مثلاً مشرف توصيل صلاحيته /delivery فقط، لكن ROLE_HOME لدوره /driver غير مسموحة له → بياض).
     let home = ROLE_HOME[role] || "/";
     if (!canAccessUser(currentUser, home)) {
       const firstPerm = (currentUser.permissions || []).find((p) => p !== "/" && !p.endsWith("/*"));

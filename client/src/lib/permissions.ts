@@ -28,7 +28,10 @@ export const ROLE_HOME: Record<Role, string> = {
   ADMIN: "/dashboard",
   NUTRITIONIST: "/orders/pending",
   KITCHEN: "/kitchen",
-  DELIVERY: "/delivery",
+  // السائق ينزل على تطبيقه مباشرةً لا على لوحة المشرف: دوره محصور في جولته،
+  // وكل خطوة يدوّر فيها على شاشته الصحيحة فرصةٌ للّخبطة. والمشرف يصل إلى
+  // /delivery من القائمة الجانبية كالمعتاد.
+  DELIVERY: "/driver",
   INVENTORY_MANAGER: "/inventory",
   ACCOUNTANT: "/reports",
   FINANCE_MANAGER: "/reports",
