@@ -5,8 +5,8 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "../convex/_generated/api.js";
 
-const convexUrl =
-  process.env.CONVEX_URL || "https://rightful-parakeet-660.convex.cloud";
+const convexUrl = process.env.CONVEX_URL;
+if (!convexUrl) throw new Error("Set CONVEX_URL explicitly to prevent updating the wrong deployment.");
 const client = new ConvexHttpClient(convexUrl);
 
 // Helper: Convert category to lowercase

@@ -9,7 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const IMAGES_DIR = path.join(__dirname, "..", "meals-images");
-const convexUrl = process.env.CONVEX_URL || "https://rightful-parakeet-660.convex.cloud";
+const convexUrl = process.env.CONVEX_URL;
+if (!convexUrl) throw new Error("Set CONVEX_URL explicitly to prevent importing into the wrong deployment.");
 const client = new ConvexHttpClient(convexUrl);
 
 function toSlug(nameEn: string) {
