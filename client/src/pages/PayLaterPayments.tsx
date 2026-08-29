@@ -136,6 +136,12 @@ export default function PayLaterPayments() {
 
                 <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
                   <span className="font-bold text-slate-600">{r.planName}</span>
+                  {r.customMeals != null && (
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-black text-slate-600">
+                      {r.customMeals} {t("وجبات", "meals")}
+                      {r.customSnacks ? ` + ${r.customSnacks} ${t("سناك", "snacks")}` : ""}
+                    </span>
+                  )}
                   {r.couponDiscount ? (
                     <>
                       <span className="text-slate-400 line-through">{r.originalAmount}</span>

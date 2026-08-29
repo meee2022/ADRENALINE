@@ -947,6 +947,10 @@ export default defineSchema({
     /* رابطٌ صنعه موظّف بسعرٍ يخالف سعر الباقة (إضافات أو ترتيبٌ خاص). يُحفظ
        من غيّره ولماذا، فالسعر المخالف يُسأل عنه لاحقاً ولا يُفسَّر بالحدس. */
     customPrice: v.optional(v.boolean()),
+    /* الباقة المخصّصة لا أسعار جاهزة لها: الأخصائية تحدّد الوجبات والسناكات
+       والسعر لكل عميل. فتُحفظ الأعداد هنا، وإلا لم يُعرف لاحقاً ما بيع. */
+    customMeals: v.optional(v.number()),
+    customSnacks: v.optional(v.number()),
     createdByUserId: v.optional(v.id("users")),
     createdByName: v.optional(v.string()),
     priceNote: v.optional(v.string()),

@@ -34,6 +34,8 @@ export const saveAttempt = internalMutation({
     originalAmount: v.optional(v.number()), couponCode: v.optional(v.string()),
     couponDiscount: v.optional(v.number()),
     customPrice: v.optional(v.boolean()),
+    customMeals: v.optional(v.number()),
+    customSnacks: v.optional(v.number()),
     createdByUserId: v.optional(v.id("users")),
     createdByName: v.optional(v.string()),
     priceNote: v.optional(v.string()),
@@ -222,6 +224,8 @@ export const listPayments = query({
       originalAmount: r.originalAmount ?? null,
       couponCode: r.couponCode ?? null,
       couponDiscount: r.couponDiscount ?? null,
+      customMeals: r.customMeals ?? null,
+      customSnacks: r.customSnacks ?? null,
       customerName: r.customerName,
       customerPhone: r.customerPhone,
       customerEmail: r.customerEmail ?? null,
@@ -285,6 +289,9 @@ export const createStaffLink = action({
     customerEmail: v.optional(v.string()),
     couponCode: v.optional(v.string()),
     priceNote: v.optional(v.string()),
+    /* للباقة المخصّصة وحدها — الطاقم يحدّد الأعداد لأنها ليست في الباقة. */
+    customMeals: v.optional(v.number()),
+    customSnacks: v.optional(v.number()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, a): Promise<any> => {
@@ -292,7 +299,13 @@ export const createStaffLink = action({
 
     const plan: any = await ctx.runQuery(internal.payLater.getPlanInternal, { planId: a.planId });
     if (!plan || plan.isActive === false) throw new Error("الباقة غير متاحة");
-    const listPrice = Number(plan.options?.[a.optionIndex]?.priceQAR) || 0;
+    /* الباقة المخصّصة بلا خيارات: لا سعر قائمة تُقاس عليه، فالمبلغ المكتوب
+       هو السعر لا «تعديلٌ» عليه. */
+    const openPriced = !plan.options || plan.options.length === 0;
+    const listPrice = openPriced ? 0 : (Number(plan.options?.[a.optionIndex]?.priceQAR) || 0);
+    if (openPriced && !(Number(a.customMeals) > 0)) {
+      throw new Error("حدّد عدد الوجبات للباقة المخصّصة");
+    }
 
     const base = Math.round(Number(a.amount));
     if (!Number.isFinite(base) || base <= 0) throw new Error("أدخل مبلغاً صحيحاً");
@@ -334,7 +347,9 @@ export const createStaffLink = action({
       planName: plan.nameEn || plan.nameAr, optionIndex: a.optionIndex,
       amount, originalAmount: base,
       couponCode, couponDiscount: couponDiscount || undefined,
-      customPrice: base !== listPrice,
+      customPrice: openPriced ? true : base !== listPrice,
+      customMeals: openPriced ? Number(a.customMeals) : undefined,
+      customSnacks: openPriced ? (Number(a.customSnacks) || 0) : undefined,
       createdByUserId: who?.userId || undefined,
       createdByName: who?.name || undefined,
       priceNote: a.priceNote?.trim() || undefined,

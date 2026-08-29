@@ -50,13 +50,18 @@ export default function SendPaymentLink() {
      خاصاً، والباقةُ سعرٌ استرشادي لا حدّ. والنصّ فارغٌ يعني «اتبع الباقة». */
   const [priceInput, setPriceInput] = useState("");
   const [note, setNote] = useState("");
+  /* الباقة المخصّصة: الأخصائية تحدّد وجباتها وسناكاتها لكل عميل. */
+  const [customMeals, setCustomMeals] = useState("");
+  const [customSnacks, setCustomSnacks] = useState("");
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
 
   const sellable = useMemo(
     () => plans
-      .filter((p) => p.isActive !== false && (p.options || []).length > 0)
+      /* الباقة المخصّصة بلا خيارات — لا تُستبعد، فهي أكثر ما يُباع برابطٍ
+         خاصّ: الأخصائية تحدّد وجباتها وسعرها لكل عميل على حدة. */
+      .filter((p) => p.isActive !== false)
       /* تُرتَّب بالهدف ثم بالمدّة، فالمتشابهةُ اسماً تتجاور وتُقرأ مدّتُها. */
       .sort((a, b) => String(a.nameAr).localeCompare(String(b.nameAr), "ar")
         || (DURATION[a.duration]?.order ?? 9) - (DURATION[b.duration]?.order ?? 9)),
@@ -67,16 +72,22 @@ export default function SendPaymentLink() {
   const planLabel = (p: any) => {
     const base = isRtl ? p.nameAr : (p.nameEn || p.nameAr);
     const d = DURATION[p.duration];
+    if (!(p.options || []).length) return `${base} — ${t("سعر مفتوح", "open price")}`;
     const from = Math.min(...(p.options || []).map((o: any) => Number(o.priceQAR) || 0));
     const price = Number.isFinite(from) && from > 0 ? ` · ${from}${t("+ ر.ق", "+ QAR")}` : "";
     return d ? `${base} — ${t(d.ar, d.en)}${price}` : `${base}${price}`;
   };
   const plan = sellable.find((p) => String(p._id) === planId);
-  const option = plan?.options?.[optionIndex];
+  const openPriced = !!plan && (plan.options || []).length === 0;
+  const option = openPriced ? undefined : plan?.options?.[optionIndex];
   const listPrice = Number(option?.priceQAR) || 0;
   const typed = Number(priceInput);
   const basePrice = priceInput.trim() && Number.isFinite(typed) && typed > 0 ? Math.round(typed) : listPrice;
-  const edited = basePrice !== listPrice;
+  /* في المفتوحة السعرُ ليس «تعديلاً» على سعرٍ قائم — لا سعر قائم أصلاً. */
+  const edited = !openPriced && basePrice !== listPrice;
+  const mealsN = Math.floor(Number(customMeals)) || 0;
+  const snacksN = Math.floor(Number(customSnacks)) || 0;
+  const openIncomplete = openPriced && (mealsN <= 0 || basePrice <= 0);
 
   const check = useQuery(
     api.coupons.validate,
@@ -90,7 +101,7 @@ export default function SendPaymentLink() {
   const tooHigh = finalPrice > MAX_QAR;
 
   const create = async () => {
-    if (!plan || !option) return;
+    if (!plan || (!option && !openPriced)) return;
     if (!name.trim() || phone.replace(/\D/g, "").length < 6) {
       void alertDialog({ message: t("اكتب اسم المشترك ورقم هاتف صحيح", "Enter the customer name and a valid phone") });
       return;
@@ -106,6 +117,8 @@ export default function SendPaymentLink() {
         customerPhone: phone.trim(),
         couponCode: code.trim() ? code.trim().toUpperCase() : undefined,
         priceNote: note.trim() || undefined,
+        customMeals: openPriced ? mealsN : undefined,
+        customSnacks: openPriced ? snacksN : undefined,
         sessionToken,
       });
       setLink(res.paymentLinkUrl);
@@ -123,7 +136,8 @@ export default function SendPaymentLink() {
       `مرحباً ${name.trim()}`,
       `رابط دفع اشتراكك في *${plan ? plan.nameAr : ""}*`
         + (plan && DURATION[plan.duration] ? ` (${DURATION[plan.duration].ar})` : ""),
-      option ? `الخيار: ${option.mealsCount} وجبات + ${option.snacksCount} سناك` : "",
+      option ? `الخيار: ${option.mealsCount} وجبات + ${option.snacksCount} سناك`
+        : (openPriced && mealsN ? `الخيار: ${mealsN} وجبات + ${snacksN} سناك` : ""),
       discount > 0 ? `السعر: ${basePrice} ر.ق — بعد الخصم *${finalPrice} ر.ق*` : `المبلغ: ${finalPrice} ر.ق`,
       "",
       link,
@@ -150,7 +164,7 @@ export default function SendPaymentLink() {
             <Label>{t("الباقة", "Plan")}</Label>
             <select
               value={planId}
-              onChange={(e) => { setPlanId(e.target.value); setOptionIndex(0); setPriceInput(""); reset(); }}
+              onChange={(e) => { setPlanId(e.target.value); setOptionIndex(0); setPriceInput(""); setCustomMeals(""); setCustomSnacks(""); reset(); }}
               className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-bold"
             >
               <option value="">{t("اختر الباقة…", "Choose a plan…")}</option>
@@ -160,7 +174,24 @@ export default function SendPaymentLink() {
             </select>
           </div>
 
-          {plan && (
+          {plan && openPriced && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>{t("عدد الوجبات", "Meals")}</Label>
+                <Input dir="ltr" type="number" inputMode="numeric" min={1}
+                  value={customMeals} onChange={(e) => { setCustomMeals(e.target.value); reset(); }}
+                  placeholder="3" className="font-black" />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("عدد السناكات", "Snacks")}</Label>
+                <Input dir="ltr" type="number" inputMode="numeric" min={0}
+                  value={customSnacks} onChange={(e) => { setCustomSnacks(e.target.value); reset(); }}
+                  placeholder="1" className="font-black" />
+              </div>
+            </div>
+          )}
+
+          {plan && !openPriced && (
             <div className="space-y-2">
               <Label>{t("الخيار", "Option")}</Label>
               <div className="flex flex-wrap gap-2">
@@ -191,23 +222,29 @@ export default function SendPaymentLink() {
           {plan && (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>{t("المبلغ (ر.ق)", "Amount (QAR)")}</Label>
+                <Label>
+                  {openPriced ? t("السعر (ر.ق)", "Price (QAR)") : t("المبلغ (ر.ق)", "Amount (QAR)")}
+                </Label>
                 <Input dir="ltr" type="number" inputMode="numeric"
                   value={priceInput}
                   onChange={(e) => { setPriceInput(e.target.value); reset(); }}
-                  placeholder={String(listPrice)}
+                  placeholder={openPriced ? t("اكتب السعر", "enter price") : String(listPrice)}
                   className={cn("font-black", edited && "border-amber-400 bg-amber-50")} />
                 <p className="text-[11px] font-bold text-slate-400">
-                  {edited
-                    ? t(`سعر الباقة ${listPrice} ر.ق — أنت غيّرته`, `Plan price is ${listPrice} — you changed it`)
-                    : t("اتركه فارغاً ليتبع سعر الباقة", "Leave empty to use the plan price")}
+                  {openPriced
+                    ? t("باقة بلا سعر جاهز — السعر ما تكتبه هنا", "Open-priced plan — the price is what you type")
+                    : edited
+                      ? t(`سعر الباقة ${listPrice} ر.ق — أنت غيّرته`, `Plan price is ${listPrice} — you changed it`)
+                      : t("اتركه فارغاً ليتبع سعر الباقة", "Leave empty to use the plan price")}
                 </p>
               </div>
               <div className="space-y-2">
-                <Label>{t("سبب تغيير السعر", "Reason for the change")}</Label>
+                <Label>
+                  {openPriced ? t("ملاحظة (اختياري)", "Note (optional)") : t("سبب تغيير السعر", "Reason for the change")}
+                </Label>
                 <Input value={note} onChange={(e) => setNote(e.target.value)}
                   placeholder={t("مثال: إضافة وجبتين", "e.g. two extra meals")}
-                  disabled={!edited} />
+                  disabled={!edited && !openPriced} />
                 {edited && !note.trim() && (
                   <p className="text-[11px] font-bold text-amber-600">
                     {t("يُستحسن كتابة السبب — يُحفظ مع الدفعة", "Worth noting — it is saved with the payment")}
@@ -257,9 +294,15 @@ export default function SendPaymentLink() {
                   )}
                 </p>
                 <p className="text-xs font-bold text-slate-500">
-                  {option?.mealsCount} {t("وجبات", "meals")} + {option?.snacksCount} {t("سناك", "snacks")}
+                  {openPriced
+                    ? `${mealsN || "—"} ${t("وجبات", "meals")} + ${snacksN} ${t("سناك", "snacks")}`
+                    : `${option?.mealsCount} ${t("وجبات", "meals")} + ${option?.snacksCount} ${t("سناك", "snacks")}`}
                 </p>
-                {edited && (
+                {openPriced ? (
+                  <p className="mt-1 inline-block rounded bg-sky-100 px-1.5 py-0.5 text-[11px] font-black text-sky-800">
+                    {t("سعر تحدّده أنت", "You set the price")}
+                  </p>
+                ) : edited && (
                   <p className="mt-1 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[11px] font-black text-amber-800">
                     {t(`سعر مخصّص — الباقة ${listPrice} ر.ق`, `Custom price — plan is ${listPrice}`)}
                   </p>
@@ -285,8 +328,16 @@ export default function SendPaymentLink() {
                 </p>
               )}
 
+              {/* الزرّ يُعطَّل بلا الأعداد والسعر؛ فيُقال السبب بدل صمتٍ يُحيّر. */}
+              {openIncomplete && (
+                <p className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-xs font-black text-sky-800">
+                  {t("اكتب عدد الوجبات والسعر لإنشاء الرابط", "Enter the meals count and the price to create the link")}
+                </p>
+              )}
+
               {!link ? (
-                <Button onClick={() => void create()} disabled={busy || tooLow || tooHigh || !option || basePrice <= 0}
+                <Button onClick={() => void create()}
+                  disabled={busy || tooLow || tooHigh || openIncomplete || (!option && !openPriced) || basePrice <= 0}
                   className="h-12 w-full rounded-xl bg-[#0E76AC] font-black hover:bg-[#0a668f]">
                   <Send className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} />
                   {busy ? t("جارٍ الإنشاء…", "Creating…") : t("أنشئ رابط الدفع", "Create payment link")}
