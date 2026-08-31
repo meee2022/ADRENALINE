@@ -8,6 +8,23 @@ import { requireStaff, requireAdmin } from "./sessions";
 import { internalQuery, internalMutation } from "./_generated/server";
 
 /**
+ * تنقية الكود قبل الحفظ وقبل البحث.
+ *
+ * كُتب كودان في الإنتاج بكيبورد عربي، فسبقت الحروفَ حركةُ تشكيل لا شكل لها
+ * على الشاشة (كسرة/كسرتان). فالمحفوظ «ٍSTEM» والمكتوب «STEM»، والبحث لا
+ * يلتقيهما — والرسالة «الكود غير موجود» تُتَّهم بها الكوبونات لا الحرف.
+ * فتُحذف الحركات والمدّة والمحارف الصفرية العرض، وتبقى الحروف العربية
+ * صالحةً في الأكواد كما كانت.
+ */
+export function normalizeCode(code: string): string {
+  return String(code)
+    .replace(/[\u064B-\u0652\u0670\u0640]/g, "")   // تشكيل وتطويل
+    .replace(/[\u200B-\u200F\u2060\uFEFF]/g, "")   // محارف صفرية العرض
+    .trim()
+    .toUpperCase();
+}
+
+/**
  * حكم الكوبون — مصدرٌ واحد يحتكم إليه الطرفان.
  *
  * الاستعلام العام يعرضه للمشترك ليطمئنّ قبل الدفع، والدفع الحقيقي يستدعيه
@@ -60,7 +77,7 @@ export const getByCodeInternal = internalQuery({
   args: { code: v.string() },
   handler: async (ctx, { code }) =>
     await ctx.db.query("coupons")
-      .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("code", normalizeCode(code)))
       .first(),
 });
 
@@ -72,7 +89,7 @@ export const countUseInternal = internalMutation({
   args: { code: v.string() },
   handler: async (ctx, { code }) => {
     const c = await ctx.db.query("coupons")
-      .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("code", normalizeCode(code)))
       .first();
     if (!c) return false;
     await ctx.db.patch(c._id, { usedCount: Number(c.usedCount || 0) + 1 });
@@ -102,7 +119,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    const code = args.code.trim().toUpperCase();
+    const code = normalizeCode(args.code);
     const existing = await ctx.db
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", code))
@@ -121,6 +138,71 @@ export const create = mutation({
       isActive: true,
       createdAt: Date.now(),
     });
+  },
+});
+
+/**
+ * تعديل كوبون قائم.
+ *
+ * كان الإنشاء والحذف وحدهما، فتغييرُ نسبةٍ من ٢٠٪ إلى ١٥٪ يعني حذفَ الكود
+ * وإنشاءه من جديد — وقد يكون منشوراً على إنستجرام وفي جيوب الناس. فيُعدَّل
+ * في مكانه، ويبقى `usedCount` كما هو لأنه سجلُّ ما حدث لا إعدادٌ يُضبط.
+ * والحقول الاختيارية تُمحى بإرسالها فارغةً صراحةً.
+ */
+export const update = mutation({
+  args: {
+    id: v.id("coupons"),
+    code: v.optional(v.string()),
+    discountType: v.optional(v.union(v.literal("PERCENT"), v.literal("FIXED"))),
+    discountValue: v.optional(v.number()),
+    maxUses: v.optional(v.union(v.number(), v.null())),
+    expiresAt: v.optional(v.union(v.string(), v.null())),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
+    minOrderQAR: v.optional(v.union(v.number(), v.null())),
+    durations: v.optional(v.union(v.array(v.string()), v.null())),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx, args.sessionToken);
+    const coupon = await ctx.db.get(args.id);
+    if (!coupon) throw new Error("الكود غير موجود");
+
+    const patch: Record<string, any> = {};
+
+    if (args.code !== undefined) {
+      const code = normalizeCode(args.code);
+      if (!code) throw new Error("الكود لا يصحّ فارغاً");
+      if (code !== coupon.code) {
+        const clash = await ctx.db.query("coupons")
+          .withIndex("by_code", (q) => q.eq("code", code)).first();
+        if (clash) throw new Error("الكود موجود مسبقاً");
+        patch.code = code;
+      }
+    }
+    if (args.discountType !== undefined) patch.discountType = args.discountType;
+    if (args.discountValue !== undefined) {
+      if (!(args.discountValue > 0)) throw new Error("قيمة الخصم لا تصحّ صفراً");
+      if (args.discountType === "PERCENT" && args.discountValue > 100) {
+        throw new Error("النسبة لا تتجاوز ١٠٠٪");
+      }
+      patch.discountValue = args.discountValue;
+    }
+    if (args.restaurantKey !== undefined) patch.restaurantKey = args.restaurantKey;
+    if (args.maxUses !== undefined) {
+      /* السقف دون ما استُهلك يجعل الكود ميّتاً بلا سبب ظاهر. */
+      if (args.maxUses !== null && args.maxUses < Number(coupon.usedCount || 0)) {
+        throw new Error(`الكود استُخدم ${coupon.usedCount} مرة — السقف لا يقلّ عنها`);
+      }
+      patch.maxUses = args.maxUses ?? undefined;
+    }
+    if (args.expiresAt !== undefined) patch.expiresAt = args.expiresAt || undefined;
+    if (args.minOrderQAR !== undefined) patch.minOrderQAR = args.minOrderQAR ?? undefined;
+    if (args.durations !== undefined) {
+      patch.durations = args.durations && args.durations.length ? args.durations : undefined;
+    }
+
+    await ctx.db.patch(args.id, patch);
+    return { success: true };
   },
 });
 
@@ -156,7 +238,7 @@ export const validate = query({
   handler: async (ctx, { code, orderTotal, restaurantKey, duration }) => {
     const coupon = await ctx.db
       .query("coupons")
-      .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("code", normalizeCode(code)))
       .first();
     const j = judgeCoupon(coupon, orderTotal, restaurantKey || "ADRENALINE", duration);
     if (!j.valid) return { valid: false, error: j.error };
@@ -177,7 +259,7 @@ export const incrementUsage = mutation({
     await requireAdmin(ctx, sessionToken);
     const coupon = await ctx.db
       .query("coupons")
-      .withIndex("by_code", (q) => q.eq("code", code.trim().toUpperCase()))
+      .withIndex("by_code", (q) => q.eq("code", normalizeCode(code)))
       .first();
     if (!coupon) throw new Error("Coupon not found");
     if (!coupon.isActive) throw new Error("Coupon inactive");

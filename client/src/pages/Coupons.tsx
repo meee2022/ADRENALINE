@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Tag, Trash2, Power, Copy, Image } from "lucide-react";
+import { Plus, Tag, Trash2, Power, Copy, Image, Pencil } from "lucide-react";
 import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 import { DashboardHeader } from "@/components/DashboardHeader";
@@ -30,8 +30,11 @@ export default function Coupons() {
   const createMutation = useMutation(api.coupons.create);
   const removeMutation = useMutation(api.coupons.remove);
   const toggleMutation = useMutation(api.coupons.toggleActive);
+  const updateMutation = useMutation(api.coupons.update);
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  /* الحوار نفسه للإنشاء والتعديل: الحقول واحدة، والمعرَّف وحده يفرّق. */
+  const [editId, setEditId] = useState<any>(null);
   const [form, setForm] = useState({
     code: "",
     discountType: "PERCENT" as "PERCENT" | "FIXED",
@@ -68,6 +71,57 @@ export default function Coupons() {
     }
   };
 
+  const blank = {
+    code: "", discountType: "PERCENT" as "PERCENT" | "FIXED", discountValue: "",
+    maxUses: "", expiresAt: "", minOrderQAR: "",
+    restaurantKey: "ADRENALINE" as "ADRENALINE" | "NUTRI_RESET", durations: [] as string[],
+  };
+
+  const openNew = () => { setEditId(null); setForm(blank); setDialogOpen(true); };
+
+  const openEdit = (c: any) => {
+    setEditId(c._id);
+    setForm({
+      code: c.code,
+      discountType: c.discountType,
+      discountValue: String(c.discountValue ?? ""),
+      maxUses: c.maxUses != null ? String(c.maxUses) : "",
+      expiresAt: c.expiresAt || "",
+      minOrderQAR: c.minOrderQAR != null ? String(c.minOrderQAR) : "",
+      restaurantKey: c.restaurantKey || "ADRENALINE",
+      durations: Array.isArray(c.durations) ? c.durations : [],
+    });
+    setDialogOpen(true);
+  };
+
+  /* الحقول الاختيارية تُرسَل null حين تُفرَّغ، لا undefined — وإلا فُهم
+     المحوُ على أنه «لم يُمسّ» وبقيت القيمة القديمة. */
+  const handleUpdate = async () => {
+    if (!form.code || !form.discountValue) {
+      toast({ title: t("خطأ","Error"), description: t("املأ الحقول المطلوبة","Fill the required fields"), variant: "destructive" });
+      return;
+    }
+    try {
+      await updateMutation({
+        id: editId,
+        code: form.code,
+        discountType: form.discountType,
+        discountValue: parseFloat(form.discountValue),
+        maxUses: form.maxUses ? parseInt(form.maxUses) : null,
+        expiresAt: form.expiresAt || null,
+        minOrderQAR: form.minOrderQAR ? parseFloat(form.minOrderQAR) : null,
+        restaurantKey: form.restaurantKey,
+        durations: form.durations.length ? form.durations : null,
+        sessionToken,
+      });
+      toast({ title: t("تم الحفظ","Saved"), description: form.code });
+      setDialogOpen(false);
+      setEditId(null);
+    } catch (e: any) {
+      toast({ title: t("خطأ","Error"), description: e.message, variant: "destructive" });
+    }
+  };
+
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast({ title: t("تم النسخ","Copied"), description: code });
@@ -80,7 +134,7 @@ export default function Coupons() {
         titleAr="كوبونات الخصم" titleEn="Coupons"
         subtitleAr="إنشاء وإدارة أكواد الخصم" subtitleEn="Create & manage discount codes"
         actions={
-          <Button onClick={() => setDialogOpen(true)} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
+          <Button onClick={openNew} className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm gap-2">
             <Plus className="h-5 w-5" />
             {t("كوبون جديد","New coupon")}
           </Button>
@@ -152,6 +206,15 @@ export default function Coupons() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => openEdit(c)}
+                          title={t("تعديل","Edit")}
+                          className="text-slate-600"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => toggleMutation({ id: c._id, sessionToken })}
                           title={t("تفعيل/إيقاف","Enable/Disable")}
                         >
@@ -192,10 +255,10 @@ export default function Coupons() {
         </CardContent>
       </Card>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setEditId(null); }}>
         <DialogContent dir={isRtl ? "rtl" : "ltr"}>
           <DialogHeader>
-            <DialogTitle>{t("كوبون خصم جديد","New discount coupon")}</DialogTitle>
+            <DialogTitle>{editId ? t("تعديل الكوبون","Edit coupon") : t("كوبون خصم جديد","New discount coupon")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -308,7 +371,9 @@ export default function Coupons() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               {t("إلغاء","Cancel")}
             </Button>
-            <Button onClick={handleCreate}>{t("إنشاء الكوبون","Create coupon")}</Button>
+            <Button onClick={editId ? handleUpdate : handleCreate}>
+              {editId ? t("حفظ التعديل","Save changes") : t("إنشاء الكوبون","Create coupon")}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
