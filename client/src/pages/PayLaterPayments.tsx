@@ -160,6 +160,8 @@ export default function PayLaterPayments() {
                   <div className="mt-2 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-1.5">
                     <span className="text-[11px] font-black text-sky-800">
                       {t("سعر مخصّص", "Custom price")}
+                      {r.customMeals ? ` — ${r.customMeals} ${t("وجبات", "meals")} + ${r.customSnacks || 0} ${t("سناك", "snacks")}` : ""}
+                      {r.customDuration ? ` — ${{ week: "أسبوع", two_weeks: "أسبوعان", month: "شهر" }[r.customDuration as string] || r.customDuration}` : ""}
                       {r.createdByName ? ` — ${r.createdByName}` : ""}
                       {r.priceNote ? ` — ${r.priceNote}` : ""}
                     </span>

@@ -53,6 +53,9 @@ export default function SendPaymentLink() {
   /* الباقة المخصّصة: الأخصائية تحدّد وجباتها وسناكاتها لكل عميل. */
   const [customMeals, setCustomMeals] = useState("");
   const [customSnacks, setCustomSnacks] = useState("");
+  /* المخصّصة تُباع أسبوعاً وشهراً معاً، ومدّتها في الجدول واحدة — والكوبونات
+     محصورة بالشهرية. فتُسأل المدّة هنا بدل أن تُفترض ويُصرف خصمٌ في غير محلّه. */
+  const [customDuration, setCustomDuration] = useState("month");
   const [busy, setBusy] = useState(false);
   const [link, setLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -92,7 +95,8 @@ export default function SendPaymentLink() {
   const check = useQuery(
     api.coupons.validate,
     code.trim() && basePrice
-      ? { code: code.trim().toUpperCase(), orderTotal: basePrice, restaurantKey: "ADRENALINE", duration: plan?.duration }
+      ? { code: code.trim().toUpperCase(), orderTotal: basePrice, restaurantKey: "ADRENALINE",
+          duration: openPriced ? customDuration : plan?.duration }
       : "skip",
   ) as any;
   const discount = check?.valid ? Number(check.discount) : 0;
@@ -119,6 +123,7 @@ export default function SendPaymentLink() {
         priceNote: note.trim() || undefined,
         customMeals: openPriced ? mealsN : undefined,
         customSnacks: openPriced ? snacksN : undefined,
+        customDuration: openPriced ? customDuration : undefined,
         sessionToken,
       });
       setLink(res.paymentLinkUrl);
@@ -135,7 +140,10 @@ export default function SendPaymentLink() {
     const lines = [
       `مرحباً ${name.trim()}`,
       `رابط دفع اشتراكك في *${plan ? plan.nameAr : ""}*`
-        + (plan && DURATION[plan.duration] ? ` (${DURATION[plan.duration].ar})` : ""),
+        + (() => {
+          const d = plan ? DURATION[openPriced ? customDuration : plan.duration] : undefined;
+          return d ? ` (${d.ar})` : "";
+        })(),
       option ? `الخيار: ${option.mealsCount} وجبات + ${option.snacksCount} سناك`
         : (openPriced && mealsN ? `الخيار: ${mealsN} وجبات + ${snacksN} سناك` : ""),
       discount > 0 ? `السعر: ${basePrice} ر.ق — بعد الخصم *${finalPrice} ر.ق*` : `المبلغ: ${finalPrice} ر.ق`,
@@ -187,6 +195,25 @@ export default function SendPaymentLink() {
                 <Input dir="ltr" type="number" inputMode="numeric" min={0}
                   value={customSnacks} onChange={(e) => { setCustomSnacks(e.target.value); reset(); }}
                   placeholder="1" className="font-black" />
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <Label>{t("المدّة", "Duration")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {(["week", "two_weeks", "month"] as const).map((d) => (
+                    <button key={d} type="button"
+                      onClick={() => { setCustomDuration(d); reset(); }}
+                      className={cn("rounded-xl border px-3 py-2 text-xs font-black",
+                        customDuration === d
+                          ? "border-[#0E76AC] bg-[#0E76AC] text-white"
+                          : "border-slate-200 bg-white text-slate-600")}>
+                      {t(DURATION[d].ar, DURATION[d].en)}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] font-bold text-slate-400">
+                  {t("تحدّد أي كوبون يسري — أكواد الخصم على الشهرية فقط",
+                     "Decides which coupons apply — discount codes are monthly-only")}
+                </p>
               </div>
             </div>
           )}
@@ -287,9 +314,10 @@ export default function SendPaymentLink() {
               <div className="rounded-xl bg-slate-50 p-3">
                 <p className="font-black text-[#0F1516]">
                   {isRtl ? plan.nameAr : (plan.nameEn || plan.nameAr)}
-                  {DURATION[plan.duration] && (
+                  {(openPriced ? DURATION[customDuration] : DURATION[plan.duration]) && (
                     <span className="ms-2 rounded bg-slate-200 px-1.5 py-0.5 text-[11px] font-black text-slate-700">
-                      {t(DURATION[plan.duration].ar, DURATION[plan.duration].en)}
+                      {t(DURATION[openPriced ? customDuration : plan.duration].ar,
+                         DURATION[openPriced ? customDuration : plan.duration].en)}
                     </span>
                   )}
                 </p>

@@ -36,6 +36,7 @@ export const saveAttempt = internalMutation({
     customPrice: v.optional(v.boolean()),
     customMeals: v.optional(v.number()),
     customSnacks: v.optional(v.number()),
+    customDuration: v.optional(v.string()),
     createdByUserId: v.optional(v.id("users")),
     createdByName: v.optional(v.string()),
     priceNote: v.optional(v.string()),
@@ -292,6 +293,9 @@ export const createStaffLink = action({
     /* للباقة المخصّصة وحدها — الطاقم يحدّد الأعداد لأنها ليست في الباقة. */
     customMeals: v.optional(v.number()),
     customSnacks: v.optional(v.number()),
+    /* الباقة المخصّصة تُباع أسبوعاً وشهراً، ومدّتها في الجدول واحدة. والكوبونات
+       محصورة بالشهرية، فمدّةٌ مفترَضة تصرف خصماً على اشتراك أسبوع. */
+    customDuration: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, a): Promise<any> => {
@@ -315,7 +319,8 @@ export const createStaffLink = action({
     let couponDiscount = 0;
     if (a.couponCode && a.couponCode.trim()) {
       const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
-      const j = judgeCoupon(coupon, base, "ADRENALINE", plan.duration);
+      const duration = openPriced && a.customDuration ? a.customDuration : plan.duration;
+      const j = judgeCoupon(coupon, base, "ADRENALINE", duration);
       if (!j.valid) throw new Error(j.error);
       amount = j.finalTotal;
       couponDiscount = j.discount;
@@ -350,6 +355,7 @@ export const createStaffLink = action({
       customPrice: openPriced ? true : base !== listPrice,
       customMeals: openPriced ? Number(a.customMeals) : undefined,
       customSnacks: openPriced ? (Number(a.customSnacks) || 0) : undefined,
+      customDuration: openPriced ? a.customDuration : undefined,
       createdByUserId: who?.userId || undefined,
       createdByName: who?.name || undefined,
       priceNote: a.priceNote?.trim() || undefined,

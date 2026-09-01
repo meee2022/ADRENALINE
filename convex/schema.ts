@@ -951,6 +951,7 @@ export default defineSchema({
        والسعر لكل عميل. فتُحفظ الأعداد هنا، وإلا لم يُعرف لاحقاً ما بيع. */
     customMeals: v.optional(v.number()),
     customSnacks: v.optional(v.number()),
+    customDuration: v.optional(v.string()),
     createdByUserId: v.optional(v.id("users")),
     createdByName: v.optional(v.string()),
     priceNote: v.optional(v.string()),
