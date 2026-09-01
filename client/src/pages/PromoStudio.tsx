@@ -67,6 +67,8 @@ const BRANDS: Record<Brand, {
   ADRENALINE: {
     name: "ADRENALINE", logo: "/adrenaline-logo-dark.png", ink: "#F6FBFE", accent: "#3CC4F0", deep: "#071E31",
     images: [
+      { src: "/promo-ar-gulf-coach-real-meal-v2.png", ar: "مدربة خليجية مع علبة الوجبة الحقيقية", en: "Gulf coach with the real meal bowl", lang: "AR" },
+      { src: "/promo-en-gulf-women-real-meals-v2.png", ar: "صديقتان مع علب وجبات المطعم", en: "Gulf friends with real meal bowls", lang: "EN" },
       { src: "/promo-ar-female-coach-box-v1.png", ar: "مدربة خليجية مع بوكس", en: "Gulf female coach with box", lang: "AR" },
       { src: "/promo-ar-women-meals-v1.png", ar: "صديقتان مع وجبات أدرينالين", en: "Friends enjoying Adrenaline meals", lang: "AR" },
       { src: "/promo-en-female-coach-meal-v1.png", ar: "مدربة مع الوجبة والبوكس", en: "Female coach with meal and box", lang: "EN" },

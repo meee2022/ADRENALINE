@@ -51,19 +51,15 @@ export default function PublicPlansNew() {
   const comparisonPlans = plans.filter(p => p.showInComparison);
 
   const fallbackPlanImage = (plan: any) => {
-    const key = `${plan.slug || ""} ${plan.nameEn || ""}`.toLowerCase();
-    if (key.includes("diet") || key.includes("tanshif")) return "/plan-tanshif-real.png";
-    if (key.includes("fitness") || key.includes("liyaqa")) return "/plan-liyaqa-real.png";
-    if (key.includes("bulk") || key.includes("tadkhim")) return "/plan-tadkhim-real.jpg";
-    return "/adrenaline-logo-full.png";
+    const key = `${plan.slug || ""} ${plan.nameEn || ""} ${plan.nameAr || ""}`.toLowerCase();
+    if (key.includes("diet") || key.includes("tanshif") || key.includes("تنظيف") || key.includes("تنشيف")) return "/plan-tanshif-real.jpg";
+    if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقت") || key.includes("لياقة")) return "/plan-liyaqa-real.jpg";
+    if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-tadkhim-real.jpg";
+    return "/custom-plan-meals.jpg";
   };
 
   const planImage = (plan: any) => {
-    if (!plan.options || plan.options.length === 0) return "/custom-plan-meals.png";
-    const source = String(plan.imageUrl || "").trim();
-    // Storage-backed images are resolved to a fresh URL by publicPlans queries.
-    // Broken legacy URLs still fall back through the image onError handler.
-    return source || fallbackPlanImage(plan);
+    return fallbackPlanImage(plan);
   };
 
   const phoneRaw = (settings?.phone || "+97451144366").replace(/\D/g, "");

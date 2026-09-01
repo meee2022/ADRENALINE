@@ -22,14 +22,11 @@ import { cn } from "@/lib/utils";
 /** صورة بطاقة الباقة — روابط Convex Storage القديمة المخزّنة على الباقات ترجع 404،
  *  فنستبدلها بالأصول الثابتة المرفقة (نفس منطق صفحة الخطط PublicPlansNew). */
 function planCardImage(plan: any): string {
-  if (!plan?.options || plan.options.length === 0) return "/custom-plan-meals.png";
-  const source = String(plan?.imageUrl || "").trim();
-  if (source) return source;
-  const key = `${plan?.slug || ""} ${plan?.nameEn || ""}`.toLowerCase();
-  if (key.includes("diet") || key.includes("tanshif")) return "/plan-tanshif-real.png";
-  if (key.includes("fitness") || key.includes("liyaqa")) return "/plan-liyaqa-real.png";
-  if (key.includes("bulk") || key.includes("tadkhim")) return "/plan-tadkhim-real.jpg";
-  return "/adrenaline-logo-full.png";
+  const key = `${plan?.slug || ""} ${plan?.nameEn || ""} ${plan?.nameAr || ""}`.toLowerCase();
+  if (key.includes("diet") || key.includes("tanshif") || key.includes("تنشيف") || key.includes("تنظيف")) return "/plan-tanshif-real.jpg";
+  if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقة") || key.includes("لياقت")) return "/plan-liyaqa-real.jpg";
+  if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-tadkhim-real.jpg";
+  return "/custom-plan-meals.jpg";
 }
 
 export default function HomePage() {

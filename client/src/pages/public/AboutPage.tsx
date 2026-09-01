@@ -225,6 +225,9 @@ export default function AboutPage() {
 
           /* 3-col → 1-col */
           .ab-grid-3 { grid-template-columns: 1fr !important; }
+          /* صورة الفعالية الرئيسية تمتدّ عمودين على الشاشة الواسعة، وعمودٌ
+             واحدٌ هنا — وإلا وُلِّد عمودٌ ثانٍ ضمنيّ وخرجت الشبكة عن الشاشة. */
+          .ab-ev-lead { grid-column: span 1 !important; }
 
           /* General section padding */
           section { padding: 40px 0 !important; }
@@ -1028,9 +1031,14 @@ export default function AboutPage() {
             { src:"/events/event-5.jpg", cap:{ar:"حلويات وضيافة صحية",   en:"Healthy desserts and hospitality"} },
             { src:"/events/event-6.jpg", cap:{ar:"أعداد كبيرة بترتيب دقيق", en:"Large volumes, precisely organised"} },
           ].map((g,i)=>(
-            <figure key={i} style={{ margin:0, borderRadius:16, overflow:"hidden",
-              border:`1px solid ${B.line}`, boxShadow:SD, background:B.surf }}>
-              <div style={{ height:220, overflow:"hidden", background:B.bg2 }}>
+            /* الصورة الأولى تأخذ عمودين وارتفاعاً أكبر: هي أوضح دليلٍ في القسم
+               (شعارا الطرفين واللافتة والطلاب في لقطة واحدة)، ولأن القسم قد
+               يبدأ بصورةٍ واحدة فلا تبدو تائهةً في ثلث الصفّ. */
+            <figure key={i} className={i === 0 ? "ab-ev-lead" : undefined}
+              style={{ margin:0, borderRadius:16, overflow:"hidden",
+                gridColumn: i === 0 ? "span 2" : undefined,
+                border:`1px solid ${B.line}`, boxShadow:SD, background:B.surf }}>
+              <div style={{ height:i === 0 ? 340 : 220, overflow:"hidden", background:B.bg2 }}>
                 <img src={g.src} alt={t(g.cap,isAr)} loading="lazy" crossOrigin="anonymous"
                   style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
                   onError={(e)=>{ const f=e.currentTarget.closest('figure') as HTMLElement|null; if(f) f.style.display="none"; }}/>
