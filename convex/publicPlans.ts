@@ -145,19 +145,31 @@ export const remove = mutation({
   },
 });
 
+/**
+ * يُعيد صور الباقات إلى أصول الموقع المرفقة.
+ *
+ * كان يكتب مسارات ‎.png‎ لم تعد موجودة (ضُغطت الصور وصارت ‎.jpg‎)، فتشغيله
+ * كان يُفرغ بطاقات الباقات من صورها. وكان يطابق بـ«tanshif/liyaqa» ولا
+ * slug في القاعدة يحملها — الأسماء الفعلية diet/fitness/bulking-pack.
+ */
 export const updateDefaultPlanImages = mutation({
   args: { sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    const plans = await ctx.db.query("publicPlans").collect();
-    for (const plan of plans) {
-      if (plan.slug === "tanshif" || plan.slug.includes("tanshif") || plan.nameAr.includes("تنشيف") || plan.nameAr.includes("التنشيف")) {
-        await ctx.db.patch(plan._id, { imageUrl: "/plan-tanshif-real.png" });
-      } else if (plan.slug === "liyaqa" || plan.slug.includes("liyaqa") || plan.nameAr.includes("لياقة") || plan.nameAr.includes("اللياقة")) {
-        await ctx.db.patch(plan._id, { imageUrl: "/plan-liyaqa-real.png" });
-      } else if (plan.slug === "tadkhim" || plan.slug.includes("tadkhim") || plan.nameAr.includes("تضخيم") || plan.nameAr.includes("التضخيم")) {
-        await ctx.db.patch(plan._id, { imageUrl: "/plan-tadkhim-real.jpg" });
+    let updated = 0;
+    for (const plan of await ctx.db.query("publicPlans").collect()) {
+      const key = `${plan.slug || ""} ${plan.nameEn || ""} ${plan.nameAr || ""}`.toLowerCase();
+      const asset =
+        !plan.options || plan.options.length === 0 ? "/custom-plan-meals.jpg"
+        : key.includes("diet") || key.includes("tanshif") || key.includes("تنشيف") ? "/plan-tanshif-real.jpg"
+        : key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقة") ? "/plan-liyaqa-real.jpg"
+        : key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم") ? "/plan-tadkhim-real.jpg"
+        : null;
+      if (asset && plan.imageUrl !== asset) {
+        await ctx.db.patch(plan._id, { imageUrl: asset });
+        updated++;
       }
     }
-  }
+    return { updated };
+  },
 });
