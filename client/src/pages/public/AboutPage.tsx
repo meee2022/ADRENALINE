@@ -183,11 +183,12 @@ export default function AboutPage() {
     { n:"06", ar:"ماذا نقدّم",            en:"What We Offer",        id:"offer"    },
     { n:"07", ar:"من قائمتنا",            en:"From Our Menu",        id:"menu"     },
     { n:"08", ar:"برامج الاشتراكات",      en:"Subscription Plans",   id:"plans"    },
-    { n:"09", ar:"من مطبخنا إليك",        en:"From Kitchen to You",  id:"process"  },
-    { n:"10", ar:"مواقعنا",               en:"Our Locations",        id:"locations"},
-    { n:"11", ar:"من مطبخنا",             en:"From Our Kitchen",     id:"gallery"  },
-    { n:"12", ar:"لماذا أدرينالين",       en:"Why Adrenaline",       id:"why"      },
-    { n:"13", ar:"تواصل معنا",            en:"Contact Us",           id:"contact"  },
+    { n:"09", ar:"الفعاليات والمناسبات",  en:"Events & Catering",    id:"events"   },
+    { n:"10", ar:"من مطبخنا إليك",        en:"From Kitchen to You",  id:"process"  },
+    { n:"11", ar:"مواقعنا",               en:"Our Locations",        id:"locations"},
+    { n:"12", ar:"من مطبخنا",             en:"From Our Kitchen",     id:"gallery"  },
+    { n:"13", ar:"لماذا أدرينالين",       en:"Why Adrenaline",       id:"why"      },
+    { n:"14", ar:"تواصل معنا",            en:"Contact Us",           id:"contact"  },
   ];
 
   const catLabel = (cat: string) => {
@@ -968,6 +969,89 @@ export default function AboutPage() {
             </button>
           </div>
         )}
+      </Sec>
+
+      {/* ══ EVENTS & CATERING ══
+          الزائر يقرأ الاشتراكات فيظنّ أنها كلُّ ما نصنع. والمطبخ نفسه يغطّي
+          فعاليةَ وزارةٍ وحفلَ مئة ضيف، فيُقال ذلك صراحةً وبصور تُثبته. */}
+      <Sec id="events">
+        <CentreHead eyeAr="خدمات الضيافة" eyeEn="CATERING & EVENTS"
+          titleAr="لسنا اشتراكات فقط — نغطّي فعالياتكم"
+          titleEn="More Than Subscriptions — We Cater Your Events"
+          subAr="من اجتماعٍ في وزارة إلى حفلٍ يضمّ المئات: التخطيط والتحضير والتقديم من مطبخنا نفسه."
+          subEn="From a ministry meeting to a hall of hundreds — planned, prepared and served from our own kitchen."
+          isAr={isAr}/>
+
+        <div className="ab-grid-3" style={{ display:"grid",
+          gridTemplateColumns:"repeat(3,1fr)", gap:16, marginBottom:40 }}>
+          {[
+            { ar:"الوزارات والجهات الحكومية", en:"Ministries & Government",
+              dAr:"اجتماعات ومؤتمرات رسمية بفواتير وأوراق معتمدة",
+              dEn:"Official meetings and conferences, with proper invoicing" },
+            { ar:"الشركات والمكاتب", en:"Corporate & Offices",
+              dAr:"ضيافة يومية أو مناسبة واحدة — نلتزم بموعدكم",
+              dEn:"Daily hospitality or a one-off event — on your schedule" },
+            { ar:"المؤتمرات والمعارض", en:"Conferences & Expos",
+              dAr:"أعداد كبيرة وتقديم منظّم على مدار اليوم",
+              dEn:"Large volumes, served in an organised flow all day" },
+            { ar:"الأعراس والمناسبات الخاصة", en:"Weddings & Private Events",
+              dAr:"قوائم تُفصَّل معكم، وتقديم يليق بالمناسبة",
+              dEn:"Menus tailored with you, served as the occasion deserves" },
+            { ar:"التخرّج وأعياد الميلاد", en:"Graduations & Birthdays",
+              dAr:"بوفيهات وحلويات صحية بأعداد مرنة",
+              dEn:"Buffets and healthy desserts, flexible headcounts" },
+            { ar:"الأندية والفعاليات الرياضية", en:"Clubs & Sports Events",
+              dAr:"وجباتٌ محسوبة السعرات لطبيعة الحدث",
+              dEn:"Calorie-counted catering built for the occasion" },
+          ].map((c,i)=>(
+            <div key={i} style={{ background:B.surf, border:`1px solid ${B.line}`,
+              borderRadius:16, padding:"18px 20px", boxShadow:"0 2px 8px rgba(14,42,74,.05)" }}>
+              <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:15, fontWeight:800,
+                color:B.ink, marginBottom:6 }}>{t(c,isAr)}</div>
+              <div style={{ fontFamily:"'Cairo',sans-serif", fontSize:13, lineHeight:1.7,
+                color:B.muted }}>{isAr ? c.dAr : c.dEn}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* الصور دليلٌ لا زينة: الصورة الغائبة تُخفي بطاقتها ولا تترك إطاراً فارغاً. */}
+        <div className="ab-grid-3" style={{ display:"grid",
+          gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          {[
+            { src:"/events/event-1.jpg", cap:{ar:"تغطية فعالية حكومية",  en:"Government event catering"} },
+            { src:"/events/event-2.jpg", cap:{ar:"ضيافة مؤتمرات وشركات", en:"Conference & corporate hospitality"} },
+            { src:"/events/event-3.jpg", cap:{ar:"بوفيه مناسبات خاصة",   en:"Private event buffet"} },
+            { src:"/events/event-4.jpg", cap:{ar:"تجهيز وتقديم في الموقع", en:"On-site setup and service"} },
+            { src:"/events/event-5.jpg", cap:{ar:"حلويات وضيافة صحية",   en:"Healthy desserts and hospitality"} },
+            { src:"/events/event-6.jpg", cap:{ar:"أعداد كبيرة بترتيب دقيق", en:"Large volumes, precisely organised"} },
+          ].map((g,i)=>(
+            <figure key={i} style={{ margin:0, borderRadius:16, overflow:"hidden",
+              border:`1px solid ${B.line}`, boxShadow:SD, background:B.surf }}>
+              <div style={{ height:220, overflow:"hidden", background:B.bg2 }}>
+                <img src={g.src} alt={t(g.cap,isAr)} loading="lazy" crossOrigin="anonymous"
+                  style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }}
+                  onError={(e)=>{ const f=e.currentTarget.closest('figure') as HTMLElement|null; if(f) f.style.display="none"; }}/>
+              </div>
+              <figcaption style={{ padding:"11px 14px", fontFamily:"'Cairo',sans-serif",
+                fontSize:12.5, fontWeight:700, color:B.ink, textAlign:"center" }}>
+                {t(g.cap,isAr)}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <div style={{ display:"flex", justifyContent:"center", marginTop:36 }}>
+          <a href={`https://wa.me/${phone}?text=${encodeURIComponent(isAr
+            ? "مرحباً 👋\nأرغب في عرض سعر لتغطية فعالية.\nنوع المناسبة:\nالتاريخ:\nعدد الضيوف:"
+            : "Hello 👋\nI'd like a quote for event catering.\nOccasion:\nDate:\nGuests:")}`}
+            target="_blank" rel="noreferrer"
+            style={{ minHeight:48, display:"inline-flex", alignItems:"center", gap:10,
+              padding:"13px 30px", borderRadius:999, background:B.accent, color:"#fff",
+              textDecoration:"none", fontFamily:"'Cairo',sans-serif", fontSize:15, fontWeight:800,
+              boxShadow:"0 10px 24px -10px rgba(14,118,172,.7)" }}>
+            {isAr ? "اطلب عرض سعر لفعاليتك" : "Request an event quote"}
+          </a>
+        </div>
       </Sec>
 
       {/* ══ 10 PLANS ══ */}
