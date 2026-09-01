@@ -93,6 +93,7 @@ export default function OrderReviewDetail() {
   const swapMealMutation = useMutation(api.customerOrders.updateOrderItemMeal);
   const removeItemMutation = useMutation(api.customerOrders.removeOrderItem);
   const noteItemMutation = useMutation(api.customerOrders.updateOrderItemNote);
+  const replaceAllMutation = useMutation(api.customerOrders.replaceMealAcrossOrder);
   const getShareTokenMut = useMutation(api.customerOrders.getPlanShareToken);
   const [sharing, setSharing] = useState(false);
 
@@ -179,11 +180,15 @@ export default function OrderReviewDetail() {
   };
   const [swapTarget, setSwapTarget] = useState<any>(null);
   const [swapping, setSwapping] = useState(false);
+  /* التبديل موضعٌ واحد أو الخطة كلّها — والمشترك يقول «مش عايز الوجبة دي»
+     لا «مش عايزها يوم الثلاثاء». */
+  const [swapEverywhere, setSwapEverywhere] = useState(false);
   const [swapScope, setSwapScope] = useState<"day" | "all">("day");
   const [swapSearch, setSwapSearch] = useState("");
   const [swapCategory, setSwapCategory] = useState("all");
   useEffect(() => {
     if (!swapTarget) return;
+    setSwapEverywhere(false);
     setSwapScope("day");
     setSwapSearch("");
     setSwapCategory("all");
@@ -230,14 +235,39 @@ export default function OrderReviewDetail() {
   }, [activeMeals, isScheduledForTarget, swapCategory, swapScope, swapSearch, swapTarget]);
 
   const doSwap = async (m: any) => {
-    if (!swapTarget) return;
+    if (!swapTarget || !orderData) return;
     setSwapping(true);
     try {
-      await swapMealMutation({
-        sessionToken,
-        itemId: swapTarget._id,
-        newMealId: m._id,
-      });
+      if (swapEverywhere) {
+        const r: any = await replaceAllMutation({
+          sessionToken,
+          orderId: orderData._id,
+          oldMealId: swapTarget.mealId,
+          newMealId: m._id,
+        });
+        /* ما لم يتبدّل يُقال صراحةً: الأيام التي طبخها المطبخ لا تُعدَّل، ولو
+           صمتنا عنها ظنّت الأخصائية أن الخطة كلّها تغيّرت. */
+        void alertDialog({
+          message: t(
+            `تم التبديل في ${r.replaced} ${r.replaced === 1 ? "موضع" : "مواضع"}.`
+              + (r.skipped?.length ? `
+
+⚠️ لم تتغيّر ${r.skipped.length} أيام لأن المطبخ جهّزها:
+${r.skipped.join("، ")}` : ""),
+            `Replaced in ${r.replaced} place(s).`
+              + (r.skipped?.length ? `
+
+⚠️ ${r.skipped.length} day(s) unchanged — already prepared:
+${r.skipped.join(", ")}` : ""),
+          ),
+        });
+      } else {
+        await swapMealMutation({
+          sessionToken,
+          itemId: swapTarget._id,
+          newMealId: m._id,
+        });
+      }
       setSwapTarget(null);
     } catch (e: any) {
       console.error("swap failed", e);
@@ -1267,6 +1297,29 @@ export default function OrderReviewDetail() {
                 </span>
               ) : null}
             </p>
+            {/* عدد مواضع هذه الوجبة في الخطة — يُقرأ قبل الضغط لا بعده. */}
+            {(() => {
+              const times = (orderData?.items || []).filter(
+                (i: any) => String(i.mealId) === String(swapTarget.mealId)).length;
+              if (times < 2) return null;
+              return (
+                <div className="mb-4 rounded-xl border-2 border-[#0E76AC]/30 bg-[#0E76AC]/5 p-3">
+                  <label className="flex cursor-pointer items-start gap-2.5">
+                    <input type="checkbox" checked={swapEverywhere}
+                      onChange={(e) => setSwapEverywhere(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#0E76AC]" />
+                    <span className="text-sm font-bold text-[#0E2A4A]">
+                      {t(`بدّل هذه الوجبة في الخطة كلها (${times} مرات)`,
+                         `Replace this meal across the whole plan (${times} times)`)}
+                      <span className="mt-0.5 block text-xs font-semibold text-gray-500">
+                        {t("المشترك لا يريدها أصلاً — بدّلها مرة واحدة بدل يوم بيوم.",
+                           "The subscriber doesn't want it at all — swap once instead of day by day.")}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              );
+            })()}
             <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-gray-100 p-1">
               <button
                 type="button"

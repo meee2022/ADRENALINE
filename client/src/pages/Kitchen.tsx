@@ -436,6 +436,9 @@ export default function Kitchen() {
       if (String(item.preferences || "").trim()) return false;
       if (String(item.portions || "").trim()) return false;
       if (String(item.specialNotes || "").trim()) return false;
+      /* وجبةٌ بُدِّلت بعد اعتماد الخطة ليست «عادية»: الشيف قد يكون قرأ الورقة
+         الأولى، فيلزم أن يراها في سطر التعديلات لا مدموجةً في العدد. */
+      if (item.editedAfterApproval) return false;
       if ((item.modifierIds || []).length > 0) return false;
       // فحص بيانات العميل: الحساسية تطبق دائماً؛ الممنوعات تطبق فقط لو مناسبة للطبق (custAvoid مُفلتَر)
       if (String(customer?.allergies || "").trim()) return false;
@@ -575,6 +578,12 @@ export default function Kitchen() {
             portions: joinUniq([item.portions, customer?.portions, ...po, qtyNote || undefined, sideNote || undefined]),
             specialNotes: joinUniq([item.specialNotes]),
             swap: sw.length ? sw.join(isRtl ? "، " : ", ") : undefined,
+            edited: item.editedAfterApproval
+              ? [
+                  item.replacedMealNameAr ? `${isRtl ? "بدل" : "was"} ${item.replacedMealNameAr}` : "",
+                  item.editedByName || "",
+                ].filter(Boolean).join(" · ") || (isRtl ? "بعد الاعتماد" : "after approval")
+              : undefined,
             isPlain: plain,
           };
           summary[mealName].details.push(detailBase);
@@ -633,7 +642,9 @@ export default function Kitchen() {
       const groups: Record<string, any> = {};
       details.filter((d) => !d.isPlain).forEach((d) => {
         const parts = [
-          // ⇄ الاستبدال أولاً — أوضح حاجة للشيف
+          // ⚠️ التعديل بعد الاعتماد أولاً: الورقة قد تكون طُبعت قبله
+          d.edited && `${isRtl ? "⚠️ عُدِّلت" : "⚠️ EDITED"}: ${d.edited}`,
+          // ⇄ الاستبدال ثانياً — أوضح حاجة للشيف
           d.swap && `⇄ ${d.swap}`,
           d.avoid && `${isRtl ? "بدون" : "No"}: ${d.avoid}`,
           d.preferences && `${isRtl ? "تفضيل" : "Pref"}: ${d.preferences}`,
@@ -997,6 +1008,7 @@ export default function Kitchen() {
     // تسمية التعديل بأسلوب الإكسيل: "/NO TOMATO ,MUSHROOM"
     // ⇄ الاستبدال أولاً وبعلامة مميّزة — يتجمّع بعدّاد مستقل عن الممنوعات
     const modLabel = (d: any) => [
+      d.edited && `⚠️ EDITED: ${d.edited}`,
       d.swap && `⇄ ${d.swap}`,
       d.avoid && `/NO ${d.avoid}`,
       d.preferences && `PREF: ${d.preferences}`,

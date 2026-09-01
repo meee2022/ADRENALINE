@@ -647,6 +647,10 @@ export const approve = mutation({
       if (pausedFrom && String(date).slice(0, 10) >= pausedFrom) continue;
 
       const planItems = dayMeals.map((meal) => ({
+        /* بصمةُ الصنف في الطلب: بها يُعرف — بعد الاعتماد — أيُّ وجبةٍ في الخطة
+           اليومية تقابل أيَّ صنفٍ في الطلب، فيُنزَّل التعديل على موضعه بالضبط
+           لا على أوّل وجبةٍ تشبهه. */
+        orderItemId: meal._id,
         mealId: meal.mealId,
         mealNameAr: meal.mealNameAr,
         mealNameEn: meal.mealNameEn,
@@ -837,6 +841,84 @@ export const reject = mutation({
   },
 });
 
+/* ═══ تعديل الخطة بعد اعتمادها ═══════════════════════════════════════════
+   كان التعديل ممنوعاً بعد المراجعة، فالمشترك الذي يستثقل وجبةً بعد أسبوع
+   يُضطرّ معه الطاقم إلى فتح الخطط اليومية يوماً بيوم. والطلب هو الخطة كاملةً
+   في شاشةٍ واحدة، فيُفتح للأخصائية — على أن ينزل كلُّ تعديلٍ فوراً على الخطة
+   اليومية المولَّدة منه، وإلا افترقت الشاشتان وطبخ المطبخ القديم. */
+
+/** الحالات التي يجوز فيها التعديل: قبل المراجعة، وبعد الاعتماد. */
+function assertOrderEditable(order: any, verb: string) {
+  if (!order) throw new Error("الطلب غير موجود");
+  if (order.status !== "pending" && order.status !== "confirmed") {
+    throw new Error(`لا يمكن ${verb} وجبات طلبٍ ${order.status === "rejected" ? "مرفوض" : "منتهٍ"}`);
+  }
+}
+
+/** موضع الصنف داخل الخطة اليومية المولَّدة من الطلب. */
+async function findPlanSlot(ctx: any, orderId: any, item: any) {
+  const plans = await ctx.db
+    .query("dailyPlans")
+    .withIndex("by_source_order", (q: any) => q.eq("sourceOrderId", orderId))
+    .collect();
+  for (const plan of plans) {
+    const items: any[] = Array.isArray(plan.items) ? plan.items : [];
+    /* البصمة أولاً. والخطط المعتمَدة قبل إضافتها لا تحملها، فيُرجَع إلى
+       (الدورة + اليوم + الوجبة) — وهي تكفي إلا أن تتكرّر الوجبة نفسها في
+       اليوم نفسه، وذلك ما يمنعه مولّد الخطة أصلاً. */
+    let idx = items.findIndex((it) => it?.orderItemId && String(it.orderItemId) === String(item._id));
+    if (idx < 0) {
+      idx = items.findIndex((it) =>
+        String(it?.mealId) === String(item.mealId)
+        && Number(it?.week) === Number(item.week)
+        && String(it?.day) === String(item.day));
+    }
+    if (idx >= 0) return { plan, items, idx };
+  }
+  return null;
+}
+
+/**
+ * يمنع التعديل على يومٍ خرج من يد الأخصائية.
+ *
+ * بعد «جاهزة» يكون المطبخ طبخ والاستيكر طُبع، والمخزون خُصم مرّةً واحدة فما
+ * يُضاف بعدها لا يُخصم أبداً. فيُردّ التعديل على ذلك اليوم وحده، ويبقى بقيّة
+ * الخطة مفتوحاً — التعديل على الخطة الكاملة لا يسقط لأجل يومٍ واحدٍ فات.
+ */
+function assertPlanDayEditable(plan: any) {
+  const st = String(plan?.status || "");
+  if (st === "PREPARED" || st === "DELIVERED" || st === "CANCELLED") {
+    const label: Record<string, string> = {
+      PREPARED: "جهّزه المطبخ", DELIVERED: "وصل للمشترك", CANCELLED: "أُلغي",
+    };
+    throw new Error(`يوم ${plan.date} ${label[st]} — لا يُعدَّل. عدّل الأيام التالية.`);
+  }
+}
+
+/**
+ * تنبيه المطبخ بتعديلٍ وقع بعد الاعتماد.
+ *
+ * الورقة قد تكون طُبعت والاستيكر لُصق، فالتغيير الصامت يصل إلى البوكس ولا
+ * يصل إلى الشيف. ولا يُرسَل قبل الاعتماد: التعديل حينها هو المراجعة نفسها.
+ */
+async function notifyKitchenOfEdit(
+  ctx: any, order: any, byName: string | undefined, detail: string, dates: string[],
+) {
+  if (!order || order.status !== "confirmed") return;
+  await ctx.db.insert("notifications", {
+    targetRole: "KITCHEN",
+    type: "PLAN_EDITED_AFTER_APPROVAL",
+    title: "⚠️ تعديل على خطة معتمدة",
+    message: `${order.customerName} — ${detail}`
+      + (dates.length ? ` — ${dates.length === 1 ? "يوم" : "أيام"} ${dates.sort().join("، ")}` : "")
+      + (byName ? ` — بواسطة ${byName}` : ""),
+    link: `/kitchen`,
+    relatedId: order._id,
+    isRead: false,
+    createdAt: Date.now(),
+  });
+}
+
 // ===== UPDATE ORDER ITEM MEAL (Admin - Replace meal) =====
 /** ✅ ملاحظة الأخصائية على وجبة داخل الطلب — تظهر للمطبخ وعلى الاستيكر بعد الاعتماد. */
 export const updateOrderItemNote = mutation({
@@ -850,13 +932,20 @@ export const updateOrderItemNote = mutation({
     const item = await ctx.db.get(args.itemId);
     if (!item) throw new Error("الصنف غير موجود");
     const order = await ctx.db.get(item.orderId);
-    if (!order || order.status !== "pending") {
-      throw new Error("لا يمكن تعديل وجبات الطلب بعد انتهاء المراجعة");
+    assertOrderEditable(order, "تعديل");
+    const note = args.note.trim() || undefined;
+
+    if (order!.status === "confirmed") {
+      const slot = await findPlanSlot(ctx, item.orderId, item);
+      if (slot) {
+        assertPlanDayEditable(slot.plan);
+        const items = [...slot.items];
+        items[slot.idx] = { ...items[slot.idx], specialNotes: note };
+        await ctx.db.patch(slot.plan._id, { items, updatedAt: Date.now() });
+      }
     }
-    await ctx.db.patch(args.itemId, {
-      specialNotes: args.note.trim() || undefined,
-      updatedAt: Date.now(),
-    });
+
+    await ctx.db.patch(args.itemId, { specialNotes: note, updatedAt: Date.now() });
     return { success: true };
   },
 });
@@ -872,9 +961,7 @@ export const updateOrderItemMeal = mutation({
     const item = await ctx.db.get(args.itemId);
     if (!item) throw new Error("الصنف غير موجود");
     const order = await ctx.db.get(item.orderId);
-    if (!order || order.status !== "pending") {
-      throw new Error("لا يمكن تبديل وجبات الطلب بعد انتهاء المراجعة");
-    }
+    assertOrderEditable(order, "تبديل");
     const meal = await ctx.db.get(args.newMealId);
     if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) {
       throw new Error("الوجبة المختارة ليست ضمن منيو المشتركين");
@@ -883,6 +970,39 @@ export const updateOrderItemMeal = mutation({
     const specialistUser: any = specialist.userId
       ? await ctx.db.get(specialist.userId as any)
       : null;
+    const byName = specialistUser?.name || specialistUser?.username || undefined;
+
+    /* يُبحث عن موضع الصنف قبل تعديله: البحث الاحتياطي يستدلّ بوجبته القديمة. */
+    let planDate: string | undefined;
+    if (order!.status === "confirmed") {
+      const slot = await findPlanSlot(ctx, item.orderId, item);
+      if (slot) {
+        assertPlanDayEditable(slot.plan);
+        planDate = slot.plan.date;
+        const items = [...slot.items];
+        items[slot.idx] = {
+          ...items[slot.idx],
+          orderItemId: String(item._id),
+          mealId: args.newMealId,
+          mealNameAr: meal.nameAr,
+          mealNameEn: meal.nameEn,
+          category: meal.category,
+          calories: Number(meal.calories) || 0,
+          protein: Number(meal.protein) || 0,
+          carbs: Number(meal.carbs) || 0,
+          fats: Number(meal.fats) || 0,
+          imageUrl: meal.imageUrl,
+          /* أثرٌ يقرؤه المطبخ على ورقة الطلبات والاستيكر: الوجبة تغيّرت بعد
+             الاعتماد، ومَن غيّرها ومتى. */
+          editedAfterApproval: true,
+          replacedMealNameAr: items[slot.idx]?.mealNameAr,
+          editedByName: byName,
+          editedByRole: specialist.role || undefined,
+          editedAt: Date.now(),
+        };
+        await ctx.db.patch(slot.plan._id, { items, updatedAt: Date.now() });
+      }
+    }
 
     // The catalogue is authoritative. Never trust nutrition or price snapshots
     // supplied by the review UI.
@@ -899,7 +1019,7 @@ export const updateOrderItemMeal = mutation({
       priceQAR: Number(meal.priceQAR) || 0,
       originalMealNameAr: item.originalMealNameAr || item.mealNameAr,
       originalMealNameEn: item.originalMealNameEn || item.mealNameEn,
-      modifiedByName: specialistUser?.name || specialistUser?.username || undefined,
+      modifiedByName: byName,
       modifiedByRole: specialist.role || undefined,
       modifiedAt: Date.now(),
       updatedAt: Date.now(),
@@ -921,15 +1041,146 @@ export const updateOrderItemMeal = mutation({
       updatedAt: Date.now(),
     });
 
+    await notifyKitchenOfEdit(ctx, order, byName, `${oldMealName} ← ${meal.nameAr}`, planDate ? [planDate] : []);
+
+    /* التعديل بعد الاعتماد يُسجَّل باسمٍ يخصّه: هو ما يُسأل عنه لاحقاً حين
+       يختلف ما في البوكس عمّا وافق عليه المشترك. */
     await trail(ctx, {
-      action: "ORDER_MEAL_REPLACED",
+      action: order!.status === "confirmed" ? "ORDER_MEAL_REPLACED_AFTER_APPROVAL" : "ORDER_MEAL_REPLACED",
       entityType: "order",
       entityId: String(item.orderId),
-      details: `${oldMealName} → ${meal.nameAr} (${item.week}-${item.day})`,
+      details: `${oldMealName} → ${meal.nameAr} (${item.week}-${item.day}${planDate ? ` — ${planDate}` : ""})`,
       staff: specialist,
     });
 
     return { success: true };
+  },
+});
+
+/**
+ * استبدال وجبةٍ في الخطة كلّها دفعةً واحدة.
+ *
+ * المشترك لا يقول «غيّر ثلاثاء الأسبوع الثاني»، بل «الوجبة دي مش عايزها».
+ * وهي تتكرّر عبر الدورات، فتبديلها صنفاً صنفاً عملٌ طويل يُنسى منه واحد.
+ * فتُبدَّل مواضعها كلّها في نداءٍ واحد.
+ *
+ * والأيام التي جهّزها المطبخ تُتخطّى ولا تُسقط العملية — ثم تُذكر بأسمائها
+ * للأخصائية، فتعرف ما لم يتغيّر بدل أن تظنّ الكلّ تبدّل.
+ */
+export const replaceMealAcrossOrder = mutation({
+  args: {
+    orderId: v.id("customerOrders"),
+    oldMealId: v.id("publicMeals"),
+    newMealId: v.id("publicMeals"),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const specialist = await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
+    const order = await ctx.db.get(args.orderId);
+    assertOrderEditable(order, "تبديل");
+    if (String(args.oldMealId) === String(args.newMealId)) {
+      throw new Error("الوجبة الجديدة هي نفسها القديمة");
+    }
+
+    const meal = await ctx.db.get(args.newMealId);
+    if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) {
+      throw new Error("الوجبة المختارة ليست ضمن منيو المشتركين");
+    }
+
+    const items = (await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", args.orderId))
+      .collect()).filter((i: any) => String(i.mealId) === String(args.oldMealId));
+    if (!items.length) throw new Error("الوجبة غير موجودة في هذه الخطة");
+
+    const specialistUser: any = specialist.userId ? await ctx.db.get(specialist.userId as any) : null;
+    const byName = specialistUser?.name || specialistUser?.username || undefined;
+    const now = Date.now();
+    const oldName = items[0].mealNameAr || items[0].mealNameEn || "";
+
+    let replaced = 0;
+    const skipped: string[] = [];
+
+    for (const item of items) {
+      /* الخطة اليومية أولاً: لو رُدَّ اليوم لم يُمسّ صنفُه في الطلب، فيبقى
+         الطلب مرآةً لما سيُطبخ فعلاً لا لما نوينا تغييره. */
+      if (order!.status === "confirmed") {
+        const slot = await findPlanSlot(ctx, args.orderId, item);
+        if (slot) {
+          const st = String(slot.plan.status || "");
+          if (st === "PREPARED" || st === "DELIVERED" || st === "CANCELLED") {
+            skipped.push(slot.plan.date);
+            continue;
+          }
+          const planItems = [...slot.items];
+          planItems[slot.idx] = {
+            ...planItems[slot.idx],
+            orderItemId: String(item._id),
+            mealId: args.newMealId,
+            mealNameAr: meal.nameAr,
+            mealNameEn: meal.nameEn,
+            category: meal.category,
+            calories: Number(meal.calories) || 0,
+            protein: Number(meal.protein) || 0,
+            carbs: Number(meal.carbs) || 0,
+            fats: Number(meal.fats) || 0,
+            imageUrl: meal.imageUrl,
+            editedAfterApproval: true,
+            replacedMealNameAr: planItems[slot.idx]?.mealNameAr,
+            editedByName: byName,
+            editedByRole: specialist.role || undefined,
+            editedAt: now,
+          };
+          await ctx.db.patch(slot.plan._id, { items: planItems, updatedAt: now });
+        }
+      }
+
+      await ctx.db.patch(item._id, {
+        mealId: args.newMealId,
+        mealNameAr: meal.nameAr,
+        mealNameEn: meal.nameEn,
+        calories: Number(meal.calories) || 0,
+        protein: Number(meal.protein) || 0,
+        carbs: Number(meal.carbs) || 0,
+        fats: Number(meal.fats) || 0,
+        category: meal.category,
+        imageUrl: meal.imageUrl,
+        priceQAR: Number(meal.priceQAR) || 0,
+        originalMealNameAr: item.originalMealNameAr || item.mealNameAr,
+        originalMealNameEn: item.originalMealNameEn || item.mealNameEn,
+        modifiedByName: byName,
+        modifiedByRole: specialist.role || undefined,
+        modifiedAt: now,
+        updatedAt: now,
+      });
+      replaced++;
+    }
+
+    const all = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", args.orderId))
+      .collect();
+    await ctx.db.patch(args.orderId, {
+      totalCalories: all.reduce((sum, i) => sum + (i.calories || 0), 0),
+      totalPrice: all.reduce((sum, i) => sum + (i.priceQAR || 0), 0),
+      totalMeals: all.length,
+      updatedAt: now,
+    });
+
+    if (replaced > 0) {
+      await notifyKitchenOfEdit(ctx, order, byName, `${oldName} ← ${meal.nameAr} (${replaced} مواضع)`, []);
+    }
+
+    await trail(ctx, {
+      action: order!.status === "confirmed" ? "ORDER_MEAL_REPLACED_ALL_AFTER_APPROVAL" : "ORDER_MEAL_REPLACED_ALL",
+      entityType: "order",
+      entityId: String(args.orderId),
+      details: `${oldName} → ${meal.nameAr} — ${replaced} موضعاً`
+        + (skipped.length ? ` — تُخطّي ${skipped.length} (${skipped.sort().join("، ")})` : ""),
+      staff: specialist,
+    });
+
+    return { success: true, replaced, skipped: skipped.sort(), newMealNameAr: meal.nameAr, oldMealNameAr: oldName };
   },
 });
 
@@ -946,9 +1197,17 @@ export const removeOrderItem = mutation({
 
     const orderId = item.orderId;
     const order = await ctx.db.get(orderId);
-    if (!order || order.status !== "pending") {
-      throw new Error("لا يمكن حذف وجبات الطلب بعد انتهاء المراجعة");
+    assertOrderEditable(order, "حذف");
+
+    if (order!.status === "confirmed") {
+      const slot = await findPlanSlot(ctx, orderId, item);
+      if (slot) {
+        assertPlanDayEditable(slot.plan);
+        const items = slot.items.filter((_: any, i: number) => i !== slot.idx);
+        await ctx.db.patch(slot.plan._id, { items, updatedAt: Date.now() });
+      }
     }
+
     await ctx.db.delete(args.itemId);
 
     const rest = await ctx.db
