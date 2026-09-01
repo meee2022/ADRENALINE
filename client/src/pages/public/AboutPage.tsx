@@ -1000,6 +1000,9 @@ export default function AboutPage() {
             { ar:"التخرّج وأعياد الميلاد", en:"Graduations & Birthdays",
               dAr:"بوفيهات وحلويات صحية بأعداد مرنة",
               dEn:"Buffets and healthy desserts, flexible headcounts" },
+            { ar:"المدارس والجامعات", en:"Schools & Universities",
+              dAr:"شراكات وأيام تعريفية وتغذية للطلاب بخصمٍ خاص",
+              dEn:"Partnerships, open days and student nutrition at a special rate" },
             { ar:"الأندية والفعاليات الرياضية", en:"Clubs & Sports Events",
               dAr:"وجباتٌ محسوبة السعرات لطبيعة الحدث",
               dEn:"Calorie-counted catering built for the occasion" },
@@ -1018,7 +1021,7 @@ export default function AboutPage() {
         <div className="ab-grid-3" style={{ display:"grid",
           gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
           {[
-            { src:"/events/event-1.jpg", cap:{ar:"تغطية فعالية حكومية",  en:"Government event catering"} },
+            { src:"/events/event-1.jpg", cap:{ar:"شراكة مع مدرسة قطر للعلوم والتكنولوجيا", en:"Partnership with Qatar Science & Technology School"} },
             { src:"/events/event-2.jpg", cap:{ar:"ضيافة مؤتمرات وشركات", en:"Conference & corporate hospitality"} },
             { src:"/events/event-3.jpg", cap:{ar:"بوفيه مناسبات خاصة",   en:"Private event buffet"} },
             { src:"/events/event-4.jpg", cap:{ar:"تجهيز وتقديم في الموقع", en:"On-site setup and service"} },
