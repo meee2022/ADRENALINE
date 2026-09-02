@@ -1314,3 +1314,57 @@ export const deleteAllItems = mutation({
     return { deleted, skipped, skippedNames };
   },
 });
+
+/**
+ * تراجعٌ عن «تحضير الكل» ليومٍ كامل — للمدير وحده.
+ *
+ * ضُغط الزرّ على وجبات الغد قبل طبخها، فصار اليوم كلّه «جاهزاً» في نظر
+ * النظام: ورقة الطلبات تفرغ (تقرأ المؤكَّد وحده) فلا يُطبع استيكر، والأكل
+ * يظهر في التوصيل وهو لم يُصنع. ولا مخرج من ذلك إلا فتح مئة كرتٍ يدوياً.
+ *
+ * المخزون لا يُعاد: المكوّنات ستُستهلك اليوم فعلاً حين يُطبخ الطعام، وختم
+ * `inventoryConsumedAt` يبقى فيمنع خصماً ثانياً عند التحضير الحقيقي. أما
+ * ما خرج للتوصيل أو وصل فلا يُمسّ — تلك خطوةٌ حدثت في الواقع لا وهماً.
+ */
+export const undoPrepareAllForDate = mutation({
+  args: {
+    date: v.string(),
+    deliveryTime: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, deliveryTime, sessionToken }) => {
+    const admin = await requireAdmin(ctx, sessionToken);
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_date", (q: any) => q.eq("date", date))
+      .collect();
+
+    const targets = (plans as any[]).filter((p) =>
+      p.status === "PREPARED" &&
+      !p.outForDeliveryAt &&
+      !p.deliveredAt &&
+      (!deliveryTime || String(p.deliveryTime) === deliveryTime));
+
+    /* الخارج للتوصيل يُحصى ويُبلَّغ: المدير يحتاج أن يعرف أن يومه ليس كلّه
+       قابلاً للتراجع، لا أن يظنّ العدد الناقص خطأً في الأداة. */
+    const onTheRoad = (plans as any[]).filter((p) =>
+      p.status === "PREPARED" && (p.outForDeliveryAt || p.deliveredAt)).length;
+
+    for (const plan of targets) {
+      await ctx.db.patch(plan._id, { status: "CONFIRMED", updatedAt: Date.now() });
+    }
+
+    if (targets.length) {
+      await trail(ctx, {
+        action: "PLAN_PREPARE_ALL_UNDONE",
+        entityType: "plan",
+        entityId: date,
+        details: `${date}${deliveryTime ? ` (${deliveryTime})` : ""} — ${targets.length} خطة عادت «مؤكدة»`
+          + (onTheRoad ? ` — ${onTheRoad} خرجت للتوصيل فلم تُمسّ` : ""),
+        staff: admin,
+      });
+    }
+
+    return { undone: targets.length, skippedOnTheRoad: onTheRoad };
+  },
+});

@@ -42,7 +42,7 @@ import { downloadKitchenXlsx, downloadKitchenPdf, type KitchenPerson } from "@/l
 import { openPrintDoc } from "@/lib/printDoc";
 import { downloadChefSheetXlsx, type ChefRow } from "@/lib/kitchenSheet";
 import { getEffectivePlanItems } from "@/lib/planItems";
-import { Download, FileSpreadsheet, Check } from "lucide-react";
+import { Download, FileSpreadsheet, Check, Undo2 } from "lucide-react";
 import { Link } from "wouter";
 
 import {
@@ -177,6 +177,9 @@ export default function Kitchen() {
   const prepareAllMutation = useMutation(api.inventory.prepareAndConsumeAllForDate);
   const [preparingAll, setPreparingAll] = useState(false);
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
+  const isAdmin = useStore((s: any) => s.currentUser?.role) === "ADMIN";
+  const undoPrepareAllMutation = useMutation(api.inventory.undoPrepareAllForDate);
+  const [undoingAll, setUndoingAll] = useState(false);
   const productionAudit = useQuery(api.productionAudit.forDate, {
     date: formattedDate,
     sessionToken: sessionTok,
@@ -286,6 +289,13 @@ export default function Kitchen() {
       evening: all.filter((p: any) => p.deliveryTime === "EVENING").length,
     };
   }, [dailyPlans, formattedDate]);
+
+  /* ما يمكن التراجع عنه: المحضَّر الذي لم يخرج بعد. الخارج للتوصيل حدث فعلاً. */
+  const dayUndoable = useMemo(
+    () => dailyPlans.filter((p: any) => p.date === formattedDate && p.status === "PREPARED"
+      && !p.outForDeliveryAt && !p.deliveredAt).length,
+    [dailyPlans, formattedDate],
+  );
 
   const getCustomer = (id: string) => customerById.get(String(id)) as any;
   const filteredPlans = useMemo(() => {
@@ -1629,6 +1639,41 @@ If you meant another day, switch Today/Tomorrow first.`,
     } finally { setPreparingAll(false); }
   };
 
+  /* ضُغط «تحضير الكل» على وجبات الغد قبل طبخها، ففرغت ورقة الطلبات ولم
+     يُطبع استيكر. التراجع للمدير وحده لأنه يعيد يوماً كاملاً. */
+  const handleUndoPrepareAll = async () => {
+    if (undoingAll || !dayUndoable) return;
+    const dayName = format(date, "EEEE d MMMM", { locale: isRtl ? ar : enUS });
+    const ok = await confirmDialog({
+      message: isRtl
+        ? `التراجع عن تحضير ${dayName}؟
+${dayUndoable} خطة سترجع «مؤكدة» فتظهر في ورقة الطلبات والاستيكرات من جديد.
+
+المخزون لا يُعاد — المكوّنات ستُستهلك فعلاً عند الطبخ، ولن تُخصم مرتين.
+وما خرج للتوصيل لا يُمسّ.`
+        : `Undo preparation for ${dayName}?
+${dayUndoable} plan(s) return to CONFIRMED and reappear in the order list and stickers.
+
+Inventory is not restored — the ingredients will genuinely be used when cooking, and will not be deducted twice.
+Plans already out for delivery are untouched.`,
+      title: isRtl ? "تراجع عن تحضير الكل" : "Undo prepare all",
+      variant: "danger",
+      confirmText: isRtl ? "تراجع" : "Undo",
+    });
+    if (!ok) return;
+    setUndoingAll(true);
+    try {
+      const r: any = await undoPrepareAllMutation({ date: formattedDate, sessionToken: sessionTok } as any);
+      void alertDialog({ message: isRtl
+        ? `رجعت ${r.undone} خطة «مؤكدة» ✓${r.skippedOnTheRoad ? `
+${r.skippedOnTheRoad} خرجت للتوصيل فلم تُمسّ.` : ""}`
+        : `${r.undone} plan(s) back to CONFIRMED ✓${r.skippedOnTheRoad ? `
+${r.skippedOnTheRoad} already out for delivery were left as is.` : ""}` });
+    } catch (e: any) {
+      void alertDialog({ message: e?.message?.replace(/^\[CONVEX .*?\]\s*/, "") || (isRtl ? "تعذّر التراجع" : "Couldn't undo") });
+    } finally { setUndoingAll(false); }
+  };
+
   const handleMarkPrepared = async (planId: string) => {
     try {
       // يعلّم الخطة كمحضّرة + يخصم مكوّنات الرسيبي من المخزون تلقائياً (idempotent)
@@ -1712,6 +1757,15 @@ If you meant another day, switch Today/Tomorrow first.`,
                     style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
                     <Check className="h-4 w-4" />
                     {preparingAll ? "…" : isRtl ? `تحضير الكل (${dayConfirmed.total})` : `Prepare all (${dayConfirmed.total})`}
+                  </button>
+                )}
+                {isAdmin && dayUndoable > 0 && (
+                  <button onClick={handleUndoPrepareAll} disabled={undoingAll}
+                    title={isRtl ? "للمدير فقط" : "Admin only"}
+                    className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 border border-white/40 disabled:opacity-60"
+                    style={{ background: "rgba(255,255,255,.12)" }}>
+                    <Undo2 className="h-4 w-4" />
+                    {undoingAll ? "…" : isRtl ? `تراجع عن التحضير (${dayUndoable})` : `Undo prepare (${dayUndoable})`}
                   </button>
                 )}
                 {/* ✅ تبديل سريع: توصيل بكرة (الافتراضي) / اليوم — بدون ما الشيف يفتح التقويم */}
