@@ -27,3 +27,11 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+/* Capacitor 8 يطلب Java 21 والجهاز عليه 17 فقط (وJBR الخاص بـAndroid Studio 25
+   لا يشغّل Gradle). فتُطلب سلسلة أدوات 21 ويُنزّلها Gradle بنفسه. */
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        javaCompiler = javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(21) }
+    }
+}
