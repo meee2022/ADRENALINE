@@ -42,7 +42,10 @@ function ProductBarcode({ value, compact = false }: { value: string; compact?: b
 
 function ThermalLabel({ item, logoUrl }: { item: LabelRow; logoUrl?: string }) {
   return (
-    <div className="outlet-thermal-label">
+    /* اتجاهٌ صريح: الطباعة تجري داخل جذرٍ dir="ltr" بينما المعاينة ترث
+       اتجاه لوحة التحكم العربية — فكان القلب يميناً في الورق ويساراً على
+       الشاشة. التثبيت هنا يجعل ما يُرى هو ما يُطبع. */
+    <div className="outlet-thermal-label" dir="ltr">
       {/* شعار المنفذ إن كان له شعارٌ خاص (الكافيه)، وإلا فهوية أدرينالين.
           مصدره صفُّ المنفذ المختار، فلا يظهر على استيكرات منفذٍ آخر. */}
       <div className={logoUrl ? "outlet-label-brand outlet-label-brand--logo" : "outlet-label-brand"}>
@@ -313,7 +316,10 @@ export default function OutletLabels() {
            بتٌّ واحد، فالصورة المرفوعة أسودُ صافٍ بلا تدرّج. */
         .outlet-label-brand--logo{gap:0}
         .outlet-label-brand img.outlet-brand-logo{width:auto;height:6.6mm;max-width:50mm;object-fit:contain;filter:none}
-        .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5.6mm;font-weight:900;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.5mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm}
+        .outlet-brand-word{display:flex;flex-direction:column;align-items:flex-end;line-height:.82}.outlet-brand-word b{font-size:5.6mm;font-weight:900;letter-spacing:-.2mm}
+        /* تباعد الحروف يضيف فراغاً بعد آخر حرف، فيبدو السطر منزاحاً عن الحافة
+           رغم محاذاته — يُلغى بهامشٍ سالبٍ يساويه. */
+        .outlet-brand-word span{font-size:1.5mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm;margin-right:-.9mm}
         .outlet-label-name{height:7mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;line-height:1.02;overflow:hidden;padding-top:.3mm}.outlet-label-name span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:3.4mm}
         .outlet-label-mid{height:10.8mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.1mm;line-height:1.5}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts .cal{font-size:2.8mm;color:#222}.outlet-label-facts strong{font-size:4.4mm;font-weight:900}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}
         .outlet-label-macros{margin-top:1.6mm;border:.35mm solid #000;border-radius:1.4mm;padding:.9mm .6mm;display:flex;font-size:3.2mm;font-weight:800;white-space:nowrap}.outlet-label-macros span{flex:1;text-align:center}.outlet-label-macros span+span{border-left:.25mm solid #000}.outlet-label-macros b{font-size:4mm;font-weight:900}
