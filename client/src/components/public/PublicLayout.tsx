@@ -76,7 +76,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
           </div>
         </nav>
         <footer className="mt-16 border-t border-[#079AA5]/25 bg-[#079AA5] text-white">
-          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 md:grid-cols-[1.2fr_.8fr] md:items-end">
+          <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 pb-28 md:grid-cols-[1.2fr_.8fr] md:items-end md:pb-10">
             <div>
               <img src={restaurant.logo} alt="Nutri Reset" className="mb-4 h-16 w-auto max-w-[260px] rounded-xl bg-white px-3 py-2 object-contain" />
               <p className="max-w-xl text-sm font-semibold leading-7 text-white/90">
@@ -477,7 +477,11 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       </nav>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-b from-[#0F4A5E] to-[#0a3847] text-white py-8 md:py-14 mt-12 md:mt-20">
+      {/* الشريط السفلي الثابت (77px) وفقاعة المحادثة (تنتهي عند 148px) يعلوان
+          الصفحة، و<main> وحده يحمل مسافةً لهما — والفوتر خارجه. فكان آخره
+          مغطّى: سطر الحقوق ورابطا «سياسة الخصوصية» و«الشروط» لا تُضغط أصلاً.
+          ورابط سياسة الخصوصية شرطٌ في متجر جوجل بلاي. */}
+      <footer className="bg-gradient-to-b from-[#0F4A5E] to-[#0a3847] text-white py-8 md:py-14 mt-12 md:mt-20 pb-40 md:pb-14">
         <div className="max-w-7xl mx-auto px-4">
 
           {/* Logo row — always full width on mobile */}
@@ -537,7 +541,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   { href: "/public/contact", ar: "تواصل معنا", en: "Contact" },
                 ].map((link) => (
                   <li key={link.href}>
-                    <a href={link.href} className="text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-xs">
+                    <a href={link.href} className="inline-flex min-h-[44px] items-center text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-xs md:min-h-0">
                       {isRtl ? link.ar : link.en}
                     </a>
                   </li>
@@ -609,10 +613,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   : `© ${new Date().getFullYear()} Adrenaline Healthy Food. All rights reserved.`}
               </p>
               <div className="flex items-center gap-4">
-                <a href={restaurantSettings?.privacyPolicyUrl || "/privacy"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
+                <a href={restaurantSettings?.privacyPolicyUrl || "/privacy"} className="inline-flex min-h-[44px] items-center px-2 text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
                   {isRtl ? "سياسة الخصوصية" : "Privacy Policy"}
                 </a>
-                <a href={restaurantSettings?.termsUrl || "/terms"} className="text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
+                <a href={restaurantSettings?.termsUrl || "/terms"} className="inline-flex min-h-[44px] items-center px-2 text-[#BCBEBF] hover:text-[#3CC4F0] text-xs transition-colors">
                   {isRtl ? "الشروط والأحكام" : "Terms & Conditions"}
                 </a>
               </div>
