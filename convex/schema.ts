@@ -1131,6 +1131,7 @@ export default defineSchema({
       v.literal("MEAL_PREPARED"),     // تم تحضير وجبات
       v.literal("MEAL_DELIVERED"),    // تم التوصيل
       v.literal("LOW_STOCK"),         // مخزون منخفض
+      v.literal("PLAN_EDITED_AFTER_APPROVAL"), // عُدّلت خطة معتمدة — قد تكون الورقة طُبعت
       v.literal("SYSTEM")             // إشعار عام
     ),
     title: v.string(),

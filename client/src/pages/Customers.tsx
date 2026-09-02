@@ -330,6 +330,10 @@ export default function Customers() {
   const importCustomers = useImportCustomers();
   const { data: modifiers = [] } = useModifiers();
 
+  /* البحث بتاريخ البدء: المشتركون بالمئات، والسؤال «مين بدأ في سبتمبر؟»
+     كان يحتاج تقليب القائمة كلّها. مدىٌ من/إلى — والطرف الواحد يكفي. */
+  const [startFrom, setStartFrom] = useState("");
+  const [startTo, setStartTo] = useState("");
   const [searchTerm, setSearchTerm] = useState(() =>
     typeof window === "undefined"
       ? ""
@@ -476,9 +480,22 @@ export default function Customers() {
       );
     }
 
-    // فلتر البحث
+    /* مدى تاريخ البدء — يُقارَن نصّياً بصيغة ISO (yyyy-mm-dd) فترتيبها
+       الأبجدي هو ترتيبها الزمني، ولا حاجة لتحويل تواريخ ولا مناطق زمنية. */
+    if (startFrom || startTo) {
+      base = base.filter((c: any) => {
+        const d = String(c.startDate || "").slice(0, 10);
+        if (!d) return false;
+        if (startFrom && d < startFrom) return false;
+        if (startTo && d > startTo) return false;
+        return true;
+      });
+    }
+
+    // فلتر البحث — يشمل تاريخ البدء، فكتابة «2026-09» تكفي لجمع شهر
     if (q) {
-      base = base.filter((c: any) => matchesSearchQuery(q, c.fullName, c.phone));
+      base = base.filter((c: any) =>
+        matchesSearchQuery(q, c.fullName, c.phone, String(c.startDate || "").slice(0, 10)));
     }
 
     return base.slice().sort((a: any, b: any) => {
@@ -493,7 +510,7 @@ export default function Customers() {
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm, selectedProgram, viewFilter, restaurantFilter]);
+  }, [customers, searchTerm, selectedProgram, viewFilter, restaurantFilter, startFrom, startTo]);
 
   const selectedPlan = sitePlans.find((p: any) => String(p._id) === planId);
   const planOptions: any[] = selectedPlan?.options ?? [];
@@ -992,11 +1009,32 @@ export default function Customers() {
           <Search className={cn("absolute top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400", isRtl ? "right-4" : "left-4")} />
           <Input
             type="text"
-            placeholder={isRtl ? "البحث بالاسم أو الهاتف..." : "Search by name or phone..."}
+            placeholder={isRtl ? "البحث بالاسم أو الهاتف أو تاريخ البدء (2026-09)..." : "Search by name, phone or start date (2026-09)..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className={cn("h-11 sm:h-12 rounded-xl shadow-sm border-gray-200 bg-white text-sm", isRtl ? "pr-12 text-right" : "pl-12")}
           />
+        </div>
+
+        {/* مدى بداية الاشتراك */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-black text-slate-500">{isRtl ? "بدأ اشتراكه بين" : "Started between"}</span>
+          <Input type="date" dir="ltr" value={startFrom} onChange={(e) => setStartFrom(e.target.value)}
+            className="h-10 w-[150px] rounded-xl border-gray-200 bg-white text-xs font-bold" />
+          <span className="text-xs font-black text-slate-400">—</span>
+          <Input type="date" dir="ltr" value={startTo} onChange={(e) => setStartTo(e.target.value)}
+            className="h-10 w-[150px] rounded-xl border-gray-200 bg-white text-xs font-bold" />
+          {(startFrom || startTo) && (
+            <>
+              <span className="rounded-lg bg-[#0E76AC] px-2.5 py-1.5 text-[11px] font-black text-white">
+                {filteredCustomers.length} {isRtl ? "مشترك" : "found"}
+              </span>
+              <button type="button" onClick={() => { setStartFrom(""); setStartTo(""); }}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-black text-slate-600">
+                {isRtl ? "مسح" : "Clear"}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Program Filter Chips */}

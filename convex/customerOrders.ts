@@ -913,7 +913,7 @@ async function notifyKitchenOfEdit(
       + (dates.length ? ` — ${dates.length === 1 ? "يوم" : "أيام"} ${dates.sort().join("، ")}` : "")
       + (byName ? ` — بواسطة ${byName}` : ""),
     link: `/kitchen`,
-    relatedId: order._id,
+    relatedId: String(order._id),
     isRead: false,
     createdAt: Date.now(),
   });

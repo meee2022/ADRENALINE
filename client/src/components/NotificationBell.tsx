@@ -21,6 +21,7 @@ const TYPE_ICON: Record<string, any> = {
   MEAL_PREPARED: ChefHat,
   MEAL_DELIVERED: Truck,
   LOW_STOCK: AlertTriangle,
+  PLAN_EDITED_AFTER_APPROVAL: AlertTriangle,
   SYSTEM: Bell,
 };
 
@@ -31,6 +32,7 @@ const TYPE_COLOR: Record<string, string> = {
   MEAL_PREPARED: "#f59e0b",
   MEAL_DELIVERED: "#8b5cf6",
   LOW_STOCK: "#ef4444",
+  PLAN_EDITED_AFTER_APPROVAL: "#f97316",
   SYSTEM: "#64748b",
 };
 
