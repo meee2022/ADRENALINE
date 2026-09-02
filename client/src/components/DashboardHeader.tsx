@@ -91,7 +91,10 @@ export function DashboardHeader({ icon, titleAr, titleEn, subtitleAr, subtitleEn
                 <div className="text-2xl sm:text-3xl font-black tabular-nums leading-none" style={{ color: k.color || "#fff" }}>
                   {k.value}
                 </div>
-                <div className="text-[11px] sm:text-xs text-white/70 font-semibold mt-1 truncate">
+                {/* كان `truncate` يقصّ السطر: «إجمالي اليوم · 18+5 مخصّص» تظهر
+                    «إجمالي اليوم · 18+…» في عمودٍ عرضه نصف شاشة الهاتف، فيضيع
+                    ما يميّزها. والعنوان قصيرٌ يسع سطرين، فيُلفّ ويُحدّ بهما. */}
+                <div className="mt-1 text-[11px] font-semibold leading-tight text-white/70 line-clamp-2 sm:truncate sm:text-xs">
                   {isRtl ? k.labelAr : k.labelEn}
                 </div>
               </>
