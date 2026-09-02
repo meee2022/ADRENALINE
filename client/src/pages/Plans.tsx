@@ -57,6 +57,7 @@ import {
   Clock,
   User,
   AlertTriangle,
+  Ban,
   ChevronDown,
   StickyNote,
   Eye,
@@ -1219,8 +1220,10 @@ export default function PlansPage() {
             filtered = filtered.filter((c: any) => (c.program || "STANDARD").toUpperCase() === programFilter);
           }
           if (searchQ.trim()) {
+            /* البحث يتجاوز الاسم: السؤال العملي «مين عنده حساسية من المكسّرات؟»
+               كان يحتاج فتح كل بطاقة على حدة. */
             filtered = filtered.filter((c: any) =>
-              matchesSearchQuery(searchQ, c.fullName, c.phone)
+              matchesSearchQuery(searchQ, c.fullName, c.phone, c.allergies, c.avoid, c.preferences)
             );
           }
           // ✅ فلتر حالة الخطة
@@ -1352,7 +1355,7 @@ export default function PlansPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={isRtl ? "ابحث بالاسم أو رقم الهاتف..." : "Search by name or phone..."}
+                    placeholder={isRtl ? "ابحث بالاسم أو الهاتف أو الحساسية أو الممنوعات..." : "Search by name, phone, allergy or restriction..."}
                     className={cn(
                       "w-full h-11 rounded-xl text-sm font-medium pl-4 pr-10 transition-all outline-none",
                       isRtl ? "text-right" : "text-left"
@@ -1747,6 +1750,34 @@ ${r.skippedEmpty} with no meals left as drafts.` : ""}` });
                             </div>
                           </div>
                         </div>
+
+                        {/* الحساسية والممنوعات بنصّهما لا بوسمٍ يقول «يوجد».
+                            الشارة أعلى البطاقة تنبّه، وهذا يقول ممّ بالضبط —
+                            فلا تُفتح البطاقة لقراءة سطر. */}
+                        {(String(customer.allergies || "").trim() || String(customer.avoid || "").trim()) && (
+                          <div className="px-4 pb-2.5 space-y-1">
+                            {String(customer.allergies || "").trim() && (
+                              <div className="flex items-start gap-1.5 rounded-lg px-2 py-1.5"
+                                style={{ background: "#fef2f2", border: "1px solid #fecaca" }}>
+                                <AlertTriangle className="h-3 w-3 shrink-0 text-red-600 mt-[1px]" />
+                                <p className="text-[10px] font-bold leading-snug text-red-800 line-clamp-2 text-right">
+                                  <span className="font-black">{isRtl ? "حساسية: " : "Allergy: "}</span>
+                                  {customer.allergies}
+                                </p>
+                              </div>
+                            )}
+                            {String(customer.avoid || "").trim() && (
+                              <div className="flex items-start gap-1.5 rounded-lg px-2 py-1.5"
+                                style={{ background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                                <Ban className="h-3 w-3 shrink-0 text-slate-500 mt-[1px]" />
+                                <p className="text-[10px] font-bold leading-snug text-slate-700 line-clamp-2 text-right">
+                                  <span className="font-black">{isRtl ? "ممنوعات: " : "Avoid: "}</span>
+                                  {customer.avoid}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Bottom row: program + days left */}
                         <div className="plan-customer-footer px-4 pb-3 pt-2 border-t border-gray-50 flex items-center justify-between">
