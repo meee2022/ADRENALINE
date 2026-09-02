@@ -40,12 +40,20 @@ function ProductBarcode({ value, compact = false }: { value: string; compact?: b
   return <svg ref={ref} aria-label={`Barcode ${value}`} />;
 }
 
-function ThermalLabel({ item }: { item: LabelRow }) {
+function ThermalLabel({ item, logoUrl }: { item: LabelRow; logoUrl?: string }) {
   return (
     <div className="outlet-thermal-label">
-      <div className="outlet-label-brand">
-        <div className="outlet-brand-word"><b>ADRENALINE</b><span>HEALTHY FOOD</span></div>
-        <img src="/heart-logo.png" alt="" />
+      {/* شعار المنفذ إن كان له شعارٌ خاص (الكافيه)، وإلا فهوية أدرينالين.
+          مصدره صفُّ المنفذ المختار، فلا يظهر على استيكرات منفذٍ آخر. */}
+      <div className={logoUrl ? "outlet-label-brand outlet-label-brand--logo" : "outlet-label-brand"}>
+        {logoUrl ? (
+          <img className="outlet-brand-logo" src={logoUrl} alt="" />
+        ) : (
+          <>
+            <div className="outlet-brand-word"><b>ADRENALINE</b><span>HEALTHY FOOD</span></div>
+            <img src="/heart-logo.png" alt="" />
+          </>
+        )}
       </div>
       <div className="outlet-label-name"><span>{item.nameEn}</span></div>
       <div className="outlet-label-mid">
@@ -78,6 +86,7 @@ export default function OutletLabels() {
      يُقرأ لحظياً من «أصناف المنافذ» فلا ينحرف الملصق عن الفاتورة. */
   const outlets = (useQuery(api.gymSales.listGyms, { sessionToken }) || []) as any[];
   const [outletId, setOutletId] = useState<string>("");
+  const outletLogo = outlets.find((o: any) => String(o.id) === outletId)?.labelLogoUrl || undefined;
   useEffect(() => { if (!outletId && outlets.length) setOutletId(outlets[0].id); }, [outlets, outletId]);
   const rows = (useQuery(
     api.outletLabels.list,
@@ -278,7 +287,7 @@ export default function OutletLabels() {
             <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between gap-2"><div><h2 className="font-black text-slate-900">{isRtl ? "قائمة الطباعة" : "Print queue"}</h2><p className="text-xs text-slate-500 mt-0.5">58 × 39 mm · Code 128</p></div>{queuedRows.length > 0 && <button onClick={() => setQueue({})} className="h-8 rounded-md border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-600 flex items-center gap-1.5"><Trash2 className="h-3.5 w-3.5" />{isRtl ? "مسح الكل" : "Clear all"}</button>}</div>
             <div className="p-4">
               {queuedRows.length ? <>
-                <div className="mx-auto w-fit overflow-hidden border border-slate-300 shadow-md"><ThermalLabel item={queuedRows[0]} /></div>
+                <div className="mx-auto w-fit overflow-hidden border border-slate-300 shadow-md"><ThermalLabel item={queuedRows[0]} logoUrl={outletLogo} /></div>
                 <div className="mt-4 max-h-44 overflow-y-auto divide-y divide-slate-100">{queuedRows.map(item => <div key={item._id} className="py-2 flex items-center justify-between gap-3 text-xs"><span className="font-bold truncate" dir="ltr">{item.nameEn}</span><div className="flex items-center gap-2 shrink-0"><b>× {queue[item._id]}</b><button onClick={() => setQueue(q => ({ ...q, [item._id]: 0 }))} className="text-red-500"><Trash2 className="h-4 w-4" /></button></div></div>)}</div>
                 <button onClick={() => window.print()} className="mt-4 h-12 w-full rounded-md bg-[linear-gradient(110deg,#0E76AC,#3cc4f0)] text-white font-black flex items-center justify-center gap-2 shadow-lg"><Printer className="h-5 w-5" />{isRtl ? `طباعة ${totalCopies} استيكر` : `Print ${totalCopies} labels`}</button>
               </> : <div className="py-16 text-center text-slate-400"><Barcode className="h-10 w-10 mx-auto mb-3 opacity-50" /><p className="font-bold">{isRtl ? "أضف صنفًا لعرض الاستيكر" : "Add a product to preview its label"}</p></div>}
@@ -288,7 +297,7 @@ export default function OutletLabels() {
       </div>
 
       <div className="outlet-print-root hidden print:block" dir="ltr">
-        {queuedRows.flatMap(item => Array.from({ length: queue[item._id] || 0 }, (_, index) => <div className="outlet-print-sheet" key={`${item._id}-${index}`}><ThermalLabel item={item} /></div>))}
+        {queuedRows.flatMap(item => Array.from({ length: queue[item._id] || 0 }, (_, index) => <div className="outlet-print-sheet" key={`${item._id}-${index}`}><ThermalLabel item={item} logoUrl={outletLogo} /></div>))}
       </div>
 
       {editing && <div className="print:hidden fixed inset-0 z-50 bg-slate-950/55 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={e => e.target === e.currentTarget && setEditing(null)}><form onSubmit={saveEdit} className="w-full max-w-xl rounded-lg bg-white shadow-2xl overflow-hidden"><div className="px-5 py-4 bg-slate-50 border-b flex items-center justify-between"><div><h2 className="font-black text-slate-900">{isRtl ? "تعديل بيانات الاستيكر" : "Edit label data"}</h2><p className="text-xs text-[#0E76AC] font-bold mt-1">{editing.barcode}</p></div><button type="button" onClick={() => setEditing(null)}><X className="h-5 w-5" /></button></div><div className="p-5 grid grid-cols-2 gap-4"><label className="col-span-2 text-xs font-bold text-slate-600">{isRtl ? "اسم الصنف" : "Product name"}<Input name="nameEn" defaultValue={editing.nameEn} className="mt-1" dir="ltr" required /></label>{(["price", "calories", "carbs", "protein", "fats"] as const).map(key => <label key={key} className="text-xs font-bold text-slate-600 capitalize">{key}<Input name={key} type="number" step="any" min="0" defaultValue={editing[key] ?? ""} className="mt-1" dir="ltr" /></label>)}</div><div className="px-5 py-4 border-t bg-slate-50 flex justify-between gap-2"><button type="button" onClick={() => editing && deleteProduct(editing)} disabled={saving} className="h-10 px-4 rounded-md border border-red-200 bg-red-50 text-red-600 font-bold flex items-center gap-2"><Trash2 className="h-4 w-4" />{isRtl ? "حذف الصنف" : "Delete"}</button><div className="flex gap-2"><button type="button" onClick={() => setEditing(null)} className="h-10 px-4 rounded-md border font-bold">{isRtl ? "إلغاء" : "Cancel"}</button><button disabled={saving} className="h-10 px-5 rounded-md bg-[#0E76AC] text-white font-bold flex items-center gap-2"><Save className="h-4 w-4" />{isRtl ? "حفظ" : "Save"}</button></div></div></form></div>}
@@ -300,6 +309,10 @@ export default function OutletLabels() {
         .outlet-thermal-label{width:58mm;height:39mm;background:#fff;color:#050505;padding:2.2mm 3mm 1.6mm;box-sizing:border-box;display:flex;flex-direction:column;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
         .outlet-label-brand{height:8mm;display:flex;align-items:center;justify-content:center;gap:2mm;border-bottom:.45mm solid #000;padding-bottom:.8mm}
         .outlet-label-brand img{width:7.8mm;height:7.8mm;object-fit:contain;filter:grayscale(1) brightness(0)}
+        /* الشعار الخاص يملأ عرض الشريط بدل أيقونةٍ ونصّ — والطابعة الحرارية
+           بتٌّ واحد، فالصورة المرفوعة أسودُ صافٍ بلا تدرّج. */
+        .outlet-label-brand--logo{gap:0}
+        .outlet-label-brand img.outlet-brand-logo{width:auto;height:6.6mm;max-width:50mm;object-fit:contain;filter:none}
         .outlet-brand-word{display:flex;flex-direction:column;align-items:center;line-height:.82}.outlet-brand-word b{font-size:5.6mm;font-weight:900;letter-spacing:-.2mm}.outlet-brand-word span{font-size:1.5mm;font-weight:800;letter-spacing:.9mm;margin-top:1mm}
         .outlet-label-name{height:7mm;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:900;line-height:1.02;overflow:hidden;padding-top:.3mm}.outlet-label-name span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:3.4mm}
         .outlet-label-mid{height:10.8mm;display:grid;grid-template-columns:1fr 24mm;align-items:center}.outlet-label-facts{font-size:3.1mm;line-height:1.5}.outlet-label-facts div{display:flex;gap:2mm;align-items:baseline}.outlet-label-facts .cal{font-size:2.8mm;color:#222}.outlet-label-facts strong{font-size:4.4mm;font-weight:900}.outlet-label-barcode{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}.outlet-label-barcode svg{max-width:23mm;height:7mm}.outlet-label-barcode span{font-size:3.4mm;letter-spacing:.8mm;line-height:1}

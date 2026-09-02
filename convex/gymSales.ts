@@ -36,6 +36,7 @@ export const listGyms = query({
       outletType: g.outletType || "GYM",
       contactName: g.contactName || "", contactPhone: g.contactPhone || "",
       discountPct: g.discountPct, notes: g.notes || "", isActive: g.isActive,
+      labelLogoUrl: (g as any).labelLogoUrl || "",
     }));
   },
 });
@@ -82,6 +83,7 @@ export const updateGym = mutation({
     contactPhone: v.optional(v.string()),
     discountPct: v.optional(v.number()),
     notes: v.optional(v.string()),
+    labelLogoUrl: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
     sessionToken: v.optional(v.string()),
   },
@@ -96,6 +98,7 @@ export const updateGym = mutation({
     if (args.contactPhone !== undefined) patch.contactPhone = args.contactPhone.trim() || undefined;
     if (args.discountPct !== undefined) patch.discountPct = Math.min(100, Math.max(0, args.discountPct));
     if (args.notes !== undefined) patch.notes = args.notes.trim() || undefined;
+    if (args.labelLogoUrl !== undefined) patch.labelLogoUrl = args.labelLogoUrl.trim() || undefined;
     if (args.isActive !== undefined) patch.isActive = args.isActive;
     await ctx.db.patch(args.id, patch);
     return { success: true };

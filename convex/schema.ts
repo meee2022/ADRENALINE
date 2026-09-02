@@ -1263,6 +1263,9 @@ export default defineSchema({
     contactPhone: v.optional(v.string()),
     discountPct: v.number(), // نسبة الخصم على سعر المنيو (0..100). افتراضي 20.
     notes: v.optional(v.string()),
+    /* شعار المنفذ على استيكراته. مربوطٌ بصفّ المنفذ لا باسمه: تغييرُ الاسم
+       لا يُسقط الشعار، والمنفذ الجديد يأخذ شعاره دون لمس الكود. */
+    labelLogoUrl: v.optional(v.string()),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
