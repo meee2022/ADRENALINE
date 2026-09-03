@@ -1,13 +1,19 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
-/* نسخة المتجر قشرةٌ تحمّل الموقع الحيّ: التطبيق يتحدّث مع الموقع دون
-   إعادة رفع، وحجمه ٣ ميغابايت بدل ٨٢ (كانت صور الدعاية والبروفايل تُحشر
-   في الحزمة). الشبكة شرطٌ في الحالتين — التطبيق لا يعمل بلا إنترنت أصلاً. */
+/* وضعان:
+   - القشرة (CAP_SHELL=1 — أندرويد): تحمّل الموقع الحيّ، فتتحدّث مع الموقع دون
+     إعادة رفع وحجمها ٣ ميغابايت بدل ٨٢. الشبكة شرطٌ في الحالتين أصلاً.
+   - الكاملة (الافتراضي — iOS): الواجهة مضمّنة من dist/public، لأن مراجعة آبل
+     (البند 4.2) ترفض التطبيق الذي هو موقعٌ في قشرة. */
+const shell = process.env.CAP_SHELL === "1";
+
 const config: CapacitorConfig = {
   appId: "com.adrenalinehealthy.app",
   appName: "Adrenaline Healthy",
-  webDir: "android-shell",
-  server: { url: "https://adrenalinehealthy.com", androidScheme: "https", cleartext: false },
+  webDir: shell ? "android-shell" : "dist/public",
+  ...(shell
+    ? { server: { url: "https://adrenalinehealthy.com", androidScheme: "https", cleartext: false } }
+    : {}),
   ios: {
     backgroundColor: "#F1F5F9",
     contentInset: "automatic",

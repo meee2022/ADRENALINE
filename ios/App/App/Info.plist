@@ -64,6 +64,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>يستخدم التطبيق موقعك أثناء التوصيل لعرض مسار السائق ومتابعة الطلبات.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>تُستخدم الكاميرا لمسح باركود المنتجات في المنافذ.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>لاختيار صورة الملف الشخصي أو صور الوجبات.</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>

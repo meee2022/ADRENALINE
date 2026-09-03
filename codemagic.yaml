@@ -1,0 +1,66 @@
+# بناء iOS ورفعه إلى TestFlight من السحابة — لا يحتاج ماك.
+# الدليل: دليل/نشر-التطبيق-على-آب-ستور.md
+#
+# ما يلزم ضبطه في Codemagic (مرة واحدة):
+#   1. Teams → Integrations → App Store Connect: مفتاح API (Issuer ID + Key ID + ملف .p8)
+#      باسم "adrenaline-asc".
+#   2. Environment variables → مجموعة "adrenaline-ios":
+#        VITE_CONVEX_URL = https://laudable-mongoose-958.convex.cloud   (الإنتاج)
+#        APP_STORE_APPLE_ID = الرقم الظاهر في App Store Connect → App Information → Apple ID
+#   3. في App Store Connect: أنشئ التطبيق أولاً بالمعرّف com.adrenalinehealthy.app.
+
+workflows:
+  ios-testflight:
+    name: iOS → TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: adrenaline-asc
+    environment:
+      groups:
+        - adrenaline-ios
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.adrenalinehealthy.app
+      node: 20
+      xcode: latest
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+      cancel_previous_builds: true
+    scripts:
+      - name: تثبيت الاعتماديات
+        script: npm ci
+      - name: بيئة الإصدار (قاعدة الإنتاج)
+        script: |
+          set -e
+          test -n "$VITE_CONVEX_URL" || { echo "VITE_CONVEX_URL غير مضبوط في مجموعة adrenaline-ios"; exit 1; }
+          printf 'VITE_CONVEX_URL=%s\nIOS_RELEASE_CONFIRMED=true\n' "$VITE_CONVEX_URL" > client/.env.ios.local
+      - name: بناء الواجهة ومزامنة Capacitor (النسخة الكاملة — لا قشرة)
+        script: npm run build:ios
+      - name: رقم البناء التالي من App Store Connect
+        script: |
+          set -e
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          NEXT=$((LATEST + 1))
+          echo "build number: $NEXT"
+          cd ios/App && agvtool new-version -all "$NEXT"
+      - name: ملفات التوقيع
+        script: xcode-project use-profiles
+      - name: بناء IPA
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --archive-flags="-destination 'generic/platform=iOS'"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # المراجعة النهائية للمتجر تُرسل يدوياً من App Store Connect بعد تجربة TestFlight
+        submit_to_app_store: false
