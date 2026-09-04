@@ -54,16 +54,6 @@ function pageNumberStyle(isRtl: boolean): string {
 export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean {
   const { fileName, autoPrint = true, width = 1000, height = 900, isRtl = true, pageNumbers = true } = opts;
 
-  const w = window.open("", "_blank", `width=${width},height=${height}`);
-  if (!w) {
-    void alertDialog({
-      message: isRtl
-        ? "المتصفح منع النافذة المنبثقة — اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة."
-        : "Pop-up blocked — allow pop-ups for this site, then try again.",
-    });
-    return false;
-  }
-
   // اسم ملف الـPDF = <title>. نستبدل العنوان الموجود بدل ما نضيف تاني.
   let doc = html;
   if (fileName) {
@@ -80,11 +70,84 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
     doc = /<\/head>/i.test(doc) ? doc.replace(/<\/head>/i, `${st}</head>`) : st + doc;
   }
 
+  /* ═══ تطبيق المتجر (Capacitor/WKWebView) ═══
+     window.open("") بيرجّع null جوّه التطبيق الأصلي — مفيش نوافذ منبثقة أصلاً —
+     فكان بيطلع «المتصفح منع النافذة المنبثقة» على الآيفون. الحل: نرسم المستند في
+     iframe مخفي داخل الصفحة نفسها ونطبع منه؛ نفس الحيلة تنقذ المتصفح العادي لو
+     المستخدم مانع النوافذ المنبثقة. */
+  if (isNativeShell()) {
+    void printNative(doc, fileName, autoPrint);
+    return true;
+  }
+
+  const w = window.open("", "_blank", `width=${width},height=${height}`);
+  if (!w) {
+    if (printViaIframe(doc, autoPrint)) return true;
+    void alertDialog({
+      message: isRtl
+        ? "المتصفح منع النافذة المنبثقة — اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد المحاولة."
+        : "Pop-up blocked — allow pop-ups for this site, then try again.",
+    });
+    return false;
+  }
+
   w.document.write(doc);
   w.document.close();
   w.focus();
   if (autoPrint) waitForImagesThenPrint(w);
   return true;
+}
+
+/**
+ * داخل تطبيق المتجر: window.print() لا يعمل إطلاقاً في WKWebView على iOS، فنستخدم
+ * حوار الطباعة الأصلي (@capgo/capacitor-printer) — منه يطبع أو يحفظ PDF ويشاركه.
+ * لو الإضافة غير متاحة (نسخة قديمة من التطبيق) نرجع لطريقة الإطار.
+ */
+async function printNative(doc: string, fileName: string | undefined, autoPrint: boolean): Promise<void> {
+  try {
+    const { Printer } = await import("@capgo/capacitor-printer");
+    await Printer.printHtml({ html: doc, name: fileName ? safeFileName(fileName) : undefined });
+  } catch {
+    if (!printViaIframe(doc, autoPrint)) {
+      void alertDialog({ message: "تعذّر فتح الطباعة داخل التطبيق — افتح الصفحة من المتصفح وأعد المحاولة." });
+    }
+  }
+}
+
+/** هل نعمل داخل تطبيق المتجر (Capacitor) لا متصفح عادي؟ */
+function isNativeShell(): boolean {
+  try {
+    return Boolean((window as any).Capacitor?.isNativePlatform?.());
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * طباعة من iframe مخفي في الصفحة الحالية — بديل النافذة المنبثقة.
+ * المستند نفسه (بعنوانه وترقيمه) يُكتب داخل الإطار؛ لو المستند بيطبع نفسه
+ * (autoPrint=false) فسكربته بيشتغل داخل الإطار عادي. الإطار يُزال بعد الطباعة.
+ */
+function printViaIframe(doc: string, autoPrint: boolean): boolean {
+  try {
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.cssText = "position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+    document.body.appendChild(iframe);
+    const fw = iframe.contentWindow;
+    const fd = fw?.document;
+    if (!fw || !fd) { iframe.remove(); return false; }
+    fd.open();
+    fd.write(doc);
+    fd.close();
+    const cleanup = () => setTimeout(() => iframe.remove(), 1000);
+    fw.addEventListener("afterprint", cleanup);
+    setTimeout(cleanup, 5 * 60 * 1000); // احتياطي لو ما وصلش afterprint
+    if (autoPrint) waitForImagesThenPrint(fw);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
