@@ -17,6 +17,7 @@ import { DashboardHeader } from "@/components/DashboardHeader";
 import { Store, Users, LayoutGrid, Palette, BarChart3, Clock, Plus, Save, Trash2, RefreshCw, Link as LinkIcon, ExternalLink, TrendingUp, ShieldCheck, Building2, ReceiptText, WalletCards, Mail, Send, Settings2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { downloadBlob } from "@/lib/native";
 
 type Tab = "overview" | "branches" | "cashiers" | "categories" | "items" | "reports" | "profit" | "audit" | "shifts";
 
@@ -1120,10 +1121,7 @@ function ProfitTab({ t, sessionToken, isRtl }: any) {
     ]);
     const csv = "﻿" + [header, ...rows].map((r: any[]) => r.map((c: any) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `profit-${from}_${to}.csv`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    void downloadBlob(blob, `profit-${from}_${to}.csv`);
   };
 
   return (
@@ -1283,10 +1281,7 @@ function AuditTab({ t, sessionToken }: any) {
     ]);
     const csv = "﻿" + [header, ...data].map((row) => row.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `audit-${from}_${to}.csv`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
+    void downloadBlob(blob, `audit-${from}_${to}.csv`);
   };
 
   return (

@@ -17,6 +17,7 @@ import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { slotToDate } from "@/lib/subscription";
 import { localISO } from "@/lib/mealSchedule";
 import type { Id } from "@/../../convex/_generated/dataModel";
+import { publicOrigin, openExternal } from "@/lib/native";
 
 const dayNameAr: Record<string, string> = {
   saturday: "السبت",
@@ -103,7 +104,7 @@ export default function OrderReviewDetail() {
     setSharing(true);
     try {
       const { token } = await getShareTokenMut({ orderId: orderData._id, sessionToken });
-      const url = `${window.location.origin}/plan/${token}`;
+      const url = `${publicOrigin()}/plan/${token}`;
       const name = orderData.customerName || "";
       const msg = t(`جدول وجباتك من Adrenaline 🥗\n${name}\n${url}`, `Your Adrenaline meal plan 🥗\n${name}\n${url}`);
       // قائمة المشاركة الأصلية (الأفضل على الجوال) — تختار واتساب فيتّرفق الرابط
@@ -120,7 +121,7 @@ export default function OrderReviewDetail() {
       const wa = phone
         ? `https://wa.me/${phone.length === 8 ? "974" + phone : phone}?text=${encodeURIComponent(msg)}`
         : `https://wa.me/?text=${encodeURIComponent(msg)}`;
-      window.location.href = wa;
+      openExternal(wa);
     } catch (e: any) {
       void alertDialog({ message: t("تعذّر إنشاء الرابط: ", "Couldn't create link: ") + String(e?.message || e) });
     } finally {

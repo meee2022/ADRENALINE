@@ -9,6 +9,7 @@ import { usePosStore } from "@/lib/posStore";
 import { Printer, X, CheckCircle2, Tags, Undo2, Loader2 } from "lucide-react";
 import { openPrintDoc } from "@/lib/printDoc";
 import { alertDialog } from "@/lib/dialogs";
+import { publicOrigin } from "@/lib/native";
 
 type Props = { ticketId: string; onClose: () => void };
 
@@ -203,7 +204,7 @@ function buildReceiptHtml(t: any): string {
       @page{size:80mm auto;margin:0}
       @media print{body{margin:0;padding:4mm 4mm 8mm}}
     </style></head><body>
-    <img class="logo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE HEALTHY FOOD">
+    <img class="logo" src="${publicOrigin()}/adrenaline-logo-full.png" alt="ADRENALINE HEALTHY FOOD">
     ${t.branchName ? `<div class="brand"><span class="nm" style="font-size:13px;font-weight:900">${escapeHtml(t.branchName)}</span></div>` : ""}
     ${t.branchAddress ? `<div class="brand" style="margin-bottom:2px"><span class="nm">${escapeHtml(t.branchAddress)}</span></div>` : ""}
     ${t.branchPhone ? `<div class="brand" style="margin-bottom:6px"><span class="nm" dir="ltr">${escapeHtml(t.branchPhone)}</span></div>` : ""}
@@ -241,7 +242,7 @@ function buildLabelsHtml(t: any): string {
     for (let k = 0; k < units; k++) {
       labels.push(`
         <div class="lbl">
-          <img class="brandlogo" src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
+          <img class="brandlogo" src="${publicOrigin()}/adrenaline-logo-full.png" alt="ADRENALINE">
           <div class="name">${escapeHtml(l.name)}</div>
           ${l.notes ? `<div class="note">${escapeHtml(l.notes)}</div>` : ""}
           <div class="meta">

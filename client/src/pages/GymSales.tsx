@@ -17,6 +17,8 @@ import { Dumbbell, Plus, Receipt, ClipboardList, BarChart3, Settings, Search, Pr
 import { cn } from "@/lib/utils";
 import { confirmDialog, promptDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
+import { publicOrigin, isNativeShell } from "@/lib/native";
+import { openPrintDoc } from "@/lib/printDoc";
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const thisMonth = () => todayStr().slice(0, 7);
@@ -1015,7 +1017,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           <div><b>${t("أيام التوريد", "Supply days")}:</b> ${report.daysCount}</div>
           <div><b>${t("تاريخ الإصدار", "Issued")}:</b> ${issuedAt}</div>
         </div>
-        <img src="${window.location.origin}/adrenaline-logo-full.png" alt="ADRENALINE">
+        <img src="${publicOrigin()}/adrenaline-logo-full.png" alt="ADRENALINE">
       </div>
       <div class="doc-t">
         <span>${esc(scopeTitle())}</span>
@@ -1508,6 +1510,8 @@ function ReportPreview({ html, fileName, isRtl, t, onClose }: any) {
   };
 
   const doPrint = () => {
+    // داخل تطبيق المتجر لا يعمل print() في WKWebView — نمرّر المستند لحوار الطباعة الأصلي
+    if (isNativeShell()) { openPrintDoc(html, { fileName, autoPrint: true }); return; }
     const w = frameRef.current?.contentWindow;
     if (!w) return;
     w.focus();

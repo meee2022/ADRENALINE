@@ -75,6 +75,7 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
 import { getEffectivePlanItems } from "@/lib/planItems";
+import { downloadBlob } from "@/lib/native";
 
 /* ─── helpers ─────────────────────────────────────────── */
 function makeId() {
@@ -1040,13 +1041,7 @@ export default function PlansPage() {
       return rowData.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",");
     });
     const blob = new Blob([[headers.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.setAttribute("href", URL.createObjectURL(blob));
-    link.setAttribute("download", `plans_${formattedDate}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void downloadBlob(blob, `plans_${formattedDate}.csv`);
   };
 
   /**

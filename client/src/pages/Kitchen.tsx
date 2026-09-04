@@ -58,6 +58,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { printCurrentPage } from "@/lib/native";
 
 type ModifierGroup = "AVOID" | "PREF" | "PORTION";
 type RestaurantFilter = "ALL" | "ADRENALINE" | "NUTRI_RESET";
@@ -1691,7 +1692,7 @@ ${r.skippedOnTheRoad} already out for delivery were left as is.` : ""}` });
 
   const handlePrint = () => {
     if (stopUnsafePrint()) return;
-    window.print();
+    void printCurrentPage();
   };
 
   const getModifiersByGroup = (modifierIds: string[] = []) => {

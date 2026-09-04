@@ -7,6 +7,7 @@ import { useLanguage } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Search, Printer, Plus, Minus, Trash2, Barcode, AlertTriangle, Pencil, X, Save } from "lucide-react";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
+import { printCurrentPage } from "@/lib/native";
 
 type LabelRow = {
   _id: string;
@@ -292,7 +293,7 @@ export default function OutletLabels() {
               {queuedRows.length ? <>
                 <div className="mx-auto w-fit overflow-hidden border border-slate-300 shadow-md"><ThermalLabel item={queuedRows[0]} logoUrl={outletLogo} /></div>
                 <div className="mt-4 max-h-44 overflow-y-auto divide-y divide-slate-100">{queuedRows.map(item => <div key={item._id} className="py-2 flex items-center justify-between gap-3 text-xs"><span className="font-bold truncate" dir="ltr">{item.nameEn}</span><div className="flex items-center gap-2 shrink-0"><b>× {queue[item._id]}</b><button onClick={() => setQueue(q => ({ ...q, [item._id]: 0 }))} className="text-red-500"><Trash2 className="h-4 w-4" /></button></div></div>)}</div>
-                <button onClick={() => window.print()} className="mt-4 h-12 w-full rounded-md bg-[linear-gradient(110deg,#0E76AC,#3cc4f0)] text-white font-black flex items-center justify-center gap-2 shadow-lg"><Printer className="h-5 w-5" />{isRtl ? `طباعة ${totalCopies} استيكر` : `Print ${totalCopies} labels`}</button>
+                <button onClick={() => void printCurrentPage()} className="mt-4 h-12 w-full rounded-md bg-[linear-gradient(110deg,#0E76AC,#3cc4f0)] text-white font-black flex items-center justify-center gap-2 shadow-lg"><Printer className="h-5 w-5" />{isRtl ? `طباعة ${totalCopies} استيكر` : `Print ${totalCopies} labels`}</button>
               </> : <div className="py-16 text-center text-slate-400"><Barcode className="h-10 w-10 mx-auto mb-3 opacity-50" /><p className="font-bold">{isRtl ? "أضف صنفًا لعرض الاستيكر" : "Add a product to preview its label"}</p></div>}
             </div>
           </aside>

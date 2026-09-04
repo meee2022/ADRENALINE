@@ -24,6 +24,7 @@ import {
   Package,
   Users as UsersIcon,
 } from "lucide-react";
+import { printCurrentPage, downloadBlob } from "@/lib/native";
 
 type ReportType = "sales" | "kitchen" | "delivery" | "customers" | "inventory";
 
@@ -89,12 +90,7 @@ function toCsv(rows: any[][]): string {
 
 function downloadCsv(filename: string, content: string) {
   const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+  void downloadBlob(blob, filename);
 }
 
 export default function Reports() {
@@ -229,7 +225,7 @@ function SalesReport({ from, to }: { from: string; to: string }) {
     <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المبيعات", "Sales Report")}</CardTitle>
-        <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
+        <ReportToolbar onExport={handleExport} onPrint={() => void printCurrentPage()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -307,7 +303,7 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
     <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المطبخ", "Kitchen Report")}</CardTitle>
-        <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
+        <ReportToolbar onExport={handleExport} onPrint={() => void printCurrentPage()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -426,7 +422,7 @@ function CustomersReport() {
     <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير العملاء", "Customers Report")}</CardTitle>
-        <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
+        <ReportToolbar onExport={handleExport} onPrint={() => void printCurrentPage()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
@@ -492,7 +488,7 @@ function InventoryReport() {
     <Card className="rounded-2xl border-0 rpt-anim" style={CARD_STYLE}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>{t("تقرير المخزون", "Inventory Report")}</CardTitle>
-        <ReportToolbar onExport={handleExport} onPrint={() => window.print()} />
+        <ReportToolbar onExport={handleExport} onPrint={() => void printCurrentPage()} />
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">

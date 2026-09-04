@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/lib/i18n";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { publicOrigin } from "@/lib/native";
 
 export default function PayLaterCheckout() {
   const { language } = useLanguage();
@@ -60,7 +61,7 @@ export default function PayLaterCheckout() {
       setBusy(true);
       const result = await createCheckout({
         planId, optionIndex, customerName: name, customerPhone: phone,
-        customerEmail: email || undefined, returnOrigin: window.location.origin,
+        customerEmail: email || undefined, returnOrigin: publicOrigin(),
         couponCode: code.trim() ? code.trim().toUpperCase() : undefined,
       });
       window.location.assign(result.paymentLinkUrl);

@@ -7,6 +7,7 @@
  *   - لو التطبيق مثبَّت أصلاً (standalone) — الزر يختفي.
  */
 import { useEffect, useState } from "react";
+import { isNativeShell } from "@/lib/native";
 import { Download, Share } from "lucide-react";
 
 const MANIFEST_ID = "app-manifest";
@@ -53,7 +54,13 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 /** زر تثبيت PWA ذكي — يظهر بس لما فيه إمكانية تثبيت أو على iOS بدون تثبيت. */
-export function InstallButton({ className = "" }: { className?: string }) {
+export function InstallButton(props: { className?: string }) {
+  // داخل تطبيق المتجر لا معنى لـ«ثبّت التطبيق» — التطبيق مثبّت أصلاً
+  if (isNativeShell()) return null;
+  return <InstallButtonInner {...props} />;
+}
+
+function InstallButtonInner({ className = "" }: { className?: string }) {
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState<boolean>(false);
   const [showIosHint, setShowIosHint] = useState<boolean>(false);

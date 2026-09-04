@@ -42,6 +42,7 @@ import {
   setBrowseOnly,
   clearIdentity,
 } from "@/lib/customerIdentity";
+import { openExternal } from "@/lib/native";
 
 const DAY_LABEL_AR: Record<string, string> = {
   saturday: "السبت", sunday: "الأحد", monday: "الإثنين",
@@ -192,7 +193,7 @@ export default function PublicMenuPage() {
     const msg = isRtl
       ? `مرحباً 👋\nأرغب في الاشتراك في خطط ${restaurant.nameAr}.\nرقمي: ${phoneInput || verifiedPhone}`
       : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn} plans.\nMy phone: ${phoneInput || verifiedPhone}`;
-    window.location.href = whatsappLink(msg);
+    openExternal(whatsappLink(msg));
   };
 
   // ✅ تاريخ بداية التوصيل الذي يختاره العميل. منه يعرف النظام أسبوع الدورة —
@@ -1602,7 +1603,7 @@ Is that what you want?`,
                 const msg = isRtl
                   ? `مرحباً 👋\nأرغب في الاشتراك في ${restaurant.nameAr}.`
                   : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.`;
-                window.location.href = whatsappLink(msg);
+                openExternal(whatsappLink(msg));
               }}
               className="h-9 rounded-full px-4 font-bold text-white"
               style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
@@ -2381,7 +2382,7 @@ Is that what you want?`,
                             const msg = isRtl
                               ? `مرحباً 👋\nأرغب في الاشتراك في ${restaurant.nameAr}.\nأعجبتني وجبة: ${meal.nameAr}`
                               : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
-                            window.location.href = whatsappLink(msg);
+                            openExternal(whatsappLink(msg));
                           }}
                           className="h-9 px-4 rounded-full font-bold text-white flex items-center gap-1.5"
                           style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}

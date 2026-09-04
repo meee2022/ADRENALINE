@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { Check, Copy, Download, ImagePlus, Megaphone, QrCode, ShieldCheck, Sparkles } from "lucide-react";
 import QRCode from "qrcode";
+import { downloadBlob } from "@/lib/native";
 
 type Brand = "ADRENALINE" | "NUTRI_RESET";
 type Size = "POST" | "STORY";
@@ -506,16 +507,7 @@ async function savePng(dataUrl: string, filename: string): Promise<SaveResult> {
     }
   }
 
-  const objectUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = objectUrl;
-  link.download = filename;
-  link.rel = "noopener";
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 30_000);
+  await downloadBlob(blob, filename);
   return "downloaded";
 }
 

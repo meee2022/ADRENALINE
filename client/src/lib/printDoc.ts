@@ -13,6 +13,7 @@
  */
 
 import { alertDialog } from "./dialogs";
+import { isNativeShell } from "./native";
 
 /** ينظّف اسم الملف من المحارف الممنوعة في ويندوز/ماك. */
 export function safeFileName(s: string): string {
@@ -111,15 +112,6 @@ async function printNative(doc: string, fileName: string | undefined, autoPrint:
     if (!printViaIframe(doc, autoPrint)) {
       void alertDialog({ message: "تعذّر فتح الطباعة داخل التطبيق — افتح الصفحة من المتصفح وأعد المحاولة." });
     }
-  }
-}
-
-/** هل نعمل داخل تطبيق المتجر (Capacitor) لا متصفح عادي؟ */
-function isNativeShell(): boolean {
-  try {
-    return Boolean((window as any).Capacitor?.isNativePlatform?.());
-  } catch {
-    return false;
   }
 }
 

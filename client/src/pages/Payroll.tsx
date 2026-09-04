@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { DashboardHeader } from "@/components/DashboardHeader";
 import { Banknote, Plus, Pencil, Trash2, Printer, Clock4, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { printCurrentPage } from "@/lib/native";
 
 const money = (n: number) => (n || 0).toLocaleString("en-US");
 
@@ -187,7 +188,7 @@ export default function Payroll() {
                   <BadgeCheck className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("اعتماد وترحيل", "Approve & Post")}
                 </Button>
               )}
-              <Button onClick={() => window.print()} className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
+              <Button onClick={() => void printCurrentPage()} className="h-11 rounded-xl font-bold text-white shadow-lg text-sm backdrop-blur-md"
                 style={{ background: "rgba(255,255,255,.18)", border: "1px solid rgba(255,255,255,.3)" }}>
                 <Printer className={cn("h-4 w-4", isRtl ? "ml-2" : "mr-2")} /> {t("طباعة", "Print")}
               </Button>

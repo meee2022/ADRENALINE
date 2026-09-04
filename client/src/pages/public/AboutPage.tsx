@@ -9,6 +9,7 @@ import { api } from "@/../../convex/_generated/api";
 import { MessageCircle, Printer, Globe } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { useSeo } from "@/lib/seo";
+import { printCurrentPage } from "@/lib/native";
 
 /* ─── Brand tokens ─── */
 const B = {
@@ -171,7 +172,7 @@ export default function AboutPage() {
       img.onerror = () => resolve(); // resolve even on error
       img.src = src;
     }));
-    Promise.all(imgPromises).then(() => window.print());
+    Promise.all(imgPromises).then(() => void printCurrentPage());
   };
 
   const toc = [

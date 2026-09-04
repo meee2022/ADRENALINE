@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { openWhatsApp, WhatsAppTemplates } from "@/lib/whatsapp";
 import { useLanguage } from "@/lib/i18n";
 import { confirmDialog } from "@/lib/dialogs";
+import { publicOrigin } from "@/lib/native";
 
 const B = { brand: "#3cc4f0", deep: "#0E76AC", ink: "#0E2A4A" };
 
@@ -48,7 +49,7 @@ export default function DriverApp() {
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingPhoto = useRef<any>(null);
 
-  const trackBase = typeof window !== "undefined" ? window.location.origin : "";
+  const trackBase = publicOrigin();
   const [trackingQueue, setTrackingQueue] = useState<any[]>(() => {
     try { return JSON.parse(localStorage.getItem("driver-tracking-queue") || "[]"); } catch { return []; }
   });

@@ -20,6 +20,7 @@ import { DeliveryMap } from "@/components/DeliveryMap";
 import { useStore } from "@/lib/store";
 import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
+import { publicOrigin, printCurrentPage } from "@/lib/native";
 
 export default function Delivery() {
   const { language, dir } = useLanguage();
@@ -48,7 +49,7 @@ export default function Delivery() {
   const rescheduleMut = useMutation(api.delivery.reschedule);
   const [selectedDriver, setSelectedDriver] = useState("");
   const [assigning, setAssigning] = useState(false);
-  const trackBase = typeof window !== "undefined" ? window.location.origin : "";
+  const trackBase = publicOrigin();
 
   // ✅ الطلبات النشطة: جاهزة/في الطريق/فشلت (لا تختفي، والفاشلة تظهر لإعادة الجدولة)
   const plans = dailyPlans.filter(
@@ -265,7 +266,7 @@ export default function Delivery() {
                 </Button>
               )}
               <Button
-                onClick={() => window.print()}
+                onClick={() => void printCurrentPage()}
                 className="h-11 rounded-xl font-bold text-[#0E2A4A] bg-white hover:bg-white/90 shadow-lg text-sm"
                 title={isRtl ? "طباعة قائمة التوصيل" : "Print delivery list"}
               >

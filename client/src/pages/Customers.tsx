@@ -77,6 +77,7 @@ import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
 import { getUserError } from "@/lib/userError";
+import { downloadBlob } from "@/lib/native";
 
 /* =========================
    Date helpers - DD/MM/YYYY format
@@ -938,12 +939,7 @@ export default function Customers() {
     ];
     const csv = headers.join(",") + "\n";
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "customers_import_template.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+    void downloadBlob(blob, "customers_import_template.csv");
   };
 
   return (
