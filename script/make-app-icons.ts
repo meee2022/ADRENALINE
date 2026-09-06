@@ -32,15 +32,22 @@ const HEART = p("client", "public", "heart-logo.png");
 
 type Flat = { input: Buffer; width: number; height: number };
 
-/** يرسم شكلاً مسطّحاً بلون واحد في العرض المطلوب بحوافٍّ حادّة (يحاكي الفيكتور). */
+/**
+ * يرسم شكلاً مسطّحاً بلون واحد في العرض المطلوب بحوافٍّ حادّة (يحاكي الفيكتور).
+ *
+ * ⚠️ المقاس يُمرَّر صراحةً: `metadata()` تصف الملف على القرص لا نتيجة `extract`،
+ *    فحسابُ النسبة منها يعطي ارتفاعاً خاطئاً و`resize` الافتراضي (fit: cover)
+ *    يقصّ الجوانب — فيخرج الشعار مبتوراً. ولهذا `fit: "fill"` أيضاً.
+ */
 async function crisp(
   src: sharp.Sharp,
+  srcW: number,
+  srcH: number,
   targetW: number,
   color: { r: number; g: number; b: number },
   ss = 6,
 ): Promise<Flat> {
-  const meta = await src.clone().metadata();
-  const ratio = (meta.height || 1) / (meta.width || 1);
+  const ratio = srcH / srcW;
   const w = Math.max(1, Math.round(targetW));
   const h = Math.max(1, Math.round(w * ratio));
 
@@ -48,9 +55,9 @@ async function crisp(
     .clone()
     .ensureAlpha()
     .extractChannel("alpha")
-    .resize(w * ss, Math.max(1, Math.round(w * ss * ratio)), { kernel: "cubic" })
+    .resize(w * ss, Math.max(1, Math.round(h * ss)), { kernel: "cubic", fit: "fill" })
     .threshold(128)
-    .resize(w, h, { kernel: "lanczos3" })
+    .resize(w, h, { kernel: "lanczos3", fit: "fill" })
     .raw()
     .toBuffer();
 
@@ -62,21 +69,20 @@ async function crisp(
   return { input, width: w, height: h };
 }
 
-/** الشعار بلا سطر HEALTHY FOOD — أعلى 66% من الملف. */
-async function wordMark(): Promise<sharp.Sharp> {
+/** الشعار بلا سطر HEALTHY FOOD — أعلى 66% من الملف، ومعه مقاسه الحقيقي. */
+async function wordMark(): Promise<{ img: sharp.Sharp; w: number; h: number }> {
   const m = await sharp(LOGO).metadata();
-  return sharp(LOGO).extract({
-    left: 0,
-    top: 0,
-    width: m.width!,
-    height: Math.round(m.height! * 0.66),
-  });
+  const w = m.width!;
+  const h = Math.round(m.height! * 0.66);
+  return { img: sharp(LOGO).extract({ left: 0, top: 0, width: w, height: h }), w, h };
 }
 
 /** أيقونة مربّعة: الاسم وتحته القلب، مع خلفية أو بشفافية (للطبقة التكيّفية). */
 async function build(S: number, withBg: boolean): Promise<Buffer> {
-  const word = await crisp(await wordMark(), Math.round(S * 0.84), WORD_COLOR);
-  const heart = await crisp(sharp(HEART), Math.round(S * 0.42), HEART_COLOR);
+  const wm = await wordMark();
+  const hm = await sharp(HEART).metadata();
+  const word = await crisp(wm.img, wm.w, wm.h, Math.round(S * 0.84), WORD_COLOR);
+  const heart = await crisp(sharp(HEART), hm.width!, hm.height!, Math.round(S * 0.42), HEART_COLOR);
   const gap = Math.max(1, Math.round(S * 0.05));
   const top = Math.round((S - (word.height + gap + heart.height)) / 2);
 
