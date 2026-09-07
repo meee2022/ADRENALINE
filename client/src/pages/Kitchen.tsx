@@ -180,6 +180,13 @@ export default function Kitchen() {
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
   const isAdmin = useStore((s: any) => s.currentUser?.role) === "ADMIN";
   const undoPrepareAllMutation = useMutation(api.inventory.undoPrepareAllForDate);
+  /* ✅ معاينة الخصم قبل «تحضير الكل»: ماذا سيُخصم من كل صنف مخزون، وأين النقص،
+     وأي وجبات بلا رسيبي — قراءة فقط، تُطلب عند فتح النافذة. */
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const preview = useQuery(
+    api.recipeCosting.previewPrepareAll,
+    previewOpen ? { date: formattedDate, sessionToken: sessionTok } : "skip",
+  ) as any;
   const [undoingAll, setUndoingAll] = useState(false);
   const productionAudit = useQuery(api.productionAudit.forDate, {
     date: formattedDate,
@@ -1753,6 +1760,14 @@ ${r.skippedOnTheRoad} already out for delivery were left as is.` : ""}` });
             actions={
               <>
                 {dayConfirmed.total > 0 && (
+                  <button onClick={() => setPreviewOpen(true)}
+                    title={isRtl ? "ماذا سيُخصم من المخزون قبل التحضير" : "What will be deducted before preparing"}
+                    className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 border border-white/40"
+                    style={{ background: "rgba(255,255,255,.12)" }}>
+                    {isRtl ? "معاينة الخصم" : "Preview deduction"}
+                  </button>
+                )}
+                {dayConfirmed.total > 0 && (
                   <button onClick={handlePrepareAll} disabled={preparingAll || !printAllowed}
                     className="h-11 px-3 rounded-xl text-xs sm:text-sm font-black text-white flex items-center gap-1.5 shrink-0 disabled:opacity-60"
                     style={{ background: "linear-gradient(135deg,#25D366,#128C7E)" }}>
@@ -2795,6 +2810,71 @@ ${r.skippedOnTheRoad} already out for delivery were left as is.` : ""}` });
           );
         })()}
       </div>
+
+      {/* ✅ معاينة خصم المخزون ليوم كامل قبل «تحضير الكل» — قراءة فقط */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" dir={isRtl ? "rtl" : "ltr"}>
+          <DialogHeader>
+            <DialogTitle>{isRtl ? `معاينة خصم المخزون — ${formattedDate}` : `Inventory deduction preview — ${formattedDate}`}</DialogTitle>
+          </DialogHeader>
+          {!preview ? (
+            <p className="text-sm text-muted-foreground">{isRtl ? "جارٍ الحساب…" : "Calculating…"}</p>
+          ) : (
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  [isRtl ? "خطط مؤكدة" : "Confirmed plans", preview.plansCounted],
+                  [isRtl ? "وجبات لها رسيبي" : "Meals with recipe", preview.itemsWithRecipe],
+                  [isRtl ? "وجبات بلا رسيبي" : "Meals without recipe", preview.itemsWithoutRecipe],
+                  [isRtl ? "تكلفة تقديرية" : "Est. cost", `${preview.estCost} ${isRtl ? "ر.ق" : "QAR"}`],
+                ].map(([l, v]) => (
+                  <div key={String(l)} className="rounded-lg border p-2">
+                    <div className="text-[11px] text-muted-foreground">{l}</div>
+                    <div className="font-black text-lg tabular-nums">{v as any}</div>
+                  </div>
+                ))}
+              </div>
+              {preview.shortItems > 0 && (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-2 text-red-800 font-bold">
+                  {isRtl ? `⚠️ ${preview.shortItems} صنف لا يكفي مخزونه — سيُخصم المتاح فقط ويُسجَّل النقص` : `⚠️ ${preview.shortItems} item(s) short — only available stock will be deducted`}
+                </div>
+              )}
+              {preview.missingRecipe?.length > 0 && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-amber-900">
+                  <div className="font-bold mb-1">{isRtl ? "وجبات بلا رسيبي (لن يُخصم لها شيء):" : "Meals without a recipe (nothing deducted):"}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {preview.missingRecipe.slice(0, 30).map((m: any) => (
+                      <span key={m.name} className="px-2 py-0.5 rounded bg-white border text-xs">{m.name} ×{m.n}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground">
+                      <th className="text-start p-1">{isRtl ? "الصنف" : "Item"}</th>
+                      <th className="text-end p-1">{isRtl ? "المطلوب" : "Need"}</th>
+                      <th className="text-end p-1">{isRtl ? "المتاح" : "Stock"}</th>
+                      <th className="text-end p-1">{isRtl ? "النقص" : "Short"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.lines.map((l: any) => (
+                      <tr key={l.itemId} className={cn("border-t", l.short > 0 && "bg-red-50 text-red-800 font-bold")}>
+                        <td className="p-1">{l.nameAr}</td>
+                        <td className="p-1 text-end tabular-nums">{l.need} {l.unit}</td>
+                        <td className="p-1 text-end tabular-nums">{l.stock} {l.unit}</td>
+                        <td className="p-1 text-end tabular-nums">{l.short > 0 ? `${l.short} ${l.unit}` : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* ✅ Meal Details Dialog — Premium Light Theme */}
       <Dialog open={openMealDialog} onOpenChange={setOpenMealDialog}>
