@@ -281,11 +281,29 @@ ${r.skipped.join(", ")}` : ""),
      وصول الطلب → React #310 وانهيار الصفحة على الأخصائية أثناء المراجعة. */
   const startISOForSlots = startDate ? localISO(startDate) : undefined;
   const startRotForSlots = Number(rotationInfo?.rotationWeek) || 1;
+  /* الطلب المعتمد: التاريخ من خطته الفعلية لا من الحساب. slotToDate تقصّ عند
+     «بكرة» فتعرض يوماً مضى (وجهّزه المطبخ) كأنه بعد ثلاثة أسابيع، فتحاول
+     الأخصائية تعديله ويردّه الخادم. */
+  const planDayMap = useMemo(() => {
+    const m: Record<string, { date: string; status: string }> = {};
+    for (const p of (((orderData as any)?.planDays || []) as any[])) {
+      if (p?.week != null && p?.day && p?.date) m[`${Number(p.week)}-${String(p.day)}`] = { date: String(p.date), status: String(p.status || "") };
+    }
+    return m;
+  }, [orderData]);
   const dateForSlot = useCallback(
     (week: number, day: string): string | null =>
-      startISOForSlots ? slotToDate(startISOForSlots, startRotForSlots, week, day) : null,
-    [startISOForSlots, startRotForSlots],
+      planDayMap[`${week}-${day}`]?.date
+        ?? (startISOForSlots ? slotToDate(startISOForSlots, startRotForSlots, week, day) : null),
+    [planDayMap, startISOForSlots, startRotForSlots],
   );
+  /* الأيام التي خرجت من يد الأخصائية — الخادم يردّ تعديلها، فتُقفل هنا أيضاً. */
+  const LOCKED_DAY: Record<string, [string, string]> = {
+    PREPARED: ["جهّزه المطبخ", "Prepared by kitchen"],
+    OUT_FOR_DELIVERY: ["خرج مع السائق", "Out for delivery"],
+    DELIVERED: ["وصل للمشترك", "Delivered"],
+    CANCELLED: ["أُلغي", "Cancelled"],
+  };
 
   // ✅ كل (week, day) من الطلب مرتبة كرونولوجياً (الأسبوع الأول السبت ← الأسبوع 4 الخميس)
   //    ⚠️ كان الخميس ناقصاً من الجدول (يأخذ 99 فيُرمى آخر الترتيب دائماً)
@@ -782,6 +800,9 @@ ${r.skipped.join(", ")}` : ""),
                   const autoISO = dateForSlot(weekNum, day);
                   const autoDate = autoISO ? new Date(`${autoISO}T00:00:00`) : null;
                   const effectiveDate = overrideDate || autoDate;
+                  const planDay = planDayMap[`${weekNum}-${day}`];
+                  const lockedLabel = planDay ? LOCKED_DAY[planDay.status] : undefined;
+                  const lockTitle = lockedLabel ? t(`${lockedLabel[0]} — لا يُعدَّل`, `${lockedLabel[1]} — locked`) : undefined;
 
                   return (
                     <div
@@ -796,6 +817,16 @@ ${r.skipped.join(", ")}` : ""),
                           {effectiveDate && (
                             <span className="text-sm font-semibold opacity-80">
                               · {format(effectiveDate, "d MMM yyyy", { locale })}
+                            </span>
+                          )}
+                          {planDay && (
+                            <span
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${lockedLabel ? "bg-white/25" : planDay.status === "PAUSED" ? "bg-amber-300/40" : "bg-emerald-300/40"}`}
+                              title={lockTitle}
+                            >
+                              {lockedLabel
+                                ? `🔒 ${t(lockedLabel[0], lockedLabel[1])}`
+                                : planDay.status === "PAUSED" ? t("متوقف مؤقتاً", "Paused") : t("معتمد", "Confirmed")}
                             </span>
                           )}
                           <span className="text-xs bg-white/15 rounded-full px-2.5 py-0.5">
@@ -932,15 +963,17 @@ ${r.skipped.join(", ")}` : ""),
                                       void alertDialog({ message: e?.message || t("تعذّر الحفظ", "Save failed") });
                                     }
                                   }}
-                                  className="text-gray-400 hover:text-amber-600 transition-colors text-sm"
-                                  title={t("ملاحظة للمطبخ", "Kitchen note")}
+                                  className="text-gray-400 hover:text-amber-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                                  disabled={!!lockedLabel}
+                                  title={lockTitle || t("ملاحظة للمطبخ", "Kitchen note")}
                                 >
                                   📝
                                 </button>
                                 <button
                                   onClick={() => setSwapTarget(meal)}
-                                  className="text-gray-400 hover:text-primary transition-colors text-sm"
-                                  title={t("تبديل الوجبة", "Swap meal")}
+                                  className="text-gray-400 hover:text-primary transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                                  disabled={!!lockedLabel}
+                                  title={lockTitle || t("تبديل الوجبة", "Swap meal")}
                                 >
                                   ✏️
                                 </button>
@@ -953,8 +986,9 @@ ${r.skipped.join(", ")}` : ""),
                                       void alertDialog({ message: e?.message || t("تعذّر الحذف", "Delete failed") });
                                     }
                                   }}
-                                  className="text-gray-400 hover:text-red-600 transition-colors text-sm"
-                                  title={t("حذف الوجبة من الطلب", "Remove meal from order")}
+                                  className="text-gray-400 hover:text-red-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                                  disabled={!!lockedLabel}
+                                  title={lockTitle || t("حذف الوجبة من الطلب", "Remove meal from order")}
                                 >
                                   🗑️
                                 </button>

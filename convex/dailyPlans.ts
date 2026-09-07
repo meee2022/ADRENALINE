@@ -5,7 +5,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { convertUnit } from "./units";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { trail } from "./lib/trail";
@@ -189,21 +189,21 @@ export const create = mutation({
     const customer = await ctx.db.get(args.customerId);
     const pausedFrom = (customer as any)?.pausedFrom as string | undefined;
     if (pausedFrom && String(args.date).slice(0, 10) >= pausedFrom) {
-      throw new Error("اشتراك هذا المشترك مجمّد — لا يمكن إنشاء خطة في فترة التجميد");
+      throw new ConvexError("اشتراك هذا المشترك مجمّد — لا يمكن إنشاء خطة في فترة التجميد");
     }
     const planDate = String(args.date).slice(0, 10);
     const skippedDates: string[] = Array.isArray((customer as any)?.skippedDates)
       ? (customer as any).skippedDates
       : [];
     if (skippedDates.some((skippedDate: unknown) => String(skippedDate).slice(0, 10) === planDate)) {
-      throw new Error(`المشترك متخطٍ يوم ${planDate} — لا يمكن إنشاء خطة أو إرسال وجبات لهذا اليوم`);
+      throw new ConvexError(`المشترك متخطٍ يوم ${planDate} — لا يمكن إنشاء خطة أو إرسال وجبات لهذا اليوم`);
     }
     /* 🔒 ولا خطة خارج الاشتراك. كان الفحص للتجميد وحده، فمرّت خطط لمن لم يبدأ
        اشتراكه بعد أو انتهى — والمطبخ يطبخها. الفترات المجدَّدة محسوبة، فمن
        جدّد لا تُرفض أيامه القديمة التي أكلها. */
     if (!isWithinSubscription(customer, String(args.date))) {
       const c: any = customer;
-      throw new Error(
+      throw new ConvexError(
         `التاريخ خارج مدة اشتراك هذا المشترك (${String(c?.startDate || "?").slice(0,10)} → ${String(c?.endDate || "?").slice(0,10)}) — راجع تواريخ الاشتراك أو جدّده`,
       );
     }
@@ -261,7 +261,7 @@ export const update = mutation({
     // انتقال الحالة إلى PREPARED يخصم المخزون ويُطلق إشعارات — موظفون فقط
     const staffU = await requireStaff(ctx, sessionToken);
     const existing = await ctx.db.get(id);
-    if (!existing) throw new Error("Daily plan not found");
+    if (!existing) throw new ConvexError("Daily plan not found");
 
     const currentStatus = normalizeStatus((existing as any).status);
     const requestedStatus =
@@ -307,7 +307,7 @@ export const update = mutation({
     ) {
       const approverRole = String(staffU?.role || "").toUpperCase();
       if (approverRole !== "ADMIN" && approverRole !== "NUTRITIONIST") {
-        throw new Error("اعتماد اختلاف عدد الوجبات متاح للأخصائية أو المدير فقط");
+        throw new ConvexError("اعتماد اختلاف عدد الوجبات متاح للأخصائية أو المدير فقط");
       }
       const approver: any = staffU?.userId ? await ctx.db.get(staffU.userId as any) : null;
       safe.mealCountOverride = {

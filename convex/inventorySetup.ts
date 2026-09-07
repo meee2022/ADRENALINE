@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireRoleOrPermission } from "./sessions";
 
@@ -91,7 +91,7 @@ export const upsertCategory = mutation({
   handler: async (ctx, args) => {
     await requireRoleOrPermission(ctx, args.sessionToken, MANAGE);
     const { id, sessionToken: _t, ...data } = args; const code = cleanCode(data.code);
-    if (!code || !data.nameAr.trim()) throw new Error("التصنيف والرمز مطلوبان");
+    if (!code || !data.nameAr.trim()) throw new ConvexError("التصنيف والرمز مطلوبان");
     if (id) { await ctx.db.patch(id, { ...data, code }); return id; }
     const old = await ctx.db.query("inventoryCategories").withIndex("by_code", q => q.eq("code", code)).first();
     if (old) { await ctx.db.patch(old._id, { ...data, code }); return old._id; }
@@ -104,7 +104,7 @@ export const upsertLocation = mutation({
   handler: async (ctx, args) => {
     await requireRoleOrPermission(ctx, args.sessionToken, MANAGE);
     const { id, sessionToken: _t, ...data } = args; const code = cleanCode(data.code);
-    if (!code || !data.nameAr.trim()) throw new Error("الموقع والرمز مطلوبان");
+    if (!code || !data.nameAr.trim()) throw new ConvexError("الموقع والرمز مطلوبان");
     if (id) { await ctx.db.patch(id, { ...data, code }); return id; }
     const old = await ctx.db.query("inventoryLocations").withIndex("by_code", q => q.eq("code", code)).first();
     if (old) { await ctx.db.patch(old._id, { ...data, code }); return old._id; }
@@ -117,8 +117,8 @@ export const upsertUnit = mutation({
   handler: async (ctx, args) => {
     await requireRoleOrPermission(ctx, args.sessionToken, MANAGE);
     const { id, sessionToken: _t, ...data } = args; const code = cleanCode(data.code);
-    if (!code || !data.nameAr.trim()) throw new Error("الوحدة والرمز مطلوبان");
-    if (!Number.isFinite(data.baseFactor) || data.baseFactor <= 0) throw new Error("معامل التحويل يجب أن يكون أكبر من صفر");
+    if (!code || !data.nameAr.trim()) throw new ConvexError("الوحدة والرمز مطلوبان");
+    if (!Number.isFinite(data.baseFactor) || data.baseFactor <= 0) throw new ConvexError("معامل التحويل يجب أن يكون أكبر من صفر");
     if (id) { await ctx.db.patch(id, { ...data, code }); return id; }
     const old = await ctx.db.query("inventoryUnits").withIndex("by_code", q => q.eq("code", code)).first();
     if (old) { await ctx.db.patch(old._id, { ...data, code }); return old._id; }
@@ -138,7 +138,7 @@ export const createOpeningStocktake = mutation({
   args: { title: v.string(), countedAt: v.string(), notes: v.optional(v.string()), rows: v.array(openingRow), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await requireRoleOrPermission(ctx, args.sessionToken, MANAGE);
-    if (!args.rows.length) throw new Error("أضف صنفاً واحداً على الأقل");
+    if (!args.rows.length) throw new ConvexError("أضف صنفاً واحداً على الأقل");
     const now = Date.now();
     const stocktakeId = await ctx.db.insert("inventoryStocktakes", { title: args.title.trim() || "الجرد الافتتاحي", stocktakeType: "OPENING", status: "DRAFT", countedAt: args.countedAt, notes: args.notes, createdBy: identity.userId as any, createdAt: now });
     const allItems = await ctx.db.query("inventoryItems").collect();
@@ -165,7 +165,7 @@ export const createOpeningStocktake = mutation({
           currentStock: 0, avgWeeklyUsage: 0, notes: row.note, createdAt: now, updatedAt: now,
         });
         item = await ctx.db.get(itemId) as any;
-        if (!item) throw new Error(`تعذر إنشاء الصنف: ${row.nameAr}`);
+        if (!item) throw new ConvexError(`تعذر إنشاء الصنف: ${row.nameAr}`);
         itemByName.set(cleanName(row.nameAr), item);
       }
       await ctx.db.insert("inventoryStocktakeLines", { stocktakeId, itemId: item!._id, systemQuantity: item!.currentStock, countedQuantity: row.quantity, unitCost: row.unitCost, expiryDate: row.expiryDate, lotNumber: row.lotNumber, locationId: locationId || item!.defaultLocationId, note: row.note, createdAt: now });
@@ -193,9 +193,9 @@ export const approveStocktake = mutation({
   args: { id: v.id("inventoryStocktakes"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await requireRoleOrPermission(ctx, args.sessionToken, MANAGE);
-    const stocktake = await ctx.db.get(args.id); if (!stocktake) throw new Error("الجرد غير موجود");
+    const stocktake = await ctx.db.get(args.id); if (!stocktake) throw new ConvexError("الجرد غير موجود");
     if (stocktake.status === "APPROVED") return { alreadyApproved: true };
-    if (stocktake.status === "CANCELLED") throw new Error("لا يمكن اعتماد جرد ملغي");
+    if (stocktake.status === "CANCELLED") throw new ConvexError("لا يمكن اعتماد جرد ملغي");
     const lines = await ctx.db.query("inventoryStocktakeLines").withIndex("by_stocktake", q => q.eq("stocktakeId", args.id)).collect();
     const now = Date.now(); let adjusted = 0;
     for (const line of lines) {

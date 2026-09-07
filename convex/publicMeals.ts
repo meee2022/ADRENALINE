@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // 🔒 صلاحيات المنيو — إدارة الوجبات لأدوار التغذية والمنيو، مش لأي staff
 const MENU_MANAGE_ROLES = ["NUTRITIONIST"]; // ADMIN تلقائي
@@ -216,7 +216,7 @@ export const create = mutation({
     validateMealFields(args);
     // 🔒 slug فريد
     const dupSlug = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", args.slug)).first();
-    if (dupSlug) throw new Error("المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر");
+    if (dupSlug) throw new ConvexError("المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر");
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: args.nameAr,
       nameEn: args.nameEn,
@@ -290,7 +290,7 @@ export const update = mutation({
     validateMealFields(updates);
     if (updates.slug) {
       const dup = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", updates.slug!)).first();
-      if (dup && String(dup._id) !== String(id)) throw new Error("slug مكرر");
+      if (dup && String(dup._id) !== String(id)) throw new ConvexError("slug مكرر");
     }
     await ctx.db.patch(id, updates);
     return id;
@@ -318,31 +318,31 @@ export const remove = mutation({
     const has = (rows: any[], key: string) => rows.some((r: any) => String(r[key] ?? "") === id);
 
     const orderItems = await ctx.db.query("customerOrderItems").withIndex("by_mealId", (q) => q.eq("mealId", args.id)).take(1);
-    if (orderItems.length) throw new Error("الوجبة مستخدمة في طلبات. عطّلها بدلًا من حذفها");
+    if (orderItems.length) throw new ConvexError("الوجبة مستخدمة في طلبات. عطّلها بدلًا من حذفها");
 
     if (has(await ctx.db.query("posTicketLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في فواتير نقطة البيع. عطّلها بدلًا من حذفها");
+      throw new ConvexError("الوجبة مستخدمة في فواتير نقطة البيع. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("gymOrderLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في طلبات المنافذ. عطّلها بدلًا من حذفها");
+      throw new ConvexError("الوجبة مستخدمة في طلبات المنافذ. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("gymReturnBatchLines").collect(), "mealId")) {
-      throw new Error("الوجبة مستخدمة في مرتجعات المنافذ. عطّلها بدلًا من حذفها");
+      throw new ConvexError("الوجبة مستخدمة في مرتجعات المنافذ. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("outletCatalogItems").collect(), "mealId")) {
-      throw new Error("الوجبة موجودة في قائمة أحد المنافذ. أزلها من القائمة أولًا");
+      throw new ConvexError("الوجبة موجودة في قائمة أحد المنافذ. أزلها من القائمة أولًا");
     }
     if (has(await ctx.db.query("posItems").collect(), "mealId")) {
-      throw new Error("الوجبة موجودة ضمن أصناف نقطة البيع. أزلها منها أولًا");
+      throw new ConvexError("الوجبة موجودة ضمن أصناف نقطة البيع. أزلها منها أولًا");
     }
     if (has(await ctx.db.query("mealIssuances").collect(), "publicMealId")) {
-      throw new Error("الوجبة مستخدمة في حصر الصادر. عطّلها بدلًا من حذفها");
+      throw new ConvexError("الوجبة مستخدمة في حصر الصادر. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("ratings").collect(), "publicMealId")) {
-      throw new Error("للوجبة تقييمات من العملاء. عطّلها بدلًا من حذفها");
+      throw new ConvexError("للوجبة تقييمات من العملاء. عطّلها بدلًا من حذفها");
     }
     if (has(await ctx.db.query("mealIngredients").collect(), "publicMealId")) {
-      throw new Error("الوجبة مرتبطة بوصفة مخزون — احذف الوصفة أو عطّل الوجبة بدلاً من حذفها");
+      throw new ConvexError("الوجبة مرتبطة بوصفة مخزون — احذف الوصفة أو عطّل الوجبة بدلاً من حذفها");
     }
     // ⚠️ dailyPlans.items نوعه v.any(): الـmealId بداخله ليس مفتاحاً في
     //    السكيما، فلا يظهر في أي فحص للمفاتيح. حذفها هنا يترك خطة مطبخ
@@ -351,7 +351,7 @@ export const remove = mutation({
     const inPlan = (plans as any[]).some((p) =>
       (Array.isArray(p.items) ? p.items : []).some((it: any) => String(it?.mealId ?? "") === id));
     if (inPlan) {
-      throw new Error("الوجبة مستخدمة في خطط يومية. عطّلها بدلًا من حذفها");
+      throw new ConvexError("الوجبة مستخدمة في خطط يومية. عطّلها بدلًا من حذفها");
     }
 
     // احذف الصورة من التخزين لو موجودة
@@ -364,27 +364,27 @@ export const remove = mutation({
 
 /** 🔒 validation نطاق للقيم الغذائية والأسعار والجدولة. */
 function validateMealFields(m: any) {
-  if (m.calories !== undefined && (m.calories < 0 || m.calories > 5000)) throw new Error("سعرات غير معقولة");
-  if (m.protein !== undefined && (m.protein < 0 || m.protein > 500)) throw new Error("بروتين غير معقول");
-  if (m.carbs !== undefined && (m.carbs < 0 || m.carbs > 500)) throw new Error("كربوهيدرات غير معقولة");
-  if (m.fats !== undefined && (m.fats < 0 || m.fats > 500)) throw new Error("دهون غير معقولة");
-  if (m.priceQAR !== undefined && (m.priceQAR < 0 || m.priceQAR > 10000)) throw new Error("سعر غير صالح");
-  if (m.costQAR !== undefined && (m.costQAR < 0 || m.costQAR > 10000)) throw new Error("تكلفة غير صالحة");
-  if (m.gymPrice !== undefined && m.gymPrice !== null && (m.gymPrice < 0 || m.gymPrice > 10000)) throw new Error("سعر جم غير صالح");
+  if (m.calories !== undefined && (m.calories < 0 || m.calories > 5000)) throw new ConvexError("سعرات غير معقولة");
+  if (m.protein !== undefined && (m.protein < 0 || m.protein > 500)) throw new ConvexError("بروتين غير معقول");
+  if (m.carbs !== undefined && (m.carbs < 0 || m.carbs > 500)) throw new ConvexError("كربوهيدرات غير معقولة");
+  if (m.fats !== undefined && (m.fats < 0 || m.fats > 500)) throw new ConvexError("دهون غير معقولة");
+  if (m.priceQAR !== undefined && (m.priceQAR < 0 || m.priceQAR > 10000)) throw new ConvexError("سعر غير صالح");
+  if (m.costQAR !== undefined && (m.costQAR < 0 || m.costQAR > 10000)) throw new ConvexError("تكلفة غير صالحة");
+  if (m.gymPrice !== undefined && m.gymPrice !== null && (m.gymPrice < 0 || m.gymPrice > 10000)) throw new ConvexError("سعر جم غير صالح");
   if (m.weeks) {
-    for (const w of m.weeks) if (!Number.isInteger(w) || w < 1 || w > 4) throw new Error("يجب أن تكون أرقام الأسابيع بين 1 و4");
+    for (const w of m.weeks) if (!Number.isInteger(w) || w < 1 || w > 4) throw new ConvexError("يجب أن تكون أرقام الأسابيع بين 1 و4");
   }
   const VALID_DAYS = new Set(["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]);
   if (m.days) {
-    for (const d of m.days) if (!VALID_DAYS.has(String(d).toLowerCase())) throw new Error("day غير صالح");
+    for (const d of m.days) if (!VALID_DAYS.has(String(d).toLowerCase())) throw new ConvexError("day غير صالح");
   }
   if (m.schedule) {
     for (const s of m.schedule) {
-      if (!Number.isInteger(s.week) || s.week < 1 || s.week > 4) throw new Error("schedule.week 1..4");
-      if (!VALID_DAYS.has(String(s.day).toLowerCase())) throw new Error("schedule.day غير صالح");
+      if (!Number.isInteger(s.week) || s.week < 1 || s.week > 4) throw new ConvexError("schedule.week 1..4");
+      if (!VALID_DAYS.has(String(s.day).toLowerCase())) throw new ConvexError("schedule.day غير صالح");
     }
   }
-  if (m.slug !== undefined && !/^[a-z0-9-]{2,80}$/.test(String(m.slug))) throw new Error("slug: أحرف صغيرة/أرقام/- فقط (2-80)");
+  if (m.slug !== undefined && !/^[a-z0-9-]{2,80}$/.test(String(m.slug))) throw new ConvexError("slug: أحرف صغيرة/أرقام/- فقط (2-80)");
 }
 
 export const deleteAll = mutation({
@@ -393,7 +393,7 @@ export const deleteAll = mutation({
     await requireAdmin(ctx, args.sessionToken);
     // 🔒 حماية: عملية مدمّرة (مسح كل وجبات الموقع) — معطّلة افتراضياً.
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
-      throw new Error("عملية المسح الجماعي معطّلة لأسباب أمنية");
+      throw new ConvexError("عملية المسح الجماعي معطّلة لأسباب أمنية");
     }
     const meals = await ctx.db.query("publicMeals").collect();
     for (const meal of meals) {

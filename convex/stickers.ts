@@ -3,7 +3,7 @@ import { query, mutation } from "./_generated/server";
 import { normalizePhone } from "./lib/phone";
 import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
 type PlanStatus =
@@ -263,9 +263,9 @@ export const setCalorieOverride = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await requireStaff(ctx, args.sessionToken);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) throw new Error("تاريخ الاستيكر غير صالح");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date)) throw new ConvexError("تاريخ الاستيكر غير صالح");
     const stickerKey = args.stickerKey.trim();
-    if (!stickerKey || stickerKey.length > 300) throw new Error("معرّف الاستيكر غير صالح");
+    if (!stickerKey || stickerKey.length > 300) throw new ConvexError("معرّف الاستيكر غير صالح");
 
     const existing = await ctx.db
       .query("stickerCalorieOverrides")
@@ -279,7 +279,7 @@ export const setCalorieOverride = mutation({
 
     const calories = Math.round(args.calories);
     if (!Number.isFinite(calories) || calories < 1 || calories > 3000) {
-      throw new Error("يجب أن تكون السعرات بين 1 و3000");
+      throw new ConvexError("يجب أن تكون السعرات بين 1 و3000");
     }
 
     const values = {

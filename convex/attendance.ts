@@ -4,7 +4,7 @@
  *   يدعم الإدخال اليدوي، الإدخال الجماعي، واستيراد سجلّات جهاز البصمة (punches).
  *   يوم العمل القياسي 9 ساعات؛ الأوفرتايم = max(0, ساعات العمل − 9).
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { addDays, dateToDays, fmtDate, parseDate } from "./lib/dates";
 import { mutation, query } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
@@ -571,7 +571,7 @@ export const importPunchesDevice = mutation({
   },
   handler: async (ctx, args) => {
     const expected = process.env.DEVICE_BRIDGE_KEY;
-    if (!expected || args.key !== expected) throw new Error("Unauthorized device");
+    if (!expected || args.key !== expected) throw new ConvexError("Unauthorized device");
     // ✅ يطابق أسماء البصمة بأسماء الرواتب تلقائيًا ويتجاهل غير المسجّلين (شركة تانية إلخ)
     const resolve = await buildPayrollResolver(ctx);
     const resolved = args.punches
@@ -731,12 +731,12 @@ export const mergeName = mutation({
     await requireAdmin(ctx, args.sessionToken);
     const norm = (x: any) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "");
     const from = norm(args.from), to = norm(args.to);
-    if (!from || !to) throw new Error("حدّد الاسمين");
-    if (from === to) throw new Error("الاسمان متطابقان");
+    if (!from || !to) throw new ConvexError("حدّد الاسمين");
+    if (from === to) throw new ConvexError("الاسمان متطابقان");
 
     const all = await ctx.db.query("attendance").collect();
     const src = all.filter((r) => norm(r.name) === from);
-    if (!src.length) throw new Error("لا سجلّات بهذا الاسم");
+    if (!src.length) throw new ConvexError("لا سجلّات بهذا الاسم");
     const dstByDate = new Map<string, any>();
     for (const r of all) if (norm(r.name) === to) dstByDate.set(r.date, r);
 

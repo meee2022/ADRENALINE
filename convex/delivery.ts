@@ -8,7 +8,7 @@
  *   - updateMyLocation → DELIVERY فقط
  *   - tracking عام (بتوكن سرّي)
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRole, requireRoleOrPermission, newToken } from "./sessions";
 
@@ -42,7 +42,7 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 function assertTransition(from: string, to: string) {
   const list = ALLOWED_TRANSITIONS[from] || [];
   if (!list.includes(to)) {
-    throw new Error(`انتقال غير مسموح: ${from} → ${to}`);
+    throw new ConvexError(`انتقال غير مسموح: ${from} → ${to}`);
   }
 }
 
@@ -55,16 +55,16 @@ async function assertStopOwnershipOrAdmin(ctx: any, staff: any, plan: any) {
   const role = String(staff.role || "").toUpperCase();
   if (role === "ADMIN") return;
   // السائق يقدر ينفّذ محطاته فقط
-  if (role !== "DELIVERY") throw new Error("هذه العملية للسائق أو الأدمن فقط");
+  if (role !== "DELIVERY") throw new ConvexError("هذه العملية للسائق أو الأدمن فقط");
   if (plan.driverId) {
     if (String(plan.driverId) !== String(staff.userId)) {
-      throw new Error("هذه المحطة مسندة لسائق آخر");
+      throw new ConvexError("هذه المحطة مسندة لسائق آخر");
     }
     return;
   }
   const c: any = plan.customerId ? await ctx.db.get(plan.customerId) : null;
   if (String(c?.defaultDriverId || "") !== String(staff.userId)) {
-    throw new Error("هذه المحطة غير مسندة لك");
+    throw new ConvexError("هذه المحطة غير مسندة لك");
   }
 }
 
@@ -393,7 +393,7 @@ export const startDeliveryShift = mutation({
   handler: async (ctx, { date, deliveryTime, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     if (String(staff.role || "").toUpperCase() !== "DELIVERY") {
-      throw new Error("هذه العملية للسائق فقط");
+      throw new ConvexError("هذه العملية للسائق فقط");
     }
     const driverId = String(staff.userId);
     const rows = await ctx.db
@@ -449,7 +449,7 @@ export const startDelivery = mutation({
   handler: async (ctx, { planId, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
-    if (!plan) throw new Error("المحطة غير موجودة");
+    if (!plan) throw new ConvexError("المحطة غير موجودة");
     await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "OUT_FOR_DELIVERY");
     const token = plan.trackToken || newToken();
@@ -478,7 +478,7 @@ export const markDelivered = mutation({
   handler: async (ctx, { planId, podNote, podStorageId, recipientName, deliveredLat, deliveredLng, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
-    if (!plan) throw new Error("المحطة غير موجودة");
+    if (!plan) throw new ConvexError("المحطة غير موجودة");
     await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "DELIVERED");
     await ctx.db.patch(planId, {
@@ -507,11 +507,11 @@ export const markFailed = mutation({
   handler: async (ctx, { planId, failCode, reason, retryAction, sessionToken }) => {
     const staff = await requireStaff(ctx, sessionToken);
     const plan: any = await ctx.db.get(planId);
-    if (!plan) throw new Error("المحطة غير موجودة");
+    if (!plan) throw new ConvexError("المحطة غير موجودة");
     await assertStopOwnershipOrAdmin(ctx, staff, plan);
     assertTransition(plan.status, "FAILED");
     const r = String(reason || "").trim();
-    if (r.length < 3) throw new Error("سبب الفشل مطلوب (3 أحرف أو أكثر)");
+    if (r.length < 3) throw new ConvexError("سبب الفشل مطلوب (3 أحرف أو أكثر)");
     await ctx.db.patch(planId, {
       status: "FAILED",
       failedAt: Date.now(),
@@ -530,9 +530,9 @@ export const reschedule = mutation({
   handler: async (ctx, { planId, sessionToken }) => {
     await requireRoleOrPermission(ctx, sessionToken, { roles: DELIVERY_MANAGER_ROLES, permissions: DELIVERY_MANAGER_PAGES });
     const plan: any = await ctx.db.get(planId);
-    if (!plan) throw new Error("المحطة غير موجودة");
+    if (!plan) throw new ConvexError("المحطة غير موجودة");
     if (plan.status !== "FAILED" && plan.status !== "OUT_FOR_DELIVERY") {
-      throw new Error("إعادة الجدولة مسموحة فقط للمحطات الفاشلة أو التي في الطريق");
+      throw new ConvexError("إعادة الجدولة مسموحة فقط للمحطات الفاشلة أو التي في الطريق");
     }
     await ctx.db.patch(planId, {
       status: "PREPARED",
@@ -566,8 +566,8 @@ export const updateMyLocation = mutation({
     const driverId = staff.userId as any;
     if (!driverId) return { success: false };
     // 🔒 حدود جغرافية عامة (منع bogus values)
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error("إحداثيات غير صالحة");
-    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new Error("إحداثيات خارج النطاق");
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new ConvexError("إحداثيات غير صالحة");
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) throw new ConvexError("إحداثيات خارج النطاق");
 
     const existing = await ctx.db
       .query("driverLocations")

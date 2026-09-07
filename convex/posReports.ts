@@ -9,7 +9,7 @@
  *   npx convex env set RESEND_API_KEY re_xxx
  *   npx convex env set RESET_FROM_EMAIL "Adrenaline <noreply@yourdomain.com>"
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { action, internalAction, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { requireAdmin } from "./sessions";
@@ -124,7 +124,7 @@ export const saveReportSettings = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const s: any = await ctx.db.query("restaurantSettings").first();
-    if (!s) throw new Error("إعدادات المطعم غير موجودة");
+    if (!s) throw new ConvexError("إعدادات المطعم غير موجودة");
     const clean = args.recipients.map((e) => e.trim().toLowerCase()).filter((e) => /.+@.+\..+/.test(e));
     const time = /^\d{2}:\d{2}$/.test(String(args.sendTime || "")) ? args.sendTime : "23:00";
     await ctx.db.patch(s._id, {

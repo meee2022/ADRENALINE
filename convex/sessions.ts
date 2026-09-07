@@ -1,3 +1,4 @@
+import { ConvexError } from "convex/values";
 /**
  * @file convex/sessions.ts
  * @description طبقة صلاحيات السيرفر — إنشاء/التحقق من جلسات الدخول (توكن).
@@ -81,11 +82,11 @@ export const ROLE_ERR = "دورك لا يسمح بهذه العملية";
  *    ADMIN دائماً مسموح (super-user).
  */
 export function assertRole(id: Identity | null, allowed: string[]): asserts id is Identity {
-  if (!id || id.accountType !== "staff") throw new Error(AUTH_ERR);
+  if (!id || id.accountType !== "staff") throw new ConvexError(AUTH_ERR);
   const role = String(id.role || "").toUpperCase();
   if (role === "ADMIN") return;                          // ADMIN يمر دائماً
   const ok = allowed.map((r) => r.toUpperCase()).includes(role);
-  if (!ok) throw new Error(ROLE_ERR);
+  if (!ok) throw new ConvexError(ROLE_ERR);
 }
 
 /** ✅ يتطلّب دور من قائمة محددة (أو ADMIN تلقائياً). للـfinance/HR/kitchen…إلخ. */
@@ -116,7 +117,7 @@ export async function requireRoleOrPermission(
   opts: { roles?: string[]; permissions?: string[] },
 ): Promise<Identity> {
   const id = await validateSession(ctx, token);
-  if (!id || id.accountType !== "staff") throw new Error(AUTH_ERR);
+  if (!id || id.accountType !== "staff") throw new ConvexError(AUTH_ERR);
   const role = String(id.role || "").toUpperCase();
   if (role === "ADMIN") return id;
   const allowedRoles = (opts.roles || []).map((r) => r.toUpperCase());
@@ -140,20 +141,20 @@ export async function requireRoleOrPermission(
       }
     }
   }
-  throw new Error(ROLE_ERR);
+  throw new ConvexError(ROLE_ERR);
 }
 
 /** يتطلّب موظفاً مسجّلاً (أي دور staff) */
 export async function requireStaff(ctx: QueryCtx | MutationCtx, token?: string | null): Promise<Identity> {
   const id = await validateSession(ctx, token);
-  if (!id || id.accountType !== "staff") throw new Error(AUTH_ERR);
+  if (!id || id.accountType !== "staff") throw new ConvexError(AUTH_ERR);
   return id;
 }
 
 /** يتطلّب صلاحية مدير (ADMIN) */
 export async function requireAdmin(ctx: QueryCtx | MutationCtx, token?: string | null): Promise<Identity> {
   const id = await requireStaff(ctx, token);
-  if (String(id.role || "").toUpperCase() !== "ADMIN") throw new Error(ADMIN_ERR);
+  if (String(id.role || "").toUpperCase() !== "ADMIN") throw new ConvexError(ADMIN_ERR);
   return id;
 }
 
@@ -167,9 +168,9 @@ export async function requireStaffOrAccountOwner(
   accountId: string,
 ): Promise<Identity> {
   const id = await validateSession(ctx, token);
-  if (!id) throw new Error(AUTH_ERR);
+  if (!id) throw new ConvexError(AUTH_ERR);
   if (id.accountType === "staff") return id;
-  if (String(id.customerAccountId) !== String(accountId)) throw new Error(AUTH_ERR);
+  if (String(id.customerAccountId) !== String(accountId)) throw new ConvexError(AUTH_ERR);
   return id;
 }
 
@@ -183,11 +184,11 @@ export async function requireStaffOrSubscriptionOwner(
   customerId: string,
 ): Promise<Identity> {
   const id = await validateSession(ctx, token);
-  if (!id) throw new Error(AUTH_ERR);
+  if (!id) throw new ConvexError(AUTH_ERR);
   if (id.accountType === "staff") return id;
-  if (!id.customerAccountId) throw new Error(AUTH_ERR);
+  if (!id.customerAccountId) throw new ConvexError(AUTH_ERR);
   const account: any = await ctx.db.get(id.customerAccountId as any);
-  if (!account || String(account.customerId) !== String(customerId)) throw new Error(AUTH_ERR);
+  if (!account || String(account.customerId) !== String(customerId)) throw new ConvexError(AUTH_ERR);
   return id;
 }
 

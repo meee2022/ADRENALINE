@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 function normalizeName(s: string) {
   return (s || "").trim().replace(/\s+/g, " ").toLowerCase();
@@ -46,7 +46,7 @@ export const create = mutation({
     const exists = existing.some(
       (c: any) => normalizeName(c.name) === normalizeName(args.name),
     );
-    if (exists) throw new Error("Category name already exists");
+    if (exists) throw new ConvexError("Category name already exists");
     // ⚠️ sessionToken لا يُخزَّن داخل الوثيقة
     const { sessionToken: _t, ...fields } = args;
     return await ctx.db.insert("mealCategories", fields);
@@ -71,7 +71,7 @@ export const update = mutation({
           c._id !== id &&
           normalizeName(c.name) === normalizeName(data.name as string),
       );
-      if (exists) throw new Error("Category name already exists");
+      if (exists) throw new ConvexError("Category name already exists");
     }
 
     await ctx.db.patch(id, data);
@@ -108,7 +108,7 @@ export const remove = mutation({
       .take(1);
 
     if (items.length > 0) {
-      throw new Error("Cannot delete a category that has menu items");
+      throw new ConvexError("Cannot delete a category that has menu items");
     }
 
     await ctx.db.delete(id);

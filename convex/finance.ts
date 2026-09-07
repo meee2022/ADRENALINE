@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireRole, requireRoleOrPermission } from "./sessions";
 
 const requireFinance = (ctx: any, token?: string) => requireRoleOrPermission(ctx, token, {
@@ -194,9 +194,9 @@ export const setPeriodStatus = mutation({
   handler: async (ctx, args) => {
     const actor = await requireRole(ctx, args.sessionToken, ["FINANCE_MANAGER"]);
     const period: any = await ctx.db.get(args.periodId);
-    if (!period) throw new Error("الفترة المالية غير موجودة");
+    if (!period) throw new ConvexError("الفترة المالية غير موجودة");
     if (period.status === "closed" && args.status !== "closed") {
-      throw new Error("الفترة المقفلة نهائيًا لا يعاد فتحها إلا بقيد افتتاحي في فترة جديدة");
+      throw new ConvexError("الفترة المقفلة نهائيًا لا يعاد فتحها إلا بقيد افتتاحي في فترة جديدة");
     }
     await ctx.db.patch(args.periodId, {
       status: args.status,

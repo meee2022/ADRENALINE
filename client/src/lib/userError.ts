@@ -13,6 +13,13 @@ export function getUserError(error: unknown, language: "ar" | "en" = currentLang
   const fallback = language === "ar"
     ? "تعذر إكمال العملية. حاول مرة أخرى، وإذا استمرت المشكلة تواصل مع المسؤول."
     : "The operation could not be completed. Try again, and contact an administrator if it continues.";
+  /* ConvexError تحمل الرسالة في data وتصل حتى في الإنتاج؛ أما Error العادية
+     فيحجب الإنتاج نصّها إلى «Server Error» — فتظهر الرسالة العامة بلا سبب. */
+  const data = (error as any)?.data;
+  if (typeof data === "string" && data.trim()) {
+    const d = data.trim();
+    if (!TECHNICAL_MARKERS.some((marker) => d.toLowerCase().includes(marker))) return d.slice(0, 240);
+  }
   const raw = String((error as any)?.message ?? error ?? "").trim();
   if (!raw) return fallback;
 

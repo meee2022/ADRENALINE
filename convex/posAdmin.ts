@@ -3,7 +3,7 @@
  * @description إدارة POS (للأدمن): الكاشيرون، فئات POS، ألوان الأصناف، التقارير، الورديات.
  * @frontend client/src/pages/PosAdmin.tsx
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff } from "./sessions";
 import { hashPassword, verifyPassword } from "./passwords";
@@ -67,15 +67,15 @@ export const assignUserToPos = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const user: any = await ctx.db.get(args.userId);
-    if (!user) throw new Error("المستخدم غير موجود");
-    if (!user.isActive) throw new Error("يجب تفعيل حساب المستخدم أولاً");
+    if (!user) throw new ConvexError("المستخدم غير موجود");
+    if (!user.isActive) throw new ConvexError("يجب تفعيل حساب المستخدم أولاً");
     const clean = args.pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     const allUsers = await ctx.db.query("users").collect();
     for (const other of allUsers) {
       if (String(other._id) === String(args.userId)) continue;
       if (other.pinHash && isPosUser(other) && await verifyPassword(clean, other.pinHash)) {
-        throw new Error("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
+        throw new ConvexError("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
       }
     }
     await ctx.db.patch(args.userId, {
@@ -100,16 +100,16 @@ export const createCashier = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const clean = args.pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     const emailLower = args.email.trim().toLowerCase();
     const existing = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", emailLower)).first();
-    if (existing) throw new Error("البريد الإلكتروني مستخدم بالفعل");
+    if (existing) throw new ConvexError("البريد الإلكتروني مستخدم بالفعل");
     // نشوف كمان PIN مش متكرر (عشان الدخول لا يلتبس)
     const allUsers = await ctx.db.query("users").collect();
     
     for (const u of allUsers) {
       if (u.pinHash && isPosUser(u)) {
-        if (await verifyPassword(clean, u.pinHash)) throw new Error("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
+        if (await verifyPassword(clean, u.pinHash)) throw new ConvexError("رمز PIN مستخدم بالفعل. اختر رمزًا آخر");
       }
     }
     const pinHash = await hashPassword(clean);
@@ -145,7 +145,7 @@ export const updateCashier = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const u: any = await ctx.db.get(args.id);
-    if (!u) throw new Error("الكاشير غير موجود");
+    if (!u) throw new ConvexError("الكاشير غير موجود");
     const patch: any = { updatedAt: Date.now() };
     if (args.name !== undefined) patch.name = args.name.trim();
     if (args.phone !== undefined) patch.phone = args.phone.trim() || undefined;
@@ -154,13 +154,13 @@ export const updateCashier = mutation({
     if (args.posBranchId !== undefined) patch.posBranchId = args.posBranchId;
     if (args.pin !== undefined) {
       const clean = args.pin.trim();
-      if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+      if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
       
       const allUsers = await ctx.db.query("users").collect();
       for (const other of allUsers) {
         if (String(other._id) === String(args.id)) continue;
         if (other.pinHash && isPosUser(other)) {
-          if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
+          if (await verifyPassword(clean, other.pinHash)) throw new ConvexError("رمز PIN مستخدم بالفعل");
         }
       }
       patch.pinHash = await hashPassword(clean);
@@ -176,13 +176,13 @@ export const setUserPin = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const clean = args.pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     
     const allUsers = await ctx.db.query("users").collect();
     for (const other of allUsers) {
       if (String(other._id) === String(args.userId)) continue;
       if (other.pinHash && isPosUser(other)) {
-        if (await verifyPassword(clean, other.pinHash)) throw new Error("رمز PIN مستخدم بالفعل");
+        if (await verifyPassword(clean, other.pinHash)) throw new ConvexError("رمز PIN مستخدم بالفعل");
       }
     }
     await ctx.db.patch(args.userId, { pinHash: await hashPassword(clean), posEnabled: true, updatedAt: Date.now() } as any);
@@ -309,7 +309,7 @@ export const upsertItemMeta = mutation({
     if (args.sortOrder !== undefined) patch.sortOrder = args.sortOrder;
     if (args.isHidden !== undefined) patch.isHidden = args.isHidden;
     if (args.posPrice !== undefined) {
-      if (!Number.isFinite(args.posPrice) || args.posPrice < 0) throw new Error("سعر الأونلاين غير صالح");
+      if (!Number.isFinite(args.posPrice) || args.posPrice < 0) throw new ConvexError("سعر الأونلاين غير صالح");
       patch.posPrice = args.posPrice;
     }
     if (existing) {
@@ -482,7 +482,7 @@ export const rangeSalesSummary = query({
     const start = Date.parse(`${args.from}T00:00:00+03:00`);
     const end = Date.parse(`${args.to}T23:59:59.999+03:00`);
     if (!Number.isFinite(start) || !Number.isFinite(end) || start > end) {
-      throw new Error("Invalid report date range");
+      throw new ConvexError("Invalid report date range");
     }
 
     let tickets: any[] = await ctx.db
@@ -811,7 +811,7 @@ export const refundTicket = mutation({
   handler: async (ctx, args) => {
     const id = await requireStaff(ctx, args.sessionToken);
     const t: any = await ctx.db.get(args.ticketId);
-    if (!t) throw new Error("الفاتورة غير موجودة");
+    if (!t) throw new ConvexError("الفاتورة غير موجودة");
     if (t.status === "REFUNDED" || t.status === "VOID") return { ok: true };
     await ctx.db.patch(args.ticketId, { status: "REFUNDED", updatedAt: Date.now() });
     if (t.shiftId && !t.isNonRevenue) {

@@ -14,7 +14,7 @@
  *
  * وضع المعاينة (dryRun) يرجّع الأعداد دون حذف أي شيء.
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireAdmin } from "./sessions";
 
@@ -43,7 +43,7 @@ export const resetOperationalData = mutation({
       await requireAdmin(ctx, args.sessionToken);
     }
     if (args.confirm !== "RESET") {
-      throw new Error('التأكيد مطلوب: أرسل confirm="RESET"');
+      throw new ConvexError('التأكيد مطلوب: أرسل confirm="RESET"');
     }
 
     const counts: Record<string, number> = {};

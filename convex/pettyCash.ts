@@ -7,7 +7,7 @@
  *   إرجاع      : من 1110 الصندوق       إلى 1115 عهدة الموظف
  * فيبقى رصيد 1115 مساوياً لمجموع ما في أيدي الموظفين في أي لحظة.
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { requireStaff, requireRoleOrPermission } from "./sessions";
@@ -140,13 +140,13 @@ export const record = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requireFinance(ctx, args.sessionToken);
-    if (args.amount <= 0) throw new Error("المبلغ يجب أن يكون أكبر من صفر");
+    if (args.amount <= 0) throw new ConvexError("المبلغ يجب أن يكون أكبر من صفر");
     if (args.type === "EXPENSE" && !args.expenseAccountCode) {
-      throw new Error("اختر نوع المصروف (بنزين، صيانة…) حتى يُرحَّل على حسابه");
+      throw new ConvexError("اختر نوع المصروف (بنزين، صيانة…) حتى يُرحَّل على حسابه");
     }
 
     const holder: any = await ctx.db.get(args.holderId);
-    if (!holder) throw new Error("الموظف غير موجود");
+    if (!holder) throw new ConvexError("الموظف غير موجود");
 
     // منع صرف أكثر مما في اليد — العجز الدفتري يُخفي خطأً لا يُكتشف لاحقاً
     if (args.type === "EXPENSE" || args.type === "RETURN") {
@@ -158,14 +158,14 @@ export const record = mutation({
         (s: number, t: any) => s + (t.type === "ADVANCE" ? t.amount : -t.amount), 0,
       );
       if (args.amount > bal + 0.01) {
-        throw new Error(`الرصيد المتاح ${bal.toFixed(2)} ريال فقط — لا يمكن صرف ${args.amount.toFixed(2)}`);
+        throw new ConvexError(`الرصيد المتاح ${bal.toFixed(2)} ريال فقط — لا يمكن صرف ${args.amount.toFixed(2)}`);
       }
     }
 
     const advanceAcc = await accByCode(ctx, ADVANCE_ACC);
     const cashAcc = await accByCode(ctx, CASH_ACC);
     if (!advanceAcc || !cashAcc) {
-      throw new Error("شجرة الحسابات غير مزروعة — شغّل seedChartOfAccounts أولاً");
+      throw new ConvexError("شجرة الحسابات غير مزروعة — شغّل seedChartOfAccounts أولاً");
     }
 
     let lines: any[] = [];
@@ -184,7 +184,7 @@ export const record = mutation({
       ];
     } else {
       const expAcc = await accByCode(ctx, args.expenseAccountCode!);
-      if (!expAcc) throw new Error(`حساب المصروف ${args.expenseAccountCode} غير موجود`);
+      if (!expAcc) throw new ConvexError(`حساب المصروف ${args.expenseAccountCode} غير موجود`);
       desc = args.description?.trim()
         || `مصروف من عهدة ${holder.fullName || holder.username}`;
       lines = [
@@ -237,7 +237,7 @@ export const saveCount = mutation({
   handler: async (ctx, args) => {
     const actor = await requireFinance(ctx, args.sessionToken);
     const holder: any = await ctx.db.get(args.holderId);
-    if (!holder) throw new Error("الموظف غير موجود");
+    if (!holder) throw new ConvexError("الموظف غير موجود");
 
     const counted = Object.entries(args.denominations || {}).reduce(
       (s, [den, qty]) => s + Number(den) * (Number(qty) || 0), 0,

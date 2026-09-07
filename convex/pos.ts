@@ -11,7 +11,7 @@
  *   - كل بيع بيخصم المخزون تلقائياً من رسيبيات publicMeals عبر mealIngredients
  * @frontend client/src/pages/pos/*
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, QueryCtx, MutationCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { verifyPassword } from "./passwords";
@@ -23,15 +23,15 @@ import { autoPostPosTicket, autoReversePosTicket } from "./financePost";
 /* ═══════════════════════════════ Auth (PIN) ═══════════════════════════════ */
 
 async function requireCashier(ctx: QueryCtx | MutationCtx, token?: string | null) {
-  if (!token) throw new Error("POS session required");
+  if (!token) throw new ConvexError("POS session required");
   const session = await ctx.db
     .query("posSessions")
     .withIndex("by_token", (q) => q.eq("token", token))
     .first();
-  if (!session) throw new Error("Invalid POS session");
-  if (session.expiresAt < Date.now()) throw new Error("POS session expired");
+  if (!session) throw new ConvexError("Invalid POS session");
+  if (session.expiresAt < Date.now()) throw new ConvexError("POS session expired");
   const user: any = await ctx.db.get(session.cashierId);
-  if (!user || !user.isActive || !canUsePos(user)) throw new Error("Cashier not active");
+  if (!user || !user.isActive || !canUsePos(user)) throw new ConvexError("Cashier not active");
   return { session, user };
 }
 
@@ -87,7 +87,7 @@ async function checkAndRecordFailure(ctx: MutationCtx, key: string, failed: bool
     const recent = rows.filter((r: any) => r.at >= cutoff);
     for (const r of rows) if (r.at < cutoff) await ctx.db.delete(r._id);
     if (recent.length >= RL_MAX_FAILS) {
-      throw new Error(`تم قفل الدخول ${Math.ceil(RL_WINDOW_MS / 60000)} دقائق — عدد محاولات كبير`);
+      throw new ConvexError(`تم قفل الدخول ${Math.ceil(RL_WINDOW_MS / 60000)} دقائق — عدد محاولات كبير`);
     }
     if (failed) await ctx.db.insert("posLoginAttempts", { key, at: now });
   } catch (e: any) {
@@ -99,7 +99,7 @@ export const loginWithPin = mutation({
   args: { pin: v.string() },
   handler: async (ctx, { pin }) => {
     const clean = pin.trim();
-    if (!/^\d{4,6}$/.test(clean)) throw new Error("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
+    if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");
     await checkAndRecordFailure(ctx, "global", false);
     const users = await ctx.db.query("users").collect();
     let match: any = null;
@@ -111,7 +111,7 @@ export const loginWithPin = mutation({
     }
     if (!match) {
       await checkAndRecordFailure(ctx, "global", true);
-      throw new Error("PIN غير صحيح");
+      throw new ConvexError("PIN غير صحيح");
     }
     const token = newToken();
     await ctx.db.insert("posSessions", {
@@ -252,7 +252,7 @@ export const openShift = mutation({
     const branchId = await resolveBranchId(ctx, user);
     const branchesCount = (await ctx.db.query("posBranches").withIndex("by_active", (q) => q.eq("isActive", true)).collect()).length;
     if (!branchId && branchesCount > 1) {
-      throw new Error("لم يُعيَّن موظف الصندوق على فرع. تواصل مع المدير لإتمام التعيين");
+      throw new ConvexError("لم يُعيَّن موظف الصندوق على فرع. تواصل مع المدير لإتمام التعيين");
     }
     const id = await ctx.db.insert("posShifts", {
       cashierId: user._id, cashierName: user.name, branchId, openedAt: Date.now(),
@@ -272,7 +272,7 @@ export const closeShift = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("لا توجد وردية مفتوحة");
+    if (!shift) throw new ConvexError("لا توجد وردية مفتوحة");
     const tickets = await ctx.db
       .query("posTickets")
       .withIndex("by_shift", (q) => q.eq("shiftId", shift._id))
@@ -330,21 +330,21 @@ async function buildServerLines(
   const out: ServerLine[] = [];
   for (const l of clientLines) {
     const qty = Number(l.qty);
-    if (!Number.isFinite(qty) || qty <= 0) throw new Error("يجب أن تكون الكمية أكبر من صفر");
+    if (!Number.isFinite(qty) || qty <= 0) throw new ConvexError("يجب أن تكون الكمية أكبر من صفر");
     if (!l.mealId && l.kind === "delivery") {
       // 🚚 سطر توصيل — يسعّره الخادم، مسموح للكاشير (مش صنف مخصّص حر)
-      if (!Number.isFinite(deliveryFee) || deliveryFee < 0) throw new Error("رسوم التوصيل غير مضبوطة");
+      if (!Number.isFinite(deliveryFee) || deliveryFee < 0) throw new ConvexError("رسوم التوصيل غير مضبوطة");
       out.push({ mealId: undefined, name: "توصيل", qty, unitPrice: deliveryFee, notes: l.notes?.trim() || undefined });
     } else if (l.mealId) {
       const meal: any = await ctx.db.get(l.mealId as Id<"publicMeals">);
-      if (!meal || !meal.isActive) throw new Error("الوجبة غير متوفرة");
+      if (!meal || !meal.isActive) throw new ConvexError("الوجبة غير متوفرة");
       const meta = await ctx.db
         .query("posItems")
         .withIndex("by_meal", (q) => q.eq("mealId", meal._id))
         .first();
-      if (meta?.posPrice == null) throw new Error("هذا الصنف غير مفعّل للبيع أونلاين: حدّد سعر الأونلاين أولاً");
+      if (meta?.posPrice == null) throw new ConvexError("هذا الصنف غير مفعّل للبيع أونلاين: حدّد سعر الأونلاين أولاً");
       const price = Number(meta.posPrice);
-      if (!Number.isFinite(price) || price < 0) throw new Error("سعر الأونلاين للصنف غير صالح");
+      if (!Number.isFinite(price) || price < 0) throw new ConvexError("سعر الأونلاين للصنف غير صالح");
       const name = meta?.displayName || meal.nameEn || meal.nameAr || "—";
       out.push({
         mealId: meal._id, name, qty, unitPrice: price,
@@ -352,18 +352,18 @@ async function buildServerLines(
       });
     } else {
       // 🔒 صنف مخصّص (بلا mealId) — ADMIN فقط
-      if (!actorIsAdmin) throw new Error("الأصناف المخصّصة تحتاج صلاحية مدير");
+      if (!actorIsAdmin) throw new ConvexError("الأصناف المخصّصة تحتاج صلاحية مدير");
       const name = String(l.name || "").trim();
       const unitPrice = Number(l.unitPrice);
-      if (!name) throw new Error("اسم الصنف المخصّص مطلوب");
-      if (!Number.isFinite(unitPrice) || unitPrice < 0) throw new Error("سعر الصنف المخصّص غير صالح");
+      if (!name) throw new ConvexError("اسم الصنف المخصّص مطلوب");
+      if (!Number.isFinite(unitPrice) || unitPrice < 0) throw new ConvexError("سعر الصنف المخصّص غير صالح");
       out.push({
         mealId: undefined, name, qty, unitPrice,
         notes: l.notes?.trim() || undefined,
       });
     }
   }
-  if (out.length === 0) throw new Error("يجب إضافة صنف واحد على الأقل");
+  if (out.length === 0) throw new ConvexError("يجب إضافة صنف واحد على الأقل");
   return out;
 }
 
@@ -397,13 +397,13 @@ async function computeTotals(ctx: MutationCtx, lines: ServerLine[], discount = 0
 
 /** 🔒 يتحقق أن الخصم ضمن حدود الكاشير. الأدمن ممرور. */
 function assertDiscountAllowed(subtotal: number, discount: number, actorIsAdmin: boolean) {
-  if (!Number.isFinite(discount) || discount < 0) throw new Error("الخصم غير صالح");
+  if (!Number.isFinite(discount) || discount < 0) throw new ConvexError("الخصم غير صالح");
   if (discount === 0) return;
   if (actorIsAdmin) return;
-  if (subtotal <= 0) throw new Error("خصم غير مسموح على فاتورة فارغة");
+  if (subtotal <= 0) throw new ConvexError("خصم غير مسموح على فاتورة فارغة");
   const pct = (discount / subtotal) * 100;
   if (pct > MAX_CASHIER_DISCOUNT_PCT) {
-    throw new Error(`خصم أعلى من ${MAX_CASHIER_DISCOUNT_PCT}% يحتاج صلاحية مدير`);
+    throw new ConvexError(`خصم أعلى من ${MAX_CASHIER_DISCOUNT_PCT}% يحتاج صلاحية مدير`);
   }
 }
 
@@ -411,10 +411,10 @@ function assertDiscountAllowed(subtotal: number, discount: number, actorIsAdmin:
 function assertPaymentMethodAllowed(method: string, actorIsAdmin: boolean) {
   const m = String(method || "").toLowerCase();
   if (ADMIN_ONLY_PAYMENT_METHODS.has(m)) {
-    if (!actorIsAdmin) throw new Error('فاتورة "staff" (خارج الإيراد) تحتاج صلاحية مدير');
+    if (!actorIsAdmin) throw new ConvexError('فاتورة "staff" (خارج الإيراد) تحتاج صلاحية مدير');
     return m;
   }
-  if (!ALLOWED_PAYMENT_METHODS.has(m)) throw new Error("طريقة دفع غير مسموحة");
+  if (!ALLOWED_PAYMENT_METHODS.has(m)) throw new ConvexError("طريقة دفع غير مسموحة");
   return m;
 }
 
@@ -443,11 +443,11 @@ function resolvePayment(args: PaymentArg, total: number, actorIsAdmin: boolean):
       amount: Math.round(Number(p.amount) * 100) / 100,
     }));
     for (const p of norm) {
-      if (p.method === "staff") throw new Error('لا يمكن دمج فاتورة "staff" مع دفع مقسوم');
+      if (p.method === "staff") throw new ConvexError('لا يمكن دمج فاتورة "staff" مع دفع مقسوم');
     }
     const sum = Math.round(norm.reduce((s, p) => s + p.amount, 0) * 100) / 100;
     if (Math.abs(sum - total) > 0.01) {
-      throw new Error(`يجب أن يساوي مجموع المدفوعات (${sum.toFixed(2)}) الإجمالي (${total.toFixed(2)})`);
+      throw new ConvexError(`يجب أن يساوي مجموع المدفوعات (${sum.toFixed(2)}) الإجمالي (${total.toFixed(2)})`);
     }
     const cashPortion = Math.round(
       norm.filter((p) => p.method === "cash").reduce((s, p) => s + p.amount, 0) * 100,
@@ -465,7 +465,7 @@ function resolvePayment(args: PaymentArg, total: number, actorIsAdmin: boolean):
   let change: number | undefined = undefined;
   if (method === "cash") {
     const cr = Number(args.cashReceived ?? 0);
-    if (!Number.isFinite(cr) || cr < total) throw new Error("يجب أن يغطي النقد المستلم قيمة الإجمالي");
+    if (!Number.isFinite(cr) || cr < total) throw new ConvexError("يجب أن يغطي النقد المستلم قيمة الإجمالي");
     change = Math.round((cr - total) * 100) / 100;
   }
   return { paymentMethod: method, cashReceived: args.cashReceived, changeAmount: change, isStaff: method === "staff" };
@@ -592,7 +592,7 @@ export const createTicket = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("يجب فتح وردية أولًا");
+    if (!shift) throw new ConvexError("يجب فتح وردية أولًا");
 
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const totals = await computeTotals(ctx, serverLines, 0);
@@ -641,7 +641,7 @@ export const parkTicket = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
     const shift = await ctx.db.query("posShifts").withIndex("by_cashier", q => q.eq("cashierId", user._id)).filter(q => q.eq(q.field("status"), "OPEN")).first();
-    if (!shift) throw new Error("يجب فتح وردية أولاً");
+    if (!shift) throw new ConvexError("يجب فتح وردية أولاً");
     const lines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
     const preview = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
@@ -693,8 +693,8 @@ export const resumeOpenTicket = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
     const ticket: any = await ctx.db.get(args.ticketId);
-    if (!ticket || ticket.status !== "OPEN") throw new Error("الفاتورة غير متاحة");
-    if (String(ticket.cashierId) !== String(user._id) && !isAdmin(user)) throw new Error("لا يمكن فتح فاتورة كاشير آخر");
+    if (!ticket || ticket.status !== "OPEN") throw new ConvexError("الفاتورة غير متاحة");
+    if (String(ticket.cashierId) !== String(user._id) && !isAdmin(user)) throw new ConvexError("لا يمكن فتح فاتورة كاشير آخر");
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", q => q.eq("ticketId", args.ticketId)).collect();
     return { id: String(ticket._id), customerName: ticket.customerName || "", orderType: ticket.orderType || "dine_in", discount: ticket.discount || 0, lines: lines.map((l: any) => ({ mealId: l.mealId ? String(l.mealId) : null, name: l.name, qty: l.qty, unitPrice: l.unitPrice, note: l.notes })) };
   },
@@ -714,10 +714,10 @@ export const updateTicketLines = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
     const t: any = await ctx.db.get(args.ticketId);
-    if (!t || t.status !== "OPEN") throw new Error("الفاتورة غير قابلة للتعديل");
+    if (!t || t.status !== "OPEN") throw new ConvexError("الفاتورة غير قابلة للتعديل");
     // 🔒 ownership
     if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-      throw new Error("لا يُسمح بتعديل فاتورة موظف صندوق آخر");
+      throw new ConvexError("لا يُسمح بتعديل فاتورة موظف صندوق آخر");
     }
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
@@ -762,11 +762,11 @@ export const chargeTicket = mutation({
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
     const t: any = await ctx.db.get(args.ticketId);
-    if (!t) throw new Error("الفاتورة غير موجودة");
-    if (t.status !== "OPEN") throw new Error("الفاتورة مدفوعة بالفعل");
+    if (!t) throw new ConvexError("الفاتورة غير موجودة");
+    if (t.status !== "OPEN") throw new ConvexError("الفاتورة مدفوعة بالفعل");
     // 🔒 ownership
     if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-      throw new Error("لا يُسمح بتحصيل فاتورة موظف صندوق آخر");
+      throw new ConvexError("لا يُسمح بتحصيل فاتورة موظف صندوق آخر");
     }
 
     const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
@@ -847,7 +847,7 @@ export const quickSale = mutation({
       .withIndex("by_cashier", (q) => q.eq("cashierId", user._id))
       .filter((q) => q.eq(q.field("status"), "OPEN"))
       .first();
-    if (!shift) throw new Error("يجب فتح وردية أولًا");
+    if (!shift) throw new ConvexError("يجب فتح وردية أولًا");
 
     const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
     const rawDiscount = Number(args.discount || 0);
@@ -913,13 +913,13 @@ export const voidTicket = mutation({
 
     if (wasPaid) {
       // 🔒 إلغاء فاتورة مدفوعة → ADMIN فقط + سبب إلزامي
-      if (!isAdmin(user)) throw new Error("إلغاء فاتورة مدفوعة يحتاج صلاحية مدير");
+      if (!isAdmin(user)) throw new ConvexError("إلغاء فاتورة مدفوعة يحتاج صلاحية مدير");
       const r = String(reason || "").trim();
-      if (r.length < 3) throw new Error("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
+      if (r.length < 3) throw new ConvexError("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
     } else {
       // parked → صاحبها أو ADMIN
       if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
-        throw new Error("لا يُسمح بإلغاء فاتورة موظف صندوق آخر");
+        throw new ConvexError("لا يُسمح بإلغاء فاتورة موظف صندوق آخر");
       }
     }
 
@@ -961,12 +961,12 @@ export const refundTicket = mutation({
   args: { token: v.string(), ticketId: v.id("posTickets"), reason: v.optional(v.string()) },
   handler: async (ctx, { token, ticketId, reason }) => {
     const { user } = await requireCashier(ctx, token);
-    if (!isAdmin(user)) throw new Error("الاسترجاع يحتاج صلاحية مدير");
+    if (!isAdmin(user)) throw new ConvexError("الاسترجاع يحتاج صلاحية مدير");
     const t: any = await ctx.db.get(ticketId);
-    if (!t) throw new Error("الفاتورة غير موجودة");
-    if (t.status !== "PAID") throw new Error("الاسترجاع يكون للفواتير المدفوعة فقط");
+    if (!t) throw new ConvexError("الفاتورة غير موجودة");
+    if (t.status !== "PAID") throw new ConvexError("الاسترجاع يكون للفواتير المدفوعة فقط");
     const r = String(reason || "").trim();
-    if (r.length < 3) throw new Error("سبب الاسترجاع مطلوب (3 أحرف أو أكثر)");
+    if (r.length < 3) throw new ConvexError("سبب الاسترجاع مطلوب (3 أحرف أو أكثر)");
 
     await ctx.db.patch(ticketId, { status: "REFUNDED", updatedAt: Date.now() });
     // خصم من مبيعات الوردية (لو مفتوحة وليست خارج الإيراد)

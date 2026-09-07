@@ -1,5 +1,5 @@
 // convex/restaurantSettings.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { requireStaff } from "./sessions";
 import { rotationWeekAtDate, fridaysBetween } from "./lib/dates";
@@ -227,14 +227,14 @@ export const updateHeroLogo = mutation({
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {
-      throw new Error("Settings not found. Please initialize settings first.");
+      throw new ConvexError("Settings not found. Please initialize settings first.");
     }
 
     // Get URL from storage
     const imageUrl = await ctx.storage.getUrl(args.storageId);
     
     if (!imageUrl) {
-      throw new Error("Failed to get image URL from storage");
+      throw new ConvexError("Failed to get image URL from storage");
     }
 
     // Delete old logo if exists
@@ -265,7 +265,7 @@ export const deleteHeroLogo = mutation({
     const existing = await ctx.db.query("restaurantSettings").first();
     
     if (!existing) {
-      throw new Error("Settings not found");
+      throw new ConvexError("Settings not found");
     }
 
     // Delete from storage if exists

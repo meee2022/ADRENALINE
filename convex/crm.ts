@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireAdmin, requireStaff } from "./sessions";
 
 const DEFAULT_AUTOMATION = {
@@ -72,7 +72,7 @@ export const createFollowUp = mutation({
   args: { customerId: v.id("customers"), type: v.union(v.literal("RENEWAL"), v.literal("DELIVERY_FAILURE"), v.literal("GENERAL")), note: v.string(), dueDate: v.optional(v.string()), sourcePlanId: v.optional(v.id("dailyPlans")), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity: any = await requireStaff(ctx, args.sessionToken);
-    const note = args.note.trim(); if (!note) throw new Error("ملاحظة المتابعة مطلوبة");
+    const note = args.note.trim(); if (!note) throw new ConvexError("ملاحظة المتابعة مطلوبة");
     return await ctx.db.insert("customerFollowUps", { customerId: args.customerId, type: args.type, status: "OPEN", note, dueDate: args.dueDate, sourcePlanId: args.sourcePlanId, createdBy: identity.userId as any, createdAt: Date.now() });
   },
 });
@@ -107,7 +107,7 @@ export const saveAutomationSettings = mutation({
   },
   handler: async (ctx, args) => {
     const identity = await requireAdmin(ctx, args.sessionToken);
-    if (args.sendHour < 0 || args.sendHour > 23) throw new Error("ساعة الإرسال يجب أن تكون بين 0 و23");
+    if (args.sendHour < 0 || args.sendHour > 23) throw new ConvexError("ساعة الإرسال يجب أن تكون بين 0 و23");
     const { sessionToken: _sessionToken, ...values } = args;
     void _sessionToken;
     const current = await ctx.db.query("messageAutomationSettings")
@@ -132,7 +132,7 @@ export const simulateAutomation = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const customer: any = await ctx.db.query("customers").order("desc").first();
-    if (!customer) throw new Error("لا يوجد عميل لاختبار الرسالة");
+    if (!customer) throw new ConvexError("لا يوجد عميل لاختبار الرسالة");
     return await ctx.db.insert("messageAutomationLogs", {
       customerId: customer._id, customerName: customer.fullName, phone: customer.phone,
       eventKey: "RENEWAL_7_DAYS", language: "ar", status: "SIMULATED", createdAt: Date.now(),

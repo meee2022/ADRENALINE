@@ -19,7 +19,7 @@
  *   ⚠️ معاينة أولاً: تحسب أين ستقع كل وجبة بالكود المصلَّح دون أي كتابة.
  */
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireAdmin } from "./sessions";
 import { parseDate, fmtDate, addDeliveryDays, isDeliveryDay, getDayOffset } from "./lib/dates";
 
@@ -103,7 +103,7 @@ export const resetForReapprove = mutation({
   handler: async (ctx, { orderId, sessionToken }) => {
     await requireAdmin(ctx, sessionToken);
     const order: any = await ctx.db.get(orderId);
-    if (!order) throw new Error("الطلب غير موجود");
+    if (!order) throw new ConvexError("الطلب غير موجود");
 
     // باك أب + حذف كل خطط هذا الطلب
     const plans = (await ctx.db.query("dailyPlans").collect() as any[])

@@ -2,7 +2,7 @@ import { action, internalMutation, internalQuery, query } from "./_generated/ser
 import { api, internal } from "./_generated/api";
 import { judgeCoupon } from "./coupons";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 const UAT = "https://connect.uat.paylaterapp.com";
 
@@ -18,12 +18,12 @@ function config() {
 }
 
 async function accessToken(c: ReturnType<typeof config>) {
-  if (!c.clientId || !c.clientSecret || !Number.isFinite(c.outletId)) throw new Error("PayLater is not configured");
+  if (!c.clientId || !c.clientSecret || !Number.isFinite(c.outletId)) throw new ConvexError("PayLater is not configured");
   const body = new URLSearchParams({ grant_type: "client_credentials", client_id: c.clientId, client_secret: c.clientSecret });
   const res = await fetch(`${c.baseUrl}/auth/realms/api/protocol/openid-connect/token`, {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body,
   });
-  if (!res.ok) throw new Error(`PayLater authentication failed (${res.status})`);
+  if (!res.ok) throw new ConvexError(`PayLater authentication failed (${res.status})`);
   return String((await res.json()).access_token || "");
 }
 
@@ -109,10 +109,10 @@ export const createCheckout = action({
   },
   handler: async (ctx, a): Promise<any> => {
     const plan: any = await ctx.runQuery(internal.payLater.getPlanInternal, { planId: a.planId });
-    if (!plan || plan.isActive === false) throw new Error("Plan is not available");
+    if (!plan || plan.isActive === false) throw new ConvexError("Plan is not available");
     const option = plan.options?.[a.optionIndex];
     const listPrice = Number(option?.priceQAR);
-    if (!Number.isFinite(listPrice)) throw new Error("This plan has no price");
+    if (!Number.isFinite(listPrice)) throw new ConvexError("This plan has no price");
 
     /* الخصم يُحسب هنا لا في المتصفح: الصفحة ترسل الكود وحده، والمبلغ الذاهب
        إلى بوّابة الدفع يُشتقّ من سعر الباقة المخزَّن. فلو بُعث خصمٌ مصنوع
@@ -123,18 +123,18 @@ export const createCheckout = action({
     if (a.couponCode && a.couponCode.trim()) {
       const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
       const j = judgeCoupon(coupon, listPrice, "ADRENALINE", plan.duration);
-      if (!j.valid) throw new Error(j.error);
+      if (!j.valid) throw new ConvexError(j.error);
       amount = j.finalTotal;
       couponDiscount = j.discount;
       couponCode = String(coupon.code);
     }
     if (amount < 300 || amount > 25000) {
-      throw new Error(couponCode
+      throw new ConvexError(couponCode
         ? `المبلغ بعد الخصم (${amount} ر.ق) خارج حدود الدفع الإلكتروني — تواصل مع أخصائية التغذية لإتمام الاشتراك`
         : "This plan is outside PayLater's allowed amount range");
     }
     const origin = new URL(a.returnOrigin);
-    if (origin.protocol !== "https:" && origin.hostname !== "localhost") throw new Error("Invalid return URL");
+    if (origin.protocol !== "https:" && origin.hostname !== "localhost") throw new ConvexError("Invalid return URL");
     const c = config();
     const token = await accessToken(c);
     const orderId = `ADR-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
@@ -145,7 +145,7 @@ export const createCheckout = action({
       body: JSON.stringify({ outlet_id: c.outletId, currency: "QAR", amount, order_id: orderId, success_redirect_url: `${resultUrl}&result=success`, fail_redirect_url: `${resultUrl}&result=failed`, expiry_duration: 30 }),
     });
     const json: any = await res.json();
-    if (!res.ok || !json.paymentLinkUrl) throw new Error(json.error || `PayLater checkout failed (${res.status})`);
+    if (!res.ok || !json.paymentLinkUrl) throw new ConvexError(json.error || `PayLater checkout failed (${res.status})`);
     await ctx.runMutation(internal.payLater.saveAttempt, {
       orderId, checkoutToken, planId: a.planId, planName: plan.nameEn || plan.nameAr, optionIndex: a.optionIndex,
       amount, originalAmount: listPrice, couponCode, couponDiscount: couponDiscount || undefined,
@@ -160,11 +160,11 @@ export const refreshStatus = action({
   args: { checkoutToken: v.string() },
   handler: async (ctx, a): Promise<any> => {
     const payment: any = await ctx.runQuery(internal.payLater.getPaymentInternal, { checkoutToken: a.checkoutToken });
-    if (!payment) throw new Error("Payment not found");
+    if (!payment) throw new ConvexError("Payment not found");
     const c = config();
     const token = await accessToken(c);
     const res = await fetch(`${c.baseUrl}/api/paylater/merchant-portal/v2/web-checkout/status?order_id=${encodeURIComponent(payment.orderId)}`, { headers: { authorization: `Bearer ${token}` } });
-    if (!res.ok) throw new Error(`Unable to verify payment (${res.status})`);
+    if (!res.ok) throw new ConvexError(`Unable to verify payment (${res.status})`);
     const json: any = await res.json();
     /* رموز البوّابة كما لوحظت حيًّا: ١ معلّق، ٢ ناجح، ٣ فاشل.
        ورفضُ البطاقة لا يجعل الطلب فاشلاً عندهم — يبقى معلّقاً ليجرّب المشتري
@@ -302,17 +302,17 @@ export const createStaffLink = action({
     const who: any = await ctx.runQuery(internal.payLater.assertStaff, { sessionToken: a.sessionToken });
 
     const plan: any = await ctx.runQuery(internal.payLater.getPlanInternal, { planId: a.planId });
-    if (!plan || plan.isActive === false) throw new Error("الباقة غير متاحة");
+    if (!plan || plan.isActive === false) throw new ConvexError("الباقة غير متاحة");
     /* الباقة المخصّصة بلا خيارات: لا سعر قائمة تُقاس عليه، فالمبلغ المكتوب
        هو السعر لا «تعديلٌ» عليه. */
     const openPriced = !plan.options || plan.options.length === 0;
     const listPrice = openPriced ? 0 : (Number(plan.options?.[a.optionIndex]?.priceQAR) || 0);
     if (openPriced && !(Number(a.customMeals) > 0)) {
-      throw new Error("حدّد عدد الوجبات للباقة المخصّصة");
+      throw new ConvexError("حدّد عدد الوجبات للباقة المخصّصة");
     }
 
     const base = Math.round(Number(a.amount));
-    if (!Number.isFinite(base) || base <= 0) throw new Error("أدخل مبلغاً صحيحاً");
+    if (!Number.isFinite(base) || base <= 0) throw new ConvexError("أدخل مبلغاً صحيحاً");
 
     let amount = base;
     let couponCode: string | undefined;
@@ -321,13 +321,13 @@ export const createStaffLink = action({
       const coupon: any = await ctx.runQuery(internal.coupons.getByCodeInternal, { code: a.couponCode });
       const duration = openPriced && a.customDuration ? a.customDuration : plan.duration;
       const j = judgeCoupon(coupon, base, "ADRENALINE", duration);
-      if (!j.valid) throw new Error(j.error);
+      if (!j.valid) throw new ConvexError(j.error);
       amount = j.finalTotal;
       couponDiscount = j.discount;
       couponCode = String(coupon.code);
     }
     if (amount < 300 || amount > 25000) {
-      throw new Error(`المبلغ (${amount} ر.ق) خارج حدود الدفع الإلكتروني — من 300 إلى 25000`);
+      throw new ConvexError(`المبلغ (${amount} ر.ق) خارج حدود الدفع الإلكتروني — من 300 إلى 25000`);
     }
 
     const c = config();
@@ -345,7 +345,7 @@ export const createStaffLink = action({
       }),
     });
     const json: any = await res.json();
-    if (!res.ok || !json.paymentLinkUrl) throw new Error(json.error || `تعذّر إنشاء الرابط (${res.status})`);
+    if (!res.ok || !json.paymentLinkUrl) throw new ConvexError(json.error || `تعذّر إنشاء الرابط (${res.status})`);
 
     await ctx.runMutation(internal.payLater.saveAttempt, {
       orderId, checkoutToken, planId: a.planId,

@@ -1,5 +1,5 @@
 import { mutation, internalMutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { requireRoleOrPermission } from "./sessions";
 
@@ -60,7 +60,7 @@ async function ensurePeriod(ctx: Ctx, dateISO: string): Promise<Id<"finPeriods">
 async function assertPeriodOpen(ctx: Ctx, periodId: Id<"finPeriods">) {
   const p = await ctx.db.get(periodId);
   if (p && p.status !== "open") {
-    throw new Error(`الفترة ${p.name} مغلقة، ولا يمكن الترحيل إليها`);
+    throw new ConvexError(`الفترة ${p.name} مغلقة، ولا يمكن الترحيل إليها`);
   }
 }
 
@@ -113,14 +113,14 @@ export async function postEntry(
   },
 ): Promise<{ entryId: Id<"finJournalEntries">; entryNumber: string }> {
   const lines = (opts.lines || []).filter((l) => (l.debit || 0) !== 0 || (l.credit || 0) !== 0);
-  if (lines.length < 2) throw new Error("القيد يحتاج سطرين على الأقل");
+  if (lines.length < 2) throw new ConvexError("القيد يحتاج سطرين على الأقل");
   const round = (n: number) => Math.round((n || 0) * 1000) / 1000;
   const totalDebit = round(lines.reduce((s, l) => s + (l.debit || 0), 0));
   const totalCredit = round(lines.reduce((s, l) => s + (l.credit || 0), 0));
   if (Math.abs(totalDebit - totalCredit) > 0.01) {
-    throw new Error(`القيد غير متوازن: مدين ${totalDebit} ≠ دائن ${totalCredit}`);
+    throw new ConvexError(`القيد غير متوازن: مدين ${totalDebit} ≠ دائن ${totalCredit}`);
   }
-  if (totalDebit === 0) throw new Error("القيد بقيمة صفر");
+  if (totalDebit === 0) throw new ConvexError("القيد بقيمة صفر");
 
   const periodId = await ensurePeriod(ctx, opts.entryDate);
   await assertPeriodOpen(ctx, periodId);
@@ -451,14 +451,14 @@ export const postPayrollMonth = mutation({
   args: { month: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const actor = await requireFinance(ctx, args.sessionToken);
-    if (!/^\d{4}-\d{2}$/.test(args.month)) throw new Error("صيغة الشهر غير صحيحة");
+    if (!/^\d{4}-\d{2}$/.test(args.month)) throw new ConvexError("صيغة الشهر غير صحيحة");
     const existing = await ctx.db.query("finJournalEntries")
       .withIndex("by_source", (q: any) => q.eq("sourceType", "payrollMonth").eq("sourceId", args.month)).collect();
     if (existing.some((entry: any) => entry.postingStatus === "posted" && !entry.reversalEntryId)) {
-      throw new Error("رواتب هذا الشهر رُحّلت بالفعل");
+      throw new ConvexError("رواتب هذا الشهر رُحّلت بالفعل");
     }
     const rows = (await ctx.db.query("payroll").withIndex("by_month", (q: any) => q.eq("month", args.month)).collect()).filter((r: any) => !r.isVoid);
-    if (!rows.length) throw new Error("لا توجد رواتب في هذا الشهر");
+    if (!rows.length) throw new ConvexError("لا توجد رواتب في هذا الشهر");
     let salary = 0, overtime = 0, paid = 0, advance = 0;
     for (const row of rows as any[]) {
       const monthly = (Number(row.basic || 0) + Number(row.allowance || 0)) * Math.min(Number(row.days || 0), 31) / 31;
@@ -474,7 +474,7 @@ export const postPayrollMonth = mutation({
     const overtimeAcc = await accByCode(ctx, "6115");
     const accruedAcc = await accByCode(ctx, "2120");
     const cashAcc = await accByCode(ctx, "1110");
-    if (!salaryAcc || !overtimeAcc || !accruedAcc || !cashAcc) throw new Error("حسابات الرواتب الأساسية غير مكتملة");
+    if (!salaryAcc || !overtimeAcc || !accruedAcc || !cashAcc) throw new ConvexError("حسابات الرواتب الأساسية غير مكتملة");
     const lines: LineIn[] = [{ accountId: salaryAcc, debit: salary, description: `رواتب ${args.month}` }];
     if (overtime > 0) lines.push({ accountId: overtimeAcc, debit: overtime, description: `إضافي ومكافآت ${args.month}` });
     if (cashPaid > 0) lines.push({ accountId: cashAcc, credit: cashPaid, description: "رواتب وسلف مدفوعة" });
@@ -585,7 +585,7 @@ export const recordExpense = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requireFinance(ctx, args.sessionToken);
-    if (args.amount <= 0) throw new Error("المبلغ يجب أن يكون أكبر من صفر");
+    if (args.amount <= 0) throw new ConvexError("المبلغ يجب أن يكون أكبر من صفر");
     const result = await postEntry(ctx, {
       entryDate: args.entryDate,
       description: args.description,
@@ -610,9 +610,9 @@ export const reverseEntry = mutation({
   handler: async (ctx, args) => {
     const actor = await requireFinance(ctx, args.sessionToken);
     const entry: any = await ctx.db.get(args.entryId);
-    if (!entry) throw new Error("القيد غير موجود");
-    if (entry.postingStatus !== "posted") throw new Error("لا يمكن عكس قيد غير مُرحَّل");
-    if (entry.reversalEntryId) throw new Error("القيد معكوس بالفعل");
+    if (!entry) throw new ConvexError("القيد غير موجود");
+    if (entry.postingStatus !== "posted") throw new ConvexError("لا يمكن عكس قيد غير مُرحَّل");
+    if (entry.reversalEntryId) throw new ConvexError("القيد معكوس بالفعل");
     const lines = await ctx.db.query("finJournalLines").withIndex("by_entry", (q) => q.eq("entryId", args.entryId)).collect();
     const today = new Date().toISOString().slice(0, 10);
     const rev = await postEntry(ctx, {

@@ -10,7 +10,7 @@
  */
 import { action, query } from "./_generated/server";
 import { api, internal } from "./_generated/api";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { validateSession } from "./sessions";
 
 /** ✅ استعلام مساعد داخلي — يستخرج الهوية من التوكن (للـactions). */
@@ -394,7 +394,7 @@ export const chat = action({
           messages: args.messages.slice(-12),
         }),
       });
-      if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+      if (!res.ok) throw new ConvexError(`Anthropic ${res.status}`);
       const data = await res.json();
       return { ok: true, reply: data?.content?.[0]?.text || "عذرًا، لم أفهم طلبك. هل يمكنك توضيحه أكثر؟" };
     } catch (e) {
@@ -583,7 +583,7 @@ ${menu}
     }),
   });
 
-  if (!res.ok) throw new Error(`Anthropic ${res.status}`);
+  if (!res.ok) throw new ConvexError(`Anthropic ${res.status}`);
   const data = await res.json();
   const text = data?.content?.[0]?.text || "";
   const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
@@ -622,7 +622,7 @@ export const generateSmartPlan = action({
       const gate = await ctx.runMutation(internal.rateLimit.consume, {
         key, limit, windowMs: 10 * 60 * 1000,
       });
-      if (!gate.ok) throw new Error("عدد الطلبات مرتفع حاليًا. حاول مجددًا بعد بضع دقائق");
+      if (!gate.ok) throw new ConvexError("عدد الطلبات مرتفع حاليًا. حاول مجددًا بعد بضع دقائق");
     }
 
     // ✅ اسم اليوم + التاريخ — نفضّل targetDate من العميل (بالتوقيت المحلي)
@@ -768,7 +768,7 @@ export const generateWeeklyPlan = action({
     else if (args.phone && args.phone.replace(/\D/g, "").length >= 6) {
       identityKey = `phone:${args.phone.replace(/\D/g, "")}`; visitor = true;
     } else {
-      throw new Error("أدخل رقمك المتحقق أو سجّل الدخول لتوليد خطة");
+      throw new ConvexError("أدخل رقمك المتحقق أو سجّل الدخول لتوليد خطة");
     }
 
     // 💸 حدّ معدّل: الموثّق أوسع؛ الزائر (رقم فقط) صارم — توليدة واحدة كل 10 دقائق
@@ -781,7 +781,7 @@ export const generateWeeklyPlan = action({
         key, limit, windowMs: 10 * 60 * 1000,
       });
       if (!gate.ok) {
-        throw new Error(visitor
+        throw new ConvexError(visitor
           ? "ولّدت خطة للتو — انتظر بضع دقائق قبل توليد خطة أخرى."
           : "عدد الطلبات مرتفع حاليًا. حاول مجددًا بعد بضع دقائق");
       }

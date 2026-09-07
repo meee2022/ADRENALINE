@@ -2,7 +2,7 @@
  * @file convex/seedRealPlans.ts
  * @description Add all plans for all durations (week, two_weeks, month) with correct prices
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation } from "./_generated/server";
 import { requireAdmin } from "./sessions";
 
@@ -13,7 +13,7 @@ export const seedRealPlans = mutation({
     // 🔒 حماية: يمسح كل الباقات ثم يعيد زرعها — معطّل افتراضياً.
     // فعّله مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
-      throw new Error("إعادة زرع الباقات معطّلة لأسباب أمنية (تمسح البيانات الحالية)");
+      throw new ConvexError("إعادة زرع الباقات معطّلة لأسباب أمنية (تمسح البيانات الحالية)");
     }
     // Delete existing plans
     const existingPlans = await ctx.db.query("publicPlans").collect();

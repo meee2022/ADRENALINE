@@ -1,7 +1,7 @@
 // convex/banners.ts
 import { query, mutation } from "./_generated/server";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // ===== LIST ALL BANNERS (Admin) =====
 export const list = query({
@@ -90,7 +90,7 @@ export const remove = mutation({
     await requireStaff(ctx, sessionToken);
     const banner = await ctx.db.get(id);
     if (!banner) {
-      throw new Error("Banner not found");
+      throw new ConvexError("Banner not found");
     }
 
     // Delete the image from storage
@@ -110,7 +110,7 @@ export const toggleActive = mutation({
     await requireStaff(ctx, sessionToken);
     const banner = await ctx.db.get(id);
     if (!banner) {
-      throw new Error("Banner not found");
+      throw new ConvexError("Banner not found");
     }
 
     await ctx.db.patch(id, {

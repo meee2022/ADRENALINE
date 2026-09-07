@@ -4,7 +4,7 @@
  */
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 export const listByMeal = query({
   args: {
@@ -52,13 +52,13 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    if (!args.publicMealId && !args.menuItemId) throw new Error("Meal is required");
-    if (args.quantityPerServing <= 0) throw new Error("Quantity must be greater than zero");
+    if (!args.publicMealId && !args.menuItemId) throw new ConvexError("Meal is required");
+    if (args.quantityPerServing <= 0) throw new ConvexError("Quantity must be greater than zero");
     const existing = args.publicMealId
       ? await ctx.db.query("mealIngredients").withIndex("by_publicMeal", (q) => q.eq("publicMealId", args.publicMealId)).collect()
       : await ctx.db.query("mealIngredients").withIndex("by_menuItem", (q) => q.eq("menuItemId", args.menuItemId)).collect();
     if (existing.some((row) => String(row.inventoryItemId) === String(args.inventoryItemId))) {
-      throw new Error("This ingredient is already linked to the meal");
+      throw new ConvexError("This ingredient is already linked to the meal");
     }
     const { sessionToken: _token, ...fields } = args;
     return await ctx.db.insert("mealIngredients", {

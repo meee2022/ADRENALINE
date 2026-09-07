@@ -11,7 +11,7 @@
  * تبقى شاهدة على ما أُرسل، ويُسجَّل النقص صراحةً في `shortageQty/shortageValue`.
  * لو عدّلنا `qty` لاختفى النقص من السجل وكأنه لم يحدث.
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireRoleOrPermission } from "./sessions";
 
@@ -111,8 +111,8 @@ export const confirmReceipt = mutation({
   handler: async (ctx, args) => {
     const actor: any = await requireOutlet(ctx, args.sessionToken);
     const order: any = await ctx.db.get(args.orderId);
-    if (!order) throw new Error("الطلبية غير موجودة");
-    if (order.isVoid) throw new Error("لا يمكن تأكيد استلام طلبية ملغاة");
+    if (!order) throw new ConvexError("الطلبية غير موجودة");
+    if (order.isVoid) throw new ConvexError("لا يمكن تأكيد استلام طلبية ملغاة");
 
     const lines = await ctx.db
       .query("gymOrderLines")
@@ -122,7 +122,7 @@ export const confirmReceipt = mutation({
     const receivedById = new Map<string, number>();
     for (const r of args.received) {
       const line: any = byId.get(String(r.lineId));
-      if (!line) throw new Error("سطر غير موجود في الطلبية");
+      if (!line) throw new ConvexError("سطر غير موجود في الطلبية");
       const q = Math.max(0, Math.round(Number(r.qty) || 0));
       // الزيادة عن المطلوب لا تُحتسب على الفاتورة — تُسجَّل كملاحظة فقط
       receivedById.set(String(r.lineId), Math.min(q, Number(line.qty) || 0));

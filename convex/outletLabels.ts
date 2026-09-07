@@ -1,6 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 type SeedRow = [string, number?, number?, number?, number?, number?];
 
@@ -316,15 +316,15 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const nameEn = args.nameEn.trim();
-    if (!nameEn) throw new Error("اكتب اسم الصنف");
+    if (!nameEn) throw new ConvexError("اكتب اسم الصنف");
     for (const value of [args.price, args.calories, args.carbs, args.protein, args.fats]) {
-      if (!Number.isFinite(value) || value < 0) throw new Error("بيانات الاستيكر غير صالحة");
+      if (!Number.isFinite(value) || value < 0) throw new ConvexError("بيانات الاستيكر غير صالحة");
     }
     const rows = await ctx.db.query("outletProductLabels").collect();
     const sequence = rows.reduce((max, row) => Math.max(max, Number(row.sequence) || 0), 0) + 1;
     const barcode = String(100000 + sequence);
     const duplicate = await ctx.db.query("outletProductLabels").withIndex("by_barcode", q => q.eq("barcode", barcode)).first();
-    if (duplicate) throw new Error("رقم الباركود مستخدم بالفعل");
+    if (duplicate) throw new ConvexError("رقم الباركود مستخدم بالفعل");
     const now = Date.now();
     const id = await ctx.db.insert("outletProductLabels", {
       sequence,

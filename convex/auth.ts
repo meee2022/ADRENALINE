@@ -2,7 +2,7 @@
  * @file convex/auth.ts
  * @description نظام مصادقة موحد للأدمن والعملاء + إصدار جلسة (توكن) للسيرفر
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation } from "./_generated/server";
 import { verifyPassword, verifyAndMaybeUpgrade } from "./passwords";
 import { createSession, destroySession, requireAdmin } from "./sessions";
@@ -29,7 +29,7 @@ async function assertNotThrottled(ctx: any, email: string) {
     await ctx.db.delete(row._id);
     return;
   }
-  if (row.count >= MAX_ATTEMPTS) throw new Error(THROTTLED);
+  if (row.count >= MAX_ATTEMPTS) throw new ConvexError(THROTTLED);
 }
 
 /** يسجّل محاولة فاشلة. */

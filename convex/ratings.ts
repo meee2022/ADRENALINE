@@ -7,7 +7,7 @@
  *   - byCustomer يتطلّب ownership (الموظف أو صاحب الاشتراك)
  */
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner, validateSession } from "./sessions";
 
 /** أول اسم فقط لعرض عام (بدون كشف الاسم الكامل). */
@@ -47,9 +47,9 @@ export const create = mutation({
     sessionToken: v.string(),
   },
   handler: async (ctx, args) => {
-    if (args.stars < 1 || args.stars > 5) throw new Error("يجب أن يكون التقييم بين نجمة واحدة و5 نجوم");
+    if (args.stars < 1 || args.stars > 5) throw new ConvexError("يجب أن يكون التقييم بين نجمة واحدة و5 نجوم");
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id) throw new Error("غير مصرح. سجّل الدخول لإضافة تقييمك");
+    if (!id) throw new ConvexError("غير مصرح. سجّل الدخول لإضافة تقييمك");
 
     // 🔒 نستخرج customerId + customerName من الجلسة، مش من args
     let customerId: any = undefined;
@@ -84,7 +84,7 @@ export const create = mutation({
         (args.publicMealId && String(r.publicMealId) === String(args.publicMealId))
       );
       if (dup && (!args.planDate || dup.planDate === args.planDate)) {
-        throw new Error("قيّمت هذه الوجبة من قبل");
+        throw new ConvexError("قيّمت هذه الوجبة من قبل");
       }
     }
 

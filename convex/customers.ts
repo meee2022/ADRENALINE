@@ -3,7 +3,7 @@
  * @description Convex functions للعملاء (المشتركين)
  */
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
 import { normalizePhone } from "./lib/phone";
 import { qatarTodayISO } from "./lib/customerOrderRules";
@@ -233,13 +233,13 @@ export const create = mutation({
       normalizeCustomerName(c.fullName) === normalizeCustomerName(args.fullName)
       && String(c.restaurantKey || "ADRENALINE") === expectedRestaurant
     )) {
-      throw new Error("يوجد مشترك بنفس الاسم ورقم الهاتف بالفعل / Customer already exists");
+      throw new ConvexError("يوجد مشترك بنفس الاسم ورقم الهاتف بالفعل / Customer already exists");
     }
     /* حارس على الخادم أيضاً: الرقمان يُبنى منهما سطر الباقة على ملصق البوكس
        ويُقاس بهما نقص الخطة. من يُسجَّل بدونهما يطبع ملصقاً مختلف الشكل عن
        بقية الرزمة. الواجهة تمنعه، وهذا يمنعه لو نادى المسار أحد غيرها. */
     if (!(Number(args.mealsPerDay) >= 1)) {
-      throw new Error("حدّد عدد الوجبات في اليوم / Set meals per day");
+      throw new ConvexError("حدّد عدد الوجبات في اليوم / Set meals per day");
     }
     // السناك افتراضه صفر ويُزاد عند اللزوم، فغيابه ليس نقصاً — يُخزَّن صفراً.
     const snacksPerDay = Number(args.snacksPerDay) >= 0 ? Number(args.snacksPerDay) : 0;
@@ -350,14 +350,14 @@ export const update = mutation({
     await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...raw } = args as any;
     const current: any = await ctx.db.get(id);
-    if (!current) throw new Error("المشترك غير موجود / Customer not found");
+    if (!current) throw new ConvexError("المشترك غير موجود / Customer not found");
     // 🔒 حدود منطقية على الأرقام
-    if (raw.price !== undefined && (raw.price < 0 || raw.price > 1_000_000)) throw new Error("سعر غير صالح");
-    if (raw.discount !== undefined && (raw.discount < 0 || raw.discount > 1_000_000)) throw new Error("خصم غير صالح");
-    if (raw.finalPrice !== undefined && (raw.finalPrice < 0 || raw.finalPrice > 1_000_000)) throw new Error("سعر نهائي غير صالح");
-    if (raw.mealsPerDay !== undefined && (raw.mealsPerDay < 0 || raw.mealsPerDay > 10)) throw new Error("عدد وجبات غير صالح");
-    if (raw.snacksPerDay !== undefined && (raw.snacksPerDay < 0 || raw.snacksPerDay > 10)) throw new Error("عدد سناكس غير صالح");
-    if (raw.durationWeeks !== undefined && (raw.durationWeeks < 0 || raw.durationWeeks > 260)) throw new Error("مدة اشتراك غير صالحة");
+    if (raw.price !== undefined && (raw.price < 0 || raw.price > 1_000_000)) throw new ConvexError("سعر غير صالح");
+    if (raw.discount !== undefined && (raw.discount < 0 || raw.discount > 1_000_000)) throw new ConvexError("خصم غير صالح");
+    if (raw.finalPrice !== undefined && (raw.finalPrice < 0 || raw.finalPrice > 1_000_000)) throw new ConvexError("سعر نهائي غير صالح");
+    if (raw.mealsPerDay !== undefined && (raw.mealsPerDay < 0 || raw.mealsPerDay > 10)) throw new ConvexError("عدد وجبات غير صالح");
+    if (raw.snacksPerDay !== undefined && (raw.snacksPerDay < 0 || raw.snacksPerDay > 10)) throw new ConvexError("عدد سناكس غير صالح");
+    if (raw.durationWeeks !== undefined && (raw.durationWeeks < 0 || raw.durationWeeks > 260)) throw new ConvexError("مدة اشتراك غير صالحة");
 
     const patch: any = { updatedAt: Date.now() };
     for (const [k, v2] of Object.entries(raw)) if (v2 !== undefined) patch[k] = v2;
@@ -381,7 +381,7 @@ export const update = mutation({
       String(c._id) !== String(id) &&
       normalizeCustomerName(c.fullName) === normalizeCustomerName(finalName)
     )) {
-      throw new Error("يوجد مشترك آخر بنفس الاسم ورقم الهاتف / Duplicate customer");
+      throw new ConvexError("يوجد مشترك آخر بنفس الاسم ورقم الهاتف / Duplicate customer");
     }
 
     await ctx.db.patch(id, patch);
@@ -562,16 +562,16 @@ export const remove = mutation({
     await requireAdmin(ctx, sessionToken);
     // 🔒 ref-check — نمنع الحذف اليتيم
     const plans = await ctx.db.query("dailyPlans").withIndex("by_customerId", (q) => q.eq("customerId", id)).take(1);
-    if (plans.length) throw new Error("لا يمكن الحذف — للعميل خطط توصيل. عطّل الاشتراك بدلاً من الحذف.");
+    if (plans.length) throw new ConvexError("لا يمكن الحذف — للعميل خطط توصيل. عطّل الاشتراك بدلاً من الحذف.");
     const orders = await ctx.db.query("customerOrders").collect();
     if (orders.some((o) => String(o.customerId) === String(id))) {
-      throw new Error("لا يمكن الحذف — للعميل طلبات محفوظة.");
+      throw new ConvexError("لا يمكن الحذف — للعميل طلبات محفوظة.");
     }
     const acct = await ctx.db.query("customerAccounts").withIndex("by_customerId", (q) => q.eq("customerId", id)).first();
-    if (acct) throw new Error("لا يمكن الحذف — للعميل حساب موقع مرتبط. احذف الحساب أولاً.");
+    if (acct) throw new ConvexError("لا يمكن الحذف — للعميل حساب موقع مرتبط. احذف الحساب أولاً.");
     const posT = await ctx.db.query("posTickets").collect();
     if (posT.some((t: any) => String(t.customerId) === String(id))) {
-      throw new Error("لا يمكن الحذف — للعميل فواتير POS.");
+      throw new ConvexError("لا يمكن الحذف — للعميل فواتير POS.");
     }
     await ctx.db.delete(id);
     return true;
@@ -593,7 +593,7 @@ export const removeForce = mutation({
     // 🔒 حماية مالية: فواتير POS تمنع الحذف القسري
     const posT = await ctx.db.query("posTickets").collect();
     if (posT.some((t: any) => String(t.customerId) === String(id))) {
-      throw new Error("لا يمكن الحذف القسري — للعميل فواتير POS مالية. عطّل الاشتراك بدلاً من الحذف.");
+      throw new ConvexError("لا يمكن الحذف القسري — للعميل فواتير POS مالية. عطّل الاشتراك بدلاً من الحذف.");
     }
     let ordersDeleted = 0, itemsDeleted = 0, plansDeleted = 0, accountsDeleted = 0;
     // الطلبات + بنودها
@@ -661,7 +661,7 @@ export const toggleSkipDay = mutation({
     const mode = exists ? "unskip" : "skip";
 
     // 🔒 لا تخطّي بأثر رجعي
-    if (mode === "skip" && dateISO < today) throw new Error("لا يمكن تخطّي يوم مضى");
+    if (mode === "skip" && dateISO < today) throw new ConvexError("لا يمكن تخطّي يوم مضى");
 
     // نفس منطق setSkippedDays — مباشرة هنا (بلا استدعاء متبادل).
     // ⚠️ الاستيراد في أعلى الملف — Convex لا يدعم `await import()` الديناميكي.
@@ -729,7 +729,7 @@ export const setSubscriptionActive = mutation({
       // تنشيط = موظف فقط
       await requireStaff(ctx, args.sessionToken);
       const c: any = await ctx.db.get(args.id);
-      if (!c) throw new Error("العميل غير موجود");
+      if (!c) throw new ConvexError("العميل غير موجود");
       // تحذير لو منتهي — الأدمن يقدر يعيد تفعيل بس ياخد قرار واعي
       // (لو حبيت تمنع نهائياً استبدل بـthrow)
     } else {
@@ -812,7 +812,7 @@ export const deleteAll = mutation({
     // 🔒 حماية: عملية مدمّرة (مسح كل العملاء) — معطّلة افتراضياً.
     // لتشغيلها مؤقتاً: npx convex env set ALLOW_DESTRUCTIVE true (ثم أعدها false).
     if (process.env.ALLOW_DESTRUCTIVE !== "true") {
-      throw new Error("عملية المسح الجماعي معطّلة لأسباب أمنية");
+      throw new ConvexError("عملية المسح الجماعي معطّلة لأسباب أمنية");
     }
     const deleteDailyPlans = args.deleteDailyPlans ?? true;
 

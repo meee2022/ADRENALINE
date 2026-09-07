@@ -22,7 +22,7 @@
  *   ⚠️ الجدول مولّد من الإكسل عبر tmp/parse_excel.py — لا يُحرّر يدوياً.
  */
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireAdmin } from "./sessions";
 import { OFFICIAL } from "./menuOfficial";
 
@@ -243,7 +243,7 @@ export const apply = mutation({
     const refs = await refCounts(ctx);
     // 🔒 لا نكتب لو في اسم في الإكسل بلا وجبة — الصورة ناقصة، والنتيجة تبقى منيو ناقص
     if (unmatched.length) {
-      throw new Error(`أسماء في الإكسل بلا وجبة مطابقة (${unmatched.length}): ${unmatched.slice(0, 5).join(" · ")}`);
+      throw new ConvexError(`أسماء في الإكسل بلا وجبة مطابقة (${unmatched.length}): ${unmatched.slice(0, 5).join(" · ")}`);
     }
     let updated = 0;
     for (const m of meals as any[]) {

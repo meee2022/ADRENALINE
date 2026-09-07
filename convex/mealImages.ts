@@ -5,7 +5,7 @@
  */
 import { mutation } from "./_generated/server";
 import { requireAdmin } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 // 🔒 حدود ملف صورة الوجبة
 const ALLOWED_IMAGE_MIMES = new Set([
@@ -26,11 +26,11 @@ export const setImage = mutation({
       if (contentType && !ALLOWED_IMAGE_MIMES.has(contentType)) {
         // احذف الملف المرفوض حتى لا يتراكم
         try { await ctx.storage.delete(storageId); } catch { /* ignore */ }
-        throw new Error(`نوع الصورة غير مسموح (${contentType || "غير معروف"}) — اسمح فقط JPG/PNG/WebP/GIF`);
+        throw new ConvexError(`نوع الصورة غير مسموح (${contentType || "غير معروف"}) — اسمح فقط JPG/PNG/WebP/GIF`);
       }
       if (size > MAX_IMAGE_BYTES) {
         try { await ctx.storage.delete(storageId); } catch { /* ignore */ }
-        throw new Error(`حجم الصورة أكبر من الحد المسموح (${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB)`);
+        throw new ConvexError(`حجم الصورة أكبر من الحد المسموح (${Math.round(MAX_IMAGE_BYTES / 1024 / 1024)}MB)`);
       }
     }
 

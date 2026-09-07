@@ -1,5 +1,5 @@
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 
@@ -588,7 +588,7 @@ export const restoreActiveCustomerPausedPlans = mutation({
   handler: async (ctx, args) => {
     const staff: any = await requireStaff(ctx, args.sessionToken);
     const customer: any = await ctx.db.get(args.customerId);
-    if (!customer) throw new Error("المشترك غير موجود");
+    if (!customer) throw new ConvexError("المشترك غير موجود");
 
     const plans = await ctx.db
       .query("dailyPlans")

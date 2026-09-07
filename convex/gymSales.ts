@@ -8,7 +8,7 @@
  *   - deleteOrder = soft void (isVoid=true + سبب) — الحذف الفعلي محظور
  * @frontend client/src/pages/GymSales.tsx
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRoleOrPermission } from "./sessions";
 import { autoPostGymOrder, autoPostGymReturn, autoReverseGymOrder } from "./financePost";
@@ -57,7 +57,7 @@ export const addGym = mutation({
     await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const name = args.name.trim();
-    if (!name) throw new Error("اسم الجم مطلوب");
+    if (!name) throw new ConvexError("اسم الجم مطلوب");
     const id = await ctx.db.insert("gymAccounts", {
       name,
       outletType: args.outletType || "GYM",
@@ -137,11 +137,11 @@ export const setMealGymNames = mutation({
     await requireGymSalesAccess(ctx, args.sessionToken);
     const meal: any = await ctx.db.get(args.mealId);
     if (!meal || !meal.isActive) {
-      throw new Error("الصنف غير موجود");
+      throw new ConvexError("الصنف غير موجود");
     }
     const nameAr = args.nameAr.trim();
     const nameEn = args.nameEn.trim();
-    if (!nameAr && !nameEn) throw new Error("اكتب اسم الوجبة بالعربي أو الإنجليزي");
+    if (!nameAr && !nameEn) throw new ConvexError("اكتب اسم الوجبة بالعربي أو الإنجليزي");
     await ctx.db.patch(args.mealId, {
       gymNameAr: nameAr || undefined,
       gymNameEn: nameEn || undefined,
@@ -170,9 +170,9 @@ export const createGymMeal = mutation({
     await requireGymSalesAccess(ctx, args.sessionToken);
     const nameAr = args.nameAr.trim();
     const nameEn = args.nameEn.trim();
-    if (!nameAr && !nameEn) throw new Error("اكتب اسم الوجبة بالعربي أو الإنجليزي");
+    if (!nameAr && !nameEn) throw new ConvexError("اكتب اسم الوجبة بالعربي أو الإنجليزي");
     const gymPrice = Number(args.gymPrice);
-    if (!Number.isFinite(gymPrice) || gymPrice < 0) throw new Error("سعر الجيم غير صالح");
+    if (!Number.isFinite(gymPrice) || gymPrice < 0) throw new ConvexError("سعر الجيم غير صالح");
     const slug = `gym-${Date.now()}-${nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "meal"}`;
     const id = await ctx.db.insert("publicMeals", {
       nameAr: nameAr || nameEn,
@@ -270,7 +270,7 @@ export const copyOnlineCatalogToOutlet = mutation({
     await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet: any = await ctx.db.get(args.outletId);
-    if (!outlet) throw new Error("المنفذ غير موجود");
+    if (!outlet) throw new ConvexError("المنفذ غير موجود");
     const posRows: any[] = await ctx.db.query("posItems").collect();
     const onlineRows = posRows
       .filter((row) => row.posPrice != null && Number.isFinite(Number(row.posPrice)) && Number(row.posPrice) >= 0)
@@ -301,7 +301,7 @@ export const listOutletCatalogAdmin = query({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const outlet: any = await ctx.db.get(args.outletId);
-    if (!outlet) throw new Error("المنفذ غير موجود");
+    if (!outlet) throw new ConvexError("المنفذ غير موجود");
     const meals: any[] = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
     const rows: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.outletId)).collect();
     const hasOutletCatalog = rows.length > 0;
@@ -362,8 +362,8 @@ export const setOutletCatalogItem = mutation({
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet: any = await ctx.db.get(args.outletId);
     const meal: any = await ctx.db.get(args.mealId);
-    if (!outlet || !meal) throw new Error("المنفذ أو الصنف غير موجود");
-    if (args.price !== undefined && (!Number.isFinite(args.price) || args.price < 0)) throw new Error("سعر المنفذ غير صالح");
+    if (!outlet || !meal) throw new ConvexError("المنفذ أو الصنف غير موجود");
+    if (args.price !== undefined && (!Number.isFinite(args.price) || args.price < 0)) throw new ConvexError("سعر المنفذ غير صالح");
     const outletRows: any[] = await ctx.db.query("outletCatalogItems").withIndex("by_outlet", (q) => q.eq("outletId", args.outletId)).collect();
     if (outletRows.length === 0) {
       const legacyMeals: any[] = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
@@ -471,11 +471,11 @@ export const createOutletMeal = mutation({
     await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const outlet = await ctx.db.get(args.outletId);
-    if (!outlet) throw new Error("اختر منفذًا صحيحًا");
+    if (!outlet) throw new ConvexError("اختر منفذًا صحيحًا");
     const nameAr = args.nameAr.trim();
     const nameEn = args.nameEn.trim();
-    if (!nameAr && !nameEn) throw new Error("اكتب اسم الصنف");
-    if (!Number.isFinite(args.price) || args.price < 0) throw new Error("سعر المنفذ غير صالح");
+    if (!nameAr && !nameEn) throw new ConvexError("اكتب اسم الصنف");
+    if (!Number.isFinite(args.price) || args.price < 0) throw new ConvexError("سعر المنفذ غير صالح");
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: nameAr || nameEn,
       nameEn: nameEn || undefined,
@@ -726,7 +726,7 @@ export const setMealReturnWindow = mutation({
     await requireStaff(ctx, args.sessionToken);
     await requireGymSalesAccess(ctx, args.sessionToken);
     const days = Math.round(args.days);
-    if (days < 1 || days > 14) throw new Error("مدة المرتجع يجب أن تكون بين يوم و14 يوماً");
+    if (days < 1 || days > 14) throw new ConvexError("مدة المرتجع يجب أن تكون بين يوم و14 يوماً");
     await ctx.db.patch(args.mealId, { gymReturnAfterDays: days } as any);
     return { ok: true };
   },
@@ -973,11 +973,11 @@ async function buildGymOrderLines(
   for (const l of clientLines) {
     const qty = Math.max(0, Math.round(Number(l.qty) || 0));
     if (qty === 0) continue;
-    if (!l.mealId) throw new Error("mealId مطلوب لكل سطر");
+    if (!l.mealId) throw new ConvexError("mealId مطلوب لكل سطر");
     const meal: any = await ctx.db.get(l.mealId);
-    if (!meal || !meal.isActive) throw new Error("وجبة غير متوفرة");
+    if (!meal || !meal.isActive) throw new ConvexError("وجبة غير متوفرة");
     const outletRow: any = outletByMeal.get(String(meal._id));
-    if (hasOutletCatalog && !outletRow) throw new Error("الصنف غير متاح في هذا المنفذ");
+    if (hasOutletCatalog && !outletRow) throw new ConvexError("الصنف غير متاح في هذا المنفذ");
     const hasCustom = meal.gymPrice != null && meal.gymPrice >= 0;
     /* سعر المنفذ (كتالوجه أو سعره المخصّص) هو **ما قبل الخصم**، ونسبة المنفذ
        تُطبَّق فوقه. كان الكود يعيد سعر الكتالوج كما هو ويتجاهل النسبة، فبقي
@@ -991,7 +991,7 @@ async function buildGymOrderLines(
       ? Number(meal.gymPrice)
       : Number(meal.priceQAR) || 0;
     const unitPrice = roundUnit(listPrice * (1 - discountPct / 100), meal.priceUnit);
-    if (unitPrice < 0) throw new Error("سعر غير صالح");
+    if (unitPrice < 0) throw new ConvexError("سعر غير صالح");
     subtotal += listPrice * qty;
     total += unitPrice * qty;
     mealsCount += qty;
@@ -1004,7 +1004,7 @@ async function buildGymOrderLines(
       lineTotal: Math.round(qty * unitPrice * 100) / 100,
     });
   }
-  if (out.length === 0) throw new Error("يجب إضافة وجبة واحدة على الأقل");
+  if (out.length === 0) throw new ConvexError("يجب إضافة وجبة واحدة على الأقل");
   subtotal = Math.round(subtotal * 100) / 100;
   total = Math.round(total * 100) / 100;
   const discountAmount = Math.round((subtotal - total) * 100) / 100;
@@ -1033,7 +1033,7 @@ export const createOrder = mutation({
     const sess: any = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const who = sess?.userId as any;
     const gym: any = await ctx.db.get(args.gymId);
-    if (!gym) throw new Error("الجم غير موجود");
+    if (!gym) throw new ConvexError("الجم غير موجود");
 
     const built = await buildGymOrderLines(ctx, gym, args.lines);
 
@@ -1085,10 +1085,10 @@ export const updateOrder = mutation({
   handler: async (ctx, args) => {
     const actor = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const existing: any = await ctx.db.get(args.orderId);
-    if (!existing) throw new Error("الطلبية غير موجودة");
-    if (existing.isVoid) throw new Error("لا يُسمح بتعديل طلبية ملغاة");
+    if (!existing) throw new ConvexError("الطلبية غير موجودة");
+    if (existing.isVoid) throw new ConvexError("لا يُسمح بتعديل طلبية ملغاة");
     const gym: any = await ctx.db.get(args.gymId);
-    if (!gym) throw new Error("الجم غير موجود");
+    if (!gym) throw new ConvexError("الجم غير موجود");
 
     const built = await buildGymOrderLines(ctx, gym, args.lines);
     await autoReverseGymOrder(ctx, args.orderId, "تعديل فاتورة المنفذ", actor.userId as any);
@@ -1100,7 +1100,7 @@ export const updateOrder = mutation({
     for (const line of built.lines) {
       const returnedQty = returnedByMeal.get(String(line.mealId)) || 0;
       if (returnedQty > line.qty) {
-        throw new Error(`لا يمكن تقليل ${line.mealNameAr || line.mealNameEn} عن الكمية المرتجعة (${returnedQty})`);
+        throw new ConvexError(`لا يمكن تقليل ${line.mealNameAr || line.mealNameEn} عن الكمية المرتجعة (${returnedQty})`);
       }
       returnedTotal += returnedQty;
       wasteValue += returnedQty * line.unitPrice;
@@ -1154,10 +1154,10 @@ export const deleteOrder = mutation({
   handler: async (ctx, args) => {
     const id: any = await requireAdmin(ctx, args.sessionToken);
     const order: any = await ctx.db.get(args.orderId);
-    if (!order) throw new Error("الطلبية غير موجودة");
+    if (!order) throw new ConvexError("الطلبية غير موجودة");
     if (order.isVoid) return { success: true, alreadyVoid: true };
     const reason = String(args.reason || "").trim();
-    if (reason.length < 3) throw new Error("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
+    if (reason.length < 3) throw new ConvexError("سبب الإلغاء مطلوب (3 أحرف أو أكثر)");
     const actorName = id?.userId ? (await ctx.db.get(id.userId as any) as any)?.name : undefined;
     await ctx.db.patch(args.orderId, {
       isVoid: true, voidedAt: Date.now(),
@@ -1185,11 +1185,11 @@ export const recordOrderReturns = mutation({
   },
   handler: async (ctx, args) => {
     const actor = await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.returnDate)) throw new Error("تاريخ المرتجع غير صالح");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(args.returnDate)) throw new ConvexError("تاريخ المرتجع غير صالح");
     const order: any = await ctx.db.get(args.orderId);
-    if (!order) throw new Error("الطلبية غير موجودة");
-    if (order.isVoid) throw new Error("لا يمكن تسجيل مرتجع لطلبية ملغاة");
-    if (args.returnDate < order.date) throw new Error("تاريخ المرتجع لا يمكن أن يسبق تاريخ الفاتورة");
+    if (!order) throw new ConvexError("الطلبية غير موجودة");
+    if (order.isVoid) throw new ConvexError("لا يمكن تسجيل مرتجع لطلبية ملغاة");
+    if (args.returnDate < order.date) throw new ConvexError("تاريخ المرتجع لا يمكن أن يسبق تاريخ الفاتورة");
 
     const lines = await ctx.db
       .query("gymOrderLines")
@@ -1200,16 +1200,16 @@ export const recordOrderReturns = mutation({
     const batchLines: Array<{ line: any; qty: number; expectedAfterDays: number }> = [];
     for (const r of args.returns) {
       const line: any = linesById.get(String(r.lineId));
-      if (!line) throw new Error("سطر غير موجود في الطلبية");
+      if (!line) throw new ConvexError("سطر غير موجود في الطلبية");
       const q = Math.max(0, Math.round(Number(r.qty) || 0));
       if (q === 0) continue;
       const alreadyReturned = Number(line.returnedQty || 0);
-      if (alreadyReturned + q > line.qty) throw new Error(`إجمالي المرتجع أكبر من المتبقي لصنف ${line.mealNameEn || line.mealNameAr}`);
+      if (alreadyReturned + q > line.qty) throw new ConvexError(`إجمالي المرتجع أكبر من المتبقي لصنف ${line.mealNameEn || line.mealNameAr}`);
       const meal: any = line.mealId ? await ctx.db.get(line.mealId) : null;
       const expectedAfterDays = Number(meal?.gymReturnAfterDays || (meal?.category === "snack" ? 4 : 2));
       batchLines.push({ line, qty: q, expectedAfterDays });
     }
-    if (batchLines.length === 0) throw new Error("أدخل كمية مرتجع واحدة على الأقل");
+    if (batchLines.length === 0) throw new ConvexError("أدخل كمية مرتجع واحدة على الأقل");
 
     const batchQty = batchLines.reduce((sum, item) => sum + item.qty, 0);
     const batchWaste = Math.round(batchLines.reduce((sum, item) => sum + item.qty * Number(item.line.unitPrice || 0), 0) * 100) / 100;
@@ -1412,7 +1412,7 @@ export const monthlyReport = query({
     const from = args.from || (args.month ? `${args.month}-01` : "");
     const to = args.to || (args.month ? `${args.month}-31` : "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-      throw new Error("نطاق التاريخ غير صالح");
+      throw new ConvexError("نطاق التاريخ غير صالح");
     }
     let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
     orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
@@ -1509,7 +1509,7 @@ export const decisionReport = query({
     await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
     const { from, to } = args;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-      throw new Error("نطاق التاريخ غير صالح");
+      throw new ConvexError("نطاق التاريخ غير صالح");
     }
 
     let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();

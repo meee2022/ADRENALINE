@@ -5,7 +5,7 @@
  *   الإعدادات (نقاط/طلب، قيمة النقطة، أقل حد للاستبدال) في restaurantSettings.loyalty.
  * @frontend client/src/pages/public/CustomerProfile.tsx
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaffOrSubscriptionOwner } from "./sessions";
 
@@ -43,7 +43,7 @@ export const redeem = mutation({
     await requireStaffOrSubscriptionOwner(ctx, args.sessionToken, String(args.customerId));
     const cfg = await loyaltyConfig(ctx);
     const cust: any = await ctx.db.get(args.customerId);
-    if (!cust) throw new Error("العميل غير موجود");
+    if (!cust) throw new ConvexError("العميل غير موجود");
     const available = Number(cust.loyaltyPoints || 0);
 
     // اطلب مضاعفات الحد الأدنى فقط
@@ -51,7 +51,7 @@ export const redeem = mutation({
     want = Math.min(want, available);
     const redeemable = Math.floor(want / cfg.minRedeem) * cfg.minRedeem;
     if (redeemable < cfg.minRedeem) {
-      throw new Error(`تحتاج ${cfg.minRedeem} نقطة على الأقل للاستبدال`);
+      throw new ConvexError(`تحتاج ${cfg.minRedeem} نقطة على الأقل للاستبدال`);
     }
     const credit = Math.round(redeemable * cfg.riyalPerPoint * 100) / 100;
     const history = Array.isArray(cust.loyaltyHistory) ? cust.loyaltyHistory : [];

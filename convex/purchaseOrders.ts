@@ -1,7 +1,7 @@
 // convex/purchaseOrders.ts
 // أوامر الشراء — مؤمّنة: إنشاء/تعديل حالة → INVENTORY_MANAGER أو ADMIN، الحذف → ADMIN.
 // RECEIVED ينشئ دفعات مخزون تلقائياً (لا يُترك المخزون منفصلاً عن الشراء).
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
 
@@ -86,8 +86,8 @@ export const create = mutation({
     await requireRole(ctx, args.sessionToken, PO_MANAGE_ROLES); // 🔒
     // 🔒 التحقق من صحة الكميات والتكاليف
     for (const it of args.items) {
-      if (it.quantity <= 0) throw new Error("يجب أن تكون الكمية أكبر من صفر");
-      if (it.estUnitCost < 0) throw new Error("التكلفة لا يمكن أن تكون سالبة");
+      if (it.quantity <= 0) throw new ConvexError("يجب أن تكون الكمية أكبر من صفر");
+      if (it.estUnitCost < 0) throw new ConvexError("التكلفة لا يمكن أن تكون سالبة");
     }
     const totalEst = (args.items || []).reduce((s, i) => s + Number(i.estLineCost || 0), 0);
     return await ctx.db.insert("purchaseOrders", {
@@ -117,12 +117,12 @@ export const updateStatus = mutation({
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, PO_MANAGE_ROLES);
     const po: any = await ctx.db.get(args.id);
-    if (!po) throw new Error("أمر الشراء غير موجود");
+    if (!po) throw new ConvexError("أمر الشراء غير موجود");
     if (po.status === "RECEIVED" && args.status !== "RECEIVED") {
-      throw new Error("لا يمكن الرجوع من حالة RECEIVED — لأن الدفعات دخلت المخزون");
+      throw new ConvexError("لا يمكن الرجوع من حالة RECEIVED — لأن الدفعات دخلت المخزون");
     }
     if (po.status === "CANCELLED" && args.status !== "CANCELLED") {
-      throw new Error("لا يمكن إعادة تفعيل أمر شراء ملغى");
+      throw new ConvexError("لا يمكن إعادة تفعيل أمر شراء ملغى");
     }
     const patch: any = { status: args.status };
     if (args.status === "SENT" && !po.sentAt) patch.sentAt = Date.now();
@@ -175,7 +175,7 @@ export const remove = mutation({
     const po: any = await ctx.db.get(args.id);
     if (!po) return { success: true };
     if (po.status === "RECEIVED") {
-      throw new Error("لا يمكن حذف أمر مستلم — سيؤدي لفقدان أثر المخزون. ألغه بحالة CANCELLED بديلاً.");
+      throw new ConvexError("لا يمكن حذف أمر مستلم — سيؤدي لفقدان أثر المخزون. ألغه بحالة CANCELLED بديلاً.");
     }
     await ctx.db.delete(args.id);
     return { success: true };

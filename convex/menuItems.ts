@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 function canonicalMenuItem(menuItem: any, publicMeal: any | null) {
   if (!publicMeal) return menuItem;
@@ -148,7 +148,7 @@ export const update = mutation({
     await requireStaff(ctx, args.sessionToken);
     const { id, sessionToken: _t, ...updates } = args;
     const current = await ctx.db.get(id);
-    if (!current) throw new Error("Menu item not found");
+    if (!current) throw new ConvexError("Menu item not found");
     await ctx.db.patch(id, updates);
     if (current.publicMealId) {
       const publicUpdates: any = {};

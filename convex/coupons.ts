@@ -3,7 +3,7 @@
  * @description نظام كوبونات الخصم
  */
 import { mutation, query } from "./_generated/server";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { requireStaff, requireAdmin } from "./sessions";
 import { internalQuery, internalMutation } from "./_generated/server";
 
@@ -124,7 +124,7 @@ export const create = mutation({
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", code))
       .first();
-    if (existing) throw new Error("الكود موجود مسبقاً");
+    if (existing) throw new ConvexError("الكود موجود مسبقاً");
     return await ctx.db.insert("coupons", {
       code,
       discountType: args.discountType,
@@ -165,25 +165,25 @@ export const update = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const coupon = await ctx.db.get(args.id);
-    if (!coupon) throw new Error("الكود غير موجود");
+    if (!coupon) throw new ConvexError("الكود غير موجود");
 
     const patch: Record<string, any> = {};
 
     if (args.code !== undefined) {
       const code = normalizeCode(args.code);
-      if (!code) throw new Error("الكود لا يصحّ فارغاً");
+      if (!code) throw new ConvexError("الكود لا يصحّ فارغاً");
       if (code !== coupon.code) {
         const clash = await ctx.db.query("coupons")
           .withIndex("by_code", (q) => q.eq("code", code)).first();
-        if (clash) throw new Error("الكود موجود مسبقاً");
+        if (clash) throw new ConvexError("الكود موجود مسبقاً");
         patch.code = code;
       }
     }
     if (args.discountType !== undefined) patch.discountType = args.discountType;
     if (args.discountValue !== undefined) {
-      if (!(args.discountValue > 0)) throw new Error("قيمة الخصم لا تصحّ صفراً");
+      if (!(args.discountValue > 0)) throw new ConvexError("قيمة الخصم لا تصحّ صفراً");
       if (args.discountType === "PERCENT" && args.discountValue > 100) {
-        throw new Error("النسبة لا تتجاوز ١٠٠٪");
+        throw new ConvexError("النسبة لا تتجاوز ١٠٠٪");
       }
       patch.discountValue = args.discountValue;
     }
@@ -191,7 +191,7 @@ export const update = mutation({
     if (args.maxUses !== undefined) {
       /* السقف دون ما استُهلك يجعل الكود ميّتاً بلا سبب ظاهر. */
       if (args.maxUses !== null && args.maxUses < Number(coupon.usedCount || 0)) {
-        throw new Error(`الكود استُخدم ${coupon.usedCount} مرة — السقف لا يقلّ عنها`);
+        throw new ConvexError(`الكود استُخدم ${coupon.usedCount} مرة — السقف لا يقلّ عنها`);
       }
       patch.maxUses = args.maxUses ?? undefined;
     }
@@ -220,7 +220,7 @@ export const toggleActive = mutation({
   handler: async (ctx, { id, sessionToken }) => {
     await requireAdmin(ctx, sessionToken);
     const coupon = await ctx.db.get(id);
-    if (!coupon) throw new Error("Coupon not found");
+    if (!coupon) throw new ConvexError("Coupon not found");
     await ctx.db.patch(id, { isActive: !coupon.isActive });
   },
 });
@@ -261,11 +261,11 @@ export const incrementUsage = mutation({
       .query("coupons")
       .withIndex("by_code", (q) => q.eq("code", normalizeCode(code)))
       .first();
-    if (!coupon) throw new Error("Coupon not found");
-    if (!coupon.isActive) throw new Error("Coupon inactive");
+    if (!coupon) throw new ConvexError("Coupon not found");
+    if (!coupon.isActive) throw new ConvexError("Coupon inactive");
     // ✅ فرض الحد الأقصى للاستخدام داخل الـmutation (Convex يسلسل المعاملات → لا تجاوز)
     if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
-      throw new Error("Coupon usage limit reached");
+      throw new ConvexError("Coupon usage limit reached");
     }
     await ctx.db.patch(coupon._id, { usedCount: coupon.usedCount + 1 });
   },

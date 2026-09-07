@@ -2,7 +2,7 @@
  * @file convex/posBranches.ts
  * @description إدارة فروع نقطة البيع (POS متعدّد الفروع). CRUD للأدمن + قائمة عامة.
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin } from "./sessions";
 
@@ -33,7 +33,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
     const name = args.name.trim();
-    if (!name) throw new Error("اسم الفرع مطلوب");
+    if (!name) throw new ConvexError("اسم الفرع مطلوب");
     const count = (await ctx.db.query("posBranches").collect()).length;
     const id = await ctx.db.insert("posBranches", {
       name,

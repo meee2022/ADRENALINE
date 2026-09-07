@@ -1,5 +1,5 @@
 // convex/customerOrders.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRole, newToken } from "./sessions";
 
@@ -39,7 +39,7 @@ async function findRestaurantCustomerByPhone(ctx: any, phone: unknown, restauran
     && String(customer.restaurantKey || "ADRENALINE") === restaurantKey,
   );
   if (matches.length > 1) {
-    throw new Error("ORDER_VALIDATION:DUPLICATE_CUSTOMER_PHONE");
+    throw new ConvexError("ORDER_VALIDATION:DUPLICATE_CUSTOMER_PHONE");
   }
   return matches[0] || null;
 }
@@ -89,9 +89,9 @@ export const create = mutation({
     const restaurantKey = args.restaurantKey === "NUTRI_RESET" ? "NUTRI_RESET" : "ADRENALINE";
 
     // 🔒 التحقق: على الأقل وجبة واحدة، حد أقصى معقول (يمنع abuse)
-    if (args.items.length === 0) throw new Error("يجب اختيار وجبة واحدة على الأقل");
-    if (args.items.length > 500) throw new Error("عدد الوجبات كبير جداً");
-    if (!args.customerPhone.trim()) throw new Error("رقم الهاتف مطلوب");
+    if (args.items.length === 0) throw new ConvexError("يجب اختيار وجبة واحدة على الأقل");
+    if (args.items.length > 500) throw new ConvexError("عدد الوجبات كبير جداً");
+    if (!args.customerPhone.trim()) throw new ConvexError("رقم الهاتف مطلوب");
 
     // 🔒 Idempotency: لو المفتاح متكرر، رجّع نفس الطلب الأصلي
     if (args.idempotencyKey) {
@@ -113,7 +113,7 @@ export const create = mutation({
       .collect();
     const recent = recentByPhone.filter((o: any) => o.createdAt >= cutoff);
     if (recent.length >= 3) {
-      throw new Error("عدد طلبات كبير من نفس الرقم — انتظر قليلاً");
+      throw new ConvexError("عدد طلبات كبير من نفس الرقم — انتظر قليلاً");
     }
 
     // 🔒 نجيب كل الوجبات من الخادم ونتحقق أنها موجودة ونشطة
@@ -123,7 +123,7 @@ export const create = mutation({
       if (mealCache.has(key)) continue;
       const meal: any = await ctx.db.get(it.mealId);
       if (!meal || !meal.isActive) {
-        throw new Error("الوجبة غير متاحة، وربما أُزيلت من قائمة الوجبات");
+        throw new ConvexError("الوجبة غير متاحة، وربما أُزيلت من قائمة الوجبات");
       }
       mealCache.set(key, meal);
     }
@@ -134,11 +134,11 @@ export const create = mutation({
     if (args.customerId) {
       subscriptionCustomer = await ctx.db.get(args.customerId);
       if (!subscriptionCustomer || canonicalPhone(subscriptionCustomer.phone) !== canonicalPhone(phone)) {
-        throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
+        throw new ConvexError("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
       }
       const customerRestaurant = String((subscriptionCustomer as any).restaurantKey || "ADRENALINE");
       if (customerRestaurant !== restaurantKey) {
-        throw new Error("ORDER_VALIDATION:RESTAURANT_MISMATCH");
+        throw new ConvexError("ORDER_VALIDATION:RESTAURANT_MISMATCH");
       }
     } else {
       subscriptionCustomer = await findRestaurantCustomerByPhone(ctx, phone, restaurantKey);
@@ -295,7 +295,7 @@ export const getPlanShareToken = mutation({
   handler: async (ctx, { orderId, sessionToken }) => {
     await requireStaff(ctx, sessionToken);
     const order = await ctx.db.get(orderId);
-    if (!order) throw new Error("Order not found");
+    if (!order) throw new ConvexError("Order not found");
     let token = (order as any).planToken as string | undefined;
     if (!token) {
       token = newToken();
@@ -369,9 +369,30 @@ export const getById = query({
       .withIndex("by_orderId", (q) => q.eq("orderId", orderId))
       .collect();
 
+    /* الطلب المعتمد له خطط فعلية بتواريخها وحالاتها، فتُعرض هي — لا تاريخ
+       محسوب. الحساب يقصّ عند «بكرة»، فكان يوم 31 أغسطس (جهّزه المطبخ) يظهر
+       للأخصائية على أنه 28 سبتمبر قابلاً للتعديل، ثم يردّه الخادم. */
+    let planDays: Array<{ date: string; deliveryTime?: string; status: string; week: number | null; day: string | null }> = [];
+    if (order.status === "confirmed") {
+      const plans = await ctx.db
+        .query("dailyPlans")
+        .withIndex("by_source_order", (q: any) => q.eq("sourceOrderId", orderId))
+        .collect();
+      planDays = (plans as any[])
+        .map((p) => {
+          const first = (Array.isArray(p.items) ? p.items : []).find((it: any) => it?.week != null && it?.day);
+          return {
+            date: String(p.date), deliveryTime: p.deliveryTime, status: String(p.status || ""),
+            week: first ? Number(first.week) : null, day: first ? String(first.day) : null,
+          };
+        })
+        .sort((a, b) => a.date.localeCompare(b.date));
+    }
+
     return {
       ...order,
       items,
+      planDays,
     };
   },
 });
@@ -519,7 +540,7 @@ export const approve = mutation({
   handler: async (ctx, { orderId, customerId, startDate, notes, dateOverrides, sessionToken }) => {
     const approver = await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
     const order = await ctx.db.get(orderId);
-    if (!order) throw new Error("Order not found");
+    if (!order) throw new ConvexError("Order not found");
 
     const restaurantKey = String((order as any).restaurantKey || "ADRENALINE");
     let effectiveCustomerId: any = customerId || order.customerId;
@@ -529,10 +550,10 @@ export const approve = mutation({
       effectiveCustomerId = linkedCustomer?._id;
     }
     if (!linkedCustomer || !effectiveCustomerId) {
-      throw new Error("ORDER_VALIDATION:CUSTOMER_LINK_REQUIRED");
+      throw new ConvexError("ORDER_VALIDATION:CUSTOMER_LINK_REQUIRED");
     }
     if (canonicalPhone(linkedCustomer.phone) !== canonicalPhone(order.customerPhone)) {
-      throw new Error("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
+      throw new ConvexError("ORDER_VALIDATION:CUSTOMER_IDENTITY_MISMATCH");
     }
 
     // ✅ idempotency: لا نعتمد الطلب أكثر من مرة (يمنع تكرار الخطط/النقاط/الإشعارات)
@@ -849,9 +870,9 @@ export const reject = mutation({
 
 /** الحالات التي يجوز فيها التعديل: قبل المراجعة، وبعد الاعتماد. */
 function assertOrderEditable(order: any, verb: string) {
-  if (!order) throw new Error("الطلب غير موجود");
+  if (!order) throw new ConvexError("الطلب غير موجود");
   if (order.status !== "pending" && order.status !== "confirmed") {
-    throw new Error(`لا يمكن ${verb} وجبات طلبٍ ${order.status === "rejected" ? "مرفوض" : "منتهٍ"}`);
+    throw new ConvexError(`لا يمكن ${verb} وجبات طلبٍ ${order.status === "rejected" ? "مرفوض" : "منتهٍ"}`);
   }
 }
 
@@ -887,11 +908,11 @@ async function findPlanSlot(ctx: any, orderId: any, item: any) {
  */
 function assertPlanDayEditable(plan: any) {
   const st = String(plan?.status || "");
-  if (st === "PREPARED" || st === "DELIVERED" || st === "CANCELLED") {
+  if (st === "PREPARED" || st === "OUT_FOR_DELIVERY" || st === "DELIVERED" || st === "CANCELLED") {
     const label: Record<string, string> = {
-      PREPARED: "جهّزه المطبخ", DELIVERED: "وصل للمشترك", CANCELLED: "أُلغي",
+      PREPARED: "جهّزه المطبخ", OUT_FOR_DELIVERY: "خرج مع السائق", DELIVERED: "وصل للمشترك", CANCELLED: "أُلغي",
     };
-    throw new Error(`يوم ${plan.date} ${label[st]} — لا يُعدَّل. عدّل الأيام التالية.`);
+    throw new ConvexError(`يوم ${plan.date} ${label[st]} — لا يُعدَّل. عدّل الأيام التالية.`);
   }
 }
 
@@ -930,7 +951,7 @@ export const updateOrderItemNote = mutation({
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
     const item = await ctx.db.get(args.itemId);
-    if (!item) throw new Error("الصنف غير موجود");
+    if (!item) throw new ConvexError("الصنف غير موجود");
     const order = await ctx.db.get(item.orderId);
     assertOrderEditable(order, "تعديل");
     const note = args.note.trim() || undefined;
@@ -959,12 +980,12 @@ export const updateOrderItemMeal = mutation({
   handler: async (ctx, args) => {
     const specialist = await requireRole(ctx, args.sessionToken, ORDER_REVIEW_ROLES);
     const item = await ctx.db.get(args.itemId);
-    if (!item) throw new Error("الصنف غير موجود");
+    if (!item) throw new ConvexError("الصنف غير موجود");
     const order = await ctx.db.get(item.orderId);
     assertOrderEditable(order, "تبديل");
     const meal = await ctx.db.get(args.newMealId);
     if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) {
-      throw new Error("الوجبة المختارة ليست ضمن منيو المشتركين");
+      throw new ConvexError("الوجبة المختارة ليست ضمن منيو المشتركين");
     }
     const oldMealName = item.mealNameAr || item.mealNameEn || String(item.mealId);
     const specialistUser: any = specialist.userId
@@ -1079,19 +1100,19 @@ export const replaceMealAcrossOrder = mutation({
     const order = await ctx.db.get(args.orderId);
     assertOrderEditable(order, "تبديل");
     if (String(args.oldMealId) === String(args.newMealId)) {
-      throw new Error("الوجبة الجديدة هي نفسها القديمة");
+      throw new ConvexError("الوجبة الجديدة هي نفسها القديمة");
     }
 
     const meal = await ctx.db.get(args.newMealId);
     if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) {
-      throw new Error("الوجبة المختارة ليست ضمن منيو المشتركين");
+      throw new ConvexError("الوجبة المختارة ليست ضمن منيو المشتركين");
     }
 
     const items = (await ctx.db
       .query("customerOrderItems")
       .withIndex("by_orderId", (q) => q.eq("orderId", args.orderId))
       .collect()).filter((i: any) => String(i.mealId) === String(args.oldMealId));
-    if (!items.length) throw new Error("الوجبة غير موجودة في هذه الخطة");
+    if (!items.length) throw new ConvexError("الوجبة غير موجودة في هذه الخطة");
 
     const specialistUser: any = specialist.userId ? await ctx.db.get(specialist.userId as any) : null;
     const byName = specialistUser?.name || specialistUser?.username || undefined;

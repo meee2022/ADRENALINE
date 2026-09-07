@@ -2,7 +2,7 @@
  * @file convex/customerAuth.ts
  * @description Customer authentication and profile management
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword, verifyPassword } from "./passwords";
 import { destroyAllSessionsFor, validateSession, requireStaffOrAccountOwner } from "./sessions";
@@ -209,12 +209,12 @@ export const deleteMyAccount = mutation({
   handler: async (ctx, args) => {
     const identity = await validateSession(ctx, args.sessionToken);
     if (!identity || identity.accountType !== "customer" || !identity.customerAccountId) {
-      throw new Error("غير مصرّح — سجّل الدخول من جديد");
+      throw new ConvexError("غير مصرّح — سجّل الدخول من جديد");
     }
 
     const accountId = identity.customerAccountId as any;
     const account = await ctx.db.get(accountId);
-    if (!account) throw new Error("الحساب غير موجود");
+    if (!account) throw new ConvexError("الحساب غير موجود");
 
     await destroyAllSessionsFor(ctx, { customerAccountId: String(accountId) });
     await ctx.db.delete(accountId);
@@ -256,11 +256,11 @@ export const changePassword = mutation({
   handler: async (ctx, args) => {
     const account = await ctx.db.get(args.accountId);
     if (!account) {
-      throw new Error("الحساب غير موجود");
+      throw new ConvexError("الحساب غير موجود");
     }
 
     if (!(await verifyPassword(args.oldPassword, account.passwordHash))) {
-      throw new Error("كلمة المرور القديمة غير صحيحة");
+      throw new ConvexError("كلمة المرور القديمة غير صحيحة");
     }
 
     const newPasswordHash = await hashPassword(args.newPassword);

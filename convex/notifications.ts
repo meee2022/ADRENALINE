@@ -7,7 +7,7 @@
  */
 import { mutation, query, internalMutation } from "./_generated/server";
 import { requireAdmin, requireStaff, validateSession, requireStaffOrSubscriptionOwner, AUTH_ERR } from "./sessions";
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 
 const NOTIF_TYPE = v.union(
   v.literal("NEW_ORDER"),
@@ -110,20 +110,20 @@ export const markAsRead = mutation({
   args: { id: v.id("notifications"), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const identity = await validateSession(ctx, args.sessionToken);
-    if (!identity) throw new Error(AUTH_ERR);
+    if (!identity) throw new ConvexError(AUTH_ERR);
     const notif: any = await ctx.db.get(args.id);
     if (!notif) return;
     if (identity.accountType === "staff") {
       const role = roleFromIdentity(identity);
       if (role !== "ADMIN") {
-        if (notif.targetRole && notif.targetRole !== role) throw new Error("لا تملك صلاحية الوصول إلى هذا الإشعار");
+        if (notif.targetRole && notif.targetRole !== role) throw new ConvexError("لا تملك صلاحية الوصول إلى هذا الإشعار");
       }
     } else {
       // عميل — لا يعلّم إلا إشعاراته
-      if (!identity.customerAccountId) throw new Error(AUTH_ERR);
+      if (!identity.customerAccountId) throw new ConvexError(AUTH_ERR);
       const acct: any = await ctx.db.get(identity.customerAccountId as any);
       if (!acct?.customerId || String(notif.targetCustomerId) !== String(acct.customerId)) {
-        throw new Error("لا تملك صلاحية الوصول إلى هذا الإشعار");
+        throw new ConvexError("لا تملك صلاحية الوصول إلى هذا الإشعار");
       }
     }
     await ctx.db.patch(args.id, { isRead: true, readAt: Date.now() });
@@ -135,7 +135,7 @@ export const markAllAsRead = mutation({
   handler: async (ctx, args) => {
     const identity = await validateSession(ctx, args.sessionToken);
     const role = roleFromIdentity(identity);
-    if (!role) throw new Error(AUTH_ERR);
+    if (!role) throw new ConvexError(AUTH_ERR);
     const now = Date.now();
     let count = 0;
     if (role === "ADMIN") {

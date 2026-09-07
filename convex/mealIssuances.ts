@@ -5,7 +5,7 @@
  *   يخصم مكوّنات الوجبة من المخزون تلقائيًا لو ليها وصفة (mealIngredients).
  * @frontend client/src/pages/MealIssuance.tsx
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
 import { convertUnit } from "./units";
@@ -59,9 +59,9 @@ export const log = mutation({
   },
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id || id.accountType !== "staff") throw new Error("Unauthorized");
+    if (!id || id.accountType !== "staff") throw new ConvexError("Unauthorized");
     const name = args.mealName.trim();
-    if (!name) throw new Error("اسم الوجبة مطلوب");
+    if (!name) throw new ConvexError("اسم الوجبة مطلوب");
     const qty = Math.max(1, Math.round(args.quantity || 1));
 
     let inventoryConsumedAt: number | undefined;

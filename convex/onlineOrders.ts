@@ -4,7 +4,7 @@
  *   يسجّل لكل طلب: المنصّة + عدد الوجبات + القيمة، ويطلّع تقرير لكل منصّة (طلبات/وجبات/إيراد).
  * @frontend client/src/pages/OnlineOrders.tsx
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { validateSession, requireAdmin } from "./sessions";
 
@@ -77,7 +77,7 @@ export const log = mutation({
   },
   handler: async (ctx, args) => {
     const id = await validateSession(ctx, args.sessionToken);
-    if (!id || id.accountType !== "staff") throw new Error("Unauthorized");
+    if (!id || id.accountType !== "staff") throw new ConvexError("Unauthorized");
     return await ctx.db.insert("onlineOrders", {
       date: args.date,
       month: monthOf(args.date),

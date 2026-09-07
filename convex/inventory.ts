@@ -1,5 +1,5 @@
 // convex/inventory.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
@@ -346,7 +346,7 @@ export const createItem = mutation({
         .withIndex("by_barcode", (q) => q.eq("barcode", args.barcode!))
         .first();
       if (existing) {
-        throw new Error("Barcode already exists");
+        throw new ConvexError("Barcode already exists");
       }
     }
 
@@ -408,7 +408,7 @@ export const updateItem = mutation({
         .withIndex("by_barcode", (q) => q.eq("barcode", updates.barcode!))
         .first();
       if (existing && existing._id !== id) {
-        throw new Error("Barcode already exists");
+        throw new ConvexError("Barcode already exists");
       }
     }
 
@@ -438,14 +438,14 @@ export const receiveStock = mutation({
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒 مدير مخزون أو ADMIN
     if (args.quantity <= 0) {
-      throw new Error("Quantity must be positive");
+      throw new ConvexError("Quantity must be positive");
     }
-    if (args.unitCost < 0) throw new Error("التكلفة لا يمكن أن تكون سالبة");
+    if (args.unitCost < 0) throw new ConvexError("التكلفة لا يمكن أن تكون سالبة");
 
     // Get current item
     const item = await ctx.db.get(args.itemId);
     if (!item) {
-      throw new Error("Item not found");
+      throw new ConvexError("Item not found");
     }
 
     const now = Date.now();
@@ -498,17 +498,17 @@ export const consumeStock = mutation({
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒
     if (args.quantity <= 0) {
-      throw new Error("Quantity must be positive");
+      throw new ConvexError("Quantity must be positive");
     }
 
     // Get current item
     const item = await ctx.db.get(args.itemId);
     if (!item) {
-      throw new Error("Item not found");
+      throw new ConvexError("Item not found");
     }
 
     if (item.currentStock < args.quantity) {
-      throw new Error("Insufficient stock");
+      throw new ConvexError("Insufficient stock");
     }
 
     const now = Date.now();
@@ -576,16 +576,16 @@ export const adjustStock = mutation({
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒 التسويات = مدير مخزون أو ADMIN
     if (args.newQuantity < 0) {
-      throw new Error("Quantity cannot be negative");
+      throw new ConvexError("Quantity cannot be negative");
     }
     if (!args.note || args.note.trim().length < 3) {
-      throw new Error("سبب التسوية مطلوب (3 أحرف أو أكثر)"); // 🔒 لا تسوية بدون سبب
+      throw new ConvexError("سبب التسوية مطلوب (3 أحرف أو أكثر)"); // 🔒 لا تسوية بدون سبب
     }
 
     // Get current item
     const item = await ctx.db.get(args.itemId);
     if (!item) {
-      throw new Error("Item not found");
+      throw new ConvexError("Item not found");
     }
 
     const difference = args.newQuantity - item.currentStock;
@@ -628,7 +628,7 @@ export const seedWasteDemo = mutation({
     await requireAdmin(ctx, args.sessionToken); // 🔒 ADMIN فقط (كان requireStaff)
     const now = Date.now();
     const items = (await ctx.db.query("inventoryItems").collect()).slice(0, 6);
-    if (items.length === 0) throw new Error("لا توجد أصناف في المخزون — أضف أصناف أولاً");
+    if (items.length === 0) throw new ConvexError("لا توجد أصناف في المخزون — أضف أصناف أولاً");
     const costs = [18, 55, 42, 8, 12, 15];
     const reasons = ["تالف", "انتهت الصلاحية", "انسكاب", "خطأ تحضير"];
     let n = 0;
@@ -670,12 +670,12 @@ export const recordWaste = mutation({
   },
   handler: async (ctx, args) => {
     await requireRole(ctx, args.sessionToken, INV_MANAGE_ROLES); // 🔒
-    if (args.quantity <= 0) throw new Error("الكمية يجب أن تكون أكبر من صفر");
+    if (args.quantity <= 0) throw new ConvexError("الكمية يجب أن تكون أكبر من صفر");
     const item = await ctx.db.get(args.itemId);
-    if (!item) throw new Error("الصنف غير موجود");
+    if (!item) throw new ConvexError("الصنف غير موجود");
     // 🔒 لا يُسمح بتسجيل هالك أكبر من الرصيد — يمنع عدم اتساق الحركة مع الرصيد
     if (args.quantity > item.currentStock) {
-      throw new Error(`الكمية (${args.quantity}) أكبر من الرصيد المتاح (${item.currentStock}) — عدّل الرصيد بتسوية أولاً`);
+      throw new ConvexError(`الكمية (${args.quantity}) أكبر من الرصيد المتاح (${item.currentStock}) — عدّل الرصيد بتسوية أولاً`);
     }
     const now = Date.now();
     const newStock = item.currentStock - args.quantity; // معروف إنه ≥ 0 بعد التحقق أعلاه
@@ -955,7 +955,7 @@ export const getSupplierStats = query({
     يستدعى من زرّ الخطة الواحدة ومن زرّ «تحضير الكل» فلا يفترق سلوكهما. */
 async function prepareAndConsumeOne(ctx: any, planId: Id<"dailyPlans">) {
     const plan: any = await ctx.db.get(planId);
-    if (!plan) throw new Error("Plan not found");
+    if (!plan) throw new ConvexError("Plan not found");
 
     // idempotency: لو سبق خصم مكوّنات هذه الخطة، لا نكرّر الخصم
     if (plan.inventoryConsumedAt) {
@@ -1070,25 +1070,25 @@ export const prepareAndConsumeAllForDate = mutation({
     for (const plan of candidates) {
       const customerId = String(plan.customerId || "");
       if (!customerId || seenCustomers.has(customerId)) {
-        throw new Error("فشل تدقيق الإنتاج: توجد خطة مكررة أو خطة بلا مشترك. افتح شاشة تدقيق الإنتاج اليومي.");
+        throw new ConvexError("فشل تدقيق الإنتاج: توجد خطة مكررة أو خطة بلا مشترك. افتح شاشة تدقيق الإنتاج اليومي.");
       }
       seenCustomers.add(customerId);
       const customer: any = await ctx.db.get(plan.customerId);
-      if (!customer) throw new Error("فشل تدقيق الإنتاج: مشترك الخطة غير موجود.");
+      if (!customer) throw new ConvexError("فشل تدقيق الإنتاج: مشترك الخطة غير موجود.");
       const pausedFrom = String(customer.pausedFrom || "").slice(0, 10);
       const skippedDates: string[] = Array.isArray(customer.skippedDates) ? customer.skippedDates : [];
       const isSkipped = skippedDates.some((skippedDate: unknown) => String(skippedDate).slice(0, 10) === date);
       if (isSkipped || customer.isActive === false || (pausedFrom && date >= pausedFrom) || !isWithinSubscription(customer, date)) {
-        throw new Error(`فشل تدقيق الإنتاج: اشتراك ${customer.fullName || "مشترك"} غير صالح لهذا اليوم.`);
+        throw new ConvexError(`فشل تدقيق الإنتاج: اشتراك ${customer.fullName || "مشترك"} غير صالح لهذا اليوم.`);
       }
       const expected = Math.max(0, Number(customer.mealsPerDay) || 0)
         + Math.max(0, Number(customer.snacksPerDay) || 0);
       const actual = (Array.isArray(plan.items) ? plan.items : []).filter((item: any) => !item?.isOff).length;
       if (actual === 0 || (expected > 0 && actual !== expected)) {
-        throw new Error(`فشل تدقيق الإنتاج: عدد وجبات ${customer.fullName || "مشترك"} لا يطابق الباقة.`);
+        throw new ConvexError(`فشل تدقيق الإنتاج: عدد وجبات ${customer.fullName || "مشترك"} لا يطابق الباقة.`);
       }
       if (customer.deliveryTime && plan.deliveryTime !== customer.deliveryTime) {
-        throw new Error(`فشل تدقيق الإنتاج: وردية ${customer.fullName || "مشترك"} غير متطابقة.`);
+        throw new ConvexError(`فشل تدقيق الإنتاج: وردية ${customer.fullName || "مشترك"} غير متطابقة.`);
       }
     }
     let prepared = 0, skipped = 0;
@@ -1269,7 +1269,7 @@ export const deleteItem = mutation({
     await requireAdmin(ctx, args.sessionToken); // 🔒 حذف صنف = قرار مالي
     const u = await itemUsage(ctx, args.id);
     if (u.blocked && !args.force) {
-      throw new Error(
+      throw new ConvexError(
         `لا يمكن حذف الصنف: رصيد ${u.stock}، ${u.batches} دفعة، ${u.movements} حركة، ${u.recipes} وصفة، ${u.purchaseOrders} أمر شراء. استخدم الحذف القسري لو متأكد.`,
       );
     }
@@ -1299,7 +1299,7 @@ export const deleteAllItems = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
-    if (args.confirm !== "DELETE ALL") throw new Error('اكتب "DELETE ALL" للتأكيد');
+    if (args.confirm !== "DELETE ALL") throw new ConvexError('اكتب "DELETE ALL" للتأكيد');
     const all = await ctx.db.query("inventoryItems").collect();
     let deleted = 0, skipped = 0;
     const skippedNames: string[] = [];

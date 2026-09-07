@@ -2,7 +2,7 @@
  * @file convex/users.ts
  * @description User authentication and management
  */
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { hashPassword } from "./passwords";
 import { requireAdmin, requireStaff, destroyAllSessionsFor } from "./sessions";
@@ -12,7 +12,7 @@ const MIN_PASSWORD_LENGTH = 8;
 
 function assertStrongEnough(password: string) {
   if (!password || password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`كلمة المرور يجب أن تكون ${MIN_PASSWORD_LENGTH} أحرف على الأقل`);
+    throw new ConvexError(`كلمة المرور يجب أن تكون ${MIN_PASSWORD_LENGTH} أحرف على الأقل`);
   }
 }
 
@@ -117,7 +117,7 @@ export const createUser = mutation({
       .first();
 
     if (existing) {
-      throw new Error("البريد الإلكتروني مستخدم بالفعل");
+      throw new ConvexError("البريد الإلكتروني مستخدم بالفعل");
     }
 
     const passwordHash = await hashPassword(args.password);
