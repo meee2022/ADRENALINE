@@ -1,0 +1,12209 @@
+[
+ {
+  "mealId": "kh7842g76acza1d7ej2q4mbj798ajjpf",
+  "en": "Adrenaline Beef Burger",
+  "gym": false,
+  "recipe": "adrenaline beef burger",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "philadelphia cheese",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 4.0,
+    "u": "grams"
+   },
+   {
+    "n": "tahini",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 4.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "mushroom",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "potato bun",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ajss66c4gxxcmhmc7bxmm5980t7jd",
+  "en": "Adrenaline Halloumi Muffin",
+  "gym": false,
+  "recipe": "adrenaline halloumi muffin",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "brioche muffins",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "black olives",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pesto sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "halloumi cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef bacon",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "sundried tomato",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b9g7t9p7wsj812ksayf4ht180tybv",
+  "en": "Adrenaline Healthy Majboos",
+  "gym": false,
+  "recipe": "adrenaline healthy majboos",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "whole chicken al waha fresh",
+    "q": 350.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry lemon",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "bay leaf",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cloves whole",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "raisins",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable ghee",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fyfpkb4dsqat96pme8rbdks8aj8t7",
+  "en": "Healthy Chicken Majboos",
+  "gym": false,
+  "recipe": "adrenaline healthy majboos",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "whole chicken al waha fresh",
+    "q": 350.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry lemon",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "bay leaf",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cloves whole",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "raisins",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable ghee",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75wq9496nh863b3fwrt0san98asj5f",
+  "en": "ALMOND SLICE",
+  "gym": true,
+  "recipe": "almond slice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "almond slices",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh745yrgs3109rvfpr9dxbhy118akahd",
+  "en": "American Breakfast",
+  "gym": false,
+  "recipe": "american breakfast",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "multigrain bread",
+    "q": 1.0,
+    "u": "pc"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "pc"
+   },
+   {
+    "n": "mushroom",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken sausage",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "flava bean",
+    "q": 40.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh70z439afwsggrxs3ne98jveh8arece",
+  "en": "ASPARAGUS",
+  "gym": true,
+  "recipe": "asparagus",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "asparagus",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parlsey",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72ghv3re268hs5gkpqapvjg18ar0k3",
+  "en": "AVOCADO",
+  "gym": true,
+  "recipe": "avocado",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "avocado",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71s2h5591kh19styqgtn7g9s8areac",
+  "en": "AVOCADO LIME SAUCE",
+  "gym": true,
+  "recipe": "avocado lime sauce",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "fitness mayo",
+    "q": 300.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71gyypn8g1235m1k4mdnczcs8asqyy",
+  "en": "AVOCADO OIL",
+  "gym": true,
+  "recipe": "avocado oil",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "avocado oil",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75gdchc5zq99qmkxwqny5ss18akygw",
+  "en": "Avocado Turkey Sandwich",
+  "gym": true,
+  "recipe": "avocado turkey sandwich",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "brown bread",
+    "q": 2.0,
+    "u": "pc"
+   },
+   {
+    "n": "cream cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7cqc8tyxwq4fhf5f7tr72j498cp83z",
+  "en": "BALSAMIC DRESSING",
+  "gym": true,
+  "recipe": "balsamic dressingr",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "pomegranete molasses",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "orange",
+    "q": 300.0,
+    "u": "gram"
+   },
+   {
+    "n": "balsamic vinegar",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fx1b1v2am7dnxka2kcjrh1h8asamq",
+  "en": "BEEF ADOBO",
+  "gym": true,
+  "recipe": "beef adobo",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "white vinegar",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "siracha sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh765me6xa90p7c5z2vbc0vqds80vd9v",
+  "en": "Beef Alfredo",
+  "gym": false,
+  "recipe": "beef alfredo",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "cooking cream",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "milk",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef tenderloin",
+    "q": 130.0,
+    "u": "grams"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77d38s3k4rxd0dvc50w0aga980tbfg",
+  "en": "Beef Burger",
+  "gym": false,
+  "recipe": "beef burger",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "bbq sauce",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 4.0,
+    "u": "grams"
+   },
+   {
+    "n": "white onion",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 8.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar slice",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "pickles",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato bun",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh772ysy22txbp7gcpk9abr92d8ajpq3",
+  "en": "Beef Fajita Sandwich",
+  "gym": false,
+  "recipe": "beef fajita sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sub bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef tenderloin",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "onion powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh786j77xqw9bqn5rxfnddez9n8anw64",
+  "en": "Beef Fajita Sandwich",
+  "gym": true,
+  "recipe": "beef fajita sandwich",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "onion powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh729p4ft9cbnhe2n0zqf0g2j580vc71",
+  "en": "Fajita Beef Sandwich",
+  "gym": false,
+  "recipe": "beef fajita sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sub bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef tenderloin",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "onion powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74dw5c5c43g642bg85frsk5x8akmq2",
+  "en": "Beef Fajita Wrap",
+  "gym": true,
+  "recipe": "beef fajita wrap",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "demi glaze",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b4fn5brf3qdez7dhpbhkxj58as7aa",
+  "en": "BEEF FAJITA WRAP",
+  "gym": true,
+  "recipe": "beef fajita wrap",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "demi glaze",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b8v9p8a33wcxrdawnjvc3b180tmyp",
+  "en": "Beef Kofta Delight",
+  "gym": false,
+  "recipe": "beef kofta delight",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71qbemh5gx1g40ccny7dv96180v7gd",
+  "en": "Beef Kofta with Safran Rice",
+  "gym": false,
+  "recipe": "beef kofta with safran rice",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76f15b4fe9n2h7j0rwgy62318an7wx",
+  "en": "Beef Kofta w/Saffron Rice",
+  "gym": true,
+  "recipe": "beef kofta with safran rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 180.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78daf37cmvfnajq17gj4na098aj1a3",
+  "en": "Beef Kofta Saffron Rice",
+  "gym": false,
+  "recipe": "beef kofta with safran rice",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7etdestq8f64b1am0h11r79x8ayc8e",
+  "en": "BEEF KOFTA W/ SAFRON RICE",
+  "gym": false,
+  "recipe": "beef kofta with safran rice",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh729wgwfhe812z04v7q41p30d8ay4cd",
+  "en": "BEEF KOFTA WIRH SAFRON RICE",
+  "gym": false,
+  "recipe": "beef kofta with safran rice",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76efvad9shn2k6azjfypvpss80w64p",
+  "en": "Beef Kofta Wrap",
+  "gym": false,
+  "recipe": "beef kofta wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79sxwmee49mcq5ybpfx96zmn80t7mh",
+  "en": "Beef Lasagna",
+  "gym": false,
+  "recipe": "beef lasagna",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "lasagna sheet",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "cloves whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bay leaf",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh794k6nhs5rnd3xn9dsry2f7h8asmby",
+  "en": "BEEF MINCE",
+  "gym": true,
+  "recipe": "beef mince",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 700.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamom powder",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7cbq58t8s7eafwh9d1ehrw2980v815",
+  "en": "Beef Pastrami Sandwich",
+  "gym": false,
+  "recipe": "beef pastrami sandwich",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "ciabatta",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef pastrami",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bsag9arrfn6p7qaptpmcn998ajxap",
+  "en": "Beef Shawarma",
+  "gym": false,
+  "recipe": "beef shawarma",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "saj bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "red pickles",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "meat shawarma marinated station",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7408afntec0fp624htmmjsx98ay6nk",
+  "en": "BEEF SHAWARMA",
+  "gym": false,
+  "recipe": "beef shawarma",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "saj bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "red pickles",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "meat shawarma marinated station",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74zj419myggs2nq713yj2rsn80tmaa",
+  "en": "Beef Shawarma Sandwich",
+  "gym": false,
+  "recipe": "beef shawarma sandwich",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "saj bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "red pickles",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "meat shawarma marinated station",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ervfsnpb1qyy0asnsjmfr6s8arag5",
+  "en": "BEEF SHAWARMA SANDWICH",
+  "gym": true,
+  "recipe": "beef shawarma sandwich",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "saj bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "red pickles",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "meat shawarma marinated station",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78wtawez7wndy96c8carv71n80t2ey",
+  "en": "Beef Shawarma with Beetroot Rice",
+  "gym": false,
+  "recipe": "beef shawarma with beetroot rice",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken shawarma marinated station",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "beetroot",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74tbeakvebvk0cj9r0q2ygpx80ve99",
+  "en": "Beef Stroganoff",
+  "gym": false,
+  "recipe": "beef stroganoff",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sour cream",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b5we9p2p36dzm1gnrh15ypd87n3pa",
+  "en": "Beef Stroganoff",
+  "gym": false,
+  "recipe": "beef stroganoff",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sour cream",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7dy8ns8qwvzzfd0ngbp267dx80thhk",
+  "en": "Beef Thread",
+  "gym": false,
+  "recipe": "beef thread",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato sauce",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "zucchini",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "bread crepe",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh750g0a057g40ftrn0a18mh0180t1q0",
+  "en": "Beetroot Salad",
+  "gym": false,
+  "recipe": "beet root salad",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beetroot",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "baby spinach",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranete molasses",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "orange",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "balsamic vinegar",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "almonds",
+    "q": 4.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7af6xssn1k95jkddje3ne5798as4qa",
+  "en": "BEETROOT RICE",
+  "gym": true,
+  "recipe": "beetroot rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "beetroot",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74k9pn8qzz2m2k363rajen1x8asn62",
+  "en": "BIRIYANI RICE",
+  "gym": true,
+  "recipe": "biriyani",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "yogurt",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry mint",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79wb8gkxn65kp4rr2zfcvcn58arj2d",
+  "en": "BROCCOLI",
+  "gym": true,
+  "recipe": "broccli",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "broccoli",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh701hgjwvwp2dcywag4vw7f4980w0wz",
+  "en": "Brownies",
+  "gym": false,
+  "recipe": "brownies",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "cocoa powder",
+    "q": 7.0,
+    "u": "grams"
+   },
+   {
+    "n": "sugar",
+    "q": 26.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "dark chocolate chips",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 20.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7e9rpp99sfpp9q549nz470k180vkbg",
+  "en": "Buffalo Chicken Wrap",
+  "gym": false,
+  "recipe": "buffalo chicken wrap",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn flour",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "buffalo sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 20.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh785apqx3yrk9gnwm9sp3ngzx8arrjw",
+  "en": "CAJUN SHRIMP",
+  "gym": true,
+  "recipe": "cajun shrimp",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "shrimp",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun spicy",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun shrimp",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh772xhcz9q1fz013s8myettyh8asf7r",
+  "en": "CARDAMOM CHICKEN CURRY",
+  "gym": true,
+  "recipe": "cardamom chciken curry",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger/garlic paste",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato paste",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut cream",
+    "q": 800.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamom chciken curry",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72sevs599vk6y4eq1rqm6y9n8as6ay",
+  "en": "CARROT",
+  "gym": true,
+  "recipe": "carrot",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "carrot",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7271z1sgt64zhd23n0pntfk98asgt1",
+  "en": "CASHEW NUT",
+  "gym": true,
+  "recipe": "cashew nut",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cashew",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73ct6kx7f2523zgw8hzmtdnh80wb0g",
+  "en": "Chicken Teriyaki",
+  "gym": false,
+  "recipe": "chciken teriyaki",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 750.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "teryaki sauce",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 30.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7eec3ahh5rhhtcwthg1vjsyn8as7qp",
+  "en": "CHERRY TOMATO",
+  "gym": true,
+  "recipe": "cherry tomato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cherry tomato",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79egjx0ty2ggd4sqjx2r4cqd8aj4p9",
+  "en": "Chicken Alfredo Pasta",
+  "gym": false,
+  "recipe": "chicken alfredo pasta",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "cooking cream",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "milk",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 140.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooked pasta",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 4.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7adyjtyty41amzh8pjnwdvxx80vy03",
+  "en": "Chicken Alfredo",
+  "gym": false,
+  "recipe": "chicken alfredo pasta",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "cooking cream",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "milk",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 140.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooked pasta",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 4.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77z0esxxc2dz35cvea48jwr187mza1",
+  "en": "Chicken Avocado Sandwich",
+  "gym": false,
+  "recipe": "chicken avocado sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 80.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "white bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79650tdpy8z0zhnpmxnce3fx80tnyh",
+  "en": "Chicken Burger",
+  "gym": false,
+  "recipe": "chicken burger",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "panko",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 13.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahini",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet chilli sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato bun",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7d7m1w6bfs0y067qjykxxh8x80tfww",
+  "en": "Chicken Curry",
+  "gym": false,
+  "recipe": "chicken curry",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun spicy",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut milk",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "curry powder",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bcmfmvdwqaxwy0eqxf6pbe587nv19",
+  "en": "Chicken Fajita Sandwich",
+  "gym": false,
+  "recipe": "chicken fajita sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sub bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken spices",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7a6d8q3p6c0pzbqybm649vy98arpyv",
+  "en": "CHICKEN FAJITA SANDWICH",
+  "gym": true,
+  "recipe": "chicken fajita sandwich",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 80.0,
+    "u": "grams"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7az0jzx1q02agm0f86kq906d80xpcf",
+  "en": "Chicken Herbs",
+  "gym": false,
+  "recipe": "chicken harbs",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 1500.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "rosemary fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7az0z00facehsa9585vbea4n80xysk",
+  "en": "Chicken Risotto",
+  "gym": false,
+  "recipe": "chicken risotto",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 180.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "celery stick",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "risotto rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh714vggr8sfs2zk7c3r828gds8ajbnr",
+  "en": "Chicken Risotto",
+  "gym": false,
+  "recipe": "chicken risotto",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 180.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "celery stick",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "risotto rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79e87tffqy0aq5ej28q8ajfh80tgzj",
+  "en": "Chicken Shawarma",
+  "gym": false,
+  "recipe": "chicken shawarma",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken shawarma spices station",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "saj bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic paste ryoukak",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7awh87g7wmvtyrzn7bnq405n8azyt9",
+  "en": "CHICKEN SHAWERMA WRAP",
+  "gym": false,
+  "recipe": "chicken shawarma wrap",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 140.0,
+    "u": "grams"
+   },
+   {
+    "n": "meat shawarma spices station",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "saj bread",
+    "q": 0.5,
+    "u": "gram"
+   },
+   {
+    "n": "garlic paste ryoukak",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh704g2w2s9tp2av03x0k08hjn87nx54",
+  "en": "Chicken Stroganoff",
+  "gym": false,
+  "recipe": "chicken stroganoff",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sour cream",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bcr1ct12z6yfrws9xkpbb2d80ttwq",
+  "en": "Chicken Tacos",
+  "gym": false,
+  "recipe": "chicken taco",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 110.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun seasoning",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bbq sauce",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "french dressing",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 12.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 110.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun seasoning",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bbq sauce",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "french dressing",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 12.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76seqgbsr8xvy7rp15mjxf1d80t59m",
+  "en": "Chicken Tacos",
+  "gym": false,
+  "recipe": "chicken taco",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 110.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun seasoning",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bbq sauce",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "french dressing",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 12.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 110.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun seasoning",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bbq sauce",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "french dressing",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 12.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7d4zqysaj8g9fd7j40ndsjqs8ascej",
+  "en": "CHILLI AND GARLIC",
+  "gym": true,
+  "recipe": "chili and garlic",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chili flakes",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry parsley",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79ywnqy8g76mc338r4jbzh3n80te6f",
+  "en": "Classic Fattoush",
+  "gym": false,
+  "recipe": "classic fattoush",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "romaine lettuce",
+    "q": 60.0,
+    "u": "grams"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "mint",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "radish red",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "feta cheese",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "white bread",
+    "q": 1.0,
+    "u": "pic"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranete molasses",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77age5f6dfkcaa6a9t29szkd8akk6k",
+  "en": "Classic Fattoush Salad",
+  "gym": false,
+  "recipe": "classic fattoush",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "romaine lettuce",
+    "q": 60.0,
+    "u": "grams"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "mint",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "radish red",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "feta cheese",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "white bread",
+    "q": 1.0,
+    "u": "pic"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranete molasses",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7cevd84jx0dp3e01qrwzcmq180w51s",
+  "en": "Cookies",
+  "gym": false,
+  "recipe": "cookies",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "chocolate chips",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking soda",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn flour",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7amhbcq7sadfhgzzs56jtseh80tf90",
+  "en": "Cordon Bleu",
+  "gym": false,
+  "recipe": "cordon bleu",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 140.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooking cream",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "demi glaze",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73jj9t3tt6z7cbx66tw0pbmn8ak7me",
+  "en": "Cordon Bleu",
+  "gym": false,
+  "recipe": "cordon bleu",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 140.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "potato",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooking cream",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "demi glaze",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bzx7980ga2dhhw95ntfeprx8arkgn",
+  "en": "CORN",
+  "gym": true,
+  "recipe": "corn",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "corn",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74v2rtf0eq06a1wdh32296ed80vc65",
+  "en": "Crab Salad",
+  "gym": false,
+  "recipe": "crab salad",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "mango frozen",
+    "q": 20.0,
+    "u": "grams"
+   },
+   {
+    "n": "avocado",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "imitation crab",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry quinoa",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranete molasses",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "celery stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75byqx84v3whvy3nqdzregbh8ar8ye",
+  "en": "CRISPY CHICKEN",
+  "gym": true,
+  "recipe": "crispy chicken",
+  "sheet": "gathering box1",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "small bun",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fe9ryx4fqbwhp8jnbvqpfzh8aj61g",
+  "en": "Crispy Chicken w/ Honey Mustard",
+  "gym": true,
+  "recipe": "crispy chicken with honey mustard",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "panko",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "arabic bread",
+    "q": 0.5,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bvhgdcpyvr9v8k03ftrvta98akakk",
+  "en": "Crispy Chicken w/Rice",
+  "gym": true,
+  "recipe": "crispy chicken with rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "yogurt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mix masala",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "asparagus",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato sauce",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fq6ab1rvnhd5n69h5zwre758anxp2",
+  "en": "Crispy Chicken Wrap",
+  "gym": true,
+  "recipe": "crispy chicken wrap",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 130.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "panko",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet potato",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh738tnh4q7nf52h78thdkqmm18ark06",
+  "en": "SPRING ONION CRISPY",
+  "gym": true,
+  "recipe": "crispy onion",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "red onion",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7essfx1jy3g6ggvkxa8ysmgs80vvmk",
+  "en": "Croissant Cheese",
+  "gym": false,
+  "recipe": "croissant chesse",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "croissant",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "zaatar",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 7.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bmm101yt95h1mkc0hq7d6k580tmed",
+  "en": "Croissant Zaatar",
+  "gym": false,
+  "recipe": "croissant zaatar",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "croissant",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "zaatar",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fqzq5w59e8cp2pdhtvb0h218arqwc",
+  "en": "CROISANT ZAATAR SANDWICH",
+  "gym": true,
+  "recipe": "croissant zaatar",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "croissant",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "zaatar",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72skvkf5t9n4jg0nhg2hdq558arjz7",
+  "en": "DILL YOGURT",
+  "gym": true,
+  "recipe": "dill yogurt",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "fitness mayo",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dill yogurt",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7aw917jm5rx316vvm1kk983x80t4ya",
+  "en": "Dynamite Shrimp",
+  "gym": false,
+  "recipe": "dynamite shrimp",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "shrimp",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white cabbage",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "red cabbage",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "hot sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet chilli sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 12.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7dgvh2xtbc8dz7rg82jppe2187ndwd",
+  "en": "Egg Avocado Toast",
+  "gym": false,
+  "recipe": "egg avocado toast",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sourdough bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "pc"
+   },
+   {
+    "n": "philadelphia cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76z2z9vtbx2dqwqaygmt0wyd80v6kv",
+  "en": "Egg Burrito",
+  "gym": false,
+  "recipe": "egg burrito",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "kidney beans",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "corn",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh717k1axqp2xcepark75mdjm580vw7c",
+  "en": "Egg Croissant",
+  "gym": false,
+  "recipe": "egg croissant",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "croissant",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75jevmsh851544a091gr73p98azs6t",
+  "en": "CROISSANT EGG",
+  "gym": false,
+  "recipe": "egg croissant",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "croissant",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bqsdnkzccaxqae7838xhy7n80v7p1",
+  "en": "Egg Muffin",
+  "gym": false,
+  "recipe": "egg muffin",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "brioche muffins",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "baby spinach",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "white onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "beef bacon",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "hollandaise sauce",
+    "q": 20.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh758qqgkmr3hejqf912syavwh87n35h",
+  "en": "Energy Balls",
+  "gym": false,
+  "recipe": "enargy balls",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "almonds",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "peanut butter",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "walnuts",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "cranberry",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut flakes",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "tahini",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut flakes",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73yd5d4hrp0emecp6krsvjks8ajsbk",
+  "en": "Energy Balls 3pcs",
+  "gym": false,
+  "recipe": "enargy balls",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "almonds",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "peanut butter",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "walnuts",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "cranberry",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut flakes",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 42.0,
+    "u": "grams"
+   },
+   {
+    "n": "tahini",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut flakes",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72mt4tf5b48r63c4w0kbyk0180vk98",
+  "en": "Falafel Wrap",
+  "gym": false,
+  "recipe": "falafel wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "chickpeas",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "red onion",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7dnc5z478q8h4qbn2c52fr0x87ma80",
+  "en": "Falafel Wrap",
+  "gym": false,
+  "recipe": "falafel wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "chickpeas",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "red onion",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tortilla bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh765se0rqew3qjvq2zdwegeb18arzcc",
+  "en": "FITNESS MAYO",
+  "gym": true,
+  "recipe": "fitness mayo",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "yogurt",
+    "q": 20000.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 1500.0,
+    "u": "gram"
+   },
+   {
+    "n": "cream cheese",
+    "q": 4000.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 60.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73e1bnm6gq4hrwc5wv344hkx8akxjz",
+  "en": "French Toast",
+  "gym": false,
+  "recipe": "french toast",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "brioche bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "berrys jam",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "brioche bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "caramel sauce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 220.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ekj6828tebjd0gwfjkrjdzh8asvfe",
+  "en": "CLASSIC FRENCH TOAST",
+  "gym": true,
+  "recipe": "french toast",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "brioche bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "berrys jam",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "brioche bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "caramel sauce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 220.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7282ajcdrxs7b508ym102r7d8asafq",
+  "en": "GUACAMOLE",
+  "gym": true,
+  "recipe": "gaucamole",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "avocado",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "gaucamole",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh715djbnbgghqqzncx0pw4bzh80vcb0",
+  "en": "Greek Chicken",
+  "gym": false,
+  "recipe": "greek chicken",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "yogurt",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "baby spinach",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "feta cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "asparagus",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fddjsb9eepjt5g3zyendcj989y20n",
+  "en": "New Greek Chicken",
+  "gym": false,
+  "recipe": "greek chicken",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "yogurt",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "baby spinach",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "feta cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "asparagus",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72n3xf89c16bgak3j387914h80x9wd",
+  "en": "Greek Infusion",
+  "gym": false,
+  "recipe": "greek infusion",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "greek yogurt",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "chia seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "flaxseeds",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "granola",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7f5ck9rng1r7ft4gncxke55d8ar90f",
+  "en": "GREEN BEANS",
+  "gym": true,
+  "recipe": "green beans",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "broad beans",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77xxr6d8jyds7rz57wj07r8d8aszgf",
+  "en": "GREEN RICE",
+  "gym": true,
+  "recipe": "green rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "green beans",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76csckk63mbwnkjt4kqr6msn8araby",
+  "en": "GREEN SALAD SAUCE",
+  "gym": true,
+  "recipe": "green salad sauce",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "mint",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "green chili",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "peanuts",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 300.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "chaat masala",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7581nbw8jqqeng7v6s1rd3c98arp2v",
+  "en": "GRILLED BELL PEPPER",
+  "gym": true,
+  "recipe": "grilled bellpepper",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "green bell pepper",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow bell pepper",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7er9qabdbryjn0ep4kmkc63x8ajd2a",
+  "en": "Grilled Chicken 100g",
+  "gym": false,
+  "recipe": "grilled chicken100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77bfaaxk4yej8f7725pqn2318akgw0",
+  "en": "Grilled Chicken 150g",
+  "gym": false,
+  "recipe": "grilled chicken100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7cm9nqtm9j878pb38p0yg40x8aknxj",
+  "en": "Grilled Chicken 200g",
+  "gym": false,
+  "recipe": "grilled chicken100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7em0mzary9pygagj0c6kc4rh8ajyz3",
+  "en": "Grilled Chicken 250g",
+  "gym": false,
+  "recipe": "grilled chicken100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7c5fg8x3pem8dsf51kc5g9598ajfp3",
+  "en": "Grilled Steak 100g",
+  "gym": false,
+  "recipe": "grilled steak 100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 140.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried rosemary",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh774cmt10krzaywsdz8xbc6cd8akmvm",
+  "en": "Grilled Steak 150g",
+  "gym": false,
+  "recipe": "grilled steak 100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 140.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried rosemary",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71yrwq0b7f6hqy11vds3s1dn8ajym3",
+  "en": "Grilled Steak 200g",
+  "gym": false,
+  "recipe": "grilled steak 100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 140.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried rosemary",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ca97qf0hjm8whcstzqb9nr98akdgy",
+  "en": "Grilled Steak 250g",
+  "gym": false,
+  "recipe": "grilled steak 100gm",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 140.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried rosemary",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ax8zh24yrdst7a8z96m0y3x8akns3",
+  "en": "Halloumi Pesto Sandwich",
+  "gym": false,
+  "recipe": "halloumi pesto sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sourdough bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pesto sauce",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sundried tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "halloumi cheese",
+    "q": 30.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79jgzmz0v4wpm7dsk4190xvs80t9v1",
+  "en": "Honey Glaze Salmon",
+  "gym": false,
+  "recipe": "honey glaze salmon",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "salmon fillet",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 40.0,
+    "u": "grams"
+   },
+   {
+    "n": "sweet potato",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "asparagus",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "frozen broccoli",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bg975hyzrc2txj2c9vxb1th8asmjz",
+  "en": "HONEY MUSTARD",
+  "gym": true,
+  "recipe": "honey musterd",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "fitness mayo",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey musterd",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7d0phmfjcgy0nhtfxh7g9byh80tfcf",
+  "en": "Hummus",
+  "gym": false,
+  "recipe": "hummus",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chickpeas",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahini",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon salt",
+    "q": 202.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "curry powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "hummus",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73cgwzb4mvc6hy8nj6pn18658arks3",
+  "en": "HUMMUS",
+  "gym": true,
+  "recipe": "hummus",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chickpeas",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahini",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon salt",
+    "q": 202.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "curry powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "hummus",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ant7vfa4xx7bhr7e6jv16hs80vtf8",
+  "en": "Iranian Kofta",
+  "gym": false,
+  "recipe": "iranian kofta with brod bin rice",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "cloves whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "bay leaf",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 70.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fk3ksx45vjtmq0br3wwsjdx8asp0s",
+  "en": "JALAPENO",
+  "gym": true,
+  "recipe": "jalepeno",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "jalapeno",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74ghtacfjkkk6xq8f6h9tksn8asw12",
+  "en": "KIMCHI",
+  "gym": true,
+  "recipe": "kimchi marination",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "chinese cabbage",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "carrot",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "spring onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "chili flakes",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b5w7462k2dtc9kx3q6wwn258ark20",
+  "en": "KING CHILLI RED",
+  "gym": true,
+  "recipe": "king chilli red",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "king chilli red",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73gcswfdzbygjbcvtggwg82s80t9pt",
+  "en": "Lebanese Traditional Muffin",
+  "gym": false,
+  "recipe": "lebanese traditional mufffi",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "brioche muffins",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "labneh",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "dried thyme",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "mint",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 20.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh799564nn9ync0k42qw4f9vah8akpe7",
+  "en": "Fresh Mandarin with Pomegranate",
+  "gym": false,
+  "recipe": "mandarin(120 g) with 20 g pomegranate",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "pomegranate fresh",
+    "q": 25.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75cz75afm0fjdmycwjvq0h6n8asnwj",
+  "en": "MANGO",
+  "gym": true,
+  "recipe": "mango",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "mango fresh",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73a4xd1z0jmkpg5srnn1f7sd8ar8w7",
+  "en": "MASHED POTATO",
+  "gym": true,
+  "recipe": "mashed potato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 250.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72kw3vp1sczv2h44msmje2th8ajt5v",
+  "en": "Mashed Potato 100g",
+  "gym": false,
+  "recipe": "mashed potato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 250.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73ybvz6cn1e4274zddsjnncs8ajq8b",
+  "en": "Mashed Potato 150g",
+  "gym": false,
+  "recipe": "mashed potato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 250.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh751ybzw49wwnqkdvzhb4pc2x8akba0",
+  "en": "Mashed Potato 200g",
+  "gym": false,
+  "recipe": "mashed potato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 250.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh765b4e7sv12dxqja97t65yas8akztk",
+  "en": "Mashed Potato 250g",
+  "gym": false,
+  "recipe": "mashed potato",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 250.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 50.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73wwtxsmvx0waz8w4mxmq7wd8akkvt",
+  "en": "Matcha Glow Juice",
+  "gym": false,
+  "recipe": "matcha glow(juice)",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "matcha powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "greek yogurt",
+    "q": 45.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78mqeb17mf959gty6w3v6wnn8asq0y",
+  "en": "MEATBALL",
+  "gym": true,
+  "recipe": "meet ball",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato sauce",
+    "q": 800.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh715kacqqzznewa0xkb7cktrd89y3g2",
+  "en": "Mediterraneen Feta Salad",
+  "gym": false,
+  "recipe": "mediterraneen feta salad",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "romaine lettuce",
+    "q": 60.0,
+    "u": "grams"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "feta cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sunflower seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "pumpkin seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "pineapple",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73skpdq288ht3zebe0k7hadn8ajzdx",
+  "en": "Mongolian Beef",
+  "gym": true,
+  "recipe": "mongolian beef",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 750.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "spring onion",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "cornstarch",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "calrose rice",
+    "q": 375.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut cream",
+    "q": 120.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh785aybxqevkpqhymqenajtp589zr9c",
+  "en": "Mongolian Noodles",
+  "gym": false,
+  "recipe": "mongolian noodles",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 170.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "spring onion",
+    "q": 6.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cornstarch",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ufc noodles",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bjk19273bma3ke3a1v6mysx80t2dm",
+  "en": "Mongolian Beef Noodles",
+  "gym": false,
+  "recipe": "mongolian noodles",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 170.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "spring onion",
+    "q": 6.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cornstarch",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ufc noodles",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bn9znqaya17mb1kjdjb6js580wv85",
+  "en": "Mongolian Beef with Noodles",
+  "gym": false,
+  "recipe": "mongolian noodles",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 170.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "spring onion",
+    "q": 6.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "brown sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cornstarch",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ufc noodles",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75g2scfh1bdyy1f4trqpkhy58ar6h2",
+  "en": "MUSHROOM",
+  "gym": true,
+  "recipe": "mushroom",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "mushroom",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74stdqbvqxrs1bj7avpjmjf980trqt",
+  "en": "No Carb Salmon",
+  "gym": false,
+  "recipe": "no carb salmon",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "salmon fillet",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "crouton",
+    "q": 5.0,
+    "u": "pic"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pistachio",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 7.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7adr03egq4e0ctfvhstxqx8h8azawd",
+  "en": "ORANGE",
+  "gym": false,
+  "recipe": "orange",
+  "sheet": "short",
+  "lines": [
+   {
+    "n": "orange juce",
+    "q": 50.0,
+    "u": "grams"
+   },
+   {
+    "n": "carrot",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "ginger",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "turmeric powder",
+    "q": 0.01,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 0.01,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh760yz7ep50xtrk06aqb1pymn8akh00",
+  "en": "Fresh Orange Juice",
+  "gym": false,
+  "recipe": "orange juce",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "orange juce",
+    "q": 100.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7a90gt6e7dm4zx8709gca0xd80t9zb",
+  "en": "Oriental Breakfast",
+  "gym": false,
+  "recipe": "orienatl breakfast",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "multigrain bread",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "falafel adrenaline",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "halloumi cheese",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "cucumber",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "parlsey",
+    "q": 2.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ffsx58xrtzdm09d82fedc6s8arryt",
+  "en": "PENNE PASTA",
+  "gym": true,
+  "recipe": "penne pasta",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "penne pasta",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75k7j22bc189dhq1ga6n2pmd8aky45",
+  "en": "Pepperoni Pizza",
+  "gym": false,
+  "recipe": "pepperoni pizza",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "all purpose flour",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "yeast",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "water",
+    "q": 65.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "pizza sauce adrenaline",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "pepperoni slice",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh788y3pbmxcm3n1b6b69c1bnn8argyz",
+  "en": "PICA DE GALLO",
+  "gym": true,
+  "recipe": "pica de gallo",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "jalapeno",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "pica de gallo",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71s6tv4arrh368zmw839rwds8as3gj",
+  "en": "PICKLE CUCUMBER",
+  "gym": true,
+  "recipe": "pickel cucumber",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "pickles",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78t0zx6mght5t3xysf2pb4ed8akzx1",
+  "en": "Fresh Pineapple Cut",
+  "gym": false,
+  "recipe": "pineapple ( 120g)",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "pineapple",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "pineapple",
+    "q": 170.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71geyxd8v9jqcjfqsaxwb6hh80v7xa",
+  "en": "Pistachio Salad",
+  "gym": false,
+  "recipe": "pistacho salad",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "shrimp",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "crouton",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "cherry tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "pistachio",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77dvryqrbqtema1yfvrdgjmh8asn99",
+  "en": "PLAIN RICE",
+  "gym": true,
+  "recipe": "plain rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b0815m2eab85cdxxmprr71d8akbzb",
+  "en": "Rice 100g",
+  "gym": false,
+  "recipe": "plain rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh731zc16eg2q9127p8sysa83n8ak373",
+  "en": "Rice 150g",
+  "gym": false,
+  "recipe": "plain rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh750g7kc9gdh3ffvevxqnk5ns8akmqb",
+  "en": "Rice 200g",
+  "gym": false,
+  "recipe": "plain rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bahn65zged1pfcqm5dtx4fx8ajztx",
+  "en": "Rice 250g",
+  "gym": false,
+  "recipe": "plain rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7dk7745gqef0qqrc85h5y65d8akaek",
+  "en": "Pomegranate",
+  "gym": false,
+  "recipe": "pomogranate( 120g)",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "pomegranate fresh",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate fresh",
+    "q": 25.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh74gvqtr5qzzmhnvebfw9rvfs8asyx6",
+  "en": "POMEGRANATE",
+  "gym": true,
+  "recipe": "pomogranate( 120g)",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "pomegranate fresh",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "pomegranate fresh",
+    "q": 25.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75492zv5ye21rh63mbvc2j3x8aszwt",
+  "en": "POTATO WEDGES",
+  "gym": true,
+  "recipe": "potato wedges",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "potato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun spicy",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 30.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73wna15k91wxs9pk0r9ztaf18ajbeq",
+  "en": "Power Ball",
+  "gym": false,
+  "recipe": "power ball",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sunflower seeds",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "pumpkin seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "oats",
+    "q": 23.0,
+    "u": "gram"
+   },
+   {
+    "n": "almonds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "peanut butter",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate chips",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bt118pwb3k27bc6v2skswx58ajz64",
+  "en": "Protein Lava Cake",
+  "gym": true,
+  "recipe": "protein lava cake",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "dark chocolate chips",
+    "q": 25.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dark chocolate chips",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7f252e030bx917fv98dycvss8asek8",
+  "en": "PROTEIN LAVA CAKE",
+  "gym": true,
+  "recipe": "protein lava cake",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "dark chocolate chips",
+    "q": 25.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dark chocolate chips",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 200.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7f9qdjjjn7kdbs89pryc8mj180vggy",
+  "en": "Protein Lazy Cake",
+  "gym": false,
+  "recipe": "protein lazy cake",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "ulker biscuit",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "sweetened condensed milk",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "white chocolate chips",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "nestle cream",
+    "q": 160.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7cyzde53cdvw16bgfyqp0fkn8asf8w",
+  "en": "PROTEIN LAZY CAKE",
+  "gym": true,
+  "recipe": "protein lazy cake",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "ulker biscuit",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "sweetened condensed milk",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "white chocolate chips",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "nestle cream",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 30.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7528atwcnrmeg4e0pfvbhe1h8ay315",
+  "en": "PROTEIN PANCAKE",
+  "gym": false,
+  "recipe": "protine pancake",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "oats",
+    "q": 400.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 730.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking soda",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "butter",
+    "q": 80.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "pancake",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "caramel sauce",
+    "q": 30.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7f0hgx4y7tnp8bbaffq6fpy58asw58",
+  "en": "QUINOA",
+  "gym": true,
+  "recipe": "quinoa",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked quinoa",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh70p6knvfppxef5vn8dt9h8an8ar0fd",
+  "en": "RANCH SAUCE",
+  "gym": true,
+  "recipe": "ranch sauce",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "fitness mayo",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "sour cream",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "worcestershire",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 0.05,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 0.05,
+    "u": "gram"
+   },
+   {
+    "n": "lemon zest",
+    "q": 0.05,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "ranch sauce",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ceb5qjz3y0qadddcqwt59k180vh7y",
+  "en": "Raspberry Rice Pudding",
+  "gym": false,
+  "recipe": "raspbarry rice pudding",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "calrose rice",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "cream of rice cnp",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "raspberries",
+    "q": 40.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh71rcmpapderpcvbqbsbqxf8x80v642",
+  "en": "Rice Pudding",
+  "gym": false,
+  "recipe": "rice pudding",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "calrose rice",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "cream of rice cnp",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "raisins",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh779ey3exsrfsy8qs5yz7qdzx80vptt",
+  "en": "Roasted Beef Sandwich",
+  "gym": false,
+  "recipe": "roast beef sandwich",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "ciabatta",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "roasted beef",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bxrk3a8jnm22e684g4x0xe58aymnn",
+  "en": "NEW Roasted Beef Sandwich",
+  "gym": false,
+  "recipe": "roast beef sandwich",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "ciabatta",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "roasted beef",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "pickles",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75d4vtm9cm9anrg6fcc4wg398as33m",
+  "en": "SAFFRON RICE",
+  "gym": true,
+  "recipe": "saffrone rice",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "cooked rice",
+    "q": 500.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.05,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ae43xj55pjqvdktgr0gwv0s80tbrw",
+  "en": "Salmon Curry",
+  "gym": false,
+  "recipe": "salmon curry",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "salmon fillet",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "coconut oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun spicy",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coconut milk",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "curry powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "lime",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77zc1nv55kdn9nwc3gbaanvn8ary21",
+  "en": "SESAME BEEF",
+  "gym": true,
+  "recipe": "sesami beef",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "hoisin sauce ryoukak",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "rice vinegar",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesami beef",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7atspczx74d0e8x6d4jh1jm18as0t3",
+  "en": "SESAMI WHITE",
+  "gym": true,
+  "recipe": "sesami white",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "sesame seeds",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fmh3vkqy9d1ev60gp4q2d9d8akmks",
+  "en": "Shakshouka",
+  "gym": false,
+  "recipe": "shakshouka",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sourdough bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "feta cheese",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 1.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh703t49vrz71jbcq24krq7rts80t8dj",
+  "en": "Shish Tawook with Rice",
+  "gym": false,
+  "recipe": "shishtawook with rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry mint",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75bxdx3fntsq3q79bfgmar9n80xmhs",
+  "en": "Shish Tawook with Rice",
+  "gym": false,
+  "recipe": "shishtawook with rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooked rice",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh dill",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry mint",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fq1ym2aefe5fqv20j9h8xw180v3b8",
+  "en": "Shish Tawook Wrap",
+  "gym": false,
+  "recipe": "shishtawook wrap",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 120.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken spices",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red cabbage",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "sub bread",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fqd848jz416wzbp58fv2szn80t9z6",
+  "en": "Shrimp Tacos",
+  "gym": false,
+  "recipe": "shrim taco",
+  "sheet": "gathering box1",
+  "lines": [
+   {
+    "n": "shrimp",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun seasoning",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "mango fresh",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "french dressing",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "taco",
+    "q": 25.0,
+    "u": "grams"
+   },
+   {
+    "n": "tomato",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 12.0,
+    "u": "gram"
+   },
+   {
+    "n": "cheddar cheese",
+    "q": 7.0,
+    "u": "gram"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh750jsy73t9rsq03jjr3bwcch80t3x4",
+  "en": "Southwest Chicken Wrap",
+  "gym": false,
+  "recipe": "southwest chciken wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 130.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "corn",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "kidney beans",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato sauce",
+    "q": 20.0,
+    "u": "grams"
+   },
+   {
+    "n": "brown bread",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7714d81m9ye16t4n3jsp8jms80vzk6",
+  "en": "Spaghetti Meat Balls",
+  "gym": false,
+  "recipe": "spaghetti meat ball",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "minced beef",
+    "q": 180.0,
+    "u": "grams"
+   },
+   {
+    "n": "nutmeg powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "breadcrumbs",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "thai curry paste",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "spaghetti",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "sumac",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "peeled tomato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh basil",
+    "q": 4.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75wfmj5wv1xqv2gj12pyqnxs8arsqx",
+  "en": "SPICY PANJA SAUCE",
+  "gym": true,
+  "recipe": "spicy panju sauce",
+  "sheet": "Photo shoot",
+  "lines": [
+   {
+    "n": "ponzu sauce",
+    "q": 640.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "fresh lemon",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon zest",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "siracha sauce",
+    "q": 20.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7atxfk9cy437x554j4tc6ca580tktt",
+  "en": "Steak Sandwich",
+  "gym": false,
+  "recipe": "steak sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 100.0,
+    "u": "grams"
+   },
+   {
+    "n": "sub bread",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "balsamic vinegar",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ct3gq1xeeabn4xxt237r6z58ar72r",
+  "en": "SUMAC POWDER",
+  "gym": true,
+  "recipe": "sumac powder",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "sumac",
+    "q": 500.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ftpfvyd5fn2bwnrhvt9tr3980vyrv",
+  "en": "Sweet Chili Chicken",
+  "gym": false,
+  "recipe": "sweet chilli chicken",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 180.0,
+    "u": "grams"
+   },
+   {
+    "n": "cooked rice",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow bell pepper",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "carrot",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "pineapple",
+    "q": 15.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "ketchup",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet chilli sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "food colour",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b44vftcxatb8p63kjehefvs80va3j",
+  "en": "Sweet Potato Delight",
+  "gym": false,
+  "recipe": "sweet potato delight",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "sweet potato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "halloumi cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry quinoa",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "parsley fresh",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cucumber",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon zest",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "cajun spicy",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7871xmb9cpzz23r9jtzk39d580vpj2",
+  "en": "Sweet Potato Energy Booster",
+  "gym": false,
+  "recipe": "sweet potato enargy",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "sweet potato",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "almond slices",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77nmgyzwdk6n1nh41h75atys8ak9wg",
+  "en": "Sweet Potato Energy Booster",
+  "gym": false,
+  "recipe": "sweet potato enargy",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "sweet potato",
+    "q": 200.0,
+    "u": "grams"
+   },
+   {
+    "n": "butter",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "date paste",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "almond slices",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bv9cf1at2er8xrnbeh4276d8ajh51",
+  "en": "Tenderloin w/Rice",
+  "gym": true,
+  "recipe": "tenderloin with rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 180.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "meat and mushroom sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "red bell pepper",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 20.0,
+    "u": "grams"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "worcestershire",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh778y4m7dvkvgtm9ttqjpe69180vc6x",
+  "en": "Teriyaki Chicken",
+  "gym": false,
+  "recipe": "teriyaki chciken",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "ketchup",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7bde5537w8b3qvh978hcq71n8ar7kt",
+  "en": "TERIYAKI CHICKEN",
+  "gym": true,
+  "recipe": "teriyaki chciken",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet soya sauce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "ketchup",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7ck0tsj4m3hajpq0r9n24enh8anfka",
+  "en": "Teriyaki Tofu w/Rice",
+  "gym": true,
+  "recipe": "teriyaki tofu with rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "paneer",
+    "q": 130.0,
+    "u": "gram"
+   },
+   {
+    "n": "soy sauce",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "apple cider vinegar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "ginger",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "ketchup",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 120.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh77w3210d2976wvfe0934yva180tv0q",
+  "en": "Tiramisu",
+  "gym": false,
+  "recipe": "tiramisu",
+  "sheet": "Desserts",
+  "lines": [
+   {
+    "n": "philadelphia cheese",
+    "q": 225.0,
+    "u": "grams"
+   },
+   {
+    "n": "whipping cream",
+    "q": 280.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 85.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "lady finger biscuits",
+    "q": 36.0,
+    "u": "gram"
+   },
+   {
+    "n": "cocoa powder",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "coffee gold",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "honey",
+    "q": 30.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh73rfjshjt2wfq51mfjqw32e18arrvw",
+  "en": "TOAMTO SAUCE",
+  "gym": true,
+  "recipe": "tomato sauce",
+  "sheet": "poke bowl",
+  "lines": [
+   {
+    "n": "peeled tomato",
+    "q": 1000.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "celery stick",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "leek",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 10.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72f1y1br797k1xycfjhjy71s8ajd6g",
+  "en": "Turkey and Cheese Sandwich",
+  "gym": false,
+  "recipe": "turkey and cheese club sandwich",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "panini bread",
+    "q": 1.0,
+    "u": "pc"
+   },
+   {
+    "n": "cream cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh783pbnrygkjx5cxcs9yg4yxn8anyst",
+  "en": "Turkey and Cheese Sandwich",
+  "gym": true,
+  "recipe": "turkey and cheese club sandwich",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "panini bread",
+    "q": 1.0,
+    "u": "pc"
+   },
+   {
+    "n": "cream cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7d1rge4jbzdaj8xyt2qcsqcs8arsrd",
+  "en": "TURKEY CHEESE WRAP",
+  "gym": true,
+  "recipe": "turkey cheese wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 0.6,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cheddar slice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh76ykv9czv1v2sgqvgyh2n8c180vf1v",
+  "en": "Turkey English Muffin",
+  "gym": false,
+  "recipe": "turkey english muffin",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "brioche muffins",
+    "q": 50.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "baby spinach",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "mushroom",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "paprika powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "hollandaise sauce",
+    "q": 20.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh70sa2hjz6ds5er0rr1jtt87980td7d",
+  "en": "Turkey Sandwich",
+  "gym": false,
+  "recipe": "turky sandwich",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sourdough bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "philadelphia cheese",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 3.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh797hyphk144h5c55h4v6xywh8aka19",
+  "en": "Vanilla Muffin",
+  "gym": false,
+  "recipe": "vailla muffin",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "vegetable oil",
+    "q": 13.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 27.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 22.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 33.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh75fhd2ec853ezmwt64061c5d8amhk8",
+  "en": "Vanilla Muffin",
+  "gym": true,
+  "recipe": "vailla muffin",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "egg",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "vegetable oil",
+    "q": 13.0,
+    "u": "gram"
+   },
+   {
+    "n": "milk",
+    "q": 27.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 22.0,
+    "u": "gram"
+   },
+   {
+    "n": "vanilla extract",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "all purpose flour",
+    "q": 33.0,
+    "u": "gram"
+   },
+   {
+    "n": "chocolate protein powder",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "baking powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7fj7z90acaetbkhrdt0e41s18akjvv",
+  "en": "Vegan Avocado Toast",
+  "gym": false,
+  "recipe": "vegan avocado toast",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "sourdough bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 4.0,
+    "u": "grams"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "sweet potato",
+    "q": 30.0,
+    "u": "grams"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "pomegranate seeds",
+    "q": 3.0,
+    "u": "grams"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79rzm766474pbx2asv1e2qj18ak6ee",
+  "en": "Veggie Pizza",
+  "gym": false,
+  "recipe": "veggie pizza",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "all purpose flour",
+    "q": 120.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "sugar",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "yeast",
+    "q": 5.0,
+    "u": "grams"
+   },
+   {
+    "n": "water",
+    "q": 65.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "peeled tomato",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "white onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry basil",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "zucchini",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "green bell pepper",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "black olives",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry oregano",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79a62swtxkrnax36c7f713ss80v4e2",
+  "en": "Waldorf Salad",
+  "gym": false,
+  "recipe": "waldoraf salad",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "romaine lettuce",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "green apple",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "green graps",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "walnuts",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 20.0,
+    "u": "grams"
+   },
+   {
+    "n": "honey",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7b7313h06wc1h5knpy6d3jjh8akwg9",
+  "en": "Zaatar Omlette",
+  "gym": false,
+  "recipe": "zaatar omlet",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "zaatar",
+    "q": 8.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "mozzarella cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cherry tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "radish red",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "labneh",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry mint",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78zp1wbxsh2tfx63565gyn2s80tfav",
+  "en": "Creamy Zucchini Pasta",
+  "gym": false,
+  "recipe": "zucchini pasta",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "pesto sauce",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooking cream",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "chicken breasts",
+    "q": 150.0,
+    "u": "gram"
+   },
+   {
+    "n": "zucchini",
+    "q": 100.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "cherry tomato",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "frozen spinach",
+    "q": 15.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh70y1gr11h7j04mcjvf0b43n980tkkm",
+  "en": "Mediterranean Feta Salad",
+  "gym": false,
+  "recipe": "mediterraneen feta salad",
+  "sheet": "TALABAT MENU",
+  "lines": [
+   {
+    "n": "romaine lettuce",
+    "q": 60.0,
+    "u": "grams"
+   },
+   {
+    "n": "iceberg lettuce",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "blueberries",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "feta cheese",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "sunflower seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "pumpkin seeds",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "sesame seeds",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "pineapple",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh78vjh6qd0m8dvtv4tvnbpgdn80tt7r",
+  "en": "Turkey and Cheese Wrap",
+  "gym": false,
+  "recipe": "turkey cheese wrap",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "tortilla bread",
+    "q": 0.6,
+    "u": "gram"
+   },
+   {
+    "n": "mayonaise",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "yellow mustard",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cheddar slice",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "smoked turkey",
+    "q": 30.0,
+    "u": "gram"
+   },
+   {
+    "n": "romaine lettuce",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh72hax2aj3b6cfjxw4t6r9ap587nc3k",
+  "en": "Healthy Chicken Majbous",
+  "gym": false,
+  "recipe": "adrenaline healthy majboos",
+  "sheet": "new items 26.5-2025",
+  "lines": [
+   {
+    "n": "whole chicken al waha fresh",
+    "q": 350.0,
+    "u": "grams"
+   },
+   {
+    "n": "salt",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cardamon whole",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cinnamon stick",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "dry lemon",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "bay leaf",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "cloves whole",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "cumin powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "coriander powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "red onion",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "olive oil",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "raw basmati rice",
+    "q": 75.0,
+    "u": "gram"
+   },
+   {
+    "n": "saffron",
+    "q": 0.2,
+    "u": "gram"
+   },
+   {
+    "n": "chicken stock powder",
+    "q": 4.0,
+    "u": "gram"
+   },
+   {
+    "n": "tomato",
+    "q": 20.0,
+    "u": "gram"
+   },
+   {
+    "n": "cashew",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "raisins",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "vegetable ghee",
+    "q": 6.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79ncnrxpr34g98a59mv4hh658am1dv",
+  "en": "Beef Shawarma Beetroot Rice",
+  "gym": true,
+  "recipe": "beef shawarma with beetroot rice",
+  "sheet": "old gym menu",
+  "lines": [
+   {
+    "n": "beef tenderloin",
+    "q": 150.0,
+    "u": "grams"
+   },
+   {
+    "n": "chicken shawarma marinated station",
+    "q": 10.0,
+    "u": "gram"
+   },
+   {
+    "n": "cooked rice",
+    "q": 60.0,
+    "u": "gram"
+   },
+   {
+    "n": "food colour",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "tahina sauce adrenaline",
+    "q": 40.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "beetroot",
+    "q": 5.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh79r29kptxqw0z815j0qg24rn8aspct",
+  "en": "CHICKEN AVACADO SANDWICH",
+  "gym": true,
+  "recipe": "chicken avocado sandwich",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "chicken breasts",
+    "q": 80.0,
+    "u": "grams"
+   },
+   {
+    "n": "mayonaise",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 3.0,
+    "u": "grams"
+   },
+   {
+    "n": "black pepper",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "dijon mustard",
+    "q": 1.0,
+    "u": "gram"
+   },
+   {
+    "n": "yogurt",
+    "q": 1.0,
+    "u": "grams"
+   },
+   {
+    "n": "jalapeno",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 25.0,
+    "u": "gram"
+   },
+   {
+    "n": "multigrain bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 3.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ },
+ {
+  "mealId": "kh7015dvtfzmb87fdzgr2f1eg98as6dz",
+  "en": "EGG AVACADO TOAST",
+  "gym": true,
+  "recipe": "egg avocado toast",
+  "sheet": "Gym New",
+  "lines": [
+   {
+    "n": "multigrain bread",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "avocado",
+    "q": 15.0,
+    "u": "gram"
+   },
+   {
+    "n": "salt",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "black pepper",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "onion powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "garlic powder",
+    "q": 2.0,
+    "u": "gram"
+   },
+   {
+    "n": "lemon juice",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "egg",
+    "q": 2.0,
+    "u": "pc"
+   },
+   {
+    "n": "philadelphia cheese",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "rocket leaves",
+    "q": 5.0,
+    "u": "gram"
+   },
+   {
+    "n": "parmesan cheese",
+    "q": 2.0,
+    "u": "gram"
+   }
+  ]
+ }
+]

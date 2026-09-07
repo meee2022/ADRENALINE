@@ -1,0 +1,197 @@
+{
+ "CONVERT": {
+  "GOLD VALLEY COCONUT CREAM 24*400GM": [
+   "g",
+   9600
+  ],
+  "EASTERN COCONUT MILK 24*400 ML": [
+   "ml",
+   9600
+  ],
+  "APOLLO CAJUN SEASONING 2 KG": [
+   "g",
+   2000
+  ],
+  "YOGHURT 10KG MAZZRATY": [
+   "g",
+   10000
+  ],
+  "LYAN CREAM CHEESE SPREAD 1KG": [
+   "g",
+   1000
+  ],
+  "LEMON JUICE 555 (1LTRx12)": [
+   "ml",
+   12000
+  ],
+  "AMERICAN GARDEN YELLOW MUSTARD 2.98 KG X 4": [
+   "g",
+   11920
+  ],
+  "OLIVE OIL POMACE SOUS CHEF (5LTR X 3)": [
+   "ml",
+   15000
+  ],
+  "EGG QATARI 1 X 30 X 12": [
+   "piece",
+   360
+  ],
+  "MILK LONG LIFE AWAFI (1LTR X 12)": [
+   "ml",
+   12000
+  ],
+  "PRISTINE VEG COOKING CREAM 1LTR X 10": [
+   "ml",
+   10000
+  ],
+  "BROWN SUGAR DARK SIS 1 KG X 24": [
+   "g",
+   1000
+  ],
+  "HONEY GOLD VALLEY 3KG X 4": [
+   "g",
+   12000
+  ],
+  "RICE INDIA GATE 30 KG": [
+   "g",
+   30000
+  ],
+  "CAVELLA REAL MILK CHOCOLATE DROPS 5KG*4": [
+   "g",
+   20000
+  ],
+  "SWEET CORN GREENA 400GM X 24": [
+   "g",
+   9600
+  ],
+  "PHILADELPHIA CREAM CHEESE 4 X 1.65 KG": [
+   "g",
+   1650
+  ],
+  "MAZARATY LABNEH 1 KG": [
+   "g",
+   1000
+  ],
+  "SUGAR 10KG BRADMA'S": [
+   "g",
+   10000
+  ],
+  "AMERICAN GOURMET RANCH DRESSING 3.78 X 4": [
+   "ml",
+   3780
+  ],
+  "CORN OIL BRADMA'S (1.8 LTR X 6)": [
+   "ml",
+   10800
+  ],
+  "TOMATO PASTE KDD (135GMx8 PCS X5 PKT)": [
+   "g",
+   5400
+  ],
+  "MAGGI CHICKEN BOUILLON POWDER 1KG X 6": [
+   "g",
+   1000
+  ],
+  "PEANUT BUTTER 5 STAR 1KGx12": [
+   "g",
+   1000
+  ],
+  "MACARONA PENNE RIGATE GRANORO 500GM X 24": [
+   "g",
+   12000
+  ],
+  "BACKALDRIN DARK COMPOUND CHOCOLATE 2.5KG": [
+   "g",
+   2500
+  ],
+  "BABY ROCCA": [
+   "g",
+   125
+  ],
+  "BABY SPINACH": [
+   "g",
+   125
+  ],
+  "STRAWBERRY": [
+   "g",
+   250
+  ],
+  "BLUE BERRY": [
+   "g",
+   125
+  ],
+  "MUSHROOM": [
+   "g",
+   250
+  ]
+ },
+ "LINK": {
+  "chicken breasts": "CHK TENDER BREAST IQF 5X2000G SADIA FS",
+  "whole chicken al waha fresh": "CHK TENDER BREAST IQF 5X2000G SADIA FS",
+  "beef tenderloin": "FZN B/L BEEF TENDERLOIN 4/5 LB CHAIN ON SD",
+  "cornstarch": "CORN FLOUR (STARCH) TURKEY 25KG",
+  "corn flour": "CORN FLOUR (STARCH) TURKEY 25KG",
+  "cardamon whole": "CARDAMOM GBC",
+  "turmeric powder": "TURMERIC POWDER 88 25 KG",
+  "coriander": "Coriander leaves",
+  "green bell pepper": "Green Bell Pepper",
+  "red bell pepper": "Red Bell Pepper",
+  "yellow bell pepper": "Yellow Bell Pepper",
+  "sweet potato": "Sweet Potato",
+  "pomegranate fresh": "Pomegranate",
+  "iceberg lettuce": "Iceberg lettuce",
+  "potato": "Potato",
+  "asparagus": "Asparagus (Small Size)",
+  "green apple": "Apple Green",
+  "white onion": "White Onion",
+  "broccoli": "Brocoli fresh",
+  "frozen broccoli": "Brocoli fresh",
+  "zucchini": "Zucchini",
+  "leek": "Leeks",
+  "white cabbage": "White Cabbage",
+  "red cabbage": "Red Cabbage",
+  "mango fresh": "Mango",
+  "mango frozen": "Mango",
+  "red onion": "Red Onion",
+  "coconut cream": "GOLD VALLEY COCONUT CREAM 24*400GM",
+  "coconut milk": "EASTERN COCONUT MILK 24*400 ML",
+  "cajun seasoning": "APOLLO CAJUN SEASONING 2 KG",
+  "cajun spicy": "APOLLO CAJUN SEASONING 2 KG",
+  "yogurt": "YOGHURT 10KG MAZZRATY",
+  "cream cheese": "LYAN CREAM CHEESE SPREAD 1KG",
+  "lemon juice": "LEMON JUICE 555 (1LTRx12)",
+  "yellow mustard": "AMERICAN GARDEN YELLOW MUSTARD 2.98 KG X 4",
+  "olive oil": "OLIVE OIL POMACE SOUS CHEF (5LTR X 3)",
+  "egg": "EGG QATARI 1 X 30 X 12",
+  "milk": "MILK LONG LIFE AWAFI (1LTR X 12)",
+  "cooking cream": "PRISTINE VEG COOKING CREAM 1LTR X 10",
+  "brown sugar": "BROWN SUGAR DARK SIS 1 KG X 24",
+  "honey": "HONEY GOLD VALLEY 3KG X 4",
+  "raw basmati rice": "RICE INDIA GATE 30 KG",
+  "cooked rice": [
+   "RICE INDIA GATE 30 KG",
+   0.4
+  ],
+  "chocolate chips": "CAVELLA REAL MILK CHOCOLATE DROPS 5KG*4",
+  "corn": "SWEET CORN GREENA 400GM X 24",
+  "philadelphia cheese": "PHILADELPHIA CREAM CHEESE 4 X 1.65 KG",
+  "labneh": "MAZARATY LABNEH 1 KG",
+  "sugar": "SUGAR 10KG BRADMA'S",
+  "ranch sauce": "AMERICAN GOURMET RANCH DRESSING 3.78 X 4",
+  "vegetable oil": "CORN OIL BRADMA'S (1.8 LTR X 6)",
+  "tomato paste": "TOMATO PASTE KDD (135GMx8 PCS X5 PKT)",
+  "chicken stock powder": "MAGGI CHICKEN BOUILLON POWDER 1KG X 6",
+  "peanut butter": "PEANUT BUTTER 5 STAR 1KGx12",
+  "penne pasta": "MACARONA PENNE RIGATE GRANORO 500GM X 24",
+  "cooked pasta": [
+   "MACARONA PENNE RIGATE GRANORO 500GM X 24",
+   0.5
+  ],
+  "dark chocolate chips": "BACKALDRIN DARK COMPOUND CHOCOLATE 2.5KG",
+  "rocket leaves": "Baby Rocca",
+  "baby spinach": "Baby Spinach",
+  "strawberry": "Strawberry",
+  "blueberries": "Blue berry",
+  "mushroom": "Mushroom"
+ }
+}

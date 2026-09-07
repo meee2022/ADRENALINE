@@ -1,0 +1,3896 @@
+{
+ "cherry tomato": {
+  "perG": 0.035789473684210524,
+  "priceStated": 8.5,
+  "qtyStated": 250.0,
+  "yield": 0.95
+ },
+ "fresh mozzarella": {
+  "perG": 0.07647058823529412,
+  "priceStated": 13.0,
+  "qtyStated": 170.0,
+  "yield": 1.0
+ },
+ "mozzarella patty": {
+  "perG": 0.02277227722772277,
+  "priceStated": 25.3,
+  "qtyStated": 1111.0,
+  "yield": 1.0
+ },
+ "red onion": {
+  "perG": 0.004705882352941176,
+  "priceStated": 4.0,
+  "qtyStated": 1000.0,
+  "yield": 0.85
+ },
+ "romaine lettuce": {
+  "perG": 0.022388059701492536,
+  "priceStated": 75.0,
+  "qtyStated": 5000.0,
+  "yield": 0.67
+ },
+ "grilled salmon": {
+  "perG": 0.1067,
+  "priceStated": 10.67,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "cooked pasta": {
+  "perG": 0.00675,
+  "priceStated": 33.75,
+  "qtyStated": 5000.0,
+  "yield": 1.0
+ },
+ "balsamic vinegar": {
+  "perG": 0.026234567901234566,
+  "priceStated": 12.75,
+  "qtyStated": 486.0,
+  "yield": 1.0
+ },
+ "grilled white fish": {
+  "perG": 0.0255,
+  "priceStated": 12.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "green salad": {
+  "perG": 3.5,
+  "priceStated": 3.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "olive oil": {
+  "perG": 0.019,
+  "priceStated": 95.0,
+  "qtyStated": 5000.0,
+  "yield": 1.0
+ },
+ "dates balls": {
+  "perG": 3.6,
+  "priceStated": 3.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "garlic powder": {
+  "perG": 0.06,
+  "priceStated": 15.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "black pepper": {
+  "perG": 0.05,
+  "priceStated": 25.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "flava bean": {
+  "perG": 0.012222222222222223,
+  "priceStated": 5.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "cooked chickpeas": {
+  "perG": 0.0125,
+  "priceStated": 3.0,
+  "qtyStated": 240.0,
+  "yield": 1.0
+ },
+ "red bell pepper": {
+  "perG": 0.004615384615384616,
+  "priceStated": 15.0,
+  "qtyStated": 5000.0,
+  "yield": 0.65
+ },
+ "ceasar salad": {
+  "perG": 5.7894736842105265,
+  "priceStated": 5.5,
+  "qtyStated": 1.0,
+  "yield": 0.95
+ },
+ "sub bread": {
+  "perG": 1.5,
+  "priceStated": 6.0,
+  "qtyStated": 4.0,
+  "yield": 1.0
+ },
+ "lasagna sheet": {
+  "perG": 0.024,
+  "priceStated": 12.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "cucumber": {
+  "perG": 0.009589041095890411,
+  "priceStated": 7.0,
+  "qtyStated": 1000.0,
+  "yield": 0.73
+ },
+ "cooked lentil": {
+  "perG": 0.004,
+  "priceStated": 32.0,
+  "qtyStated": 8000.0,
+  "yield": 1.0
+ },
+ "sunflower seeds": {
+  "perG": 0.07333333333333333,
+  "priceStated": 11.0,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "pizza dough": {
+  "perG": 0.004,
+  "priceStated": 6.0,
+  "qtyStated": 1500.0,
+  "yield": 1.0
+ },
+ "milk bread": {
+  "perG": 0.01,
+  "priceStated": 6.0,
+  "qtyStated": 600.0,
+  "yield": 1.0
+ },
+ "siracha sauce": {
+  "perG": 0.028409090909090908,
+  "priceStated": 12.5,
+  "qtyStated": 440.0,
+  "yield": 1.0
+ },
+ "oats gluten free": {
+  "perG": 0.0675,
+  "priceStated": 60.75,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "meat and mushroom sauce": {
+  "perG": 0.008502024291497975,
+  "priceStated": 10.5,
+  "qtyStated": 1235.0,
+  "yield": 1.0
+ },
+ "avocado mayo sauce ryoukak": {
+  "perG": 0.017449664429530203,
+  "priceStated": 2.6,
+  "qtyStated": 149.0,
+  "yield": 1.0
+ },
+ "hoisin sauce ryoukak": {
+  "perG": 0.04264705882352941,
+  "priceStated": 14.5,
+  "qtyStated": 340.0,
+  "yield": 1.0
+ },
+ "taco": {
+  "perG": 0.07333333333333333,
+  "priceStated": 11.0,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "dry lemon": {
+  "perG": 0.0575,
+  "priceStated": 11.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "sujuk": {
+  "perG": 0.027,
+  "priceStated": 27.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "sujuk ryoukak big": {
+  "perG": 6.2,
+  "priceStated": 6.2,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "parsley fresh": {
+  "perG": 0.025,
+  "priceStated": 15.0,
+  "qtyStated": 1000.0,
+  "yield": 0.6
+ },
+ "tahini": {
+  "perG": 0.0246875,
+  "priceStated": 19.75,
+  "qtyStated": 800.0,
+  "yield": 1.0
+ },
+ "lemon juice": {
+  "perG": 0.004,
+  "priceStated": 4.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "chili flakes": {
+  "perG": 0.0375,
+  "priceStated": 2.25,
+  "qtyStated": 60.0,
+  "yield": 1.0
+ },
+ "sesame oil": {
+  "perG": 0.08333333333333333,
+  "priceStated": 12.5,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "tawook ryoukak": {
+  "perG": 0.015909090909090907,
+  "priceStated": 21.0,
+  "qtyStated": 1320.0,
+  "yield": 1.0
+ },
+ "white vinegar": {
+  "perG": 0.0046875,
+  "priceStated": 4.5,
+  "qtyStated": 960.0,
+  "yield": 1.0
+ },
+ "sugar": {
+  "perG": 0.003,
+  "priceStated": 3.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "salt": {
+  "perG": 0.0014,
+  "priceStated": 1.4,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "dry oregano": {
+  "perG": 0.07857142857142857,
+  "priceStated": 2.75,
+  "qtyStated": 35.0,
+  "yield": 1.0
+ },
+ "garlic": {
+  "perG": 0.018,
+  "priceStated": 18.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "green apple": {
+  "perG": 0.008125,
+  "priceStated": 6.5,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "feta cheese": {
+  "perG": 0.06,
+  "priceStated": 24.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "walnuts": {
+  "perG": 0.04,
+  "priceStated": 40.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "cranberry": {
+  "perG": 0.142,
+  "priceStated": 17.75,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "yellow mustard": {
+  "perG": 0.03058823529411765,
+  "priceStated": 26.0,
+  "qtyStated": 850.0,
+  "yield": 1.0
+ },
+ "honey": {
+  "perG": 0.025,
+  "priceStated": 75.0,
+  "qtyStated": 3000.0,
+  "yield": 1.0
+ },
+ "shredded chicken": {
+  "perG": 0.04787613204791119,
+  "priceStated": 122.91,
+  "qtyStated": 3423.0,
+  "yield": 0.75
+ },
+ "fresh strawberries": {
+  "perG": 0.05,
+  "priceStated": 20.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "almonds": {
+  "perG": 0.04,
+  "priceStated": 40.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "carrot": {
+  "perG": 0.00975609756097561,
+  "priceStated": 8.0,
+  "qtyStated": 1000.0,
+  "yield": 0.82
+ },
+ "celery stick": {
+  "perG": 0.02666666666666667,
+  "priceStated": 20.0,
+  "qtyStated": 1000.0,
+  "yield": 0.75
+ },
+ "white onion": {
+  "perG": 0.007058823529411765,
+  "priceStated": 6.0,
+  "qtyStated": 1000.0,
+  "yield": 0.85
+ },
+ "chicken liver": {
+  "perG": 0.03,
+  "priceStated": 30.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "kobda ryoukak": {
+  "perG": 0.0325,
+  "priceStated": 32.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "tomato paste": {
+  "perG": 0.011111111111111112,
+  "priceStated": 1.5,
+  "qtyStated": 135.0,
+  "yield": 1.0
+ },
+ "kidney beans": {
+  "perG": 0.011458333333333333,
+  "priceStated": 2.75,
+  "qtyStated": 240.0,
+  "yield": 1.0
+ },
+ "vegetable stock cubes": {
+  "perG": 0.005078125,
+  "priceStated": 3.25,
+  "qtyStated": 640.0,
+  "yield": 1.0
+ },
+ "bay leaf": {
+  "perG": 0.15,
+  "priceStated": 2.25,
+  "qtyStated": 15.0,
+  "yield": 1.0
+ },
+ "dried rosemary": {
+  "perG": 0.105,
+  "priceStated": 5.25,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "dried thyme": {
+  "perG": 0.053,
+  "priceStated": 13.25,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "chicken stock powder": {
+  "perG": 0.005078125,
+  "priceStated": 3.25,
+  "qtyStated": 640.0,
+  "yield": 1.0
+ },
+ "cooked egg noodles": {
+  "perG": 0.0125,
+  "priceStated": 3.75,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "cooked black beans": {
+  "perG": 0.029166666666666667,
+  "priceStated": 7.0,
+  "qtyStated": 240.0,
+  "yield": 1.0
+ },
+ "cumin powder": {
+  "perG": 0.07142857142857142,
+  "priceStated": 10.0,
+  "qtyStated": 140.0,
+  "yield": 1.0
+ },
+ "tomato": {
+  "perG": 0.00823529411764706,
+  "priceStated": 7.0,
+  "qtyStated": 1000.0,
+  "yield": 0.85
+ },
+ "nutella": {
+  "perG": 0.0392156862745098,
+  "priceStated": 30.0,
+  "qtyStated": 900.0,
+  "yield": 0.85
+ },
+ "egg": {
+  "perG": 0.6,
+  "priceStated": 18.0,
+  "qtyStated": 30.0,
+  "yield": 1.0
+ },
+ "samosa sheet": {
+  "perG": 0.22,
+  "priceStated": 11.0,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "zaatar": {
+  "perG": 0.012,
+  "priceStated": 6.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "ginger": {
+  "perG": 0.00775,
+  "priceStated": 15.5,
+  "qtyStated": 2000.0,
+  "yield": 1.0
+ },
+ "green onion": {
+  "perG": 0.01956521739130435,
+  "priceStated": 9.0,
+  "qtyStated": 500.0,
+  "yield": 0.92
+ },
+ "zucchini": {
+  "perG": 0.008421052631578947,
+  "priceStated": 8.0,
+  "qtyStated": 1000.0,
+  "yield": 0.95
+ },
+ "potato cheese balls ryoukak": {
+  "perG": 0.016923076923076923,
+  "priceStated": 44.0,
+  "qtyStated": 2600.0,
+  "yield": 1.0
+ },
+ "red cabbage": {
+  "perG": 0.0037974683544303796,
+  "priceStated": 3.0,
+  "qtyStated": 1000.0,
+  "yield": 0.79
+ },
+ "peanuts": {
+  "perG": 0.03333333333333333,
+  "priceStated": 5.0,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "soy sauce": {
+  "perG": 0.0075,
+  "priceStated": 7.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "sesame seeds": {
+  "perG": 0.0165,
+  "priceStated": 8.25,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "peanut butter": {
+  "perG": 0.023,
+  "priceStated": 11.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "sriracha": {
+  "perG": 0.03529411764705882,
+  "priceStated": 9.0,
+  "qtyStated": 255.0,
+  "yield": 1.0
+ },
+ "vegetable oil": {
+  "perG": 0.004186046511627907,
+  "priceStated": 54.0,
+  "qtyStated": 12900.0,
+  "yield": 1.0
+ },
+ "green beans": {
+  "perG": 0.015,
+  "priceStated": 13.5,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "shrimp": {
+  "perG": 0.0305,
+  "priceStated": 30.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "vermicelli noodles": {
+  "perG": 0.008,
+  "priceStated": 8.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "peas": {
+  "perG": 0.014166666666666666,
+  "priceStated": 25.5,
+  "qtyStated": 1800.0,
+  "yield": 1.0
+ },
+ "corn": {
+  "perG": 0.019230769230769232,
+  "priceStated": 5.0,
+  "qtyStated": 260.0,
+  "yield": 1.0
+ },
+ "coriander": {
+  "perG": 0.029166666666666667,
+  "priceStated": 35.0,
+  "qtyStated": 2000.0,
+  "yield": 0.6
+ },
+ "mint": {
+  "perG": 0.03166666666666667,
+  "priceStated": 9.5,
+  "qtyStated": 500.0,
+  "yield": 0.6
+ },
+ "cooked rice": {
+  "perG": 0.01,
+  "priceStated": 100.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "sweet potato": {
+  "perG": 6.0,
+  "priceStated": 6.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "raisins": {
+  "perG": 0.0375,
+  "priceStated": 7.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "curry powder": {
+  "perG": 0.04,
+  "priceStated": 4.0,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "turmeric powder": {
+  "perG": 0.03,
+  "priceStated": 3.0,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "all spice": {
+  "perG": 0.05625,
+  "priceStated": 11.25,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "broccoli": {
+  "perG": 0.019375,
+  "priceStated": 7.75,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "basil": {
+  "perG": 0.07,
+  "priceStated": 70.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "black olives": {
+  "perG": 0.018,
+  "priceStated": 18.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "white cabbage": {
+  "perG": 0.0037974683544303796,
+  "priceStated": 3.0,
+  "qtyStated": 1000.0,
+  "yield": 0.79
+ },
+ "red chili pepper": {
+  "perG": 0.025277777777777777,
+  "priceStated": 22.75,
+  "qtyStated": 1000.0,
+  "yield": 0.9
+ },
+ "mozzarella cheese": {
+  "perG": 0.024,
+  "priceStated": 24.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "areesh cheese": {
+  "perG": 0.016,
+  "priceStated": 4.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "cream cheese": {
+  "perG": 0.03316326530612245,
+  "priceStated": 16.25,
+  "qtyStated": 490.0,
+  "yield": 1.0
+ },
+ "buratta cheese": {
+  "perG": 0.14166666666666666,
+  "priceStated": 17.0,
+  "qtyStated": 120.0,
+  "yield": 1.0
+ },
+ "smoked cheese": {
+  "perG": 0.055,
+  "priceStated": 55.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "semolina": {
+  "perG": 0.003375,
+  "priceStated": 6.75,
+  "qtyStated": 2000.0,
+  "yield": 1.0
+ },
+ "yeast": {
+  "perG": 0.046,
+  "priceStated": 5.75,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "ginger/garlic paste": {
+  "perG": 0.025,
+  "priceStated": 10.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "tomato sauce": {
+  "perG": 0.0056,
+  "priceStated": 14.0,
+  "qtyStated": 2500.0,
+  "yield": 1.0
+ },
+ "bbq sauce station": {
+  "perG": 0.028,
+  "priceStated": 4.2,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "penne pasta": {
+  "perG": 0.01,
+  "priceStated": 5.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "macaroni pasta": {
+  "perG": 0.012,
+  "priceStated": 6.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "jalapeno": {
+  "perG": 0.013571428571428571,
+  "priceStated": 9.5,
+  "qtyStated": 700.0,
+  "yield": 1.0
+ },
+ "fettuccine pasta": {
+  "perG": 0.012,
+  "priceStated": 6.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "frozen wedges": {
+  "perG": 0.012,
+  "priceStated": 18.0,
+  "qtyStated": 1500.0,
+  "yield": 1.0
+ },
+ "chicken wings": {
+  "perG": 0.0165,
+  "priceStated": 8.25,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "chicken wings fresh": {
+  "perG": 0.0165,
+  "priceStated": 16.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "tuna": {
+  "perG": 0.03783783783783784,
+  "priceStated": 7.0,
+  "qtyStated": 185.0,
+  "yield": 1.0
+ },
+ "ketchup": {
+  "perG": 0.014224137931034483,
+  "priceStated": 8.25,
+  "qtyStated": 580.0,
+  "yield": 1.0
+ },
+ "sweet chilli sauce": {
+  "perG": 0.021296296296296296,
+  "priceStated": 5.75,
+  "qtyStated": 270.0,
+  "yield": 1.0
+ },
+ "fish sauce": {
+  "perG": 0.013333333333333334,
+  "priceStated": 10.0,
+  "qtyStated": 750.0,
+  "yield": 1.0
+ },
+ "pomegranete molasses": {
+  "perG": 0.023026315789473683,
+  "priceStated": 8.75,
+  "qtyStated": 380.0,
+  "yield": 1.0
+ },
+ "ranch sauce": {
+  "perG": 0.026714801444043323,
+  "priceStated": 7.4,
+  "qtyStated": 277.0,
+  "yield": 1.0
+ },
+ "buffalo sauce": {
+  "perG": 0.021830985915492956,
+  "priceStated": 7.75,
+  "qtyStated": 355.0,
+  "yield": 1.0
+ },
+ "b.b.q sauce": {
+  "perG": 0.01926691729323308,
+  "priceStated": 10.25,
+  "qtyStated": 532.0,
+  "yield": 1.0
+ },
+ "sriracha sauce": {
+  "perG": 0.02668918918918919,
+  "priceStated": 19.75,
+  "qtyStated": 740.0,
+  "yield": 1.0
+ },
+ "white pepper": {
+  "perG": 0.06875,
+  "priceStated": 13.75,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "mix masala": {
+  "perG": 0.035,
+  "priceStated": 3.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "tandoori masala": {
+  "perG": 0.035,
+  "priceStated": 3.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "food colour": {
+  "perG": 0.09821428571428571,
+  "priceStated": 2.75,
+  "qtyStated": 28.0,
+  "yield": 1.0
+ },
+ "bay leaves": {
+  "perG": 0.175,
+  "priceStated": 5.25,
+  "qtyStated": 30.0,
+  "yield": 1.0
+ },
+ "ginger powder": {
+  "perG": 0.045,
+  "priceStated": 9.0,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "paprika powder": {
+  "perG": 0.05125,
+  "priceStated": 10.25,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "mushroom": {
+  "perG": 0.028,
+  "priceStated": 7.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "mushroom can": {
+  "perG": 0.015,
+  "priceStated": 6.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "spinach": {
+  "perG": 0.01888888888888889,
+  "priceStated": 8.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "rocket leaves": {
+  "perG": 0.16,
+  "priceStated": 10.0,
+  "qtyStated": 125.0,
+  "yield": 0.5
+ },
+ "baby spinach": {
+  "perG": 0.10666666666666667,
+  "priceStated": 10.0,
+  "qtyStated": 125.0,
+  "yield": 0.75
+ },
+ "green bell pepper": {
+  "perG": 0.00875,
+  "priceStated": 7.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "chicken nuggets": {
+  "perG": 0.03625,
+  "priceStated": 14.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "pepperoni slice": {
+  "perG": 0.042,
+  "priceStated": 252.0,
+  "qtyStated": 6000.0,
+  "yield": 1.0
+ },
+ "beef ham": {
+  "perG": 0.04863636363636364,
+  "priceStated": 107.0,
+  "qtyStated": 2200.0,
+  "yield": 1.0
+ },
+ "beef tenderloin": {
+  "perG": 0.1,
+  "priceStated": 100.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "cheddar cheese": {
+  "perG": 0.039,
+  "priceStated": 39.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "pasta sauce": {
+  "perG": 0.01305298353909465,
+  "priceStated": 20.3,
+  "qtyStated": 1555.2,
+  "yield": 1.0
+ },
+ "alfredo sauce": {
+  "perG": 0.011815217391304348,
+  "priceStated": 10.87,
+  "qtyStated": 920.0,
+  "yield": 1.0
+ },
+ "pesto sauce": {
+  "perG": 0.0495814360770578,
+  "priceStated": 283.11,
+  "qtyStated": 5710.0,
+  "yield": 1.0
+ },
+ "black beans sauce": {
+  "perG": 0.017458333333333336,
+  "priceStated": 8.38,
+  "qtyStated": 480.0,
+  "yield": 1.0
+ },
+ "dough": {
+  "perG": 0.003909719158947214,
+  "priceStated": 53.18,
+  "qtyStated": 13602.0,
+  "yield": 1.0
+ },
+ "tandoori chicken": {
+  "perG": 0.027809999999999998,
+  "priceStated": 27.81,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "pizza sauce": {
+  "perG": 0.012336613955545726,
+  "priceStated": 27.89,
+  "qtyStated": 2260.75,
+  "yield": 1.0
+ },
+ "bruschetta tomato mix": {
+  "perG": 0.003979899497487437,
+  "priceStated": 3.96,
+  "qtyStated": 995.0,
+  "yield": 1.0
+ },
+ "mix pepper": {
+  "perG": 0.044820512820512824,
+  "priceStated": 8.74,
+  "qtyStated": 195.0,
+  "yield": 1.0
+ },
+ "sriracha mayo sauce": {
+  "perG": 0.030427184466019417,
+  "priceStated": 15.67,
+  "qtyStated": 515.0,
+  "yield": 1.0
+ },
+ "mayo garlic sauce": {
+  "perG": 0.03232380952380952,
+  "priceStated": 16.97,
+  "qtyStated": 525.0,
+  "yield": 1.0
+ },
+ "risotto rice": {
+  "perG": 0.022,
+  "priceStated": 22.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "cajun spicy": {
+  "perG": 0.11,
+  "priceStated": 5.5,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "cajun seasoning": {
+  "perG": 0.09066666666666667,
+  "priceStated": 12.24,
+  "qtyStated": 135.0,
+  "yield": 1.0
+ },
+ "teryaki sauce": {
+  "perG": 0.04310344827586207,
+  "priceStated": 12.5,
+  "qtyStated": 290.0,
+  "yield": 1.0
+ },
+ "mac n cheese sauce": {
+  "perG": 0.02111764705882353,
+  "priceStated": 7.18,
+  "qtyStated": 340.0,
+  "yield": 1.0
+ },
+ "breadcrumbs": {
+  "perG": 0.0375,
+  "priceStated": 7.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "breaded chicken": {
+  "perG": 0.02187542778918549,
+  "priceStated": 31.96,
+  "qtyStated": 1461.0,
+  "yield": 1.0
+ },
+ "pineapple": {
+  "perG": 0.024285714285714285,
+  "priceStated": 8.5,
+  "qtyStated": 500.0,
+  "yield": 0.7
+ },
+ "cajun ketchup": {
+  "perG": 0.02595,
+  "priceStated": 31.14,
+  "qtyStated": 1200.0,
+  "yield": 1.0
+ },
+ "panko": {
+  "perG": 0.0375,
+  "priceStated": 7.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "crouton": {
+  "perG": 0.16,
+  "priceStated": 4.0,
+  "qtyStated": 25.0,
+  "yield": 1.0
+ },
+ "iceberg lettuce": {
+  "perG": 0.025,
+  "priceStated": 10.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "sweet chili sauce": {
+  "perG": 0.03333333333333333,
+  "priceStated": 14.5,
+  "qtyStated": 435.0,
+  "yield": 1.0
+ },
+ "sweet chili mayo": {
+  "perG": 0.03354705882352941,
+  "priceStated": 57.03,
+  "qtyStated": 1700.0,
+  "yield": 1.0
+ },
+ "frozen pomegranate": {
+  "perG": 0.02125,
+  "priceStated": 8.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "oats": {
+  "perG": 0.034444444444444444,
+  "priceStated": 15.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "cocoa powder": {
+  "perG": 0.064,
+  "priceStated": 8.0,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "sweetner calorie free": {
+  "perG": 0.15166666666666667,
+  "priceStated": 22.75,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "water": {
+  "perG": 0.00036842105263157896,
+  "priceStated": 7.0,
+  "qtyStated": 19000.0,
+  "yield": 1.0
+ },
+ "blueberries": {
+  "perG": 0.06,
+  "priceStated": 15.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "pudding rice": {
+  "perG": 0.013235294117647059,
+  "priceStated": 2.25,
+  "qtyStated": 170.0,
+  "yield": 1.0
+ },
+ "semi skimmed milk": {
+  "perG": 0.006,
+  "priceStated": 6.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "grated nutmeg": {
+  "perG": 0.13125,
+  "priceStated": 5.25,
+  "qtyStated": 40.0,
+  "yield": 1.0
+ },
+ "large russet potatoes": {
+  "perG": 0.019,
+  "priceStated": 19.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "white whole wheat flour": {
+  "perG": 0.00285,
+  "priceStated": 28.5,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "lemon zest": {
+  "perG": 0.009285714285714286,
+  "priceStated": 13.0,
+  "qtyStated": 1400.0,
+  "yield": 1.0
+ },
+ "tartar sauce": {
+  "perG": 0.052083333333333336,
+  "priceStated": 7.5,
+  "qtyStated": 144.0,
+  "yield": 1.0
+ },
+ "chicken breasts": {
+  "perG": 0.02,
+  "priceStated": 18.0,
+  "qtyStated": 1000.0,
+  "yield": 0.9
+ },
+ "chicken breasts fresh": {
+  "perG": 0.0255,
+  "priceStated": 25.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "louisiana-style hot sauce": {
+  "perG": 0.022598870056497175,
+  "priceStated": 4.0,
+  "qtyStated": 177.0,
+  "yield": 1.0
+ },
+ "butter": {
+  "perG": 0.03,
+  "priceStated": 750.0,
+  "qtyStated": 25000.0,
+  "yield": 1.0
+ },
+ "multigrain rice cakes": {
+  "perG": 0.16153846153846155,
+  "priceStated": 21.0,
+  "qtyStated": 130.0,
+  "yield": 1.0
+ },
+ "onion rings station": {
+  "perG": 0.017499999999999998,
+  "priceStated": 1.4,
+  "qtyStated": 80.0,
+  "yield": 1.0
+ },
+ "shawarma quesadillas": {
+  "perG": 3.2,
+  "priceStated": 3.2,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "dijon mustard": {
+  "perG": 0.065,
+  "priceStated": 13.0,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "sea salt": {
+  "perG": 0.0045,
+  "priceStated": 4.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "cannellini beans": {
+  "perG": 0.01875,
+  "priceStated": 7.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "milk low fat": {
+  "perG": 0.00625,
+  "priceStated": 25.0,
+  "qtyStated": 4000.0,
+  "yield": 1.0
+ },
+ "acai": {
+  "perG": 0.05277777777777778,
+  "priceStated": 190.0,
+  "qtyStated": 3600.0,
+  "yield": 1.0
+ },
+ "maca powder": {
+  "perG": 0.35,
+  "priceStated": 24.5,
+  "qtyStated": 70.0,
+  "yield": 1.0
+ },
+ "parsnip": {
+  "perG": 0.035,
+  "priceStated": 35.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "red chili paste": {
+  "perG": 0.015,
+  "priceStated": 1.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "almond milk": {
+  "perG": 0.012,
+  "priceStated": 12.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "papaya": {
+  "perG": 0.0571875,
+  "priceStated": 45.75,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "banana": {
+  "perG": 0.012857142857142857,
+  "priceStated": 9.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "cinnamon powder": {
+  "perG": 0.0525,
+  "priceStated": 5.25,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "cloves powder": {
+  "perG": 0.11,
+  "priceStated": 11.0,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "cashew": {
+  "perG": 0.045,
+  "priceStated": 45.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "pomegranate seeds": {
+  "perG": 0.041666666666666664,
+  "priceStated": 12.5,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "goji berries": {
+  "perG": 0.159,
+  "priceStated": 39.75,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "erythritol sweetner": {
+  "perG": 0.15166666666666667,
+  "priceStated": 22.75,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "almond flour": {
+  "perG": 0.09602649006622517,
+  "priceStated": 43.5,
+  "qtyStated": 453.0,
+  "yield": 1.0
+ },
+ "vanilla extract": {
+  "perG": 0.09821428571428571,
+  "priceStated": 2.75,
+  "qtyStated": 28.0,
+  "yield": 1.0
+ },
+ "brown sugar": {
+  "perG": 0.014,
+  "priceStated": 14.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "rice vinegar": {
+  "perG": 0.01875,
+  "priceStated": 3.75,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "cornstarch": {
+  "perG": 0.011428571428571429,
+  "priceStated": 4.0,
+  "qtyStated": 350.0,
+  "yield": 1.0
+ },
+ "whole wheat flour": {
+  "perG": 0.0045,
+  "priceStated": 4.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "ground beef": {
+  "perG": 0.025,
+  "priceStated": 25.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "potato": {
+  "perG": 0.006875,
+  "priceStated": 5.5,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "dry parsley": {
+  "perG": 0.15625,
+  "priceStated": 5.0,
+  "qtyStated": 40.0,
+  "yield": 0.8
+ },
+ "italian seasoning": {
+  "perG": 0.25735294117647056,
+  "priceStated": 7.0,
+  "qtyStated": 34.0,
+  "yield": 0.8
+ },
+ "cherries dried": {
+  "perG": 0.075,
+  "priceStated": 60.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "kale": {
+  "perG": 0.054285714285714284,
+  "priceStated": 38.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "maple syrup": {
+  "perG": 0.10222222222222223,
+  "priceStated": 46.0,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "dry quinoa": {
+  "perG": 0.064,
+  "priceStated": 32.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "apple cider vinegar": {
+  "perG": 0.014006342494714588,
+  "priceStated": 13.25,
+  "qtyStated": 946.0,
+  "yield": 1.0
+ },
+ "blueberry frozen": {
+  "perG": 0.053,
+  "priceStated": 13.25,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "greek yogurt": {
+  "perG": 0.023333333333333334,
+  "priceStated": 3.5,
+  "qtyStated": 150.0,
+  "yield": 1.0
+ },
+ "tortilla bread": {
+  "perG": 0.75,
+  "priceStated": 90.0,
+  "qtyStated": 120.0,
+  "yield": 1.0
+ },
+ "black beans": {
+  "perG": 0.026923076923076925,
+  "priceStated": 7.0,
+  "qtyStated": 260.0,
+  "yield": 1.0
+ },
+ "chili powder": {
+  "perG": 0.03125,
+  "priceStated": 2.5,
+  "qtyStated": 80.0,
+  "yield": 1.0
+ },
+ "avocado": {
+  "perG": 0.045,
+  "priceStated": 45.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "hot sauce": {
+  "perG": 0.008438818565400843,
+  "priceStated": 4.0,
+  "qtyStated": 474.0,
+  "yield": 1.0
+ },
+ "yogurt": {
+  "perG": 0.0035,
+  "priceStated": 35.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "seabass fillet": {
+  "perG": 0.025,
+  "priceStated": 25.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "brioche bread": {
+  "perG": 0.02,
+  "priceStated": 10.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "red vinegar": {
+  "perG": 0.009513742071881607,
+  "priceStated": 4.5,
+  "qtyStated": 473.0,
+  "yield": 1.0
+ },
+ "chickpeas": {
+  "perG": 0.0115,
+  "priceStated": 11.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "blue cheese": {
+  "perG": 0.112,
+  "priceStated": 28.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "light vinaigrette dressing": {
+  "perG": 0.037526427061310784,
+  "priceStated": 17.75,
+  "qtyStated": 473.0,
+  "yield": 1.0
+ },
+ "parmesan cheese": {
+  "perG": 0.054,
+  "priceStated": 54.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "ricotta cheese": {
+  "perG": 0.067,
+  "priceStated": 16.75,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "emmental cheese": {
+  "perG": 0.057,
+  "priceStated": 14.25,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "eggplant": {
+  "perG": 0.002,
+  "priceStated": 2.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "sundried tomato": {
+  "perG": 0.162,
+  "priceStated": 162.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "spread cheese": {
+  "perG": 0.03520408163265306,
+  "priceStated": 17.25,
+  "qtyStated": 490.0,
+  "yield": 1.0
+ },
+ "baking powder": {
+  "perG": 0.03222222222222222,
+  "priceStated": 7.25,
+  "qtyStated": 225.0,
+  "yield": 1.0
+ },
+ "all purpose flour": {
+  "perG": 0.0028,
+  "priceStated": 28.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "puff pastry": {
+  "perG": 0.01875,
+  "priceStated": 7.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "coconut flakes": {
+  "perG": 0.04772727272727273,
+  "priceStated": 525.0,
+  "qtyStated": 11000.0,
+  "yield": 1.0
+ },
+ "pistachio": {
+  "perG": 0.072,
+  "priceStated": 72.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "milk": {
+  "perG": 0.005833333333333334,
+  "priceStated": 70.0,
+  "qtyStated": 12000.0,
+  "yield": 1.0
+ },
+ "cooking cream": {
+  "perG": 0.0165,
+  "priceStated": 165.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "sweetened condensed milk": {
+  "perG": 0.01375,
+  "priceStated": 5.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "parlsey": {
+  "perG": 0.029166666666666667,
+  "priceStated": 35.0,
+  "qtyStated": 2000.0,
+  "yield": 0.6
+ },
+ "brown rice": {
+  "perG": 0.0085,
+  "priceStated": 8.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "nori sheets": {
+  "perG": 1.05,
+  "priceStated": 105.0,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "frozen blackberries": {
+  "perG": 0.04428571428571428,
+  "priceStated": 15.5,
+  "qtyStated": 350.0,
+  "yield": 1.0
+ },
+ "flaxseeds": {
+  "perG": 0.0475,
+  "priceStated": 19.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "orzo pasta": {
+  "perG": 0.005,
+  "priceStated": 2.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "coconut oil": {
+  "perG": 0.0175,
+  "priceStated": 17.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "garam masala": {
+  "perG": 0.065,
+  "priceStated": 6.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "cauliflower": {
+  "perG": 0.0045,
+  "priceStated": 4.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "coconut milk": {
+  "perG": 0.011875,
+  "priceStated": 4.75,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "worcestershire": {
+  "perG": 0.030508474576271188,
+  "priceStated": 9.0,
+  "qtyStated": 295.0,
+  "yield": 1.0
+ },
+ "sour cream": {
+  "perG": 0.0425,
+  "priceStated": 4.25,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "dry basil": {
+  "perG": 0.175,
+  "priceStated": 5.25,
+  "qtyStated": 30.0,
+  "yield": 1.0
+ },
+ "ciabatta": {
+  "perG": 0.022222222222222223,
+  "priceStated": 2.0,
+  "qtyStated": 90.0,
+  "yield": 1.0
+ },
+ "halloumi cheese": {
+  "perG": 0.042,
+  "priceStated": 42.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "balsamic glaze": {
+  "perG": 0.074,
+  "priceStated": 18.5,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "baking soda": {
+  "perG": 0.016519823788546256,
+  "priceStated": 7.5,
+  "qtyStated": 454.0,
+  "yield": 1.0
+ },
+ "vanilla frosting": {
+  "perG": 0.03200883002207505,
+  "priceStated": 14.5,
+  "qtyStated": 453.0,
+  "yield": 1.0
+ },
+ "smoked turkey": {
+  "perG": 0.045,
+  "priceStated": 45.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "salsa": {
+  "perG": 0.03492063492063492,
+  "priceStated": 11.0,
+  "qtyStated": 315.0,
+  "yield": 1.0
+ },
+ "guacamole": {
+  "perG": 0.05,
+  "priceStated": 50.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "freekeh": {
+  "perG": 0.0315,
+  "priceStated": 15.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "beetroot": {
+  "perG": 0.007,
+  "priceStated": 3.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "white beans": {
+  "perG": 0.019230769230769232,
+  "priceStated": 3.0,
+  "qtyStated": 260.0,
+  "yield": 0.6
+ },
+ "couscous": {
+  "perG": 0.0325,
+  "priceStated": 9.75,
+  "qtyStated": 500.0,
+  "yield": 0.6
+ },
+ "onion powder": {
+  "perG": 0.0625,
+  "priceStated": 7.5,
+  "qtyStated": 200.0,
+  "yield": 0.6
+ },
+ "fresh basil": {
+  "perG": 0.08666666666666667,
+  "priceStated": 52.0,
+  "qtyStated": 1000.0,
+  "yield": 0.6
+ },
+ "salmon fillet": {
+  "perG": 0.07444444444444444,
+  "priceStated": 67.0,
+  "qtyStated": 1000.0,
+  "yield": 0.9
+ },
+ "asparagus": {
+  "perG": 0.07037037037037037,
+  "priceStated": 9.5,
+  "qtyStated": 150.0,
+  "yield": 0.9
+ },
+ "dried dill": {
+  "perG": 0.625,
+  "priceStated": 18.75,
+  "qtyStated": 30.0,
+  "yield": 1.0
+ },
+ "vegetable stock powder": {
+  "perG": 0.11875,
+  "priceStated": 9.5,
+  "qtyStated": 80.0,
+  "yield": 1.0
+ },
+ "mayonaise": {
+  "perG": 0.005263157894736842,
+  "priceStated": 20.0,
+  "qtyStated": 3800.0,
+  "yield": 1.0
+ },
+ "white bread": {
+  "perG": 1.0,
+  "priceStated": 1.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "icing sugar": {
+  "perG": 0.0155,
+  "priceStated": 7.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "whipping cream": {
+  "perG": 0.024,
+  "priceStated": 24.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "strawberry": {
+  "perG": 0.052,
+  "priceStated": 13.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "leek": {
+  "perG": 0.016,
+  "priceStated": 16.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "yellow bell pepper": {
+  "perG": 0.004615384615384616,
+  "priceStated": 15.0,
+  "qtyStated": 5000.0,
+  "yield": 0.65
+ },
+ "capers": {
+  "perG": 0.02727272727272727,
+  "priceStated": 15.0,
+  "qtyStated": 550.0,
+  "yield": 1.0
+ },
+ "brown arabic bread": {
+  "perG": 0.3333333333333333,
+  "priceStated": 1.0,
+  "qtyStated": 3.0,
+  "yield": 1.0
+ },
+ "lamb mince": {
+  "perG": 0.07,
+  "priceStated": 70.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "7 spices": {
+  "perG": 0.08793103448275862,
+  "priceStated": 12.75,
+  "qtyStated": 145.0,
+  "yield": 1.0
+ },
+ "chicken thighs": {
+  "perG": 0.008333333333333333,
+  "priceStated": 7.5,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "chicken tighs fresh": {
+  "perG": 0.02,
+  "priceStated": 20.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "skewers": {
+  "perG": 0.0425,
+  "priceStated": 4.25,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "taco seasoning": {
+  "perG": 0.3,
+  "priceStated": 7.5,
+  "qtyStated": 25.0,
+  "yield": 1.0
+ },
+ "pumpkin butternut": {
+  "perG": 0.014285714285714285,
+  "priceStated": 10.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "multigrain bread": {
+  "perG": 1.17,
+  "priceStated": 1.17,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "chia seeds": {
+  "perG": 0.03,
+  "priceStated": 30.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "raspberries": {
+  "perG": 0.116,
+  "priceStated": 14.5,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "cardamom powder": {
+  "perG": 0.2375,
+  "priceStated": 47.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "nutmeg powder": {
+  "perG": 0.05,
+  "priceStated": 50.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "celery": {
+  "perG": 0.0295,
+  "priceStated": 14.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "coconut cream": {
+  "perG": 0.0125,
+  "priceStated": 5.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "bagel": {
+  "perG": 2.0,
+  "priceStated": 2.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "baby arugula": {
+  "perG": 0.08,
+  "priceStated": 10.0,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "pear": {
+  "perG": 0.009,
+  "priceStated": 4.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "pepperjack cheese": {
+  "perG": 0.0473568281938326,
+  "priceStated": 10.75,
+  "qtyStated": 227.0,
+  "yield": 1.0
+ },
+ "low cal mayonaise": {
+  "perG": 0.046363636363636364,
+  "priceStated": 12.75,
+  "qtyStated": 275.0,
+  "yield": 1.0
+ },
+ "spicy brown mustard": {
+  "perG": 0.01911764705882353,
+  "priceStated": 6.5,
+  "qtyStated": 340.0,
+  "yield": 1.0
+ },
+ "chocolate chips": {
+  "perG": 0.0725,
+  "priceStated": 14.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "coffee gold": {
+  "perG": 0.15625,
+  "priceStated": 31.25,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "italian dressing": {
+  "perG": 0.035580524344569285,
+  "priceStated": 9.5,
+  "qtyStated": 267.0,
+  "yield": 1.0
+ },
+ "oyster sauce": {
+  "perG": 0.025,
+  "priceStated": 8.75,
+  "qtyStated": 350.0,
+  "yield": 1.0
+ },
+ "whole chicken": {
+  "perG": 0.008,
+  "priceStated": 96.0,
+  "qtyStated": 12000.0,
+  "yield": 1.0
+ },
+ "whole chicken fresh": {
+  "perG": 0.02,
+  "priceStated": 24.0,
+  "qtyStated": 1200.0,
+  "yield": 1.0
+ },
+ "saj bread": {
+  "perG": 1.0,
+  "priceStated": 1.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "sumac": {
+  "perG": 0.025,
+  "priceStated": 25.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "flax seeds": {
+  "perG": 0.0475,
+  "priceStated": 9.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "lime": {
+  "perG": 0.016,
+  "priceStated": 4.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "cooking spray": {
+  "perG": 0.11702127659574468,
+  "priceStated": 16.5,
+  "qtyStated": 141.0,
+  "yield": 1.0
+ },
+ "pumpkin puree": {
+  "perG": 0.04058823529411765,
+  "priceStated": 34.5,
+  "qtyStated": 850.0,
+  "yield": 1.0
+ },
+ "smoked paprika": {
+  "perG": 0.11,
+  "priceStated": 5.5,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "coconut flour": {
+  "perG": 0.0455,
+  "priceStated": 22.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "bulgur": {
+  "perG": 0.031,
+  "priceStated": 15.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "saffron": {
+  "perG": 11.0,
+  "priceStated": 11.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "farro": {
+  "perG": 0.05845588235294118,
+  "priceStated": 39.75,
+  "qtyStated": 680.0,
+  "yield": 1.0
+ },
+ "edamame": {
+  "perG": 0.01875,
+  "priceStated": 7.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "green chili": {
+  "perG": 0.0075,
+  "priceStated": 0.75,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "raspberry vinaigrette": {
+  "perG": 0.035940803382663845,
+  "priceStated": 17.0,
+  "qtyStated": 473.0,
+  "yield": 1.0
+ },
+ "goat cheese": {
+  "perG": 0.13053097345132744,
+  "priceStated": 14.75,
+  "qtyStated": 113.0,
+  "yield": 1.0
+ },
+ "thai curry paste": {
+  "perG": 0.0659090909090909,
+  "priceStated": 7.25,
+  "qtyStated": 110.0,
+  "yield": 1.0
+ },
+ "chocolate protein powder": {
+  "perG": 0.10572687224669604,
+  "priceStated": 240.0,
+  "qtyStated": 2270.0,
+  "yield": 1.0
+ },
+ "pickles": {
+  "perG": 0.0045,
+  "priceStated": 45.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "peach": {
+  "perG": 0.0285,
+  "priceStated": 14.25,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "orange zest": {
+  "perG": 0.004,
+  "priceStated": 80.0,
+  "qtyStated": 20000.0,
+  "yield": 1.0
+ },
+ "bisquick pancake": {
+  "perG": 0.08057395143487858,
+  "priceStated": 36.5,
+  "qtyStated": 453.0,
+  "yield": 1.0
+ },
+ "granola": {
+  "perG": 0.04111111111111111,
+  "priceStated": 18.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "fanugreek": {
+  "perG": 0.04,
+  "priceStated": 4.0,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "tamarind paste": {
+  "perG": 0.024166666666666666,
+  "priceStated": 7.25,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "sushi rice": {
+  "perG": 0.0145,
+  "priceStated": 29.0,
+  "qtyStated": 2000.0,
+  "yield": 1.0
+ },
+ "rice flour": {
+  "perG": 0.00975,
+  "priceStated": 9.75,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "labneh": {
+  "perG": 0.016,
+  "priceStated": 16.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "imitation crab": {
+  "perG": 0.0725,
+  "priceStated": 14.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "bbq sauce": {
+  "perG": 0.02892156862745098,
+  "priceStated": 14.75,
+  "qtyStated": 510.0,
+  "yield": 1.0
+ },
+ "miso paste": {
+  "perG": 0.115,
+  "priceStated": 34.5,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "ulker biscuit": {
+  "perG": 0.013,
+  "priceStated": 13.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "relish": {
+  "perG": 0.011858974358974358,
+  "priceStated": 9.25,
+  "qtyStated": 780.0,
+  "yield": 1.0
+ },
+ "low fat cheese": {
+  "perG": 0.041428571428571426,
+  "priceStated": 29.0,
+  "qtyStated": 700.0,
+  "yield": 1.0
+ },
+ "frozen spinach": {
+  "perG": 0.01,
+  "priceStated": 4.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "fish fillet": {
+  "perG": 0.015,
+  "priceStated": 15.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "red apple": {
+  "perG": 0.008125,
+  "priceStated": 6.5,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "corn flour": {
+  "perG": 0.0175,
+  "priceStated": 1.75,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "date paste": {
+  "perG": 0.013,
+  "priceStated": 13.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "strawberry frozen": {
+  "perG": 0.01375,
+  "priceStated": 5.5,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "cranberry frozen": {
+  "perG": 0.106,
+  "priceStated": 13.25,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "cloves whole": {
+  "perG": 0.12142857142857143,
+  "priceStated": 8.5,
+  "qtyStated": 70.0,
+  "yield": 1.0
+ },
+ "cinnamon stick": {
+  "perG": 0.03125,
+  "priceStated": 6.25,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "cardamon whole": {
+  "perG": 0.179,
+  "priceStated": 89.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "raw basmati rice": {
+  "perG": 0.00695,
+  "priceStated": 34.75,
+  "qtyStated": 5000.0,
+  "yield": 1.0
+ },
+ "beef topside": {
+  "perG": 0.03,
+  "priceStated": 30.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "vegetable ghee": {
+  "perG": 0.015,
+  "priceStated": 60.0,
+  "qtyStated": 4000.0,
+  "yield": 1.0
+ },
+ "vegetable stock liquid": {
+  "perG": 0.004,
+  "priceStated": 0.8,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "rosemary fresh": {
+  "perG": 0.5333333333333333,
+  "priceStated": 8.0,
+  "qtyStated": 15.0,
+  "yield": 1.0
+ },
+ "beef fat": {
+  "perG": 0.03333333333333333,
+  "priceStated": 10.0,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "toothpick": {
+  "perG": 0.015,
+  "priceStated": 7.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "low fat yoghurt": {
+  "perG": 0.007,
+  "priceStated": 14.0,
+  "qtyStated": 2000.0,
+  "yield": 1.0
+ },
+ "bahraini masala": {
+  "perG": 0.065,
+  "priceStated": 6.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "chaat masala": {
+  "perG": 0.065,
+  "priceStated": 6.5,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "chives": {
+  "perG": 0.215,
+  "priceStated": 10.75,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "almond slices": {
+  "perG": 0.07,
+  "priceStated": 70.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "rose water": {
+  "perG": 0.0296875,
+  "priceStated": 23.75,
+  "qtyStated": 800.0,
+  "yield": 1.0
+ },
+ "coriander powder": {
+  "perG": 0.00925,
+  "priceStated": 9.25,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "fresh dill": {
+  "perG": 0.014,
+  "priceStated": 14.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "dry mint": {
+  "perG": 0.085,
+  "priceStated": 4.25,
+  "qtyStated": 50.0,
+  "yield": 1.0
+ },
+ "dates": {
+  "perG": 0.05625,
+  "priceStated": 45.0,
+  "qtyStated": 800.0,
+  "yield": 1.0
+ },
+ "radish red": {
+  "perG": 0.038,
+  "priceStated": 4.75,
+  "qtyStated": 125.0,
+  "yield": 1.0
+ },
+ "dark chocolate chips": {
+  "perG": 0.0725,
+  "priceStated": 14.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "white chocolate chips": {
+  "perG": 0.0725,
+  "priceStated": 14.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "hazelnut": {
+  "perG": 0.015,
+  "priceStated": 15.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "mango frozen": {
+  "perG": 0.0115,
+  "priceStated": 11.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "wasabi paste": {
+  "perG": 0.0875,
+  "priceStated": 17.5,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "lemon black": {
+  "perG": 0.0295,
+  "priceStated": 29.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "orange": {
+  "perG": 0.01,
+  "priceStated": 8.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "pistachio slices": {
+  "perG": 0.1815,
+  "priceStated": 90.75,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "pumpkin seeds": {
+  "perG": 0.035,
+  "priceStated": 35.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "dried fig": {
+  "perG": 0.04875,
+  "priceStated": 9.75,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "hummus tahini": {
+  "perG": 0.010526315789473684,
+  "priceStated": 4.0,
+  "qtyStated": 380.0,
+  "yield": 1.0
+ },
+ "pulled chicken": {
+  "perG": 0.011,
+  "priceStated": 11.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "watermelon": {
+  "perG": 0.005357142857142857,
+  "priceStated": 11.25,
+  "qtyStated": 3000.0,
+  "yield": 0.7
+ },
+ "vine leaves": {
+  "perG": 0.025510204081632654,
+  "priceStated": 25.0,
+  "qtyStated": 980.0,
+  "yield": 1.0
+ },
+ "lemon salt": {
+  "perG": 0.0075,
+  "priceStated": 7.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "chicken spices": {
+  "perG": 0.07777777777777778,
+  "priceStated": 1050.0,
+  "qtyStated": 13500.0,
+  "yield": 1.0
+ },
+ "shatta spice": {
+  "perG": 0.01125,
+  "priceStated": 225.0,
+  "qtyStated": 20000.0,
+  "yield": 1.0
+ },
+ "cooked corn flour": {
+  "perG": 0.003973684210526316,
+  "priceStated": 75.5,
+  "qtyStated": 19000.0,
+  "yield": 1.0
+ },
+ "hummus station": {
+  "perG": 0.017,
+  "priceStated": 3.4,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "muhammara station": {
+  "perG": 0.0285,
+  "priceStated": 5.7,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "baba ghannouj station": {
+  "perG": 0.0055000000000000005,
+  "priceStated": 1.1,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "mutabbal station": {
+  "perG": 0.00845,
+  "priceStated": 1.69,
+  "qtyStated": 200.0,
+  "yield": 1.0
+ },
+ "honey mustard station": {
+  "perG": 0.010307692307692308,
+  "priceStated": 100.5,
+  "qtyStated": 9750.0,
+  "yield": 1.0
+ },
+ "cheddar slice": {
+  "perG": 0.03875,
+  "priceStated": 31.0,
+  "qtyStated": 800.0,
+  "yield": 1.0
+ },
+ "chinese salt": {
+  "perG": 0.041,
+  "priceStated": 20.5,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "broasted spices station": {
+  "perG": 0.0291025641025641,
+  "priceStated": 22.7,
+  "qtyStated": 780.0,
+  "yield": 1.0
+ },
+ "broasted spices hot station": {
+  "perG": 0.023941176470588237,
+  "priceStated": 40.7,
+  "qtyStated": 1700.0,
+  "yield": 1.0
+ },
+ "grilled machine spices station": {
+  "perG": 0.002829457364341085,
+  "priceStated": 73.0,
+  "qtyStated": 25800.0,
+  "yield": 1.0
+ },
+ "meat shawarma marinated station": {
+  "perG": 0.036472995090016364,
+  "priceStated": 445.7,
+  "qtyStated": 12220.0,
+  "yield": 1.0
+ },
+ "chicken shawarma marinated station": {
+  "perG": 0.01323963133640553,
+  "priceStated": 1436.5,
+  "qtyStated": 108500.0,
+  "yield": 1.0
+ },
+ "meat shawarma spices station": {
+  "perG": 0.08702857142857144,
+  "priceStated": 609.2,
+  "qtyStated": 7000.0,
+  "yield": 1.0
+ },
+ "chicken shawarma spices station": {
+  "perG": 0.078456,
+  "priceStated": 980.7,
+  "qtyStated": 12500.0,
+  "yield": 1.0
+ },
+ "garlic cream station": {
+  "perG": 0.005674278328306764,
+  "priceStated": 263.4,
+  "qtyStated": 46420.0,
+  "yield": 1.0
+ },
+ "arabic bread": {
+  "perG": 0.125,
+  "priceStated": 1.0,
+  "qtyStated": 8.0,
+  "yield": 1.0
+ },
+ "tahina sauce station": {
+  "perG": 0.009469214437367304,
+  "priceStated": 22.3,
+  "qtyStated": 2355.0,
+  "yield": 1.0
+ },
+ "parsley mix station": {
+  "perG": 0.03675862068965517,
+  "priceStated": 53.3,
+  "qtyStated": 1450.0,
+  "yield": 1.0
+ },
+ "arabic spices": {
+  "perG": 0.03,
+  "priceStated": 150.0,
+  "qtyStated": 5000.0,
+  "yield": 1.0
+ },
+ "red pickles": {
+  "perG": 0.005,
+  "priceStated": 50.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "fries 9mm station": {
+  "perG": 0.0068,
+  "priceStated": 68.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "xfries station": {
+  "perG": 0.0072,
+  "priceStated": 72.0,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "spicy sauce station": {
+  "perG": 0.008819374369323917,
+  "priceStated": 43.7,
+  "qtyStated": 4955.0,
+  "yield": 1.0
+ },
+ "crispy strips station": {
+  "perG": 0.011425000000000001,
+  "priceStated": 182.8,
+  "qtyStated": 16000.0,
+  "yield": 1.0
+ },
+ "cheese al walad": {
+  "perG": 0.421875,
+  "priceStated": 13.5,
+  "qtyStated": 32.0,
+  "yield": 1.0
+ },
+ "crispy strips station fresh": {
+  "perG": 0.021175,
+  "priceStated": 338.8,
+  "qtyStated": 16000.0,
+  "yield": 1.0
+ },
+ "zinger strips station": {
+  "perG": 0.01148125,
+  "priceStated": 183.7,
+  "qtyStated": 16000.0,
+  "yield": 1.0
+ },
+ "zinger strips station fresh": {
+  "perG": 0.02085625,
+  "priceStated": 333.7,
+  "qtyStated": 16000.0,
+  "yield": 1.0
+ },
+ "sand meat marination station": {
+  "perG": 0.03497284716834756,
+  "priceStated": 225.4,
+  "qtyStated": 6445.0,
+  "yield": 1.0
+ },
+ "sand chicken marination station": {
+  "perG": 0.01112044817927171,
+  "priceStated": 79.4,
+  "qtyStated": 7140.0,
+  "yield": 1.0
+ },
+ "sand chicken marination fresh": {
+  "perG": 0.021260504201680675,
+  "priceStated": 151.8,
+  "qtyStated": 7140.0,
+  "yield": 1.0
+ },
+ "escalop chicken": {
+  "perG": 0.015263157894736841,
+  "priceStated": 17.4,
+  "qtyStated": 1140.0,
+  "yield": 1.0
+ },
+ "escalop chicken fresh": {
+  "perG": 0.026228070175438597,
+  "priceStated": 29.9,
+  "qtyStated": 1140.0,
+  "yield": 1.0
+ },
+ "chicken cordon roll patty": {
+  "perG": 0.012326732673267326,
+  "priceStated": 24.9,
+  "qtyStated": 2020.0,
+  "yield": 1.0
+ },
+ "chicken cordon roll patty fresh": {
+  "perG": 0.019752475247524753,
+  "priceStated": 39.9,
+  "qtyStated": 2020.0,
+  "yield": 1.0
+ },
+ "chicken breast breaded": {
+  "perG": 0.011153846153846153,
+  "priceStated": 14.5,
+  "qtyStated": 1300.0,
+  "yield": 1.0
+ },
+ "chicken breast breaded fresh": {
+  "perG": 0.019923076923076922,
+  "priceStated": 25.9,
+  "qtyStated": 1300.0,
+  "yield": 1.0
+ },
+ "mexicano chicken patty station": {
+  "perG": 0.01112215909090909,
+  "priceStated": 78.3,
+  "qtyStated": 7040.0,
+  "yield": 1.0
+ },
+ "mexicano chicken patty station fresh": {
+  "perG": 0.021406249999999998,
+  "priceStated": 150.7,
+  "qtyStated": 7040.0,
+  "yield": 1.0
+ },
+ "crepe patty": {
+  "perG": 0.007785714285714286,
+  "priceStated": 3.27,
+  "qtyStated": 420.0,
+  "yield": 1.0
+ },
+ "mozarella patty ryoukak": {
+  "perG": 0.03312331233123312,
+  "priceStated": 36.8,
+  "qtyStated": 1111.0,
+  "yield": 1.0
+ },
+ "samona bread": {
+  "perG": 0.5,
+  "priceStated": 3.0,
+  "qtyStated": 6.0,
+  "yield": 1.0
+ },
+ "zinger spicy sauce": {
+  "perG": 0.009583333333333333,
+  "priceStated": 11.5,
+  "qtyStated": 1200.0,
+  "yield": 1.0
+ },
+ "veggie mix": {
+  "perG": 0.008742857142857142,
+  "priceStated": 30.6,
+  "qtyStated": 3500.0,
+  "yield": 1.0
+ },
+ "meat n'shroom sauce": {
+  "perG": 0.008477732793522267,
+  "priceStated": 104.7,
+  "qtyStated": 12350.0,
+  "yield": 1.0
+ },
+ "crispy sandwich": {
+  "perG": 3.5,
+  "priceStated": 3.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "coleslaw ryoukak": {
+  "perG": 0.005714285714285714,
+  "priceStated": 20.0,
+  "qtyStated": 3500.0,
+  "yield": 1.0
+ },
+ "crispy wrap": {
+  "perG": 3.8,
+  "priceStated": 3.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "zinger sandwich": {
+  "perG": 3.5,
+  "priceStated": 3.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "zinger wrap": {
+  "perG": 3.8,
+  "priceStated": 3.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "philadelphia  cheese": {
+  "perG": 0.04242424242424243,
+  "priceStated": 70.0,
+  "qtyStated": 1650.0,
+  "yield": 1.0
+ },
+ "fajita sandwich": {
+  "perG": 4.6,
+  "priceStated": 4.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "fajita wrap fresh": {
+  "perG": 5.9,
+  "priceStated": 5.9,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "meat n'shroom sandwich": {
+  "perG": 8.7,
+  "priceStated": 8.7,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "escalop sandwich": {
+  "perG": 4.3,
+  "priceStated": 4.3,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "cordon chicken roll sandwich": {
+  "perG": 3.9,
+  "priceStated": 3.9,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "ufo bun": {
+  "perG": 3.5,
+  "priceStated": 3.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "ufc noodles": {
+  "perG": 0.02,
+  "priceStated": 5.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "ufo burger": {
+  "perG": 5.0,
+  "priceStated": 5.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "ufo burger fresh": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "station slaw burger": {
+  "perG": 2.7,
+  "priceStated": 2.7,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "station slaw burger fresh": {
+  "perG": 4.3,
+  "priceStated": 4.3,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "station chicken burger": {
+  "perG": 2.5,
+  "priceStated": 2.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "station chicken burger fresh": {
+  "perG": 4.4,
+  "priceStated": 4.4,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "mexicano sandwich": {
+  "perG": 4.9,
+  "priceStated": 4.9,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "ufo sauce": {
+  "perG": 0.011904761904761904,
+  "priceStated": 5.0,
+  "qtyStated": 420.0,
+  "yield": 1.0
+ },
+ "pickle juice": {
+  "perG": 0.025,
+  "priceStated": 7.5,
+  "qtyStated": 300.0,
+  "yield": 1.0
+ },
+ "potato bun": {
+  "perG": 1.0,
+  "priceStated": 8.0,
+  "qtyStated": 8.0,
+  "yield": 1.0
+ },
+ "coleslaw salad": {
+  "perG": 0.005174757281553398,
+  "priceStated": 53.3,
+  "qtyStated": 10300.0,
+  "yield": 1.0
+ },
+ "chicken wrap sandwich": {
+  "perG": 3.4,
+  "priceStated": 3.4,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "daqoos sauce": {
+  "perG": 0.008095238095238095,
+  "priceStated": 6.8,
+  "qtyStated": 840.0,
+  "yield": 1.0
+ },
+ "soft drink station": {
+  "perG": 2.0,
+  "priceStated": 2.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "water station": {
+  "perG": 1.0,
+  "priceStated": 1.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "pepsi big": {
+  "perG": 4.0,
+  "priceStated": 4.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "kofta patty": {
+  "perG": 0.03257575757575758,
+  "priceStated": 43.0,
+  "qtyStated": 1320.0,
+  "yield": 1.0
+ },
+ "minced beef": {
+  "perG": 0.03,
+  "priceStated": 30.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "meat shawarma sandwich large": {
+  "perG": 6.6,
+  "priceStated": 6.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "chicken shawarma sandwich large": {
+  "perG": 3.6,
+  "priceStated": 3.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "whole grilled chicken": {
+  "perG": 7.3,
+  "priceStated": 7.3,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "whole grilled chicken fresh": {
+  "perG": 26.4,
+  "priceStated": 26.4,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "whole broasted": {
+  "perG": 18.8,
+  "priceStated": 18.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "whole broasted fresh": {
+  "perG": 30.6,
+  "priceStated": 30.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "kobbah": {
+  "perG": 1.5,
+  "priceStated": 1.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "drumsticks chicken": {
+  "perG": 0.008148148148148147,
+  "priceStated": 88.0,
+  "qtyStated": 10800.0,
+  "yield": 1.0
+ },
+ "drumsticks chicken fresh": {
+  "perG": 0.024,
+  "priceStated": 24.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "french dressing": {
+  "perG": 0.01950585175552666,
+  "priceStated": 60.0,
+  "qtyStated": 3076.0,
+  "yield": 1.0
+ },
+ "american pickles": {
+  "perG": 0.03,
+  "priceStated": 15.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "pepsi small": {
+  "perG": 2.08,
+  "priceStated": 2.08,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "small bun": {
+  "perG": 1.0,
+  "priceStated": 1.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "chicken garlic sandwich": {
+  "perG": 2.8,
+  "priceStated": 2.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "whole chicken al waha fresh": {
+  "perG": 0.014833333333333334,
+  "priceStated": 17.8,
+  "qtyStated": 1200.0,
+  "yield": 1.0
+ },
+ "chicken breast al waha fresh": {
+  "perG": 0.036,
+  "priceStated": 18.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "zinger patty al waha fresh": {
+  "perG": 0.02873125,
+  "priceStated": 459.7,
+  "qtyStated": 16000.0,
+  "yield": 1.0
+ },
+ "whole chicken mazraaty fresh 1kg": {
+  "perG": 0.02,
+  "priceStated": 20.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "chicken pop up station": {
+  "perG": 5.4,
+  "priceStated": 5.4,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "kaake 150g ryoukak": {
+  "perG": 0.39,
+  "priceStated": 0.39,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "kaake 40g ryoukak": {
+  "perG": 0.1,
+  "priceStated": 0.1,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "ice bag": {
+  "perG": 0.003,
+  "priceStated": 3.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "garlic paste ryoukak": {
+  "perG": 0.006500000000000001,
+  "priceStated": 2.6,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "meat shawarma ryoukak": {
+  "perG": 0.03666666666666667,
+  "priceStated": 110.0,
+  "qtyStated": 3000.0,
+  "yield": 1.0
+ },
+ "tarator ryouk": {
+  "perG": 0.007235142118863049,
+  "priceStated": 2.8,
+  "qtyStated": 387.0,
+  "yield": 1.0
+ },
+ "fries ryoukak sadia": {
+  "perG": 0.008,
+  "priceStated": 20.0,
+  "qtyStated": 2500.0,
+  "yield": 1.0
+ },
+ "americana pizza": {
+  "perG": 0.010588235294117647,
+  "priceStated": 4.5,
+  "qtyStated": 425.0,
+  "yield": 1.0
+ },
+ "ryoukak pizza sauce": {
+  "perG": 0.012253829321663018,
+  "priceStated": 5.6,
+  "qtyStated": 457.0,
+  "yield": 1.0
+ },
+ "ryoukak burger patty": {
+  "perG": 0.022150735294117648,
+  "priceStated": 24.1,
+  "qtyStated": 1088.0,
+  "yield": 1.0
+ },
+ "burger sauce": {
+  "perG": 0.017037037037037035,
+  "priceStated": 2.3,
+  "qtyStated": 135.0,
+  "yield": 1.0
+ },
+ "falafel patty": {
+  "perG": 0.00852,
+  "priceStated": 85.2,
+  "qtyStated": 10000.0,
+  "yield": 1.0
+ },
+ "crispy patty ryoukak": {
+  "perG": 0.013326595437481952,
+  "priceStated": 92.3,
+  "qtyStated": 6926.0,
+  "yield": 1.0
+ },
+ "zinger patty ryoukak": {
+  "perG": 0.013384128809660724,
+  "priceStated": 93.1,
+  "qtyStated": 6956.0,
+  "yield": 1.0
+ },
+ "akkawi cheese": {
+  "perG": 0.04375,
+  "priceStated": 35.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "halloum baladi": {
+  "perG": 0.04,
+  "priceStated": 40.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "baladi fatayer": {
+  "perG": 0.2,
+  "priceStated": 4.0,
+  "qtyStated": 20.0,
+  "yield": 1.0
+ },
+ "lahme b3ajin": {
+  "perG": 0.012649640861931365,
+  "priceStated": 31.7,
+  "qtyStated": 2506.0,
+  "yield": 1.0
+ },
+ "pizza fatayer": {
+  "perG": 3.15,
+  "priceStated": 3.15,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "zaatar fatayer": {
+  "perG": 3.45,
+  "priceStated": 3.45,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "cheese fatayer": {
+  "perG": 3.95,
+  "priceStated": 3.95,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "meat fatayer": {
+  "perG": 1.81,
+  "priceStated": 1.81,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "foul plate ryoukak": {
+  "perG": 3.8,
+  "priceStated": 3.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "hummus ryoukak": {
+  "perG": 2.6,
+  "priceStated": 2.6,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "mix cheese baladi": {
+  "perG": 0.03,
+  "priceStated": 30.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "tahina sauce adrenaline": {
+  "perG": 0.018024691358024692,
+  "priceStated": 7.3,
+  "qtyStated": 405.0,
+  "yield": 1.0
+ },
+ "falafel adrenaline": {
+  "perG": 0.020494053064958828,
+  "priceStated": 22.4,
+  "qtyStated": 1093.0,
+  "yield": 1.0
+ },
+ "chicken sausage": {
+  "perG": 0.025757575757575757,
+  "priceStated": 8.5,
+  "qtyStated": 330.0,
+  "yield": 1.0
+ },
+ "hummus can": {
+  "perG": 0.013636363636363636,
+  "priceStated": 4.5,
+  "qtyStated": 330.0,
+  "yield": 1.0
+ },
+ "hummus adrenaline": {
+  "perG": 0.014799999999999999,
+  "priceStated": 5.55,
+  "qtyStated": 375.0,
+  "yield": 1.0
+ },
+ "sourdough bread": {
+  "perG": 0.6666666666666666,
+  "priceStated": 8.0,
+  "qtyStated": 12.0,
+  "yield": 1.0
+ },
+ "fresh lemon": {
+  "perG": 0.0055,
+  "priceStated": 5.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "sweet pepper": {
+  "perG": 0.13421052631578947,
+  "priceStated": 12.75,
+  "qtyStated": 95.0,
+  "yield": 1.0
+ },
+ "mango fresh": {
+  "perG": 0.042,
+  "priceStated": 21.0,
+  "qtyStated": 1000.0,
+  "yield": 0.5
+ },
+ "digestive biscuit": {
+  "perG": 0.016,
+  "priceStated": 4.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "kiri cheese": {
+  "perG": 0.03935185185185185,
+  "priceStated": 17.0,
+  "qtyStated": 432.0,
+  "yield": 1.0
+ },
+ "milk powder": {
+  "perG": 0.031875,
+  "priceStated": 25.5,
+  "qtyStated": 800.0,
+  "yield": 1.0
+ },
+ "jelly powder": {
+  "perG": 0.026470588235294117,
+  "priceStated": 2.25,
+  "qtyStated": 85.0,
+  "yield": 1.0
+ },
+ "bread crepe": {
+  "perG": 0.029166666666666667,
+  "priceStated": 5.25,
+  "qtyStated": 180.0,
+  "yield": 1.0
+ },
+ "dry grapes": {
+  "perG": 0.022,
+  "priceStated": 11.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "yellow zucchini": {
+  "perG": 0.08333333333333333,
+  "priceStated": 25.0,
+  "qtyStated": 500.0,
+  "yield": 0.6
+ },
+ "beef mixture adrenaline": {
+  "perG": 0.1036086956521739,
+  "priceStated": 23.83,
+  "qtyStated": 230.0,
+  "yield": 1.0
+ },
+ "burger patty": {
+  "perG": 0.022150735294117648,
+  "priceStated": 24.1,
+  "qtyStated": 1088.0,
+  "yield": 1.0
+ },
+ "frozen broccoli": {
+  "perG": 0.026785714285714284,
+  "priceStated": 15.0,
+  "qtyStated": 700.0,
+  "yield": 0.8
+ },
+ "hash brown": {
+  "perG": 0.0105,
+  "priceStated": 10.5,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "chicken luncheon meat": {
+  "perG": 0.02941,
+  "priceStated": 29.41,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "croissant": {
+  "perG": 4.0,
+  "priceStated": 4.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "rice chips brown": {
+  "perG": 0.112,
+  "priceStated": 112.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "berrys jam": {
+  "perG": 0.045,
+  "priceStated": 45.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "coconut water": {
+  "perG": 0.02,
+  "priceStated": 20.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "nachos chips": {
+  "perG": 0.012,
+  "priceStated": 12.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "chicken breasts adrenaline": {
+  "perG": 0.017948717948717947,
+  "priceStated": 21.0,
+  "qtyStated": 1170.0,
+  "yield": 1.0
+ },
+ "peeled tomato": {
+  "perG": 0.008,
+  "priceStated": 20.0,
+  "qtyStated": 2500.0,
+  "yield": 1.0
+ },
+ "pizza sauce adrenaline": {
+  "perG": 0.009953703703703702,
+  "priceStated": 4.3,
+  "qtyStated": 432.0,
+  "yield": 1.0
+ },
+ "passion fruit": {
+  "perG": 0.025,
+  "priceStated": 10.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "green graps": {
+  "perG": 0.02,
+  "priceStated": 8.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "red graps": {
+  "perG": 0.0475,
+  "priceStated": 19.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "black graps": {
+  "perG": 0.0225,
+  "priceStated": 9.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "brown bread": {
+  "perG": 0.008461538461538461,
+  "priceStated": 5.5,
+  "qtyStated": 650.0,
+  "yield": 1.0
+ },
+ "blackbarries": {
+  "perG": 0.12352941176470589,
+  "priceStated": 21.0,
+  "qtyStated": 170.0,
+  "yield": 1.0
+ },
+ "calrose rice": {
+  "perG": 0.009,
+  "priceStated": 9.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "demi glaze": {
+  "perG": 0.05,
+  "priceStated": 50.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "baby jem": {
+  "perG": 0.02625,
+  "priceStated": 21.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "spaghetti": {
+  "perG": 0.007070707070707071,
+  "priceStated": 3.5,
+  "qtyStated": 500.0,
+  "yield": 0.99
+ },
+ "paneer": {
+  "perG": 0.044444444444444446,
+  "priceStated": 200.0,
+  "qtyStated": 5000.0,
+  "yield": 0.9
+ },
+ "spring onion": {
+  "perG": 0.017777777777777778,
+  "priceStated": 4.0,
+  "qtyStated": 250.0,
+  "yield": 0.9
+ },
+ "majboos masala": {
+  "perG": 0.03469387755102041,
+  "priceStated": 17.0,
+  "qtyStated": 500.0,
+  "yield": 0.98
+ },
+ "thousand island sauce": {
+  "perG": 0.06666666666666667,
+  "priceStated": 15.0,
+  "qtyStated": 225.0,
+  "yield": 1.0
+ },
+ "majbous masala": {
+  "perG": 0.04,
+  "priceStated": 10.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "chickpeas can": {
+  "perG": 0.0125,
+  "priceStated": 3.5,
+  "qtyStated": 400.0,
+  "yield": 0.7
+ },
+ "matcha powder": {
+  "perG": 0.464,
+  "priceStated": 116.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "nestle cream": {
+  "perG": 0.028125,
+  "priceStated": 4.5,
+  "qtyStated": 160.0,
+  "yield": 1.0
+ },
+ "hot dog bun": {
+  "perG": 1.0,
+  "priceStated": 5.0,
+  "qtyStated": 5.0,
+  "yield": 1.0
+ },
+ "beef stock powder": {
+  "perG": 0.056712962962962965,
+  "priceStated": 24.5,
+  "qtyStated": 432.0,
+  "yield": 1.0
+ },
+ "staff rice": {
+  "perG": 0.005,
+  "priceStated": 5.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "lady finger": {
+  "perG": 0.011111111111111112,
+  "priceStated": 10.0,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "bottle gourd": {
+  "perG": 0.008888888888888889,
+  "priceStated": 8.0,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "salmon off cut": {
+  "perG": 0.016666666666666666,
+  "priceStated": 15.0,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "kiwi": {
+  "perG": 0.05375,
+  "priceStated": 21.5,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "cottage cheese": {
+  "perG": 0.04777777777777778,
+  "priceStated": 21.5,
+  "qtyStated": 450.0,
+  "yield": 1.0
+ },
+ "sweet soya sauce": {
+  "perG": 0.016,
+  "priceStated": 10.0,
+  "qtyStated": 625.0,
+  "yield": 1.0
+ },
+ "brioche muffins": {
+  "perG": 0.06,
+  "priceStated": 15.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "hollandaise sauce": {
+  "perG": 0.02373887240356083,
+  "priceStated": 8.0,
+  "qtyStated": 337.0,
+  "yield": 1.0
+ },
+ "beef bacon": {
+  "perG": 0.08928571428571429,
+  "priceStated": 30.0,
+  "qtyStated": 336.0,
+  "yield": 1.0
+ },
+ "roasted beef": {
+  "perG": 0.108,
+  "priceStated": 27.0,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "beef pastrami": {
+  "perG": 0.089,
+  "priceStated": 22.25,
+  "qtyStated": 250.0,
+  "yield": 1.0
+ },
+ "corn flakes": {
+  "perG": 0.032,
+  "priceStated": 16.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "cream of rice cnp": {
+  "perG": 0.11,
+  "priceStated": 110.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "whey protien nutrend": {
+  "perG": 0.156,
+  "priceStated": 156.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "lady finger biscuits": {
+  "perG": 0.045,
+  "priceStated": 18.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "panini bread": {
+  "perG": 2.0,
+  "priceStated": 2.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "orange juce": {
+  "perG": 0.04,
+  "priceStated": 40.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "caramel sauce": {
+  "perG": 0.01842105263157895,
+  "priceStated": 7.7,
+  "qtyStated": 440.0,
+  "yield": 0.95
+ },
+ "lolo rosso": {
+  "perG": 0.0325,
+  "priceStated": 13.0,
+  "qtyStated": 500.0,
+  "yield": 0.8
+ },
+ "fitness mayo": {
+  "perG": 0.015,
+  "priceStated": 13.5,
+  "qtyStated": 1000.0,
+  "yield": 0.9
+ },
+ "cooked quinoa": {
+  "perG": 0.035555555555555556,
+  "priceStated": 32.0,
+  "qtyStated": 900.0,
+  "yield": 1.0
+ },
+ "fajita chicken": {
+  "perG": 0.046,
+  "priceStated": 23.0,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "cajun shrimp": {
+  "perG": 0.0489,
+  "priceStated": 24.45,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "sesami beef": {
+  "perG": 0.12033333333333333,
+  "priceStated": 72.2,
+  "qtyStated": 600.0,
+  "yield": 1.0
+ },
+ "tofu": {
+  "perG": 0.057571428571428565,
+  "priceStated": 40.3,
+  "qtyStated": 700.0,
+  "yield": 1.0
+ },
+ "cardamom chciken curry": {
+  "perG": 0.0722,
+  "priceStated": 36.1,
+  "qtyStated": 500.0,
+  "yield": 1.0
+ },
+ "meat ball": {
+  "perG": 0.06866666666666667,
+  "priceStated": 41.2,
+  "qtyStated": 600.0,
+  "yield": 1.0
+ },
+ "black garlic sauce": {
+  "perG": 0.03115942028985507,
+  "priceStated": 4.3,
+  "qtyStated": 138.0,
+  "yield": 1.0
+ },
+ "dill yogurt": {
+  "perG": 0.017435897435897435,
+  "priceStated": 3.4,
+  "qtyStated": 195.0,
+  "yield": 1.0
+ },
+ "honey musterd": {
+  "perG": 0.018848167539267015,
+  "priceStated": 3.6,
+  "qtyStated": 191.0,
+  "yield": 1.0
+ },
+ "sriracha mayo": {
+  "perG": 0.01813186813186813,
+  "priceStated": 3.3,
+  "qtyStated": 182.0,
+  "yield": 1.0
+ },
+ "gaucamole": {
+  "perG": 0.03043478260869565,
+  "priceStated": 5.6,
+  "qtyStated": 184.0,
+  "yield": 1.0
+ },
+ "pica de gallo": {
+  "perG": 0.009420289855072464,
+  "priceStated": 1.3,
+  "qtyStated": 138.0,
+  "yield": 1.0
+ },
+ "hummus": {
+  "perG": 0.012147239263803681,
+  "priceStated": 9.9,
+  "qtyStated": 815.0,
+  "yield": 1.0
+ },
+ "broad beans": {
+  "perG": 0.0175,
+  "priceStated": 7.0,
+  "qtyStated": 400.0,
+  "yield": 1.0
+ },
+ "avocado oil": {
+  "perG": 0.097,
+  "priceStated": 97.0,
+  "qtyStated": 1000.0,
+  "yield": 1.0
+ },
+ "king chilli red": {
+  "perG": 0.035,
+  "priceStated": 28.0,
+  "qtyStated": 1000.0,
+  "yield": 0.8
+ },
+ "pancake": {
+  "perG": 2.65,
+  "priceStated": 2.65,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "pomegranate fresh": {
+  "perG": 0.03,
+  "priceStated": 21.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "mandarin fruit": {
+  "perG": 0.011428571428571429,
+  "priceStated": 8.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "ponzu sauce": {
+  "perG": 0.023214285714285715,
+  "priceStated": 13.0,
+  "qtyStated": 800.0,
+  "yield": 0.7
+ },
+ "chinese cabbage": {
+  "perG": 0.05142857142857143,
+  "priceStated": 36.0,
+  "qtyStated": 1000.0,
+  "yield": 0.7
+ },
+ "whole chicken 1100gr": {
+  "perG": 0.008727272727272728,
+  "priceStated": 96.0,
+  "qtyStated": 11000.0,
+  "yield": 1.0
+ },
+ "whole chicken 800gr": {
+  "perG": 0.00875,
+  "priceStated": 70.0,
+  "qtyStated": 8000.0,
+  "yield": 1.0
+ },
+ "whole chicken 900gr": {
+  "perG": 0.009,
+  "priceStated": 81.0,
+  "qtyStated": 9000.0,
+  "yield": 1.0
+ },
+ "whole chicken 1400gr": {
+  "perG": 0.008142857142857143,
+  "priceStated": 114.0,
+  "qtyStated": 14000.0,
+  "yield": 1.0
+ },
+ "whole chicken 1500gr": {
+  "perG": 0.008,
+  "priceStated": 120.0,
+  "qtyStated": 15000.0,
+  "yield": 1.0
+ },
+ "whole chicken 1300gr": {
+  "perG": 0.008,
+  "priceStated": 104.0,
+  "qtyStated": 13000.0,
+  "yield": 1.0
+ },
+ "whole chicken 1200gr": {
+  "perG": 0.008,
+  "priceStated": 96.0,
+  "qtyStated": 12000.0,
+  "yield": 1.0
+ },
+ "rice iftar": {
+  "perG": 0.0017142857142857142,
+  "priceStated": 60.0,
+  "qtyStated": 35000.0,
+  "yield": 1.0
+ },
+ "satue vegetabls": {
+  "perG": 0.012,
+  "priceStated": 1.2,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "grilled chicken": {
+  "perG": 0.0364,
+  "priceStated": 3.64,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "lava cake": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "beet root salad": {
+  "perG": 4.8,
+  "priceStated": 4.8,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "mashed potato": {
+  "perG": 0.012166666666666666,
+  "priceStated": 7.3,
+  "qtyStated": 600.0,
+  "yield": 1.0
+ },
+ "grilled steak": {
+  "perG": 0.1447,
+  "priceStated": 14.47,
+  "qtyStated": 100.0,
+  "yield": 1.0
+ },
+ "vitargo drink- fresh rasberry flavour": {
+  "perG": 15.0,
+  "priceStated": 15.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "vitargo drink- juicy mango flavour": {
+  "perG": 15.0,
+  "priceStated": 15.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "vitargo drink- sunny orange flavour": {
+  "perG": 15.0,
+  "priceStated": 15.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "oxygen chips- hot honey bbq": {
+  "perG": 12.0,
+  "priceStated": 12.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "oxygen chips- sweet chilli pepper": {
+  "perG": 12.0,
+  "priceStated": 12.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "oxygen chips-  salted vinegar": {
+  "perG": 12.0,
+  "priceStated": 12.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "oxygen chips- chipotle chili": {
+  "perG": 12.0,
+  "priceStated": 12.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "talbina": {
+  "perG": 6.0,
+  "priceStated": 6.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "energy balls": {
+  "perG": 3.0,
+  "priceStated": 3.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "rice pudding": {
+  "perG": 6.0,
+  "priceStated": 6.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "bahamas lava cake": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "tiramisu": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "raspberry rice pudding": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "lava cake hazelnuts": {
+  "perG": 8.5,
+  "priceStated": 8.5,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "lava cake raspberry pistachio": {
+  "perG": 9.0,
+  "priceStated": 9.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "talbina majdoul": {
+  "perG": 8.0,
+  "priceStated": 8.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "sneakers bar": {
+  "perG": 5.0,
+  "priceStated": 5.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "tarte mini": {
+  "perG": 5.0,
+  "priceStated": 5.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "tiramisu balls": {
+  "perG": 3.0,
+  "priceStated": 3.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "pistachio kunafa tiramissu balls (3 pieces)": {
+  "perG": 10.0,
+  "priceStated": 10.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "cheesecake": {
+  "perG": 10.0,
+  "priceStated": 10.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "basbousa coconut": {
+  "perG": 7.0,
+  "priceStated": 7.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "basbousa pistachio": {
+  "perG": 10.0,
+  "priceStated": 10.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "matcha cheese cake": {
+  "perG": 15.0,
+  "priceStated": 15.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "caramel cheese cake": {
+  "perG": 15.0,
+  "priceStated": 15.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ },
+ "egg croissant": {
+  "perG": 5.0,
+  "priceStated": 5.0,
+  "qtyStated": 1.0,
+  "yield": 1.0
+ }
+}
