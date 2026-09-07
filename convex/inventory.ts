@@ -995,9 +995,19 @@ async function prepareAndConsumeOne(ctx: any, planId: Id<"dailyPlans">) {
       if (!item) continue;
       const deduct = Math.min(item.currentStock, qty);
       if (deduct > 0) {
-        await ctx.db.insert("inventoryMovements", {
+        /* ✅ قيمة الاستهلاك تُحسب FIFO من الدفعات قبل الخصم وتُختم على الحركة، ثم
+           تُرحَّل محاسبياً (مصروف مواد المطبخ / المخزون) — كان الخصم بلا قيمة فلا يظهر
+           في تقارير التكلفة ولا في القيود، بخلاف الاستهلاك اليدوي. */
+        const value = await fifoValue(ctx, item._id, deduct);
+        const movementId = await ctx.db.insert("inventoryMovements", {
           itemId: item._id, type: "consume", quantity: -deduct,
+          unitCost: deduct > 0 ? Math.round((value / deduct) * 10000) / 10000 : undefined,
+          referenceType: "dailyPlan", referenceId: String(planId),
           note: `تحضير خطة ${plan.date}`, createdAt: now,
+        });
+        await autoPostInventoryMovement(ctx, {
+          movementId, date: String(plan.date || new Date(now).toISOString().slice(0, 10)),
+          amount: value, kind: "consume", quantity: -deduct, itemId: item._id,
         });
         await ctx.db.patch(item._id, { currentStock: item.currentStock - deduct, updatedAt: now });
         await maybeLowStockAlert(ctx, item._id, item.currentStock - deduct);

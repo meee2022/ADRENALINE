@@ -733,6 +733,10 @@ export default defineSchema({
     targetStock: v.number(),
     currentStock: v.number(),
     avgWeeklyUsage: v.number(),
+    // ✅ تكلفة مرجعية لوحدة الأساس (ر.ق/جم أو ر.ق/مل أو ر.ق/قطعة) من ورقة أسعار الرسب.
+    //    تُستخدم لحساب تكلفة الوجبة عندما لا توجد دفعة شراء مسعّرة بعد؛ آخر دفعة
+    //    مسعّرة تتقدّم عليها دائماً. لا تؤثّر على المخزون ولا على القيود.
+    refUnitCost: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
