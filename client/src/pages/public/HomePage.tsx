@@ -7,7 +7,7 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useBanners, usePublicPlans } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
-import { HeroClean } from "@/components/public/HeroClean";
+import { HeroEditorial } from "@/components/public/HeroEditorial";
 import { PremiumTestimonials, PremiumFooter } from "@/components/public/PremiumSections";
 import {
   Check, ArrowLeft, ArrowRight, ShieldCheck, Sparkles, MessageCircle,
@@ -75,67 +75,42 @@ export default function HomePage() {
   return (
     <PublicLayout>
       {/* ═══════════ HERO — clean premium carousel with real dish photos ═══════════ */}
-      <HeroClean
+      <HeroEditorial
         images={heroImages}
-        titleAr="طعام صحي بمذاق لا يُقاوم"
-        titleEn="Healthy Food That Tastes Amazing"
-        subtitleAr="وجبات طازجة محسوبة السعرات تُحضَّر يوميًا بإشراف أخصائيي تغذية، وتصل إلى باب منزلك في قطر."
-        subtitleEn="Fresh, calorie-counted meals prepared daily by nutritionists — delivered to your door in Qatar."
+        linesAr={["أكل حقيقي.", "سعرات محسوبة.", "ويوصلك طازج كل يوم."]}
+        linesEn={["Real food.", "Counted calories.", "Fresh at your door, daily."]}
+        subtitleAr="وجبات تُطبخ صباح كل يوم بإشراف أخصائيي تغذية، مصمّمة حول هدفك لا حول منيو المطاعم."
+        subtitleEn="Meals cooked every morning under nutritionist supervision, built around your goal — not a restaurant menu."
+        featured={bestSellers[0] || null}
         onSubscribeClick={handleGeneralInquiry}
         onMenuClick={() => setLocation("/public/menu")}
         onSmartPlanClick={() => setLocation("/customer/smart-plan")}
       />
 
-      {/* ═══════════ FEATURE STRIP — Floating glass card overlapping hero ═══════════ */}
-      <section className="relative -mt-12 md:-mt-16 z-30 px-4 md:px-6 mb-8 md:mb-10">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="rounded-2xl md:rounded-3xl backdrop-blur-xl overflow-hidden"
-            style={{
-              background: "linear-gradient(135deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94))",
-              boxShadow: "0 20px 60px rgba(60,196,240,0.18), 0 4px 20px rgba(0,0,0,0.08)",
-              border: "1px solid rgba(60,196,240,0.18)",
-            }}
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-gray-100"
-              style={{ direction: isRtl ? "rtl" : "ltr" }}>
-              {[
-                { icon: Leaf, ar: "مكونات", en: "Fresh", subAr: "طازجة يومياً", subEn: "Daily-sourced" },
-                { icon: ChefHat, ar: "شيفات", en: "Expert", subAr: "محترفون", subEn: "Chefs" },
-                { icon: Truck, ar: "توصيل", en: "Free", subAr: "مجاني للجميع", subEn: "Delivery" },
-                { icon: Award, ar: "جودة", en: "Premium", subAr: "معتمدة عالمياً", subEn: "Certified" },
-              ].map(({ icon: Icon, ar, en, subAr, subEn }, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: 0.1 + i * 0.07 }}
-                  className="group relative px-4 md:px-5 py-5 md:py-6 flex items-center gap-3 md:gap-4 transition-colors hover:bg-gray-50/50"
-                >
-                  <div className="h-11 w-11 md:h-12 md:w-12 rounded-2xl flex-shrink-0 flex items-center justify-center transition-transform group-hover:scale-110 group-hover:rotate-3"
-                    style={{
-                      background: "linear-gradient(135deg, #3CC4F0 0%, #47759C 100%)",
-                      boxShadow: "0 6px 18px rgba(60,196,240,0.32)",
-                    }}>
-                    <Icon className="h-5 w-5 md:h-5.5 md:w-5.5 text-white" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm md:text-base font-black text-[#0F1516] leading-tight truncate">
-                      {isRtl ? ar : en}
-                    </p>
-                    <p className="text-[10px] md:text-xs font-semibold mt-0.5 truncate" style={{ color: "#47759C" }}>
-                      {isRtl ? subAr : subEn}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+      {/* ═══════════ TRUST STRIP — صف هادئ بلا تداخل ولا تدرّجات ═══════════ */}
+      <section className="bg-white border-b" style={{ borderColor: "#E4EEF6" }}>
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4" style={{ direction: isRtl ? "rtl" : "ltr" }}>
+            {[
+              { icon: Leaf, ar: "مكونات طازجة", en: "Fresh ingredients", subAr: "تُطبخ صباح كل يوم", subEn: "Cooked every morning" },
+              { icon: ChefHat, ar: "شيفات محترفون", en: "Expert chefs", subAr: "وصفات معتمدة", subEn: "Approved recipes" },
+              { icon: Truck, ar: "توصيل يومي", en: "Daily delivery", subAr: "مجاني لكل المشتركين", subEn: "Free for subscribers" },
+              { icon: Award, ar: "جودة معتمدة", en: "Certified quality", subAr: "بإشراف أخصائيي تغذية", subEn: "Nutritionist-supervised" },
+            ].map(({ icon: Icon, ar, en, subAr, subEn }, i) => (
+              <div key={i}
+                className={cn("flex items-center gap-3 py-5 md:py-6 px-2 md:px-5",
+                  i % 2 === 1 && "border-s md:border-s", i >= 2 && "border-t md:border-t-0", i > 0 && "md:border-s")}
+                style={{ borderColor: "#E4EEF6" }}>
+                <div className="h-10 w-10 shrink-0 rounded-full flex items-center justify-center" style={{ background: "#EAF3FB" }}>
+                  <Icon className="h-[18px] w-[18px]" style={{ color: "#0E76AC" }} strokeWidth={1.75} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[13px] md:text-sm font-black text-[#0F1516] leading-tight">{isRtl ? ar : en}</p>
+                  <p className="text-[11px] md:text-xs mt-0.5 leading-tight" style={{ color: "#6B7C8C" }}>{isRtl ? subAr : subEn}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
