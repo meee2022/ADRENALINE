@@ -27,10 +27,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useAction } from "convex/react";
 import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
-import { subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotToDate } from "@/lib/subscription";
-import { mealScheduledFor, localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel } from "@/lib/mealSchedule";
+/* ✅ القواعد كلها من المصدر الوحيد shared/rules — لا قاعدة تُكتب في هذه الشاشة. */
+import {
+  subscriptionState, orderedSubscriptionSlots, firstSubscriptionSlot, slotToDate,
+  localISO, isMainCategory, isSnackCategory, isBreakfastCategory, BREAKFAST_MAX_PER_DAY, customerCategoryLabel,
+  DELIVERY_DAYS as SHARED_DELIVERY_DAYS, type DeliveryDay, defaultDeliveryDay, nextDeliveryDateISO, mealAvailableOn,
+  restrictionWords, avoidTokens as avoidTokensOf, restrictionHit,
+  dailyLimits, countPicks, dayComplete, dayProgress as sharedDayProgress, slotFull, addMealVerdict, subscriptionSlotKeys,
+  programCalFactor, customerProgram, scaledNutrition,
+} from "@shared/rules";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
-import { restrictionWords, matchedRestriction } from "@/lib/mealRestrictions";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
 import { restaurantFromPath } from "@/lib/restaurantBrand";
 import {
@@ -53,29 +59,10 @@ const DAY_LABEL_AR: Record<string, string> = {
 const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 
 type Category = "all" | "breakfast" | "lunch" | "dinner" | "salad" | "snack";
-type DayOfWeek = "saturday" | "sunday" | "monday" | "tuesday" | "wednesday" | "thursday";
+type DayOfWeek = DeliveryDay;
 
-/** أيام التوصيل: السبت → الخميس (الجمعة فقط إجازة — 6 أيام). */
-const DELIVERY_DAYS: DayOfWeek[] = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"];
-
-/** يوم اليوم لو كان يوم توصيل، وإلا أقرب يوم توصيل قادم (السبت بعد الجمعة). */
-function defaultDay(): DayOfWeek {
-  const names: string[] = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
-  const today = names[new Date().getDay()];
-  if (DELIVERY_DAYS.includes(today as DayOfWeek)) return today as DayOfWeek;
-  return "saturday"; // الجمعة → السبت
-}
-
-
-/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd (بالتوقيت المحلي). */
-function nextDeliveryDateISO(): string {
-  const d = new Date();
-  for (let i = 0; i < 8; i++) {
-    if (d.getDay() !== 5) return localISO(d); // الجمعة = 5
-    d.setDate(d.getDate() + 1);
-  }
-  return localISO(d);
-}
+/** أيام التوصيل: السبت → الخميس (الجمعة فقط إجازة — 6 أيام). من shared/rules. */
+const DELIVERY_DAYS: DayOfWeek[] = [...SHARED_DELIVERY_DAYS];
 
 export default function PublicMenuPage() {
   const { language, dir } = useLanguage();
@@ -210,7 +197,7 @@ export default function PublicMenuPage() {
   const [weekTouched, setWeekTouched] = useState(false);
   // ✅ نبدأ بيوم اليوم (أو أقرب يوم توصيل) بدل إجبار العميل على اختيار يوم
   //    قبل أن يستطيع إضافة أي وجبة.
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(() => defaultDay());
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek | null>(() => defaultDeliveryDay());
   const [timeRemaining, setTimeRemaining] = useState<string>("");
   const [isLocked, setIsLocked] = useState<boolean>(false);
 
@@ -220,85 +207,28 @@ export default function PublicMenuPage() {
   //    "وصلت للحد الأقصى (0)". صفر = لا يوجد حدّ مسجّل، لا "ممنوع".
   // ✅ سعرات حسب هدف العميل: مُعامل البرنامج (دايت/لياقة/تضخيم) من إعدادات المطعم.
   //    العرض فقط — بيانات الطلب تُحفظ بالسعرات الأساسية.
-  const calFactor = useMemo(() => {
-    // البرنامج قد يكون في program أو goalType أو goals (بيانات قديمة)
-    const prog = String((verifiedCustomer as any)?.program || (verifiedCustomer as any)?.goalType || (verifiedCustomer as any)?.goals || "").toUpperCase();
-    // fallback = قيم كشف المطبخ — تعمل حتى قبل أول حفظ من إعدادات المطعم
-    const pp = (settings as any)?.programPortions || {
-      DIET: { calFactor: 1 },
-      FITNESS: { calFactor: 1.08 },
-      BULK: { calFactor: 1.15 },
-    };
-    if (!prog) return 1;
-    if (prog.includes("DIET")) return Number(pp.DIET?.calFactor) || 1;
-    if (prog.includes("FITNESS")) return Number(pp.FITNESS?.calFactor) || 1;
-    if (prog.includes("BULK")) return Number(pp.BULK?.calFactor) || 1;
-    return 1;
-  }, [verifiedCustomer, settings]);
-  // ✅ المُعامل يسري على الأطباق الرئيسية فقط (غداء/عشاء — الرز والبروتين هما
-  //    ما يتغيّر حجمهما بالبرنامج). الفطور/السناك/السلطة حصتها ثابتة لكل الأهداف.
-  const SCALED_CATS = new Set(["lunch", "dinner"]);
-  const calFor = (c: any, category?: any) => {
-    if (c == null || c === "") return c;
-    const cat = String(category || "").toLowerCase();
-    if (!SCALED_CATS.has(cat)) return Math.round(Number(c));
-    return Math.round(Number(c) * calFactor);
-  };
-  // Keep the nutrition panel mathematically aligned with the goal-adjusted
-  // calories shown for lunch/dinner. Stored catalog snapshots remain unscaled;
-  // the kitchen and sticker pipeline applies the customer program once.
-  const macroFor = (value: any, category?: any) => {
-    if (value == null || value === "") return value;
-    const cat = String(category || "").toLowerCase();
-    return Math.round(Number(value) * (SCALED_CATS.has(cat) ? calFactor : 1));
-  };
-  const nutritionFor = (meal: any) => {
-    const protein = Number(macroFor(meal?.protein, meal?.category)) || 0;
-    const carbs = Number(macroFor(meal?.carbs, meal?.category)) || 0;
-    const fats = Number(macroFor(meal?.fats, meal?.category)) || 0;
-    const scaled = SCALED_CATS.has(String(meal?.category || "").toLowerCase());
-    const calories = scaled && (protein || carbs || fats)
-      ? protein * 4 + carbs * 4 + fats * 9
-      : calFor(meal?.calories, meal?.category);
-    return { calories, protein, carbs, fats };
-  };
+  // ✅ معامل البرنامج والتغذية الفعلية — من shared/rules/nutrition (نفس ما تطبّقه الاستيكرات)
+  const calFactor = useMemo(
+    () => programCalFactor(customerProgram(verifiedCustomer), (settings as any)?.programPortions),
+    [verifiedCustomer, settings],
+  );
+  const nutritionFor = (meal: any) => scaledNutrition(meal, calFactor);
 
-  /** حدّ الاشتراك: **صفر يعني صفر** (مشترك يريد وجبات بلا سناك مثلاً)، وغير المسجَّل
-   *  (null/undefined) فقط يعني «بلا حد معروف». كان `Number(v) || Infinity` يحوّل
-   *  الصفر إلى بلا حد، فيفتح للمشترك سناكات بلا نهاية — عكس اشتراكه. */
-  const limitOf = (v: any): number => {
-    if (v === null || v === undefined || v === "") return Infinity;
-    const n = Number(v);
-    return Number.isFinite(n) && n >= 0 ? n : Infinity;
-  };
-  const mealsPerDay = limitOf(verifiedCustomer?.mealsPerDay);
-  const snacksPerDay = limitOf(verifiedCustomer?.snacksPerDay);
-  const hasMealLimit = Number.isFinite(mealsPerDay);
-  const hasSnackLimit = Number.isFinite(snacksPerDay);
-  // ⛔ اشتراك بلا عدد وجبات محدّد (لا رئيسية ولا سناك) — لا يقدر النظام تقدير
-  //    حصّته، فنمنع الاختيار برسالة واضحة بدل السماح بلا حدود. (يدوي وذكي.)
-  const noMealPlan = !!verifiedCustomer && !hasMealLimit && !hasSnackLimit;
+  // ✅ حدود الاشتراك اليومية من shared/rules/selection (صفر يعني صفر؛ غير المسجَّل بلا حد)
+  const limits = useMemo(() => dailyLimits(verifiedCustomer), [verifiedCustomer]);
+  const { mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit, noMealPlan } = limits;
 
   // Count what's selected for current day
   const selectedToday = items.filter(
     (i: any) => i.week === selectedWeek && i.day === selectedDay
   );
-  const mainMealsToday = selectedToday.filter((i: any) => isMainCategory(i.category)).length;
-  const snacksToday = selectedToday.filter((i: any) => isSnackCategory(i.category)).length;
-  const breakfastToday = selectedToday.filter((i: any) => isBreakfastCategory(i.category)).length;
+  const todayCounts = countPicks(selectedToday);
+  const mainMealsToday = todayCounts.meals;
+  const snacksToday = todayCounts.snacks;
 
-  /** كم وجبة/سناك اختار العميل ليوم معيّن في الأسبوع الحالي، وهل اكتمل؟ */
-  const dayProgress = (dayValue: string) => {
-    const picked = items.filter((i: any) => i.week === selectedWeek && i.day === dayValue);
-    const meals = picked.filter((i: any) => isMainCategory(i.category)).length;
-    const snacks = picked.filter((i: any) => isSnackCategory(i.category)).length;
-    // بدون حدود مسجّلة لا نعتبر اليوم "مكتملاً" أبداً — نتركه مفتوحاً
-    const complete =
-      (hasMealLimit || hasSnackLimit) &&
-      (!hasMealLimit || meals >= mealsPerDay) &&
-      (!hasSnackLimit || snacks >= snacksPerDay);
-    return { meals, snacks, complete, count: picked.length };
-  };
+  /** كم وجبة/سناك اختار العميل ليوم معيّن في الأسبوع الحالي، وهل اكتمل؟ (shared/rules) */
+  const dayProgress = (dayValue: string) =>
+    sharedDayProgress(items.filter((i: any) => i.week === selectedWeek && i.day === dayValue), limits);
 
   const todayProgress = selectedDay ? dayProgress(selectedDay) : null;
 
@@ -316,7 +246,6 @@ export default function PublicMenuPage() {
         (lib/subscription.ts) — مصدر واحد فلا يفترقان. */
   const subState = useMemo(() => subscriptionState(subEndDate), [subEndDate]);
   const subExpired = subState.status === "expired";
-  const DAY_NAMES = ["sunday","monday","tuesday","wednesday","thursday","friday","saturday"];
 
   /**
    * ✅ منطق الاختيار الصحيح:
@@ -327,40 +256,10 @@ export default function PublicMenuPage() {
    *   - نلفّ أسبوع الدورة بشكل صحيح بعد كل جمعة، بدءاً من رقم الدورة في
    *     تاريخ بداية الاشتراك (rotationInfo.rotationWeek).
    */
-  const subscriptionSlots = useMemo((): Set<string> | null => {
-    if (!subEndDate || !/^\d{4}-\d{2}-\d{2}$/.test(subEndDate)) return null;
-    if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
-    const subStart = new Date(startDate + "T00:00:00");
-    const end = new Date(subEndDate + "T00:00:00");
-    if (end.getTime() < subStart.getTime()) return null;
-
-    // نقطة بداية الاختيار الفعلية (تكون بكرة لو الاشتراك بدأ)
-    // ⚠️ نستخدم تاريخ محلي — toISOString بيتحوّل لـUTC وبيرجّع اليوم السابق
-    //     في المناطق ذات UTC+ (قطر UTC+3).
-    const _now = new Date(); _now.setHours(0, 0, 0, 0);
-    const today = _now;
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const effStart = subStart.getTime() > today.getTime() ? subStart : tomorrow;
-
-    let rotWeek = Number(rotationInfo?.rotationWeek) || 1;
-    const slots = new Set<string>();
-    // نبدأ الحسبة من subStart (عشان نطابق rotation cycle الصحيح)،
-    // بس نضيف slot بس لو التاريخ ≥ effStart.
-    const cur = new Date(subStart);
-    for (let guard = 0; guard < 400 && cur.getTime() <= end.getTime(); guard++) {
-      const dow = cur.getDay(); // 0=Sun … 5=Fri … 6=Sat
-      if (dow !== 5 && cur.getTime() >= effStart.getTime()) {
-        const dayName = DAY_NAMES[dow];
-        if (DELIVERY_DAYS.includes(dayName as DayOfWeek)) {
-          slots.add(`${rotWeek}:${dayName}`);
-        }
-      }
-      // كل جمعة → أسبوع الدورة يتقدّم (mod 4)
-      if (dow === 5) rotWeek = (rotWeek % 4) + 1;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return slots;
-  }, [startDate, subEndDate, rotationInfo]);
+  const subscriptionSlots = useMemo(
+    (): Set<string> | null => subscriptionSlotKeys(startDate, subEndDate, Number(rotationInfo?.rotationWeek) || 1),
+    [startDate, subEndDate, rotationInfo],
+  );
 
   /** الأسابيع اللي عندها يوم واحد على الأقل داخل الاشتراك. */
   const subscriptionWeeks = useMemo((): Set<number> | null => {
@@ -399,12 +298,7 @@ export default function PublicMenuPage() {
     for (let i = 0; i < orderedSubSlots.length; i++) {
       const { week, day } = orderedSubSlots[i];
       const picked = items.filter((it: any) => it.week === week && it.day === day);
-      const meals = picked.filter((p: any) => isMainCategory(p.category)).length;
-      const snacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
-      // نفس شرط dayProgress.complete: بلا حدود مسجّلة لا يكتمل أبداً
-      const done = (hasMealLimit || hasSnackLimit)
-        && (!hasMealLimit || meals >= mealsPerDay) && (!hasSnackLimit || snacks >= snacksPerDay);
-      if (!done) return i;
+      if (!dayComplete(countPicks(picked), limits)) return i;
     }
     return orderedSubSlots.length; // الكل مكتمل
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -438,11 +332,7 @@ export default function PublicMenuPage() {
   const remainingSlotsCount = useMemo(
     () => orderedSubSlots.filter(({ week, day }) => {
       const picked = items.filter((it: any) => it.week === week && it.day === day);
-      const meals = picked.filter((p: any) => isMainCategory(p.category)).length;
-      const snacks = picked.filter((p: any) => isSnackCategory(p.category)).length;
-      const done = (hasMealLimit || hasSnackLimit)
-        && (!hasMealLimit || meals >= mealsPerDay) && (!hasSnackLimit || snacks >= snacksPerDay);
-      return !done;
+      return !dayComplete(countPicks(picked), limits);
     }).length,
     [orderedSubSlots, items, mealsPerDay, snacksPerDay, hasMealLimit, hasSnackLimit],
   );
@@ -581,16 +471,10 @@ export default function PublicMenuPage() {
   const maxSubWeek = subscriptionWeeks && subscriptionWeeks.size > 0
     ? Math.max(...Array.from(subscriptionWeeks))
     : Math.max(1, Math.min(4, Number((verifiedCustomer as any)?.durationWeeks) || 4));
-  const dayCompleteInWeek = (wk: number, dy: DayOfWeek) => {
-    if (wk === selectedWeek) return dayProgress(dy).complete;
-    // check other weeks by counting items directly
-    const picked = items.filter((i: any) => i.week === wk && i.day === dy);
-    const mainMeals = picked.filter((i: any) => isMainCategory(i.category)).length;
-    const snacks = picked.filter((i: any) => isSnackCategory(i.category)).length;
-    const okMeals = !mealsPerDay || mainMeals >= mealsPerDay;
-    const okSnacks = !hasSnackLimit || snacks >= snacksPerDay;
-    return okMeals && okSnacks;
-  };
+  /* حكم الاكتمال نفسه لكل الأسابيع (shared/rules dayComplete) — كانت للأسابيع الأخرى
+     نسخة تختلف حين لا يكون للمشترك حدّ وجبات مسجَّل. */
+  const dayCompleteInWeek = (wk: number, dy: DayOfWeek) =>
+    dayComplete(countPicks(items.filter((i: any) => i.week === wk && i.day === dy)), limits);
 
   /** 🧭 كتل الاشتراك: مجموعات متتالية زمنياً من نفس أسبوع الدورة. تبويب الدورة
    *  الواحد قد يغطي فترتين (أيام يوليو + ذيل أغسطس بعد لفّة الدورة) — نعرض
@@ -703,16 +587,10 @@ export default function PublicMenuPage() {
   }, [selectedWeek, selectedDay, todayProgress?.complete]);
 
   // Avoid keywords from customer (lowercase tokens)
-  const avoidTokens = useMemo(() => {
-    const text = [verifiedCustomer?.allergies, verifiedCustomer?.avoid]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return text
-      .split(/[,،|/·•·\s]+/)
-      .map((t) => t.trim())
-      .filter((t) => t.length >= 3);
-  }, [verifiedCustomer]);
+  const avoidTokens = useMemo(
+    () => avoidTokensOf(verifiedCustomer?.allergies, verifiedCustomer?.avoid),
+    [verifiedCustomer],
+  );
 
   /** الكلمة المخالفة نفسها (TURKEY / AVOCADO) — تُسمّى للمشترك بدل تحذير مبهم.
    *  من المصدر الوحيد lib/mealRestrictions، نفس ما تستخدمه الأخصائية والمراجعة. */
@@ -720,21 +598,16 @@ export default function PublicMenuPage() {
     () => restrictionWords(verifiedCustomer?.avoid, verifiedCustomer?.allergies),
     [verifiedCustomer],
   );
-  const avoidHitFor = (meal: any): string | null => {
-    const byLib = matchedRestriction(meal, restrictWords);
-    if (byLib) return byLib;
-    // احتياط: الوصف لا يفحصه المصدر الوحيد، فنفحصه هنا حتى لا يفلت شيء
-    if (!avoidTokens.length) return null;
-    const hay = [meal.descriptionAr, meal.descriptionEn].filter(Boolean).join(" ").toLowerCase();
-    return avoidTokens.find((t) => hay.includes(t)) || null;
-  };
+  const avoidHitFor = (meal: any): string | null => restrictionHit(meal, restrictWords, avoidTokens);
   
   // Handle adding meal to cart
   const handleAddToCart = async (meal: any, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    // ✅ الحكم من shared/rules — الشاشة تعرض الرسائل فقط
+    const verdict = addMealVerdict(meal.category, todayCounts, limits);
 
     // ⛔ اشتراك بلا عدد وجبات محدّد — لا نسمح بالاختيار (النظام لا يعرف حصّته)
-    if (noMealPlan) {
+    if (verdict.block === "noMealPlan") {
       toast({
         title: isRtl ? "لم يتم تحديد عدد وجباتك" : "Your meal count isn't set",
         description: isRtl
@@ -755,11 +628,10 @@ export default function PublicMenuPage() {
     }
 
     // ✅ Check subscription limits — نُخبره بما يفعله بعدها، لا نكتفي بالرفض
-    const isSnack = isSnackCategory(meal.category);
     const dayLabelNow = isRtl ? DAY_LABEL_AR[selectedDay] || selectedDay : selectedDay;
     // ⛔ السقوف تُعرض كـpop-up لا كتنبيه أسفل الصفحة — التنبيه العابر يمرّ
     //    دون أن يراه المشترك، فيظنّ أن اختياره تمّ ثم يشتكي أن يومه ناقص.
-    if (isSnack && snacksToday >= snacksPerDay) {
+    if (verdict.block === "snacksFull") {
       await alertDialog({
         title: isRtl ? `⛔ اكتملت سناكات ${dayLabelNow}` : `⛔ Snacks are full for ${dayLabelNow}`,
         message: isRtl
@@ -782,18 +654,18 @@ Remove one, or pick another day.`),
     //    كان ممنوعاً منعاً باتاً، لكن من لا تعجبه وجبات الغداء/العشاء ليومه قد
     //    يفضّل فطارين — وهو حرّ ما دام العدد الكلي ضمن اشتراكه.
     //    ⚠️ السقف باقٍ في الاختيار التلقائي (الذكية والإكمال) فلا تُنتِج فطارين وحدها.
-    if (isBreakfastCategory(meal.category) && breakfastToday >= BREAKFAST_MAX_PER_DAY) {
+    if (verdict.secondBreakfast) {
       const okBf = await confirmDialog({
         title: isRtl ? "☕ فطار ثانٍ لنفس اليوم؟" : "☕ A second breakfast for this day?",
         confirmText: isRtl ? "نعم أريد فطارين" : "Yes, two breakfasts",
         cancelText: isRtl ? "إلغاء" : "Cancel",
         message: isRtl
-          ? `اخترت بالفعل ${breakfastToday} فطار ليوم ${dayLabelNow}، وهذه وجبة فطار أخرى.\n\nستُحسب ضمن وجباتك الرئيسية (${mainMealsToday + 1} من ${mealsPerDay})، أي ستستلم فطارين في نفس اليوم بدل غداء أو عشاء.\n\nهل تريد المتابعة؟`
-          : `You already picked ${breakfastToday} breakfast for ${dayLabelNow}, and this is another one.\n\nIt counts toward your main meals (${mainMealsToday + 1} of ${mealsPerDay}) — you would get two breakfasts that day instead of a lunch or dinner.\n\nContinue?`,
+          ? `اخترت بالفعل ${todayCounts.breakfasts} فطار ليوم ${dayLabelNow}، وهذه وجبة فطار أخرى.\n\nستُحسب ضمن وجباتك الرئيسية (${mainMealsToday + 1} من ${mealsPerDay})، أي ستستلم فطارين في نفس اليوم بدل غداء أو عشاء.\n\nهل تريد المتابعة؟`
+          : `You already picked ${todayCounts.breakfasts} breakfast for ${dayLabelNow}, and this is another one.\n\nIt counts toward your main meals (${mainMealsToday + 1} of ${mealsPerDay}) — you would get two breakfasts that day instead of a lunch or dinner.\n\nContinue?`,
       });
       if (!okBf) return;
     }
-    if (!isSnack && mainMealsToday >= mealsPerDay) {
+    if (verdict.block === "mealsFull") {
       await alertDialog({
         title: isRtl ? `⛔ اكتملت وجبات ${dayLabelNow}` : `⛔ Meals are full for ${dayLabelNow}`,
         message: isRtl
@@ -950,17 +822,7 @@ Is that what you want?`,
     // ✅ نفس حكم الخطة الذكية (lib/mealSchedule.ts) — كانت المقارنة هنا بـ===
     //    بلا توحيد نوع، فأي جدولة تُكتب بأسبوع نصّي "2" أو يوم "Saturday"
     //    كانت تختفي من المنيو اليدوي وحده بينما تظهر في الذكية.
-    if (meal.schedule && meal.schedule.length > 0) {
-      if (selectedDay) return mealScheduledFor(meal, selectedWeek, selectedDay);
-      return meal.schedule.some((s: any) => Number(s?.week) === Number(selectedWeek));
-    }
-    // Fallback: legacy weeks/days arrays
-    const hasSchedule = meal.weeks && meal.weeks.length > 0;
-    if (!hasSchedule) return false;
-    if (selectedDay) {
-      return meal.weeks.includes(selectedWeek) && meal.days && meal.days.includes(selectedDay);
-    }
-    return meal.weeks.includes(selectedWeek);
+    return mealAvailableOn(meal, selectedWeek, selectedDay);
   });
 
   const meals = filteredMeals;
@@ -2255,10 +2117,7 @@ Is that what you want?`,
                 const hasConflict = !!avoidHitFor(meal);
                 // السلطة سناك ⇒ تُقاس بحد السناكات. كانت تُقاس بحد الوجبات
                 // الرئيسية (فرع else)، فتُقفل غلط أو تُفتح غلط.
-                const isSnackMeal = isSnackCategory(meal.category);
-                const atLimit = isSnackMeal
-                  ? snacksToday >= snacksPerDay
-                  : mainMealsToday >= mealsPerDay;
+                const atLimit = slotFull(meal.category, todayCounts, limits);
                 return (
                 <Card
                   key={meal._id}

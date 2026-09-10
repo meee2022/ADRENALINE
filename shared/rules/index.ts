@@ -6,3 +6,5 @@
 export * from "./mealSchedule";
 export * from "./mealRestrictions";
 export * from "./subscription";
+export * from "./selection";
+export * from "./nutrition";

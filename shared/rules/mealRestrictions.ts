@@ -64,3 +64,24 @@ export function matchedRestriction(meal: any, words: string[]): string | null {
   ].filter(Boolean).join(" ").toLowerCase();
   return words.find((w) => hay.includes(w)) || null;
 }
+
+/**
+ * كلمات التجنّب الخام (بلا إسقاط كلمات الوصل) — احتياط لفحص الوصف الذي لا يفحصه
+ * restrictionWords/matchedRestriction. نُقلت من شاشة المنيو كما هي.
+ */
+export function avoidTokens(allergies?: string | null, avoid?: string | null): string[] {
+  const text = [allergies, avoid].filter(Boolean).join(" ").toLowerCase();
+  return text.split(/[,،|/·•·\s]+/).map((t) => t.trim()).filter((t) => t.length >= 3);
+}
+
+/**
+ * الكلمة المخالفة للوجبة: أولاً بالمصدر الموحّد (الاسم + المكوّنات + الوسوم) عبر
+ * matchedRestriction، ثم الوصف بالكلمات الخام حتى لا يفلت شيء. null = لا مخالفة.
+ */
+export function restrictionHit(meal: any, words: string[], tokens: string[]): string | null {
+  const byLib = matchedRestriction(meal, words);
+  if (byLib) return byLib;
+  if (!tokens.length || !meal) return null;
+  const hay = [meal.descriptionAr, meal.descriptionEn].filter(Boolean).join(" ").toLowerCase();
+  return tokens.find((t) => hay.includes(t)) || null;
+}

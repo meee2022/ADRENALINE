@@ -19,6 +19,7 @@
     "android:apk": "npm run build:android:dev && tsx script/android-gradle.ts assembleDebug",
     "start": "cross-env NODE_ENV=production node dist/index.cjs",
     "check": "tsc --noEmit && eslint \"client/src/**/*.{ts,tsx}\"",
+    "check:rules": "tsx scripts/check-rules.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint \"client/src/**/*.{ts,tsx}\""

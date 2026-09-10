@@ -134,3 +134,39 @@ export function mealScheduledFor(meal: any, week: number, day: string): boolean 
 
   return false;
 }
+
+/** أيام التوصيل بالترتيب: السبت → الخميس (الجمعة فقط إجازة). */
+export const DELIVERY_DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"] as const;
+export type DeliveryDay = (typeof DELIVERY_DAYS)[number];
+
+/** يوم اليوم لو كان يوم توصيل، وإلا السبت (الجمعة → السبت). */
+export function defaultDeliveryDay(now: Date = new Date()): DeliveryDay {
+  const today = DAY_NAMES[now.getDay()] as string;
+  return (DELIVERY_DAYS as readonly string[]).includes(today) ? (today as DeliveryDay) : "saturday";
+}
+
+/** أقرب يوم توصيل من اليوم (يتخطّى الجمعة فقط) كـ yyyy-MM-dd بالتوقيت المحلي. */
+export function nextDeliveryDateISO(now: Date = new Date()): string {
+  const d = new Date(now);
+  for (let i = 0; i < 8; i++) {
+    if (d.getDay() !== FRIDAY) return localISO(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return localISO(d);
+}
+
+/**
+ * هل تُعرض الوجبة في (دورة، يوم؟) بالمنيو؟ بلا يوم → يكفي أن تكون مجدولة في الدورة.
+ * الصيغة الحديثة schedule[] عبر mealScheduledFor (بتوحيد النوع)، والقديمة weeks[]/days[]
+ * بالمطابقة الحرفية كما كانت الشاشة تفعل. وجبة بلا أي جدولة لا تُعرض.
+ */
+export function mealAvailableOn(meal: any, week: number, day?: string | null): boolean {
+  if (Array.isArray(meal?.schedule) && meal.schedule.length > 0) {
+    if (day) return mealScheduledFor(meal, week, day);
+    return meal.schedule.some((s: any) => Number(s?.week) === Number(week));
+  }
+  const weeks: any[] = Array.isArray(meal?.weeks) ? meal.weeks : [];
+  if (!weeks.length) return false;
+  if (day) return weeks.includes(week) && Array.isArray(meal?.days) && meal.days.includes(day);
+  return weeks.includes(week);
+}
