@@ -301,7 +301,6 @@ export function PremiumMenuHighlights({ onBrowseMenu }: { onBrowseMenu: () => vo
 export function PremiumTestimonials() {
   const { language, dir } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
-  const [activeIdx, setActiveIdx] = React.useState(0);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [successMsg, setSuccessMsg] = React.useState("");
@@ -363,14 +362,6 @@ export function PremiumTestimonials() {
     return mappedDb.length > 0 ? [...mappedDb, ...defaults] : defaults;
   }, [dbRatings, isRtl]);
 
-  React.useEffect(() => {
-    if (testimonials.length <= 1 || isModalOpen) return;
-    const t = setInterval(() => setActiveIdx((i) => (i + 1) % testimonials.length), 6000);
-    return () => clearInterval(t);
-  }, [testimonials.length, isModalOpen]);
-
-  const t = testimonials[activeIdx] || testimonials[0];
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment || !newMeal) return;
@@ -404,132 +395,56 @@ export function PremiumTestimonials() {
   };
 
   return (
-    <section className="relative py-10 md:py-14 overflow-hidden"
-      style={{ background: "linear-gradient(135deg, #ECF8FB 0%, #F3F9FC 50%, #ECF4F8 100%)" }}>
-      
-      {/* Curved abstract accent highlights using branding colors */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #3CC4F0, transparent 75%)" }} />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-10 blur-3xl pointer-events-none"
-        style={{ background: "radial-gradient(circle, #47759C, transparent 75%)" }} />
-
-      <div className="relative max-w-4xl mx-auto px-5 md:px-8">
-        {/* Modern Clean Header */}
-        <div className="text-center mb-6 md:mb-8 flex flex-col items-center">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-3 backdrop-blur-md"
-            style={{ background: "rgba(60,196,240,0.08)", border: "1px solid rgba(60,196,240,0.2)" }}
-          >
-            <Star className="h-3.5 w-3.5 fill-current text-cyan-500" />
-            <span className="text-xs font-black tracking-wider uppercase text-cyan-600">
-              {isRtl ? "آراء عملائنا" : "TESTIMONIALS"}
-            </span>
-          </motion.div>
-          
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-2xl md:text-4xl font-black tracking-tight text-slate-800 mb-2"
-          >
-            {isRtl ? "ما يقوله عملاؤنا" : "What Our Clients Say"}
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="text-slate-500 text-xs md:text-sm max-w-lg mb-4"
-          >
-            {isRtl 
-              ? "نحن فخورون بمشاركة تجارب عملائنا الحقيقية مع وجبات أدرينالين الصحية"
-              : "We are proud to share our clients' real experiences with Adrenaline healthy meals"}
-          </motion.p>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+    <section className="py-12 md:py-20 bg-white" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="max-w-6xl mx-auto px-5 md:px-8">
+        <div className="flex items-end justify-between gap-4 mb-6 md:mb-8">
+          <div>
+            <h2 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(24px,3.2vw,36px)", lineHeight: 1.15 }}>
+              {isRtl ? "قصص حقيقية. نتائج حقيقية." : "Real stories. Real results."}
+            </h2>
+            <p className="mt-1.5 text-[14px] text-[#6B7C8C]">
+              {isRtl ? "تجارب مشتركين مع وجبات أدرينالين" : "Subscribers' experiences with Adrenaline meals"}
+            </p>
+          </div>
+          <button
             onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-black transition-all shadow-md"
-            style={{
-              background: "linear-gradient(135deg, #3CC4F0, #289fc5)",
-              color: "white",
-              boxShadow: "0 4px 12px rgba(60,196,240,0.2)"
-            }}
+            className="shrink-0 h-10 px-4 rounded-full text-[13px] font-black text-[#0E2A4A] transition-colors hover:bg-[#EAF7FD]"
+            style={{ border: "1.5px solid #0E2A4A" }}
           >
-            <MessageCircle className="h-3.5 w-3.5" />
-            {isRtl ? "اكتب تقييمك الآن" : "Write Your Review Now"}
-          </motion.button>
+            {isRtl ? "اكتب تقييمك" : "Write a review"}
+          </button>
         </div>
 
-        {/* Premium Testimonial Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative rounded-3xl p-5 md:p-8 bg-white/95 backdrop-blur-md border border-cyan-100/60"
-          style={{
-            boxShadow: "0 15px 40px -10px rgba(60,196,240,0.1), 0 4px 12px rgba(0,0,0,0.02)",
-          }}
-        >
-          <Quote className="absolute top-5 right-5 md:top-6 md:right-6 h-6 w-6 md:h-10 md:w-10 opacity-10 text-cyan-500" />
-
-          <AnimatePresence mode="wait">
+        {/* على الجوال: صف يُمرَّر أفقياً بطاقةً بطاقة؛ على الشاشات الأكبر: ثلاث بطاقات */}
+        <div className="flex md:grid md:grid-cols-3 gap-3 md:gap-4 overflow-x-auto md:overflow-visible -mx-5 px-5 md:mx-0 md:px-0 pb-1 snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {testimonials.map((t, i) => (
             <motion.div
-              key={activeIdx}
-              initial={{ opacity: 0, x: isRtl ? -20 : 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: isRtl ? 20 : -20 }}
-              transition={{ duration: 0.35 }}
+              key={i}
+              initial={{ opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.35, delay: i * 0.06 }}
+              className="snap-start shrink-0 w-[84%] sm:w-[58%] md:w-auto rounded-[24px] p-5 md:p-6 flex flex-col gap-4"
+              style={{ background: "#F4F8FB" }}
             >
-              {/* Stars */}
-              <div className="flex gap-1 mb-3">
-                {[...Array(t.stars || 5)].map((_, si) => (
-                  <Star key={si} className="h-4 w-4 fill-current text-amber-400" />
+              <div className="flex gap-0.5">
+                {[...Array(Math.max(1, Math.min(5, t.stars || 5)))].map((_, si) => (
+                  <Star key={si} className="h-4 w-4 fill-current" style={{ color: "#F4A93A" }} />
                 ))}
               </div>
-
-              {/* Quote text */}
-              <p className="text-sm md:text-base leading-relaxed mb-4 md:mb-6 font-medium text-slate-700">
-                "{isRtl ? t.textAr : t.textEn}"
+              <p className="flex-1 text-[15px] md:text-base leading-relaxed font-semibold text-[#0E2A4A]">
+                «{isRtl ? t.textAr : t.textEn}»
               </p>
-
-              {/* Author Info */}
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                <div className="h-10 w-10 md:h-11 md:w-11 rounded-xl flex items-center justify-center text-sm md:text-base font-black text-white flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #3CC4F0, #47759C)", boxShadow: "0 4px 10px rgba(60,196,240,0.2)" }}>
+              <div className="flex items-center gap-3 pt-3" style={{ borderTop: "1px solid #E4EEF6" }}>
+                <div className="h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-sm font-black text-[#0E76AC]" style={{ background: "#EAF7FD" }}>
                   {(isRtl ? t.nameAr : t.nameEn).charAt(0)}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-black text-sm md:text-base text-slate-800 truncate">{isRtl ? t.nameAr : t.nameEn}</p>
-                  <p className="text-[11px] md:text-xs font-bold text-cyan-600 mt-0.5">{isRtl ? t.roleAr : t.roleEn}</p>
+                  <p className="text-sm font-black text-[#0E2A4A] truncate">{isRtl ? t.nameAr : t.nameEn}</p>
+                  <p className="text-[12px] text-[#6B7C8C]">{isRtl ? t.roleAr : t.roleEn}</p>
                 </div>
               </div>
             </motion.div>
-          </AnimatePresence>
-        </motion.div>
-
-        {/* Carousel Indicator Dots */}
-        <div className="flex items-center justify-center gap-1.5 mt-5">
-          {testimonials.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setActiveIdx(i)}
-              aria-label={`Testimonial ${i + 1}`}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: activeIdx === i ? "24px" : "6px",
-                height: "6px",
-                background: activeIdx === i ? "#3CC4F0" : "rgba(71,117,156,0.2)",
-              }}
-            />
           ))}
         </div>
       </div>

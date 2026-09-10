@@ -339,31 +339,12 @@ export default function HomePage() {
       <PremiumTestimonials />
 
       {/* ═══════════ FAQ (compact, 3 questions) ═══════════ */}
-      <section className="py-10 md:py-20 bg-white">
+      <section className="py-12 md:py-20" style={{ background: "#F5F9FC", direction: isRtl ? "rtl" : "ltr" }}>
         <div className="max-w-3xl mx-auto px-5 md:px-8">
-          <div className="text-center mb-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4"
-              style={{ background: "#3CC4F015", border: "1px solid #3CC4F030" }}
-            >
-              <ChevronDown className="h-4 w-4" style={{ color: "#3CC4F0" }} />
-              <span className="text-xs md:text-sm font-bold tracking-wider" style={{ color: "#47759C" }}>
-                {isRtl ? "أسئلة شائعة" : "FAQ"}
-              </span>
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-3xl md:text-4xl font-black text-[#0F1516] mb-3 tracking-tight"
-            >
-              {isRtl ? "أكثر الأسئلة شيوعاً" : "Common Questions"}
-            </motion.h2>
+          <div className="text-center mb-7 md:mb-10">
+            <h2 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(24px,3.2vw,36px)", lineHeight: 1.15 }}>
+              {isRtl ? "الأسئلة الشائعة" : "Common questions"}
+            </h2>
           </div>
 
           <div className="space-y-3">
@@ -477,28 +458,19 @@ export default function HomePage() {
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div
-      className="rounded-2xl overflow-hidden transition-all"
-      style={{
-        background: open ? "linear-gradient(135deg, #ecfeff, #f0f9ff)" : "#f8fafc",
-        border: `1.5px solid ${open ? "#3CC4F0" : "#e2e8f0"}`,
-      }}
-    >
+    <div className="rounded-2xl bg-white overflow-hidden" style={{ border: `1px solid ${open ? "#3CC4F0" : "#E4EEF6"}` }}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full px-5 py-4 flex items-center justify-between text-right transition-colors"
+        className="w-full px-5 py-4 flex items-center justify-between gap-3 text-start"
       >
+        <span className="font-black text-[15px] text-[#0E2A4A] flex-1">{q}</span>
         <ChevronDown
           className="h-5 w-5 flex-shrink-0 transition-transform"
-          style={{
-            color: open ? "#3CC4F0" : "#94a3b8",
-            transform: open ? "rotate(180deg)" : "rotate(0)",
-          }}
+          style={{ color: open ? "#0E76AC" : "#8AA6BD", transform: open ? "rotate(180deg)" : "rotate(0)" }}
         />
-        <span className="font-bold text-[#0F1516] flex-1 mr-3">{q}</span>
       </button>
       {open && (
-        <div className="px-5 pb-4 text-[#47759C] text-sm leading-relaxed border-t border-[#3CC4F0]/20 pt-3">
+        <div className="px-5 pb-4 text-[14px] leading-relaxed text-[#3D4F5C]">
           {a}
         </div>
       )}
