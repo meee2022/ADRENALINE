@@ -166,7 +166,7 @@ export default function HomePage() {
       </section>
 
       {/* ═══════════ PLANS — بطاقات هادئة: صورة دائرية، اسم، سعر كبير، باقتان، زر مفرّغ ═══════════ */}
-      <section id="plans-section" className="py-12 md:py-20" style={{ background: "#F5F9FC", direction: isRtl ? "rtl" : "ltr" }}>
+      <section id="plans-section" className="py-12 md:py-20" style={{ background: "#E6EEF5", direction: isRtl ? "rtl" : "ltr" }}>
         <div className="max-w-6xl mx-auto px-5 md:px-8">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.15 }}>
@@ -193,8 +193,9 @@ export default function HomePage() {
                   transition={{ duration: 0.45, delay: idx * 0.08 }}
                   className="relative rounded-[24px] p-5 md:p-6 flex flex-col gap-5"
                   style={{
-                    background: "linear-gradient(180deg, #FFFFFF 0%, #F0F9FE 100%)",
-                    border: `1px solid ${isPopular ? "#3CC4F0" : "#E4EEF6"}`,
+                    background: "#FFFFFF",
+                    border: `1.5px solid ${isPopular ? "#3CC4F0" : "#FFFFFF"}`,
+                    boxShadow: "0 1px 2px rgba(14,42,74,0.04), 0 14px 32px -18px rgba(14,42,74,0.22)",
                   }}
                 >
                   {isPopular && (
@@ -237,8 +238,8 @@ export default function HomePage() {
                       <button
                         key={oi}
                         onClick={() => handleSubscribe(name, option)}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-start transition-colors hover:border-[#3CC4F0]"
-                        style={{ border: "1px solid #E4EEF6" }}
+                        className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-start transition-colors hover:border-[#3CC4F0]"
+                        style={{ background: "#F4F8FB", border: "1px solid #E4EEF6" }}
                       >
                         <span className="text-sm font-bold text-[#0E2A4A]">
                           {option.mealsCount} {isRtl ? "وجبات" : "meals"} + {option.snacksCount} {isRtl ? "سناك" : "snacks"}
