@@ -1303,43 +1303,29 @@ Is that what you want?`,
     <PublicLayout>
       {/* ═══ Browse Mode Banner ═══ */}
       {browseMode && !isPhoneVerified && (
-        <div className="sticky top-[73px] z-50 px-4 py-3"
-          style={{
-            background: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
-            boxShadow: "0 4px 14px rgba(245,158,11,0.3)",
-          }}>
+        <div className="relative z-30 px-4 py-2.5" style={{ background: "#0B2138" }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-white/25 backdrop-blur-sm">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-black text-white leading-tight">
-                  {isRtl ? "وضع التصفح" : "Preview Mode"}
-                </p>
-                <p className="text-[11px] text-white/90 leading-tight">
-                  {isRtl ? "اشترك للحجز والاستلام" : "Subscribe to order & get delivered"}
-                </p>
-              </div>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: "#3CC4F0", boxShadow: "0 0 0 4px rgba(60,196,240,0.2)" }} />
+              <p className="text-[13px] text-white leading-tight truncate">
+                <span className="font-black">{isRtl ? "وضع التصفح" : "Preview mode"}</span>
+                <span className="text-white/60 font-medium"> · {isRtl ? "اشترك للحجز والاستلام" : "Subscribe to order & get delivered"}</span>
+              </p>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={handleSignupViaWhatsApp}
-                className="text-xs font-bold px-4 h-9 rounded-full flex items-center gap-1.5 transition-all hover:scale-105"
-                style={{
-                  background: "linear-gradient(135deg, #25D366, #128C7E)",
-                  color: "#fff",
-                  boxShadow: "0 3px 10px rgba(37,211,102,0.4)",
-                }}
+                className="text-xs font-black px-4 h-8 rounded-full flex items-center gap-1.5 transition-transform hover:scale-[1.03]"
+                style={{ background: "#fff", color: "#0B2138" }}
               >
-                <MessageCircle className="h-3.5 w-3.5" />
-                {isRtl ? "اشترك الآن" : "Subscribe Now"}
+                <MessageCircle className="h-3.5 w-3.5" style={{ color: "#25D366" }} />
+                {isRtl ? "اشترك الآن" : "Subscribe now"}
               </button>
               <button
                 onClick={handleResetPhone}
-                className="text-[11px] font-bold text-white px-3 h-9 rounded-full hover:bg-white/30 transition-colors flex items-center"
-                style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
+                className="text-xs font-bold text-white px-3 h-8 rounded-full hover:bg-white/10 transition-colors flex items-center"
+                style={{ border: "1px solid rgba(255,255,255,0.35)" }}
               >
                 {isRtl ? "تسجيل دخول" : "Login"}
               </button>
@@ -1515,13 +1501,25 @@ Is that what you want?`,
             </div>
           </div>
         </section>
-      ) : <PageHeader
-        eyebrowAr="قائمتنا" eyebrowEn="OUR MENU"
-        titleAr="قائمة الوجبات" titleEn="Our Menu"
-        subtitleAr="اكتشف مجموعتنا المتنوعة من الوجبات الصحية واللذيذة"
-        subtitleEn="Discover our diverse collection of healthy and delicious meals"
-        image={menuHeaderImage}
-      />}
+      ) : (
+        <section className="bg-white" dir={isRtl ? "rtl" : "ltr"}>
+          <div className="max-w-3xl mx-auto px-5 pt-10 pb-6 md:pt-14 md:pb-8 text-center">
+            <h1 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(28px,4vw,44px)", lineHeight: 1.15 }}>
+              {isRtl ? "قائمة الوجبات" : "Our menu"}
+            </h1>
+            <p className="mt-3 text-[15px] md:text-base font-black text-[#0E76AC]">
+              {isRtl
+                ? `${filteredMeals.length} طبقاً من إعداد الشيف · تتنوّع على مدار الشهر`
+                : `${filteredMeals.length} chef-made dishes · rotating through the month`}
+            </p>
+            <p className="mt-1.5 text-sm text-[#6B7C8C]">
+              {isRtl
+                ? "محسوبة السعرات بإشراف أخصائيي تغذية، وتُطبخ صباح كل يوم."
+                : "Calorie-counted under nutritionist supervision, cooked every morning."}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* Choose: manual selection vs AI smart plan — أداة مشترك، تُخفى عن الزائر */}
       {!isVisitor && (
@@ -1581,17 +1579,20 @@ Is that what you want?`,
       {/* شريط الزائر — بديل هادئ عن أدوات الجدولة: يقول ما يراه ويعطيه طريق الاشتراك */}
       {isVisitor && (
         <div className="border-b border-[#3CC4F0]/25 bg-[#F2FBFF]" dir={isRtl ? "rtl" : "ltr"}>
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-3.5">
-            <UtensilsCrossed className="h-5 w-5 shrink-0 text-[#0E76AC]" />
-            <p className="min-w-0 flex-1 text-sm font-bold text-[#0E2A4A]">
-              {isRtl ? "هذه قائمتنا الكاملة" : "This is our full menu"}
-              <span className="ms-2 font-semibold text-[#47759C]">
-                {isRtl ? "— تتنوّع الوجبات على مدار الشهر" : "— meals rotate through the month"}
+          {/* على الجوال: النص سطر كامل والأزرار تحته — كان النص ينحشر في عمود ضيّق بين الزرّين */}
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-2.5 px-4 py-3">
+            <p className="flex basis-full sm:basis-auto sm:flex-1 min-w-0 items-center gap-2 text-sm font-bold text-[#0E2A4A]">
+              <UtensilsCrossed className="h-4.5 w-4.5 shrink-0 text-[#0E76AC]" />
+              <span className="truncate">
+                {isRtl ? "هذه قائمتنا الكاملة" : "This is our full menu"}
+                <span className="ms-1.5 font-semibold text-[#47759C]">
+                  {isRtl ? "· تتنوّع على مدار الشهر" : "· rotates through the month"}
+                </span>
               </span>
             </p>
             <button
               onClick={() => setVisitorDayPicker((v) => !v)}
-              className="rounded-full border border-[#3CC4F0]/50 bg-white px-3 py-1.5 text-xs font-black text-[#0E76AC] hover:bg-[#3CC4F0]/10"
+              className="rounded-full border border-[#3CC4F0]/50 bg-white px-3 h-9 text-xs font-black text-[#0E76AC] hover:bg-[#3CC4F0]/10"
             >
               {visitorDayPicker
                 ? (isRtl ? "عرض القائمة كاملة" : "Show the full menu")
@@ -2196,31 +2197,31 @@ Is that what you want?`,
       <section className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
         <div className={cn("max-w-6xl mx-auto px-4", pathMode ? "py-3" : "py-6")}>
           {/* Search Bar */}
-          <div className={cn("relative", pathMode ? "mb-0" : "mb-6")}>
+          <div className={cn("relative", pathMode ? "mb-0" : "mb-3 sm:mb-5")}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: customerMuted }} />
             <Input
               type="text"
               placeholder={isRtl ? "ابحث عن وجبة..." : "Search for a meal..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-14 pl-12 pr-4 rounded-full border-2 border-gray-200 focus:border-[#3CC4F0] text-base"
+              className="h-11 sm:h-14 pl-12 pr-4 rounded-full border-2 border-gray-200 focus:border-[#3CC4F0] text-[15px] sm:text-base"
             />
           </div>
 
           {/* Category Filters — مخفية في مسار الأيام (الفلترة هناك بنوع الخانة النشطة) */}
           {!pathMode && (
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex sm:flex-wrap sm:justify-center gap-2 sm:gap-3 overflow-x-auto sm:overflow-visible -mx-4 px-4 sm:mx-0 sm:px-0 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
                 className={cn(
-                  "px-6 py-2 rounded-full font-medium transition-all",
+                  "shrink-0 rounded-full border px-4 sm:px-5 py-1.5 text-[14px] sm:text-[15px] leading-5 transition-colors whitespace-nowrap",
                   activeCategory === cat.id
-                    ? "text-white shadow-md"
-                    : "bg-gray-100 text-[#47759C] hover:bg-gray-200"
+                    ? "font-black text-[#0E76AC] bg-[#EAF7FD]"
+                    : "border-gray-200 font-medium text-[#6B7C8C] hover:border-[#3CC4F0]/60 bg-white"
                 )}
-                style={activeCategory === cat.id ? { background: customerAccent } : undefined}
+                style={activeCategory === cat.id ? { borderColor: customerAccent } : undefined}
               >
                 {isRtl ? cat.labelAr : cat.labelEn}
               </button>
@@ -2240,7 +2241,7 @@ Is that what you want?`,
       </section>
 
       {/* Meals Grid */}
-      <section className="py-12 bg-gray-50">
+      <section className="py-8 md:py-14" style={{ background: "#EEF4F8" }}>
         <div className="max-w-7xl mx-auto px-4">
           {meals.length === 0 ? (
             <div className="text-center py-20">
@@ -2249,7 +2250,7 @@ Is that what you want?`,
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {meals.map((meal: any) => {
                 const hasConflict = !!avoidHitFor(meal);
                 // السلطة سناك ⇒ تُقاس بحد السناكات. كانت تُقاس بحد الوجبات
@@ -2262,24 +2263,23 @@ Is that what you want?`,
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group flex flex-col transition-all duration-300 overflow-hidden cursor-pointer bg-white relative rounded-2xl sm:rounded-3xl shadow-sm",
+                    "group flex flex-col cursor-pointer bg-white relative rounded-[24px] p-2 shadow-none transition-all duration-300 border",
                     hasConflict
-                      ? "border border-red-200 hover:border-red-400 hover:shadow-lg"
-                      : "border border-gray-100 hover:border-[#3CC4F0]/50 hover:shadow-xl hover:-translate-y-1"
+                      ? "border-red-300 hover:border-red-400"
+                      : "border-transparent hover:border-[#3CC4F0]/60 hover:-translate-y-0.5"
                   )}
                   onClick={() => setSelectedMeal(meal)}
                 >
-                  {/* Meal Image */}
-                  <div className="relative h-28 sm:h-44 lg:h-52 overflow-hidden">
+                  {/* Meal Image — مربّعة بزوايا داخلية أصغر من زوايا البطاقة */}
+                  <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden rounded-[18px]" style={{ background: "#EAF3FB" }}>
                     {/* الشبكة قد تعرض عشرات الوجبات — لا تُحمَّل صورة قبل ظهورها */}
                     <img
                       src={meal.imageUrl}
                       alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
                       loading="lazy"
                       decoding="async"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
 
                     {/* Avoid conflict ribbon */}
                     {hasConflict && (
@@ -2290,87 +2290,48 @@ Is that what you want?`,
                       </div>
                     )}
 
-                    {/* Calories Badge */}
-                    <div className={cn("absolute top-3", isRtl ? "right-3" : "left-3", hasConflict && "top-10")}>
-                      <div className="flex items-center gap-1 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-md">
-                        <Flame className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-black text-[#0F1516] tabular-nums">
-                          {nutritionFor(meal).calories}
-                        </span>
-                        <span className="text-[10px] font-bold text-gray-400">{isRtl ? "سعرة" : "kcal"}</span>
-                      </div>
-                    </div>
-
-                    {/* Category Badge */}
-                    <div className={cn("absolute bottom-3", isRtl ? "right-3" : "left-3")}>
-                      <Badge
-                        className={cn(
-                          "text-xs font-bold px-3 py-1 border-0 shadow-md",
-                          meal.category === "breakfast" && "bg-orange-500 text-white",
-                          meal.category === "lunch" && "bg-cyan-500 text-white",
-                          meal.category === "dinner" && "bg-indigo-500 text-white",
-                          // السلطة سناك ⇒ نفس لون السناك ونفس المسمّى
-                          isSnackCategory(meal.category) && "bg-amber-500 text-white"
-                        )}
-                      >
-                        {customerCategoryLabel(meal.category, isRtl)}
-                      </Badge>
+                    {/* Calories Badge — كبسولة بيضاء في زاوية الصورة */}
+                    <div className={cn("absolute top-2", isRtl ? "right-2" : "left-2", hasConflict && "top-9")}>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11.5px] sm:text-[12px] font-black text-[#0E76AC]" style={{ fontVariantNumeric: "tabular-nums", boxShadow: "0 1px 3px rgba(14,42,74,0.12)" }}>
+                        {nutritionFor(meal).calories}
+                        <span className="font-semibold text-[#47759C]">{isRtl ? "سعرة" : "kcal"}</span>
+                      </span>
                     </div>
                   </div>
 
-                  <CardContent className="p-3 sm:p-5 flex flex-col flex-1">
-                    {/* Meal Name */}
-                    <h3 className="text-sm sm:text-lg font-black text-[#0F1516] mb-1 line-clamp-2 sm:line-clamp-1 leading-tight">
-                      {isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
-                    </h3>
-
-                    {/* Subtitle (English under Arabic) — يُخفى على الموبايل لتوفير المساحة */}
-                    {meal.nameEn && isRtl && (
-                      <p className="hidden sm:block text-xs text-[#8AA6BD] mb-2 line-clamp-1">{meal.nameEn}</p>
-                    )}
-
-                    {/* Description — يُخفى على الموبايل (البطاقة مدمجة) */}
-                    {(isRtl ? meal.descriptionAr : meal.descriptionEn) && (
-                      <p className="hidden sm:block text-sm text-[#47759C] mb-4 line-clamp-2 leading-relaxed">
-                        {isRtl ? meal.descriptionAr : meal.descriptionEn}
+                  <CardContent className="px-1.5 pt-2.5 pb-1.5 sm:px-3 sm:pt-3.5 sm:pb-2.5 flex flex-col flex-1 gap-2 sm:gap-3">
+                    <div>
+                      {/* Meal Name */}
+                      <h3 className="text-[13px] sm:text-[16px] font-black text-[#0E2A4A] line-clamp-2 leading-tight sm:leading-snug">
+                        {isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
+                      </h3>
+                      {/* التصنيف + الوسوم: سطر واحد هادئ بدل الشارات الملوّنة */}
+                      <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-[11px] font-bold text-[#0E76AC] line-clamp-1">
+                        {customerCategoryLabel(meal.category, isRtl)}
+                        {meal.tags && meal.tags.length > 0 && (
+                          <span className="hidden sm:inline"> · {meal.tags.slice(0, 2).map((tag: string) => tagLabel(tag, isRtl)).join(" · ")}</span>
+                        )}
                       </p>
-                    )}
-
-                    {/* Macros — neat 3-column stat row */}
-                    <div className="grid grid-cols-3 gap-1 sm:gap-2 mb-3 sm:mb-4">
-                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fef2f2" }}>
-                        <div className="text-xs sm:text-sm font-black text-red-600 tabular-nums leading-none">{nutritionFor(meal).protein}<span className="text-[9px] sm:text-[10px]">g</span></div>
-                        <div className="text-[9px] sm:text-[10px] font-bold text-red-400 mt-0.5 sm:mt-1">{isRtl ? "بروتين" : "Protein"}</div>
-                      </div>
-                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#fefce8" }}>
-                        <div className="text-xs sm:text-sm font-black text-yellow-600 tabular-nums leading-none">{nutritionFor(meal).carbs}<span className="text-[9px] sm:text-[10px]">g</span></div>
-                        <div className="text-[9px] sm:text-[10px] font-bold text-yellow-500 mt-0.5 sm:mt-1">{isRtl ? "كارب" : "Carbs"}</div>
-                      </div>
-                      <div className="rounded-lg sm:rounded-xl py-1.5 sm:py-2 text-center" style={{ background: "#eff6ff" }}>
-                        <div className="text-xs sm:text-sm font-black text-blue-600 tabular-nums leading-none">{nutritionFor(meal).fats}<span className="text-[9px] sm:text-[10px]">g</span></div>
-                        <div className="text-[9px] sm:text-[10px] font-bold text-blue-400 mt-0.5 sm:mt-1">{isRtl ? "دهون" : "Fats"}</div>
-                      </div>
                     </div>
 
-                    {/* Tags — تُخفى على الموبايل (البطاقة مدمجة) */}
-                    {meal.tags && meal.tags.length > 0 && (
-                      <div className="hidden sm:flex flex-wrap gap-1.5 mb-4">
-                        {meal.tags.slice(0, 3).map((tag: string, idx: number) => (
-                          <Badge
-                            key={idx}
-                            variant="secondary"
-                            className="text-[11px] bg-[#3CC4F0]/10 text-[#0E76AC] border-0 font-semibold"
-                          >
-                            {tagLabel(tag, isRtl)}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                    {/* Macros — ثلاثة أرقام نصية بلا صناديق ملوّنة */}
+                    <div className="flex items-start gap-3.5 sm:gap-6">
+                      {[
+                        [nutritionFor(meal).protein, isRtl ? "بروتين" : "PROTEIN"],
+                        [nutritionFor(meal).carbs, isRtl ? "كارب" : "CARBS"],
+                        [nutritionFor(meal).fats, isRtl ? "دهون" : "FAT"],
+                      ].map(([v, l], mi) => (
+                        <div key={mi} className="flex flex-col gap-1 leading-none">
+                          <span className="text-[12.5px] sm:text-sm font-black text-[#0E2A4A]" style={{ fontVariantNumeric: "tabular-nums" }}>{v as number}g</span>
+                          <span className="text-[9px] sm:text-[10px] font-semibold tracking-[0.08em] text-[#47759C]">{l as string}</span>
+                        </div>
+                      ))}
+                    </div>
 
                     {/* Footer — button (no price, included in subscription) */}
-                    <div className="flex items-center justify-between pt-2.5 sm:pt-4 mt-auto border-t border-gray-100">
+                    <div className="flex items-center justify-between mt-auto pt-1">
                       {/* «ضمن اشتراكك» يُخفى على الموبايل لإفساح مكان للزر */}
-                      <span className="hidden sm:inline text-xs font-semibold text-[#8AA6BD]">
+                      <span className="hidden sm:inline text-[11px] font-semibold text-[#8AA6BD]">
                         {isRtl ? "ضمن اشتراكك" : "In your plan"}
                       </span>
                       {browseMode && !isPhoneVerified ? (
@@ -2384,15 +2345,15 @@ Is that what you want?`,
                               : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
                             openExternal(whatsappLink(msg));
                           }}
-                          className="h-9 px-4 rounded-full font-bold text-white flex items-center gap-1.5"
-                          style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
+                          className="h-8 sm:h-9 px-3.5 sm:px-4 rounded-full font-bold text-white flex items-center gap-1.5 w-full sm:w-auto"
+                          style={{ background: "#25D366" }}
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
                           {isRtl ? "اشترك" : "Subscribe"}
                         </Button>
                       ) : itemCount(meal._id) > 0 ? (
                         // ✅ عدّاد — يسمح باختيار نفس الوجبة أكثر من مرة (السقف زيّه)
-                        <div className="flex items-center justify-between sm:justify-center gap-1.5 rounded-full bg-green-500 text-white px-1.5 h-9 w-full sm:w-auto">
+                        <div className="flex items-center justify-between sm:justify-center gap-1.5 rounded-full bg-[#3CC4F0] text-white px-1.5 h-8 sm:h-9 w-full sm:w-auto">
                           <button
                             onClick={(e) => { e?.stopPropagation(); removeItem(meal._id, selectedWeek, selectedDay!); }}
                             title={isRtl ? "إنقاص" : "Remove one"}
@@ -2416,12 +2377,12 @@ Is that what you want?`,
                           onClick={(e) => handleAddToCart(meal, e)}
                           disabled={!selectedDay || atLimit || noMealPlan}
                           className={cn(
-                            "h-9 px-5 rounded-full font-bold transition-all w-full sm:w-auto",
+                            "h-8 sm:h-9 px-5 rounded-full font-bold transition-all w-full sm:w-auto",
                             (atLimit || noMealPlan)
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : hasConflict
                                 ? "bg-orange-500 hover:bg-orange-600 text-white"
-                                : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
+                                : "bg-[#3CC4F0] hover:bg-[#0E76AC] text-white"
                           )}
                         >
                           {atLimit ? (
