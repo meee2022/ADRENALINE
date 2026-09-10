@@ -2407,61 +2407,45 @@ Is that what you want?`,
 
       {/* Meal Details Modal */}
       <Dialog open={!!selectedMeal} onOpenChange={() => setSelectedMeal(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir={dir}>
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto rounded-[24px] sm:rounded-[28px] p-4 sm:p-6" dir={dir}>
           {selectedMeal && (
-            <div className="space-y-6">
-              {/* Header */}
-              <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-[#0F1516]">
-                  {isRtl ? selectedMeal.nameAr : selectedMeal.nameEn || selectedMeal.nameAr}
-                </DialogTitle>
-                {selectedMeal.nameEn && isRtl && (
-                  <p className="text-sm text-[#47759C]">{selectedMeal.nameEn}</p>
-                )}
-              </DialogHeader>
-
-              {/* Image */}
-              <div className="relative w-full h-64 rounded-lg overflow-hidden">
+            <div className="space-y-5">
+              {/* Image — أولاً كما في بطاقة الطبق، بزوايا داخلية وشارة سعرات سماوية */}
+              <div className="relative w-full aspect-[16/10] rounded-[18px] sm:rounded-[20px] overflow-hidden" style={{ background: "#EAF3FB" }}>
                 <img
                   src={selectedMeal.imageUrl}
                   alt={isRtl ? selectedMeal.nameAr : selectedMeal.nameEn}
                   className="w-full h-full object-cover"
                 />
-                <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="text-sm font-bold">{nutritionFor(selectedMeal).calories}</span>
-                </div>
+                {/* الشارة أسفل الصورة — زر الإغلاق × يسكن الزاوية العليا */}
+                <span className={cn("absolute bottom-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[12px] font-black text-[#0E76AC]", isRtl ? "right-3" : "left-3")}
+                  style={{ fontVariantNumeric: "tabular-nums", boxShadow: "0 1px 3px rgba(14,42,74,0.12)" }}>
+                  {nutritionFor(selectedMeal).calories}
+                  <span className="font-semibold text-[#47759C]">{isRtl ? "سعرة" : "kcal"}</span>
+                </span>
               </div>
 
-              {/* Category & Tags */}
-              <div className="flex flex-wrap gap-2">
-                <Badge
-                  className={cn(
-                    "text-xs font-bold px-3 py-1 border-0",
-                    selectedMeal.category === "breakfast" && "bg-orange-500 text-white",
-                    selectedMeal.category === "lunch" && "bg-cyan-500 text-white",
-                    selectedMeal.category === "dinner" && "bg-indigo-500 text-white",
-                    isSnackCategory(selectedMeal.category) && "bg-amber-500 text-white"
-                  )}
-                >
+              {/* Header */}
+              <DialogHeader className="space-y-1 text-start">
+                <p className="text-[12px] font-bold text-[#0E76AC]">
                   {customerCategoryLabel(selectedMeal.category, isRtl)}
-                </Badge>
-                {selectedMeal.tags?.map((tag: string, idx: number) => (
-                  <Badge
-                    key={idx}
-                    variant="secondary"
-                    className="text-xs bg-[#3CC4F0]/10 text-[#3CC4F0] border-0"
-                  >
-                    {tagLabel(tag, isRtl)}
-                  </Badge>
-                ))}
-              </div>
+                  {selectedMeal.tags?.length > 0 && (
+                    <span className="font-semibold text-[#6B7C8C]"> · {selectedMeal.tags.map((tag: string) => tagLabel(tag, isRtl)).join(" · ")}</span>
+                  )}
+                </p>
+                <DialogTitle className="text-[22px] sm:text-2xl font-black text-[#0E2A4A] leading-tight" style={{ fontFamily: "'Cairo',sans-serif" }}>
+                  {isRtl ? selectedMeal.nameAr : selectedMeal.nameEn || selectedMeal.nameAr}
+                </DialogTitle>
+                {selectedMeal.nameEn && isRtl && (
+                  <p className="text-sm text-[#6B7C8C]">{selectedMeal.nameEn}</p>
+                )}
+              </DialogHeader>
 
               {/* Description — يُجلب عند الفتح. نحجز المكان أثناء التحميل حتى لا يقفز التخطيط */}
               {(aboutLoading || aboutText) && (
                 <div>
-                  <h3 className="font-bold text-[#0F1516] mb-2">
-                    {isRtl ? "الوصف" : "Description"}
+                  <h3 className="text-[11px] font-bold tracking-[0.08em] text-[#47759C] mb-1.5">
+                    {isRtl ? "الوصف" : "DESCRIPTION"}
                   </h3>
                   {aboutLoading ? (
                     <div className="space-y-2 animate-pulse" aria-hidden="true">
@@ -2470,51 +2454,43 @@ Is that what you want?`,
                       <div className="h-3.5 rounded bg-[#EAF3FB] w-2/3" />
                     </div>
                   ) : (
-                    <p className="text-[#47759C] leading-relaxed">{aboutText}</p>
+                    <p className="text-[15px] text-[#3D4F5C] leading-relaxed">{aboutText}</p>
                   )}
                 </div>
               )}
 
-              {/* Macros */}
+              {/* Macros — أربع خانات بيضاء بحدّ رفيع، أرقام كبيرة كحلية بلا نقاط ملوّنة */}
               <div>
-                <h3 className="font-bold text-[#0F1516] mb-3">
-                  {isRtl ? "القيم الغذائية" : "Nutrition Facts"}
+                <h3 className="text-[11px] font-bold tracking-[0.08em] text-[#47759C] mb-2">
+                  {isRtl ? "القيم الغذائية" : "NUTRITION"}
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-orange-50 rounded-lg p-4 text-center">
-                    <Flame className="h-6 w-6 text-orange-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).calories}</p>
-                    <p className="text-xs text-[#47759C]">{isRtl ? "سعرة" : "Calories"}</p>
-                  </div>
-                  <div className="bg-red-50 rounded-lg p-4 text-center">
-                    <div className="h-6 w-6 rounded-full bg-red-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).protein}g</p>
-                    <p className="text-xs text-[#47759C]">{isRtl ? "بروتين" : "Protein"}</p>
-                  </div>
-                  <div className="bg-yellow-50 rounded-lg p-4 text-center">
-                    <div className="h-6 w-6 rounded-full bg-yellow-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).carbs}g</p>
-                    <p className="text-xs text-[#47759C]">{isRtl ? "كربوهيدرات" : "Carbs"}</p>
-                  </div>
-                  <div className="bg-blue-50 rounded-lg p-4 text-center">
-                    <div className="h-6 w-6 rounded-full bg-blue-500 mx-auto mb-2" />
-                    <p className="text-2xl font-bold text-[#0F1516]">{nutritionFor(selectedMeal).fats}g</p>
-                    <p className="text-xs text-[#47759C]">{isRtl ? "دهون" : "Fats"}</p>
-                  </div>
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                  {[
+                    [nutritionFor(selectedMeal).calories, "", isRtl ? "سعرة" : "kcal"],
+                    [nutritionFor(selectedMeal).protein, "g", isRtl ? "بروتين" : "Protein"],
+                    [nutritionFor(selectedMeal).carbs, "g", isRtl ? "كارب" : "Carbs"],
+                    [nutritionFor(selectedMeal).fats, "g", isRtl ? "دهون" : "Fat"],
+                  ].map(([v, u, l], mi) => (
+                    <div key={mi} className="rounded-2xl bg-white px-2 py-3 sm:py-4 text-center" style={{ border: "1px solid #E4EEF6" }}>
+                      <p className={cn("font-black text-[#0E2A4A] leading-none", mi === 0 ? "text-[20px] sm:text-2xl" : "text-[18px] sm:text-2xl")} style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {v as number}<span className="text-[12px] sm:text-sm font-bold text-[#47759C]">{u as string}</span>
+                      </p>
+                      <p className="mt-1.5 text-[10.5px] sm:text-xs font-semibold text-[#47759C]">{l as string}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Ingredients */}
+              {/* Ingredients — كبسولات هادئة بدل قائمة نقاط */}
               {selectedMeal.ingredients && selectedMeal.ingredients.length > 0 && (
                 <div>
-                  <h3 className="font-bold text-[#0F1516] mb-2">
-                    {isRtl ? "المكونات" : "Ingredients"}
+                  <h3 className="text-[11px] font-bold tracking-[0.08em] text-[#47759C] mb-2">
+                    {isRtl ? "المكونات" : "INGREDIENTS"}
                   </h3>
-                  <ul className="space-y-1">
+                  <ul className="flex flex-wrap gap-1.5">
                     {selectedMeal.ingredients.map((ingredient: string, idx: number) => (
-                      <li key={idx} className="text-[#47759C] flex items-start gap-2">
-                        <span className="text-[#3CC4F0] mt-1">•</span>
-                        <span>{ingredient}</span>
+                      <li key={idx} className="rounded-full px-3 py-1 text-[12.5px] font-semibold text-[#0E2A4A]" style={{ background: "#EEF4F8" }}>
+                        {ingredient}
                       </li>
                     ))}
                   </ul>
@@ -2522,16 +2498,10 @@ Is that what you want?`,
               )}
 
               {/* Info & CTA (no price — included in subscription) */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold px-3 py-1.5 rounded-full"
-                    style={{ background: "#3cc4f015", color: "#3cc4f0" }}>
-                    {nutritionFor(selectedMeal).calories} {isRtl ? "كالوري" : "kcal"}
-                  </span>
-                  <span className="text-xs font-semibold text-[#47759C]">
-                    {isRtl ? "ضمن اشتراكك" : "Included in your plan"}
-                  </span>
-                </div>
+              <div className="flex items-center justify-between gap-3 pt-4" style={{ borderTop: "1px solid #E4EEF6" }}>
+                <span className="text-[12px] font-semibold text-[#6B7C8C]">
+                  {isRtl ? "ضمن اشتراكك" : "Included in your plan"}
+                </span>
                 <Button
                   onClick={(e) => {
                     handleAddToCart(selectedMeal, e);
@@ -2539,7 +2509,7 @@ Is that what you want?`,
                   }}
                   disabled={isInCart(selectedMeal._id) || !selectedDay}
                   className={cn(
-                    "h-11 px-8 rounded-full font-bold",
+                    "h-11 sm:h-12 px-7 sm:px-8 rounded-full font-black shadow-none",
                     isInCart(selectedMeal._id)
                       ? "bg-green-500 hover:bg-green-600 text-white"
                       : "bg-[#3CC4F0] hover:bg-[#47759C] text-white"
