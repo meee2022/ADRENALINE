@@ -165,230 +165,167 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ═══════════ PLANS ═══════════ */}
-      <section id="plans-section" className="py-10 md:py-20 bg-white relative overflow-hidden">
-        <div className="absolute top-20 -right-32 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ background: "radial-gradient(circle, #3CC4F0, transparent)" }} />
-        <div className="absolute bottom-20 -left-32 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none"
-          style={{ background: "radial-gradient(circle, #47759C, transparent)" }} />
-
-        <div className="max-w-7xl mx-auto px-5 md:px-8 relative">
-          <div className="text-center mb-6 md:mb-12">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-4"
-              style={{ background: "linear-gradient(135deg, #3CC4F015, #47759C10)", border: "1px solid #3CC4F030" }}
-            >
-              <Sparkles className="h-4 w-4" style={{ color: "#3CC4F0" }} />
-              <span className="text-xs md:text-sm font-bold tracking-wider" style={{ color: "#47759C" }}>
-                {isRtl ? "خطط مرنة" : "FLEXIBLE PLANS"}
-              </span>
-            </motion.div>
-            <motion.h2
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-3xl md:text-4xl lg:text-5xl font-black text-[#0F1516] mb-3 tracking-tight"
-            >
-              {isRtl ? "استكشف خططنا" : "Explore Our Plans"}
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base max-w-xl mx-auto"
-              style={{ color: "#47759C" }}
-            >
-              {isRtl
-                ? "اختر الخطة المناسبة لأهدافك"
-                : "Choose the plan that suits your goals"}
-            </motion.p>
+      {/* ═══════════ PLANS — بطاقات هادئة: صورة دائرية، اسم، سعر كبير، باقتان، زر مفرّغ ═══════════ */}
+      <section id="plans-section" className="py-12 md:py-20" style={{ background: "#F5F9FC", direction: isRtl ? "rtl" : "ltr" }}>
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+          <div className="text-center mb-8 md:mb-12">
+            <h2 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(26px,3.6vw,42px)", lineHeight: 1.15 }}>
+              {isRtl ? "برامج مبنية حول هدفك" : "Programs built around your goal"}
+            </h2>
+            <p className="mt-2 text-[15px] text-[#6B7C8C]">
+              {isRtl ? "اختر الباقة وعدد وجباتك، ونتكفّل بالباقي." : "Pick a plan and your meal count. We handle the rest."}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
             {weekPlans.slice(0, 3).map((plan: any, idx: number) => {
               const isPopular = idx === 1;
+              const name = isRtl ? plan.nameAr : plan.nameEn || plan.nameAr;
+              const opts: any[] = plan.options || [];
+              const prices = opts.map((o) => Number(o.priceQAR) || 0).filter((n) => n > 0);
+              const minPrice = prices.length ? Math.min(...prices) : 0;
               return (
                 <motion.div
                   key={plan._id}
-                  initial={{ opacity: 0, y: 30 }}
+                  initial={{ opacity: 0, y: 18 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  whileHover={{ y: -8 }}
-                  className="group relative bg-white rounded-3xl overflow-hidden"
+                  transition={{ duration: 0.45, delay: idx * 0.08 }}
+                  className="relative rounded-[24px] p-5 md:p-6 flex flex-col gap-5"
                   style={{
-                    boxShadow: isPopular
-                      ? "0 20px 60px rgba(60,196,240,0.25), 0 8px 20px rgba(0,0,0,0.06)"
-                      : "0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03)",
-                    border: isPopular ? "2px solid #3CC4F0" : "1px solid rgba(0,0,0,0.05)",
+                    background: "linear-gradient(180deg, #FFFFFF 0%, #F0F9FE 100%)",
+                    border: `1px solid ${isPopular ? "#3CC4F0" : "#E4EEF6"}`,
                   }}
                 >
                   {isPopular && (
-                    <div className="absolute top-4 right-4 z-10">
-                      <div className="px-3 py-1.5 rounded-full text-[10px] font-black text-white flex items-center gap-1"
-                        style={{
-                          background: "linear-gradient(135deg, #3CC4F0, #47759C)",
-                          boxShadow: "0 4px 12px rgba(60,196,240,0.4)",
-                        }}>
-                        <Sparkles className="h-3 w-3" />
-                        {isRtl ? "الأكثر شعبية" : "POPULAR"}
-                      </div>
+                    <span className="absolute top-4 rounded-full px-2.5 py-0.5 text-[11px] font-black text-white"
+                      style={{ insetInlineEnd: 16, background: "#3CC4F0" }}>
+                      {isRtl ? "الأكثر طلباً" : "Most popular"}
+                    </span>
+                  )}
+
+                  <div className="flex items-center gap-4">
+                    <div className="h-16 w-16 md:h-[72px] md:w-[72px] shrink-0 rounded-full overflow-hidden"
+                      style={{ background: "#EAF3FB", boxShadow: "0 8px 18px -10px rgba(14,42,74,0.45)" }}>
+                      <img
+                        src={planCardImage(plan)}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/heart-logo.png"; }}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-xl md:text-[22px] font-black text-[#0E2A4A] leading-tight">{name}</h3>
+                      <p className="mt-1 text-[13px] text-[#6B7C8C] leading-snug line-clamp-2">
+                        {isRtl ? plan.descriptionAr : plan.descriptionEn || plan.descriptionAr}
+                      </p>
+                    </div>
+                  </div>
+
+                  {minPrice > 0 && (
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-[13px] font-bold text-[#6B7C8C]">{isRtl ? "من" : "from"}</span>
+                      <span className="text-[32px] font-black text-[#0E2A4A] leading-none" style={{ fontVariantNumeric: "tabular-nums" }}>{minPrice}</span>
+                      <span className="text-sm font-bold text-[#0E76AC]">{isRtl ? "ر.ق / أسبوع" : "QAR / week"}</span>
                     </div>
                   )}
 
-                  <div className="relative h-32 md:h-48 overflow-hidden">
-                    <motion.img
-                      src={planCardImage(plan)}
-                      alt={isRtl ? plan.nameAr : plan.nameEn || plan.nameAr}
-                      loading="lazy"
-                      onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/adrenaline-logo-full.png"; }}
-                      whileHover={{ scale: 1.1 }}
-                      transition={{ duration: 0.7 }}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0"
-                      style={{ background: "linear-gradient(180deg, transparent 30%, rgba(15,21,22,0.85) 100%)" }} />
-                    <div className="absolute bottom-3 inset-x-4">
-                      <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">
-                        {isRtl ? plan.nameAr : plan.nameEn || plan.nameAr}
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="p-4 md:p-5">
-                    <p className="text-sm mb-3 md:mb-4 line-clamp-2" style={{ color: "#47759C" }}>
-                      {isRtl ? plan.descriptionAr : plan.descriptionEn || plan.descriptionAr}
+                  {/* الباقات — الضغط على باقة يفتح واتساب بنفس الرسالة السابقة */}
+                  <div className="flex flex-col gap-2">
+                    {opts.slice(0, 2).map((option: any, oi: number) => (
+                      <button
+                        key={oi}
+                        onClick={() => handleSubscribe(name, option)}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-start transition-colors hover:border-[#3CC4F0]"
+                        style={{ border: "1px solid #E4EEF6" }}
+                      >
+                        <span className="text-sm font-bold text-[#0E2A4A]">
+                          {option.mealsCount} {isRtl ? "وجبات" : "meals"} + {option.snacksCount} {isRtl ? "سناك" : "snacks"}
+                        </span>
+                        <span className="text-sm font-black text-[#0E76AC] whitespace-nowrap" style={{ fontVariantNumeric: "tabular-nums" }}>
+                          {Number(option.priceQAR) > 0 ? `${option.priceQAR} ${isRtl ? "ر.ق" : "QAR"}` : (isRtl ? "اشترك" : "Subscribe")}
+                        </span>
+                      </button>
+                    ))}
+                    <p className="text-[11px] text-[#8AA6BD] px-1">
+                      {isRtl ? "اضغط على الباقة للاشتراك عبر واتساب" : "Tap a package to subscribe on WhatsApp"}
                     </p>
-
-                    <div className="space-y-2 mb-3 md:mb-4">
-                      {plan.options?.slice(0, 2).map((option: any, oi: number) => (
-                        <button
-                          key={oi}
-                          onClick={() => handleSubscribe(isRtl ? plan.nameAr : plan.nameEn || plan.nameAr, option)}
-                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all hover:scale-[1.02]"
-                          style={{
-                            background: "linear-gradient(135deg, #f8fafc, #f1f5f9)",
-                            border: "1.5px solid #e2e8f0",
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check className="h-3.5 w-3.5" style={{ color: "#3CC4F0" }} />
-                            <span className="text-xs md:text-sm font-bold text-[#0F1516]">
-                              {option.mealsCount} {isRtl ? "وجبات" : "meals"} + {option.snacksCount} {isRtl ? "سناك" : "snacks"}
-                            </span>
-                          </div>
-                          <ArrowLeft className={cn("h-3.5 w-3.5 flex-shrink-0", !isRtl && "rotate-180")} style={{ color: "#3CC4F0" }} />
-                        </button>
-                      ))}
-                    </div>
-
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleSubscribe(
-                        isRtl ? plan.nameAr : plan.nameEn || plan.nameAr,
-                        plan.options?.[0] || { mealsCount: 0, snacksCount: 0 }
-                      )}
-                      className="w-full h-11 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2"
-                      style={{
-                        background: "linear-gradient(135deg, #3cc4f0, #47759c)",
-                        boxShadow: "0 6px 16px rgba(60,196,240,0.35)",
-                      }}
-                    >
-                      <MessageCircle className="h-4 w-4" />
-                      {isRtl ? "اشترك" : "Subscribe"}
-                    </motion.button>
                   </div>
+
+                  <a
+                    href="/public/plans"
+                    className="mt-auto h-12 rounded-full inline-flex items-center justify-center font-black text-[15px] text-[#0E2A4A] transition-colors hover:bg-[#EAF7FD]"
+                    style={{ border: "1.5px solid #0E2A4A", textDecoration: "none" }}
+                  >
+                    {isRtl ? "استكشف الخطة" : "Explore the plan"}
+                  </a>
                 </motion.div>
               );
             })}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-center mt-8"
-          >
-            <a
-              href="/public/plans"
-              className="inline-flex items-center gap-2 h-11 px-6 rounded-full font-bold text-sm transition-all hover:gap-3"
-              style={{
-                background: "transparent",
-                border: "2px solid #3CC4F0",
-                color: "#3CC4F0",
-              }}
-            >
-              {isRtl ? "عرض جميع الخطط" : "View All Plans"}
+          <div className="text-center mt-8">
+            <a href="/public/plans" className="inline-flex items-center gap-1.5 text-sm font-black text-[#0E76AC] hover:underline underline-offset-4" style={{ textDecoration: "none" }}>
+              {isRtl ? "كل الخطط والأسعار" : "All plans & prices"}
               {isRtl ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
             </a>
-          </motion.div>
+          </div>
         </div>
       </section>
 
-      {/* ═══════════ BEST SELLERS ═══════════ */}
+      {/* ═══════════ BEST SELLERS — بطاقة الطبق نفسها التي في المنيو ═══════════ */}
       {(bestSellersLoading || bestSellers.length > 0) && (
-        <section className="py-10 md:py-20 bg-[#F7FBFE]" style={{ direction: isRtl ? "rtl" : "ltr" }}>
-          <div className="max-w-7xl mx-auto px-5 md:px-8">
-            <div className="text-center mb-6 md:mb-10">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-3"
-                style={{ background: "#3CC4F015", border: "1px solid #3CC4F030" }}>
-                <Sparkles className="h-4 w-4" style={{ color: "#0E76AC" }} />
-                <span className="text-xs md:text-sm font-bold tracking-wider" style={{ color: "#0E76AC" }}>
-                  {isRtl ? "اختيارات عملائنا" : "CUSTOMER FAVORITES"}
-                </span>
+        <section className="py-12 md:py-20 bg-white" style={{ direction: isRtl ? "rtl" : "ltr" }}>
+          <div className="max-w-6xl mx-auto px-5 md:px-8">
+            <div className="flex items-end justify-between gap-4 mb-6 md:mb-8">
+              <div>
+                <h2 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(24px,3.2vw,36px)", lineHeight: 1.15 }}>
+                  {isRtl ? "الأكثر طلباً" : "Best sellers"}
+                </h2>
+                <p className="mt-1.5 text-[14px] text-[#6B7C8C]">{isRtl ? "ما يختاره مشتركونا أكثر" : "What our subscribers pick most"}</p>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black text-[#0E2A4A] mb-2" style={{ fontFamily: "'Cairo',sans-serif" }}>
-                {isRtl ? "الأكثر طلبًا" : "Best Sellers"}
-              </h2>
-              <p className="text-base" style={{ color: "#47759C" }}>
-                {isRtl ? "أكثر الوجبات التي يحبها مشتركونا" : "The meals our subscribers love most"}
-              </p>
+              <a href="/public/menu" className="shrink-0 inline-flex items-center gap-1 text-sm font-black text-[#0E76AC] hover:underline underline-offset-4" style={{ textDecoration: "none" }}>
+                {isRtl ? "القائمة كاملة" : "Full menu"}
+                {isRtl ? <ArrowLeft className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
+              </a>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
               {bestSellersLoading && Array.from({ length: 6 }).map((_, i) => (
-                <div key={`sk-${i}`} className="rounded-3xl overflow-hidden bg-white" style={{ border: "1px solid #D9E6F1" }}>
-                  <div className="w-full aspect-[4/3] animate-pulse" style={{ background: "#E4EEF6" }} />
-                  <div className="p-4 space-y-2">
+                <div key={`sk-${i}`} className="rounded-[24px] p-2" style={{ background: "#F3F7FA" }}>
+                  <div className="w-full aspect-square rounded-[18px] animate-pulse" style={{ background: "#E4EEF6" }} />
+                  <div className="px-1.5 pt-3 pb-2 space-y-2">
                     <div className="h-3 rounded animate-pulse" style={{ background: "#E4EEF6", width: "80%" }} />
-                    <div className="h-2.5 rounded animate-pulse" style={{ background: "#EAF3FB", width: "55%" }} />
+                    <div className="h-2.5 rounded animate-pulse" style={{ background: "#EAF3FB", width: "50%" }} />
                   </div>
                 </div>
               ))}
               {!bestSellersLoading && bestSellers.map((m: any, i: number) => (
                 <motion.a key={m.id} href={m.slug ? `/public/meal/${m.slug}` : "/public/menu"}
-                  initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }} transition={{ duration: 0.4, delay: i * 0.05 }}
-                  className="group rounded-3xl overflow-hidden bg-white block"
-                  style={{ border: "1px solid #D9E6F1", boxShadow: "0 10px 30px -16px rgba(14,42,74,.3)", textDecoration: "none" }}>
-                  <div className="relative w-full aspect-[4/3]" style={{ background: "#EAF3FB", overflow: "hidden" }}>
+                  initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.35, delay: i * 0.05 }}
+                  className="group block rounded-[24px] p-2 transition-colors border border-transparent hover:border-[#3CC4F0]/60"
+                  style={{ background: "#F3F7FA", textDecoration: "none" }}>
+                  <div className="relative w-full aspect-square overflow-hidden rounded-[18px]" style={{ background: "#EAF3FB" }}>
                     {m.imageUrl && <img src={m.imageUrl} alt={isRtl ? m.nameAr : m.nameEn}
                       loading="lazy" decoding="async"
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105" />}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />}
+                    <span className={cn("absolute top-2 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-black text-[#0E76AC]", isRtl ? "right-2" : "left-2")}
+                      style={{ fontVariantNumeric: "tabular-nums", boxShadow: "0 1px 3px rgba(14,42,74,0.12)" }}>
+                      {m.calories}<span className="font-semibold text-[#47759C]">{isRtl ? "سعرة" : "kcal"}</span>
+                    </span>
                     {i < 3 && (
-                      <span className="absolute top-2 px-2 py-0.5 rounded-full text-[10px] font-black text-white"
-                        style={{ insetInlineStart: 8, background: i === 0 ? "#F4A93A" : "#0E76AC" }}>
-                        {isRtl ? `#${i + 1} الأكثر طلبًا` : `#${i + 1} Best`}
+                      <span className={cn("absolute bottom-2 rounded-full px-2 py-0.5 text-[10px] font-black text-white", isRtl ? "right-2" : "left-2")}
+                        style={{ background: "#0E2A4A" }}>
+                        #{i + 1}
                       </span>
                     )}
                   </div>
-                  <div className="p-4">
-                    <div className="font-bold text-[#0E2A4A] text-sm leading-tight mb-1 line-clamp-1"
-                      style={{ fontFamily: "'Cairo',sans-serif" }}>
+                  <div className="px-1.5 pt-2.5 pb-1.5">
+                    <p className="text-[13px] font-black text-[#0E2A4A] leading-tight line-clamp-2" style={{ fontFamily: "'Cairo',sans-serif" }}>
                       {isRtl ? m.nameAr : m.nameEn}
-                    </div>
-                    {/* بدون سعر — أسعار المشتركين غير معروضة هنا (كانت خطأ) */}
-                    <div className="flex items-center text-[11px]" style={{ color: "#47759C" }}>
-                      <span>{m.calories} {isRtl ? "سعرة" : "kcal"}</span>
-                    </div>
+                    </p>
                   </div>
                 </motion.a>
               ))}
