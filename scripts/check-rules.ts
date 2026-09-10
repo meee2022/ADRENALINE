@@ -70,6 +70,15 @@ t("أسبوع من السبت للخميس يتخطّى الجمعة ويتقد�
   assert.equal(slotToDate(iso(d), 4, 1, "saturday"), iso(end));
   assert.equal(subscriptionSlotKeys(null, iso(end), 1), null);
 });
+t("الخادم يمرّر «يوم قطر»: لو اليوم = يوم البداية تبدأ الخانات من بكرة (كما في المنيو)", () => {
+  const sat = new Date(`${Y}-01-01T00:00:00`); while (sat.getDay() !== 6) sat.setDate(sat.getDate() + 1);
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const end = new Date(sat); end.setDate(end.getDate() + 5); // الخميس
+  const fromSat = orderedSubscriptionSlots(iso(sat), iso(end), 1, iso(sat)).map((s) => s.day);
+  assert.deepEqual(fromSat, ["sunday", "monday", "tuesday", "wednesday", "thursday"]);
+  const before = orderedSubscriptionSlots(iso(sat), iso(end), 1, `${Y - 1}-12-01`).map((s) => s.day);
+  assert.deepEqual(before, ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday"]);
+});
 t("اليوم الافتراضي: الجمعة → السبت، والخميس يبقى الخميس", () => {
   assert.equal(defaultDeliveryDay(new Date("2026-09-11T10:00:00")), "saturday"); // جمعة
   assert.equal(defaultDeliveryDay(new Date("2026-09-10T10:00:00")), "thursday");

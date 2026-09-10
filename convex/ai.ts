@@ -9,6 +9,7 @@
  *   - مسار التليفون يرجّع الحد الأدنى من البيانات اللازمة للتوليد فقط.
  */
 import { action, query } from "./_generated/server";
+import { restrictionWords, mealIsRestricted, BREAKFAST_MAX_PER_DAY as SHARED_BREAKFAST_MAX } from "../shared/rules";
 import { api, internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import { validateSession } from "./sessions";
@@ -42,43 +43,9 @@ function targetCaloriesFor(goal: string | undefined): number {
  * كلمات وصل/نفي لا تُعدّ مادةً محظورة بذاتها.
  * مطابقة لـ`client/src/lib/mealRestrictions.ts` — وهي مرآة هذا المنطق.
  */
-const STOPWORDS = new Set([
-  "no", "not", "without", "reduce", "less", "only", "add", "my", "choice",
-  "always", "put", "separate", "off", "and", "or", "the", "in", "with",
-  "high", "low", "extra", "please", "calories", "carb", "carbs",
-  "breakfast", "lunch", "dinner", "snack", "meal", "meals",
-]);
-
-/**
- * يستخرج كلمات المنع من نصّي الممنوعات والحساسية.
- *
- * الطاقم يكتبها بالإنجليزية هكذا: «NO SALAD / NO CAKE». القسمة على المسافات
- * وحدها كانت تجعل كل كلمة فلتراً — بما فيها «no» و«/» — و«no» تقع داخل
- * كلماتٍ كثيرة (Noodles, Mono)، فتُحجب وجبات سليمة. عشرة مشتركين كانت خططهم
- * الذكية تخرج ناقصة لهذا السبب وحده، ومنهم من لم يجد سناكاً واحداً في يومه.
- *
- * الواجهة تُسقِط هذه الكلمات منذ البداية؛ هذا يوحّد الخادم معها فلا يفترق
- * المنيو اليدوي عن المولّد الذكي. تحقّقنا قبل التغيير: عشرة مشتركين تتحسّن
- * خططهم، وصفر وجبة محظورة فعلاً تمرّ.
- */
-function extractBlockWords(allergies?: string | null, avoid?: string | null): string[] {
-  const raw = `${allergies || ""} ${avoid || ""}`.toLowerCase();
-  const words = raw
-    .split(/[,،/.\s]+/)
-    .map((w) => w.trim())
-    .filter((w) => w.length >= 3 && !STOPWORDS.has(w));
-  return Array.from(new Set(words));
-}
-
-function isBlocked(meal: any, blockWords: string[]): boolean {
-  if (blockWords.length === 0) return false;
-  const hay = [
-    meal.nameAr, meal.nameEn,
-    ...(meal.ingredients || []),
-    ...(meal.tags || []),
-  ].join(" ").toLowerCase();
-  return blockWords.some((w) => w && hay.includes(w));
-}
+/* ✅ كلمات المنع والحجب من المصدر الوحيد shared/rules — نفس ما يطبّقه المنيو والمراجعة. */
+const extractBlockWords = (allergies?: string | null, avoid?: string | null): string[] => restrictionWords(avoid, allergies);
+const isBlocked = (meal: any, blockWords: string[]): boolean => mealIsRestricted(meal, blockWords);
 
 /**
  * يجمع البروفايل + الوجبات المرشّحة المتاحة اليوم.
@@ -403,8 +370,8 @@ export const chat = action({
   },
 });
 
-/** سقف الفطار: وجبة فطار واحدة في اليوم — نفس قاعدة المنيو اليدوي. */
-const BREAKFAST_MAX_PER_DAY = 1;
+/** سقف الفطار: وجبة فطار واحدة في اليوم — نفس قاعدة المنيو اليدوي (shared/rules). */
+const BREAKFAST_MAX_PER_DAY = SHARED_BREAKFAST_MAX;
 
 /**
  * يُكمل ما نقّصه النموذج من اختيار اليوم.

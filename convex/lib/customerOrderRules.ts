@@ -1,9 +1,13 @@
-import { addDays, DELIVERY_DAYS, fmtDate, parseDate } from "./dates";
+import { DELIVERY_DAYS, fmtDate } from "./dates";
+/* ✅ القواعد نفسها التي تستخدمها شاشة المنيو والخطة الذكية — مصدر واحد (shared/rules):
+   التصنيفات، الجدولة، ومشي خانات الاشتراك. الخادم يمرّر «يوم قطر» بدل ساعة الجهاز. */
+import {
+  isMainCategory as sharedIsMain, isSnackCategory as sharedIsSnack, mealScheduledFor as sharedScheduledFor,
+  orderedSubscriptionSlots, countPicks, BREAKFAST_MAX_PER_DAY as SHARED_BREAKFAST_MAX,
+} from "../../shared/rules";
 
-export const BREAKFAST_MAX_PER_DAY = 1;
+export const BREAKFAST_MAX_PER_DAY = SHARED_BREAKFAST_MAX;
 
-const MAIN_CATEGORIES = new Set(["breakfast", "lunch", "dinner"]);
-const SNACK_CATEGORIES = new Set(["snack", "salad"]);
 const DELIVERY_DAY_SET = new Set<string>(DELIVERY_DAYS);
 
 const norm = (value: unknown) => String(value || "").trim().toLowerCase();
@@ -24,70 +28,23 @@ export type SubscriptionCustomer = {
   snacksPerDay?: number;
 };
 
-export function isMainCategory(category: unknown): boolean {
-  return MAIN_CATEGORIES.has(norm(category));
-}
+export function isMainCategory(category: unknown): boolean { return sharedIsMain(category); }
+export function isSnackCategory(category: unknown): boolean { return sharedIsSnack(category); }
 
-export function isSnackCategory(category: unknown): boolean {
-  return SNACK_CATEGORIES.has(norm(category));
-}
-
+/** جدولة الوجبة في (دورة، يوم) — مع رفض دورة خارج 1..4 أو يوم ليس يوم توصيل. */
 export function mealScheduledFor(meal: any, week: number, day: string): boolean {
   const normalizedDay = norm(day);
-  if (!Number.isInteger(week) || week < 1 || week > 4 || !DELIVERY_DAY_SET.has(normalizedDay)) {
-    return false;
-  }
-
-  if (Array.isArray(meal?.schedule) && meal.schedule.length > 0) {
-    return meal.schedule.some(
-      (slot: any) => Number(slot?.week) === week && norm(slot?.day) === normalizedDay,
-    );
-  }
-
-  const weeks = Array.isArray(meal?.weeks) ? meal.weeks.map(Number) : [];
-  const days = Array.isArray(meal?.days) ? meal.days.map(norm) : [];
-  if (weeks.length > 0 || days.length > 0) {
-    return weeks.includes(week) && days.includes(normalizedDay);
-  }
-
-  return false;
+  if (!Number.isInteger(week) || week < 1 || week > 4 || !DELIVERY_DAY_SET.has(normalizedDay)) return false;
+  return sharedScheduledFor(meal, week, normalizedDay);
 }
 
-/** Same subscription walk used by the customer menu: tomorrow onward, Friday excluded. */
+/** خانات الاشتراك القابلة للطلب: نفس مشي المنيو (من بكرة، تخطّي الجمعة، تقدّم الدورة كل جمعة) بيوم قطر. */
 export function orderableSubscriptionSlots(
   customer: SubscriptionCustomer,
   startRotationWeek: number,
   todayISO: string,
 ): Array<{ week: number; day: string }> {
-  const startDate = String(customer.startDate || "");
-  const endDate = String(customer.endDate || "");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return [];
-
-  const start = parseDate(startDate);
-  const end = parseDate(endDate);
-  if (end.getTime() < start.getTime()) return [];
-
-  const tomorrow = addDays(parseDate(todayISO), 1);
-  const effectiveStart = start.getTime() > parseDate(todayISO).getTime() ? start : tomorrow;
-  let rotationWeek = startRotationWeek >= 1 && startRotationWeek <= 4 ? startRotationWeek : 1;
-  const slots: Array<{ week: number; day: string }> = [];
-  let cursor = start;
-
-  for (let guard = 0; guard < 400 && cursor.getTime() <= end.getTime(); guard++) {
-    const dayOfWeek = cursor.getUTCDay();
-    if (dayOfWeek !== 5 && cursor.getTime() >= effectiveStart.getTime()) {
-      const names: Record<number, string> = {
-        6: "saturday", 0: "sunday", 1: "monday", 2: "tuesday",
-        3: "wednesday", 4: "thursday",
-      };
-      const day = names[dayOfWeek];
-      if (day) slots.push({ week: rotationWeek, day });
-    }
-    if (dayOfWeek === 5) rotationWeek = (rotationWeek % 4) + 1;
-    cursor = addDays(cursor, 1);
-  }
-
-  return slots;
+  return orderedSubscriptionSlots(String(customer.startDate || ""), String(customer.endDate || ""), startRotationWeek, todayISO);
 }
 
 function fail(code: string, details?: Record<string, unknown>): never {
@@ -129,9 +86,8 @@ export function validateCustomerOrderSelection(args: {
     if (!isMainCategory(category) && !isSnackCategory(category)) fail("INVALID_CATEGORY");
     const key = `${week}:${day}`;
     const count = counts.get(key) || { mains: 0, snacks: 0, breakfast: 0 };
-    if (isSnackCategory(category)) count.snacks += 1;
-    else count.mains += 1;
-    if (category === "breakfast") count.breakfast += 1;
+    const c = countPicks([{ category }]);
+    count.snacks += c.snacks; count.mains += c.meals; count.breakfast += c.breakfasts;
     // ☕ لا نرفض فطاراً ثانياً: المشترك حرّ فيه بعد تأكيد صريح في المنيو
     //    (BREAKFAST_MAX_PER_DAY يبقى سقفاً للاختيار **التلقائي** فقط).
     //    العدد الكلي للوجبات الرئيسية يظل مفروضاً أدناه، فلا يزيد أحد حصّته.

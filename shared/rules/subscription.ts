@@ -109,13 +109,16 @@ export function orderedSubscriptionSlots(
   startDate: string | null | undefined,
   endDate: string | null | undefined,
   startRotationWeek: number,
+  /** «اليوم» yyyy-MM-dd — الخادم يمرّر يوم قطر؛ الواجهة تتركه فيؤخذ من ساعة الجهاز. */
+  todayISO?: string,
 ): SubSlot[] {
   if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return [];
   if (!endDate || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return [];
   const subStart = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
   if (end.getTime() < subStart.getTime()) return [];
-  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const now = todayISO && /^\d{4}-\d{2}-\d{2}$/.test(todayISO) ? new Date(`${todayISO}T00:00:00`) : new Date();
+  now.setHours(0, 0, 0, 0);
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
   const effStart = subStart.getTime() > now.getTime() ? subStart : tomorrow;
 

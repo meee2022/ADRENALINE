@@ -99,11 +99,12 @@ export function subscriptionSlotKeys(
   startDate: string | null | undefined,
   endDate: string | null | undefined,
   startRotationWeek: number,
+  todayISO?: string,
 ): Set<string> | null {
   if (!endDate || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return null;
   if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
   if (new Date(`${endDate}T00:00:00`).getTime() < new Date(`${startDate}T00:00:00`).getTime()) return null;
   const out = new Set<string>();
-  for (const s of orderedSubscriptionSlots(startDate, endDate, startRotationWeek)) out.add(slotKey(s.week, s.day));
+  for (const s of orderedSubscriptionSlots(startDate, endDate, startRotationWeek, todayISO)) out.add(slotKey(s.week, s.day));
   return out;
 }
