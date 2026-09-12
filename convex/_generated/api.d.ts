@@ -92,6 +92,7 @@ import type * as purchaseOrders from "../purchaseOrders.js";
 import type * as rateLimit from "../rateLimit.js";
 import type * as ratings from "../ratings.js";
 import type * as reapproveShifted from "../reapproveShifted.js";
+import type * as recipeCosting from "../recipeCosting.js";
 import type * as resetTestData from "../resetTestData.js";
 import type * as restaurantSettings from "../restaurantSettings.js";
 import type * as seed from "../seed.js";
@@ -201,6 +202,7 @@ declare const fullApi: ApiFromModules<{
   rateLimit: typeof rateLimit;
   ratings: typeof ratings;
   reapproveShifted: typeof reapproveShifted;
+  recipeCosting: typeof recipeCosting;
   resetTestData: typeof resetTestData;
   restaurantSettings: typeof restaurantSettings;
   seed: typeof seed;
