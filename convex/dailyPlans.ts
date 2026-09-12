@@ -94,9 +94,24 @@ async function recipeForPlanItem(ctx: any, item: any) {
   return [];
 }
 
+/** نافذة افتراضية لما لا يُطلب تاريخ: الخطط تراكمت (6000+) فصار تنزيلها كلها 14.7MB من حدّ 16MB. */
+const DEFAULT_WINDOW_BACK_DAYS = 14;
+const DEFAULT_WINDOW_AHEAD_DAYS = 21;
+const MAX_RANGE_DAYS = 92;
+function shiftISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export const list = query({
-  args: { date: v.optional(v.string()), sessionToken: v.optional(v.string()) },
-  handler: async (ctx, { date, sessionToken }) => {
+  args: {
+    date: v.optional(v.string()),
+    /** مدى تواريخ شامل yyyy-MM-dd — للتقارير. أقصاه 92 يوماً. */
+    from: v.optional(v.string()),
+    to: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { date, from, to, sessionToken }) => {
     await requireStaff(ctx, sessionToken); // 🔒 خطط اليوم فيها بيانات مشتركين
     if (date) {
       return await ctx.db
@@ -104,7 +119,19 @@ export const list = query({
         .withIndex("by_date", (q) => q.eq("date", date))
         .collect();
     }
-    return await ctx.db.query("dailyPlans").order("desc").collect();
+    /* بلا تاريخ: نافذة محدودة حول اليوم (بتوقيت قطر) بدل كل التاريخ — المطبخ والتوصيل
+       واللوحة يحتاجون أياماً قريبة فقط، وكان تنزيل الكل يقترب من حدّ 16MB فيتوقف. */
+    const todayQatar = new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+    const isISO = (x?: string) => !!x && /^\d{4}-\d{2}-\d{2}$/.test(x);
+    let lo = isISO(from) ? from! : shiftISO(todayQatar, -DEFAULT_WINDOW_BACK_DAYS);
+    let hi = isISO(to) ? to! : (isISO(from) ? shiftISO(from!, MAX_RANGE_DAYS) : shiftISO(todayQatar, DEFAULT_WINDOW_AHEAD_DAYS));
+    if (hi < lo) [lo, hi] = [hi, lo];
+    if (shiftISO(lo, MAX_RANGE_DAYS) < hi) hi = shiftISO(lo, MAX_RANGE_DAYS);
+    return await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_date", (q) => q.gte("date", lo).lte("date", hi))
+      .order("desc")
+      .collect();
   },
 });
 

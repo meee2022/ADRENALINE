@@ -270,7 +270,8 @@ function SalesReport({ from, to }: { from: string; to: string }) {
 
 function KitchenReport({ from, to }: { from: string; to: string }) {
   const { t } = useT();
-  const plans = useQuery(api.dailyPlans.list, {}) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const plans = useQuery(api.dailyPlans.list, { from, to, sessionToken }) || [];
   const filtered = plans.filter((p: any) => p.date >= from && p.date <= to);
 
   const byStatus = filtered.reduce((acc: any, p: any) => {
@@ -345,7 +346,8 @@ function KitchenReport({ from, to }: { from: string; to: string }) {
 
 function DeliveryReport({ from, to }: { from: string; to: string }) {
   const { t } = useT();
-  const plans = useQuery(api.dailyPlans.list, {}) || [];
+  const sessionToken = useStore((s) => s.sessionToken) || undefined;
+  const plans = useQuery(api.dailyPlans.list, { from, to, sessionToken }) || [];
   const filtered = plans.filter(
     (p: any) => p.date >= from && p.date <= to && p.status === "DELIVERED",
   );

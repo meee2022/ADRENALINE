@@ -1,4 +1,6 @@
 // client/src/lib/api.ts
+import { useMemo } from 'react';
+import { withMealArtwork } from './mealArtwork';
 import {
   useQuery as useConvexQuery,
   useMutation as useConvexMutation,
@@ -259,8 +261,9 @@ export function useDeleteCategory() {
 export function useMenuItems() {
   const sessionToken = useSessionToken();
   const data = useConvexQuery(api.menuItems.list, { sessionToken });
+  const illustrated = useMemo(() => data?.map(withMealArtwork), [data]);
   return {
-    data: data as MenuItem[] | undefined,
+    data: illustrated as MenuItem[] | undefined,
     isLoading: data === undefined,
     error: null,
   };
@@ -372,12 +375,15 @@ export function useDeleteModifier() {
  * ✅ إصلاح مهم:
  * لو date = undefined ما نبعتش args أصلاً (عشان Convex ما يضربش)
  */
-export function useDailyPlans(date?: string) {
+export function useDailyPlans(date?: string, range?: { from: string; to: string }) {
   const sessionToken = useSessionToken();
   // 🔒 خطط اليوم = staff only — لازم نمرّر sessionToken
+  // بلا date ولا range: الخادم يعيد نافذة محدودة حول اليوم (لا كل التاريخ)
   const data = useConvexQuery(
     api.dailyPlans.list,
-    sessionToken ? (date ? { date, sessionToken } : { sessionToken }) as any : "skip" as any,
+    sessionToken
+      ? (date ? { date, sessionToken } : range ? { from: range.from, to: range.to, sessionToken } : { sessionToken }) as any
+      : "skip" as any,
   );
   return {
     data: data as DailyPlan[] | undefined,
@@ -675,12 +681,13 @@ export function usePublicMeals(options?: {
     category: options?.category === "all" ? undefined : options?.category,
     search: options?.search,
   });
-  return { data: data ?? [] };
+  const illustrated = useMemo(() => data?.map(withMealArtwork) ?? [], [data]);
+  return { data: illustrated };
 }
 
 export function usePublicMealBySlug(slug: string) {
   const data = useConvexQuery(api.publicMeals.getBySlug, { slug });
-  return { data };
+  return { data: data ? withMealArtwork(data) : data };
 }
 
 export function useSeedPublicWebsite() {
