@@ -82,7 +82,7 @@ workflows:
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.adrenalinehealthy.app
-      node: 22
+      node: 24
       xcode: latest
       cocoapods: default
       vars:
@@ -96,7 +96,12 @@ workflows:
       cancel_previous_builds: true
     scripts:
       - name: تثبيت اعتماديات التطبيق
-        script: npm ci --prefix apps/mobile
+        script: |
+          set -e
+          cd apps/mobile
+          node -v && npm -v
+          # القفل مولَّد بـnpm 11 (Node 24)؛ npm 10 يعدّه ناقصاً. لو رفض npm ci نثبّت بغير صرامة.
+          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
       - name: توليد مشروع iOS (expo prebuild) مع Pods
         script: |
           set -e
