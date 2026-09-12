@@ -24,6 +24,16 @@ Codemagic مضبوط من قبل (مفتاح App Store Connect `adrenaline-asc`�
 > ملاحظة: plugin الإشعارات أُزيل من `app.json` لأنه يضيف صلاحية Push لا يغطيها ملف التعريف الحالي (الميزة مخفية أصلاً).
 > عند تفعيل الإشعارات لاحقاً: أضف قدرة Push Notifications للمعرّف في Apple Developer، أعد توليد ملف التعريف في Codemagic، ثم أعد plugin.
 
+### ما تعلّمناه من أول بناء (2026-09-13 — نجح ورُفع 1.1.0 build 3)
+ثلاثة أسباب فشل أُصلحت وبقيت في `codemagic.yaml`، لا تحذفها:
+1. **القفل مولَّد بـnpm 11 (Node 24)** وnpm 10 يعدّه ناقصاً → Node 24 على السحابة و`npm ci || npm install`.
+2. **مراحل Xcode تشغّل node** ولا تراه عبر nvm → `ios/.xcode.env.local` يحدد `NODE_BINARY`.
+3. **حزمة expo-notifications المثبَّتة تضيف صلاحية Push تلقائياً** (حتى بلا plugin في app.json) وملف التعريف
+   «Adrenaline App Store» لا يشملها → تُحذف بـ`plutil -remove aps-environment` بعد prebuild.
+   عند تفعيل الإشعارات: أضف Push Notifications للمعرّف في Apple Developer، جدّد ملف التعريف في Codemagic، واحذف سطر plutil.
+- رقم البناء يُقرأ من TestFlight تلقائياً (+1)، فلا تعدّل `ios.buildNumber` يدوياً لهذا المسار.
+- البناء كله ~٩ دقائق: prebuild ٤٠ ث، Xcode ٥ د، رفع ١.٥ د.
+
 ## المسار البديل: EAS من جهازك (يحتاج Apple ID في الطرفية)
 الأوامر كلها من داخل مجلد `apps/mobile` (بلا تثبيت: `npx eas-cli` يشغّل الأداة مباشرة):
 
