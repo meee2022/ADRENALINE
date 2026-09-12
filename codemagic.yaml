@@ -108,6 +108,10 @@ workflows:
           cd apps/mobile
           npx expo prebuild --platform ios --clean
           ls ios/*.xcworkspace
+          # مراحل بناء React Native داخل Xcode (codegen/bundle) تشغّل node؛ على السحابة node عبر nvm
+          # لا يُرى من صدفة Xcode غير التفاعلية، فنثبّت مساره صراحةً.
+          echo "export NODE_BINARY=$(command -v node)" > ios/.xcode.env.local
+          cat ios/.xcode.env.local
       - name: رقم البناء التالي من App Store Connect
         script: |
           set -e
@@ -121,7 +125,15 @@ workflows:
           cd apps/mobile/ios && xcode-project use-profiles
       - name: بناء IPA
         script: |
-          xcode-project build-ipa             --workspace apps/mobile/ios/Adrenaline.xcworkspace             --scheme Adrenaline             --archive-flags="-destination 'generic/platform=iOS'"
+          set -o pipefail
+          ARCHIVE_FLAGS="-destination generic/platform=iOS"
+          if ! xcode-project build-ipa --workspace apps/mobile/ios/Adrenaline.xcworkspace --scheme Adrenaline --archive-flags="$ARCHIVE_FLAGS"; then
+            echo "════════ أخطاء Xcode (من السجل الكامل) ════════"
+            grep -h -n -E "error:|error " /tmp/xcodebuild_logs/*.log | grep -v "warning" | head -60 || true
+            echo "════════ آخر 80 سطراً من السجل ════════"
+            tail -n 80 /tmp/xcodebuild_logs/*.log || true
+            exit 1
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
