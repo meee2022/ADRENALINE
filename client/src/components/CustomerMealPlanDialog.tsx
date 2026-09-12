@@ -11,6 +11,7 @@ import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog } from "@/lib/dialogs";
 import { printMealPlanCards } from "@/lib/printMealPlan";
+import { mealArtworkUrl } from "@/lib/mealArtwork";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +92,8 @@ export function CustomerMealPlanDialog({
               : (isRtl ? (canonical?.nameAr || menu?.name || it.mealNameAr) : (canonical?.nameEn || menu?.name || it.mealNameEn)))
               || (isRtl ? "غير محدد" : "Unspecified"),
             notes: [...mods, it.avoid, it.preferences, it.portions].filter(Boolean).join(" • "),
-            imageUrl: it.imageUrl || canonical?.imageUrl || menu?.imageUrl || undefined,
+            imageUrl: mealArtworkUrl(canonical) || mealArtworkUrl(menu) || mealArtworkUrl(it)
+              || it.imageUrl || canonical?.imageUrl || menu?.imageUrl || undefined,
             calories: it.calories ?? canonical?.calories ?? menu?.calories ?? "",
             protein: it.protein ?? canonical?.protein ?? menu?.protein ?? "",
           };

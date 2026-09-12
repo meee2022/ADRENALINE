@@ -1198,7 +1198,7 @@ Is that what you want?`,
 
       {/* ═══ Customer Info Banner (Sticky top) ═══ */}
       {isPhoneVerified && (
-        <div className="sticky top-[73px] z-50 border-b px-4 py-3"
+        <div className="relative sm:sticky sm:top-[73px] z-30 border-b px-4 py-2.5"
           style={{
             background: isNutriReset
               ? "linear-gradient(110deg, #087E87 0%, #079AA5 58%, #066F77 100%)"
@@ -2122,23 +2122,23 @@ Is that what you want?`,
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group flex flex-col cursor-pointer bg-white relative rounded-[24px] p-2 shadow-none transition-all duration-300 border",
+                    "group flex flex-col cursor-pointer bg-white relative rounded-2xl p-2 shadow-none transition-colors duration-200 border",
                     hasConflict
                       ? "border-red-300 hover:border-red-400"
-                      : "border-transparent hover:border-[#3CC4F0]/60 hover:-translate-y-0.5"
+                      : "border-[#E4EEF6] hover:border-[#3CC4F0]/60"
                   )}
                   onClick={() => setSelectedMeal(meal)}
                 >
                   {/* Meal Image — مربّعة بزوايا داخلية أصغر من زوايا البطاقة */}
-                  <div className="relative aspect-[4/3] sm:aspect-square w-full overflow-hidden rounded-[18px]" style={{ background: "#EAF3FB" }}>
+                  <div className="relative aspect-square w-full overflow-hidden rounded-xl" style={{ background: "#EAF3FB" }}>
                     {/* الشبكة قد تعرض عشرات الوجبات — لا تُحمَّل صورة قبل ظهورها */}
-                    <img
+                    {meal.imageUrl ? <img
                       src={meal.imageUrl}
                       alt={isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
                       loading="lazy"
                       decoding="async"
                       className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                    />
+                    /> : <div className="flex h-full flex-col items-center justify-center gap-2 px-3 text-center text-[#47759C]"><UtensilsCrossed className="h-7 w-7" aria-hidden="true"/><span className="text-xs">{isRtl ? 'الصورة الجديدة قريبًا' : 'New photo coming soon'}</span></div>}
 
                     {/* Avoid conflict ribbon */}
                     {hasConflict && (
@@ -2161,7 +2161,7 @@ Is that what you want?`,
                   <CardContent className="px-1.5 pt-2.5 pb-1.5 sm:px-3 sm:pt-3.5 sm:pb-2.5 flex flex-col flex-1 gap-2 sm:gap-3">
                     <div>
                       {/* Meal Name */}
-                      <h3 className="text-[13px] sm:text-[16px] font-black text-[#0E2A4A] line-clamp-2 leading-tight sm:leading-snug">
+                      <h3 className="text-[14px] sm:text-[16px] font-black text-[#0E2A4A] min-h-[3.25rem] leading-relaxed">
                         {isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}
                       </h3>
                       {/* التصنيف + الوسوم: سطر واحد هادئ بدل الشارات الملوّنة */}
@@ -2174,14 +2174,14 @@ Is that what you want?`,
                     </div>
 
                     {/* Macros — ثلاثة أرقام نصية بلا صناديق ملوّنة */}
-                    <div className="flex items-start gap-3.5 sm:gap-6">
+                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-[#EAF7FD] px-2 py-3">
                       {[
                         [nutritionFor(meal).protein, isRtl ? "بروتين" : "PROTEIN"],
                         [nutritionFor(meal).carbs, isRtl ? "كارب" : "CARBS"],
                         [nutritionFor(meal).fats, isRtl ? "دهون" : "FAT"],
                       ].map(([v, l], mi) => (
                         <div key={mi} className="flex flex-col gap-1 leading-none">
-                          <span className="text-[12.5px] sm:text-sm font-black text-[#0E2A4A]" style={{ fontVariantNumeric: "tabular-nums" }}>{v as number}g</span>
+                          <span className="text-[14px] sm:text-base font-black text-[#0E76AC]" style={{ fontVariantNumeric: "tabular-nums" }}>{v as number}g</span>
                           <span className="text-[9px] sm:text-[10px] font-semibold tracking-[0.08em] text-[#47759C]">{l as string}</span>
                         </div>
                       ))}
@@ -2204,7 +2204,7 @@ Is that what you want?`,
                               : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.\nI like this meal: ${meal.nameEn || meal.nameAr}`;
                             openExternal(whatsappLink(msg));
                           }}
-                          className="h-8 sm:h-9 px-3.5 sm:px-4 rounded-full font-bold text-white flex items-center gap-1.5 w-full sm:w-auto"
+                          className="min-h-11 px-3.5 sm:px-4 rounded-full font-bold text-white flex items-center gap-1.5 w-full sm:w-auto"
                           style={{ background: "#25D366" }}
                         >
                           <MessageCircle className="h-3.5 w-3.5" />
@@ -2212,11 +2212,11 @@ Is that what you want?`,
                         </Button>
                       ) : itemCount(meal._id) > 0 ? (
                         // ✅ عدّاد — يسمح باختيار نفس الوجبة أكثر من مرة (السقف زيّه)
-                        <div className="flex items-center justify-between sm:justify-center gap-1.5 rounded-full bg-[#3CC4F0] text-white px-1.5 h-8 sm:h-9 w-full sm:w-auto">
+                        <div className="flex items-center justify-between sm:justify-center gap-1.5 rounded-full bg-[#0E76AC] text-white px-1.5 min-h-11 w-full sm:w-auto">
                           <button
                             onClick={(e) => { e?.stopPropagation(); removeItem(meal._id, selectedWeek, selectedDay!); }}
                             title={isRtl ? "إنقاص" : "Remove one"}
-                            className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/25 transition-colors"
+                            className="h-11 w-11 grid place-items-center rounded-full hover:bg-white/25 transition-colors"
                           >
                             <Minus className="h-4 w-4" />
                           </button>
@@ -2225,7 +2225,7 @@ Is that what you want?`,
                             onClick={(e) => handleAddToCart(meal, e)}
                             disabled={atLimit}
                             title={atLimit ? (isRtl ? "اكتمل عدد اليوم" : "Day is full") : (isRtl ? "إضافة مرة أخرى" : "Add another")}
-                            className="h-7 w-7 grid place-items-center rounded-full hover:bg-white/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="h-11 w-11 grid place-items-center rounded-full hover:bg-white/25 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Plus className="h-4 w-4" />
                           </button>
@@ -2236,7 +2236,7 @@ Is that what you want?`,
                           onClick={(e) => handleAddToCart(meal, e)}
                           disabled={!selectedDay || atLimit || noMealPlan}
                           className={cn(
-                            "h-8 sm:h-9 px-5 rounded-full font-bold transition-all w-full sm:w-auto",
+                            "min-h-11 px-5 rounded-full font-bold transition-colors w-full sm:w-auto",
                             (atLimit || noMealPlan)
                               ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                               : hasConflict
@@ -2271,11 +2271,11 @@ Is that what you want?`,
             <div className="space-y-5">
               {/* Image — أولاً كما في بطاقة الطبق، بزوايا داخلية وشارة سعرات سماوية */}
               <div className="relative w-full aspect-[16/10] rounded-[18px] sm:rounded-[20px] overflow-hidden" style={{ background: "#EAF3FB" }}>
-                <img
+                {selectedMeal.imageUrl ? <img
                   src={selectedMeal.imageUrl}
                   alt={isRtl ? selectedMeal.nameAr : selectedMeal.nameEn}
-                  className="w-full h-full object-cover"
-                />
+                  className="w-full h-full object-contain"
+                /> : <div className="flex h-full items-center justify-center text-[#47759C]">{isRtl ? 'الصورة الجديدة قريبًا' : 'New photo coming soon'}</div>}
                 {/* الشارة أسفل الصورة — زر الإغلاق × يسكن الزاوية العليا */}
                 <span className={cn("absolute bottom-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[12px] font-black text-[#0E76AC]", isRtl ? "right-3" : "left-3")}
                   style={{ fontVariantNumeric: "tabular-nums", boxShadow: "0 1px 3px rgba(14,42,74,0.12)" }}>
