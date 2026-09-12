@@ -112,6 +112,12 @@ workflows:
           # لا يُرى من صدفة Xcode غير التفاعلية، فنثبّت مساره صراحةً.
           echo "export NODE_BINARY=$(command -v node)" > ios/.xcode.env.local
           cat ios/.xcode.env.local
+          # حزمة expo-notifications المثبَّتة تضيف صلاحية Push (aps-environment) تلقائياً، وملف التوقيع
+          # الحالي لا يشملها فتفشل الأرشفة. الميزة مخفية في التطبيق، فنزيل الصلاحية من المشروع المولَّد.
+          # عند تفعيل الإشعارات لاحقاً: أضف Push للمعرّف في Apple Developer وجدّد ملف التعريف ثم احذف هذا.
+          for ENT in ios/Adrenaline/Adrenaline.entitlements; do
+            if [ -f "$ENT" ]; then plutil -remove aps-environment "$ENT" || true; echo "entitlements:"; plutil -p "$ENT"; fi
+          done
       - name: رقم البناء التالي من App Store Connect
         script: |
           set -e
