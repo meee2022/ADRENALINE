@@ -131,7 +131,8 @@ export function orderedSubscriptionSlots(
       const name = DOW_NAME[dow];
       if (name) out.push({ week: rotWeek, day: name as DeliveryDayName });
     }
-    if (dow === 5) rotWeek = (rotWeek % 4) + 1; // كل جمعة → الدورة تتقدّم
+    // A Friday start already carries that Friday's advanced kitchen rotation.
+    if (dow === 5 && cur.getTime() > subStart.getTime()) rotWeek = (rotWeek % 4) + 1;
     cur.setDate(cur.getDate() + 1);
   }
   return out;
@@ -159,11 +160,12 @@ export function slotToDate(
   startRotationWeek: number,
   week: number,
   day: string,
+  todayISO?: string,
 ): string | null {
   if (!startDate || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) return null;
   const target = String(day).toLowerCase();
   const subStart = new Date(`${startDate}T00:00:00`);
-  const now = new Date(); now.setHours(0, 0, 0, 0);
+  const now = todayISO && /^\d{4}-\d{2}-\d{2}$/.test(todayISO) ? new Date(`${todayISO}T00:00:00`) : new Date(); now.setHours(0, 0, 0, 0);
   const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
   const effStart = subStart.getTime() > now.getTime() ? subStart : tomorrow;
 
@@ -179,7 +181,7 @@ export function slotToDate(
         return `${cur.getFullYear()}-${p(cur.getMonth() + 1)}-${p(cur.getDate())}`;
       }
     }
-    if (dow === 5) rotWeek = (rotWeek % 4) + 1;
+    if (dow === 5 && cur.getTime() > subStart.getTime()) rotWeek = (rotWeek % 4) + 1;
     cur.setDate(cur.getDate() + 1);
   }
   return null;

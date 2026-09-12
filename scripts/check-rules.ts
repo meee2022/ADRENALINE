@@ -70,6 +70,21 @@ t("أسبوع من السبت للخميس يتخطّى الجمعة ويتقد�
   assert.equal(slotToDate(iso(d), 4, 1, "saturday"), iso(end));
   assert.equal(subscriptionSlotKeys(null, iso(end), 1), null);
 });
+t("بداية الاشتراك يوم جمعة: دورة البداية محسوبة لتلك الجمعة فلا تتقدّم مرتين، وتتقدّم في الجمعة التالية", () => {
+  // كان يتقدّم مرتين (مرة في حساب دورة البداية ومرة عند المرور على نفس الجمعة) فيرى المشترك
+  // الدورة 3 والمطبخ في 2، وتقع خطته أسبوعاً متأخراً. مُصلَح 2026-09-12. لا مشترك بدأ جمعة قبلها.
+  const f = new Date(`${Y}-01-01T00:00:00`); while (f.getDay() !== 5) f.setDate(f.getDate() + 1);
+  const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const before = new Date(f); before.setDate(before.getDate() - 1);   // «اليوم» قبل البداية
+  const sat = new Date(f); sat.setDate(sat.getDate() + 1);            // السبت التالي مباشرة
+  const end = new Date(f); end.setDate(end.getDate() + 8);            // سبت الأسبوع التالي
+  const slots = orderedSubscriptionSlots(iso(f), iso(end), 2, iso(before));
+  assert.deepEqual(slots.map((s) => `${s.week}:${s.day}`), [
+    "2:saturday", "2:sunday", "2:monday", "2:tuesday", "2:wednesday", "2:thursday", "3:saturday",
+  ]);
+  assert.equal(slotToDate(iso(f), 2, 2, "saturday", iso(before)), iso(sat));
+  assert.equal(slotToDate(iso(f), 2, 3, "saturday", iso(before)), iso(end));
+});
 t("الخادم يمرّر «يوم قطر»: لو اليوم = يوم البداية تبدأ الخانات من بكرة (كما في المنيو)", () => {
   const sat = new Date(`${Y}-01-01T00:00:00`); while (sat.getDay() !== 6) sat.setDate(sat.getDate() + 1);
   const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;

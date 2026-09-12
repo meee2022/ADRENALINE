@@ -87,3 +87,14 @@ android/local.properties
 android/.idea/
 .play-assets/
 *.bak
+
+# ── ملفات محلية/جانبية لا تدخل الريبو (2026-09-12) ──
+Adrenaline-Play/
+output/
+.codex_tmp/
+.impeccable/
+/attendance-bridge-*.zip
+/attendance-bridge-august-full-*/
+/tk.json
+/ADRENALINE MENU Recipes - Google Sheets.htm.html
+*.p8
