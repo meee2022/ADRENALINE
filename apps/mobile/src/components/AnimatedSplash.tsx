@@ -1,3 +1,4 @@
+import { translate as localize, useContentLanguage as useUILanguage } from '@/useContentLanguage';
 /** Local-only brand entrance; no session, subscription or network logic. */
 import React, { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, Animated, Easing, StyleSheet, useWindowDimensions, View } from "react-native";
@@ -5,6 +6,7 @@ import { Image } from "expo-image";
 import { colors } from "@/theme";
 
 export function AnimatedSplash({ ready, onDone }: { ready: boolean; onDone?: () => void }) {
+  useUILanguage();
   const { width } = useWindowDimensions();
   const [gone, setGone] = useState(false);
   const [reduced, setReduced] = useState<boolean | null>(null);
@@ -51,16 +53,16 @@ export function AnimatedSplash({ ready, onDone }: { ready: boolean; onDone?: () 
   if (gone) return null;
   const logoWidth = Math.min(width - 64, 340);
   return (
-    <Animated.View accessibilityViewIsModal accessibilityLabel="أدرينالين للوجبات الصحية" style={[StyleSheet.absoluteFill, styles.wrap, { opacity: fade }]}>
+    <Animated.View accessibilityViewIsModal accessibilityLabel={localize(String("أدرينالين للوجبات الصحية"))} style={[StyleSheet.absoluteFill, styles.wrap, { opacity: fade }]}>
       <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.backgroundName, { transform: [{ translateX: reduced ? 0 : backdrop.interpolate({ inputRange: [0, 1], outputRange: [-14, 14] }) }] }]}>
         <Image source={require("../../assets/wordmark-white.png")} style={{ width: Math.max(0, width - 64), height: Math.max(0, width - 64) * 187 / 1024 }} contentFit="contain" />
       </Animated.View>
       <View style={styles.identity}>
         <Animated.View style={{ opacity: word, transform: [{ translateY: reduced ? 0 : word.interpolate({ inputRange: [0, 1], outputRange: [-48, 0] }) }] }}>
-          <Image source={require("../../assets/brand-wordmark-navy.png")} style={{ width: logoWidth, height: logoWidth * 169 / 686 }} contentFit="contain" accessibilityLabel="ADRENALINE HEALTHY FOOD" />
+          <Image source={require("../../assets/brand-wordmark-navy.png")} style={{ width: logoWidth, height: logoWidth * 169 / 686 }} contentFit="contain" accessibilityLabel={localize(String("ADRENALINE HEALTHY FOOD"))} />
         </Animated.View>
         <Animated.View style={{ marginTop: 32, opacity: heart, transform: [{ translateX: 8 }, { translateY: reduced ? 0 : heart.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }, { scale: reduced ? 1 : heart.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] }}>
-          <Image source={require("../../assets/brand-heart-original.png")} style={{ width: 148, height: 141 }} contentFit="contain" accessibilityLabel="قلب أدرينالين" />
+          <Image source={require("../../assets/brand-heart-original.png")} style={{ width: 148, height: 141 }} contentFit="contain" accessibilityLabel={localize(String("قلب أدرينالين"))} />
         </Animated.View>
       </View>
     </Animated.View>

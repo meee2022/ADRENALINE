@@ -1,3 +1,4 @@
+import { subscriptionMessage, mealAllowance, translate as localize, localizedField, useContentLanguage as useUILanguage } from '@/useContentLanguage';
 /**
  * الرئيسية — هيرو تحريري هادئ (كحلي + سماوي)، صف ثقة، الخطط، الأكثر طلباً، آراء، أسئلة، ختام.
  * كل البيانات من نفس استعلامات الموقع؛ لا منطق هنا سوى العرض.
@@ -10,9 +11,14 @@ import { useQuery } from "convex/react";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api, SITE_URL } from "@/api";
+import { restaurantPhone } from '@/contact';
 import { colors, radii, softShadow } from "@/theme";
 import { Btn, SectionTitle, T } from "@/components/ui";
 import { MealCard } from "@/components/MealCard";
+import { HomeHero } from "@/components/HomeHero";
+import { SmartPlanEntry } from '@/components/SmartPlanEntry';
+import { useCustomerSession } from '@/customerSession';
+import { TodayHome } from '@/components/TodayHome';
 
 const TRUST = [
   { icon: "leaf-outline", t: "مكونات طازجة", s: "تُطبخ صباح كل يوم" },
@@ -28,7 +34,7 @@ const STORIES = [
 ];
 
 const FAQ = [
-  { q: "كيف أبدأ الاشتراك؟", a: "اختر الخطة المناسبة واضغط على زر الاشتراك عبر واتساب، وسيتواصل معك فريقنا فورًا." },
+  { q: "كيف أبدأ الاشتراك؟", a: "اختر المدة والباقة وعدد الوجبات، ثم أكمل عبر PayLater على الموقع الرسمي أو تواصل مع الأخصائية." },
   { q: "هل التوصيل مجاني؟", a: "نعم، التوصيل مجاني تماماً لجميع المشتركين في كل أنحاء قطر." },
   { q: "هل أقدر أغير وجباتي؟", a: "بالتأكيد. تختار وجباتك من القائمة لكل يوم، وتطلب التعديلات وفق تفضيلاتك." },
 ];
@@ -42,70 +48,35 @@ function planImage(plan: any): string {
 }
 
 export default function Home() {
+  useUILanguage();
+  const {session,ready}=useCustomerSession();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const best = useQuery(api.publicMeals.bestSellers, { limit: 6 }) || [];
+  const mealCatalog = useQuery(api.publicMeals.listMeals, {}) || [];
   const plans = useQuery(api.publicPlans.listByDuration, { duration: "week" }) || [];
   const settings = useQuery(api.restaurantSettings.get, {}) as any;
-  const phone = String(settings?.phone || "+97412345678").replace(/\D/g, "");
-  const wa = (msg: string) => Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
+  const phone = restaurantPhone(settings);
+  const wa = (msg: string) => Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(localize(msg))}`);
 
-  const featured = best[0];
+  const [heroVisible, setHeroVisible] = useState(true);
   const heroImg = useMemo(() => best.find((m: any) => m.imageUrl)?.imageUrl || `${SITE_URL}/hero-banner.webp`, [best]);
-  const cardW = Math.min(180, (width - 40 - 12) / 2);
+  const [bestWidth, setBestWidth] = useState(Math.max(0, width - 40));
+  const bestColumns = bestWidth >= 680 ? 3 : bestWidth >= 300 ? 2 : 1;
+  const cardW = Math.max(0, (bestWidth - (bestColumns - 1) * 12) / bestColumns);
+  const [storiesWidth, setStoriesWidth] = useState(Math.max(0, width - 40));
+  const storyWidth = storiesWidth >= 900 ? (storiesWidth - 24) / 3 : storiesWidth;
 
+  if(!ready)return <View style={{flex:1,backgroundColor:colors.bg}}/>;
+  if(session)return <TodayHome/>;
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-      {/* ── الهيرو ── */}
-      <View style={[styles.hero, { paddingTop: insets.top + 18 }]}>
-        <View style={styles.glow} />
-        <View style={styles.topBar}>
-          <Image source={require("../../assets/wordmark-white.png")} style={{ width: 132, height: 28 }} contentFit="contain" />
-          <Pressable onPress={() => wa("مرحباً 👋\nأرغب في معرفة المزيد عن خطط أدرينالين الصحية.")} style={styles.iconBtn}>
-            <Ionicons name="logo-whatsapp" size={18} color="#fff" />
-          </Pressable>
-        </View>
-
-        <View style={styles.eyebrow}>
-          <View style={styles.dot} />
-          <T w="bold" style={styles.eyebrowT}>قطر · تُحضَّر يومياً · بإشراف أخصائيي تغذية</T>
-        </View>
-
-        <T w="black" style={styles.h1}>أكل حقيقي.{"\n"}سعرات محسوبة.{"\n"}<T w="black" style={[styles.h1, { color: colors.cyan }]}>ويوصلك طازج كل يوم.</T></T>
-        <T style={styles.sub}>وجبات تُطبخ صباح كل يوم بإشراف أخصائيي تغذية، مصمّمة حول هدفك لا حول منيو المطاعم.</T>
-
-        <View style={styles.ctaRow}>
-          <Btn label="احصل على خطتك" variant="white" onPress={() => router.push("/(tabs)/plans")} icon={<Ionicons name="arrow-back" size={16} color={colors.navy} />} />
-          <Btn label="استكشف القائمة" variant="outlineLight" onPress={() => router.push("/(tabs)/menu")} />
-        </View>
-        <View style={styles.trustRow}>
-          {["+200 مشترك", "3 فروع في قطر", "توصيل يومي"].map((t, i) => (
-            <React.Fragment key={t}>
-              {i > 0 ? <View style={styles.trustDot} /> : null}
-              <T w="semibold" style={styles.trustT}>{t}</T>
-            </React.Fragment>
-          ))}
-        </View>
-
-        <View style={styles.heroImgWrap}>
-          <Image source={{ uri: heroImg }} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-          <View style={styles.heroShade} />
-          {featured ? (
-            <View style={[styles.floatCard, softShadow]}>
-              <View style={styles.floatThumb}>{featured.imageUrl ? <Image source={{ uri: featured.imageUrl }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}</View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <View style={styles.floatBadge}><T w="black" style={{ color: "#fff", fontSize: 10 }}>الأكثر طلباً</T></View>
-                <T w="black" numberOfLines={1} style={{ fontSize: 13, color: colors.text }}>{featured.nameAr}</T>
-                <View style={{ flexDirection: "row", gap: 12, alignItems: "baseline" }}>
-                  <T w="bold" style={{ fontSize: 12, color: colors.cyanDark }}>{featured.calories} سعرة</T>
-                  {featured.protein ? <T w="bold" style={{ fontSize: 12, color: colors.navy2 }}>{featured.protein}g بروتين</T> : null}
-                </View>
-              </View>
-            </View>
-          ) : null}
-        </View>
-      </View>
+    <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}
+      scrollEventThrottle={100} onScroll={(event) => setHeroVisible(event.nativeEvent.contentOffset.y < 480)}>
+      <HomeHero meals={best} fallback={heroImg} inset={insets.top} visible={heroVisible}
+        onPlans={() => router.push("/(tabs)/plans")}
+        onMenu={() => router.push("/(tabs)/menu")}
+        onContact={() => wa("مرحباً 👋\nأرغب في معرفة المزيد عن خطط أدرينالين الصحية.")} />
 
       {/* ── صف الثقة ── */}
       <View style={styles.trustGrid}>
@@ -118,6 +89,11 @@ export default function Home() {
             </View>
           </View>
         ))}
+      </View>
+
+      <View style={[styles.section,{gap:16}]}>
+        <View style={{gap:8}}><SectionTitle title="حاسبة السعرات" sub="اعرف احتياجك اليومي من السعرات والماكروز حسب هدفك."/><Btn label="احسب احتياجك اليومي" variant="outline" onPress={()=>router.push('/calorie-calculator')}/></View>
+        <SmartPlanEntry/>
       </View>
 
       {/* ── الخطط ── */}
@@ -134,8 +110,8 @@ export default function Home() {
                   <View style={styles.planImg}><Image source={{ uri: planImage(plan) }} style={StyleSheet.absoluteFill} contentFit="cover" /></View>
                   <View style={{ flex: 1 }}>
                     {popular ? <View style={styles.popular}><T w="black" style={{ color: "#fff", fontSize: 10.5 }}>الأكثر طلباً</T></View> : null}
-                    <T w="black" style={{ fontSize: 20, color: colors.navy2 }}>{plan.nameAr}</T>
-                    <T numberOfLines={2} style={{ fontSize: 12.5, color: colors.muted, lineHeight: 18 }}>{plan.descriptionAr}</T>
+                    <T w="black" style={{ fontSize: 20, color: colors.navy2 }}>{localizedField(plan, 'name')}</T>
+                    <T numberOfLines={2} style={{ fontSize: 12.5, color: colors.muted, lineHeight: 18 }}>{localizedField(plan, 'description')}</T>
                   </View>
                 </View>
                 {min > 0 ? (
@@ -147,8 +123,8 @@ export default function Home() {
                 ) : null}
                 <View style={{ gap: 8, marginTop: 12 }}>
                   {(plan.options || []).slice(0, 2).map((o: any, oi: number) => (
-                    <Pressable key={oi} onPress={() => wa(`مرحباً 👋\nأرغب في الاشتراك في خطة *${plan.nameAr}*\n\nالباقة: ${o.mealsCount} وجبات + ${o.snacksCount} سناك\n\nمن فضلك أرسلوا لي تفاصيل الاشتراك.`)} style={styles.optRow}>
-                      <T w="bold" style={{ fontSize: 13.5, color: colors.navy2 }}>{o.mealsCount} وجبات + {o.snacksCount} سناك</T>
+                    <Pressable key={oi} onPress={() => wa(subscriptionMessage(localizedField(plan), 'أسبوع', o))} style={styles.optRow}>
+                      <T w="bold" style={{ fontSize: 13.5, color: colors.navy2 }}>{mealAllowance(o.mealsCount, o.snacksCount)}</T>
                       <T w="black" style={{ fontSize: 13.5, color: colors.cyanDark, fontVariant: ["tabular-nums"] }}>{Number(o.priceQAR) > 0 ? `${o.priceQAR} ر.ق` : "اشترك"}</T>
                     </Pressable>
                   ))}
@@ -165,29 +141,29 @@ export default function Home() {
       {best.length ? (
         <View style={styles.section}>
           <SectionTitle title="الأكثر طلباً" sub="ما يختاره مشتركونا أكثر" action="القائمة كاملة" onAction={() => router.push("/(tabs)/menu")} />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingEnd: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
+          <View onLayout={(event) => setBestWidth(event.nativeEvent.layout.width)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             {best.map((m: any, i: number) => (
-              <MealCard key={m.id || m._id} meal={{ ...m, _id: m.id || m._id }} width={cardW} rank={i < 3 ? i + 1 : undefined} onPress={() => router.push({ pathname: "/meal/[id]", params: { id: String(m.id || m._id) } })} />
+              <MealCard key={m.id || m._id} meal={{ ...m, ...mealCatalog.find((meal: { _id: string }) => String(meal._id) === String(m.id || m._id)), _id: m.id || m._id }} compact width={cardW} rank={i < 3 ? i + 1 : undefined} onPress={() => router.push({ pathname: "/meal/[id]", params: { id: String(m.id || m._id) } })} />
             ))}
-          </ScrollView>
+          </View>
         </View>
       ) : null}
 
       {/* ── آراء ── */}
       <View style={[styles.section, { backgroundColor: "#fff" }]}>
         <SectionTitle title="قصص حقيقية. نتائج حقيقية." sub="تجارب مشتركين مع وجبات أدرينالين" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingEnd: 20 }} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
+        <View onLayout={(event) => setStoriesWidth(event.nativeEvent.layout.width)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
           {STORIES.map((s) => (
-            <View key={s.n} style={[styles.story, { width: width * 0.8 }]}>
+            <View key={s.n} style={[styles.story, { width: storyWidth }]}>
               <View style={{ flexDirection: "row", gap: 2 }}>{[0, 1, 2, 3, 4].map((i) => <Ionicons key={i} name="star" size={14} color={colors.amber} />)}</View>
               <T w="semibold" style={{ fontSize: 14.5, lineHeight: 24, color: colors.navy2, flex: 1 }}>«{s.q}»</T>
               <View style={{ flexDirection: "row", gap: 10, alignItems: "center", borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 12 }}>
                 <View style={styles.avatar}><T w="black" style={{ color: colors.cyanDark }}>{s.n.charAt(0)}</T></View>
-                <View><T w="black" style={{ fontSize: 13 }}>{s.n}</T><T style={{ fontSize: 11.5, color: colors.muted }}>{s.r}</T></View>
+                <View style={{ flex: 1 }}><T w="black" style={{ fontSize: 13 }}>{s.n}</T><T style={{ fontSize: 11.5, color: colors.muted }}>{s.r}</T></View>
               </View>
             </View>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
       {/* ── أسئلة ── */}
@@ -213,6 +189,7 @@ export default function Home() {
 }
 
 function FaqItem({ q, a }: { q: string; a: string }) {
+  useUILanguage();
   const [open, setOpen] = useState(false);
   return (
     <Pressable onPress={() => setOpen((v) => !v)} style={[styles.faq, open && { borderColor: colors.cyan }]}>

@@ -1,6 +1,7 @@
 /** لوحة التحكم — الموقع الحالي كما هو داخل التطبيق (نفس الحسابات وكل الصفحات). */
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from "react-native-webview";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,6 +25,15 @@ export default function Admin() {
         style={{ flex: 1 }}
         allowsBackForwardNavigationGestures
         sharedCookiesEnabled
+        domStorageEnabled
+        onNavigationStateChange={({url}) => {
+          try {
+            const next = new URL(url);
+            if (next.origin !== new URL(SITE_URL).origin) return;
+            if (next.pathname === '/driver') void AsyncStorage.setItem('adrenaline.staff-entry.v1', 'driver').catch(() => {});
+            else if (next.pathname === '/login') void AsyncStorage.removeItem('adrenaline.staff-entry.v1').catch(() => {});
+          } catch { /* Ignore non-site navigation. No credentials leave the WebView. */ }
+        }}
         setSupportMultipleWindows={false}
       />
     </View>
