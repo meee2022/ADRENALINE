@@ -10,26 +10,40 @@
 - `expo-doctor` نظيف، وفحص الأنواع ناجح، والتطبيق يشير لإنتاج Convex والموقع الرسمي.
 - الخادم على الإنتاج فيه كل دوال التطبيق (نُشر 2026-09-12).
 
-## ما يحتاج حسابك أنت (لا يفعله المساعد)
-الأوامر كلها من داخل مجلد `apps/mobile` (EAS CLI مثبَّت كاعتماد تطوير في المشروع، لذلك تُكتب بـ`npx eas`):
+## المسار المعتمد: Codemagic من GitHub (بلا كلمات مرور في الطرفية)
+Codemagic مضبوط من قبل (مفتاح App Store Connect `adrenaline-asc`، الشهادة وملف التعريف، Apple ID للتطبيق في مجموعة
+`adrenaline-ios`). أُضيف workflow **«iOS (Expo) → TestFlight»** في `codemagic.yaml` يبني `apps/mobile`:
+تثبيت الاعتماديات → `expo prebuild` → رقم البناء التالي من App Store Connect تلقائياً → توقيع → IPA → رفع إلى TestFlight.
+
+1. ارفع الكود إلى GitHub (main).
+2. افتح [codemagic.io](https://codemagic.io) → التطبيق → **Start new build** → اختر workflow «iOS (Expo) → TestFlight» → Start.
+   (الوسم `expo-ios-v*` مضبوط أيضاً لكنه لم يكن يطلق البناء تلقائياً من قبل.)
+3. ٢٠–٣٥ دقيقة ثم تظهر النسخة في App Store Connect → TestFlight.
+4. لو فشل: افتح سجل الخطوة الفاشلة وانسخ آخر ٣٠ سطراً للمساعد.
+
+> ملاحظة: plugin الإشعارات أُزيل من `app.json` لأنه يضيف صلاحية Push لا يغطيها ملف التعريف الحالي (الميزة مخفية أصلاً).
+> عند تفعيل الإشعارات لاحقاً: أضف قدرة Push Notifications للمعرّف في Apple Developer، أعد توليد ملف التعريف في Codemagic، ثم أعد plugin.
+
+## المسار البديل: EAS من جهازك (يحتاج Apple ID في الطرفية)
+الأوامر كلها من داخل مجلد `apps/mobile` (بلا تثبيت: `npx eas-cli` يشغّل الأداة مباشرة):
 
 1. **الدخول إلى Expo** (حساب على expo.dev، أنشئه لو ما عندك):
    ```bash
-   npx eas login
+   npx eas-cli login
    ```
 2. **ربط المشروع بـEAS** — **تم 2026-09-13**: المشروع `@meee87/adrenaline-healthy-food` (projectId في app.json). لا يُعاد إلا على جهاز جديد:
    ```bash
-   npx eas init
+   npx eas-cli init
    ```
 3. **بناء iOS للإنتاج** (يسأل عن Apple ID وكلمة المرور/رمز التحقق ويولّد الشهادات تلقائياً — أجب بنفسك):
    ```bash
-   npx eas build --platform ios --profile production
+   npx eas-cli build --platform ios --profile production
    ```
    - لو سأل «Set up Push Notifications?» أجب **No** (الإشعارات مؤجّلة).
    - البناء يأخذ ١٠–٢٠ دقيقة على السحابة. رابط المتابعة يظهر في الطرفية.
 4. **الرفع إلى TestFlight** (يسأل عن Apple ID أو مفتاح App Store Connect):
    ```bash
-   npx eas submit --platform ios --latest
+   npx eas-cli submit --platform ios --latest
    ```
    بعد دقائق تظهر النسخة في App Store Connect → TestFlight (معالجة Apple ١٠–٣٠ دقيقة).
 5. **التجربة على iPhone:** ثبّت تطبيق TestFlight من المتجر، أضف المختبرين (Internal Testing) بإيميلاتهم، وافتح الدعوة.
@@ -51,7 +65,7 @@
 
 ## للإصدار التالي
 - ارفع `ios.buildNumber` (وversion لو تغيّرت الميزات) في `app.json`، ثم كرّر الخطوتين ٣ و٤.
-- لتفعيل الإشعارات لاحقاً: مفتاح APNs في EAS (`npx eas credentials`)، ضبط `MOBILE_PUSH_ENABLED=true` في Convex، ثم `subscriberPushEnabled: true` في `app.json`.
+- لتفعيل الإشعارات لاحقاً: مفتاح APNs في EAS (`npx eas-cli credentials`)، ضبط `MOBILE_PUSH_ENABLED=true` في Convex، ثم `subscriberPushEnabled: true` في `app.json`.
 
 ## مراجع
 - [تطبيق الجوال (Expo)](تطبيق-الجوال-Expo.md) — بنية التطبيق وتشغيله.

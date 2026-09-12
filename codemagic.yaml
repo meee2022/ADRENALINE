@@ -64,3 +64,64 @@ workflows:
         submit_to_testflight: true
         # المراجعة النهائية للمتجر تُرسل يدوياً من App Store Connect بعد تجربة TestFlight
         submit_to_app_store: false
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # تطبيق Expo الجديد (apps/mobile) — نفس مفتاح App Store Connect ونفس التوقيع
+  # ونفس المعرّف com.adrenalinehealthy.app، فيحلّ محلّ قشرة Capacitor على TestFlight.
+  # يبدأ من لوحة Codemagic (Start new build → iOS (Expo) → TestFlight) أو بوسم expo-ios-v*.
+  # الدليل: دليل/نشر-التطبيق-TestFlight.md
+  ios-expo-testflight:
+    name: iOS (Expo) → TestFlight
+    max_build_duration: 90
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: adrenaline-asc
+    environment:
+      groups:
+        - adrenaline-ios
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.adrenalinehealthy.app
+      node: 22
+      xcode: latest
+      cocoapods: default
+      vars:
+        CI: "1"
+        EXPO_NO_TELEMETRY: "1"
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "expo-ios-v*"
+      cancel_previous_builds: true
+    scripts:
+      - name: تثبيت اعتماديات التطبيق
+        script: npm ci --prefix apps/mobile
+      - name: توليد مشروع iOS (expo prebuild) مع Pods
+        script: |
+          set -e
+          cd apps/mobile
+          npx expo prebuild --platform ios --clean
+          ls ios/*.xcworkspace
+      - name: رقم البناء التالي من App Store Connect
+        script: |
+          set -e
+          test -n "$APP_STORE_APPLE_ID" || { echo "APP_STORE_APPLE_ID غير مضبوط في مجموعة adrenaline-ios"; exit 1; }
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          NEXT=$((LATEST + 1))
+          echo "build number: $NEXT"
+          cd apps/mobile/ios && agvtool new-version -all "$NEXT"
+      - name: ملفات التوقيع
+        script: |
+          cd apps/mobile/ios && xcode-project use-profiles
+      - name: بناء IPA
+        script: |
+          xcode-project build-ipa             --workspace apps/mobile/ios/Adrenaline.xcworkspace             --scheme Adrenaline             --archive-flags="-destination 'generic/platform=iOS'"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
