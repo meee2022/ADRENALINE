@@ -49,6 +49,8 @@ import {
   clearIdentity,
 } from "@/lib/customerIdentity";
 import { openExternal } from "@/lib/native";
+import { MenuSubscriberEntry } from '@/components/public/MenuSubscriberEntry';
+import './menu-catalog.css';
 
 const DAY_LABEL_AR: Record<string, string> = {
   saturday: "السبت", sunday: "الأحد", monday: "الإثنين",
@@ -138,7 +140,8 @@ export default function PublicMenuPage() {
      المنيو كاملاً. لا شيء من منطق المشترك يتغيّر: هذا الشرط لا يتحقق إلا وهو
      غير متحقَّق من رقمه. */
   const [visitorDayPicker, setVisitorDayPicker] = useState(false);
-  const isVisitor = browseMode && !isPhoneVerified;
+  // Adrenaline opens the existing visitor catalogue immediately; subscriber rules are unchanged.
+  const isVisitor = (!isNutriReset || browseMode) && !isPhoneVerified;
 
   // Restaurant settings (for WhatsApp)
   const settings = useQuery(api.restaurantSettings.get);
@@ -909,7 +912,7 @@ Is that what you want?`,
   ];
 
   // ─── Phone gate state determination ─── (isPhoneVerified مُعرّف أعلاه — يحتاجه فلتر الزائر)
-  const canViewMenu = isPhoneVerified || browseMode;
+  const canViewMenu = isPhoneVerified || isVisitor;
   const showPhonePrompt = !verifiedPhone;
   const showCustomerPicker = verifiedPhone && matchingCustomers && matchingCustomers.length > 1 && !verifiedCustomerId;
   const showNotRegistered = verifiedPhone && matchingCustomers !== undefined && matchingCustomers.length === 0;
@@ -1163,8 +1166,9 @@ Is that what you want?`,
 
   return (
     <PublicLayout>
+      <div className={isNutriReset ? undefined : 'adrenaline-menu'}>
       {/* ═══ Browse Mode Banner ═══ */}
-      {browseMode && !isPhoneVerified && (
+      {isNutriReset && browseMode && !isPhoneVerified && (
         <div className="relative z-30 px-4 py-2.5" style={{ background: "#0B2138" }}>
           <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -1365,20 +1369,23 @@ Is that what you want?`,
         </section>
       ) : (
         <section className="bg-white" dir={isRtl ? "rtl" : "ltr"}>
-          <div className="max-w-3xl mx-auto px-5 pt-10 pb-6 md:pt-14 md:pb-8 text-center">
+          <div className="max-w-3xl mx-auto px-4 pt-7 pb-5 md:pt-9 text-center">
             <h1 className="font-black text-[#0E2A4A] tracking-tight" style={{ fontFamily: "'Cairo',sans-serif", fontSize: "clamp(28px,4vw,44px)", lineHeight: 1.15 }}>
               {isRtl ? "قائمة الوجبات" : "Our menu"}
             </h1>
-            <p className="mt-3 text-[15px] md:text-base font-black text-[#0E76AC]">
+            <p className="mt-3 text-[15px] md:text-base font-black text-[#0E76AC]" aria-live="polite">
               {isRtl
-                ? `${filteredMeals.length} طبقاً من إعداد الشيف · تتنوّع على مدار الشهر`
-                : `${filteredMeals.length} chef-made dishes · rotating through the month`}
+                ? '200 وجبة وأكثر · تتنوّع حسب جدول المطبخ'
+                : '200+ meals · rotating with the kitchen menu'}
             </p>
             <p className="mt-1.5 text-sm text-[#6B7C8C]">
               {isRtl
                 ? "محسوبة السعرات بإشراف أخصائيي تغذية، وتُطبخ صباح كل يوم."
                 : "Calorie-counted under nutritionist supervision, cooked every morning."}
             </p>
+            {isVisitor && <MenuSubscriberEntry isRtl={isRtl} phone={phoneInput} verifiedPhone={verifiedPhone}
+              error={phoneError} customers={matchingCustomers} onPhoneChange={setPhoneInput}
+              onVerify={handleVerifyPhone} onPick={handlePickCustomer} onReset={handleResetPhone} />}
           </div>
         </section>
       )}
@@ -1422,7 +1429,7 @@ Is that what you want?`,
       )}
 
       {/* Browse-mode notice: cart is saved locally but ordering needs a subscription */}
-      {browseMode && !isVisitor && (
+      {isNutriReset && browseMode && !isVisitor && (
         <div className="bg-amber-50 border-b border-amber-200" dir={isRtl ? "rtl" : "ltr"}>
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -1443,7 +1450,7 @@ Is that what you want?`,
         <div className="border-b border-[#3CC4F0]/25 bg-[#F2FBFF]" dir={isRtl ? "rtl" : "ltr"}>
           {/* على الجوال: النص سطر كامل والأزرار تحته — كان النص ينحشر في عمود ضيّق بين الزرّين */}
           <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-3 gap-y-2.5 px-4 py-3">
-            <p className="flex basis-full sm:basis-auto sm:flex-1 min-w-0 items-center gap-2 text-sm font-bold text-[#0E2A4A]">
+            <p className={cn('basis-full sm:basis-auto sm:flex-1 min-w-0 items-center gap-2 text-sm font-bold text-[#0E2A4A]', isNutriReset ? 'flex' : 'hidden')}>
               <UtensilsCrossed className="h-4.5 w-4.5 shrink-0 text-[#0E76AC]" />
               <span className="truncate">
                 {isRtl ? "هذه قائمتنا الكاملة" : "This is our full menu"}
@@ -1454,7 +1461,7 @@ Is that what you want?`,
             </p>
             <button
               onClick={() => setVisitorDayPicker((v) => !v)}
-              className="rounded-full border border-[#3CC4F0]/50 bg-white px-3 h-9 text-xs font-black text-[#0E76AC] hover:bg-[#3CC4F0]/10"
+              className="rounded-full border border-[#3CC4F0]/50 bg-white px-3 min-h-11 text-xs font-black text-[#0E76AC] hover:bg-[#3CC4F0]/10"
             >
               {visitorDayPicker
                 ? (isRtl ? "عرض القائمة كاملة" : "Show the full menu")
@@ -1468,7 +1475,7 @@ Is that what you want?`,
                   : `Hello 👋\nI'd like to subscribe to ${restaurant.nameEn}.`;
                 openExternal(whatsappLink(msg));
               }}
-              className="h-9 rounded-full px-4 font-bold text-white"
+              className="min-h-11 rounded-full px-4 font-bold text-white"
               style={{ background: "linear-gradient(135deg, #25D366, #128C7E)" }}
             >
               <MessageCircle className={cn("h-3.5 w-3.5", isRtl ? "ml-1.5" : "mr-1.5")} />
@@ -2057,16 +2064,17 @@ Is that what you want?`,
 
       {/* Search & Filters */}
       <section className="bg-white border-b border-gray-100 sticky top-[73px] z-40 shadow-sm">
-        <div className={cn("max-w-6xl mx-auto px-4", pathMode ? "py-3" : "py-6")}>
+        <div className={cn("max-w-[1100px] mx-auto px-4", pathMode ? "py-3" : "py-4")}>
           {/* Search Bar */}
           <div className={cn("relative", pathMode ? "mb-0" : "mb-3 sm:mb-5")}>
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: customerMuted }} />
             <Input
               type="text"
+              aria-label={isRtl ? 'البحث باسم الوجبة' : 'Search by meal name'}
               placeholder={isRtl ? "ابحث عن وجبة..." : "Search for a meal..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-11 sm:h-14 pl-12 pr-4 rounded-full border-2 border-gray-200 focus:border-[#3CC4F0] text-[15px] sm:text-base"
+              className="h-11 pl-12 pr-4 rounded-full border border-gray-200 focus:border-[#3CC4F0] text-base"
             />
           </div>
 
@@ -2077,8 +2085,9 @@ Is that what you want?`,
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
+                aria-pressed={activeCategory === cat.id}
                 className={cn(
-                  "shrink-0 rounded-full border px-4 sm:px-5 py-1.5 text-[14px] sm:text-[15px] leading-5 transition-colors whitespace-nowrap",
+                  "shrink-0 min-h-11 rounded-full border px-4 sm:px-5 py-1.5 text-[14px] sm:text-[15px] leading-5 transition-colors whitespace-nowrap",
                   activeCategory === cat.id
                     ? "font-black text-[#0E76AC] bg-[#EAF7FD]"
                     : "border-gray-200 font-medium text-[#6B7C8C] hover:border-[#3CC4F0]/60 bg-white"
@@ -2103,13 +2112,19 @@ Is that what you want?`,
       </section>
 
       {/* Meals Grid */}
-      <section className="py-8 md:py-14" style={{ background: "#EEF4F8" }}>
-        <div className="max-w-7xl mx-auto px-4">
+      <section className="py-5 md:py-8" style={{ background: "#EEF4F8" }}>
+        <div className="menu-catalog-grid max-w-7xl mx-auto px-4">
           {meals.length === 0 ? (
             <div className="text-center py-20">
-              <p className="text-xl" style={{ color: customerMuted }}>
-                {isRtl ? "لا توجد وجبات متاحة" : "No meals available"}
+              <p className="text-xl" role="status" style={{ color: customerMuted }}>
+                {searchQuery || activeCategory !== 'all'
+                  ? (isRtl ? 'لا توجد وجبات مطابقة' : 'No matching meals')
+                  : (isRtl ? "لا توجد وجبات متاحة" : "No meals available")}
               </p>
+              {(searchQuery || activeCategory !== 'all') && <>
+                <p className="mt-2 text-sm text-[#47759C]">{isRtl ? 'جرّب اسمًا آخر أو أزل فلتر البحث والتصنيف.' : 'Try another name or clear the search and category filter.'}</p>
+                <Button variant="outline" className="mt-4 min-h-11 rounded-xl" onClick={() => { setSearchQuery(''); setActiveCategory('all'); }}>{isRtl ? 'مسح البحث والتصنيف' : 'Clear search and category'}</Button>
+              </>}
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -2122,13 +2137,14 @@ Is that what you want?`,
                 <Card
                   key={meal._id}
                   className={cn(
-                    "group flex flex-col cursor-pointer bg-white relative rounded-2xl p-2 shadow-none transition-colors duration-200 border",
+                    "menu-meal-card group flex flex-col bg-white relative rounded-2xl p-2 shadow-none transition-colors duration-200 border",
                     hasConflict
                       ? "border-red-300 hover:border-red-400"
                       : "border-[#E4EEF6] hover:border-[#3CC4F0]/60"
                   )}
-                  onClick={() => setSelectedMeal(meal)}
                 >
+                  <button type="button" className={isNutriReset ? 'absolute inset-0 z-10 rounded-2xl' : 'menu-card-details'}
+                    onClick={() => setSelectedMeal(meal)} aria-label={`${isRtl ? 'تفاصيل' : 'Details:'} ${isRtl ? meal.nameAr : meal.nameEn || meal.nameAr}`} />
                   {/* Meal Image — مربّعة بزوايا داخلية أصغر من زوايا البطاقة */}
                   <div className="relative aspect-square w-full overflow-hidden rounded-xl" style={{ background: "#EAF3FB" }}>
                     {/* الشبكة قد تعرض عشرات الوجبات — لا تُحمَّل صورة قبل ظهورها */}
@@ -2151,7 +2167,8 @@ Is that what you want?`,
 
                     {/* Calories Badge — كبسولة بيضاء في زاوية الصورة */}
                     <div className={cn("absolute top-2", isRtl ? "right-2" : "left-2", hasConflict && "top-9")}>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11.5px] sm:text-[12px] font-black text-[#0E76AC]" style={{ fontVariantNumeric: "tabular-nums", boxShadow: "0 1px 3px rgba(14,42,74,0.12)" }}>
+                      <span className="menu-calorie-badge inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 sm:px-3 sm:py-1 text-[11.5px] sm:text-[12px] font-black text-[#0E76AC]" style={{ fontVariantNumeric: "tabular-nums" }}>
+                        {!isNutriReset && <Flame className="h-4 w-4" aria-hidden="true" />}
                         {nutritionFor(meal).calories}
                         <span className="font-semibold text-[#47759C]">{isRtl ? "سعرة" : "kcal"}</span>
                       </span>
@@ -2167,14 +2184,14 @@ Is that what you want?`,
                       {/* التصنيف + الوسوم: سطر واحد هادئ بدل الشارات الملوّنة */}
                       <p className="mt-0.5 sm:mt-1 text-[10.5px] sm:text-[11px] font-bold text-[#0E76AC] line-clamp-1">
                         {customerCategoryLabel(meal.category, isRtl)}
-                        {meal.tags && meal.tags.length > 0 && (
+                        {isNutriReset && meal.tags && meal.tags.length > 0 && (
                           <span className="hidden sm:inline"> · {meal.tags.slice(0, 2).map((tag: string) => tagLabel(tag, isRtl)).join(" · ")}</span>
                         )}
                       </p>
                     </div>
 
                     {/* Macros — ثلاثة أرقام نصية بلا صناديق ملوّنة */}
-                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-[#EAF7FD] px-2 py-3">
+                    <div className="menu-macros grid grid-cols-3 gap-1 rounded-xl bg-[#EAF7FD] px-2 py-3">
                       {[
                         [nutritionFor(meal).protein, isRtl ? "بروتين" : "PROTEIN"],
                         [nutritionFor(meal).carbs, isRtl ? "كارب" : "CARBS"],
@@ -2188,12 +2205,14 @@ Is that what you want?`,
                     </div>
 
                     {/* Footer — button (no price, included in subscription) */}
-                    <div className="flex items-center justify-between mt-auto pt-1">
+                    <div className="menu-card-actions relative z-20 flex items-center justify-between mt-auto pt-1">
                       {/* «ضمن اشتراكك» يُخفى على الموبايل لإفساح مكان للزر */}
-                      <span className="hidden sm:inline text-[11px] font-semibold text-[#8AA6BD]">
+                      <span className={cn('text-[11px] font-semibold text-[#47759C]', isVisitor ? 'hidden' : 'hidden sm:inline')}>
                         {isRtl ? "ضمن اشتراكك" : "In your plan"}
                       </span>
-                      {browseMode && !isPhoneVerified ? (
+                      {isVisitor && !isNutriReset ? (
+                        <Button variant="ghost" onClick={() => setSelectedMeal(meal)} className="w-full min-h-11 rounded-xl text-[#0E76AC] font-bold">{isRtl ? 'تفاصيل الوجبة' : 'Meal details'}</Button>
+                      ) : isVisitor ? (
                         // Browse mode: replace add button with subscribe CTA
                         <Button
                           size="sm"
@@ -2357,7 +2376,10 @@ Is that what you want?`,
               )}
 
               {/* Info & CTA (no price — included in subscription) */}
-              <div className="flex items-center justify-between gap-3 pt-4" style={{ borderTop: "1px solid #E4EEF6" }}>
+              {isVisitor && !isNutriReset ? <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-[#E4EEF6]">
+                <p className="text-sm text-[#47759C]">{isRtl ? 'اختيار الوجبات متاح للمشتركين.' : 'Meal selection is available to subscribers.'}</p>
+                <Button onClick={handleSignupViaWhatsApp} className="min-h-11 rounded-xl bg-[#0E76AC] text-white">{isRtl ? 'تواصل للاشتراك' : 'Enquire about subscriptions'}</Button>
+              </div> : <div className="flex items-center justify-between gap-3 pt-4" style={{ borderTop: "1px solid #E4EEF6" }}>
                 <span className="text-[12px] font-semibold text-[#6B7C8C]">
                   {isRtl ? "ضمن اشتراكك" : "Included in your plan"}
                 </span>
@@ -2386,14 +2408,14 @@ Is that what you want?`,
                     </>
                   )}
                 </Button>
-              </div>
+              </div>}
             </div>
           )}
         </DialogContent>
       </Dialog>
       
       {/* Floating Cart Button */}
-      {getTotalMeals() > 0 && (
+      {!isVisitor && getTotalMeals() > 0 && (
         <div className="fixed bottom-24 md:bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-5">
           <Button
             onClick={() => setLocation(restaurant.reviewPath)}
@@ -2408,6 +2430,7 @@ Is that what you want?`,
           </Button>
         </div>
       )}
+      </div>
     </PublicLayout>
   );
 }

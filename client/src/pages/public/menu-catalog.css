@@ -1,0 +1,32 @@
+.adrenaline-menu {
+  --menu-cyan: #3cc4f0;
+  --menu-ink: #0e2a4a;
+  --menu-accent: #0e76ac;
+  --menu-muted: #47759c;
+  --menu-soft: #eaf7fd;
+  --menu-line: #d9e6f1;
+  color: var(--menu-ink);
+}
+.adrenaline-menu ::selection { background: var(--menu-cyan); color: var(--menu-ink); }
+.adrenaline-menu :is(button, a, input):focus-visible { outline: 3px solid var(--menu-accent); outline-offset: 3px; }
+.adrenaline-menu input { caret-color: var(--menu-accent); }
+.menu-subscriber-entry { max-width: 760px; margin: 20px auto 0; padding: 16px; border: 1px solid var(--menu-line); border-radius: 16px; background: var(--menu-soft); text-align: start; display: grid; gap: 14px; }
+.menu-subscriber-entry h2 { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; }
+.menu-subscriber-entry p { margin-top: 5px; font-size: 14px; line-height: 1.7; color: var(--menu-muted); }
+.menu-phone-row { display: flex; gap: 8px; }
+.menu-phone-row input { min-width: 0; flex: 1; height: 44px; border-radius: 12px; background: white; border-color: var(--menu-line); font-size: 16px; }
+.menu-phone-row button { min-height: 44px; border-radius: 12px; gap: 8px; background: var(--menu-accent); color: white; }
+.menu-subscriber-entry .menu-entry-error { color: #b91c1c; }
+.menu-recipient-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.menu-recipient-list button { height: auto; min-height: 44px; white-space: normal; gap: 8px; }
+.adrenaline-menu .menu-meal-card { background: var(--menu-soft); border-radius: 20px; }
+.adrenaline-menu .menu-calorie-badge { background: var(--menu-cyan); color: var(--menu-ink); box-shadow: none; padding: 7px 10px; }
+.adrenaline-menu .menu-calorie-badge span { color: inherit; }
+.adrenaline-menu .menu-macros { border-top: 1px solid var(--menu-line); background: transparent; border-radius: 0; text-align: center; }
+.adrenaline-menu .menu-macros span:first-child { font-size: 18px; }
+.adrenaline-menu .menu-macros span:last-child { font-size: 11px; letter-spacing: 0; }
+.adrenaline-menu .menu-card-details { position: absolute; inset: 0; z-index: 10; width: 100%; border-radius: inherit; }
+.adrenaline-menu .menu-card-actions { position: relative; z-index: 20; }
+.adrenaline-menu .menu-catalog-grid { max-width: 1100px; }
+@media (max-width: 349px) { .adrenaline-menu .menu-catalog-grid > .grid { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .adrenaline-menu .menu-meal-card img { transition: none; transform: none; } }
