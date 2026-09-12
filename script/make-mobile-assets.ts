@@ -61,6 +61,15 @@ async function main() {
     const word = await crisp(wm.img, wm.w, wm.h, 1024, color);
     fs.writeFileSync(path.join(OUT, name), await sharp({ create: { width: word.width, height: word.height, channels: 4, background: clear } }).composite([{ input: word.input, top: 0, left: 0 }]).png().toBuffer());
   }
+  // الشعار الكامل (الاسم + HEALTHY FOOD) للسبلاش الكحلي: الاسم سماوي والسطر أبيض بدل الأسود
+  {
+    const m = await sharp(LOGO).metadata();
+    const W = m.width!, H = m.height!, cut = Math.round(H * 0.66);
+    const word = await crisp(sharp(LOGO).extract({ left: 0, top: 0, width: W, height: cut }), W, cut, 1024, CYAN);
+    const tag = await crisp(sharp(LOGO).extract({ left: 0, top: cut, width: W, height: H - cut }), W, H - cut, 1024, WHITE);
+    fs.writeFileSync(path.join(OUT, "brand-wordmark-navy.png"), await sharp({ create: { width: 1024, height: word.height + tag.height, channels: 4, background: clear } })
+      .composite([{ input: word.input, top: 0, left: 0 }, { input: tag.input, top: word.height, left: 0 }]).png().toBuffer());
+  }
   fs.writeFileSync(path.join(OUT, "favicon.png"), await sharp(await stack(1024, CYAN, white)).resize(48, 48).png().toBuffer());
   console.log("mobile assets written →", OUT, "| splash bg", NAVY);
 }

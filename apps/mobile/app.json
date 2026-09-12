@@ -11,7 +11,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.adrenalinehealthy.app",
-      "infoPlist": { "ITSAppUsesNonExemptEncryption": false }
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.adrenalinehealthy.app",
@@ -33,15 +35,19 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0B2138",
-          "image": "./assets/splash-icon.png",
-          "imageWidth": 220,
+          "image": "./assets/brand-heart-original.png",
+          "imageWidth": 148,
           "resizeMode": "contain"
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store",
+      "expo-notifications"
     ],
-    "experiments": { "typedRoutes": false },
+    "experiments": {
+      "typedRoutes": false
+    },
     "extra": {
       "convexUrl": "https://laudable-mongoose-958.convex.cloud",
       "siteUrl": "https://adrenalinehealthy.com"
