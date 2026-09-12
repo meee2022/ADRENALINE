@@ -17,7 +17,7 @@ import {
 
 import { format } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
@@ -175,7 +175,8 @@ export default function Kitchen() {
   const matchesRestaurant = (record: any) => restaurantFilter === "ALL" || restaurantKeyFor(record) === restaurantFilter;
   const updatePlanMutation = useUpdateDailyPlan();
   const prepareAndConsume = usePrepareAndConsume();
-  const prepareAllMutation = useMutation(api.inventory.prepareAndConsumeAllForDate);
+  // ✅ فعل يكرّر الدفعات في الخادم — «تحضير الكل» كان يتجاوز مهلة الثانية بعد تفعيل رسب المخزون
+  const prepareAllMutation = useAction(api.inventory.prepareAllForDate);
   const [preparingAll, setPreparingAll] = useState(false);
   const sessionTok = useStore((s) => s.sessionToken) || undefined;
   const isAdmin = useStore((s: any) => s.currentUser?.role) === "ADMIN";

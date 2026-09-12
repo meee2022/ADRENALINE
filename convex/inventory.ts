@@ -1,6 +1,7 @@
 // convex/inventory.ts
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action } from "./_generated/server";
+import { api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { trail } from "./lib/trail";
@@ -1053,8 +1054,15 @@ export const prepareAndConsumeAllForDate = mutation({
     date: v.string(),
     deliveryTime: v.optional(v.string()), // MORNING/EVENING — اختياري: وردية واحدة
     sessionToken: v.optional(v.string()),
+    /* ⏱ الدفعات: بعد تفعيل رسب المخزون (1708 سطراً) صار خصم يومٍ كامل (200+ وجبة) يتجاوز
+       مهلة الثانية الواحدة للـmutation فيفشل «تحضير الكل» كله. كل نداء يحضّر حتى `limit`
+       خطة أو حتى ينفد وقته، ويعيد `remaining`؛ الفعل prepareAllForDate يكرّر النداء حتى الصفر. */
+    limit: v.optional(v.number()),
+    preparedSoFar: v.optional(v.number()),
   },
-  handler: async (ctx, { date, deliveryTime, sessionToken }) => {
+  handler: async (ctx, { date, deliveryTime, sessionToken, limit, preparedSoFar }) => {
+    const startedAt = Date.now();
+    const maxPlans = Math.max(1, Math.min(50, Number(limit) || 8));
     const preparer = await requireStaff(ctx, sessionToken);
     const plans = await ctx.db
       .query("dailyPlans")
@@ -1091,13 +1099,16 @@ export const prepareAndConsumeAllForDate = mutation({
         throw new ConvexError(`فشل تدقيق الإنتاج: وردية ${customer.fullName || "مشترك"} غير متطابقة.`);
       }
     }
-    let prepared = 0, skipped = 0;
+    let prepared = 0, skipped = 0, remaining = 0;
     for (const p of plans as any[]) {
       if (p.status !== "CONFIRMED") { skipped++; continue; }
       if (deliveryTime && String(p.deliveryTime) !== deliveryTime) { skipped++; continue; }
+      // نفد نصيب هذه الدفعة (عدداً أو وقتاً) — الباقي في النداء التالي
+      if (prepared >= maxPlans || (prepared > 0 && Date.now() - startedAt > 450)) { remaining++; continue; }
       await prepareAndConsumeOne(ctx, p._id);
       prepared++;
     }
+    if (remaining > 0) return { prepared, skipped, remaining, preparedCustomized: 0 };
 
     /* المخصّصون: وجباتهم في القوالب لا في الخطط اليومية، فكانت منظومة التوصيل
        لا تعرفهم إطلاقاً — لا لوحة التوصيل ولا تطبيق السائق. عند «تحضير الكل»
@@ -1145,10 +1156,37 @@ export const prepareAndConsumeAllForDate = mutation({
     await trail(ctx, {
       action: "PREPARE_ALL", entityType: "plan", entityId: date,
       details: `${date}${deliveryTime ? ` (${deliveryTime})` : " (اليوم كاملاً)"} — `
-        + `${prepared} خطة محضَّرة · ${preparedCustomized} مخصّص للتوصيل · ${skipped} متخطّاة`,
+        + `${prepared + (Number(preparedSoFar) || 0)} خطة محضَّرة · ${preparedCustomized} مخصّص للتوصيل · ${skipped} متخطّاة`,
       staff: preparer as any,
     });
-    return { prepared, skipped, preparedCustomized };
+    return { prepared, skipped, remaining: 0, preparedCustomized };
+  },
+});
+
+/**
+ * «تحضير الكل» — المدخل الذي تستخدمه شاشة المطبخ: يكرّر الدفعات حتى تنتهي خطط اليوم
+ * المؤكدة، فيبقى الزر ضغطة واحدة مهما كبر اليوم. كل دفعة معاملة مستقلة، والخطة المحضَّرة
+ * مختومة (inventoryConsumedAt) فلا تُخصم مرتين لو أُعيد النداء.
+ */
+export const prepareAllForDate = action({
+  args: {
+    date: v.string(),
+    deliveryTime: v.optional(v.string()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ prepared: number; skipped: number; preparedCustomized: number; batches: number }> => {
+    let prepared = 0, skipped = 0, preparedCustomized = 0, batches = 0;
+    for (let guard = 0; guard < 200; guard++) {
+      const r: any = await ctx.runMutation(api.inventory.prepareAndConsumeAllForDate, {
+        ...args, limit: 8, preparedSoFar: prepared,
+      });
+      batches++;
+      prepared += Number(r.prepared) || 0;
+      skipped = Number(r.skipped) || 0;
+      preparedCustomized = Number(r.preparedCustomized) || 0;
+      if (!r.remaining) break;
+    }
+    return { prepared, skipped, preparedCustomized, batches };
   },
 });
 
