@@ -2,18 +2,18 @@
   "expo": {
     "name": "Adrenaline",
     "slug": "adrenaline-healthy-food",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "scheme": "adrenaline",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.adrenalinehealthy.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "package": "com.adrenalinehealthy.app",
@@ -21,8 +21,8 @@
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/adaptive-icon.png"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "versionCode": 3
     },
     "web": {
       "bundler": "metro",
@@ -50,7 +50,12 @@
     },
     "extra": {
       "convexUrl": "https://laudable-mongoose-958.convex.cloud",
-      "siteUrl": "https://adrenalinehealthy.com"
-    }
+      "siteUrl": "https://adrenalinehealthy.com",
+      "router": {},
+      "eas": {
+        "projectId": "d2f443ec-a622-4dd1-a727-62983aaab4ba"
+      }
+    },
+    "owner": "meee87"
   }
 }

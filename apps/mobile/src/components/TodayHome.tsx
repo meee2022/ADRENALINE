@@ -42,7 +42,8 @@ export function TodayHome(){
     <T>{loading?'جارٍ التحديث…':error||'آخر تحديث: '+(stamp ? new Date(stamp).toLocaleTimeString(language==='ar'?'ar-QA':'en-QA',{timeZone:'Asia/Qatar',hour:'2-digit',minute:'2-digit'}) : '—')}</T>
     <Btn label="تحديث الحالة" variant="outline" disabled={loading} onPress={()=>void load()}/>
     {profile?.subscription&&<SubscriberDay key={`${profile.subscription.id}:${revision}`} customerId={profile.subscription.id} token={session.token} skippedDates={profile.subscription.skippedDates}/>}
-    {profile?.subscription&&<NotificationSettings customerId={profile.subscription.id}/>}
+    {/* يظهر فقط بعد تفعيل الإشعارات (علم subscriberPushEnabled) — زر غير عامل سبب رفض في مراجعة App Store */}
+    {profile?.subscription&&(Constants.expoConfig?.extra as any)?.subscriberPushEnabled&&<NotificationSettings customerId={profile.subscription.id}/>}
     {status&&!error&&<View style={{padding:16,gap:10,backgroundColor:colors.cyanSoft,borderRadius:16}}>
       <T>{status.pending?'خطتك بانتظار اعتماد الأخصائية':status.hasApprovedPlan?'خطتك معتمدة؛ تابع وجباتك وحالة التوصيل هنا.':!status.active?'اشتراكك غير متاح للاختيار حاليًا.':'راجع حالة اختياراتك.'}</T>
       {status.canStartSelection&&<Btn label="متابعة اختياراتك" onPress={()=>router.push('/menu')}/>}
