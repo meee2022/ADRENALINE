@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-process.chdir("C:/Users/M/Desktop/github for local/adrenaline-last");
+process.chdir("E:/projects/adrenaline-last");
 
 const FNS = [
   "restaurantSettings.update", "restaurantSettings.updateHeroLogo", "restaurantSettings.deleteHeroLogo", "restaurantSettings.initializeDefault",

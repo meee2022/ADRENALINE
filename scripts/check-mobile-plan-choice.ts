@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { createRequire } from 'node:module';
+const { optionFingerprint, resolvePlanChoice, payablePrice } = createRequire(import.meta.url)('../apps/mobile/src/planChoice.ts') as typeof import('../apps/mobile/src/planChoice');
+const options = [{ mealsCount: 2, snacksCount: 2, priceQAR: 650 }, { mealsCount: 3, snacksCount: 2, priceQAR: 750 }];
+const choice = { index: 1, fingerprint: optionFingerprint(options[1]) };
+assert.equal(resolvePlanChoice(options), undefined);
+assert.equal(resolvePlanChoice(options, choice), options[1]);
+assert.equal(resolvePlanChoice([...options].reverse(), choice), undefined);
+assert.equal(resolvePlanChoice([options[0], { ...options[1], priceQAR: 800 }], choice), undefined);
+assert.equal(resolvePlanChoice([options[0]], choice), undefined);
+assert.equal(resolvePlanChoice(options, { ...choice, index: -1 }), undefined);
+assert.equal(payablePrice(undefined), false);
+assert.equal(payablePrice({ ...options[0], priceQAR: 0 }), false);
+assert.equal(payablePrice({ ...options[0], priceQAR: Infinity }), false);
+assert.equal(payablePrice(options[1]), true);
+console.log('Plan selection: 10 assertions passed. No external requests or payments.');

@@ -3,7 +3,8 @@ import { ConvexHttpClient } from "convex/browser";
 import { readFileSync } from "fs";
 import { api } from "./convex/_generated/api.js";
 
-const CONVEX_URL = "https://rightful-parakeet-660.convex.cloud";
+const CONVEX_URL = process.env.CONVEX_URL;
+if (!CONVEX_URL) throw new Error("Set CONVEX_URL explicitly to prevent importing into the wrong deployment.");
 const rows = JSON.parse(readFileSync("./customers-import.json", "utf-8"));
 
 console.log(`Importing ${rows.length} customers...`);

@@ -1,5 +1,5 @@
 import fs from "fs";
-process.chdir("C:/Users/M/Desktop/github for local/adrenaline-last");
+process.chdir("E:/projects/adrenaline-last");
 
 const T = {
   "restaurantSettings.ts": ["update", "updateHeroLogo", "deleteHeroLogo", "initializeDefault"],
