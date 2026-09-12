@@ -6,6 +6,7 @@ import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
 
 const crons = cronJobs();
+crons.interval('subscriber push updates',{minutes:2},internal.mobilePush.dispatch);
 
 /**
  * تقديم أسبوع دورة الطبخ +1 فجر الجمعة بتوقيت قطر — المطبخ يحضّر الجمعة على

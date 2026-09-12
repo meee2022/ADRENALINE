@@ -437,6 +437,8 @@ export const bestSellers = query({
         slug: m.slug,
         calories: m.calories,
         protein: m.protein,
+        carbs: m.carbs,
+        fats: m.fats,
         priceQAR: m.priceQAR,
         category: m.category,
         orders: counts.get(String(m._id)) || 0,

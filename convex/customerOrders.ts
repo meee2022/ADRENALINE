@@ -629,6 +629,11 @@ export const approve = mutation({
 
       let dateKey: string | null;
       if (overrideDate && /^\d{4}-\d{2}-\d{2}$/.test(overrideDate)) {
+        // Nutritionists may intentionally move a meal across days/cooking weeks.
+        // Friday remains unavailable for delivery, regardless of staff overrides.
+        if (!isDeliveryDay(parseDate(overrideDate))) {
+          throw new ConvexError("ORDER_VALIDATION:FRIDAY_DELIVERY_NOT_ALLOWED");
+        }
         dateKey = overrideDate;
       } else {
         dateKey = dateForSlot(Number(item.week), item.day);

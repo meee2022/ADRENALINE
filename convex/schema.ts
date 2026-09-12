@@ -3,6 +3,9 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  mobilePushDevices:defineTable({
+    customerId:v.id('customers'),token:v.string(),createdAt:v.number(),cursor:v.number(),
+  }).index('by_token',['token']),
   // ===== Users & Authentication =====
   users: defineTable({
     email: v.string(),

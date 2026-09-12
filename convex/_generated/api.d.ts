@@ -66,6 +66,8 @@ import type * as menuItems from "../menuItems.js";
 import type * as menuLink from "../menuLink.js";
 import type * as menuOfficial from "../menuOfficial.js";
 import type * as menuSync from "../menuSync.js";
+import type * as mobilePush from "../mobilePush.js";
+import type * as mobileSubscriber from "../mobileSubscriber.js";
 import type * as modifiers from "../modifiers.js";
 import type * as nameStyle from "../nameStyle.js";
 import type * as notifications from "../notifications.js";
@@ -176,6 +178,8 @@ declare const fullApi: ApiFromModules<{
   menuLink: typeof menuLink;
   menuOfficial: typeof menuOfficial;
   menuSync: typeof menuSync;
+  mobilePush: typeof mobilePush;
+  mobileSubscriber: typeof mobileSubscriber;
   modifiers: typeof modifiers;
   nameStyle: typeof nameStyle;
   notifications: typeof notifications;
