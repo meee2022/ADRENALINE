@@ -485,12 +485,15 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         <div className="max-w-7xl mx-auto px-4">
 
           {/* Logo row — always full width on mobile */}
-          <div className="mb-6">
+          <div className="mb-5 md:mb-6">
             <div className="flex items-center gap-3 mb-3">
               <img src="/heart-icon.png" alt="Adrenaline Heart" className="h-9 w-9" />
               <img src="/adrenaline-logo-full.png" alt="Adrenaline" className="h-8" />
             </div>
-            <p className="text-[#BCBEBF] text-sm leading-relaxed mb-4 max-w-sm">
+            <p className="md:hidden text-[#d9e6f1] text-sm leading-relaxed mb-3">
+              {isRtl ? "وجبات صحية طازجة، طلبات أونلاين واشتراكات تناسب يومك." : "Fresh healthy meals, online orders and plans for your day."}
+            </p>
+            <p className="hidden md:block text-[#BCBEBF] text-sm leading-relaxed mb-4 max-w-sm">
               {isRtl
                 ? (restaurantSettings?.descriptionAr || "أدرينالين - نقدم لكم وجبات صحية ولذيذة مصممة خصيصاً لتحقيق أهدافكم الغذائية. نستخدم أفضل المكونات الطازجة ونعد كل وجبة بحب واهتمام.")
                 : (restaurantSettings?.descriptionEn || "Adrenaline - We offer healthy and delicious meals specially designed to achieve your nutritional goals.")}
@@ -525,14 +528,14 @@ export function PublicLayout({ children }: PublicLayoutProps) {
           </div>
 
           {/* 3 sections: 2-col grid on mobile, auto on md+ */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mb-6 md:mb-10">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-5 mb-5 md:mb-10">
 
             {/* Quick Links */}
-            <div>
+            <div className="col-span-2 md:col-span-1">
               <h3 className="text-sm font-bold mb-3 text-white">
                 {isRtl ? "روابط سريعة" : "Quick Links"}
               </h3>
-              <ul className="space-y-2">
+              <ul className="grid grid-cols-3 gap-x-3 gap-y-0 md:block md:space-y-2">
                 {[
                   { href: "/", ar: "الرئيسية", en: "Home" },
                   { href: "/public/plans", ar: "الخطط", en: "Plans" },
@@ -541,7 +544,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                   { href: "/public/contact", ar: "تواصل معنا", en: "Contact" },
                 ].map((link) => (
                   <li key={link.href}>
-                    <a href={link.href} className="inline-flex min-h-[44px] items-center text-[#BCBEBF] hover:text-[#3CC4F0] transition-colors text-xs md:min-h-0">
+                    <a href={link.href} className="inline-flex min-h-[44px] items-center text-[#d9e6f1] hover:text-[#3CC4F0] transition-colors text-sm md:min-h-0">
                       {isRtl ? link.ar : link.en}
                     </a>
                   </li>
@@ -572,11 +575,11 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </div>
 
             {/* Contact Info — spans full width on mobile (col-span-2), normal on md+ */}
-            <div className="col-span-2 md:col-span-1">
+            <div className="col-span-2 md:col-span-1 min-w-0">
               <h3 className="text-sm font-bold mb-3 text-white">
                 {isRtl ? "تواصل معنا" : "Contact Us"}
               </h3>
-              <ul className="flex flex-wrap gap-x-6 gap-y-2 md:flex-col md:space-y-2">
+              <ul className="flex flex-wrap gap-x-5 gap-y-1 md:flex-col break-words [&_a]:break-all [&_a]:min-h-[44px] [&_a]:inline-flex [&_a]:items-center">
                 <li className="flex items-center gap-2 text-[#BCBEBF] text-xs">
                   <svg className="w-4 h-4 text-[#3CC4F0] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />

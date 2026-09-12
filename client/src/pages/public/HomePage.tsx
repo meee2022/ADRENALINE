@@ -24,10 +24,10 @@ import { cn } from "@/lib/utils";
  *  فنستبدلها بالأصول الثابتة المرفقة (نفس منطق صفحة الخطط PublicPlansNew). */
 function planCardImage(plan: any): string {
   const key = `${plan?.slug || ""} ${plan?.nameEn || ""} ${plan?.nameAr || ""}`.toLowerCase();
-  if (key.includes("diet") || key.includes("tanshif") || key.includes("تنشيف") || key.includes("تنظيف")) return "/plan-tanshif-real.jpg";
-  if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقة") || key.includes("لياقت")) return "/plan-liyaqa-real.jpg";
-  if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-tadkhim-real.jpg";
-  return "/custom-plan-meals.jpg";
+  if (key.includes("diet") || key.includes("tanshif") || key.includes("تنشيف") || key.includes("تنظيف")) return "/plan-artwork/plan-diet.png";
+  if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقة") || key.includes("لياقت")) return "/plan-artwork/plan-fitness.png";
+  if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-artwork/plan-bulk.png";
+  return "/plan-artwork/plan-custom.png";
 }
 
 export default function HomePage() {

@@ -52,10 +52,10 @@ export default function PublicPlansNew() {
 
   const fallbackPlanImage = (plan: any) => {
     const key = `${plan.slug || ""} ${plan.nameEn || ""} ${plan.nameAr || ""}`.toLowerCase();
-    if (key.includes("diet") || key.includes("tanshif") || key.includes("تنظيف") || key.includes("تنشيف")) return "/plan-tanshif-real.jpg";
-    if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقت") || key.includes("لياقة")) return "/plan-liyaqa-real.jpg";
-    if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-tadkhim-real.jpg";
-    return "/custom-plan-meals.jpg";
+    if (key.includes("diet") || key.includes("tanshif") || key.includes("تنظيف") || key.includes("تنشيف")) return "/plan-artwork/plan-diet.png";
+    if (key.includes("fitness") || key.includes("liyaqa") || key.includes("لياقت") || key.includes("لياقة")) return "/plan-artwork/plan-fitness.png";
+    if (key.includes("bulk") || key.includes("tadkhim") || key.includes("تضخيم")) return "/plan-artwork/plan-bulk.png";
+    return "/plan-artwork/plan-custom.png";
   };
 
   const planImage = (plan: any) => {
