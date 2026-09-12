@@ -1,10 +1,11 @@
 import artwork from '@shared/menuArtwork.json';
 
 /** Presentation only: never alter meal IDs, nutrition, scheduling or stored orders. */
-export function mealArtworkUrl(meal: { _id?: unknown; publicMealId?: unknown; mealId?: unknown } | null | undefined): string | undefined {
+export function mealArtworkUrl(meal: { _id?: unknown; id?: unknown; publicMealId?: unknown; mealId?: unknown } | null | undefined): string | undefined {
   if (!meal) return undefined;
   const images = artwork as Record<string, string>;
-  return images[String(meal.publicMealId || meal.mealId || meal._id || '')];
+  // bestSellers يعيد `id` لا `_id`
+  return images[String(meal.publicMealId || meal.mealId || meal._id || meal.id || '')];
 }
 
 /**

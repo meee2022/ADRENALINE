@@ -2,7 +2,8 @@
  * @file client/src/pages/public/HomePage.tsx
  * @description Compact premium homepage — Hero, Plans, Testimonials, FAQ, CTA, Footer
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { withMealArtwork } from "@/lib/mealArtwork";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { useBanners, usePublicPlans } from "@/lib/api";
@@ -38,9 +39,11 @@ export default function HomePage() {
   const { data: allPlans = [] } = usePublicPlans("week");
   const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
-  const allMeals = useQuery(api.publicMeals.list, {}) || [];
+  // ✅ الصور الجديدة (مع الرجوع لصورة الأدمن) في الهيرو والأكثر طلباً كما في المنيو
+  const allMealsRaw = useQuery(api.publicMeals.list, {}) || [];
+  const allMeals = useMemo(() => (allMealsRaw as any[]).map(withMealArtwork), [allMealsRaw]);
   const bestSellersRaw = useQuery((api.publicMeals as any).bestSellers, { limit: 6 });
-  const bestSellers = bestSellersRaw || [];
+  const bestSellers = useMemo(() => ((bestSellersRaw || []) as any[]).map(withMealArtwork), [bestSellersRaw]);
   const bestSellersLoading = bestSellersRaw === undefined;
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
 
