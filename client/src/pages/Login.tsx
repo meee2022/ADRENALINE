@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { useLocation } from "wouter";
+import { Redirect, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,16 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { t, dir, language } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
+  const currentUser = useStore(s => s.currentUser);
+  const sessionToken = useStore(s => s.sessionToken);
+
+  // Reopening the staff entry must not require another login for a saved session.
+  if (currentUser && sessionToken) {
+    const home = ROLE_HOME[currentUser.role as Role] || "/";
+    const destination = canAccessUser(currentUser, home) ? home
+      : (currentUser.permissions || []).find(p => p !== "/" && !p.endsWith("/*") && canAccessUser(currentUser, p)) || "/";
+    return <Redirect to={destination} />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
