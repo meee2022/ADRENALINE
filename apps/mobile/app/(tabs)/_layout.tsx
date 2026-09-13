@@ -3,10 +3,14 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, fonts } from "@/theme";
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { LanguagePicker } from '@/components/LanguagePicker';
 import { useContentLanguage } from '@/useContentLanguage';
 
+/* الويب فقط: react-native-web يضغط اسم التبويب إلى 3px في مساحة 48px فيُقصّ (ظهر في لقطات المتجر).
+   على iOS الشريط سليم — متحقَّق على TestFlight build 3 — فقيم الجهاز تبقى كما هي حرفياً. */
+const WEB = Platform.OS === 'web';
+
 export default function TabsLayout() {
   const { tr } = useContentLanguage();
   const insets = useSafeAreaInsets();
@@ -16,9 +20,9 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.cyanDark,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 18 }, // Cairo يحتاج 18px؛ 13 كان يقصّ النص
-        tabBarIconStyle: { marginTop: 0 },
-        tabBarStyle: { backgroundColor: "#fff", borderTopColor: colors.line, height: 66 + insets.bottom, paddingBottom: insets.bottom + 4, paddingTop: 4 }, // مساحة 58px للأيقونة والاسم (كانت 48 فانضغط الاسم إلى 3px)
+        tabBarLabelStyle: { fontFamily: fonts.bold, fontSize: 11, ...(WEB ? { lineHeight: 18 } : { lineHeight: 13, marginBottom: 3 }) },
+        tabBarIconStyle: WEB ? { marginTop: 0 } : { marginTop: 3 },
+        tabBarStyle: { backgroundColor: "#fff", borderTopColor: colors.line, ...(WEB ? { height: 66 + insets.bottom, paddingBottom: insets.bottom + 4, paddingTop: 4 } : { height: 60 + insets.bottom, paddingBottom: insets.bottom + 6, paddingTop: 6 }) },
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
