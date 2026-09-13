@@ -76,6 +76,7 @@ import * as z from "zod";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
+import { AppLinkCodeDialog } from "@/components/AppLinkCodeDialog";
 import { getUserError } from "@/lib/userError";
 import { downloadBlob } from "@/lib/native";
 
@@ -347,6 +348,8 @@ export default function Customers() {
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  // مشترك مفتوحة له نافذة «كود ربط التطبيق» (إشعارات الجوال)
+  const [linkTarget, setLinkTarget] = useState<any | null>(null);
 
   // ✅ Multi-select states
   const [selectedAvoid, setSelectedAvoid] = useState<string[]>([]);
@@ -1119,6 +1122,8 @@ export default function Customers() {
           </Button>
         </label>
       </div>
+
+      <AppLinkCodeDialog customer={linkTarget} onClose={() => setLinkTarget(null)} />
 
       {/* Add/Edit Customer Dialog */}
       <Dialog
@@ -2062,6 +2067,7 @@ export default function Customers() {
               onPause={(c) => { setPauseSection("pause"); setPauseTarget(c); }}
               onSkipDays={(c) => { setPauseSection("skip"); setPauseTarget(c); }}
               onPrintPlan={setPrintTarget}
+              onLinkApp={setLinkTarget}
               onDelete={async (id, name) => {
                 const ok = await confirmDialog({
                   title: isRtl ? "تأكيد الحذف" : "Confirm Delete",

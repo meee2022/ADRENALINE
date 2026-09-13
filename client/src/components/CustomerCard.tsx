@@ -1,6 +1,6 @@
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ar, enUS } from "date-fns/locale";
-import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle, Printer, CalendarX2 } from "lucide-react";
+import { Edit2, Trash2, Phone, CalendarDays, Utensils, Moon, Sun, PauseCircle, Printer, CalendarX2, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -16,9 +16,11 @@ interface CustomerCardProps {
   onSkipDays?: (customer: any) => void;
   /** فتح نافذة تنزيل/طباعة جدول الوجبات */
   onPrintPlan?: (customer: any) => void;
+  /** إصدار كود ربط تطبيق الجوال (للإشعارات) وإرساله على واتساب */
+  onLinkApp?: (customer: any) => void;
 }
 
-export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, onPrintPlan }: CustomerCardProps) {
+export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, onPrintPlan, onLinkApp }: CustomerCardProps) {
   const { t, dir, language } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const dateLocale = language === "ar" ? ar : enUS;
@@ -155,6 +157,18 @@ export function CustomerCard({ customer, onEdit, onDelete, onPause, onSkipDays, 
                     customer.pausedFrom ? "text-amber-600" : "text-gray-600"
                   )}
                 />
+              </Button>
+            )}
+            {onLinkApp && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title={isRtl ? "كود ربط التطبيق (للإشعارات)" : "App link code (notifications)"}
+                aria-label={isRtl ? "كود ربط التطبيق" : "App link code"}
+                className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg hover:bg-cyan-50"
+                onClick={() => onLinkApp(customer)}
+              >
+                <Smartphone className="h-4 w-4 text-cyan-700" />
               </Button>
             )}
             <Button
