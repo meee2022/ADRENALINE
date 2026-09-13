@@ -50,7 +50,8 @@
           "color": "#3CC4F0",
           "defaultChannel": "orders"
         }
-      ]
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": false
