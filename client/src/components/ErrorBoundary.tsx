@@ -114,7 +114,24 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, recovering: false, error, refCode: makeRefCode() };
   }
 
-  componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+  async componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
+    // Production may redact the Convex exception text. Verify instead of
+    // treating every server/network failure as an expired session.
+    const token = useStore.getState().sessionToken;
+    if (!isAuthError(error) && token && /CONVEX/i.test(error.message)) {
+      try {
+        const status = await Promise.race([
+          convex.query(api.auth.sessionStatus, { sessionToken: token }),
+          new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 3500)),
+        ]);
+        if (status && !status.valid && useStore.getState().sessionToken === token) {
+          this.handleSignIn();
+          return;
+        }
+      } catch {
+        // Preserve the session when the check itself is unavailable.
+      }
+    }
     // ✅ نسخة جديدة منشورة: أسماء chunks القديمة (بالـ hash) لم تعد موجودة،
     //    فيفشل الاستيراد الديناميكي. الحل: تحديث تلقائي مرة واحدة (يجلب
     //    index.html الجديد). حارس sessionStorage يمنع حلقة تحديث لانهائية.
@@ -180,6 +197,12 @@ export class ErrorBoundary extends Component<Props, State> {
   handleReload = () => {
     this.setState({ recovering: true });
     void recoverLatestApplication();
+  };
+
+  handleSignIn = () => {
+    useStore.getState().logout();
+    useStore.getState().customerLogout();
+    window.location.replace("/login");
   };
 
   render() {
@@ -261,7 +284,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 {tr("تحميل أحدث نسخة", "Load latest version")}
               </button>
               <button
-                onClick={() => window.location.assign("/login")}
+                onClick={this.handleSignIn}
                 className="min-h-11 rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-extrabold text-slate-700 transition-colors hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-200"
               >
                 {tr("تسجيل الدخول من جديد", "Sign in again")}

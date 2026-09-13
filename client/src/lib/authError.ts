@@ -13,13 +13,12 @@
 /** نصوص الأخطاء كما ترميها convex/sessions.ts — أبقِها متطابقة. */
 const AUTH_MESSAGES = [
   "غير مصرّح — سجّل الدخول من جديد",
-  "هذه العملية تتطلب صلاحية مدير",
 ];
 
 /** هل هذا الخطأ سببه جلسة غير صالحة/منتهية؟ */
 export function isAuthError(error: unknown): boolean {
+  const data = error && typeof error === "object" && "data" in error ? error.data : undefined;
   const msg =
     error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  if (!msg) return false;
-  return AUTH_MESSAGES.some((m) => msg.includes(m));
+  return AUTH_MESSAGES.some((m) => msg.includes(m) || (typeof data === "string" && data.includes(m)));
 }

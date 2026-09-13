@@ -2,7 +2,7 @@
  * @file client/src/pages/Login.tsx
  * @description صفحة تسجيل دخول — Adrenaline brand identity
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Redirect, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -27,9 +27,23 @@ export default function Login() {
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const currentUser = useStore(s => s.currentUser);
   const sessionToken = useStore(s => s.sessionToken);
+  const [verifiedToken, setVerifiedToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser || !sessionToken) return;
+    let active = true;
+    void convex.query(api.auth.sessionStatus, { sessionToken }).then((status) => {
+      if (!active || useStore.getState().sessionToken !== sessionToken) return;
+      if (status.valid && status.accountType === "staff") setVerifiedToken(sessionToken);
+      else useStore.getState().logout();
+    }).catch(() => {
+      // An outage is not evidence of an expired session. Keep the login form usable.
+    });
+    return () => { active = false; };
+  }, [currentUser, sessionToken]);
 
   // Reopening the staff entry must not require another login for a saved session.
-  if (currentUser && sessionToken) {
+  if (currentUser && sessionToken && verifiedToken === sessionToken) {
     const home = ROLE_HOME[currentUser.role as Role] || "/";
     const destination = canAccessUser(currentUser, home) ? home
       : (currentUser.permissions || []).find(p => p !== "/" && !p.endsWith("/*") && canAccessUser(currentUser, p)) || "/";

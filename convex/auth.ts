@@ -3,9 +3,9 @@
  * @description نظام مصادقة موحد للأدمن والعملاء + إصدار جلسة (توكن) للسيرفر
  */
 import { v, ConvexError } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { verifyPassword, verifyAndMaybeUpgrade } from "./passwords";
-import { createSession, destroySession, requireAdmin } from "./sessions";
+import { createSession, destroySession, requireAdmin, validateSession } from "./sessions";
 import { findStaffByEmail, findCustomerByEmail } from "./accountLookup";
 
 /* ═══════════ تحديد محاولات تسجيل الدخول (منع تخمين كلمة المرور) ═══════════ */
@@ -15,6 +15,15 @@ const MAX_ATTEMPTS = 5;
 const THROTTLED = "محاولات كثيرة — حاول مرة أخرى بعد 15 دقيقة";
 
 const attemptKey = (email: string) => String(email || "").trim().toLowerCase();
+
+/** Read-only session check: never disclose account data or relax permissions. */
+export const sessionStatus = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const identity = await validateSession(ctx, args.sessionToken);
+    return { valid: Boolean(identity), accountType: identity?.accountType ?? null };
+  },
+});
 
 /** يرمي خطأً إذا تجاوز البريد الحدّ. يُستدعى قبل أي مقارنة لكلمة المرور. */
 async function assertNotThrottled(ctx: any, email: string) {

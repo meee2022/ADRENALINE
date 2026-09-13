@@ -6,6 +6,8 @@ const VERSION_CHECK_INTERVAL_MS = 60_000;
 
 let versionCheckInFlight = false;
 let reloadStarted = false;
+let hasUnsavedInteraction = false;
+let lastInteractionAt = 0;
 
 async function clearAppCaches() {
   if ("caches" in window) {
@@ -93,7 +95,11 @@ async function checkForRemoteVersion() {
     const payload = await response.json();
     const remoteVersion =
       typeof payload?.version === "string" ? payload.version : null;
-    if (remoteVersion && remoteVersion !== __APP_BUILD_ID__) {
+    // Do not interrupt typing, a POS basket, or an in-flight user action.
+    // A fresh page load will use the newest assets; explicit crash recovery
+    // remains available independently of this background update guard.
+    if (remoteVersion && remoteVersion !== __APP_BUILD_ID__ &&
+        !hasUnsavedInteraction && Date.now() - lastInteractionAt > 30_000) {
       await applyVersion(remoteVersion);
     }
   } catch {
@@ -121,10 +127,21 @@ export function initializeAppVersion() {
     // Continue without persistent version storage.
   }
 
-  if (installedVersion && installedVersion !== __APP_BUILD_ID__) {
-    void applyVersion(__APP_BUILD_ID__);
-    return;
+  // The running bundle is already loaded. An older tab must not reload merely
+  // because another tab updated this shared localStorage marker.
+  if (installedVersion !== __APP_BUILD_ID__) {
+    try { window.localStorage.setItem(VERSION_STORAGE_KEY, __APP_BUILD_ID__); } catch { /* optional */ }
   }
+
+  document.addEventListener("input", () => { hasUnsavedInteraction = true; }, true);
+  document.addEventListener("click", (event) => {
+    lastInteractionAt = Date.now();
+    // Button-driven selections (meal picker / POS) need the same protection
+    // as text fields. Avoid assuming that a click was successfully saved.
+    if (event.target instanceof Element && event.target.closest("button,[role='button']")) {
+      hasUnsavedInteraction = true;
+    }
+  }, true);
 
   void checkForRemoteVersion();
 
