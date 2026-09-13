@@ -52,7 +52,7 @@ async function main() {
   const white = { r: 255, g: 255, b: 255, alpha: 1 };
   const clear = { r: 0, g: 0, b: 0, alpha: 0 };
   fs.writeFileSync(path.join(OUT, "icon.png"), await stack(1024, CYAN, white));
-  fs.writeFileSync(path.join(OUT, "adaptive-icon.png"), await stack(1024, CYAN, clear, 0.62));
+  fs.writeFileSync(path.join(OUT, "adaptive-icon.png"), await stack(1024, CYAN, clear, 0.52) /* 0.62 كان يقصّ طرفي ADRENALINE في قناع الدائرة */);
   // السبلاش: اسم أبيض وقلب سماوي على شفاف — الخلفية الكحلية من app.json
   fs.writeFileSync(path.join(OUT, "splash-icon.png"), await stack(1024, WHITE, clear, 0.7));
   // الاسم وحده (بلا قلب) لرأس الشاشات — أبيض على الكحلي، وسماوي على الأبيض
