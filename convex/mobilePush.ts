@@ -1,11 +1,11 @@
 import { mutation,internalQuery,internalMutation,internalAction } from './_generated/server';
 import { internal } from './_generated/api';
 import { v,ConvexError } from 'convex/values';
-import { requireStaffOrSubscriptionOwner } from './sessions';
+import { requireStaffOrLinkedSubscriber } from './sessions';
 export const register=mutation({
   args:{customerId:v.id('customers'),sessionToken:v.string(),token:v.string()},
   handler:async(ctx,a)=>{
-    await requireStaffOrSubscriptionOwner(ctx,a.sessionToken,a.customerId);
+    await requireStaffOrLinkedSubscriber(ctx,a.sessionToken,a.customerId);
     if(!/^(ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]+\]$/.test(a.token))throw new ConvexError('Invalid device token');
     const old=await ctx.db.query('mobilePushDevices').withIndex('by_token',q=>q.eq('token',a.token)).unique();
     if(old)await ctx.db.delete(old._id);
@@ -15,7 +15,7 @@ export const register=mutation({
 export const unregister=mutation({
   args:{customerId:v.id('customers'),sessionToken:v.string()},
   handler:async(ctx,a)=>{
-    await requireStaffOrSubscriptionOwner(ctx,a.sessionToken,a.customerId);
+    await requireStaffOrLinkedSubscriber(ctx,a.sessionToken,a.customerId);
     // Explicit logout revokes this subscriber's push registrations.
     for(const d of await ctx.db.query('mobilePushDevices').collect())if(d.customerId===a.customerId)await ctx.db.delete(d._id);
   }

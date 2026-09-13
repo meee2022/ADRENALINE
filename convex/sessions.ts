@@ -20,9 +20,11 @@ const STAFF_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;      // 7 أيام — أ�
 const CUSTOMER_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;  // 30 يوماً — هاتف شخصي
 
 export type Identity = {
-  accountType: "staff" | "customer";
+  accountType: "staff" | "customer" | "subscriber";
   userId?: string;
   customerAccountId?: string;
+  /** جلسة subscriber فقط: المشترك المربوط بكود الأخصائية */
+  customerId?: string;
   role?: string;
 };
 
@@ -36,7 +38,7 @@ export function newToken(): string {
 /** إنشاء جلسة جديدة وإرجاع التوكن */
 export async function createSession(
   ctx: MutationCtx,
-  data: { accountType: "staff" | "customer"; userId?: any; customerAccountId?: any; role?: string },
+  data: { accountType: "staff" | "customer" | "subscriber"; userId?: any; customerAccountId?: any; customerId?: any; role?: string },
 ): Promise<string> {
   const token = newToken();
   const now = Date.now();
@@ -45,6 +47,7 @@ export async function createSession(
     accountType: data.accountType,
     userId: data.userId,
     customerAccountId: data.customerAccountId,
+    customerId: data.customerId,
     role: data.role,
     createdAt: now,
     expiresAt: now + (data.accountType === "staff" ? STAFF_SESSION_TTL_MS : CUSTOMER_SESSION_TTL_MS),
@@ -68,6 +71,7 @@ export async function validateSession(
     accountType: session.accountType,
     userId: session.userId as any,
     customerAccountId: session.customerAccountId as any,
+    customerId: (session as any).customerId as any,
     role: session.role,
   };
 }
@@ -190,6 +194,25 @@ export async function requireStaffOrSubscriptionOwner(
   const account: any = await ctx.db.get(id.customerAccountId as any);
   if (!account || String(account.customerId) !== String(customerId)) throw new ConvexError(AUTH_ERR);
   return id;
+}
+
+/**
+ * الطاقم، أو صاحب الاشتراك بحساب بريد مربوط، أو جلسة «مشترك مربوط بكود» (subscriber)
+ * لنفس المشترك. **مخصّصة لإشعارات الجوال فقط** (mobilePush/mobileSubscriber):
+ * باقي الدوال تبقى على requireStaffOrSubscriptionOwner فلا تتسع صلاحياتها.
+ */
+export async function requireStaffOrLinkedSubscriber(
+  ctx: QueryCtx | MutationCtx,
+  token: string | null | undefined,
+  customerId: string,
+): Promise<Identity> {
+  const id = await validateSession(ctx, token);
+  if (!id) throw new ConvexError(AUTH_ERR);
+  if (id.accountType === "subscriber") {
+    if (!id.customerId || String(id.customerId) !== String(customerId)) throw new ConvexError(AUTH_ERR);
+    return id;
+  }
+  return requireStaffOrSubscriptionOwner(ctx, token, customerId);
 }
 
 /**

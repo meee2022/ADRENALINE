@@ -1,11 +1,11 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
-import { requireStaffOrSubscriptionOwner } from './sessions';
+import { requireStaffOrLinkedSubscriber } from './sessions';
 /** Owner-scoped status only. Never infer approval from a local draft. */
 export const overview=query({
   args:{customerId:v.id('customers'),sessionToken:v.string()},
   handler:async(ctx,args)=>{
-    await requireStaffOrSubscriptionOwner(ctx,args.sessionToken,args.customerId);
+    await requireStaffOrLinkedSubscriber(ctx,args.sessionToken,args.customerId);
     const customer=await ctx.db.get(args.customerId);
     if(!customer)return null;
     const orders=await ctx.db.query('customerOrders').withIndex('by_phone',q=>q.eq('customerPhone',customer.phone)).order('desc').take(100);

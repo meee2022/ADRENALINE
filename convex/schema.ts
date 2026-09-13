@@ -344,13 +344,28 @@ export default defineSchema({
   // ===== Sessions (server-side auth tokens) =====
   sessions: defineTable({
     token: v.string(),
-    accountType: v.union(v.literal("staff"), v.literal("customer")),
+    // subscriber = جلسة مشترك مربوط بكود من الأخصائية (بلا حساب بريد) — لتسجيل إشعارات الجوال فقط
+    accountType: v.union(v.literal("staff"), v.literal("customer"), v.literal("subscriber")),
     userId: v.optional(v.id("users")),
     customerAccountId: v.optional(v.id("customerAccounts")),
+    customerId: v.optional(v.id("customers")),
     role: v.optional(v.string()),
     createdAt: v.number(),
     expiresAt: v.number(),
   }).index("by_token", ["token"]),
+
+  /**
+   * أكواد ربط التطبيق: تصدرها الأخصائية لمشترك وترسلها له على واتساب، فيدخلها في التطبيق
+   * ليُربط هاتفه باشتراكه ويستقبل الإشعارات. يُخزَّن الهاش لا الكود، صالح 72 ساعة، لمرة واحدة.
+   */
+  subscriberLinkCodes: defineTable({
+    customerId: v.id("customers"),
+    codeHash: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+    usedAt: v.optional(v.number()),
+    createdBy: v.optional(v.id("users")),
+  }).index("by_codeHash", ["codeHash"]).index("by_customerId", ["customerId"]),
 
   /**
    * محاولات تسجيل الدخول الفاشلة — لمنع تخمين كلمات المرور.
