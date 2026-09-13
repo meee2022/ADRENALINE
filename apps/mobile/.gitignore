@@ -13,3 +13,5 @@ node_modules/
 # مجلدات أصلية مولَّدة بـexpo prebuild — تُعاد في كل بناء، لا تُحفظ في git
 /android
 /ios
+# إعدادات Firebase للأندرويد — ليست سراً لكنها تبقى محلية؛ البناء المحلي يقرؤها
+/google-services.json

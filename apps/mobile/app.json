@@ -22,7 +22,8 @@
         "foregroundImage": "./assets/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "versionCode": 3
+      "versionCode": 3,
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -62,7 +63,8 @@
       "router": {},
       "eas": {
         "projectId": "d2f443ec-a622-4dd1-a727-62983aaab4ba"
-      }
+      },
+      "subscriberPushEnabled": true
     },
     "owner": "meee87"
   }
