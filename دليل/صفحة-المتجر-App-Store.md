@@ -124,8 +124,17 @@ healthy meals,meal plan,diet,qatar,meal prep,calories,fitness,meal delivery,subs
 **في App Store Connect:**
 - ألغِ علامة **Sign-in required** (لا حقول بريد/كلمة مرور مطلوبة، فيُحفظ قسم المراجعة).
 - الملاحظات (EN) تصبح:
-  Adrenaline Healthy Food is a meal-subscription service in Qatar. Browsing the menu, plans and calorie calculator needs no account. Subscriptions are created by our staff after contacting us (WhatsApp/phone); there is no in-app account creation or payment. To test the subscriber flow: open the Menu tab, enter the demo subscriber phone number <PHONE>, then choose manual or smart plan, pick meals for each day and send the plan. No password is needed. The optional email sign-in in the Account tab and the Admin entry are for existing customers and staff and are not needed for review. Arabic is the primary language; English is available from the language switch at the top.
+  Adrenaline Healthy Food is a meal-subscription service in Qatar. Browsing the menu, plans and calorie calculator needs no account. Subscriptions are created by our staff after contacting us (WhatsApp/phone); there is no in-app account creation or payment. To test the subscriber flow: open the Menu tab, enter the demo subscriber phone number 00000001, then choose manual or smart plan, pick meals for each day and send the plan. No password is needed. The optional email sign-in in the Account tab and the Admin entry are for existing customers and staff and are not needed for review. Arabic is the primary language; English is available from the language switch at the top.
 
 **المشترك التجريبي (ينشئه المستخدم من لوحة التحكم):** اسم «App Review»، رقم وهمي من ٨ أرقام غير مستخدم، اشتراك نشط
 ٤ أسابيع يبدأ من بكرة، ٣ وجبات + ٢ سناك، بلا ممنوعات. لا يحتاج حساب دخول. بعد مراجعة Apple يُوقف أو يُحذف.
 حساب `playreview@adrenalinehealthy.com` الموجود **غير مربوط بأي اشتراك** فلا يصلح كما هو.
+
+**المشترك التجريبي المعتمد (متحقَّق على الإنتاج 2026-09-13):**
+- الاسم «test»، الهاتف **00000001**، نشط من 2026-09-14 إلى 2026-10-11، وجبتان + سناكان يومياً، وردية صباحية، برنامج عادي بلا ممنوعات.
+- بحث التطبيق نفسه (`customers.findPublicByPhone`) يجده مشتركاً واحداً، و**24 يوم توصيل** تبدأ من 14 سبتمبر بدورة المطبخ الصحيحة، وكل يوم فيه وجبات كافية.
+- **لا قالب مخصّص، لا خطط يومية، لا طلبات** — فلا يظهر في كشف المطبخ ولا الاستيكرات ولا التوصيل.
+- ⚠️ **أي طلب يصل من 00000001 = مراجع Apple: لا يُعتمد أبداً.** الاعتماد وحده يولّد خطط المطبخ.
+- بعد قبول Apple: يُوقف الاشتراك أو يُحذف المشترك.
+- لماذا لا 30296555: عليه **قالب مخصّص** على الإنتاج، فالمطبخ يحضّر له يومياً بغض النظر عن التطبيق.
+
