@@ -115,3 +115,17 @@ healthy meals,meal plan,diet,qatar,meal prep,calories,fitness,meal delivery,subs
 2. كتابة البريد وكلمة المرور في Sign-in Information، ورقم هاتف التواصل، ثم Save (المساعد يعيد إدخال الملاحظات والاسم والبريد بعدها).
 3. لقطات شاشة iPhone 6.5"/6.7" (3 على الأقل).
 4. زر **Add for Review** ثم Submit.
+
+## قرار الدخول للمراجعة: رقم الهاتف لا بريد وكلمة مرور (2026-09-13)
+**متحقَّق من الكود:** اختيار وجبات المشترك في التطبيق يفتح من تبويب «القائمة» بإدخال رقم الهاتف فقط
+(`SubscriberPhoneGate` → `customers.findPublicByPhone`)، بلا كلمة مرور. الدخول بالبريد في «حسابي» اختياري
+ويضيف ملخص اليوم والتقييمات فقط. لذلك المراجع يحتاج **رقم مشترك تجريبي** لا حساباً.
+
+**في App Store Connect:**
+- ألغِ علامة **Sign-in required** (لا حقول بريد/كلمة مرور مطلوبة، فيُحفظ قسم المراجعة).
+- الملاحظات (EN) تصبح:
+  Adrenaline Healthy Food is a meal-subscription service in Qatar. Browsing the menu, plans and calorie calculator needs no account. Subscriptions are created by our staff after contacting us (WhatsApp/phone); there is no in-app account creation or payment. To test the subscriber flow: open the Menu tab, enter the demo subscriber phone number <PHONE>, then choose manual or smart plan, pick meals for each day and send the plan. No password is needed. The optional email sign-in in the Account tab and the Admin entry are for existing customers and staff and are not needed for review. Arabic is the primary language; English is available from the language switch at the top.
+
+**المشترك التجريبي (ينشئه المستخدم من لوحة التحكم):** اسم «App Review»، رقم وهمي من ٨ أرقام غير مستخدم، اشتراك نشط
+٤ أسابيع يبدأ من بكرة، ٣ وجبات + ٢ سناك، بلا ممنوعات. لا يحتاج حساب دخول. بعد مراجعة Apple يُوقف أو يُحذف.
+حساب `playreview@adrenalinehealthy.com` الموجود **غير مربوط بأي اشتراك** فلا يصلح كما هو.
