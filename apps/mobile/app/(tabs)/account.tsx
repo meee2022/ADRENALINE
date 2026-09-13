@@ -16,6 +16,7 @@ import { colors, fonts } from '@/theme';
 import { Btn, T } from '@/components/ui';
 import { SubscriberDay } from '@/components/SubscriberDay';
 import { SmartPlanEntry } from '@/components/SmartPlanEntry';
+import { LinkNotifications } from '@/components/LinkNotifications';
 
 type Profile = {account:{fullName:string;email:string;phone:string};subscription:null|{
   id:string;skippedDates?:string[];loyaltyPoints?:number;loyaltyCredit?:number;referralCode?:string;
@@ -130,6 +131,7 @@ export default function Account() {
         <Btn label="تحديث بيانات الاشتراك" variant="outline" disabled={loading||busy} onPress={()=>void load()}/>
         <Btn label={busy?'جارٍ تسجيل الخروج…':'تسجيل الخروج'} variant="outline" disabled={busy} onPress={()=>void logout()}/>
       </>}
+      <LinkNotifications/>
       {session && <Btn label="قائمة الوجبات وخدمات المشترك" onPress={()=>router.push('/menu')}/>}
       <SmartPlanEntry/>
       <Btn label="تتبّع طلبك" variant="outline" onPress={()=>router.push('/order-tracking')}/>

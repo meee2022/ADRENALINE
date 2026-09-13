@@ -8,21 +8,23 @@ import { useCustomerSession } from '@/customerSession';
 import { Btn,T } from './ui';
 import { translate } from '@/useContentLanguage';
 import { ensureOrdersChannel } from './NotificationRouter';
-export function NotificationSettings({customerId}:{customerId:string}){
-  const {session}=useCustomerSession();const [message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+/** token: جلسة الهاتف المربوط بكود؛ بدونها تُستخدم جلسة حساب البريد. */
+export function NotificationSettings({customerId,token}:{customerId:string;token?:string}){
+  const {session}=useCustomerSession();
+  const sessionToken=token||session?.token;const [message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const enable=async()=>{
     const extra=Constants.expoConfig?.extra as any;
     if(!extra?.subscriberPushEnabled){setMessage('خدمة إشعارات الجوال تنتظر نشر الخادم وإعداد مفاتيح Android وiOS.');return;}
     if(Platform.OS==='web'||!Device.isDevice){setMessage('فعّل الإشعارات من نسخة التطبيق المثبتة على هاتفك.');return;}
     const projectId=Constants.easConfig?.projectId||extra?.eas?.projectId;
-    if(!projectId||!session){setMessage('إعداد الإشعارات أو جلسة الحساب غير مكتمل.');return;}
+    if(!projectId||!sessionToken){setMessage('إعداد الإشعارات أو جلسة الحساب غير مكتمل.');return;}
     setBusy(true);
     try{
       await ensureOrdersChannel();
       const permission=await Notifications.requestPermissionsAsync();
       if(permission.status!=='granted'){setMessage('الإشعارات غير مسموحة؛ يمكنك تفعيلها من إعدادات الهاتف.');return;}
       const push=await Notifications.getExpoPushTokenAsync({projectId});
-      await convex.mutation(api.mobilePush.register,{customerId,sessionToken:session.token,token:push.data});
+      await convex.mutation(api.mobilePush.register,{customerId,sessionToken,token:push.data});
       setMessage('تم تسجيل الجهاز لاستقبال تحديثات طلباتك.');
     }catch{setMessage('تعذّر تفعيل الإشعارات. حاول لاحقًا.');}finally{setBusy(false);}
   };
