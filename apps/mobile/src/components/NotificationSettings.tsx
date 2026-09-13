@@ -7,6 +7,7 @@ import { api,convex } from '@/api';
 import { useCustomerSession } from '@/customerSession';
 import { Btn,T } from './ui';
 import { translate } from '@/useContentLanguage';
+import { ensureOrdersChannel } from './NotificationRouter';
 export function NotificationSettings({customerId}:{customerId:string}){
   const {session}=useCustomerSession();const [message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const enable=async()=>{
@@ -17,7 +18,7 @@ export function NotificationSettings({customerId}:{customerId:string}){
     if(!projectId||!session){setMessage('إعداد الإشعارات أو جلسة الحساب غير مكتمل.');return;}
     setBusy(true);
     try{
-      if(Platform.OS==='android')await Notifications.setNotificationChannelAsync('orders',{name:translate('طلباتك'),importance:Notifications.AndroidImportance.DEFAULT});
+      await ensureOrdersChannel();
       const permission=await Notifications.requestPermissionsAsync();
       if(permission.status!=='granted'){setMessage('الإشعارات غير مسموحة؛ يمكنك تفعيلها من إعدادات الهاتف.');return;}
       const push=await Notifications.getExpoPushTokenAsync({projectId});

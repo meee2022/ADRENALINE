@@ -9,6 +9,8 @@ export function appDestination(value:string):string|null {
     if(['/public/order-tracking','/order-tracking'].includes(path))return '/order-tracking';
     if(['/public/menu','/menu','/customer/smart-plan','/smart-plan'].includes(path))return '/menu';
     if(['/','/today','/customer/today'].includes(path))return '/';
+    // Server notifications (approval, rejection, delivery) link to the web profile page.
+    if(['/customer/profile','/profile','/account','/customer/account'].includes(path))return '/account';
     const tracking=path.match(/^\/track\/([a-zA-Z0-9_-]{1,256})$/);
     if(tracking)return '/track/'+tracking[1];
     const meal=path.match(/^\/(?:public\/)?meal\/([a-zA-Z0-9_-]+)$/);
