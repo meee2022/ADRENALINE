@@ -24,24 +24,44 @@ export const batches=internalQuery({args:{},handler:async(ctx)=>{
   const devices=await ctx.db.query('mobilePushDevices').collect();
   return Promise.all(devices.map(async d=>{
     const rows=await ctx.db.query('notifications').withIndex('by_targetCustomer',q=>q.eq('targetCustomerId',d.customerId)).collect();
-    return {id:d._id,token:d.token,events:rows.filter(n=>n.createdAt>d.cursor).sort((a,b)=>a.createdAt-b.createdAt).slice(0,20).map(n=>({at:n.createdAt,type:n.type}))};
+    return {id:d._id,token:d.token,events:rows.filter(n=>n.createdAt>d.cursor).sort((a,b)=>a.createdAt-b.createdAt).slice(0,20)
+      .map(n=>({at:n.createdAt,type:n.type,title:n.title,message:n.message,link:n.link||''}))};
   }));
 }});
 export const advance=internalMutation({args:{id:v.id('mobilePushDevices'),cursor:v.number(),remove:v.optional(v.boolean())},handler:async(ctx,a)=>{
   const d=await ctx.db.get(a.id);if(!d)return;
   if(a.remove)await ctx.db.delete(a.id);else await ctx.db.patch(a.id,{cursor:Math.max(d.cursor,a.cursor)});
 }});
-/** Opt-in deployment gate. No push is sent unless explicitly configured. */
+const SITE='https://adrenalinehealthy.com';
+/**
+ * Opt-in deployment gate: nothing is sent unless MOBILE_PUSH_ENABLED=true.
+ * Each stored notification becomes its own push with the title, text and link the
+ * server already wrote (approval, delivery, driver nearby…), not one generic line.
+ */
 export const dispatch=internalAction({args:{},handler:async(ctx)=>{
   if(process.env.MOBILE_PUSH_ENABLED!=='true')return;
   const batches=await ctx.runQuery(internal.mobilePush.batches,{});
   for(const b of batches){
     if(!b.events.length)continue;
+    const messages=b.events.map(e=>({
+      to:b.token, sound:'default', channelId:'orders',
+      title:e.title||'أدرينالين',
+      body:e.message||'يوجد تحديث على طلبك. افتح التطبيق للاطلاع عليه.',
+      data:{url:e.link&&e.link.startsWith('/')?SITE+e.link:SITE+'/today'},
+    }));
     const response=await fetch('https://exp.host/--/api/v2/push/send',{method:'POST',headers:{'Content-Type':'application/json',...(process.env.EXPO_ACCESS_TOKEN?{Authorization:'Bearer '+process.env.EXPO_ACCESS_TOKEN}:{})},
-      body:JSON.stringify({to:b.token,title:'أدرينالين',body:'يوجد تحديث على طلبك. افتح التطبيق للاطلاع عليه.',data:{url:'https://adrenalinehealthy.com/today'},channelId:'orders'})});
+      body:JSON.stringify(messages)});
     if(!response.ok)continue;
     const result=await response.json();
-    if(result.data?.status==='ok')await ctx.runMutation(internal.mobilePush.advance,{id:b.id,cursor:b.events[b.events.length-1].at});
-    else if(result.data?.details?.error==='DeviceNotRegistered')await ctx.runMutation(internal.mobilePush.advance,{id:b.id,cursor:0,remove:true});
+    const tickets:any[]=Array.isArray(result.data)?result.data:[result.data];
+    if(tickets.some(t=>t?.details?.error==='DeviceNotRegistered')){
+      await ctx.runMutation(internal.mobilePush.advance,{id:b.id,cursor:0,remove:true});
+      continue;
+    }
+    // Advance past the accepted prefix only: a rejected message is retried next tick,
+    // and messages already delivered are never sent twice.
+    let last=0;
+    for(let i=0;i<b.events.length;i++){ if(tickets[i]?.status==='ok')last=b.events[i].at; else break; }
+    if(last)await ctx.runMutation(internal.mobilePush.advance,{id:b.id,cursor:last});
   }
 }});

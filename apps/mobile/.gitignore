@@ -9,3 +9,7 @@ node_modules/
 *.key
 *.mobileprovision
 .env*.local
+
+# مجلدات أصلية مولَّدة بـexpo prebuild — تُعاد في كل بناء، لا تُحفظ في git
+/android
+/ios
