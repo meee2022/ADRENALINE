@@ -188,6 +188,68 @@ export function effectiveMode(s: ShiftTimes, mode: ImportMode): ImportMode {
   return mode === "replace" && !s.checkIn && s.checkOut ? "merge" : mode;
 }
 
+/**
+ * بصمة الفجر (قبل الظهر): خروجُ شيفت الأمس أم دخولُ يومٍ جديد؟
+ *
+ * الفاصل ليس الوقت ولا الاسم، بل هل ترك شيفتاً مفتوحاً بالأمس. تُمشى بصمات
+ * كل موظف زمنياً: أول بصمة في يوم تفتح شيفته، وبصمة ما قبل الظهر في اليوم
+ * التالي داخل 16 ساعة منها هي خروجه فتُنسب إلى يوم الدخول وتُغلق الشيفت؛
+ * وإلا فهي بداية يوم. وما بقي من بصمات اليوم نفسه يرتّبه buildShifts.
+ *
+ * - سحب الأيام الكاملة: بصمات الدفعة هي الحقيقة؛ الصف المحفوظ لا يُسأل إلا
+ *   حين لا تحمل الدفعة بصمات الأمس (أول يوم في المقطع).
+ * - النافذة الجزئية: قد لا تحمل دخول الأمس، فالمحفوظ يكمّلها — أبكر دخول معروف
+ *   هو البداية، والصف المكتمل يعني أن الشيفت مغلق. وخروجٌ محفوظ بنفس الوقت
+ *   يعني أن البصمة هي هو (تكرار النافذة) لا دخولاً جديداً.
+ * - شيفت يبدأ بعد الثامنة مساءً لغير المدرجين في الليل ليس شيفتاً: هو خروجٌ
+ *   ضاع دخوله، فلا تُؤكل بصمة صباح الغد خروجاً له (نهيد 23:15 ثم 11:51).
+ * إشارة الجهاز الصريحة لا تُنقض.
+ */
+export async function assignDawnPunches(
+  resolved: Punch[],
+  mode: ImportMode,
+  lookup: (name: string, date: string) => Promise<{ checkIn?: string; checkOut?: string; source?: string } | null | undefined>,
+) {
+  const isNight = (name: string) => NIGHT_SHIFT_EMPLOYEES.has(normEmployeeKey(name));
+  const absOf = (p: Punch) => dateToDays(p.date) * 1440 + (timeToMin(p.time) ?? 0);
+  const order = resolved.filter((p) => timeToMin(p.time) != null).sort((a, b) => a.name.localeCompare(b.name) || absOf(a) - absOf(b));
+  const open = new Map<string, { date: string; inAbs: number } | null>();
+  for (const p of order) {
+    const tm = timeToMin(p.time)!;
+    const cur = open.get(p.name) ?? null;
+    if (p.kind === "out") { if (cur && cur.date === p.date) open.set(p.name, null); continue; }
+    if (p.kind === "in") { open.set(p.name, { date: p.date, inAbs: absOf(p) }); continue; }
+    if (cur && cur.date === p.date) continue;
+    if (tm < 12 * 60) {
+      const prev = fmtDate(addDays(parseDate(p.date), -1));
+      let start: number | null = null;
+      let isOpen = false;
+      const batchHasPrev = !!cur && cur.date === prev;
+      if (batchHasPrev) { start = cur!.inAbs; isOpen = true; }
+      if (mode === "merge" || !batchHasPrev) {
+        const row = await lookup(p.name, prev);
+        const rowIn = row && row.source !== "manual" ? timeToMin(row.checkIn) : null;
+        if (row && rowIn != null) {
+          const dbIn = dateToDays(prev) * 1440 + rowIn;
+          start = start == null ? dbIn : Math.min(start, dbIn);
+          isOpen = !row.checkOut || row.checkOut === p.time;
+        }
+      }
+      if (start != null && isOpen) {
+        const startTm = ((start % 1440) + 1440) % 1440;
+        const span = absOf(p) - start;
+        if ((isNight(p.name) || startTm < 20 * 60) && span > 0 && span <= SHIFT_MAX_MIN) {
+          p.kind = "out";
+          p.date = prev;
+          open.set(p.name, null);
+          continue;
+        }
+      }
+    }
+    open.set(p.name, { date: p.date, inAbs: absOf(p) });
+  }
+}
+
 /** يكتب شيفتات البصمة؛ الصفوف اليدوية لا تُمسّ، وصفوف البصمة تُدمج أو تُستبدل حسب النمط. */
 async function applyShifts(
   ctx: any,
@@ -675,46 +737,9 @@ export const importPunchesDevice = mutation({
      * خروجُه. وإلا فهي بداية يومٍ جديد.
      *
      * تُطبَّق على من لا يحمل إشارةً صريحة من الجهاز، فلا تنقض ما جزم به. */
-    const OPEN_SHIFT_MAX_MIN = SHIFT_MAX_MIN;
-    // بصمات الدفعة نفسها لكل (موظف|يوم) مرتّبة — في سحب الأيام الكاملة هي الحقيقة
-    // ولا يُعوَّل على صف قد أفسدته نافذة جزئية؛ وفي النافذة الجزئية أبكرُ ما نعرفه
-    // (المحفوظ أو الوارد) هو بداية الشيفت، لا آخر بصمة وصلت.
-    const batch = new Map<string, number[]>();
-    for (const p of resolved) {
-      const tm = timeToMin(p.time);
-      if (tm == null) continue;
-      const k = p.name + "|" + p.date;
-      batch.set(k, [...(batch.get(k) ?? []), tm].sort((a, b) => a - b));
-    }
-    for (const p of resolved) {
-      if (p.kind) continue;
-      const tm = timeToMin(p.time);
-      if (tm == null || tm >= 12 * 60) continue;   // الظهيرة فما بعدها ليست خروجَ ليل
-      const prev = fmtDate(addDays(parseDate(p.date), -1));
-      const prevBatch = batch.get(p.name + "|" + prev) ?? [];
-      let inMin: number | null = null;
-      let open = false;
-      if (mode === "replace" && prevBatch.length) {
-        inMin = prevBatch[0];
-        open = prevBatch.length % 2 === 1;   // بصمة بلا زوج = شيفت مفتوح
-      } else {
-        const row = await ctx.db
-          .query("attendance")
-          .withIndex("by_name_date", (q) => q.eq("name", p.name).eq("date", prev))
-          .unique()
-          .catch(() => null);
-        if (!row || !row.checkIn || row.source === "manual") continue;
-        const rowIn = timeToMin(row.checkIn);
-        if (rowIn == null) continue;
-        inMin = prevBatch.length ? Math.min(rowIn, prevBatch[0]) : rowIn;
-        open = !row.checkOut;
-      }
-      if (!open || inMin == null) continue;
-      const span = (dateToDays(p.date) * 1440 + tm) - (dateToDays(prev) * 1440 + inMin);
-      if (span <= 0 || span > OPEN_SHIFT_MAX_MIN) continue;
-      p.kind = "out";
-      p.date = prev;
-    }
+    await assignDawnPunches(resolved, mode, (name, date) =>
+      ctx.db.query("attendance").withIndex("by_name_date", (q) => q.eq("name", name).eq("date", date)).first(),
+    );
 
     const rawKeys = new Set<string>();
     for (const p of resolved) rawKeys.add(p.name + "|" + p.date);

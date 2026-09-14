@@ -6,7 +6,11 @@
  *   وحدها دخولاً فتمحو الدخول الحقيقي.
  */
 import { describe, it, expect } from "vitest";
-import { buildShifts, effectiveMode, mergeShift } from "../convex/attendance";
+import { assignDawnPunches, buildShifts, effectiveMode, mergeShift } from "../convex/attendance";
+
+type P = { name: string; date: string; time: string; kind?: "in" | "out" };
+const noDb = async () => null;
+const dbWith = (rows: Record<string, { checkIn?: string; checkOut?: string; source?: string }>) => async (name: string, date: string) => rows[`${name}|${date}`] ?? null;
 
 const bio = (checkIn?: string, checkOut?: string) => ({ checkIn, checkOut, source: "biometric" as const });
 
@@ -76,6 +80,91 @@ describe("mergeShift — سحب الأيام الكاملة (replace)", () => {
     expect(mergeShift(bio("16:11"), s, effectiveMode(s, "replace"))).toEqual({ checkIn: "16:11", checkOut: "02:35" });
     // أما شيفت يحمل دخوله فيستبدل فعلاً
     expect(effectiveMode({ checkIn: "11:55", checkOut: "23:04" }, "replace")).toBe("replace");
+  });
+});
+
+describe("assignDawnPunches — بصمة الفجر: خروج الأمس أم دخول اليوم", () => {
+  it("رطول (سحب كامل): 13:16 ثم 00:19 في اليوم التالي = خروج، و13:16 التالية دخول جديد", async () => {
+    const ps: P[] = [
+      { name: "R", date: "2026-09-07", time: "13:16" },
+      { name: "R", date: "2026-09-08", time: "00:19" },
+      { name: "R", date: "2026-09-08", time: "13:16" },
+      { name: "R", date: "2026-09-09", time: "00:03" },
+    ];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([
+      { name: "R", date: "2026-09-07", checkIn: "13:16", checkOut: "00:19" },
+      { name: "R", date: "2026-09-08", checkIn: "13:16", checkOut: "00:03" },
+    ]);
+  });
+
+  it("سعيدول: 11:50 → 23:14 ثم 11:5x في الغد ليست خروجاً (24 ساعة من الدخول)", async () => {
+    const ps: P[] = [
+      { name: "S", date: "2026-08-28", time: "11:50" },
+      { name: "S", date: "2026-08-28", time: "23:14" },
+      { name: "S", date: "2026-08-29", time: "11:51" },
+      { name: "S", date: "2026-08-29", time: "23:13" },
+    ];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([
+      { name: "S", date: "2026-08-28", checkIn: "11:50", checkOut: "23:14" },
+      { name: "S", date: "2026-08-29", checkIn: "11:51", checkOut: "23:13" },
+    ]);
+  });
+
+  it("بكري: 15:32 ثم 05:44 في الغد = خروج (14 ساعة)، و15:39 دخول جديد", async () => {
+    const ps: P[] = [
+      { name: "B", date: "2026-09-12", time: "15:32" },
+      { name: "B", date: "2026-09-13", time: "05:44" },
+      { name: "B", date: "2026-09-13", time: "15:39" },
+    ];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([
+      { name: "B", date: "2026-09-12", checkIn: "15:32", checkOut: "05:44" },
+      { name: "B", date: "2026-09-13", checkIn: "15:39", checkOut: undefined },
+    ]);
+  });
+
+  it("نهيد: بصمة مسائية وحيدة 23:15 (ضاع دخوله) لا تأكل 11:51 صباح الغد خروجاً", async () => {
+    const ps: P[] = [
+      { name: "N", date: "2026-08-28", time: "23:15" },
+      { name: "N", date: "2026-08-29", time: "11:51" },
+      { name: "N", date: "2026-08-29", time: "23:14" },
+    ];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([
+      { name: "N", date: "2026-08-28", checkIn: "23:15", checkOut: undefined },
+      { name: "N", date: "2026-08-29", checkIn: "11:51", checkOut: "23:14" },
+    ]);
+  });
+
+  it("حدّ المقطع (سحب كامل): أول بصمة في المقطع فجراً تُسأل عنها قاعدة البيانات", async () => {
+    const ps: P[] = [{ name: "Shariful Islam", date: "2026-09-08", time: "02:36" }, { name: "Shariful Islam", date: "2026-09-08", time: "16:09" }];
+    await assignDawnPunches(ps, "replace", dbWith({ "Shariful Islam|2026-09-07": { checkIn: "16:09", source: "biometric" } }));
+    expect(ps[0]).toMatchObject({ date: "2026-09-07", kind: "out" });
+    expect(buildShifts(ps)).toEqual([
+      { name: "Shariful Islam", date: "2026-09-07", checkIn: undefined, checkOut: "02:36" },
+      { name: "Shariful Islam", date: "2026-09-08", checkIn: "16:09", checkOut: undefined },
+    ]);
+  });
+
+  it("نافذة جزئية: المحفوظ مكتمل (12:06 → 23:30) والنافذة تحمل 23:30 فقط → 11:5x الغد دخول جديد", async () => {
+    const ps: P[] = [{ name: "S", date: "2026-09-13", time: "23:30" }, { name: "S", date: "2026-09-14", time: "11:55" }];
+    await assignDawnPunches(ps, "merge", dbWith({ "S|2026-09-13": { checkIn: "12:06", checkOut: "23:30", source: "biometric" } }));
+    expect(ps[1].date).toBe("2026-09-14");
+    expect(ps[1].kind).toBeUndefined();
+  });
+
+  it("نافذة جزئية: خروج محفوظ بنفس الوقت = البصمة نفسها تكرّرت، لا دخول جديد", async () => {
+    const ps: P[] = [{ name: "R", date: "2026-09-08", time: "00:19" }];
+    await assignDawnPunches(ps, "merge", dbWith({ "R|2026-09-07": { checkIn: "13:16", checkOut: "00:19", source: "biometric" } }));
+    expect(ps[0]).toMatchObject({ date: "2026-09-07", kind: "out" });
+  });
+
+  it("إشارة الجهاز الصريحة لا تُنقض", async () => {
+    const ps: P[] = [{ name: "A", date: "2026-09-13", time: "15:39", kind: "in" }, { name: "A", date: "2026-09-13", time: "02:34", kind: "out" }];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([{ name: "A", date: "2026-09-13", checkIn: "15:39", checkOut: "02:34" }]);
   });
 });
 
