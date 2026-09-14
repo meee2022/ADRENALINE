@@ -3,6 +3,10 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  driverLabelCodes: defineTable({
+    driverId: v.id("users"),
+    code: v.string(),
+  }).index("by_driver", ["driverId"]),
   mobilePushDevices:defineTable({
     customerId:v.id('customers'),token:v.string(),createdAt:v.number(),cursor:v.number(),
   }).index('by_token',['token']),

@@ -460,6 +460,8 @@ export default function Stickers() {
             </h1>
             <p className="text-sm mt-0.5 font-medium" style={{ color: "#3cc4f0" }}>
               {isRtl ? "معاينة وطباعة ستيكرات الوجبات والبوكس" : "Preview and print meal & box stickers"}
+              <br />
+              {isRtl ? "كود السائق يظهر على البوكس بعد الإسناد. إذا غيّرت السائق بعد الطباعة، أعد طباعة ستيكر البوكس." : "The box shows its assigned driver code. Reprint the box label if the driver changes after printing."}
             </p>
           </div>
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
@@ -1382,6 +1384,20 @@ export default function Stickers() {
            فلو تقاربا في الحجم اختلطا على من يفرز. أسود صلب لا
            رمادي: الطابعة الحرارية تُبقّع التدرّج، وقاعدة الشفافية على الملصق
            تلغي أي شفافية هنا أصلاً. */
+        .driver-code {
+          position: absolute;
+          right: 1.2mm;
+          top: 2mm;
+          border: 0.7px solid #000;
+          border-radius: 0.7mm;
+          font: 700 9px Tahoma, sans-serif;
+          padding: 0.45mm 0.65mm;
+          line-height: 1;
+          direction: ltr;
+          background: #fff;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
+        }
         .seq-mark {
           position: absolute;
           top: 0.4mm;
@@ -1585,6 +1601,7 @@ function BoxSticker({ s, seq }: any) {
   return (
     <div className={`label label-box${isNutriReset ? " nutri-label" : ""}`}>
       <div className="seq-mark">{seq}</div>
+      {s.driverCode && <span className="driver-code">{s.driverCode}</span>}
       {/* القلب يمين الاسم (كالاستيكر القديم)، ورقم البوكس شمالَه في إطار —
           التغليف يلتقطه من أعلى الملصق دون قلب البوكس لقراءة السطر السفلي. */}
       <div className="brand-block">

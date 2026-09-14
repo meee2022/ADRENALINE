@@ -48,6 +48,7 @@ import type * as lib_audit from "../lib/audit.js";
 import type * as lib_calories from "../lib/calories.js";
 import type * as lib_customerOrderRules from "../lib/customerOrderRules.js";
 import type * as lib_dates from "../lib/dates.js";
+import type * as lib_driverLabelCodes from "../lib/driverLabelCodes.js";
 import type * as lib_phone from "../lib/phone.js";
 import type * as lib_subscriptionPeriods from "../lib/subscriptionPeriods.js";
 import type * as lib_trail from "../lib/trail.js";
@@ -161,6 +162,7 @@ declare const fullApi: ApiFromModules<{
   "lib/calories": typeof lib_calories;
   "lib/customerOrderRules": typeof lib_customerOrderRules;
   "lib/dates": typeof lib_dates;
+  "lib/driverLabelCodes": typeof lib_driverLabelCodes;
   "lib/phone": typeof lib_phone;
   "lib/subscriptionPeriods": typeof lib_subscriptionPeriods;
   "lib/trail": typeof lib_trail;

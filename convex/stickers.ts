@@ -5,6 +5,8 @@ import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
 import { v, ConvexError } from "convex/values";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { ensureDriverLabelCodes } from "./lib/driverLabelCodes";
+import { resolveStickerDriver } from "../shared/driverLabelCode";
 
 type PlanStatus =
   | "DRAFT"
@@ -213,6 +215,7 @@ export const ensureBoxNumbers = mutation({
   args: { date: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    await ensureDriverLabelCodes(ctx);
     const orderedIds = await computeDayRosterOrderedIds(ctx, args.date);
     const existing = await ctx.db
       .query("stickerBoxNumbers")
@@ -988,6 +991,17 @@ export const get = query({
     const onlyKitchen: string[] = [];
     for (const id of kitchenIds) if (!stickerRegularIds.has(id)) onlyKitchen.push(await nameOf(id));
 
+    const driverCodes = await ctx.db.query("driverLabelCodes").collect();
+    const activeCodes = new Map<string, string>();
+    for (const row of driverCodes) {
+      const driver = await ctx.db.get(row.driverId);
+      if (driver?.isActive && driver.role === "DELIVERY") activeCodes.set(String(row.driverId), row.code);
+    }
+    for (const sticker of boxStickers as any[]) {
+      const customer: any = customerMap.get(sticker.customerId) || await ctx.db.get(sticker.customerId as any);
+      const driverId = resolveStickerDriver(plansAll, sticker.customerId, sticker.deliveryTime, customer?.defaultDriverId);
+      sticker.driverCode = driverId ? activeCodes.get(driverId) || null : null;
+    }
     return {
       boxStickers,
       mealStickers,

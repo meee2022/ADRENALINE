@@ -28,6 +28,7 @@ export default function DriverApp() {
   const t = (a: string, e: string) => (isRtl ? a : e);
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const currentUser = useStore((s) => s.currentUser);
+  const labelCode = useQuery(api.delivery.myLabelCode, { sessionToken });
   const today = format(new Date(), "yyyy-MM-dd");
   const [shift, setShift] = useState<"MORNING" | "EVENING">(new Date().getHours() < 15 ? "MORNING" : "EVENING");
   const [busy, setBusy] = useState<string | null>(null);
@@ -244,7 +245,7 @@ export default function DriverApp() {
           <div className="h-11 w-11 rounded-2xl bg-white/15 grid place-items-center"><Truck className="h-6 w-6" /></div>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-black leading-tight">{t("جولة التوصيل", "Delivery Route")}</h1>
-            <p className="text-[11px] text-cyan-100/90 font-bold">{currentUser?.name || t("السائق", "Driver")} · {format(new Date(), "EEEE d MMMM")}</p>
+            <p className="text-[11px] text-cyan-100/90 font-bold">{currentUser?.name || t("السائق", "Driver")} · {format(new Date(), "EEEE d MMMM")}{labelCode && <> · {t("كود البوكس", "Box code")} <b dir="ltr">{labelCode}</b></>}</p>
           </div>
           {/* زر البث الحي */}
           <button onClick={() => (broadcasting ? stopBroadcast() : startBroadcast())}

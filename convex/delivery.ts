@@ -78,9 +78,21 @@ export const listDrivers = query({
       .query("users")
       .withIndex("by_role", (q) => q.eq("role", "DELIVERY"))
       .collect();
+    const labelCodes = await ctx.db.query("driverLabelCodes").collect();
+    const codeByDriver = new Map(labelCodes.map(row => [String(row.driverId), row.code]));
     return drivers
       .filter((d) => d.isActive)
-      .map((d) => ({ _id: d._id, name: d.name, phone: (d as any).phone || "" }));
+      .map((d) => ({ _id: d._id, name: d.name, driverCode: codeByDriver.get(String(d._id)) || null, phone: (d as any).phone || "" }));
+  },
+});
+
+export const myLabelCode = query({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const staff = await requireStaff(ctx, args.sessionToken);
+    if (!staff.userId) return null;
+    const row = await ctx.db.query("driverLabelCodes").withIndex("by_driver", q => q.eq("driverId", staff.userId as any)).first();
+    return row?.code || null;
   },
 });
 

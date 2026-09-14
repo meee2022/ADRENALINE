@@ -348,7 +348,7 @@ export default function Delivery() {
               className="h-10 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 bg-white"
             >
               <option value="">{isRtl ? "اختر السائق…" : "Pick driver…"}</option>
-              {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+              {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.driverCode ? `${d.driverCode} · ` : ""}{d.name}</option>)}
             </select>
             <button onClick={handleAssign} disabled={assigning || !selectedDriver}
               className="h-10 px-4 rounded-xl text-white text-sm font-black disabled:opacity-50"
@@ -381,7 +381,7 @@ export default function Delivery() {
                       className="h-9 rounded-lg border border-slate-200 px-2 text-xs font-bold text-gray-700 bg-white shrink-0 max-w-[45%]"
                     >
                       <option value="">{isRtl ? "سائق…" : "Driver…"}</option>
-                      {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                      {(drivers || []).map((d) => <option key={d._id} value={d._id}>{d.driverCode ? `${d.driverCode} · ` : ""}{d.name}</option>)}
                     </select>
                   </div>
                 ))}
