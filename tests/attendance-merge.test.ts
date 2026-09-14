@@ -138,6 +138,31 @@ describe("assignDawnPunches — بصمة الفجر: خروج الأمس أم د
     ]);
   });
 
+  it("رطول: دخول يوم ضاع؛ خروج فجره لا يفتح يوماً يبدأ 00:24 ولا يقلب الأيام التالية", async () => {
+    const ps: P[] = [
+      { name: "R", date: "2026-08-28", time: "13:09" },
+      { name: "R", date: "2026-08-29", time: "00:36" },
+      // 29-8: لا دخول (بصمة ضائعة) — عمل حتى الفجر
+      { name: "R", date: "2026-08-30", time: "00:24" },
+      { name: "R", date: "2026-08-30", time: "13:05" },
+      { name: "R", date: "2026-08-31", time: "00:31" },
+      { name: "R", date: "2026-08-31", time: "13:13" },
+    ];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([
+      { name: "R", date: "2026-08-28", checkIn: "13:09", checkOut: "00:36" },
+      { name: "R", date: "2026-08-29", checkIn: undefined, checkOut: "00:24" },
+      { name: "R", date: "2026-08-30", checkIn: "13:05", checkOut: "00:31" },
+      { name: "R", date: "2026-08-31", checkIn: "13:13", checkOut: undefined },
+    ]);
+  });
+
+  it("دخول صباحي حقيقي بعد السادسة (أرمان 08:09) يبقى دخولاً", async () => {
+    const ps: P[] = [{ name: "A", date: "2026-09-13", time: "08:09" }, { name: "A", date: "2026-09-13", time: "19:38" }];
+    await assignDawnPunches(ps, "replace", noDb);
+    expect(buildShifts(ps)).toEqual([{ name: "A", date: "2026-09-13", checkIn: "08:09", checkOut: "19:38" }]);
+  });
+
   it("حدّ المقطع (سحب كامل): أول بصمة في المقطع فجراً تُسأل عنها قاعدة البيانات", async () => {
     const ps: P[] = [{ name: "Shariful Islam", date: "2026-09-08", time: "02:36" }, { name: "Shariful Islam", date: "2026-09-08", time: "16:09" }];
     await assignDawnPunches(ps, "replace", dbWith({ "Shariful Islam|2026-09-07": { checkIn: "16:09", source: "biometric" } }));

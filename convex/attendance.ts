@@ -235,6 +235,7 @@ export async function assignDawnPunches(
           isOpen = !row.checkOut || row.checkOut === p.time;
         }
       }
+      let longGone = false;
       if (start != null && isOpen) {
         const startTm = ((start % 1440) + 1440) % 1440;
         const span = absOf(p) - start;
@@ -244,6 +245,16 @@ export async function assignDawnPunches(
           open.set(p.name, null);
           continue;
         }
+        longGone = span > SHIFT_MAX_MIN;
+      }
+      // فجرٌ (قبل السادسة) بلا شيفت مفتوح: خروجٌ ضاع دخوله، يُنسب إلى الأمس بلا ساعات.
+      // لو صار «دخولاً» في 00:24 لأكل بصمة الغد الفجرية خروجاً له وانقلبت الأيام
+      // التالية كلها (رطول 30-8 → 2-9). أما بعد شيفت طويل مضى فهو بداية يوم فعلاً.
+      if (!longGone && tm < 6 * 60) {
+        p.kind = "out";
+        p.date = prev;
+        open.set(p.name, null);
+        continue;
       }
     }
     open.set(p.name, { date: p.date, inAbs: absOf(p) });
@@ -740,10 +751,15 @@ export const importPunchesDevice = mutation({
     await assignDawnPunches(resolved, mode, (name, date) =>
       ctx.db.query("attendance").withIndex("by_name_date", (q) => q.eq("name", name).eq("date", date)).first(),
     );
+    // سحب الأيام الكاملة يحمل فجر اليوم التالي ليُنسب خروجاً إلى آخر يوم في المقطع؛
+    // ما لم يُنسب (دخول يوم لاحق) يُترك لمقطعه ولا يستبدل صف يومٍ خارج المقطع.
+    const keep = mode === "replace" && args.reconcileTo
+      ? resolved.filter((p) => p.date <= args.reconcileTo!)
+      : resolved;
 
     const rawKeys = new Set<string>();
-    for (const p of resolved) rawKeys.add(p.name + "|" + p.date);
-    const shifts = buildShifts(resolved);
+    for (const p of keep) rawKeys.add(p.name + "|" + p.date);
+    const shifts = buildShifts(keep);
     const result = await applyShifts(ctx, shifts, rawKeys, mode);
     const absences = args.reconcileFrom && args.reconcileTo
       ? await reconcileHistoricalAbsences(ctx, args.reconcileFrom, args.reconcileTo)

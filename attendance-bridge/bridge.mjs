@@ -285,13 +285,12 @@ if (process.argv[2] === "backfill") {
     const [cf, ct] = chunks[i];
     log(`— مقطع ${i + 1}/${chunks.length}: ${cf} ← ${ct}`);
     try {
-      // Include 00:00-04:00 of the following day so the final night's checkout
-      // is attached to the previous work date.
-      const fetched = await fetchEvents(`${cf}T00:00:00${cfg.timezone}`, `${dateShift(ct, 1)}T04:00:00${cfg.timezone}`, users);
-      // A dawn checkout is shifted to the prior work date. Keep only work dates
-      // owned by this chunk, otherwise the next chunk would overwrite the same
-      // prior day with an out-only partial record.
-      const punches = fetched.filter((p) => p.date >= cf && p.date <= ct);
+      // نضمّ صباح اليوم التالي للمقطع (حتى الظهر) لأن خروج الليلة الأخيرة قد يقع
+      // بعد الرابعة فجراً (شريفول 05:46). الخادم يقرّر إن كانت بصمة الصباح خروجَ
+      // الأمس فيُلحقها بآخر يوم في المقطع، أو دخولَ يومٍ لاحق فيتركها لمقطعه.
+      const next = dateShift(ct, 1);
+      const fetched = await fetchEvents(`${cf}T00:00:00${cfg.timezone}`, `${next}T12:00:00${cfg.timezone}`, users);
+      const punches = fetched.filter((p) => (p.date >= cf && p.date <= ct) || (p.date === next && p.time < "12:00"));
       if (punches.length) {
         const r = await convex.mutation(importFn, {
           key: cfg.bridgeKey,
