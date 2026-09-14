@@ -108,31 +108,83 @@ export function buildShifts(raw: Punch[]) {
       byDate.set(p.date, day);
     }
     for (const [date, day] of byDate) {
-      const explicitIn = day.find((p) => p.kind === "in");
-      const explicitOut = day.slice().reverse().find((p) => p.kind === "out");
-      if (explicitIn || explicitOut) {
-        shifts.push({ name, date, checkIn: explicitIn?.time, checkOut: explicitOut?.time });
-      } else {
-        // Without a direction from the device, keep punches inside their calendar
-        // day. Pairing blindly across dates makes one missed punch shift the rest
-        // of the month (an out becomes the next in, and so on).
-        shifts.push({
-          name,
-          date,
-          checkIn: day[0]?.time,
-          checkOut: day.length > 1 ? day[day.length - 1].time : undefined,
-        });
-      }
+      // خروجٌ بعد منتصف الليل نُسب إلى يوم الدخول يحمل وقتاً أصغر من الدخول؛
+      // يُرتَّب بعده لا قبله حتى يبقى «آخر بصمة» هو الخروج فعلاً.
+      const hasAfternoon = day.some((p) => timeToMin(p.time)! >= 12 * 60);
+      const eff = (p: (typeof day)[number]) => (p.kind === "out" && hasAfternoon && timeToMin(p.time)! < 12 * 60 ? p.abs + 1440 : p.abs);
+      const ordered = day.slice().sort((a, b) => eff(a) - eff(b));
+      const ins = ordered.filter((p) => p.kind === "in");
+      const outs = ordered.filter((p) => p.kind === "out");
+      const free = ordered.filter((p) => !p.kind);
+      // إشارة الجهاز (إن وُجدت) تُقدَّم، والبصمات بلا إشارة تكمّل الناقص: أبكرها
+      // دخول وآخرها خروج. الدمج داخل اليوم التقويمي فقط — القِران الأعمى عبر
+      // الأيام يجعل بصمةً واحدة مفقودة تزحزح بقية الشهر.
+      const inP = ins[0] ?? free[0];
+      const lastFree = free.length ? free[free.length - 1] : undefined;
+      const outP = outs[outs.length - 1] ?? (lastFree && lastFree !== inP && eff(lastFree) > eff(inP!) ? lastFree : undefined);
+      shifts.push({ name, date, checkIn: inP?.time, checkOut: outP?.time });
     }
   }
   return shifts.sort((a, b) => a.date === b.date ? a.name.localeCompare(b.name) : a.date.localeCompare(b.date));
 }
 
-/** يكتب شيفتات البصمة، ويحذف سجلّات البصمة القديمة على أيام لم تعُد يوم دخول (خروج شيفت ليلي). */
+export type ShiftTimes = { checkIn?: string; checkOut?: string };
+export type ImportMode = "merge" | "replace";
+/** أطول شيفت معقول؛ اتحادٌ أطول منه يخلط شيفتين. */
+export const SHIFT_MAX_MIN = 16 * 60;
+
+/**
+ * يدمج شيفتاً وارداً مع الصف المسجَّل لنفس اليوم.
+ *
+ * الجسر يسحب كل خمس دقائق نافذةً تمتد 18 ساعة للوراء، فالبصمة الواحدة تصل مرات
+ * كثيرة. وحين تنزلق النافذة عن بصمة الصباح تبقى بصمة المساء وحدها فتُقرأ دخولاً
+ * وتمحو الدخول الحقيقي، ويبقى الخروج المحفوظ كما هو فيتساوى الدخول والخروج —
+ * صفر ساعة لنصف الطاقم يومياً منذ 2026-08-25. القاعدة: الوارد يُضاف إلى
+ * المحفوظ ولا يُسقطه؛ والدخول المحفوظ هو مرساة اليوم فلا ينقلب دخولٌ صباحي
+ * إلى خروج. أما سحب الأيام الكاملة (backfill) فيحمل بصمات اليوم جميعها،
+ * فيستبدل الصف (replace) ويصلح ما أفسدته النوافذ الجزئية.
+ */
+export function mergeShift(
+  existing: (ShiftTimes & { source?: string }) | null | undefined,
+  incoming: ShiftTimes,
+  mode: ImportMode = "merge",
+): ShiftTimes {
+  const fresh: ShiftTimes = { checkIn: incoming.checkIn || undefined, checkOut: incoming.checkOut || undefined };
+  if (mode === "replace" || !existing || existing.source !== "biometric") return fresh;
+  const times = Array.from(new Set(
+    [existing.checkIn, existing.checkOut, fresh.checkIn, fresh.checkOut].filter((t): t is string => !!t && timeToMin(t) != null),
+  ));
+  if (!times.length) return fresh;
+  const fwd = (from: string, t: string) => (((timeToMin(t)! - timeToMin(from)!) % 1440) + 1440) % 1440;
+  // صف محفوظ متناقض بذاته (خطأ قديم: خروج الأمس صار دخول اليوم) لا يُدمج معه
+  if (existing.checkIn && existing.checkOut && fwd(existing.checkIn, existing.checkOut) > SHIFT_MAX_MIN) return fresh;
+  if (times.length === 1) {
+    const t = times[0];
+    const asIn = existing.checkIn === t || fresh.checkIn === t;
+    const asOut = existing.checkOut === t || fresh.checkOut === t;
+    // صف «دخول = خروج» تالف يُترك لسحب الأيام الكاملة، لا يُحوَّل إلى دخول بلا خروج
+    if (existing.checkIn === t && existing.checkOut === t) return { checkIn: t, checkOut: t };
+    return asOut && !asIn ? { checkIn: undefined, checkOut: t } : { checkIn: t, checkOut: undefined };
+  }
+  // المرساة: الدخول المحفوظ، ثم الدخول الوارد، ثم أي بصمة — أول مرساة تجعل
+  // كل البصمات تقع في 16 ساعة بعدها هي بداية الشيفت (فلا يُقرأ دخول بكري
+  // 05:44 خروجاً ولا خروج سعيدول 00:22 دخولاً).
+  const anchors = Array.from(new Set([existing.checkIn, fresh.checkIn, ...times].filter((t): t is string => !!t && times.includes(t))));
+  for (const a of anchors) {
+    const spans = times.map((t) => fwd(a, t));
+    if (Math.max(...spans) > SHIFT_MAX_MIN) continue;
+    const last = times[spans.indexOf(Math.max(...spans))];
+    return { checkIn: a, checkOut: last === a ? undefined : last };
+  }
+  return fresh;
+}
+
+/** يكتب شيفتات البصمة؛ الصفوف اليدوية لا تُمسّ، وصفوف البصمة تُدمج أو تُستبدل حسب النمط. */
 async function applyShifts(
   ctx: any,
   shifts: { name: string; date: string; checkIn?: string; checkOut?: string }[],
   rawKeys: Set<string>,
+  mode: ImportMode = "merge",
 ) {
   // Never delete a previously valid biometric day merely because a partial
   // polling window could not rebuild it. A later complete pull may update it.
@@ -148,8 +200,8 @@ async function applyShifts(
       if (stale && stale.source === "biometric" && stale.checkIn === s.checkOut) await ctx.db.delete(stale._id);
     }
     const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", s.date)).first();
-    const checkIn = s.checkIn ?? (ex?.source === "biometric" ? ex.checkIn : undefined);
-    const checkOut = s.checkOut ?? (ex?.source === "biometric" ? ex.checkOut : undefined);
+    if (ex?.source === "manual") continue; // ما صحّحه المدير بيده لا يمحوه الجهاز
+    const { checkIn, checkOut } = mergeShift(ex, s, mode);
     const { workedHours, otHours } = computeHours(checkIn, checkOut, stdFor(wsMap, s.name), isRestDay(wsMap, s.name, s.date));
     const doc = {
       name: s.name, date: s.date, month: monthOf(s.date), status: "present" as const,
@@ -553,7 +605,8 @@ export const importPunches = mutation({
       if (name && date) rawKeys.add(name + "|" + date);
     }
     const shifts = buildShifts(args.punches);
-    return await applyShifts(ctx, shifts, rawKeys);
+    // تقرير ملصوق يحمل أيامه كاملة → يستبدل
+    return await applyShifts(ctx, shifts, rawKeys, "replace");
   },
 });
 
@@ -568,10 +621,13 @@ export const importPunchesDevice = mutation({
     punches: v.array(v.object({ name: v.string(), date: v.string(), time: v.string(), kind: v.optional(v.union(v.literal("in"), v.literal("out"))) })),
     reconcileFrom: v.optional(v.string()),
     reconcileTo: v.optional(v.string()),
+    mode: v.optional(v.union(v.literal("merge"), v.literal("replace"))),
   },
   handler: async (ctx, args) => {
     const expected = process.env.DEVICE_BRIDGE_KEY;
     if (!expected || args.key !== expected) throw new ConvexError("Unauthorized device");
+    // سحب الأيام الكاملة (backfill يمرّر فترة التسوية) يستبدل؛ نافذة الخمس دقائق تدمج
+    const mode: ImportMode = args.mode ?? (args.reconcileFrom && args.reconcileTo ? "replace" : "merge");
     // ✅ يطابق أسماء البصمة بأسماء الرواتب تلقائيًا ويتجاهل غير المسجّلين (شركة تانية إلخ)
     const resolve = await buildPayrollResolver(ctx);
     const resolved = args.punches
@@ -610,20 +666,41 @@ export const importPunchesDevice = mutation({
      * خروجُه. وإلا فهي بداية يومٍ جديد.
      *
      * تُطبَّق على من لا يحمل إشارةً صريحة من الجهاز، فلا تنقض ما جزم به. */
-    const OPEN_SHIFT_MAX_MIN = 16 * 60;
+    const OPEN_SHIFT_MAX_MIN = SHIFT_MAX_MIN;
+    // بصمات الدفعة نفسها لكل (موظف|يوم) مرتّبة — في سحب الأيام الكاملة هي الحقيقة
+    // ولا يُعوَّل على صف قد أفسدته نافذة جزئية؛ وفي النافذة الجزئية أبكرُ ما نعرفه
+    // (المحفوظ أو الوارد) هو بداية الشيفت، لا آخر بصمة وصلت.
+    const batch = new Map<string, number[]>();
+    for (const p of resolved) {
+      const tm = timeToMin(p.time);
+      if (tm == null) continue;
+      const k = p.name + "|" + p.date;
+      batch.set(k, [...(batch.get(k) ?? []), tm].sort((a, b) => a - b));
+    }
     for (const p of resolved) {
       if (p.kind) continue;
       const tm = timeToMin(p.time);
       if (tm == null || tm >= 12 * 60) continue;   // الظهيرة فما بعدها ليست خروجَ ليل
       const prev = fmtDate(addDays(parseDate(p.date), -1));
-      const row = await ctx.db
-        .query("attendance")
-        .withIndex("by_name_date", (q) => q.eq("name", p.name).eq("date", prev))
-        .unique()
-        .catch(() => null);
-      if (!row || !row.checkIn || row.checkOut) continue;
-      const inMin = timeToMin(row.checkIn);
-      if (inMin == null) continue;
+      const prevBatch = batch.get(p.name + "|" + prev) ?? [];
+      let inMin: number | null = null;
+      let open = false;
+      if (mode === "replace" && prevBatch.length) {
+        inMin = prevBatch[0];
+        open = prevBatch.length % 2 === 1;   // بصمة بلا زوج = شيفت مفتوح
+      } else {
+        const row = await ctx.db
+          .query("attendance")
+          .withIndex("by_name_date", (q) => q.eq("name", p.name).eq("date", prev))
+          .unique()
+          .catch(() => null);
+        if (!row || !row.checkIn || row.source === "manual") continue;
+        const rowIn = timeToMin(row.checkIn);
+        if (rowIn == null) continue;
+        inMin = prevBatch.length ? Math.min(rowIn, prevBatch[0]) : rowIn;
+        open = !row.checkOut;
+      }
+      if (!open || inMin == null) continue;
       const span = (dateToDays(p.date) * 1440 + tm) - (dateToDays(prev) * 1440 + inMin);
       if (span <= 0 || span > OPEN_SHIFT_MAX_MIN) continue;
       p.kind = "out";
@@ -633,7 +710,7 @@ export const importPunchesDevice = mutation({
     const rawKeys = new Set<string>();
     for (const p of resolved) rawKeys.add(p.name + "|" + p.date);
     const shifts = buildShifts(resolved);
-    const result = await applyShifts(ctx, shifts, rawKeys);
+    const result = await applyShifts(ctx, shifts, rawKeys, mode);
     const absences = args.reconcileFrom && args.reconcileTo
       ? await reconcileHistoricalAbsences(ctx, args.reconcileFrom, args.reconcileTo)
       : 0;
