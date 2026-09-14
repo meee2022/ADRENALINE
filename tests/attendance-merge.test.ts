@@ -6,7 +6,7 @@
  *   وحدها دخولاً فتمحو الدخول الحقيقي.
  */
 import { describe, it, expect } from "vitest";
-import { buildShifts, mergeShift } from "../convex/attendance";
+import { buildShifts, effectiveMode, mergeShift } from "../convex/attendance";
 
 const bio = (checkIn?: string, checkOut?: string) => ({ checkIn, checkOut, source: "biometric" as const });
 
@@ -67,6 +67,15 @@ describe("mergeShift — نافذة جزئية (merge)", () => {
 describe("mergeShift — سحب الأيام الكاملة (replace)", () => {
   it("يستبدل الصف التالف بما يحمله اليوم كاملاً", () => {
     expect(mergeShift(bio("23:04", "23:04"), { checkIn: "11:55", checkOut: "23:04" }, "replace")).toEqual({ checkIn: "11:55", checkOut: "23:04" });
+  });
+
+  it("حدّ المقطع: خروج الفجر 02:35 يصل وحده في المقطع التالي فيُدمج ولا يمحو دخول 16:11", () => {
+    // وقع فعلاً في إعادة سحب 2026-09-13: شريفول وشروب وعارف فقدوا خروجهم
+    const s = { checkIn: undefined, checkOut: "02:35" };
+    expect(effectiveMode(s, "replace")).toBe("merge");
+    expect(mergeShift(bio("16:11"), s, effectiveMode(s, "replace"))).toEqual({ checkIn: "16:11", checkOut: "02:35" });
+    // أما شيفت يحمل دخوله فيستبدل فعلاً
+    expect(effectiveMode({ checkIn: "11:55", checkOut: "23:04" }, "replace")).toBe("replace");
   });
 });
 

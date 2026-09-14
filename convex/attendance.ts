@@ -179,6 +179,15 @@ export function mergeShift(
   return fresh;
 }
 
+/**
+ * شيفتٌ بلا دخول وبخروج فقط هو بصمة فجرٍ نُسبت إلى يوم الأمس — تصل وحدها عند حدود
+ * مقاطع السحب الأسبوعية (خروج 02:35 يقع في المقطع التالي لدخوله 16:11). استبدالُ
+ * الصف بها يمحو الدخول، فتُدمج دائماً ولو كان السحب سحبَ أيامٍ كاملة.
+ */
+export function effectiveMode(s: ShiftTimes, mode: ImportMode): ImportMode {
+  return mode === "replace" && !s.checkIn && s.checkOut ? "merge" : mode;
+}
+
 /** يكتب شيفتات البصمة؛ الصفوف اليدوية لا تُمسّ، وصفوف البصمة تُدمج أو تُستبدل حسب النمط. */
 async function applyShifts(
   ctx: any,
@@ -201,7 +210,7 @@ async function applyShifts(
     }
     const ex = await ctx.db.query("attendance").withIndex("by_name_date", (q: any) => q.eq("name", s.name).eq("date", s.date)).first();
     if (ex?.source === "manual") continue; // ما صحّحه المدير بيده لا يمحوه الجهاز
-    const { checkIn, checkOut } = mergeShift(ex, s, mode);
+    const { checkIn, checkOut } = mergeShift(ex, s, effectiveMode(s, mode));
     const { workedHours, otHours } = computeHours(checkIn, checkOut, stdFor(wsMap, s.name), isRestDay(wsMap, s.name, s.date));
     const doc = {
       name: s.name, date: s.date, month: monthOf(s.date), status: "present" as const,
