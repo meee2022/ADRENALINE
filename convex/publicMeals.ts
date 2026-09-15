@@ -2,7 +2,7 @@
  * @file convex/publicMeals.ts
  * @description إدارة الوجبات العامة للموقع
  */
-import { internalMutation, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
 import { v, ConvexError } from "convex/values";
 
@@ -473,5 +473,19 @@ export const adminSetImage = internalMutation({
     if (!meal) throw new Error("meal not found: " + args.mealId);
     await ctx.db.patch(args.mealId, { storageId: args.storageId });
     return { previousStorageId: meal.storageId ?? null, previousImageUrl: meal.imageUrl ?? null, nameEn: meal.nameEn ?? meal.nameAr };
+  },
+});
+
+/** أداة إدارية (CLI): روابط صور مخزّنة لبطاقات بعينها — لتصدير كتالوج منيو المطعم من صور قاعدة البيانات. */
+export const adminImageUrls = internalQuery({
+  args: { ids: v.array(v.id("publicMeals")) },
+  handler: async (ctx, args) => {
+    const out: { id: string; nameEn?: string; url: string | null }[] = [];
+    for (const id of args.ids) {
+      const m = await ctx.db.get(id);
+      if (!m) continue;
+      out.push({ id: String(id), nameEn: m.nameEn, url: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null) });
+    }
+    return out;
   },
 });

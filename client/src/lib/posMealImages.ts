@@ -131,6 +131,9 @@ const POS_MEAL_IMAGES: Record<string, string> = {
 
 /** خريطة بالمعرّف: لا تنكسر عند إعادة تسمية الوجبة (أُعيدت تسمية 109 وجبات في 2026-09-15). */
 export const POS_MEAL_IMAGES_BY_ID: Record<string, string> = {
+  "kh7cbd3shgp79dk79qy0p5sr698cp5b5": "kh7cbd3shgp79dk79qy0p5sr698cp5b5.webp",
+  "kh7cqefd3g2h0xhp4q2809qntd8as2tr": "kh7cqefd3g2h0xhp4q2809qntd8as2tr.webp",
+  "kh785s77859xst9fk5x4ww34wh8asn2m": "kh785s77859xst9fk5x4ww34wh8asn2m.webp",
   "kh7015dvtfzmb87fdzgr2f1eg98as6dz": "Egg Avocado Toast.webp",
   "kh70bcfw874nj88z4hfcz3qjwx8aswx5": "Golden Shot.webp",
   "kh70hmj8hapv8z7gvrpwg56p1s8aj9rg": "Vitargo Drink-raspberry Flavour.webp",

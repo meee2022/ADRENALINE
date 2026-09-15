@@ -191,4 +191,8 @@ export const catalogImages: Record<string, number> = {
   "kh795s6v6d5x2y8j4wtqcach6d8bdpkx": require("../assets/restaurant-catalog/kh795s6v6d5x2y8j4wtqcach6d8bdpkx.webp"),
   "kh7b7313h06wc1h5knpy6d3jjh8akwg9": require("../assets/restaurant-catalog/kh7b7313h06wc1h5knpy6d3jjh8akwg9.webp"),
   "kh723vqhzddn883a24e6jm8e5n8ajeae": require("../assets/restaurant-catalog/kh723vqhzddn883a24e6jm8e5n8ajeae.webp"),
+  "kh7bt118pwb3k27bc6v2skswx58ajz64": require("../assets/restaurant-catalog/kh7bt118pwb3k27bc6v2skswx58ajz64.webp"),
+  "kh785s77859xst9fk5x4ww34wh8asn2m": require("../assets/restaurant-catalog/kh785s77859xst9fk5x4ww34wh8asn2m.webp"),
+  "kh7cqefd3g2h0xhp4q2809qntd8as2tr": require("../assets/restaurant-catalog/kh7cqefd3g2h0xhp4q2809qntd8as2tr.webp"),
+  "kh7cbd3shgp79dk79qy0p5sr698cp5b5": require("../assets/restaurant-catalog/kh7cbd3shgp79dk79qy0p5sr698cp5b5.webp"),
 };
