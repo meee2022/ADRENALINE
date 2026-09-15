@@ -9,7 +9,7 @@ import { usePosStore } from "@/lib/posStore";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
-import { getPosMealImage } from "@/lib/posMealImages";
+import { getPosMealImage, getPosMealImageById } from "@/lib/posMealImages";
 import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, ShoppingCart, ChevronDown, Bookmark } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
@@ -543,7 +543,7 @@ export default function PosSales() {
           )}
           <div className="pos-items-grid grid gap-2.5 sm:gap-3">
             {visibleItems.map((m: any) => {
-              const imageUrl = getPosMealImage(m.nameEn, m.name, m.nameAr) || m.imageUrl;
+              const imageUrl = getPosMealImageById(m.id) || getPosMealImage(m.nameEn, m.name, m.nameAr) || m.imageUrl;
               const hasImage = !!imageUrl;
               return (
                 <button
