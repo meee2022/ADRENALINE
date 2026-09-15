@@ -209,4 +209,7 @@ export const catalogImages: Record<string, number> = {
   "kh76w39mradm3vr5pcsa12c2qs87mgyc": require("../assets/restaurant-catalog/kh76w39mradm3vr5pcsa12c2qs87mgyc.webp"),
   "kh73skpdq288ht3zebe0k7hadn8ajzdx": require("../assets/restaurant-catalog/kh73skpdq288ht3zebe0k7hadn8ajzdx.webp"),
   "kh78mnr9dxs1jnbhy3k8p19rrd8akvjd": require("../assets/restaurant-catalog/kh78mnr9dxs1jnbhy3k8p19rrd8akvjd.webp"),
+  "kh72qahv2wy957tgb0nkm13yth8akpk7": require("../assets/restaurant-catalog/kh72qahv2wy957tgb0nkm13yth8akpk7.webp"),
+  "kh70bcfw874nj88z4hfcz3qjwx8aswx5": require("../assets/restaurant-catalog/kh70bcfw874nj88z4hfcz3qjwx8aswx5.webp"),
+  "kh758y7pyf95nws582mmvcha6h8ar99h": require("../assets/restaurant-catalog/kh758y7pyf95nws582mmvcha6h8ar99h.webp"),
 };

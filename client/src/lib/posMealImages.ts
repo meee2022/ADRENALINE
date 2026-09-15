@@ -124,6 +124,9 @@ const POS_MEAL_IMAGES: Record<string, string> = {
   "WATER ALKALINE SMALL": "Alka Live Water 500ml.webp",
   "ZAATAR OMLETTE": "Zaatar Omlette.webp",
   "ZUCHINI PASTA": "Zuchini Pasta.webp",
+  "IMMUNE SHOT": "Immune Shot.webp",
+  "GOLDEN": "Golden Shot.webp",
+  "DETOX": "Detox Shot.webp",
 };
 
 function normalizeMealName(value: string) {
