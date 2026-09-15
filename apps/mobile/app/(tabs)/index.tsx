@@ -140,7 +140,7 @@ export default function Home() {
       {/* ── الأكثر طلباً ── */}
       {best.length ? (
         <View style={styles.section}>
-          <SectionTitle title="الأكثر طلباً" sub="ما يختاره مشتركونا أكثر" action="القائمة كاملة" onAction={() => router.push("/(tabs)/menu")} />
+          <SectionTitle title="الأكثر طلباً" sub="ما يختاره مشتركونا أكثر" action="اختيار وجبات اشتراكي" onAction={() => router.push("/(tabs)/menu")} />
           <View onLayout={(event) => setBestWidth(event.nativeEvent.layout.width)} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             {best.map((m: any, i: number) => (
               <MealCard key={m.id || m._id} meal={{ ...m, ...mealCatalog.find((meal: { _id: string }) => String(meal._id) === String(m.id || m._id)), _id: m.id || m._id }} compact width={cardW} rank={i < 3 ? i + 1 : undefined} onPress={() => router.push({ pathname: "/meal/[id]", params: { id: String(m.id || m._id) } })} />

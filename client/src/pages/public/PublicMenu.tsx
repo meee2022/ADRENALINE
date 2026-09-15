@@ -930,6 +930,7 @@ Is that what you want?`,
   if (!canViewMenu) {
     return (
       <PublicLayout>
+      {!isNutriReset && <div className="mx-auto max-w-7xl px-4 pt-4"><a href="/public/restaurant-menu" className="inline-flex rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 font-semibold text-sky-900">{dir === 'rtl' ? 'منيو المطعم' : 'Restaurant menu'}</a></div>}
         <div className="min-h-[80vh] flex items-center justify-center px-4 py-12"
           style={{ background: "linear-gradient(135deg, #f8fafc, #ecfeff, #f0f9ff)" }}>
           <div className="w-full max-w-md">
@@ -1166,6 +1167,7 @@ Is that what you want?`,
 
   return (
     <PublicLayout>
+      {!isNutriReset && <div className="mx-auto max-w-7xl px-4 pt-4"><a href="/public/restaurant-menu" className="inline-flex rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 font-semibold text-sky-900">{dir === 'rtl' ? 'منيو المطعم' : 'Restaurant menu'}</a></div>}
       <div className={isNutriReset ? undefined : 'adrenaline-menu'}>
       {/* ═══ Browse Mode Banner ═══ */}
       {isNutriReset && browseMode && !isPhoneVerified && (

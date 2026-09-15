@@ -75,6 +75,7 @@ const CustomerCrm = lazy(() => import("@/pages/CustomerCrm"));
 const HomePage = lazy(() => import("@/pages/public/HomePage"));
 const PublicPlans = lazy(() => import("@/pages/public/PublicPlansNew"));
 const PublicMenu = lazy(() => import("@/pages/public/PublicMenu"));
+const RestaurantCatalog = lazy(() => import("@/pages/public/RestaurantCatalog"));
 // 🧪 نموذج تجريبي غير مربوط — يُحذف لو لم يُعتمد
 const MenuV2Demo = lazy(() => import("@/pages/public/MenuV2Demo"));
 const MealDetails = lazy(() => import("@/pages/public/MealDetails"));
@@ -182,6 +183,7 @@ function Router() {
       <Route path="/" component={DomainHome} />
       <Route path="/public/plans" component={PublicPlans} />
       <Route path="/public/menu" component={PublicMenu} />
+      <Route path="/public/restaurant-menu" component={RestaurantCatalog} />
       <Route path="/nutri-reset/menu" component={PublicMenu} />
       <Route path="/public/menu-v2" component={MenuV2Demo} />
       <Route path="/public/meal/:slug" component={MealDetails} />

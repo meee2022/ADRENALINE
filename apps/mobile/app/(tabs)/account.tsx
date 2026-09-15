@@ -132,7 +132,8 @@ export default function Account() {
         <Btn label={busy?'جارٍ تسجيل الخروج…':'تسجيل الخروج'} variant="outline" disabled={busy} onPress={()=>void logout()}/>
       </>}
       <LinkNotifications/>
-      {session && <Btn label="قائمة الوجبات وخدمات المشترك" onPress={()=>router.push('/menu')}/>}
+      <Btn label="منيو المطعم" variant="outline" onPress={()=>router.push('/restaurant-menu')}/>
+      {session && <Btn label="اختيار وجبات اشتراكي" onPress={()=>router.push('/menu')}/>}
       <SmartPlanEntry/>
       <Btn label="تتبّع طلبك" variant="outline" onPress={()=>router.push('/order-tracking')}/>
       <Btn label="حاسبة السعرات والماكروز" variant="outline" onPress={()=>router.push('/calorie-calculator')}/>

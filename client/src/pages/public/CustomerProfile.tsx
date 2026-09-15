@@ -385,6 +385,7 @@ export default function CustomerProfile() {
                     </div>
                   </div>
 
+                  <Button onClick={() => setLocation('/public/menu')}>{isRtl ? 'اختيار وجبات اشتراكي' : 'Choose my subscription meals'}</Button>
                   {/* Meals Info */}
                   {(subscription.mealsPerDay || subscription.snacksPerDay) && (
                     <div className="p-4 bg-gradient-to-r from-[#3CC4F0]/10 to-[#47759C]/10 rounded-lg border border-[#3CC4F0]/20">

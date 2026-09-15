@@ -1,6 +1,6 @@
 # Driver codes on box stickers
 
-Backend deployed to laudable-mongoose-958 on 2026-09-14; frontend included in this release following approval of the small outlined D01 preview.
+Implemented locally following approval of the small outlined D01 preview. Not deployed.
 
 - Only box stickers change. The customer name remains the only person's name on the label.
 - Codes are persisted in `driverLabelCodes` and allocated transactionally when the existing sticker-number preparation runs. Removed/inactive drivers keep reserved codes; numbers are not recycled.

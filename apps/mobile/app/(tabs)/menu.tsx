@@ -89,7 +89,7 @@ export default function Menu() {
         ListHeaderComponent={
           <View style={{ paddingTop: insets.top + 14 }}>
             <View style={styles.head}>
-              <T w="black" style={styles.title}>قائمة الوجبات</T>
+              <T w="black" style={styles.title}>اختيار وجبات اشتراكي</T>
               <T w="bold" style={styles.count}>{loading ? 'نجهّز لك القائمة…' : `${meals.length} وجبة${q.trim() ? ' تطابق بحثك' : ' متاحة للتصفح'}`}</T>
               <T style={styles.sub}>محسوبة السعرات بإشراف أخصائيي تغذية، وتُطبخ صباح كل يوم.</T>
               <SubscriberPhoneGate onSelect={(customer, phone) => {setMethod(null);setSubscriber({ id: customer._id, phone, name:customer.fullName });}}/>

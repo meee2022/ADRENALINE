@@ -118,7 +118,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 {isRtl ? "الخطط" : "Plans"}
               </a>
               <a href="/public/menu" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
-                {isRtl ? "قائمة الوجبات" : "Menu"}
+                {isRtl ? "اختيار وجبات اشتراكي" : "Choose my meals"}
               </a>
               <a href="/public/calorie-calculator" className="flex whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC] items-center gap-1.5">
                 <Calculator className="h-3.5 w-3.5" />
@@ -295,8 +295,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 href="/public/menu"
                 className="block py-2 px-4 text-[#0F1516] hover:bg-[#3CC4F0]/10 rounded-lg font-medium"
               >
-                {isRtl ? "قائمة الوجبات" : "Menu"}
+                {isRtl ? "اختيار وجبات اشتراكي" : "Choose my meals"}
               </a>
+              <a href="/public/restaurant-menu" className="block py-2 px-4 rounded-lg font-medium text-[#20384A]">{isRtl ? "منيو المطعم" : "Restaurant menu"}</a>
               <a
                 href="/customer/smart-plan"
                 className="block py-2 px-4 rounded-lg font-bold text-[#0E76AC] bg-[#3AC7F4]/10 hover:bg-[#3AC7F4]/20 flex items-center gap-2"
@@ -422,7 +423,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <UtensilsCrossed className="h-5 w-5" />
-                <span className="text-xs font-medium">{isRtl ? "قائمة الوجبات" : "Menu"}</span>
+                <span className="text-xs font-medium">{isRtl ? "اختيار وجبات اشتراكي" : "Choose my meals"}</span>
               </a>
               <a
                 href="/dashboard"
@@ -453,7 +454,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 className="flex flex-col items-center gap-1 py-2 px-3 text-[#47759C] hover:text-[#0E76AC] transition-colors"
               >
                 <UtensilsCrossed className="h-6 w-6" />
-                <span className="text-xs font-medium">{isRtl ? "قائمة الوجبات" : "Menu"}</span>
+                <span className="text-xs font-medium">{isRtl ? "اختيار وجبات اشتراكي" : "Choose my meals"}</span>
               </a>
               <a
                 href="/public/about"
@@ -539,7 +540,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
                 {[
                   { href: "/", ar: "الرئيسية", en: "Home" },
                   { href: "/public/plans", ar: "الخطط", en: "Plans" },
-                  { href: "/public/menu", ar: "قائمة الوجبات", en: "Menu" },
+                  { href: "/public/restaurant-menu", ar: "منيو المطعم", en: "Restaurant menu" },
                   { href: "/public/about", ar: "من نحن", en: "About" },
                   { href: "/public/contact", ar: "تواصل معنا", en: "Contact" },
                 ].map((link) => (
@@ -633,3 +634,4 @@ export function PublicLayout({ children }: PublicLayoutProps) {
     </div>
   );
 }
+

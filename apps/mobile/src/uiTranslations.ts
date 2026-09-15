@@ -2,6 +2,7 @@
 import { foodEnglish } from './foodTranslations';
 export const uiEnglish: Record<string, string> = {
   ...foodEnglish,
+  'منيو المطعم': 'Restaurant menu', 'اختيار وجبات اشتراكي': 'Choose my subscription meals',
   'الرئيسية': 'Home', 'القائمة': 'Menu', 'الخطط': 'Plans', 'حسابي': 'Account',
   'الكل': 'All', 'الإفطار': 'Breakfast', 'الغداء': 'Lunch', 'العشاء': 'Dinner', 'سناكس': 'Snacks', 'سناك': 'Snack',
   'رجوع': 'Back', 'العودة': 'Back', 'التالي': 'Next', 'السابق': 'Previous', 'متابعة': 'Continue', 'إلغاء': 'Cancel',

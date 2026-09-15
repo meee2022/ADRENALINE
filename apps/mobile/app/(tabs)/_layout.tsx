@@ -27,7 +27,8 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: tr("الرئيسية"), tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" color={color} size={size} /> }} />
-      <Tabs.Screen name="menu" options={{ title: tr("القائمة"), tabBarIcon: ({ color, size }) => <Ionicons name="restaurant-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="menu" options={{ title: tr("اختيار وجبات اشتراكي"), tabBarIcon: ({ color, size }) => <Ionicons name="restaurant-outline" color={color} size={size} /> }} />
+      <Tabs.Screen name="restaurant-menu" options={{ href: null }} />
       <Tabs.Screen name="plans" options={{ title: tr("الخطط"), tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" color={color} size={size} /> }} />
       <Tabs.Screen name="account" options={{ title: tr("حسابي"), tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }} />
     </Tabs></View>
