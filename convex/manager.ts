@@ -21,7 +21,10 @@ export const liveSnapshot = query({
     const sixHoursAgo = now - 6 * 60 * 60 * 1000;
 
     /* ═══════ فواتير اليوم ═══════ */
-    const tickets: any[] = await ctx.db.query("posTickets").withIndex("by_paidAt").collect();
+    // Both consumers need today's sales or the last six hours, not all history.
+    // Keep the union at midnight: activity can include the previous evening.
+    const tickets: any[] = await ctx.db.query("posTickets")
+      .withIndex("by_paidAt", (q) => q.gte("paidAt", Math.min(dayStart, sixHoursAgo))).collect();
     const todayPaid = tickets.filter((t) => t.paidAt && t.paidAt >= dayStart && t.status === "PAID");
     const todayRev = todayPaid.filter((t) => !t.isNonRevenue);
     const todayStaff = todayPaid.filter((t) => t.isNonRevenue);
@@ -71,7 +74,8 @@ export const liveSnapshot = query({
       }));
 
     /* ═══════ أحداث الأمان (آخر 20 من auditLog) ═══════ */
-    const auditRows: any[] = await ctx.db.query("auditLog").withIndex("by_createdAt").collect();
+    const auditRows: any[] = await ctx.db.query("auditLog")
+      .withIndex("by_createdAt", (q) => q.gte("createdAt", dayStart)).collect();
     const recentAudit = auditRows
       .filter((r) => r.createdAt >= dayStart)
       .sort((a, b) => b.createdAt - a.createdAt)

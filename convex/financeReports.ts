@@ -1,6 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 import { requireRoleOrPermission } from "./sessions";
+import { dashboardBalances } from "./lib/dashboardBalances";
 
 const requireFinance = (ctx: any, token?: string) => requireRoleOrPermission(ctx, token, {
   roles: ["ACCOUNTANT", "FINANCE_MANAGER"], permissions: ["/finance"],
@@ -189,11 +190,10 @@ export const financeDashboard = query({
   args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireFinance(ctx, args.sessionToken);
-    const bal = await accountBalances(ctx, args.fromDate, args.toDate);
+    const { period: bal, lifetime: balAll } = await dashboardBalances(ctx, args.fromDate, args.toDate);
     const accounts = await ctx.db.query("finAccounts").collect();
     let revenue = 0, expense = 0, cogs = 0, cash = 0, receivable = 0, payable = 0;
     // النقدية/الذمم تُحسب من كل التاريخ حتى toDate (رصيد لحظي)
-    const balAll = await accountBalances(ctx, undefined, args.toDate);
     for (const a of accounts as any[]) {
       if (!a.isPostable) continue;
       const b = bal.get(String(a._id)) || { debit: 0, credit: 0 };

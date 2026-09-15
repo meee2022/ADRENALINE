@@ -47,12 +47,16 @@ export default function DashboardNew() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [detailView, setDetailView] = useState<DetailView>(null);
+  const dateKey = format(selectedDate, "yyyy-MM-dd");
 
   const { data: customers = [], isLoading: customersLoading } = useCustomers();
-  const { data: dailyPlans = [], isLoading: plansLoading } = useDailyPlans();
+  const { data: dailyPlans = [], isLoading: plansLoading } = useDailyPlans(dateKey);
+  const { data: weeklyPlans = [] } = useDailyPlans(undefined, {
+    from: format(addDays(new Date(), -6), "yyyy-MM-dd"),
+    to: format(new Date(), "yyyy-MM-dd"),
+  });
   const inventoryItems = useQuery(api.inventory.list, {}) || [];
   const pendingOrders = useQuery(api.customerOrders.countPending) as number | undefined;
-  const dateKey = format(selectedDate, "yyyy-MM-dd");
   const attendance = useQuery(api.attendance.todayCounts, { date: dateKey, sessionToken }) as any;
   const leave = useQuery(api.leaves.onLeaveToday, { date: dateKey, sessionToken }) as any;
   const managerSnap = useQuery(api.manager.liveSnapshot, { sessionToken }) as any;
@@ -131,9 +135,9 @@ export default function DashboardNew() {
     const day = addDays(new Date(), i - 6);
     return {
       day: format(day, "EEE", { locale }),
-      meals: dailyPlans.filter((p) => p.date === format(day, "yyyy-MM-dd")).length,
+      meals: weeklyPlans.filter((p) => p.date === format(day, "yyyy-MM-dd")).length,
     };
-  }), [dailyPlans, locale]);
+  }), [weeklyPlans, locale]);
 
   const statusLabel = (s: string) => ({
     DRAFT: tr("مسودة", "Draft"), CONFIRMED: tr("مؤكدة", "Confirmed"),
