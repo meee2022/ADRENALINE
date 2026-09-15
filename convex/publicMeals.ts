@@ -2,7 +2,7 @@
  * @file convex/publicMeals.ts
  * @description إدارة الوجبات العامة للموقع
  */
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
 import { v, ConvexError } from "convex/values";
 
@@ -445,5 +445,23 @@ export const bestSellers = query({
         imageUrl: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null),
       }))
     );
+  },
+});
+
+/* ── أدوات إدارية تعمل من سطر الأوامر فقط (internal: لا تُستدعى من المتصفح) ──
+ * استبدال صور المنيو دفعةً واحدة (التصميم الجديد 2026-09-15). الصورة القديمة
+ * تُرجَع ولا تُحذف حتى يُتحقَّق من الموقع، فالرجوع ممكن. */
+export const adminUploadUrl = internalMutation({
+  args: {},
+  handler: async (ctx) => ctx.storage.generateUploadUrl(),
+});
+
+export const adminSetImage = internalMutation({
+  args: { mealId: v.id("publicMeals"), storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const meal = await ctx.db.get(args.mealId);
+    if (!meal) throw new Error("meal not found: " + args.mealId);
+    await ctx.db.patch(args.mealId, { storageId: args.storageId });
+    return { previousStorageId: meal.storageId ?? null, previousImageUrl: meal.imageUrl ?? null, nameEn: meal.nameEn ?? meal.nameAr };
   },
 });
