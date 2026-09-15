@@ -6,8 +6,11 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
 import { v, ConvexError } from "convex/values";
 
+import { assertUniqueMealName } from "./lib/mealIdentity";
+
 // 🔒 صلاحيات المنيو — إدارة الوجبات لأدوار التغذية والمنيو، مش لأي staff
 const MENU_MANAGE_ROLES = ["NUTRITIONIST"]; // ADMIN تلقائي
+
 
 /**
  * 🔒 DTO عام — بدون costQAR (تكلفة داخلية) ولا gymPrice/isGymItem (أسعار الجم).
@@ -217,6 +220,8 @@ export const create = mutation({
     // 🔒 slug فريد
     const dupSlug = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", args.slug)).first();
     if (dupSlug) throw new ConvexError("المعرّف المختصر مستخدم بالفعل. اختر معرّفًا آخر");
+    // 🔒 لا بطاقتين لنفس الطبق في نفس القناة (سبب اللخبطة القديمة: فبراير/يوليو)
+    await assertUniqueMealName(ctx, { nameAr: args.nameAr, nameEn: args.nameEn, isOnlineOnly: args.isOnlineOnly, isGymOnly: (args as any).isGymOnly });
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: args.nameAr,
       nameEn: args.nameEn,
@@ -291,6 +296,11 @@ export const update = mutation({
     if (updates.slug) {
       const dup = await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", updates.slug!)).first();
       if (dup && String(dup._id) !== String(id)) throw new ConvexError("slug مكرر");
+    }
+    // 🔒 تغيير الاسم أو القناة لا يصنع بطاقة ثانية لنفس الطبق
+    if (updates.nameAr !== undefined || updates.nameEn !== undefined || updates.isOnlineOnly !== undefined || (updates as any).isGymOnly !== undefined) {
+      const current: any = await ctx.db.get(id);
+      if (current) await assertUniqueMealName(ctx, { ...current, ...updates }, id);
     }
     await ctx.db.patch(id, updates);
     return id;

@@ -9,6 +9,7 @@
  * @frontend client/src/pages/GymSales.tsx
  */
 import { v, ConvexError } from "convex/values";
+import { assertUniqueMealName } from "./lib/mealIdentity";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRoleOrPermission } from "./sessions";
 import { autoPostGymOrder, autoPostGymReturn, autoReverseGymOrder } from "./financePost";
@@ -172,6 +173,7 @@ export const createGymMeal = mutation({
     const nameEn = args.nameEn.trim();
     if (!nameAr && !nameEn) throw new ConvexError("اكتب اسم الوجبة بالعربي أو الإنجليزي");
     const gymPrice = Number(args.gymPrice);
+    await assertUniqueMealName(ctx, { nameAr: nameAr || nameEn, nameEn, isGymOnly: true }); // 🔒 لا بطاقة ثانية لنفس الصنف في المنافذ
     if (!Number.isFinite(gymPrice) || gymPrice < 0) throw new ConvexError("سعر الجيم غير صالح");
     const slug = `gym-${Date.now()}-${nameEn.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "meal"}`;
     const id = await ctx.db.insert("publicMeals", {
@@ -476,6 +478,7 @@ export const createOutletMeal = mutation({
     const nameEn = args.nameEn.trim();
     if (!nameAr && !nameEn) throw new ConvexError("اكتب اسم الصنف");
     if (!Number.isFinite(args.price) || args.price < 0) throw new ConvexError("سعر المنفذ غير صالح");
+    await assertUniqueMealName(ctx, { nameAr: nameAr || nameEn, nameEn, isGymOnly: true }); // 🔒 لا بطاقة ثانية لنفس الصنف في المنافذ
     const mealId = await ctx.db.insert("publicMeals", {
       nameAr: nameAr || nameEn,
       nameEn: nameEn || undefined,

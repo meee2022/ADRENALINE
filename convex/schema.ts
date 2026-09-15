@@ -1050,6 +1050,10 @@ export default defineSchema({
     schedule: v.optional(v.array(v.object({ week: v.number(), day: v.string() }))),
     cutoffTime: v.optional(v.string()),
     createdAt: v.number(),
+    // ✅ بطاقة دُمجت في أخرى (نفس الطبق كان مسجَّلاً مرتين): تُقفل ولا تُحذف، والطلبات
+    //    القديمة تبقى بمعرّفها. convex/mealMerge.ts
+    mergedIntoId: v.optional(v.id("publicMeals")),
+    mergedAt: v.optional(v.number()),
   })
     .index("by_slug", ["slug"])
     .index("by_category", ["category"])
