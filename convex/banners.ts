@@ -49,7 +49,36 @@ export const listActiveBanners = query({
       })
     );
 
-    return bannersWithUrls.sort((a, b) => a.sortOrder - b.sortOrder);
+    // شرائح التطبيق فقط لا تظهر في هيرو الموقع.
+    return bannersWithUrls.filter((b) => b.target !== "app").sort((a, b) => a.sortOrder - b.sortOrder);
+  },
+});
+
+// ===== LIST APP HERO SLIDES (Public) =====
+// هيرو التطبيق يُدار من صفحة البانرات: أطباق مقصوصة وإعلانات. بلا شرائح يعرض التطبيق أطباقه المدموجة.
+export const listAppSlides = query({
+  args: {},
+  handler: async (ctx) => {
+    const banners = await ctx.db
+      .query("banners")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+    const slides = await Promise.all(
+      banners
+        .filter((b) => b.target === "app" || b.target === "both")
+        .map(async (b) => ({
+          id: String(b._id),
+          kind: b.kind ?? "promo",
+          titleAr: b.titleAr,
+          titleEn: b.titleEn,
+          subtitleAr: b.subtitleAr,
+          subtitleEn: b.subtitleEn,
+          linkUrl: b.linkUrl,
+          sortOrder: b.sortOrder,
+          imageUrl: (b.imageStorageId ? await ctx.storage.getUrl(b.imageStorageId) : null) || b.imageUrl,
+        }))
+    );
+    return slides.filter((s) => s.imageUrl).sort((a, b) => a.sortOrder - b.sortOrder);
   },
 });
 
@@ -62,6 +91,9 @@ export const create = mutation({
     subtitleEn: v.optional(v.string()),
     imageStorageId: v.id("_storage"),
     sortOrder: v.number(),
+    target: v.optional(v.union(v.literal("web"), v.literal("app"), v.literal("both"))),
+    kind: v.optional(v.union(v.literal("dish"), v.literal("promo"))),
+    linkUrl: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -76,6 +108,9 @@ export const create = mutation({
       subtitleEn: args.subtitleEn,
       imageStorageId: args.imageStorageId,
       imageUrl: imageUrl || "", // Fallback to empty string if URL generation fails
+      target: args.target,
+      kind: args.kind,
+      linkUrl: args.linkUrl?.trim() || undefined,
       isActive: true,
       sortOrder: args.sortOrder,
       createdAt: Date.now(),

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 import {groupCatalogRows,catalogNames} from '../shared/restaurantCatalogIdentity.mjs';
 const raw=JSON.parse(execFileSync(process.execPath,['node_modules/convex/bin/main.js','data','publicMeals','--deployment-name','laudable-mongoose-958','--limit','2000','--format','json'],{encoding:'utf8',maxBuffer:20000000}));
-const catalog=JSON.parse(fs.readFileSync('client/src/lib/restaurantCatalog.json','utf8'));
+const catalog=JSON.parse(fs.readFileSync('output/restaurant-menu/catalog.json','utf8'));
 const ids=new Set(catalog.flatMap(m=>m.sourceIds));
 const rows=raw.filter(r=>ids.has(r._id));
 const updates=groupCatalogRows(rows).flatMap(group=>{const n=catalogNames(group);return group.filter(r=>r.nameAr!==n.ar||r.nameEn!==n.en).map(r=>({id:r._id,beforeAr:r.nameAr,...(r.nameEn===undefined?{}:{beforeEn:r.nameEn}),nameAr:n.ar,nameEn:n.en}));});

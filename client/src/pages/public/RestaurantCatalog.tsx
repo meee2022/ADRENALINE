@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { Search, X, UtensilsCrossed, ArrowUp, Copy } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
-import catalog from '@/lib/restaurantCatalog.json';
+import { useQuery } from 'convex/react';
+import { api } from '@/../../convex/_generated/api';
 import './restaurant-catalog.css';
 
 const categories = [
@@ -13,7 +14,12 @@ const categories = [
   ['boxes','بوكسات المشاركة','Gathering boxes'], ['other','أطباق متنوعة','More dishes'],
 ];
 const channelNames: Record<string,string[]> = {online:['أونلاين','Online'], subscription:['وجبات باقات الاشتراك','Subscription dishes'],outlet:['منافذ','Outlets']};
+type Dish = {id:string;sourceIds:string[];ingredients:string[];ar:string;en:string;category:string;channels:string[];image:string|null;calories:number|null;protein:number|null;carbs:number|null;fats:number|null};
+const none: Dish[] = [];
 export default function RestaurantCatalog() {
+  // قراءة حية: صورة أو سعرات تُعدَّل في لوحة التحكم تظهر هنا فوراً (كانت لقطة مجمّدة داخل الكود).
+  const live = useQuery(api.restaurantCatalog.list, {}) as Dish[] | undefined;
+  const catalog = live ?? none;
   const {language,setLanguage} = useLanguage();
   const ar = language === 'ar';
   const [query,setQuery] = useState('');
@@ -25,13 +31,13 @@ export default function RestaurantCatalog() {
   const [shareStatus,setShareStatus]=useState('');
   const [shareFallback,setShareFallback]=useState('');
   const copyMenu=async()=>{const url=new URL(window.location.href);url.hash='';try{await navigator.clipboard.writeText(url.toString());setShareStatus(ar?'تم نسخ رابط المنيو':'Menu link copied');setShareFallback('');}catch{setShareFallback(url.toString());setShareStatus(ar?'انسخ الرابط من الحقل التالي':'Copy the link below');}};
-  const menuMeals=useMemo(()=>catalog.filter(m=>channel==='all'||m.channels.includes(channel)),[channel]);
+  const menuMeals=useMemo(()=>catalog.filter(m=>channel==='all'||m.channels.includes(channel)),[channel,catalog]);
   const [active,setActive] = useState('all');
   const [broken,setBroken] = useState<Record<string,boolean>>({});
   const filtered = useMemo(()=>menuMeals.filter(m=>(`${m.ar} ${m.en}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))),[query,menuMeals]);
   const sections=categories.map(c=>({c,meals:filtered.filter(m=>m.category===c[0])})).filter(s=>s.meals.length);
   const count=filtered.filter(m=>active==='all'||m.category===active).length;
-  const featured = ['seafood','chicken','sandwiches'].map(category=>menuMeals.find(m=>m.category===category&&m.image)).filter((m): m is typeof catalog[number]=>Boolean(m));
+  const featured = ['seafood','chicken','sandwiches'].map(category=>menuMeals.find(m=>m.category===category&&m.image)).filter((m): m is Dish=>Boolean(m));
   return <div className="restaurant-catalog" dir={ar?'rtl':'ltr'}>
     <header className="rc-header"><Link href="/public"><img src="/adrenaline-logo-full.png" alt="Adrenaline Healthy Food" /></Link><div><button onClick={()=>{setChannel(channel==='subscription'?'all':'subscription');setQuery('');setActive('all');}}>{channel==='subscription'?(ar?'كل منيو المطعم':'Full restaurant menu'):(ar?'وجبات الاشتراك':'Subscription meals')}</button><button onClick={()=>setLanguage(ar?'en':'ar')}>{ar?'English':'العربية'}</button></div></header>
     <main className="rc-main"><Link className="rc-share" href="/public/menu">{ar?'اختيار وجبات اشتراكي':'Choose my subscription meals'}</Link>
@@ -45,7 +51,8 @@ export default function RestaurantCatalog() {
         {m.image&&!broken[m.id]?<img className="rc-photo" src={m.image} alt={m.ar||m.en} loading="lazy" width="400" height="320" onError={()=>setBroken(old=>({...old,[m.id]:true}))}/>:<div className="rc-no-photo"><UtensilsCrossed size={28}/><span>{ar?'الصورة قريبًا':'Photo coming soon'}</span></div>}
         <div className="rc-body"><div className="rc-channels">{m.channels.map(ch=><span key={ch}>{channelNames[ch][ar?0:1]}</span>)}</div><h3 dir={ar&&m.ar?'rtl':'ltr'}>{ar?(m.ar||m.en):m.en}</h3>{ar&&m.ar&&<p className="rc-english" lang="en" dir="ltr">{m.en}</p>}{m.ingredients.length>0&&<p className="rc-ingredients"><strong>{ar?'المكونات: ':'Ingredients: '}</strong>{m.ingredients.join(ar?'، ':', ')}</p>}<dl className="rc-macros">{([['calories',ar?'سعرة':'kcal'],['protein',ar?'بروتين':'Protein'],['carbs',ar?'كارب':'Carbs'],['fats',ar?'دهون':'Fat']] as const).map(([k,label])=><div key={k}><dt>{label}</dt><dd>{m[k]===null?'—':m[k]}{m[k]!==null&&k!=='calories'&&<small>g</small>}</dd></div>)}</dl></div>
       </article>)}</div></section>)}
-      {!count&&<div className="rc-empty"><Search size={28}/><h2>{ar?'مفيش نتائج بالاختيار ده':'No dishes found'}</h2><button onClick={()=>{setQuery('');setActive('all');}}>{ar?'عرض كل المنيو':'Show all dishes'}</button></div>}
+      {live===undefined&&<p className="rc-results" role="status">{ar?'جارٍ تحميل المنيو…':'Loading the menu…'}</p>}
+      {live!==undefined&&!count&&<div className="rc-empty"><Search size={28}/><h2>{ar?'مفيش نتائج بالاختيار ده':'No dishes found'}</h2><button onClick={()=>{setQuery('');setActive('all');}}>{ar?'عرض كل المنيو':'Show all dishes'}</button></div>}
       <footer className="rc-footer"><p>{ar?'أدرينالين • وجبات صحية، بطعم تحبه.':'Adrenaline • Healthy food you love.'}</p><a href="#" onClick={e=>{e.preventDefault();window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}}><ArrowUp size={16}/>{ar?'للأعلى':'Back to top'}</a></footer>
     </main>
   </div>;

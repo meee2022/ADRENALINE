@@ -6,7 +6,7 @@ import { Image } from "expo-image";
 import { colors } from "@/theme";
 import { T } from "./ui";
 import { customerCategoryLabel } from "@/rules";
-import { menuArtwork } from "@/menuArtwork";
+import { mealImageSources } from "@/mealImage";
 import { Ionicons } from "@expo/vector-icons";
 import { useContentLanguage } from '@/useContentLanguage';
 
@@ -17,14 +17,14 @@ export type MealLite = {
 
 export function MealCard({ meal, onPress, width, rank, compact = false }: { meal: MealLite; onPress?: () => void; width?: number; rank?: number; compact?: boolean }) {
   useUILanguage();
-  const [failedSource, setFailedSource] = useState<number | null>(null);
+  const [failures, setFailures] = useState(0);
   const {language,t}=useContentLanguage();
   const name=language==='en'?(meal.nameEn||meal.nameAr):meal.nameAr;
-  const source = menuArtwork[String(meal._id)];
+  const source = mealImageSources(meal._id, meal.imageUrl)[failures];
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={localize(String(`${t('تفاصيل','Details')} ${name}`))} onPress={onPress} style={({ pressed }) => [styles.card, width ? { width } : null, pressed && { transform: [{ scale: 0.985 }] }]}>
       <View style={styles.imgWrap}>
-        {source && source !== failedSource ? <Image source={source} accessibilityLabel={localize(String(localizedField(meal)))} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} onError={() => setFailedSource(source)} /> : <View style={styles.placeholder}><Ionicons name="restaurant-outline" size={28} color={colors.muted2}/><T style={{fontSize:12,color:colors.muted2}}>الصورة الجديدة قريبًا</T></View>}
+        {source ? <Image source={source} cachePolicy="disk" accessibilityLabel={localize(String(localizedField(meal)))} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} onError={() => setFailures((n) => n + 1)} /> : <View style={styles.placeholder}><Ionicons name="restaurant-outline" size={28} color={colors.muted2}/><T style={{fontSize:12,color:colors.muted2}}>الصورة الجديدة قريبًا</T></View>}
         <View style={styles.badge}>
           <Ionicons name="flame-outline" size={15} color={colors.navy2} />
           <T w="black" style={styles.badgeNum}>{meal.calories ?? "—"}</T>

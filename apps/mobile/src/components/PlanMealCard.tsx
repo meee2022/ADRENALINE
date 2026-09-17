@@ -1,11 +1,11 @@
 import { translate as localize, contentLanguage as uiLanguage, localizedField, useContentLanguage as useUILanguage } from '@/useContentLanguage';
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SelectionMeal } from '@/subscriberSelection';
 import { scaledNutrition, customerCategoryLabel } from '@/rules';
-import { menuArtwork } from '@/menuArtwork';
+import { mealImageSources } from '@/mealImage';
 import { colors } from '@/theme';
 import { T } from './ui';
 
@@ -15,9 +15,10 @@ export function PlanMealCard({meal,factor,width,label,disabled,onPress}:{
 }){
   useUILanguage();
   const nutrition=scaledNutrition(meal,factor);
-  const source=menuArtwork[meal._id];
+  const [failures,setFailures]=useState(0);
+  const source=mealImageSources(meal._id,meal.imageUrl)[failures];
   return <View style={[s.card,{width}]}>
-    <View style={s.photo}>{source?<Image source={source} accessibilityLabel={localize(String(localizedField(meal)))} contentFit="cover" style={StyleSheet.absoluteFill}/>:<View style={s.empty}><Ionicons name="restaurant-outline" size={24} color={colors.muted2}/><T style={s.category}>الصورة قريبًا</T></View>}</View>
+    <View style={s.photo}>{source?<Image source={source} cachePolicy="disk" accessibilityLabel={localize(String(localizedField(meal)))} contentFit="cover" style={StyleSheet.absoluteFill} onError={()=>setFailures(n=>n+1)}/>:<View style={s.empty}><Ionicons name="restaurant-outline" size={24} color={colors.muted2}/><T style={s.category}>الصورة قريبًا</T></View>}</View>
     <View style={s.body}>
       <T style={s.category}>{customerCategoryLabel(meal.category,uiLanguage() === 'ar')}</T>
       <T w="bold" style={s.name}>{localizedField(meal, 'name')}</T>

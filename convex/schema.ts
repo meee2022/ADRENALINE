@@ -908,6 +908,11 @@ export default defineSchema({
     subtitleEn: v.optional(v.string()),
     imageUrl: v.string(),
     imageStorageId: v.optional(v.id("_storage")), // For deletion
+    // أين تظهر الشريحة: غير محدَّد = الموقع فقط (السلوك القديم). "app" هيرو التطبيق، "both" الاثنان.
+    target: v.optional(v.union(v.literal("web"), v.literal("app"), v.literal("both"))),
+    // في التطبيق: "dish" طبق مقصوص بخلفية شفافة يطفو فوق الهيرو، "promo" إعلان بصورة كاملة (PayLater، عرض…).
+    kind: v.optional(v.union(v.literal("dish"), v.literal("promo"))),
+    linkUrl: v.optional(v.string()), // إعلان يُفتح عند الضغط (اختياري)
     sortOrder: v.number(),
     isActive: v.boolean(),
     createdAt: v.number(),

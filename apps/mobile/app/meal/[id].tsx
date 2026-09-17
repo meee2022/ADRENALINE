@@ -11,7 +11,7 @@ import { api } from "@/api";
 import { colors } from "@/theme";
 import { Btn, T } from "@/components/ui";
 import { customerCategoryLabel } from "@/rules";
-import { menuArtwork } from "@/menuArtwork";
+import { mealImageSources } from "@/mealImage";
 import { MealRating } from '@/components/MealRating';
 
 export default function MealDetail() {
@@ -22,14 +22,14 @@ export default function MealDetail() {
   const result = useQuery(api.publicMeals.listMeals, {}) as any[] | undefined;
   const all = result || [];
   const meal = all.find((m) => String(m._id) === String(id));
-  const source = meal && menuArtwork[String(meal._id)];
-  const [failed, setFailed] = useState<number | null>(null);
+  const [failures, setFailures] = useState(0);
+  const source = meal && mealImageSources(meal._id, meal.imageUrl)[failures];
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
       <ScrollView contentContainerStyle={{ width:'100%',maxWidth:760,alignSelf:'center', padding: 16, paddingTop: insets.top + 8, paddingBottom: insets.bottom + 90 }} showsVerticalScrollIndicator={false}>
         <View style={styles.imgWrap}>
-          {source && source !== failed ? <Image source={source} accessibilityLabel={localize(String(localizedField(meal)))} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} onError={()=>setFailed(source)}/> : <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:12}}><Ionicons name="restaurant-outline" size={36} color={colors.muted2}/><T>{result === undefined ? 'جارٍ التحميل…' : 'الصورة الجديدة غير متاحة بعد'}</T></View>}
+          {source ? <Image source={source} cachePolicy="disk" accessibilityLabel={localize(String(localizedField(meal)))} style={StyleSheet.absoluteFill} contentFit="contain" transition={150} onError={()=>setFailures((n)=>n+1)}/> : <View style={{flex:1,alignItems:'center',justifyContent:'center',gap:12}}><Ionicons name="restaurant-outline" size={36} color={colors.muted2}/><T>{result === undefined ? 'جارٍ التحميل…' : 'الصورة الجديدة غير متاحة بعد'}</T></View>}
           <Pressable accessibilityRole="button" accessibilityLabel={localize(String("العودة إلى القائمة"))} onPress={() => router.canGoBack() ? router.back() : router.replace('/(tabs)/menu')} style={styles.close} hitSlop={8}><Ionicons name="close" size={20} color={colors.navy2} /></Pressable>
           {meal ? (
             <View style={styles.badge}>

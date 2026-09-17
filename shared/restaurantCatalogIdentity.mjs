@@ -59,6 +59,7 @@ const translations = {
  'Golden':'جولدن','Grilled Chicken Wrap':'راب الدجاج المشوي','Immune Shot':'شوت إميون','Mongolian Beef':'لحم منغولي',
  'Protein Brownies':'براونيز بالبروتين','Teriyaki Tofu w/Rice':'توفو ترياكي مع الأرز','Tropical Shot':'شوت تروبيكال',
  'Turkey and Cheese Sandwich':'ساندويتش ديك رومي وجبن',
+ 'Chicken Avocado Wrap':'راب الدجاج بالأفوكادو','Lava Cake':'لافا كيك',
 };
 const arabic=new Map(Object.entries(translations).map(([a,b])=>[normalizeName(a),b]));
 export function catalogNames(group){

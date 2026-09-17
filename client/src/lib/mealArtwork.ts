@@ -9,11 +9,11 @@ export function mealArtworkUrl(meal: { _id?: unknown; id?: unknown; publicMealId
 }
 
 /**
- * الصورة الجديدة لو كانت في القائمة، وإلا **صورة الأدمن المرفوعة** كما هي.
- * بلا هذا البديل كانت أي وجبة جديدة يضيفها الطاقم تظهر «الصورة الجديدة قريبًا» حتى إعادة النشر.
+ * **صورة لوحة التحكم المرفوعة أولاً** فيظهر ما يرفعه الطاقم فوراً، والصورة المدموجة احتياط لمن لا صورة له.
+ * (منذ 2026-09-17 رُفعت صور التصميم الجديد إلى الخادم لكل البطاقات، فلم يعد الملف المدموج هو المصدر.)
  */
 export function withMealArtwork<T extends { _id?: unknown; publicMealId?: unknown; imageUrl?: unknown }>(meal: T) {
   const uploaded = typeof meal.imageUrl === "string" && meal.imageUrl ? meal.imageUrl : undefined;
-  const imageUrl = mealArtworkUrl(meal) || uploaded;
+  const imageUrl = uploaded || mealArtworkUrl(meal);
   return { ...meal, imageUrl, canonicalImageUrl: imageUrl };
 }
