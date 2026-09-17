@@ -3,19 +3,20 @@ import { subscriptionMessage, mealAllowance, translate as localize, localizedFie
  * الرئيسية — هيرو تحريري هادئ (كحلي + سماوي)، صف ثقة، الخطط، الأكثر طلباً، آراء، أسئلة، ختام.
  * كل البيانات من نفس استعلامات الموقع؛ لا منطق هنا سوى العرض.
  */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { useQuery } from "convex/react";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { api, SITE_URL } from "@/api";
+import { api, convex, SITE_URL } from "@/api";
 import { restaurantPhone } from '@/contact';
 import { colors, radii, softShadow } from "@/theme";
 import { Btn, SectionTitle, T } from "@/components/ui";
 import { MealCard } from "@/components/MealCard";
-import { HomeHero } from "@/components/HomeHero";
+import { HomeHero, type HeroSlide } from "@/components/HomeHero";
+import { openWeb } from "@/openWeb";
 import { SmartPlanEntry } from '@/components/SmartPlanEntry';
 import { useCustomerSession } from '@/customerSession';
 import { TodayHome } from '@/components/TodayHome';
@@ -57,6 +58,14 @@ export default function Home() {
   const mealCatalog = useQuery(api.publicMeals.listMeals, {}) || [];
   const plans = useQuery(api.publicPlans.listByDuration, { duration: "week" }) || [];
   const settings = useQuery(api.restaurantSettings.get, {}) as any;
+  // شرائح الهيرو من لوحة التحكم (إعلانات وأطباق) — تتغيّر بلا بناء جديد للتطبيق.
+  // جلب اختياري لا اشتراك: تعذّر الإعلانات (خادم أقدم، انقطاع) لا يجوز أن يُسقط الصفحة الرئيسية.
+  const [heroSlides, setHeroSlides] = useState<HeroSlide[] | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    convex.query(api.banners.listAppSlides, {}).then((rows: HeroSlide[]) => { if (alive) setHeroSlides(rows); }).catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const phone = restaurantPhone(settings);
   const wa = (msg: string) => Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(localize(msg))}`);
 
@@ -74,6 +83,7 @@ export default function Home() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}
       scrollEventThrottle={100} onScroll={(event) => setHeroVisible(event.nativeEvent.contentOffset.y < 480)}>
       <HomeHero meals={best} fallback={heroImg} inset={insets.top} visible={heroVisible}
+        liveSlides={heroSlides} onOpenLink={(url) => { void openWeb(url).catch(() => {}); }}
         onPlans={() => router.push("/(tabs)/plans")}
         onMenu={() => router.push("/(tabs)/menu")}
         onContact={() => wa("مرحباً 👋\nأرغب في معرفة المزيد عن خطط أدرينالين الصحية.")} />
