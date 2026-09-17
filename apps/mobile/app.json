@@ -68,6 +68,18 @@
       "subscriberPushEnabled": true,
       "iosPushEnabled": false
     },
-    "owner": "meee87"
+    "owner": "meee87",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d2f443ec-a622-4dd1-a727-62983aaab4ba",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
+    }
   }
 }
