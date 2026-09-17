@@ -1,8 +1,8 @@
 import { translate as localize, contentLanguage as uiLanguage, useContentLanguage as useUILanguage } from '@/useContentLanguage';
 /** Subscriber profile is read-only; meal selection remains on the existing site. */
 import React, { useCallback, useRef, useState } from 'react';
-import Constants from 'expo-constants';
-import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { openWeb } from '@/openWeb';
 import { TextInput } from '@/components/LocalizedTextInput';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -17,6 +17,7 @@ import { Btn, T } from '@/components/ui';
 import { SubscriberDay } from '@/components/SubscriberDay';
 import { SmartPlanEntry } from '@/components/SmartPlanEntry';
 import { LinkNotifications } from '@/components/LinkNotifications';
+import { pushEnabled } from '@/pushEnabled';
 
 type Profile = {account:{fullName:string;email:string;phone:string};subscription:null|{
   id:string;skippedDates?:string[];loyaltyPoints?:number;loyaltyCredit?:number;referralCode?:string;
@@ -32,9 +33,10 @@ export default function Account() {
   const [email,setEmail]=useState(''), [password,setPassword]=useState('');
   const [show,setShow]=useState(false), [busy,setBusy]=useState(false), [loading,setLoading]=useState(false);
   const [error,setError]=useState(''), [profile,setProfile]=useState<Profile|null>(null);
+  const [registering,setRegistering]=useState(false), [fullName,setFullName]=useState(''), [regPhone,setRegPhone]=useState('');
   const lock=useRef(false), request=useRef(0);
   const openSite=async(path:string)=>{
-    try { await Linking.openURL(SITE_URL+path); } catch { setError('تعذّر فتح الموقع. حاول مرة أخرى.'); }
+    try { await openWeb(SITE_URL+path); } catch { setError('تعذّر فتح الموقع. حاول مرة أخرى.'); }
   };
   const load=useCallback(async()=>{
     const version=++request.current;
@@ -71,11 +73,57 @@ export default function Account() {
     } catch {setError('تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.');}
     finally{lock.current=false;setBusy(false);}
   };
+  /* إنشاء الحساب داخل التطبيق — Apple (Guideline 4) ترفض إخراج المستخدم إلى المتصفح للتسجيل. */
+  const register=async()=>{
+    if(lock.current||!ready)return;
+    const name=fullName.trim(), mail=email.trim(), digits=regPhone.replace(/\D/g,'');
+    if(name.length<3){setError('اكتب اسمك الكامل.');return;}
+    if(digits.length<8){setError('اكتب رقم جوال صحيحاً (8 أرقام على الأقل).');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){setError('اكتب بريداً إلكترونياً صحيحاً.');return;}
+    if(password.length<8){setError('كلمة المرور 8 أحرف على الأقل.');return;}
+    lock.current=true;setBusy(true);setError('');
+    try {
+      const created=await convex.mutation(api.customerAuth.register,{email:mail,password,phone:digits,fullName:name});
+      if(!created.success){setError(created.error||'تعذّر إنشاء الحساب.');return;}
+      const result=await convex.mutation(api.auth.authenticateUnified,{email:mail,password});
+      if(!result.success||result.accountType!=='customer'||!result.customer||!result.sessionToken){
+        setRegistering(false);setError('تم إنشاء الحساب. سجّل الدخول ببريدك وكلمة المرور.');return;
+      }
+      await setSession({accountId:result.customer.id,token:result.sessionToken});
+      setPassword('');setFullName('');setRegPhone('');setRegistering(false);
+    } catch {setError('تعذّر إنشاء الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
+    finally{lock.current=false;setBusy(false);}
+  };
+  /* حذف الحساب من داخل التطبيق — شرط Apple لكل تطبيق يتيح إنشاء حساب. يحذف حساب الدخول
+     وينهي كل جلساته؛ سجلات الاشتراك والفواتير تبقى لدى المطعم كسجل تجاري. */
+  const confirmDelete=()=>new Promise<boolean>((resolve)=>{
+    const msg=localize('سيُحذف حساب الدخول وبياناته نهائياً ولن يمكن استرجاعه. سجلات اشتراكك لدى المطعم لا تتأثر.');
+    if(Platform.OS==='web'){resolve(typeof window!=='undefined'&&window.confirm(msg));return;}
+    Alert.alert(localize('حذف الحساب؟'),msg,[
+      {text:localize('إلغاء'),style:'cancel',onPress:()=>resolve(false)},
+      {text:localize('نعم، احذف حسابي'),style:'destructive',onPress:()=>resolve(true)},
+    ],{cancelable:true,onDismiss:()=>resolve(false)});
+  });
+  const deleteAccount=async()=>{
+    if(!session||lock.current)return;
+    if(!(await confirmDelete()))return;
+    if(lock.current)return;
+    lock.current=true;setBusy(true);setError('');
+    try {
+      if(profile?.subscription&&pushEnabled()){
+        try{await convex.mutation(api.mobilePush.unregister,{customerId:profile.subscription.id,sessionToken:session.token});}catch{/* الحذف أهم من إلغاء الإشعارات */}
+      }
+      await convex.mutation(api.customerAuth.deleteMyAccount,{sessionToken:session.token});
+      request.current++;setProfile(null);setPassword('');await setSession(null);
+      setError('تم حذف حسابك.');
+    } catch {setError('تعذّر حذف الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
+    finally{lock.current=false;setBusy(false);}
+  };
   const logout=async()=>{
     if(!session||lock.current)return;
     lock.current=true;setBusy(true);setError('');
     try {
-      if(profile?.subscription&&(Constants.expoConfig?.extra as any)?.subscriberPushEnabled)
+      if(profile?.subscription&&pushEnabled())
         await convex.mutation(api.mobilePush.unregister,{customerId:profile.subscription.id,sessionToken:session.token});
       await convex.mutation(api.auth.logout,{sessionToken:session.token});
       request.current++;setProfile(null);setPassword('');await setSession(null);
@@ -85,20 +133,31 @@ export default function Account() {
   return <KeyboardAvoidingView style={{flex:1,backgroundColor:colors.bg}} behavior={Platform.OS==='ios'?'padding':undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[s.page,{paddingTop:insets.top+20,paddingBottom:insets.bottom+32}]}>
       <Image source={require('../../assets/brand-wordmark-original.png')} contentFit="contain" style={s.logo} accessibilityLabel={localize(String("أدرينالين للوجبات الصحية"))}/>
-      <T w="black" accessibilityRole="header" style={s.title}>{session?'حساب المشترك':'أهلًا بعودتك'}</T>
+      <T w="black" accessibilityRole="header" style={s.title}>{session?'حساب المشترك':registering?'إنشاء حساب جديد':'أهلًا بعودتك'}</T>
       <T style={s.intro}>{session?'تفاصيل حسابك واشتراكك، في مكان واحد.':'ادخل بحسابك الحالي لمتابعة تفاصيل اشتراكك.'}</T>
       {!!error&&<View accessibilityRole="alert" style={s.notice}><Ionicons name="alert-circle-outline" size={22} color={colors.navy2}/><T style={{flex:1,color:colors.navy2}}>{error}</T></View>}
       {!session ? <View style={s.panel}>
+        {registering && <>
+          <T w="bold" style={s.label}>الاسم الكامل</T>
+          <TextInput accessibilityLabel={localize(String("الاسم الكامل"))} value={fullName} onChangeText={setFullName} editable={!busy} autoComplete="name" style={[s.input,{textAlign:'auto',writingDirection:'auto'}]} placeholderTextColor={colors.muted2}/>
+          <T w="bold" style={s.label}>رقم الجوال</T>
+          <TextInput accessibilityLabel={localize(String("رقم الجوال"))} value={regPhone} onChangeText={setRegPhone} editable={!busy} keyboardType="phone-pad" autoComplete="tel" style={s.input} placeholder={localize(String("5xxxxxxx"))} placeholderTextColor={colors.muted2}/>
+        </>}
         <T w="bold" style={s.label}>البريد الإلكتروني</T>
         <TextInput accessibilityLabel={localize(String("البريد الإلكتروني"))} value={email} onChangeText={setEmail} editable={!busy} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" style={s.input} placeholder={localize(String("name@example.com"))} placeholderTextColor={colors.muted2}/>
         <T w="bold" style={s.label}>كلمة المرور</T>
         <View style={s.password}>
-          <TextInput accessibilityLabel={localize(String("كلمة المرور"))} value={password} onChangeText={setPassword} editable={!busy} secureTextEntry={!show} autoCapitalize="none" autoCorrect={false} autoComplete="current-password" style={[s.input,{flex:1,borderWidth:0,marginBottom:0}]} returnKeyType="go" onSubmitEditing={()=>void login()}/>
+          <TextInput accessibilityLabel={localize(String("كلمة المرور"))} value={password} onChangeText={setPassword} editable={!busy} secureTextEntry={!show} autoCapitalize="none" autoCorrect={false} autoComplete={registering?'new-password':'current-password'} style={[s.input,{flex:1,borderWidth:0,marginBottom:0}]} returnKeyType="go" onSubmitEditing={()=>void (registering?register():login())}/>
           <Pressable accessibilityRole="button" accessibilityLabel={localize(String(show?'إخفاء كلمة المرور':'إظهار كلمة المرور'))} onPress={()=>setShow(!show)} style={s.eye}><Ionicons name={show?'eye-off-outline':'eye-outline'} size={22} color={colors.muted2}/></Pressable>
         </View>
-        <Btn label={!ready?'جارٍ استعادة الجلسة…':busy?'جارٍ تسجيل الدخول…':'تسجيل الدخول'} disabled={busy||!ready} onPress={()=>void login()} style={{marginTop:18}}/>
-        <Pressable accessibilityRole="link" onPress={()=>void openSite('/customer/auth?reset=1')} style={s.link}><T w="bold" style={s.linkText}>نسيت كلمة المرور؟</T></Pressable>
-        <Btn label="إنشاء حساب على الموقع الرسمي" variant="outline" onPress={()=>void openSite('/customer/auth')}/>
+        {registering ? <>
+          <Btn label={busy?'جارٍ إنشاء الحساب…':'إنشاء الحساب'} disabled={busy||!ready} onPress={()=>void register()} style={{marginTop:18}}/>
+          <Btn label="لديّ حساب — تسجيل الدخول" variant="outline" disabled={busy} onPress={()=>{setRegistering(false);setError('');}} style={{marginTop:12}}/>
+        </> : <>
+          <Btn label={!ready?'جارٍ استعادة الجلسة…':busy?'جارٍ تسجيل الدخول…':'تسجيل الدخول'} disabled={busy||!ready} onPress={()=>void login()} style={{marginTop:18}}/>
+          <Pressable accessibilityRole="link" onPress={()=>void openSite('/customer/auth?reset=1')} style={s.link}><T w="bold" style={s.linkText}>نسيت كلمة المرور؟</T></Pressable>
+          <Btn label="إنشاء حساب جديد" variant="outline" disabled={busy} onPress={()=>{setRegistering(true);setError('');}}/>
+        </>}
         <T style={s.small}>{Platform.OS==='web'?'معاينة الويب تحتفظ بالجلسة أثناء تشغيل الصفحة فقط.':'تُحفظ الجلسة في التخزين الآمن للجهاز، دون حفظ كلمة المرور.'}</T>
       </View> : <>
         {loading ? <View accessibilityLabel={localize(String("جارٍ تحميل الاشتراك"))} style={s.panel}>{[0,1,2].map(i=><View key={i} style={{height:46,backgroundColor:colors.bg2,borderRadius:8,marginBottom:12}}/>)}</View> : profile ? <>
@@ -130,6 +189,7 @@ export default function Account() {
         </> : null}
         <Btn label="تحديث بيانات الاشتراك" variant="outline" disabled={loading||busy} onPress={()=>void load()}/>
         <Btn label={busy?'جارٍ تسجيل الخروج…':'تسجيل الخروج'} variant="outline" disabled={busy} onPress={()=>void logout()}/>
+        <Pressable accessibilityRole="button" accessibilityLabel={localize(String("حذف حسابي"))} disabled={busy} onPress={()=>void deleteAccount()} style={s.link}><Ionicons name="trash-outline" size={18} color="#B42318"/><T w="bold" style={[s.linkText,{color:'#B42318'}]}>حذف حسابي</T></Pressable>
       </>}
       <LinkNotifications/>
       <Btn label="منيو المطعم" variant="outline" onPress={()=>router.push('/restaurant-menu')}/>

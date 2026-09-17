@@ -1,6 +1,6 @@
 import { translate as localize, useContentLanguage as useUILanguage } from '@/useContentLanguage';
 import React, { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -10,6 +10,7 @@ import { restaurantPhone } from '@/contact';
 import { colors } from '@/theme';
 import { Btn, T } from '@/components/ui';
 import { useContentLanguage } from '@/useContentLanguage';
+import { openWeb } from '@/openWeb';
 
 // Content adapted from the official AboutPage and HowToSubscribe pages.
 const steps = [
@@ -31,7 +32,7 @@ export default function Information() {
   const textStyle = { textAlign: language === 'ar' ? 'right' as const : 'left' as const, writingDirection: language === 'ar' ? 'rtl' as const : 'ltr' as const };
   const open = async (url: string) => {
     setError('');
-    try { await Linking.openURL(url); }
+    try { await openWeb(url); }
     catch { setError('تعذّر فتح الرابط. حاول مرة أخرى.'); }
   };
   const title = page === 'about' ? t('عن أدرينالين', 'About Adrenaline') : page === 'how-to-subscribe' ? t('كيف تشترك؟', 'How to subscribe') : page === 'contact' ? t('تواصل معنا', 'Contact us') : t('الصفحة غير موجودة', 'Page not found');

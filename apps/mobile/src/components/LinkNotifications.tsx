@@ -4,7 +4,6 @@
  * يظهر فقط حين تُفعَّل الإشعارات (extra.subscriberPushEnabled).
  */
 import React, { useState } from 'react';
-import Constants from 'expo-constants';
 import { StyleSheet, View } from 'react-native';
 import { TextInput } from '@/components/LocalizedTextInput';
 import { api, convex } from '@/api';
@@ -13,6 +12,7 @@ import { colors, fonts } from '@/theme';
 import { Btn, T } from './ui';
 import { NotificationSettings } from './NotificationSettings';
 import { translate as localize } from '@/useContentLanguage';
+import { pushEnabled } from '@/pushEnabled';
 
 /** رسائل الأعمال تصل من الخادم في ConvexError.data. */
 const serverMessage = (e: unknown) => { const d = (e as any)?.data; return typeof d === 'string' && d ? d : ''; };
@@ -22,7 +22,7 @@ export function LinkNotifications() {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  if (!(Constants.expoConfig?.extra as any)?.subscriberPushEnabled || !ready) return null;
+  if (!pushEnabled() || !ready) return null;
 
   const link = async () => {
     const clean = code.toUpperCase().replace(/[^A-Z0-9]/g, '');

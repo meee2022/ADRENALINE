@@ -9,6 +9,7 @@ import { Btn,T } from './ui';
 import { SubscriberDay } from './SubscriberDay';
 import { NotificationSettings } from './NotificationSettings';
 import { useContentLanguage } from '@/useContentLanguage';
+import { pushEnabled } from '@/pushEnabled';
 export function TodayHome(){
   const { language } = useContentLanguage();
   const {session}=useCustomerSession();const router=useRouter();
@@ -43,7 +44,7 @@ export function TodayHome(){
     <Btn label="تحديث الحالة" variant="outline" disabled={loading} onPress={()=>void load()}/>
     {profile?.subscription&&<SubscriberDay key={`${profile.subscription.id}:${revision}`} customerId={profile.subscription.id} token={session.token} skippedDates={profile.subscription.skippedDates}/>}
     {/* يظهر فقط بعد تفعيل الإشعارات (علم subscriberPushEnabled) — زر غير عامل سبب رفض في مراجعة App Store */}
-    {profile?.subscription&&(Constants.expoConfig?.extra as any)?.subscriberPushEnabled&&<NotificationSettings customerId={profile.subscription.id}/>}
+    {profile?.subscription&&pushEnabled()&&<NotificationSettings customerId={profile.subscription.id}/>}
     {status&&!error&&<View style={{padding:16,gap:10,backgroundColor:colors.cyanSoft,borderRadius:16}}>
       <T>{status.pending?'خطتك بانتظار اعتماد الأخصائية':status.hasApprovedPlan?'خطتك معتمدة؛ تابع وجباتك وحالة التوصيل هنا.':!status.active?'اشتراكك غير متاح للاختيار حاليًا.':'راجع حالة اختياراتك.'}</T>
       {status.canStartSelection&&<Btn label="متابعة اختياراتك" onPress={()=>router.push('/menu')}/>}

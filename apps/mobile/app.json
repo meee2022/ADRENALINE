@@ -65,7 +65,8 @@
       "eas": {
         "projectId": "d2f443ec-a622-4dd1-a727-62983aaab4ba"
       },
-      "subscriberPushEnabled": true
+      "subscriberPushEnabled": true,
+      "iosPushEnabled": false
     },
     "owner": "meee87"
   }

@@ -3,7 +3,7 @@ import { subscriptionMessage, mealAllowance, translate as localize, localizedFie
 import React, { useCallback, useState } from "react";
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { planArtwork } from '@/planArtwork';
-import { Linking, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from "convex/react";
 import { Image } from 'expo-image';
@@ -13,6 +13,7 @@ import { restaurantPhone } from '@/contact';
 import { colors } from "@/theme";
 import { Btn, Chip, T } from "@/components/ui";
 import { PlanChoice, PlanOption, optionFingerprint, resolvePlanChoice, payablePrice } from '@/planChoice';
+import { openWeb } from '@/openWeb';
 
 const DURS = [{ id: "week", l: "أسبوع" }, { id: "two_weeks", l: "أسبوعان" }, { id: "month", l: "شهر" }] as const;
 
@@ -38,7 +39,7 @@ export default function Plans() {
   const phone = restaurantPhone(settings);
   const open = async (url: string, id: string) => {
     setError(null);
-    try { await Linking.openURL(url); } catch { setError({ id, text: 'تعذّر فتح الرابط. تحقق من الاتصال وحاول مرة أخرى.' }); }
+    try { await openWeb(url); } catch { setError({ id, text: 'تعذّر فتح الرابط. تحقق من الاتصال وحاول مرة أخرى.' }); }
   };
   const durLabel = DURS.find((d) => d.id === dur)!.l;
 

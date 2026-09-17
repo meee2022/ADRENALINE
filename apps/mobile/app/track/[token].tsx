@@ -1,11 +1,12 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { AppState, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, ScrollView, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, convex, SITE_URL } from '@/api';
 import { colors } from '@/theme';
 import { Btn, T } from '@/components/ui';
 import { useContentLanguage } from '@/useContentLanguage';
+import { openWeb } from '@/openWeb';
 
 const statuses: Record<string,[string,string]> = {
   DRAFT:['الخطة قيد المراجعة','Plan under review'], CONFIRMED:['تم تأكيد الوجبات','Meals confirmed'],
@@ -39,7 +40,7 @@ export default function DeliveryTracking() {
   },[load]));
   const text={textAlign:language==='ar'?'right' as const:'left' as const,writingDirection:language==='ar'?'rtl' as const:'ltr' as const};
   const fresh=!!data?.driver?.updatedAt&&Date.now()-data.driver.updatedAt<180000;
-  const open=async(url:string)=>{setLinkError(false);try{await Linking.openURL(url);}catch{setLinkError(true);}};
+  const open=async(url:string)=>{setLinkError(false);try{await openWeb(url);}catch{setLinkError(true);}};
   return <ScrollView style={s.screen} contentContainerStyle={[s.content,{paddingTop:insets.top+20,paddingBottom:insets.bottom+28}]}>
     <View style={s.row}>
       <Btn label={t('رجوع','Back')} variant="outline" onPress={()=>router.canGoBack()?router.back():router.replace('/order-tracking')}/>

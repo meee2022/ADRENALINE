@@ -8,13 +8,14 @@ import { useCustomerSession } from '@/customerSession';
 import { Btn,T } from './ui';
 import { translate } from '@/useContentLanguage';
 import { ensureOrdersChannel } from './NotificationRouter';
+import { pushEnabled } from '@/pushEnabled';
 /** token: جلسة الهاتف المربوط بكود؛ بدونها تُستخدم جلسة حساب البريد. */
 export function NotificationSettings({customerId,token}:{customerId:string;token?:string}){
   const {session}=useCustomerSession();
   const sessionToken=token||session?.token;const [message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   const enable=async()=>{
     const extra=Constants.expoConfig?.extra as any;
-    if(!extra?.subscriberPushEnabled){setMessage('خدمة إشعارات الجوال تنتظر نشر الخادم وإعداد مفاتيح Android وiOS.');return;}
+    if(!pushEnabled()){setMessage('خدمة إشعارات الجوال تنتظر نشر الخادم وإعداد مفاتيح Android وiOS.');return;}
     if(Platform.OS==='web'||!Device.isDevice){setMessage('فعّل الإشعارات من نسخة التطبيق المثبتة على هاتفك.');return;}
     const projectId=Constants.easConfig?.projectId||extra?.eas?.projectId;
     if(!projectId||!sessionToken){setMessage('إعداد الإشعارات أو جلسة الحساب غير مكتمل.');return;}

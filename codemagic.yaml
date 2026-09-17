@@ -106,18 +106,26 @@ workflows:
         script: |
           set -e
           cd apps/mobile
+          # إشعارات iOS بمفتاح واحد: IOS_PUSH_READY=true في مجموعة adrenaline-ios بعد تفعيل Push للمعرّف في
+          # Apple Developer وتجديد ملف التعريف ورفع مفتاح APNs إلى expo.dev. بدونه يُخفى زر الإشعارات على iOS
+          # (src/pushEnabled.ts) وتُزال الصلاحية أدناه — زر لا يعمل سبب رفض في المراجعة.
+          if [ "$IOS_PUSH_READY" = "true" ]; then
+            node -e "const f='app.json',j=JSON.parse(require('fs').readFileSync(f,'utf8'));j.expo.extra.iosPushEnabled=true;require('fs').writeFileSync(f,JSON.stringify(j,null,2)+'\n')"
+          fi
+          echo "iosPushEnabled: $(node -p "require('./app.json').expo.extra.iosPushEnabled")"
           npx expo prebuild --platform ios --clean
           ls ios/*.xcworkspace
           # مراحل بناء React Native داخل Xcode (codegen/bundle) تشغّل node؛ على السحابة node عبر nvm
           # لا يُرى من صدفة Xcode غير التفاعلية، فنثبّت مساره صراحةً.
           echo "export NODE_BINARY=$(command -v node)" > ios/.xcode.env.local
           cat ios/.xcode.env.local
-          # حزمة expo-notifications المثبَّتة تضيف صلاحية Push (aps-environment) تلقائياً، وملف التوقيع
-          # الحالي لا يشملها فتفشل الأرشفة. الميزة مخفية في التطبيق، فنزيل الصلاحية من المشروع المولَّد.
-          # عند تفعيل الإشعارات لاحقاً: أضف Push للمعرّف في Apple Developer وجدّد ملف التعريف ثم احذف هذا.
-          for ENT in ios/Adrenaline/Adrenaline.entitlements; do
-            if [ -f "$ENT" ]; then plutil -remove aps-environment "$ENT" || true; echo "entitlements:"; plutil -p "$ENT"; fi
-          done
+          # حزمة expo-notifications تضيف صلاحية Push (aps-environment) تلقائياً، وملف التوقيع بلا Push
+          # يُفشل الأرشفة؛ فما لم يكن IOS_PUSH_READY=true نزيل الصلاحية من المشروع المولَّد.
+          if [ "$IOS_PUSH_READY" != "true" ]; then
+            for ENT in ios/Adrenaline/Adrenaline.entitlements; do
+              if [ -f "$ENT" ]; then plutil -remove aps-environment "$ENT" || true; echo "entitlements:"; plutil -p "$ENT"; fi
+            done
+          fi
       - name: رقم البناء التالي من App Store Connect
         script: |
           set -e
