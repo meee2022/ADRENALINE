@@ -1309,9 +1309,10 @@ export const plansToBeReplaced = query({
     await requireStaff(ctx, args.sessionToken);
     if (!args.customerId || args.dates.length === 0) return { total: 0, rows: [] };
     const wanted = new Set(args.dates.map((d) => String(d).slice(0, 10)));
+    // بالفهرس: القراءة الكاملة لجدول الخطط تجاوزت حدّ 16MB للاستعلام (2026-09-18) فتعطّلت صفحة مراجعة الطلب.
     const all = await ctx.db
       .query("dailyPlans")
-      .filter((q: any) => q.eq(q.field("customerId"), args.customerId))
+      .withIndex("by_customerId", (q) => q.eq("customerId", args.customerId))
       .collect();
     const rows = (all as any[])
       .filter((p) => wanted.has(String(p.date).slice(0, 10)))

@@ -13,7 +13,6 @@ export const overview = query({
     await requireStaff(ctx, args.sessionToken);
     const customers = await ctx.db.query("customers").collect();
     const orders = await ctx.db.query("customerOrders").collect();
-    const plans = await ctx.db.query("dailyPlans").collect();
     const meals = await ctx.db.query("menuItems").collect();
 
     const activeCustomers = customers.filter((c) => c.isActive).length;
@@ -26,9 +25,9 @@ export const overview = query({
       .filter((o) => o.status !== "cancelled" && o.status !== "pending")
       .reduce((sum, o) => sum + (o.totalPrice || 0), 0);
 
-    // اليوم
+    // اليوم — بفهرس التاريخ: جدول الخطط كاملاً تجاوز حدّ القراءة (16MB) للاستعلام الواحد.
     const today = new Date().toISOString().split("T")[0];
-    const plansToday = plans.filter((p) => p.date === today);
+    const plansToday = await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", today)).collect();
     const todayMeals = plansToday.reduce((sum, p) => {
       return sum + (Array.isArray(p.items) ? p.items.filter((i: any) => !i?.isOff).length : 0);
     }, 0);
@@ -156,7 +155,11 @@ export const kitchenPerformance = query({
   handler: async (ctx, { days = 7, sessionToken }) => {
     await requireStaff(ctx, sessionToken);
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const plans = await ctx.db.query("dailyPlans").collect();
+    // الخطط المُنشأة حديثاً فقط بفهرس وقت الإنشاء المدمج (هامش يوم)، ثم نفس شرط createdAt بالضبط.
+    const plans = await ctx.db
+      .query("dailyPlans")
+      .withIndex("by_creation_time", (q) => q.gt("_creationTime", cutoff - 24 * 60 * 60 * 1000))
+      .collect();
     const recent = plans.filter((p) => (p.createdAt || 0) > cutoff);
 
     const byDate = new Map<string, { confirmed: number; prepared: number; delivered: number; cancelled: number }>();
@@ -229,7 +232,10 @@ export const driverStats = query({
     await requireStaff(ctx, args.sessionToken);
     const days = args.days || 7;
     const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
-    const plans = await ctx.db.query("dailyPlans").collect();
+    // التوصيل يحدث في تاريخ الخطة، فنقرأ الخطط من (بداية النافذة − 3 أيام) فصاعداً بفهرس التاريخ
+    // ثم نطبّق شرط deliveredAt نفسه — بدل قراءة الجدول كاملاً (تجاوز 16MB).
+    const fromDate = new Date(cutoff - 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const plans = await ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.gte("date", fromDate)).collect();
     const drivers = await ctx.db.query("users").collect();
     const nameOf = new Map(drivers.map((u: any) => [String(u._id), u.name || u.username || "?"]));
 
