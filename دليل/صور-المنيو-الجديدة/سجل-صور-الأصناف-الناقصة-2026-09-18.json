@@ -1,0 +1,64 @@
+[
+ {
+  "id": "kh7f5vfpsc48f0xpwe5rt7sxr58ajrzb",
+  "f": "Tropical Shot - شوت تروبيكال.png",
+  "en": "Tropical Shot",
+  "storageId": "kg29et3tf88pygwxjfz1ysshn98ej7q8",
+  "prev": {
+   "nameEn": "Tropical Shot",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh745yrgs3109rvfpr9dxbhy118akahd",
+  "f": "American Breakfast - فطور أمريكي.png",
+  "en": "American Breakfast",
+  "storageId": "kg2fkas8g3kn0k4ds071ejnf8n8ejr34",
+  "prev": {
+   "nameEn": "American Breakfast",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh783pbnrygkjx5cxcs9yg4yxn8anyst",
+  "f": "Turkey and Cheese Sandwich - ساندويتش ديك رومي وجبن.png",
+  "en": "Turkey and Cheese Sandwich (outlet)",
+  "storageId": "kg22b6xh11tzhvga3sryhmcj318eka96",
+  "prev": {
+   "nameEn": "Turkey and Cheese Sandwich",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh72f1y1br797k1xycfjhjy71s8ajd6g",
+  "f": "Turkey and Cheese Sandwich - ساندويتش ديك رومي وجبن.png",
+  "en": "Turkey and Cheese Sandwich (online)",
+  "storageId": "kg22b6xh11tzhvga3sryhmcj318eka96",
+  "prev": {
+   "nameEn": "Turkey and Cheese Sandwich",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ }
+]
+{
+ "fix": "Tropical Shot خلفية بملمس موحّد",
+ "storageId": "kg25tjdgms3ykhrwa3hyea6h2s8ej4bg",
+ "prev": {
+  "nameEn": "Tropical Shot",
+  "previousImageUrl": null,
+  "previousStorageId": "kg29et3tf88pygwxjfz1ysshn98ej7q8"
+ }
+}
+{
+ "fix": "Tropical Shot لاصق إنجليزي بلون العصير الحقيقي (تلوين زجاجة الديتوكس)",
+ "storageId": "kg2ej5v7r29vzfaqy9t237601d8emnaa",
+ "prev": {
+  "nameEn": "Tropical Shot",
+  "previousImageUrl": null,
+  "previousStorageId": "kg25tjdgms3ykhrwa3hyea6h2s8ej4bg"
+ }
+}
