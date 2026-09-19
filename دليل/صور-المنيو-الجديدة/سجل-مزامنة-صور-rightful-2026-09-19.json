@@ -184,7 +184,6 @@
     "/restaurant-catalog/kh76w39mradm3vr5pcsa12c2qs87mgyc.webp": "kg2470tcaswqtbxa98e02svmn18eqz7a",
     "/restaurant-catalog/kh73skpdq288ht3zebe0k7hadn8ajzdx.webp": "kg2aqhqv2z9bk6tcmxkqkmyjdn8ept88",
     "/restaurant-catalog/kh78mnr9dxs1jnbhy3k8p19rrd8akvjd.webp": "kg29s3jakpgvs2t387ec24hvy58epczj",
-    "/restaurant-catalog/kh72qahv2wy957tgb0nkm13yth8akpk7.webp": "kg2866vb2v5t5kqz0j5gjjjwtn8ephw5",
     "/restaurant-catalog/kh70bcfw874nj88z4hfcz3qjwx8aswx5.webp": "kg2bey2hyvz2b8e1gc2g193qzs8epxr2",
     "/restaurant-catalog/kh758y7pyf95nws582mmvcha6h8ar99h.webp": "kg22sn1n8bf5ynj7nmchmpj53x8eqjkh",
     "/restaurant-catalog/kh7bt118pwb3k27bc6v2skswx58ajz64.webp": "kg28c05dsmcqjv2xdsa908pn2h8eq4sr",
@@ -223,7 +222,8 @@
     "/restaurant-catalog/kh7ae791bv20rnmc6f9xtxk2sx80vhjm.webp": "kg249e2wapfvgv40rgvr9e7ngx8epzqp",
     "/restaurant-catalog/kh7288t8fxjr4rqm1f0t95q3px8akkqf.webp": "kg2dn9jpwtf2kted7k4qs5v3px8ephq8",
     "/restaurant-catalog/kh797hyphk144h5c55h4v6xywh8aka19.webp": "kg251xhxn3jcwmy80q3b70csn18ep4w4",
-    "/restaurant-catalog/kh75fhd2ec853ezmwt64061c5d8amhk8.webp": "kg29mgfsnqhpt97fxdnz1t5r258eqdhz"
+    "/restaurant-catalog/kh75fhd2ec853ezmwt64061c5d8amhk8.webp": "kg29mgfsnqhpt97fxdnz1t5r258eqdhz",
+    "/restaurant-catalog/kh72qahv2wy957tgb0nkm13yth8akpk7.webp": "kg2ce67akc7qw3jhjmn74bpejs8eqvh7"
   },
   "meals": {
     "kh723z73a09hjxt1bs6dynbre580tgh1": {
@@ -1746,14 +1746,6 @@
       "previousStorageId": "kg26z6qec0rf6sh0pn9x6htre98eqhv6",
       "at": "2026-09-19T14:54:44.492Z"
     },
-    "kh72qahv2wy957tgb0nkm13yth8akpk7": {
-      "nameEn": "Immune Shot",
-      "file": "/restaurant-catalog/kh72qahv2wy957tgb0nkm13yth8akpk7.webp",
-      "storageId": "kg2866vb2v5t5kqz0j5gjjjwtn8ephw5",
-      "previousImageUrl": null,
-      "previousStorageId": null,
-      "at": "2026-09-19T14:54:46.358Z"
-    },
     "kh70bcfw874nj88z4hfcz3qjwx8aswx5": {
       "nameEn": "GOLDEN",
       "file": "/restaurant-catalog/kh70bcfw874nj88z4hfcz3qjwx8aswx5.webp",
@@ -2065,6 +2057,14 @@
       "previousImageUrl": null,
       "previousStorageId": "kg2dcnrq9hd3nbk0z0n7mrc7kd8epb6m",
       "at": "2026-09-19T16:58:32.635Z"
+    },
+    "kh72qahv2wy957tgb0nkm13yth8akpk7": {
+      "nameEn": "Immune Shot",
+      "file": "/restaurant-catalog/kh72qahv2wy957tgb0nkm13yth8akpk7.webp",
+      "storageId": "kg2ce67akc7qw3jhjmn74bpejs8eqvh7",
+      "previousImageUrl": null,
+      "previousStorageId": "kg2866vb2v5t5kqz0j5gjjjwtn8ephw5",
+      "at": "2026-09-19T21:24:06.989Z"
     }
   }
 }

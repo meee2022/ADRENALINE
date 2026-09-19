@@ -85,6 +85,7 @@ for (const [english, arabic] of [
   ["Basbousa Coconut", "بسبوسة جوز الهند"],
   ["Basbousa Pistachio", "بسبوسة الفستق"],
   ["Tropical Shot", "شوت تروبيكال"],
+  ["Immune Shot", "شوت المناعة"],
   ["Beef Fajita Sandwich", "ساندويتش فاهيتا اللحم"],
   ["Ummali", "أم علي"],
   ["Vanilla Muffin", "مافن الفانيليا"],
