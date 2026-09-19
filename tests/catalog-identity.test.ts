@@ -39,6 +39,22 @@ describe('restaurant catalog identity',()=>{
    id:'energy-sub',en:'Energy Balls',ar:'كرات الطاقة',sourceIds:['energy-sub','energy-online'],channels:['subscription','online'],calories:251,
   });
  });
+ it('unifies beef shawarma across subscriber, online, and outlet records and keeps completed macros',()=>{
+  const rows=[
+   {_id:'shawarma-sub',nameEn:'Beef Shawarma Sandwich',nameAr:'ساندويتش شاورما لحم',isActive:true,category:'lunch',calories:374,protein:40,carbs:31,fats:10},
+   {_id:'shawarma-online',nameEn:'Beef Shawarma',nameAr:'شاورما لحم',isActive:true,isOnlineOnly:true,category:'lunch',calories:0,protein:0,carbs:0,fats:0},
+   {_id:'shawarma-outlet',nameEn:'BEEF SHAWARMA SANDWICH',nameAr:'ساندويتش شاورما لحم',isActive:true,isGymOnly:true,category:'lunch'},
+  ];
+  const before=structuredClone(rows);
+  const menu=buildCatalog(rows,{imageFor:()=>null,ingredientsFor:()=>[]});
+  expect(menu).toHaveLength(1);
+  expect(menu[0]).toMatchObject({
+   id:'shawarma-sub',en:'Beef Shawarma Sandwich',ar:'ساندويتش شاورما لحم',
+   sourceIds:['shawarma-sub','shawarma-online','shawarma-outlet'],channels:['subscription','online','outlet'],
+   calories:374,protein:40,carbs:31,fats:10,
+  });
+  expect(rows).toEqual(before);
+ });
  it('does not merge different meals from a shared photo or Arabic-only empty keys',()=>{
   expect(groupCatalogRows([{nameEn:'Crispy Strips',image:'same'},{nameEn:'Crispy Chicken Cutlets',image:'same'},{nameAr:'وجبة أ'},{nameAr:'وجبة ب'}])).toHaveLength(4);
  });

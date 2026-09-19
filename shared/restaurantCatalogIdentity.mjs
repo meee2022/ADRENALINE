@@ -5,6 +5,7 @@ const aliases = {
  'Beef Kofta Saffron Rice':'Beef Kofta with Saffron Rice',
  'Beef Kofta with Safran Rice':'Beef Kofta with Saffron Rice',
  'Beef Shawarma Beetroot Rice':'Beef Shawarma with Beetroot Rice',
+ 'Beef Shawarma':'Beef Shawarma Sandwich',
  'CHICKEN AVACADO SANDWICH':'Chicken Avocado Sandwich',
  'CLASSIC FRENCH TOAST':'French Toast',
  'CROISANT EGG SANDWICH':'Egg Croissant',
@@ -41,7 +42,7 @@ export function groupCatalogRows(rows){
 const translations = {
  'Adrenaline Beef Burger':'برجر لحم أدرينالين','Adrenaline Snickers':'سنيكرز أدرينالين',
  'Basbousa Coconut':'بسبوسة جوز الهند','Basbousa Pistachio':'بسبوسة الفستق',
- 'Beef Shawarma':'شاورما لحم','Beetroot Shot':'شوت الشمندر','Classic Fattoush Salad':'سلطة فتوش كلاسيكية',
+ 'Beef Shawarma':'ساندويتش شاورما لحم','Beef Shawarma Sandwich':'ساندويتش شاورما لحم','Beetroot Shot':'شوت الشمندر','Classic Fattoush Salad':'سلطة فتوش كلاسيكية',
  'Crispy Chicken Burger':'برجر الدجاج المقرمش','Detox Shot':'شوت ديتوكس','Energy Balls 3pcs':'كرات الطاقة - 3 قطع',
  'French Toast':'فرنش توست','Fresh Mandarin with Pomegranate':'يوسفي طازج مع الرمان',
  'Fresh Orange Juice':'عصير برتقال طازج','Fresh Pineapple Cut':'قطع أناناس طازجة',
