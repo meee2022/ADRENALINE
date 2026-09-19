@@ -55,6 +55,19 @@ describe('restaurant catalog identity',()=>{
   });
   expect(rows).toEqual(before);
  });
+ it('uses the subscriber matcha identity and nutrition for the equivalent online drink',()=>{
+  const rows=[
+   {_id:'matcha-sub',nameEn:'Matcha Smoothie Shake',nameAr:'سموثي ماتشا شيك',isActive:true,category:'snack',calories:260,protein:11,carbs:36,fats:8},
+   {_id:'matcha-online',nameEn:'Matcha Glow Juice',nameAr:'عصير ماتشا جلو',isActive:true,isOnlineOnly:true,category:'snack',calories:0,protein:0,carbs:0,fats:0},
+  ];
+  const menu=buildCatalog(rows,{imageFor:()=>null,ingredientsFor:()=>[]});
+  expect(menu).toHaveLength(1);
+  expect(menu[0]).toMatchObject({
+   id:'matcha-sub',en:'Matcha Smoothie Shake',ar:'سموثي ماتشا شيك',
+   sourceIds:['matcha-sub','matcha-online'],channels:['subscription','online'],
+   calories:260,protein:11,carbs:36,fats:8,
+  });
+ });
  it('does not merge different meals from a shared photo or Arabic-only empty keys',()=>{
   expect(groupCatalogRows([{nameEn:'Crispy Strips',image:'same'},{nameEn:'Crispy Chicken Cutlets',image:'same'},{nameAr:'وجبة أ'},{nameAr:'وجبة ب'}])).toHaveLength(4);
  });
