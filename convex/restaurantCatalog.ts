@@ -19,9 +19,13 @@ export const list = query({
       })
     );
     const imageOf = (r: any) => urls.get(String(r._id)) || (/^https:\/\//.test(r.imageUrl || "") ? r.imageUrl : null);
+    const imagePriority = (r: any) => r.isOnlineOnly ? 0 : r.isGymOnly ? 2 : 1;
     return buildCatalog(rows as any[], {
-      // صورة البطاقة الممثِّلة أولاً ثم أي بطاقة لنفس الطبق في قناة أخرى.
-      imageFor: (group: any[], r: any) => [r, ...group].map(imageOf).find(Boolean) ?? null,
+      // العرض العام يفضّل نسخة الأونلاين المعتمدة عند توحيد سجلات الطبق نفسه.
+      // هذا ترتيب صورة فقط ولا يغيّر السجلات أو دورة الطلبات والمطبخ.
+      imageFor: (group: any[], r: any) => [...new Set([r, ...group])]
+        .sort((a: any, b: any) => imagePriority(a) - imagePriority(b))
+        .map(imageOf).find(Boolean) ?? null,
       ingredientsFor: (group: any[], r: any) => [r, ...group].map((x) => x.ingredients).find((l) => Array.isArray(l) && l.length) ?? [],
     }) as {
       id: string; sourceIds: string[]; ingredients: string[]; ar: string; en: string; category: string;

@@ -22,6 +22,15 @@ const approved = [
   ["Greek Infusion", "جرِيك إنفيوجن", "exec-e45b92d3-2270-4e50-a7b4-a603663326de.png"],
   ["Mix Strawberry & Blueberry", "مزيج الفراولة والتوت الأزرق", "exec-ae9781f4-2a4b-4d8d-a75c-203b73149c16.png"],
   ["Raspberry Rice Pudding", "بودينغ الأرز بالتوت", "exec-872a66f2-8b5f-4efe-8f3f-6ff6c4b97cfa.png"],
+  ["Chocolate Muffin", "مافن الشوكولاتة", "exec-07e313f9-bea1-40ec-bfce-92631fc15918.png"],
+  ["Crispy Chicken", "دجاج مقرمش", "exec-4e5375d6-c55b-4c82-a5dd-188b174d680c.png"],
+  ["Crispy Chicken w Honey Mustard", "دجاج مقرمش بصوص العسل والخردل", "exec-6ff78d1c-96c8-4693-8b9a-d62229792940.png"],
+  ["Crispy Chicken w Rice", "دجاج مقرمش مع الأرز", "exec-c96b0c81-1ae5-455f-8cab-d8b54408ff84.png"],
+  ["Tenderloin w Rice", "تندرلوين مع الأرز", "exec-cc716e79-7899-4c9f-b522-8175caf4eade.png"],
+  ["Chicken Breast w Rice", "صدر دجاج مشوي مع الأرز", "exec-dfc2e478-5a77-41df-9562-2aaf2b3d214c.png"],
+  ["Crispy Chicken Wrap", "راب الدجاج المقرمش", "exec-8680ee5f-1377-40e0-a7f5-fe6a24c1e994.png"],
+  ["Teriyaki Tofu w Rice", "توفو ترياكي مع الأرز", "exec-1a55e9e2-f152-4799-91b5-9697a69789e3.png"],
+  ["Chicken Alfredo", "دجاج ألفريدو", "exec-e2d5416c-56e3-4cf3-a688-e0012c331a67.png"],
 ];
 
 const generatedDir = path.join(
@@ -75,6 +84,10 @@ for (const [english, arabic, generatedFile] of approved) {
 for (const [english, arabic] of [
   ["Basbousa Coconut", "بسبوسة جوز الهند"],
   ["Basbousa Pistachio", "بسبوسة الفستق"],
+  ["Tropical Shot", "شوت تروبيكال"],
+  ["Beef Fajita Sandwich", "ساندويتش فاهيتا اللحم"],
+  ["Ummali", "أم علي"],
+  ["Vanilla Muffin", "مافن الفانيليا"],
 ]) {
   const bilingualName = `${english} - ${arabic}.png`;
   const sourcePath = path.join(onlineDir, bilingualName);
