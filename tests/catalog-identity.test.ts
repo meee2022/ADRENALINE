@@ -9,6 +9,36 @@ describe('restaurant catalog identity',()=>{
   const rows=[{_id:'a',nameEn:'Beef Kofta w/Saffron Rice',nameAr:'old',isGymOnly:true},{_id:'b',nameEn:'Beef Kofta with Safran Rice',nameAr:'كفتة مع أرز الزعفران'}];
   const groups=groupCatalogRows(rows);expect(groups).toHaveLength(1);expect(groups[0].map((r:any)=>r._id)).toEqual(['a','b']);expect(catalogNames(groups[0])).toEqual({ar:'كفتة مع أرز الزعفران',en:'Beef Kofta with Saffron Rice'});
  });
+ it('uses the subscription identity for equivalent online and outlet products without changing source rows',()=>{
+  const rows=[
+   {_id:'talbina-sub',nameEn:'Talbina',nameAr:'تلبينة',isActive:true,category:'snack',schedule:[{week:2,day:'saturday'}]},
+   {_id:'talbina-online',nameEn:'Talbina Majdoul',nameAr:'TALBINA MAJDOUL',isActive:true,isOnlineOnly:true,category:'snack',priceQAR:30},
+   {_id:'detox-outlet',nameEn:'DETOX',nameAr:'DETOX',isActive:true,isGymOnly:true,category:'snack'},
+   {_id:'detox-online',nameEn:'Detox Shot',nameAr:'DETOX SHOT',isActive:true,isOnlineOnly:true,category:'snack'},
+  ];
+  const before=structuredClone(rows);
+  const menu=buildCatalog(rows,{imageFor:()=>null,ingredientsFor:()=>[]});
+  expect(menu).toHaveLength(2);
+  expect(menu.find((m:any)=>m.en==='Talbina')).toMatchObject({
+   id:'talbina-sub',sourceIds:['talbina-sub','talbina-online'],channels:['subscription','online'],ar:'تلبينة',
+  });
+  expect(menu.find((m:any)=>m.en==='Detox')).toMatchObject({
+   sourceIds:['detox-outlet','detox-online'],channels:['outlet','online'],
+  });
+  // التجميع للعرض فقط: لا يعيد تسمية السجلات ولا يغيّر الجدولة أو الأسعار.
+  expect(rows).toEqual(before);
+ });
+ it('shows the subscription and three-piece online energy balls as one product card',()=>{
+  const rows=[
+   {_id:'energy-sub',nameEn:'Energy Balls',nameAr:'كرات الطاقة',isActive:true,category:'snack',calories:251,schedule:[{week:2,day:'tuesday'}]},
+   {_id:'energy-online',nameEn:'Energy Balls 3pcs',nameAr:'ENERGY BALLS 3PCS',isActive:true,isOnlineOnly:true,category:'snack',priceQAR:24},
+  ];
+  const menu=buildCatalog(rows,{imageFor:()=>null,ingredientsFor:()=>[]});
+  expect(menu).toHaveLength(1);
+  expect(menu[0]).toMatchObject({
+   id:'energy-sub',en:'Energy Balls',ar:'كرات الطاقة',sourceIds:['energy-sub','energy-online'],channels:['subscription','online'],calories:251,
+  });
+ });
  it('does not merge different meals from a shared photo or Arabic-only empty keys',()=>{
   expect(groupCatalogRows([{nameEn:'Crispy Strips',image:'same'},{nameEn:'Crispy Chicken Cutlets',image:'same'},{nameAr:'وجبة أ'},{nameAr:'وجبة ب'}])).toHaveLength(4);
  });

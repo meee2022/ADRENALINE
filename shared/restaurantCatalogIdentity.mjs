@@ -16,9 +16,19 @@ const aliases = {
  'Mongolian Noodles':'Mongolian Beef Noodles',
  'MATCHA CHEESE CAKE':'Matcha Cheesecake',
  'Ummali':'Umm Ali',
+ // نفس المنتج مسجل بأسماء القنوات المختلفة. نبقي كل سجل تشغيلياً
+ // (الاشتراك/الأونلاين/المنفذ) ونجمعها تحت هوية واحدة في الكتالوج.
+ 'Talbina Majdoul':'Talbina',
+ 'Detox Shot':'Detox',
+ 'Water Alkaline 500ml':'Water Alkaline Small',
+ 'Shakshouka':'New Egg Shakshouka',
+ 'Energy Balls 3pcs':'Energy Balls',
  'Fajita Beef Sandwich':'Beef Fajita Sandwich',
  'Healthy Chicken Majboos':'Healthy Chicken Majbous',
  'Chicken Alfredo Pasta':'Chicken Alfredo',
+ 'Oxygen Chips Chipotle Chilli':'Oxygen Chips Chipotle Chili',
+ 'Oxygen Chips Sweet Chilli Pepper':'Oxygen Chips Sweet Chili Pepper',
+ 'Oxygen Chips Sweet Honey BBQ':'Oxygen Chips Hot Honey BBQ',
  'PROTIEN BROWNIES':'Protein Brownies',
 };
 const lookup=new Map(Object.entries(aliases).map(([a,b])=>[normalizeName(a),b]));
@@ -40,9 +50,9 @@ const translations = {
  'Halloumi Pesto Sandwich':'ساندويتش حلوم بالبيستو','Hazelnut Lava Cake':'لافا كيك بالبندق',
  'Heaven Ball':'هيفن بول','Kunafa Pistachio Balls':'كرات الكنافة بالفستق','Matcha Cheesecake':'تشيز كيك الماتشا',
  'Matcha Glow Juice':'عصير ماتشا جلو','Mix Pomegranate&pineapple':'مزيج الرمان والأناناس',
- 'Mix Strawberry & Blueberry':'مزيج الفراولة والتوت الأزرق','Oxygen Chips Chipotle Chilli':'شيبس أوكسجين بفلفل الشيبوتلي',
+ 'Mix Strawberry & Blueberry':'مزيج الفراولة والتوت الأزرق','Oxygen Chips Chipotle Chili':'شيبس أوكسجين بفلفل الشيبوتلي',
  'Oxygen Chips Salted Vinegar':'شيبس أوكسجين بالملح والخل','Oxygen Chips Sweet Chilli Pepper':'شيبس أوكسجين بالفلفل الحلو الحار',
- 'Oxygen Chips Sweet Honey BBQ':'شيبس أوكسجين بالعسل والباربكيو','Pecan Caramel Cheesecake':'تشيز كيك البيكان والكراميل',
+ 'Oxygen Chips Sweet Chili Pepper':'شيبس أوكسجين بالفلفل الحلو الحار','Oxygen Chips Hot Honey BBQ':'شيبس أوكسجين بالعسل الحار والباربكيو','Pecan Caramel Cheesecake':'تشيز كيك البيكان والكراميل',
  'Pecan with Chocolate':'بيكان بالشوكولاتة','Pepperoni Pizza':'بيتزا بيبروني','Pistachio Lava Cake':'لافا كيك بالفستق',
  'Pizza Slice Pepperoni':'شريحة بيتزا بيبروني','Pizza Slice Veggie':'شريحة بيتزا خضار','Pomegranate':'رمان',
  'Power Ball':'باور بول','Protein Lava Cake':'بروتين لافا كيك','Protein Lazy Cake':'ليزي كيك بالبروتين',
