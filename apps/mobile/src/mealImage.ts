@@ -1,13 +1,9 @@
 /**
- * صورة الوجبة (عرض فقط): صورة الخادم أولاً فيظهر ما يرفعه الطاقم من لوحة التحكم فوراً بلا بناء جديد،
- * والصورة المدموجة احتياط عند غياب صورة الخادم أو تعذّر تحميلها. لا يمسّ معرّفات الوجبات ولا بياناتها.
+ * صورة الوجبة (عرض فقط) — **مصدر واحد: Convex**. ما يرفعه الطاقم من لوحة التحكم يظهر في
+ * التطبيق والموقع سواءً بسواء، بلا صور مدموجة في الكود تختلف بينهما.
  */
-import { menuArtwork } from '@/menuArtwork';
+export type MealImage = { uri: string };
 
-export type MealImage = number | { uri: string };
-
-export function mealImageSources(id: unknown, imageUrl?: unknown): MealImage[] {
-  const bundled = menuArtwork[String(id || '')];
-  const live = typeof imageUrl === 'string' && /^https:\/\//.test(imageUrl) ? { uri: imageUrl } : null;
-  return [live, bundled].filter(Boolean) as MealImage[];
+export function mealImageSources(_id: unknown, imageUrl?: unknown): MealImage[] {
+  return typeof imageUrl === 'string' && /^https:\/\//.test(imageUrl) ? [{ uri: imageUrl }] : [];
 }

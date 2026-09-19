@@ -1,0 +1,93 @@
+[
+ {
+  "id": "kh75byqx84v3whvy3nqdzregbh8ar8ye",
+  "en": "Crispy Chicken",
+  "ar": "دجاج مقرمش",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh75byqx84v3whvy3nqdzregbh8ar8ye.webp",
+  "storageId": "kg25jq3es6znky31b8q030a14x8eqaqa",
+  "prev": {
+   "nameEn": "Crispy Chicken",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh7ck0tsj4m3hajpq0r9n24enh8anfka",
+  "en": "Teriyaki Tofu w/Rice",
+  "ar": "توفو ترياكي مع الأرز",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh7ck0tsj4m3hajpq0r9n24enh8anfka.webp",
+  "storageId": "kg251c53yy7cmz0nj72rq8ejth8eq1md",
+  "prev": {
+   "nameEn": "Teriyaki Tofu w/Rice",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh7fq6ab1rvnhd5n69h5zwre758anxp2",
+  "en": "Crispy Chicken Wrap",
+  "ar": "راب الدجاج المقرمش",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh7fq6ab1rvnhd5n69h5zwre758anxp2.webp",
+  "storageId": "kg2c5h8q0c7wfd9g30raswqf7x8epjs9",
+  "prev": {
+   "nameEn": "Crispy Chicken Wrap",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh79egjx0ty2ggd4sqjx2r4cqd8aj4p9",
+  "en": "Chicken Alfredo",
+  "ar": "دجاج ألفريدو",
+  "ch": "online",
+  "file": "/restaurant-catalog/kh79egjx0ty2ggd4sqjx2r4cqd8aj4p9.webp",
+  "storageId": "kg2b7a712jvnqgjyrgy1frdc6d8epd3w",
+  "prev": {
+   "nameEn": "Chicken Alfredo",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh7fe9ryx4fqbwhp8jnbvqpfzh8aj61g",
+  "en": "Crispy Chicken w/ Honey Mustard",
+  "ar": "دجاج مقرمش بصوص العسل والخردل",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh7fe9ryx4fqbwhp8jnbvqpfzh8aj61g.webp",
+  "storageId": "kg22zeez1yvambrryq6esm99gh8eq0rg",
+  "prev": {
+   "nameEn": "Crispy Chicken w/ Honey Mustard",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh7bvhgdcpyvr9v8k03ftrvta98akakk",
+  "en": "Crispy Chicken w/Rice",
+  "ar": "صدور دجاج مقرمشة مع ارز",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh7bvhgdcpyvr9v8k03ftrvta98akakk.webp",
+  "storageId": "kg2cqqtdxdj7erjrgh0wvzzw9x8epbqk",
+  "prev": {
+   "nameEn": "Crispy Chicken w/Rice",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ },
+ {
+  "id": "kh744r8sf3mnskyy4h2tt6ew1x8aj8x3",
+  "en": "Chicken Breast w/Rice",
+  "ar": "صدر دجاج مع الأرز",
+  "ch": "outlet",
+  "file": "/restaurant-catalog/kh744r8sf3mnskyy4h2tt6ew1x8aj8x3.webp",
+  "storageId": "kg2fbmwxhsadashxepzkxtr6wn8eqrhb",
+  "prev": {
+   "nameEn": "Chicken Breast w/Rice",
+   "previousImageUrl": null,
+   "previousStorageId": null
+  }
+ }
+]

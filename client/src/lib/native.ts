@@ -14,6 +14,20 @@
 
 const SITE_ORIGIN = "https://adrenalinehealthy.com";
 
+/**
+ * تطبيق Expo يعرض لوحة التحكم داخل WebView: لا نوافذ منبثقة ولا طباعة ولا تنزيل ملفات،
+ * فنسلّم المستند للتطبيق عبر postMessage ليصنع PDF أصلياً ويفتح ورقة المشاركة.
+ */
+type NativeBridge = { postMessage: (data: string) => void };
+export function expoBridge(): NativeBridge | null {
+  try {
+    const b = (window as any).ReactNativeWebView;
+    return b && typeof b.postMessage === "function" ? (b as NativeBridge) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** هل نعمل داخل تطبيق المتجر (Capacitor) لا متصفح عادي؟ */
 export function isNativeShell(): boolean {
   try {
@@ -67,6 +81,13 @@ function blobToBase64(blob: Blob): Promise<string> {
  * الملف في ذاكرة التطبيق المؤقتة ثم تُفتح ورقة المشاركة ليحفظه المستخدم أو يرسله.
  */
 export async function downloadBlob(blob: Blob, filename: string): Promise<void> {
+  const bridge = expoBridge();
+  if (bridge) {
+    try {
+      bridge.postMessage(JSON.stringify({ type: "save-file", filename, base64: await blobToBase64(blob), mime: blob.type || "application/octet-stream" }));
+      return;
+    } catch { /* نكمل بالطريقة العادية */ }
+  }
   if (isNativeShell()) {
     try {
       const [{ Filesystem, Directory }, { Share }] = await Promise.all([

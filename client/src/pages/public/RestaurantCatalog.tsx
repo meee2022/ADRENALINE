@@ -4,7 +4,6 @@ import { Search, X, UtensilsCrossed, ArrowUp, Copy } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n';
 import { useQuery } from 'convex/react';
 import { api } from '@/../../convex/_generated/api';
-import approvedArtwork from '@shared/restaurantCatalogArtwork.json';
 import './restaurant-catalog.css';
 
 const categories = [
@@ -16,8 +15,8 @@ const categories = [
 ];
 const channelNames: Record<string,string[]> = {online:['أونلاين','Online'], subscription:['وجبات باقات الاشتراك','Subscription dishes'],outlet:['منافذ','Outlets']};
 type Dish = {id:string;sourceIds:string[];ingredients:string[];ar:string;en:string;category:string;channels:string[];image:string|null;calories:number|null;protein:number|null;carbs:number|null;fats:number|null};
-const approvedArtworkById = approvedArtwork as Record<string,string>;
-const imageForDish = (dish: Dish) => dish.sourceIds.map(id=>approvedArtworkById[id]).find(Boolean) || dish.image;
+// مصدر الصور الوحيد هو Convex: ما يُرفع من لوحة التحكم يظهر هنا وفي التطبيق سواءً بسواء.
+const imageForDish = (dish: Dish) => dish.image;
 const none: Dish[] = [];
 export default function RestaurantCatalog() {
   // قراءة حية: صورة أو سعرات تُعدَّل في لوحة التحكم تظهر هنا فوراً (كانت لقطة مجمّدة داخل الكود).

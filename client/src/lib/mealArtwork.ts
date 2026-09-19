@@ -14,6 +14,7 @@ export function mealArtworkUrl(meal: { _id?: unknown; id?: unknown; publicMealId
  */
 export function withMealArtwork<T extends { _id?: unknown; publicMealId?: unknown; imageUrl?: unknown }>(meal: T) {
   const uploaded = typeof meal.imageUrl === "string" && meal.imageUrl ? meal.imageUrl : undefined;
-  const imageUrl = uploaded || mealArtworkUrl(meal);
+  // مصدر واحد: Convex. لا بديل من ملفات الكود حتى لا يختلف الموقع عن التطبيق.
+  const imageUrl = uploaded;
   return { ...meal, imageUrl, canonicalImageUrl: imageUrl };
 }

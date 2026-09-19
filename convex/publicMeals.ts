@@ -489,3 +489,22 @@ export const adminImageUrls = internalQuery({
     return out;
   },
 });
+
+/**
+ * صور الوجبات بالمعرّف — مصدر واحد للموقع والتطبيق.
+ * عرضٌ فقط: يعيد رابط الصورة المخزّنة لكل معرّف ولا يمسّ الطلبات ولا الخطط.
+ */
+export const imagesByIds = query({
+  args: { ids: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    const out: Record<string, string> = {};
+    for (const raw of args.ids.slice(0, 60)) {
+      let meal: any = null;
+      try { meal = await ctx.db.get(raw as any); } catch { meal = null; }
+      if (!meal) continue;
+      const url = meal.storageId ? await ctx.storage.getUrl(meal.storageId) : (meal.imageUrl || null);
+      if (url) out[raw] = url;
+    }
+    return out;
+  },
+});

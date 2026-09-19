@@ -13,7 +13,7 @@
  */
 
 import { alertDialog } from "./dialogs";
-import { isNativeShell } from "./native";
+import { expoBridge, isNativeShell } from "./native";
 
 /** ينظّف اسم الملف من المحارف الممنوعة في ويندوز/ماك. */
 export function safeFileName(s: string): string {
@@ -76,6 +76,16 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
      فكان بيطلع «المتصفح منع النافذة المنبثقة» على الآيفون. الحل: نرسم المستند في
      iframe مخفي داخل الصفحة نفسها ونطبع منه؛ نفس الحيلة تنقذ المتصفح العادي لو
      المستخدم مانع النوافذ المنبثقة. */
+  // داخل تطبيق Expo (WebView): window.open وwindow.print لا يعملان — نمرّر المستند
+  // للتطبيق ليحوّله PDF بمحرّك النظام (يدعم العربية) ثم يفتح المشاركة/الحفظ.
+  const bridge = expoBridge();
+  if (bridge) {
+    try {
+      bridge.postMessage(JSON.stringify({ type: "print-doc", html: doc, fileName: fileName ? safeFileName(fileName) : "document" }));
+      return true;
+    } catch { /* نكمل بالطرق الأخرى */ }
+  }
+
   if (isNativeShell()) {
     void printNative(doc, fileName, autoPrint);
     return true;

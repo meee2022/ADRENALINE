@@ -5,9 +5,16 @@ import {groupCatalogRows,catalogNames} from '../shared/restaurantCatalogIdentity
 // @ts-ignore JavaScript build helper
 import {buildCatalog} from '../shared/restaurantCatalogBuild.mjs';
 describe('restaurant catalog identity',()=>{
- it('groups spelling aliases and keeps all IDs',()=>{
+ it('groups spelling aliases but shows the name stored in the database',()=>{
+  // الجداول في الكود للتجميع فقط. الاسم المعروض هو ما يكتبه الطاقم في لوحة التحكم (Convex)
+  // فلا يختلف الموقع عن التطبيق ولا يُلغى تعديل الطاقم.
   const rows=[{_id:'a',nameEn:'Beef Kofta w/Saffron Rice',nameAr:'old',isGymOnly:true},{_id:'b',nameEn:'Beef Kofta with Safran Rice',nameAr:'كفتة مع أرز الزعفران'}];
-  const groups=groupCatalogRows(rows);expect(groups).toHaveLength(1);expect(groups[0].map((r:any)=>r._id)).toEqual(['a','b']);expect(catalogNames(groups[0])).toEqual({ar:'كفتة مع أرز الزعفران',en:'Beef Kofta with Saffron Rice'});
+  const groups=groupCatalogRows(rows);expect(groups).toHaveLength(1);expect(groups[0].map((r:any)=>r._id)).toEqual(['a','b']);
+  expect(catalogNames(groups[0])).toEqual({ar:'كفتة مع أرز الزعفران',en:'Beef Kofta with Safran Rice'});
+ });
+ it('falls back to the translation table only when the Arabic field holds English',()=>{
+  const rows=[{_id:'c',nameEn:'LAVA CAKE',nameAr:'LAVA CAKE',isGymOnly:true}];
+  expect(catalogNames(groupCatalogRows(rows)[0])).toEqual({ar:'لافا كيك',en:'Lava Cake'});
  });
  it('uses the subscription identity for equivalent online and outlet products without changing source rows',()=>{
   const rows=[

@@ -6,7 +6,7 @@ import { convex, api } from '@/api';
 import { colors } from '@/theme';
 import { Btn, T } from './ui';
 import { Image } from 'expo-image';
-import { menuArtwork } from '@/menuArtwork';
+
 
 type Plan = { status?: string; items?: Array<{ isOff?: boolean; publicMealId?: string; mealId?: string; menuItemId?: string; mealNameAr?: string; mealNameEn?: string; quantity?: number }> };
 function qatarToday() {
@@ -33,7 +33,19 @@ export function SubscriberDay({ customerId, token, skippedDates = [] }: { custom
     return () => { active = false; };
   }, [customerId, token, date, retry, key]);
   const plan = result?.key === key ? result.plan : null;
+  // الصور من Convex وحده (نفس مصدر الموقع) — لا صور مدموجة في الكود.
+  const [images, setImages] = useState<Record<string, string>>({});
   const items = Array.isArray(plan?.items) ? plan.items.filter(i => i && !i.isOff && (i.publicMealId || i.mealId || i.menuItemId || i.mealNameAr || i.mealNameEn)) : [];
+  const mealIds = items.map(i => String(i.publicMealId || i.mealId || i.menuItemId || '')).filter(Boolean);
+  const idsKey = mealIds.join(',');
+  useEffect(() => {
+    let active = true;
+    if (!idsKey) { setImages({}); return; }
+    convex.query(api.publicMeals.imagesByIds, { ids: idsKey.split(',') })
+      .then((m: Record<string, string>) => { if (active) setImages(m || {}); })
+      .catch(() => { if (active) setImages({}); });
+    return () => { active = false; };
+  }, [idsKey]);
   const status = ({ DRAFT: 'مسودة', CONFIRMED: 'مؤكد', PREPARED: 'جاهز للتوصيل', OUT_FOR_DELIVERY:'خرج مع السائق', FAILED:'تعذّر التوصيل', CANCELLED:'ملغي', DELIVERED: 'تم التسليم' } as Record<string, string>)[plan?.status || ''] || 'حالة غير محددة';
   return <View style={s.panel}>
     <T w="black" style={s.heading}>وجباتك المسجّلة</T>
@@ -48,7 +60,7 @@ export function SubscriberDay({ customerId, token, skippedDates = [] }: { custom
     {error ? <><T accessibilityRole="alert" style={s.hint}>{error}</T><Btn label="إعادة المحاولة" onPress={() => setRetry(n => n + 1)}/></> : result?.key !== key ? <ActivityIndicator accessibilityLabel={localize(String("جارٍ تحميل الوجبات"))} color={colors.cyanDark} style={{ margin: 24 }}/> : !plan ? <T style={s.empty}>لا يوجد طلب مسجّل لهذا التاريخ.</T> : <>
       <T w="bold" style={s.status}>{status}</T>
       {items.length ? items.map((item, index) => <View key={index} style={s.row}>
-        {!!menuArtwork[item.publicMealId||item.mealId||item.menuItemId||'']&&<Image source={menuArtwork[item.publicMealId||item.mealId||item.menuItemId||'']} contentFit="cover" style={{width:72,height:72,borderRadius:12}} accessibilityLabel={(uiLanguage()==='en' ? item.mealNameEn || item.mealNameAr : item.mealNameAr || item.mealNameEn) || localize('وجبة اليوم')}/>}
+        {!!images[item.publicMealId||item.mealId||item.menuItemId||'']&&<Image source={{uri:images[item.publicMealId||item.mealId||item.menuItemId||'']}} cachePolicy="disk" contentFit="cover" style={{width:72,height:72,borderRadius:12}} accessibilityLabel={(uiLanguage()==='en' ? item.mealNameEn || item.mealNameAr : item.mealNameAr || item.mealNameEn) || localize('وجبة اليوم')}/>}
         <T literal style={{ flex: 1 }}>{(uiLanguage()==='en' ? item.mealNameEn || item.mealNameAr : item.mealNameAr || item.mealNameEn) || localize(`وجبة مسجّلة ${index + 1}`)}</T>
         {typeof item.quantity === 'number' && <T w="bold" style={{ color: colors.cyanDark }}>× {item.quantity}</T>}
       </View>) : <T style={s.empty}>لا توجد تفاصيل وجبات متاحة في هذا الطلب.</T>}

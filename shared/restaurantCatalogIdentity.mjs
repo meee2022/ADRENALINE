@@ -74,10 +74,17 @@ const translations = {
  'Chicken Avocado Wrap':'راب الدجاج بالأفوكادو','Lava Cake':'لافا كيك',
 };
 const arabic=new Map(Object.entries(translations).map(([a,b])=>[normalizeName(a),b]));
+// \u0627\u0644\u0627\u0633\u0645 \u0627\u0644\u0645\u0639\u0631\u0648\u0636 \u064a\u0623\u062a\u064a \u0645\u0646 \u0642\u0627\u0639\u062f\u0629 \u0627\u0644\u0628\u064a\u0627\u0646\u0627\u062a (Convex) \u0644\u0627 \u0645\u0646 \u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641: \u0645\u0627 \u064a\u0633\u0645\u0651\u064a\u0647 \u0627\u0644\u0637\u0627\u0642\u0645 \u0641\u064a \u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645
+// \u0647\u0648 \u0645\u0627 \u064a\u0638\u0647\u0631 \u0641\u064a \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0627\u0644\u062a\u0637\u0628\u064a\u0642. \u062c\u062f\u0648\u0644\u0627 aliases \u0648translations \u064a\u0628\u0642\u064a\u0627\u0646 **\u0644\u0644\u062a\u062c\u0645\u064a\u0639 \u0641\u0642\u0637** \u0648\u0644\u0633\u062f\u0651 \u0627\u0644\u0646\u0642\u0635
+// \u062d\u064a\u0646 \u064a\u0643\u0648\u0646 \u0627\u0644\u062d\u0642\u0644 \u0627\u0644\u0639\u0631\u0628\u064a \u0645\u0643\u062a\u0648\u0628\u0627\u064b \u0628\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 \u0623\u0648 \u0641\u0627\u0631\u063a\u0627\u064b.
 export function catalogNames(group){
  const preferred=group.find(r=>!r.isGymOnly&&!r.isOnlineOnly)||group[0];
- const raw=canonicalName(preferred);
- const en=raw.replace(/\b[A-Z][A-Z]+\b/g,s=>s[0]+s.slice(1).toLowerCase());
- const ar=arabic.get(normalizeName(raw))||group.map(r=>r.nameAr).find(n=>/[\u0600-\u06ff]/.test(n||''))||'';
+ const isArabic=(n)=>/[\u0600-\u06ff]/.test(n||'');
+ const tidy=(s)=>String(s||'').replace(/\b[A-Z][A-Z]+\b/g,(w)=>w[0]+w.slice(1).toLowerCase());
+ const en=tidy(preferred.nameEn||group.map(r=>r.nameEn).find(Boolean)||canonicalName(preferred));
+ const ar=(isArabic(preferred.nameAr)&&preferred.nameAr)
+   ||group.map(r=>r.nameAr).find(isArabic)
+   ||arabic.get(normalizeName(canonicalName(preferred)))
+   ||'';
  return {ar,en};
 }
