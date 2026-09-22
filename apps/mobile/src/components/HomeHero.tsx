@@ -103,7 +103,8 @@ export function HomeHero({ meals, fallback, inset, visible, liveSlides, onOpenLi
               </Pressable>}
           </Animated.View>
           </View>
-          {current && <View style={s.caption}>
+          {/* الإعلان صورة مصمَّمة كلامها بداخلها — تكرار العنوان تحتها يزحم الهيرو. العنوان يبقى للقارئ الصوتي في accessibilityLabel. */}
+          {current && !promo && <View style={s.caption}>
             <T w="bold" style={s.mealName}>{localizedField(current, 'name')}</T>
             {!!localizedField(current, 'description') && <T style={s.promoText}>{localizedField(current, 'description')}</T>}
           </View>}
