@@ -22,8 +22,11 @@ import { pushEnabled } from '@/pushEnabled';
 type Profile = {account:{fullName:string;email:string;phone:string};subscription:null|{
   id:string;skippedDates?:string[];loyaltyPoints?:number;loyaltyCredit?:number;referralCode?:string;
   packageLabel?:string;program?:string;isActive:boolean;startDate?:string;endDate?:string;
-  mealsPerDay?:number;snacksPerDay?:number;deliveryTime?:string;address?:string;allergies?:string[];
+  mealsPerDay?:number;snacksPerDay?:number;deliveryTime?:string;address?:string;allergies?:string[]|string;
 }};
+/* السيرفر يخزّن الحساسية نصاً عند أغلب المشتركين ("" أو "لاكتوز، مكسرات") وقائمة عند بعضهم.
+   استدعاء .map على النص كان يُسقط التطبيق فور فتح حساب أي مشترك مربوط. */
+const listOf=(v:unknown):string[]=>Array.isArray(v)?v.filter(x=>typeof x==='string'&&x.trim()):typeof v==='string'?v.split(/[,،\n]/).map(x=>x.trim()).filter(Boolean):[];
 export default function Account() {
   useUILanguage();
   const router=useRouter(), insets=useSafeAreaInsets();
@@ -173,14 +176,14 @@ export default function Account() {
               <Detail label="تاريخ البداية" value={profile.subscription.startDate}/><Detail label="تاريخ النهاية" value={profile.subscription.endDate}/>
               <Detail label="الوجبات يوميًا" value={profile.subscription.mealsPerDay}/><Detail label="السناك يوميًا" value={profile.subscription.snacksPerDay}/>
               <Detail label="موعد التوصيل" value={profile.subscription.deliveryTime}/><Detail label="عنوان التوصيل" value={profile.subscription.address}/>
-              <Detail label="الحساسية المسجلة" value={profile.subscription.allergies?.map(localize).join(uiLanguage()==='ar'?'، ':', ')}/>
+              <Detail label="الحساسية المسجلة" value={listOf(profile.subscription.allergies).map(localize).join(uiLanguage()==='ar'?'، ':', ')}/>
             </> : <T style={s.intro}>لا يوجد اشتراك مرتبط بهذا الحساب. تواصل مع الأخصائية لربطه.</T>}
           </View>
           {profile.subscription && <>
             <SubscriberDay key={session.accountId} customerId={profile.subscription.id} token={session.token} skippedDates={profile.subscription.skippedDates}/>
             <View style={s.panel}>
               <T w="black" style={s.section}>الأيام والولاء</T>
-              <Detail label="الأيام المتخطّاة" value={profile.subscription.skippedDates?.length ? profile.subscription.skippedDates.join('، ') : 'لا توجد أيام متخطّاة'}/>
+              <Detail label="الأيام المتخطّاة" value={listOf(profile.subscription.skippedDates).length ? listOf(profile.subscription.skippedDates).join('، ') : 'لا توجد أيام متخطّاة'}/>
               <Detail label="نقاط الولاء" value={profile.subscription.loyaltyPoints}/>
               <Detail label="رصيد الولاء (ر.ق)" value={profile.subscription.loyaltyCredit}/>
               <Detail label="كود الإحالة" value={profile.subscription.referralCode}/>
