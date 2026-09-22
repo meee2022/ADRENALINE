@@ -30,7 +30,7 @@ export default function BannersManagement() {
   const [subtitleAr, setSubtitleAr] = useState("");
   const [subtitleEn, setSubtitleEn] = useState("");
   // أين تظهر الشريحة ونوعها في التطبيق (طبق مقصوص بخلفية شفافة، أو إعلان بصورة كاملة مثل PayLater).
-  const [target, setTarget] = useState<"web" | "app" | "both">("web");
+  const [target, setTarget] = useState<"web" | "app" | "both">("app");
   const [kind, setKind] = useState<"promo" | "dish">("promo");
   const [linkUrl, setLinkUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -215,14 +215,13 @@ export default function BannersManagement() {
               <div>
                 <Label>{t("مكان الظهور", "Where it shows")}</Label>
                 <select value={target} onChange={(e) => setTarget(e.target.value as typeof target)} className="mt-1 w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-sm">
-                  <option value="web">{t("الموقع فقط", "Website only")}</option>
-                  <option value="app">{t("هيرو التطبيق فقط", "App hero only")}</option>
-                  <option value="both">{t("الموقع والتطبيق", "Website and app")}</option>
+                  <option value="app">{t("الهيرو — التطبيق والموقع", "Hero — app and website")}</option>
+                  <option value="web">{t("قديم: صور الموقع (لم تعد تُعرض)", "Legacy: website photos (no longer shown)")}</option>
                 </select>
               </div>
               {target !== "web" && (
                 <div>
-                  <Label>{t("نوع الشريحة في التطبيق", "App slide type")}</Label>
+                  <Label>{t("نوع الشريحة في الهيرو", "Hero slide type")}</Label>
                   <select value={kind} onChange={(e) => setKind(e.target.value as typeof kind)} className="mt-1 w-full h-10 rounded-md border border-slate-300 bg-white px-3 text-sm">
                     <option value="promo">{t("إعلان (صورة كاملة عرضية 7:5)", "Promo (full image, 7:5 landscape)")}</option>
                     <option value="dish">{t("طبق (PNG/WebP بخلفية شفافة)", "Dish (transparent PNG/WebP)")}</option>
@@ -343,7 +342,7 @@ export default function BannersManagement() {
                           {banner.isActive ? t("نشط", "Active") : t("مخفي", "Hidden")}
                         </span>
                         <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-cyan-50 text-cyan-800">
-                          {banner.target === "app" ? t("التطبيق", "App") : banner.target === "both" ? t("الموقع + التطبيق", "Web + app") : t("الموقع", "Website")}
+                          {banner.target === "app" || banner.target === "both" ? t("الهيرو", "Hero") : t("قديم — غير معروض", "Legacy — not shown")}
                           {banner.target && banner.target !== "web" ? ` · ${banner.kind === "dish" ? t("طبق", "Dish") : t("إعلان", "Promo")}` : ""}
                         </span>
                         <span className="text-xs text-slate-400">{t("ترتيب:", "Order:")} {banner.sortOrder}</span>

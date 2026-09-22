@@ -6,9 +6,9 @@ import { useMemo, useState } from "react";
 import { withMealArtwork } from "@/lib/mealArtwork";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { useBanners, usePublicPlans } from "@/lib/api";
+import { usePublicPlans } from "@/lib/api";
 import { PublicLayout } from "@/components/public/PublicLayout";
-import { HeroEditorial } from "@/components/public/HeroEditorial";
+import { HeroLive } from "@/components/public/HeroLive";
 import { PremiumTestimonials, PremiumFooter } from "@/components/public/PremiumSections";
 import {
   Check, ArrowLeft, ArrowRight, ShieldCheck, Sparkles, MessageCircle,
@@ -37,25 +37,13 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
 
   const { data: allPlans = [] } = usePublicPlans("week");
-  const { data: banners = [] } = useBanners();
   const settings = useQuery(api.restaurantSettings.get);
   // ✅ الصور الجديدة (مع الرجوع لصورة الأدمن) في الهيرو والأكثر طلباً كما في المنيو
-  const allMealsRaw = useQuery(api.publicMeals.list, {}) || [];
-  const allMeals = useMemo(() => (allMealsRaw as any[]).map(withMealArtwork), [allMealsRaw]);
   const bestSellersRaw = useQuery((api.publicMeals as any).bestSellers, { limit: 6 });
   const bestSellers = useMemo(() => ((bestSellersRaw || []) as any[]).map(withMealArtwork), [bestSellersRaw]);
   const bestSellersLoading = bestSellersRaw === undefined;
   const weekPlans = allPlans.filter((p: any) => p.duration === "week");
 
-  // Hero carousel: prefer admin-managed banners (lifestyle hero shots),
-  // fall back to real dish images, then stock.
-  const heroImages: string[] = (() => {
-    const bannerImgs = (banners || []).map((b: any) => b.imageUrl).filter(Boolean);
-    if (bannerImgs.length) return bannerImgs;
-    const dishImgs = allMeals.filter((m: any) => m.imageUrl).slice(0, 5).map((m: any) => m.imageUrl);
-    if (dishImgs.length) return dishImgs;
-    return ["/1.webp", "/2.webp", "/3.webp"];
-  })();
 
   const phoneRaw = (settings?.phone || "+97412345678").replace(/\D/g, "");
   const whatsappLink = (message: string) =>
@@ -78,16 +66,11 @@ export default function HomePage() {
   return (
     <PublicLayout>
       {/* ═══════════ HERO — clean premium carousel with real dish photos ═══════════ */}
-      <HeroEditorial
-        images={heroImages}
-        linesAr={["أكل حقيقي.", "سعرات محسوبة.", "ويوصلك طازج كل يوم."]}
-        linesEn={["Real food.", "Counted calories.", "Fresh at your door, daily."]}
-        subtitleAr="وجبات تُطبخ صباح كل يوم بإشراف أخصائيي تغذية، مصمّمة حول هدفك لا حول منيو المطاعم."
-        subtitleEn="Meals cooked every morning under nutritionist supervision, built around your goal — not a restaurant menu."
-        featured={bestSellers[0] || null}
-        onSubscribeClick={handleGeneralInquiry}
-        onMenuClick={() => setLocation("/public/menu")}
-        onSmartPlanClick={() => setLocation("/customer/smart-plan")}
+      {/* نفس هيرو التطبيق: إعلانات صفحة البانرات + أطباق متحركة، من مصدر واحد */}
+      <HeroLive
+        onPlans={() => setLocation("/public/plans")}
+        onMenu={() => setLocation("/public/menu")}
+        onSmartPlan={() => setLocation("/customer/smart-plan")}
       />
 
       {/* ═══════════ TRUST STRIP — صف هادئ بلا تداخل ولا تدرّجات ═══════════ */}
