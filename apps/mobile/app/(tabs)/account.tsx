@@ -36,6 +36,7 @@ export default function Account() {
   const [email,setEmail]=useState(''), [password,setPassword]=useState('');
   const [show,setShow]=useState(false), [busy,setBusy]=useState(false), [loading,setLoading]=useState(false);
   const [error,setError]=useState(''), [profile,setProfile]=useState<Profile|null>(null);
+  const [staffOpen,setStaffOpen]=useState(false);
   const [registering,setRegistering]=useState(false), [fullName,setFullName]=useState(''), [regPhone,setRegPhone]=useState('');
   const lock=useRef(false), request=useRef(0);
   const openSite=async(path:string)=>{
@@ -143,7 +144,8 @@ export default function Account() {
   };
   return <KeyboardAvoidingView style={{flex:1,backgroundColor:colors.bg}} behavior={Platform.OS==='ios'?'padding':undefined}>
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[s.page,{paddingTop:insets.top+20,paddingBottom:insets.bottom+32}]}>
-      <Image source={require('../../assets/brand-wordmark-original.png')} contentFit="contain" style={s.logo} accessibilityLabel={localize(String("أدرينالين للوجبات الصحية"))}/>
+      {/* مدخل الطاقم مخفي عن العملاء (ومراجع Apple): ضغطة مطوّلة ثانيتين على الشعار تُظهره. */}
+      <Pressable onLongPress={()=>setStaffOpen(true)} delayLongPress={2000} accessible={false}><Image source={require('../../assets/brand-wordmark-original.png')} contentFit="contain" style={s.logo} accessibilityLabel={localize(String("أدرينالين للوجبات الصحية"))}/></Pressable>
       <T w="black" accessibilityRole="header" style={s.title}>{session?'حساب المشترك':registering?'إنشاء حساب جديد':'أهلًا بعودتك'}</T>
       <T style={s.intro}>{session?'تفاصيل حسابك واشتراكك، في مكان واحد.':'ادخل بحسابك الحالي لمتابعة تفاصيل اشتراكك.'}</T>
       {!!error&&<View accessibilityRole="alert" style={s.notice}><Ionicons name="alert-circle-outline" size={22} color={colors.navy2}/><T style={{flex:1,color:colors.navy2}}>{error}</T></View>}
@@ -223,7 +225,7 @@ export default function Account() {
           ['/terms', 'الشروط والأحكام'],
         ].map(([path,label])=><Pressable key={path} accessibilityRole="link" onPress={()=>void openSite(path)} style={s.link}><T style={s.linkText}>{label}</T><Ionicons name="open-outline" size={16} color={colors.cyanDark}/></Pressable>)}
       </View>
-      <Pressable accessibilityRole="button" style={s.link} onPress={()=>router.push('/admin')}><Ionicons name="settings-outline" size={20} color={colors.muted2}/><T style={s.linkText}>مدخل الطاقم فقط (ليس للمشتركين) — لوحة التحكم</T></Pressable>
+      {staffOpen && <Pressable accessibilityRole="button" style={s.link} onPress={()=>router.push('/admin')}><Ionicons name="settings-outline" size={20} color={colors.muted2}/><T style={s.linkText}>مدخل الطاقم فقط (ليس للمشتركين) — لوحة التحكم</T></Pressable>}
     </ScrollView>
   </KeyboardAvoidingView>;
 }
