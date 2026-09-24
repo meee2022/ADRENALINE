@@ -2,7 +2,7 @@
  * @file client/src/components/public/PublicLayout.tsx
  * @description Layout for public pages (no sidebar)
  */
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, Home, UtensilsCrossed, CalendarDays, Globe, LayoutDashboard, User, LogOut, Check, Sparkles, Calculator, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
   const { language, setLanguage, dir, t } = useLanguage();
   const isRtl = (dir ?? (language === "ar" ? "rtl" : "ltr")) === "rtl";
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // القائمة داخل الهيدر الثابت وأطول من الشاشة: بلا قفل كان السحب يحرّك الصفحة خلفها (لاحظه المستخدم في التطبيق).
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileMenuOpen]);
   const { currentUser, currentCustomer, customerLogout } = useStore();
   
   // Fetch restaurant settings from database
@@ -251,7 +258,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
-            <div className="mt-2 space-y-1 border-t border-slate-200 pb-4 pt-3 xl:hidden"
+            <div className="mt-2 max-h-[calc(100dvh-6rem)] space-y-1 overflow-y-auto overscroll-contain border-t border-slate-200 bg-white pb-4 pt-3 xl:hidden"
               onClick={(e) => { if ((e.target as HTMLElement).closest("a")) setMobileMenuOpen(false); }}>
               {/* Dashboard Link - Show only for logged in admin users */}
               {currentUser && (
