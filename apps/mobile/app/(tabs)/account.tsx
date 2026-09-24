@@ -1,7 +1,7 @@
 import { translate as localize, contentLanguage as uiLanguage, useContentLanguage as useUILanguage } from '@/useContentLanguage';
 /** Subscriber profile is read-only; meal selection remains on the existing site. */
 import React, { useCallback, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Keyboard, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { openWeb } from '@/openWeb';
 import { TextInput } from '@/components/LocalizedTextInput';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -56,45 +56,51 @@ export default function Account() {
     } finally {if(version===request.current)setLoading(false);}
   },[session]);
   useFocusEffect(useCallback(()=>{void load();return()=>{request.current++;};},[load]));
+  /* فشل الدخول/التسجيل يُعرض في تنبيه يغطي الشاشة لا في سطر أعلاها: على iPad كان سطر الخطأ
+     يختفي خلف لوحة المفاتيح فبدا زر الدخول «لا يستجيب» — سبب رفض Apple مرتين (2.1a). */
+  const fail=(msg:string)=>{
+    setError(msg);Keyboard.dismiss();
+    if(Platform.OS!=='web')Alert.alert(localize('تعذّر إكمال الطلب'),localize(msg),[{text:localize('حسناً')}]);
+  };
   const login=async()=>{
     if(lock.current||!ready)return;
-    if(!email.trim()||!password){setError('أدخل البريد الإلكتروني وكلمة المرور.');return;}
+    if(!email.trim()||!password){fail('أدخل البريد الإلكتروني وكلمة المرور.');return;}
     lock.current=true;setBusy(true);setError('');
     try {
       const result=await convex.mutation(api.auth.authenticateUnified,{email:email.trim(),password});
-      if(!result.success){setError(result.error||'بيانات الدخول غير صحيحة.');return;}
+      if(!result.success){fail(result.error||'بيانات الدخول غير صحيحة.');return;}
       if(result.accountType!=='customer'||!result.customer||!result.sessionToken){
         if(result.sessionToken)await convex.mutation(api.auth.logout,{sessionToken:result.sessionToken});
-        setError('هذا المدخل للمشتركين. استخدم مدخل الطاقم أسفل الصفحة.');return;
+        fail('هذا المدخل للمشتركين. استخدم مدخل الطاقم أسفل الصفحة.');return;
       }
       try {await setSession({accountId:result.customer.id,token:result.sessionToken});}
       catch {
         await convex.mutation(api.auth.logout,{sessionToken:result.sessionToken});
-        setError('تعذّر حفظ الجلسة بأمان. حاول مرة أخرى.');return;
+        fail('تعذّر حفظ الجلسة بأمان. حاول مرة أخرى.');return;
       }
       setPassword('');
-    } catch {setError('تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.');}
+    } catch {fail('تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.');}
     finally{lock.current=false;setBusy(false);}
   };
   /* إنشاء الحساب داخل التطبيق — Apple (Guideline 4) ترفض إخراج المستخدم إلى المتصفح للتسجيل. */
   const register=async()=>{
     if(lock.current||!ready)return;
     const name=fullName.trim(), mail=email.trim(), digits=regPhone.replace(/\D/g,'');
-    if(name.length<3){setError('اكتب اسمك الكامل.');return;}
-    if(digits.length<8){setError('اكتب رقم جوال صحيحاً (8 أرقام على الأقل).');return;}
-    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){setError('اكتب بريداً إلكترونياً صحيحاً.');return;}
-    if(password.length<8){setError('كلمة المرور 8 أحرف على الأقل.');return;}
+    if(name.length<3){fail('اكتب اسمك الكامل.');return;}
+    if(digits.length<8){fail('اكتب رقم جوال صحيحاً (8 أرقام على الأقل).');return;}
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)){fail('اكتب بريداً إلكترونياً صحيحاً.');return;}
+    if(password.length<8){fail('كلمة المرور 8 أحرف على الأقل.');return;}
     lock.current=true;setBusy(true);setError('');
     try {
       const created=await convex.mutation(api.customerAuth.register,{email:mail,password,phone:digits,fullName:name});
-      if(!created.success){setError(created.error||'تعذّر إنشاء الحساب.');return;}
+      if(!created.success){fail(created.error||'تعذّر إنشاء الحساب.');return;}
       const result=await convex.mutation(api.auth.authenticateUnified,{email:mail,password});
       if(!result.success||result.accountType!=='customer'||!result.customer||!result.sessionToken){
-        setRegistering(false);setError('تم إنشاء الحساب. سجّل الدخول ببريدك وكلمة المرور.');return;
+        setRegistering(false);fail('تم إنشاء الحساب. سجّل الدخول ببريدك وكلمة المرور.');return;
       }
       await setSession({accountId:result.customer.id,token:result.sessionToken});
       setPassword('');setFullName('');setRegPhone('');setRegistering(false);
-    } catch {setError('تعذّر إنشاء الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
+    } catch {fail('تعذّر إنشاء الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
     finally{lock.current=false;setBusy(false);}
   };
   /* حذف الحساب من داخل التطبيق — شرط Apple لكل تطبيق يتيح إنشاء حساب. يحذف حساب الدخول

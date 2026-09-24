@@ -45,6 +45,10 @@ export const uiEnglish: Record<string, string> = {
   'الحساب غير متاح. سجّل الدخول مجددًا أو تواصل معنا.': 'Account unavailable. Sign in again or contact us.',
   'تعذّر تحميل الاشتراك. تحقق من الاتصال؛ قد تحتاج إلى تسجيل الدخول مجددًا.': 'Could not load your subscription. Check your connection; you may need to sign in again.',
   'أدخل البريد الإلكتروني وكلمة المرور.': 'Enter your email address and password.', 'بيانات الدخول غير صحيحة.': 'Incorrect sign-in details.',
+  // رسائل الخادم كما تصل حرفياً (بلا نقطة) + عنوان تنبيه الفشل — المراجع يستخدم الإنجليزية.
+  'بيانات الدخول غير صحيحة': 'Incorrect email or password.', 'الحساب غير نشط': 'This account is inactive.',
+  'محاولات كثيرة — حاول مرة أخرى بعد 15 دقيقة': 'Too many attempts — try again in 15 minutes.',
+  'تعذّر إكمال الطلب': 'Could not continue', 'حسناً': 'OK',
   'هذا المدخل للمشتركين. استخدم مدخل الطاقم أسفل الصفحة.': 'This sign-in is for subscribers. Staff can use the link below.',
   'تعذّر حفظ الجلسة بأمان. حاول مرة أخرى.': 'Could not save your session securely. Please try again.',
   'تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.': 'Could not sign in. Check your connection. After repeated attempts, wait 15 minutes.',
