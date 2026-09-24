@@ -21,7 +21,8 @@ export default function MealDetail() {
   const insets = useSafeAreaInsets();
   const result = useQuery(api.publicMeals.listMeals, {}) as any[] | undefined;
   const all = result || [];
-  const meal = all.find((m) => String(m._id) === String(id));
+  // روابط الموقع /public/meal/:slug تصل هنا بالـslug لا المعرّف.
+  const meal = all.find((m) => String(m._id) === String(id) || String((m as any).slug || "") === String(id));
   const [failures, setFailures] = useState(0);
   const source = meal && mealImageSources(meal._id, meal.imageUrl)[failures];
 

@@ -39,7 +39,7 @@ export default function Account() {
   const [registering,setRegistering]=useState(false), [fullName,setFullName]=useState(''), [regPhone,setRegPhone]=useState('');
   const lock=useRef(false), request=useRef(0);
   const openSite=async(path:string)=>{
-    try { await openWeb(SITE_URL+path); } catch { setError('تعذّر فتح الموقع. حاول مرة أخرى.'); }
+    try { await openWeb(SITE_URL+path); } catch { fail('تعذّر فتح الموقع. حاول مرة أخرى.'); }
   };
   const load=useCallback(async()=>{
     const version=++request.current;
@@ -125,18 +125,20 @@ export default function Account() {
       await convex.mutation(api.customerAuth.deleteMyAccount,{sessionToken:session.token});
       request.current++;setProfile(null);setPassword('');await setSession(null);
       setError('تم حذف حسابك.');
-    } catch {setError('تعذّر حذف الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
+      if(Platform.OS!=='web')Alert.alert(localize('تم حذف حسابك.'),'',[{text:localize('حسناً')}]);
+    } catch {fail('تعذّر حذف الحساب. تحقق من الاتصال وحاول مرة أخرى.');}
     finally{lock.current=false;setBusy(false);}
   };
   const logout=async()=>{
     if(!session||lock.current)return;
     lock.current=true;setBusy(true);setError('');
     try {
-      if(profile?.subscription&&pushEnabled())
-        await convex.mutation(api.mobilePush.unregister,{customerId:profile.subscription.id,sessionToken:session.token});
+      if(profile?.subscription&&pushEnabled()){
+        try{await convex.mutation(api.mobilePush.unregister,{customerId:profile.subscription.id,sessionToken:session.token});}catch{/* الخروج أهم من إلغاء الإشعارات */}
+      }
       await convex.mutation(api.auth.logout,{sessionToken:session.token});
       request.current++;setProfile(null);setPassword('');await setSession(null);
-    } catch {setError('لم يتم تسجيل الخروج. تحقق من الاتصال وحاول مرة أخرى.');}
+    } catch {fail('لم يتم تسجيل الخروج. تحقق من الاتصال وحاول مرة أخرى.');}
     finally{lock.current=false;setBusy(false);}
   };
   return <KeyboardAvoidingView style={{flex:1,backgroundColor:colors.bg}} behavior={Platform.OS==='ios'?'padding':undefined}>
@@ -207,7 +209,7 @@ export default function Account() {
       <Btn label="تتبّع طلبك" variant="outline" onPress={()=>router.push('/order-tracking')}/>
       <Btn label="حاسبة السعرات والماكروز" variant="outline" onPress={()=>router.push('/calorie-calculator')}/>
       {session ? <Btn label="إدارة اشتراكي على الموقع الرسمي" variant="outline" onPress={()=>void openSite('/customer/profile')}/> : null}
-      <Pressable accessibilityRole="link" style={s.link} onPress={()=>void Linking.openURL(`https://wa.me/${phone}`).catch(()=>setError('تعذّر فتح واتساب.'))}><Ionicons name="logo-whatsapp" size={21} color={colors.muted2}/><T w="bold" style={s.linkText}>تواصل مع الأخصائية</T></Pressable>
+      <Pressable accessibilityRole="link" style={s.link} onPress={()=>void Linking.openURL(`https://wa.me/${phone}`).catch(()=>fail('تعذّر فتح واتساب.'))}><Ionicons name="logo-whatsapp" size={21} color={colors.muted2}/><T w="bold" style={s.linkText}>تواصل مع الأخصائية</T></Pressable>
       <View style={s.panel}>
         <T w="black" style={s.section}>المساعدة والمعلومات</T>
         {[
@@ -221,7 +223,7 @@ export default function Account() {
           ['/terms', 'الشروط والأحكام'],
         ].map(([path,label])=><Pressable key={path} accessibilityRole="link" onPress={()=>void openSite(path)} style={s.link}><T style={s.linkText}>{label}</T><Ionicons name="open-outline" size={16} color={colors.cyanDark}/></Pressable>)}
       </View>
-      <Pressable accessibilityRole="button" style={s.link} onPress={()=>router.push('/admin')}><Ionicons name="settings-outline" size={20} color={colors.muted2}/><T style={s.linkText}>مدخل الطاقم — لوحة التحكم</T></Pressable>
+      <Pressable accessibilityRole="button" style={s.link} onPress={()=>router.push('/admin')}><Ionicons name="settings-outline" size={20} color={colors.muted2}/><T style={s.linkText}>مدخل الطاقم فقط (ليس للمشتركين) — لوحة التحكم</T></Pressable>
     </ScrollView>
   </KeyboardAvoidingView>;
 }

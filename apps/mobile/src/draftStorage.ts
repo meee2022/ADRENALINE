@@ -16,6 +16,8 @@ export async function loadDraft(id:string):Promise<Draft|null>{
   if(!d.items.every((i:any)=>typeof i.id==='string'&&Number.isInteger(i.week)&&typeof i.day==='string'))throw new Error('Invalid draft items');
   return d;
 }
+/** مسودة تالفة (JSON مكسور/إصدار قديم) كانت تجمّد شاشة الاختيار للأبد — تُحذف ويبدأ المشترك من جديد. */
+export async function discardDraft(id:string){await queues.get(key(id));await AsyncStorage.removeItem(key(id));}
 export function restorePicks(draft:Draft,catalog:SelectionMeal[]):Pick[]{
   return draft.items.map(i=>({week:i.week,day:i.day,meal:catalog.find(m=>m._id===i.id)||{_id:i.id,nameAr:'وجبة لم تعد متاحة',isActive:false}}));
 }

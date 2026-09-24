@@ -15,7 +15,7 @@ import { MealCard } from './MealCard';
 import { PublicSubscriber } from './SubscriberPhoneGate';
 import { mergeSmartSuggestions } from '@/smartSelection';
 import { PlanOverview } from './PlanOverview';
-import { loadDraft, saveDraft, restorePicks, makeDraft } from '@/draftStorage';
+import { loadDraft, saveDraft, restorePicks, makeDraft, discardDraft } from '@/draftStorage';
 
 const DAYS: Record<string, string> = { saturday: 'السبت', sunday: 'الأحد', monday: 'الإثنين', tuesday: 'الثلاثاء', wednesday: 'الأربعاء', thursday: 'الخميس' };
 const BLOCKS: Record<string, string> = {
@@ -68,7 +68,13 @@ export function SubscriberMealPlanner({ subscriberId, phone, onExit, initialMode
       setPicks(d?restorePicks(d,catalog):[]);attempt.current=d?.attempt||null;setOrderNumber(d?.submitted||'');
       setSaveState(d?'تمت استعادة المسودة؛ تُراجع الاختيارات مع الجدول الحالي.':'تُحفظ اختياراتك على هذا الجهاز.');
       setDraftKey(draftId);
-    }).catch(()=>{if(alive)setSaveState('تعذّر استعادة المسودة. أعد فتح الصفحة؛ لن نستبدلها بمسودة فارغة.');});
+    }).catch(async()=>{
+      await discardDraft(draftId).catch(()=>{});
+      if(!alive)return;
+      setPicks([]);attempt.current=null;setOrderNumber('');
+      setSaveState('تعذّرت قراءة مسودة قديمة على هذا الجهاز فبدأنا اختياراً جديداً.');
+      setDraftKey(draftId);
+    });
     return()=>{alive=false;};
   },[catalog,draftId,draftReady]);
   useEffect(()=>{
@@ -224,7 +230,7 @@ export function SubscriberMealPlanner({ subscriberId, phone, onExit, initialMode
       } else setMessage('تعذّر تأكيد نتيجة الإرسال. اختياراتك محفوظة هنا؛ أعد المحاولة بنفس الطلب، ولا تنشئ طلبًا جديدًا.');
     } finally { submitLock.current = false; setBusy(false); }
   };
-  if (orderNumber) return <View style={[s.status, { paddingTop: insets.top + 32 }]}><Ionicons name="checkmark-circle-outline" size={52} color={colors.cyanDark}/><T w="black" style={s.title}>تم إرسال خطتك</T><T>رقم الطلب: {orderNumber}</T><T style={s.copy}>وصلت للأخصائية للمراجعة، بنفس مسار الموقع الرسمي.</T><Btn label="العودة إلى القائمة" onPress={onExit}/></View>;
+  if (orderNumber) return <View style={[s.status, { paddingTop: insets.top + 32 }]}><Ionicons name="checkmark-circle-outline" size={52} color={colors.cyanDark}/><T w="black" style={s.title}>تم إرسال خطتك</T><T>رقم الطلب: {orderNumber}</T><T style={s.copy}>وصلت للأخصائية للمراجعة، بنفس مسار الموقع الرسمي.</T><Btn label="العودة إلى القائمة" onPress={onExit}/>{/* كانت الشاشة تُقفل على «تم الإرسال» لنفس الفترة للأبد، حتى لو رفضت الأخصائية الطلب. */}<Btn label="بدء اختيار جديد لهذه الفترة" variant="outline" onPress={()=>{setOrderNumber('');setPicks([]);attempt.current=null;}}/></View>;
   if (!customers || (customer && (!catalog || !settings || (customer.startDate && !rotation)))) return <View style={s.status}><T>جارٍ تحميل اشتراكك وجدول المطبخ…</T><Btn label="رجوع" variant="outline" onPress={onExit}/></View>;
   if (!customer) return <View style={s.status}><T>لم يعد هذا الاشتراك مرتبطًا بالرقم. تحقق من رقم الهاتف مجددًا.</T><Btn label="العودة" onPress={onExit}/></View>;
   return <View style={{ flex: 1, backgroundColor: colors.bg }}>

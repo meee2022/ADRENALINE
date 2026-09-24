@@ -11,7 +11,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.adrenalinehealthy.app",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Delivery staff take a photo as proof of delivery.",
+        "NSPhotoLibraryUsageDescription": "Delivery staff attach a photo as proof of delivery."
       },
       "buildNumber": "2"
     },
