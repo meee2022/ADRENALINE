@@ -10,7 +10,7 @@
  */
 import { v, ConvexError } from "convex/values";
 import { assertUniqueMealName } from "./lib/mealIdentity";
-import { mutation, query, type MutationCtx } from "./_generated/server";
+import { mutation, query, internalMutation, type MutationCtx } from "./_generated/server";
 import { requireStaff, requireAdmin, requireRoleOrPermission } from "./sessions";
 import { autoPostGymOrder, autoPostGymReturn, autoReverseGymOrder } from "./financePost";
 
@@ -997,7 +997,8 @@ async function buildGymOrderLines(
     if (unitPrice < 0) throw new ConvexError("سعر غير صالح");
     subtotal += listPrice * qty;
     total += unitPrice * qty;
-    mealsCount += qty;
+    // الصنف الموزون: qty بالجرام للسعر فقط، وهو قطعة واحدة في العدّ (كان 250 جم = 250 وجبة).
+    mealsCount += linePieces({ qty, priceUnit: meal.priceUnit });
     out.push({
       mealId: meal._id,
       mealNameEn: meal.gymNameEn || meal.nameEn || meal.nameAr || "",
@@ -1402,6 +1403,29 @@ export const listOrdersForReturns = query({
 
 /* ═══════════════════════════════ التقارير ═══════════════════════════════ */
 
+/** عدد القطع لسطر: الموزون (priceUnit=gram) قطعة واحدة، وغيره qty. */
+export function linePieces(l: { qty?: number; priceUnit?: string | null }) {
+  return String(l.priceUnit || "").toLowerCase() === "gram" ? 1 : Number(l.qty || 0);
+}
+
+/** تصحيح mealsCount للطلبيات القديمة (كانت تعدّ الجرامات وجبات). dryRun يعرض الفرق فقط. */
+export const recomputeMealsCount = internalMutation({
+  args: { dryRun: v.boolean() },
+  handler: async (ctx, args) => {
+    const orders = await ctx.db.query("gymOrders").collect();
+    const changed: { id: string; date: string; before: number; after: number }[] = [];
+    for (const o of orders as any[]) {
+      const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      const after = lines.reduce((s, l: any) => s + linePieces(l), 0);
+      if (after !== o.mealsCount) {
+        changed.push({ id: String(o._id), date: o.date, before: o.mealsCount, after });
+        if (!args.dryRun) await ctx.db.patch(o._id, { mealsCount: after });
+      }
+    }
+    return { orders: orders.length, changed: changed.length, sample: changed.slice(0, 15) };
+  },
+});
+
 /**
  * كشف حساب المنفذ بصيغة الشيت المعتمد لدى المنفذ:
  *   التاريخ · كمية الإنتاج · قيمة الإنتاج · كمية المرتجع · قيمة المرتجع
@@ -1449,7 +1473,7 @@ export const outletStatement = query({
       const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
       const gross = lines.reduce((s, l: any) => s + Number(l.qty || 0) * Number(l.listPrice || 0), 0);
       const x = row(o.date);
-      x.prodQty += lines.reduce((s, l: any) => s + Number(l.qty || 0), 0);
+      x.prodQty += lines.reduce((s, l: any) => s + linePieces(l), 0);
       x.prodAmount += gross;
       commission += gross * (await pctOf(o.gymId)) / 100;
     }
