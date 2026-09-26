@@ -724,8 +724,9 @@ export const getConsumptionReport = query({
     await requireStaff(ctx, args.sessionToken);
     const days = args.days ?? 30;
     const since = Date.now() - days * 86400000;
-    const movements = (await ctx.db.query("inventoryMovements").collect()).filter(
-      (m) => m.type === "consume" && m.createdAt >= since,
+    // حركات الفترة فقط بفهرس by_createdAt — كان يقرأ كل الحركات (أسرع جدول نمواً) مع كل خصم مخزون.
+    const movements = (await ctx.db.query("inventoryMovements").withIndex("by_createdAt", (q) => q.gte("createdAt", since)).collect()).filter(
+      (m) => m.type === "consume",
     );
     const items = await ctx.db.query("inventoryItems").collect();
     const itemMap = new Map(items.map((i) => [i._id, i]));

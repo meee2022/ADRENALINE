@@ -594,7 +594,11 @@ export const topItems = query({
     const paid = tickets.filter((t) => t.status === "PAID" && !t.isNonRevenue
       && (!args.branchId || String(t.branchId) === String(args.branchId)));
     const paidIds = new Set(paid.map((t) => String(t._id)));
-    const allLines = await ctx.db.query("posTicketLines").collect();
+    // أسطر فواتير الفترة فقط بفهرس by_ticket — كان يقرأ كل posTicketLines منذ البداية (نفس النتيجة).
+    const allLines: any[] = [];
+    for (const t of paid) {
+      allLines.push(...await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", t._id)).collect());
+    }
     const byItem = new Map<string, { name: string; qty: number; revenue: number }>();
     for (const l of allLines) {
       if (!paidIds.has(String(l.ticketId))) continue;
@@ -824,7 +828,7 @@ export const refundTicket = mutation({
       }
     }
     // 🔒 إرجاع المخزون + عكس نقاط الولاء (كان ناقص — الاسترجاع كان بيغيّر الحالة فقط)
-    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund"); } catch { /* لا نوقف */ }
+    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund", t.createdAt); } catch { /* لا نوقف */ }
     if (t.customerId) {
       try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
     }

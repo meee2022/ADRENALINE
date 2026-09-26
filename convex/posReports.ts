@@ -69,7 +69,11 @@ export const dailyReportData = internalQuery({
 
     // أفضل الأصناف
     const paidIds = new Set(paid.map((t) => String(t._id)));
-    const allLines = await ctx.db.query("posTicketLines").collect();
+    // أسطر فواتير اليوم فقط بفهرس by_ticket (نفس النتيجة) — كان يقرأ كل الأسطر مع كل تشغيل للكرون.
+    const allLines: any[] = [];
+    for (const t of paid) {
+      allLines.push(...await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", t._id)).collect());
+    }
     const byItem = new Map<string, { name: string; qty: number; revenue: number }>();
     for (const l of allLines) {
       if (!paidIds.has(String(l.ticketId))) continue;

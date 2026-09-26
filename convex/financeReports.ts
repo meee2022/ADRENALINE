@@ -290,7 +290,8 @@ export const itemAndMaterialPerformance = query({
       if (!hasCost) row.missingCost = true;
       itemMap.set(key, row);
     };
-    const tickets = await ctx.db.query("posTickets").collect();
+    // كل الجداول الكبيرة بفهرس نطاق التاريخ (نفس النتيجة) — كانت تُقرأ كاملة (4 جداول في استعلام واحد).
+    const tickets = await ctx.db.query("posTickets").withIndex("by_paidAt", (q: any) => q.gte("paidAt", startMs).lte("paidAt", endMs)).collect();
     for (const ticket of tickets as any[]) {
       const at = Number(ticket.paidAt || ticket.createdAt || 0);
       if (ticket.status !== "PAID" || ticket.isNonRevenue || at < startMs || at > endMs) continue;
@@ -300,9 +301,9 @@ export const itemAndMaterialPerformance = query({
         add(String(line.mealId || line.name), meal?.nameAr || line.name, meal?.nameEn || line.name, Number(line.qty), Number(line.lineTotal), 0, Number(meal?.costQAR || 0) * Number(line.qty), meal?.costQAR != null);
       }
     }
-    const gymOrders = await ctx.db.query("gymOrders").collect();
-    const validOrders = new Set(gymOrders.filter((o: any) => !o.isVoid && o.date >= args.fromDate && o.date <= args.toDate).map((o: any) => String(o._id)));
-    const gymLines = await ctx.db.query("gymOrderLines").collect();
+    const gymOrders = await ctx.db.query("gymOrders").withIndex("by_date", (q: any) => q.gte("date", args.fromDate).lte("date", args.toDate)).collect();
+    const validOrders = new Set(gymOrders.filter((o: any) => !o.isVoid).map((o: any) => String(o._id)));
+    const gymLines = await ctx.db.query("gymOrderLines").withIndex("by_date", (q: any) => q.gte("date", args.fromDate).lte("date", args.toDate)).collect();
     for (const line of gymLines as any[]) {
       if (!validOrders.has(String(line.orderId))) continue;
       const meal: any = line.mealId ? mealMap.get(String(line.mealId)) : null;
@@ -319,7 +320,7 @@ export const itemAndMaterialPerformance = query({
     const inventoryItems = await ctx.db.query("inventoryItems").collect();
     const invMap = new Map(inventoryItems.map((i: any) => [String(i._id), i]));
     const materialMap = new Map<string, any>();
-    const movements = await ctx.db.query("inventoryMovements").collect();
+    const movements = await ctx.db.query("inventoryMovements").withIndex("by_createdAt", (q: any) => q.gte("createdAt", startMs).lte("createdAt", endMs)).collect();
     for (const mv of movements as any[]) {
       if (mv.createdAt < startMs || mv.createdAt > endMs || mv.type === "receive") continue;
       const item: any = invMap.get(String(mv.itemId));

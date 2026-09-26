@@ -104,7 +104,10 @@ export const topMeals = query({
   args: { limit: v.optional(v.number()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, { limit = 10, sessionToken }) => {
     await requireStaff(ctx, sessionToken);
-    const orderItems = await ctx.db.query("customerOrderItems").collect();
+    // آخر 90 يوماً بالفهرس وبسقف — القراءة الكاملة تجاوزت 32 ألف مستند (نفس سقوط bestSellers 26-9).
+    const since = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const orderItems = await ctx.db.query("customerOrderItems")
+      .withIndex("by_creation_time", (q) => q.gt("_creationTime", since)).order("desc").take(6000);
     const counts = new Map<string, { name: string; count: number; revenue: number }>();
 
     for (const it of orderItems) {
@@ -193,8 +196,9 @@ export const outletRevenue = query({
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
     const month = args.month || new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 7);
-    const rows: any[] = (await ctx.db.query("gymOrders").collect())
-      .filter((r) => !r.isVoid && String(r.date || "").startsWith(month));
+    // طلبيات الشهر فقط بفهرس by_date (نفس النتيجة).
+    const rows: any[] = (await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", `${month}-01`).lte("date", `${month}-31`)).collect())
+      .filter((r) => !r.isVoid);
 
     const names = new Map<string, string>();
     const map: Record<string, { platform: string; orders: number; meals: number; revenue: number }> = {};

@@ -221,7 +221,7 @@ export default function AnalyticsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UtensilsCrossed className="h-5 w-5 text-cyan-600" />
-            {t("أكثر الوجبات طلباً", "Most Ordered Meals")}
+            {t("أكثر الوجبات طلباً — آخر 90 يوماً", "Most Ordered Meals — last 90 days")}
           </CardTitle>
         </CardHeader>
         <CardContent>

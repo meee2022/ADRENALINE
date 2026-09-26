@@ -545,8 +545,12 @@ async function deductInventoryForTicket(ctx: MutationCtx, ticketId: any, ticketN
 }
 
 /** 🔒 يعكس خصم المخزون لفاتورة عند الـvoid/refund (يرجع الكميات المخصومة بعلامة موجبة). */
-export async function reverseInventoryForTicket(ctx: MutationCtx, ticketNumber: number, tag = "void") {
-  const movements = await ctx.db.query("inventoryMovements").collect();
+export async function reverseInventoryForTicket(ctx: MutationCtx, ticketNumber: number, tag = "void", ticketCreatedAt?: number) {
+  // حركات الخصم تُكتب بعد إنشاء الفاتورة، فيكفي نطاق by_createdAt من إنشائها. كان يقرأ كل
+  // inventoryMovements (أسرع جدول نمواً) فيقترب من حدّ 32 ألف مستند — والاستدعاء داخل try{} فيفشل بصمت.
+  const movements = ticketCreatedAt
+    ? await ctx.db.query("inventoryMovements").withIndex("by_createdAt", (q) => q.gte("createdAt", ticketCreatedAt - 60_000)).collect()
+    : await ctx.db.query("inventoryMovements").collect();
   const target = movements.filter((m: any) => m.note === `POS #${ticketNumber}` && m.type === "consume");
   // 🔒 حماية من العكس المزدوج: لو فيه عكس سابق لنفس الفاتورة، لا نعكس تاني
   const alreadyReversed = movements.some((m: any) => typeof m.note === "string" && m.note.startsWith(`عكس POS #${ticketNumber}`));
@@ -940,7 +944,7 @@ export const voidTicket = mutation({
       }
       // 🔒 عكس خصم المخزون لو الفاتورة كانت مدفوعة وخصمت مخزون
       if (wasPaid) {
-        try { await reverseInventoryForTicket(ctx, t.ticketNumber); } catch { /* لا نوقف */ }
+        try { await reverseInventoryForTicket(ctx, t.ticketNumber, "void", t.createdAt); } catch { /* لا نوقف */ }
         try { await autoReversePosTicket(ctx, ticketId, reason || "إلغاء الفاتورة", user._id); } catch { /* لا نوقف */ }
         // 🔒 عكس نقاط الولاء لو مُنِحت (idempotent)
         if (t.customerId) {
@@ -980,7 +984,7 @@ export const refundTicket = mutation({
       }
     }
     // 🔒 إرجاع المخزون + عكس نقاط الولاء
-    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund"); } catch { /* لا نوقف */ }
+    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund", t.createdAt); } catch { /* لا نوقف */ }
     try { await autoReversePosTicket(ctx, ticketId, r, user._id); } catch { /* لا نوقف */ }
     if (t.customerId) {
       try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
