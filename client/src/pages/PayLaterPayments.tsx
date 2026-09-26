@@ -58,6 +58,7 @@ export default function PayLaterPayments() {
       paid: paid.length,
       pending: rows.filter((r) => r.status === "pending").length,
       revenue: r2(paid.reduce((s, r) => s + Number(r.amount || 0), 0)),
+      fees: r2(paid.reduce((s, r) => s + feeOf(r.amount), 0)),
       net: r2(paid.reduce((s, r) => s + netOf(r.amount), 0)),
     };
   }, [rows]);
@@ -101,8 +102,9 @@ export default function PayLaterPayments() {
           { value: totals.all, labelAr: "إجمالي المحاولات", labelEn: "Attempts" },
           { value: totals.paid, labelAr: "مدفوعة", labelEn: "Paid" },
           { value: totals.pending, labelAr: "معلّقة", labelEn: "Pending" },
-          { value: totals.revenue, labelAr: "المحصّل (ر.ق)", labelEn: "Collected (QAR)" },
-          { value: totals.net, labelAr: `الصافي بعد رسوم PayLater (${PAYLATER_FEE_PCT}% + ${PAYLATER_FEE_FIXED})`, labelEn: `Net after PayLater fees (${PAYLATER_FEE_PCT}% + ${PAYLATER_FEE_FIXED})` },
+          { value: totals.revenue, labelAr: "الإجمالي المحصّل (ر.ق)", labelEn: "Total collected (QAR)" },
+          { value: totals.fees, labelAr: `رسوم PayLater (${PAYLATER_FEE_PCT}% + ${PAYLATER_FEE_FIXED})`, labelEn: `PayLater fees (${PAYLATER_FEE_PCT}% + ${PAYLATER_FEE_FIXED})` },
+          { value: totals.net, labelAr: "الصافي بعد الخصم (ر.ق)", labelEn: "Net after fees (QAR)" },
         ]}
       />
 
@@ -164,8 +166,10 @@ export default function PayLaterPayments() {
                     <span className="font-black text-[#0E76AC]">{r.amount} {t("ر.ق", "QAR")}</span>
                   )}
                   {r.status === "success" && (
-                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-black text-slate-600">
-                      {t("الصافي", "Net")} {netOf(r.amount).toFixed(2)} · {t("رسوم", "fees")} {feeOf(r.amount).toFixed(2)}
+                    <span className="flex flex-wrap gap-1 text-[11px] font-black">
+                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">{t("الإجمالي", "Total")} {Number(r.amount).toFixed(2)}</span>
+                      <span className="rounded bg-red-50 px-1.5 py-0.5 text-red-600">{t("الرسوم", "Fees")} −{feeOf(r.amount).toFixed(2)}</span>
+                      <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-emerald-700">{t("الصافي", "Net")} {netOf(r.amount).toFixed(2)}</span>
                     </span>
                   )}
                 </div>
