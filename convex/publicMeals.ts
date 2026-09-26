@@ -418,7 +418,14 @@ export const deleteAll = mutation({
 export const bestSellers = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 6 }) => {
-    const items = await ctx.db.query("customerOrderItems").collect();
+    // كان يقرأ كل أسطر الطلبات منذ البداية فتجاوز حدّ القراءة (Convex) وأسقط الصفحة الرئيسية
+    // (ERR-DFAACF74, 26-9). الأكثر طلباً = آخر 90 يوماً، بسقف ثابت لا يكبر مع الزمن.
+    const since = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const items = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_creation_time", (q) => q.gt("_creationTime", since))
+      .order("desc")
+      .take(6000);
     const counts = new Map<string, number>();
     for (const it of items) {
       const k = String(it.mealId);
