@@ -51,6 +51,20 @@ export default function PayLaterPayments() {
     });
   }, [rows, q, filter]);
 
+  /* بطاقة الملخص المالي بفترة: هذا الشهر / الشهر الماضي / الكل. */
+  const [period, setPeriod] = useState<"month" | "last" | "all">("month");
+  const summary = useMemo(() => {
+    const now = new Date(Date.now() + 3 * 3600e3); // توقيت قطر
+    const ym = (d: Date) => d.toISOString().slice(0, 7);
+    const last = new Date(now); last.setUTCDate(1); last.setUTCMonth(last.getUTCMonth() - 1);
+    const want = period === "month" ? ym(now) : period === "last" ? ym(last) : null;
+    const paid = rows.filter((r) => r.status === "success" && (!want || ym(new Date(Number(r.createdAt) + 3 * 3600e3)) === want));
+    const gross = r2(paid.reduce((s, r) => s + Number(r.amount || 0), 0));
+    const pctFee = r2(gross * PAYLATER_FEE_PCT / 100);
+    const fixedFee = r2(paid.length * PAYLATER_FEE_FIXED);
+    return { count: paid.length, gross, pctFee, fixedFee, fees: r2(pctFee + fixedFee), net: r2(gross - pctFee - fixedFee) };
+  }, [rows, period]);
+
   const totals = useMemo(() => {
     const paid = rows.filter((r) => r.status === "success");
     return {
@@ -107,6 +121,28 @@ export default function PayLaterPayments() {
           { value: totals.net, labelAr: "الصافي بعد الخصم (ر.ق)", labelEn: "Net after fees (QAR)" },
         ]}
       />
+
+      {/* ملخص مالي — الإجمالي، والرسوم مفصّلة (النسبة والثابت)، والصافي */}
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#0E2A4A] px-4 py-3">
+          <h3 className="text-sm font-black text-white">{t("الملخص المالي — PayLater", "Financial summary — PayLater")}</h3>
+          <div className="flex gap-1">
+            {([["month", "هذا الشهر", "This month"], ["last", "الشهر الماضي", "Last month"], ["all", "الكل", "All"]] as const).map(([k, ar, en]) => (
+              <button key={k} type="button" onClick={() => setPeriod(k)}
+                className={cn("rounded-lg px-3 py-1.5 text-xs font-black", period === k ? "bg-[#3CC4F0] text-[#07131F]" : "bg-white/10 text-white")}>
+                {t(ar, en)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="divide-y divide-slate-100 text-sm">
+          <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("عدد الدفعات الناجحة", "Successful payments")}</span><span className="font-black tabular-nums">{summary.count}</span></div>
+          <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-600">{t("الإجمالي المحصّل", "Total collected")}</span><span className="font-black tabular-nums">{summary.gross.toFixed(2)}</span></div>
+          <div className="flex items-center justify-between px-4 py-3 text-red-600"><span className="font-bold">{t(`عمولة PayLater ${PAYLATER_FEE_PCT}%`, `PayLater ${PAYLATER_FEE_PCT}% fee`)}</span><span className="font-black tabular-nums">− {summary.pctFee.toFixed(2)}</span></div>
+          <div className="flex items-center justify-between px-4 py-3 text-red-600"><span className="font-bold">{t(`رسوم ثابتة ${PAYLATER_FEE_FIXED} × ${summary.count} عملية`, `Fixed fee ${PAYLATER_FEE_FIXED} × ${summary.count}`)}</span><span className="font-black tabular-nums">− {summary.fixedFee.toFixed(2)}</span></div>
+          <div className="flex items-center justify-between bg-emerald-50 px-4 py-3 text-emerald-800"><span className="font-black">{t("الصافي بعد الخصم", "Net after fees")}</span><span className="text-lg font-black tabular-nums">{summary.net.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center gap-2">
         {(["ALL", "success", "pending", "failed"] as const).map((k) => (
