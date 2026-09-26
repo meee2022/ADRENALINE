@@ -1136,6 +1136,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             <Stat label={t("نسبة الارتجاع", "Return rate")} value={decision?.totals?.wastePct != null ? `${decision.totals.wastePct}%` : "—"} color="#dc2626" />
             <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
           </>
+        ) : scope === "statement" ? (
+          <>
+            {/* نفس أساس الكشف تحتها (سعر المنيو، المرتجع بيوم الاستلام) — كانت بطاقات الأساس القديم تعطي مستحقاً مختلفاً */}
+            <Stat label={t("كمية الإنتاج", "Production Qty")} value={stmt?.totals?.prodQty ?? "—"} color="#0E76AC" />
+            <Stat label={t("المبيعات (Sales)", "Sales")} value={stmt?.sales?.toFixed(2) ?? "—"} color="#47759c" />
+            <Stat label={t("قيمة المرتجع", "Return Amount")} value={stmt?.totals?.retAmount?.toFixed(2) ?? "—"} color="#dc2626" />
+            <Stat label={t("المستحق (Receivable)", "Receivable")} value={stmt?.receivable?.toFixed(2) ?? "—"} color="#16a34a" />
+          </>
         ) : scope === "top" ? (
           <>
             <Stat label={t("الكمية المورّدة", "Supplied")} value={report?.totalMeals ?? "—"} color="#0E76AC" />
