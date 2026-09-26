@@ -1403,9 +1403,16 @@ export const listOrdersForReturns = query({
 
 /* ═══════════════════════════════ التقارير ═══════════════════════════════ */
 
-/** عدد القطع لسطر: الموزون (priceUnit=gram) قطعة واحدة، وغيره qty. */
-export function linePieces(l: { qty?: number; priceUnit?: string | null }) {
-  return String(l.priceUnit || "").toLowerCase() === "gram" ? 1 : Number(l.qty || 0);
+/** عدد القطع لسطر: الموزون (priceUnit=gram) قطعة واحدة، وغيره qty.
+ *  الأسطر القديمة لا تحمل priceUnit، فيُؤخذ من الوجبة نفسها (mealUnit). */
+export function linePieces(l: { qty?: number; priceUnit?: string | null }, mealUnit?: string | null) {
+  return String(l.priceUnit || mealUnit || "").toLowerCase() === "gram" ? 1 : Number(l.qty || 0);
+}
+async function mealUnitOf(ctx: any, cache: Map<string, string | null>, mealId: any) {
+  if (!mealId) return null;
+  const k = String(mealId);
+  if (!cache.has(k)) cache.set(k, ((await ctx.db.get(mealId)) as any)?.priceUnit ?? null);
+  return cache.get(k) ?? null;
 }
 
 /** تصحيح mealsCount للطلبيات القديمة (كانت تعدّ الجرامات وجبات). dryRun يعرض الفرق فقط. */
@@ -1414,9 +1421,11 @@ export const recomputeMealsCount = internalMutation({
   handler: async (ctx, args) => {
     const orders = await ctx.db.query("gymOrders").collect();
     const changed: { id: string; date: string; before: number; after: number }[] = [];
+    const units = new Map<string, string | null>();
     for (const o of orders as any[]) {
       const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
-      const after = lines.reduce((s, l: any) => s + linePieces(l), 0);
+      let after = 0;
+      for (const l of lines as any[]) after += linePieces(l, await mealUnitOf(ctx, units, l.mealId));
       if (after !== o.mealsCount) {
         changed.push({ id: String(o._id), date: o.date, before: o.mealsCount, after });
         if (!args.dryRun) await ctx.db.patch(o._id, { mealsCount: after });
@@ -1463,6 +1472,7 @@ export const outletStatement = query({
       return x;
     };
     let commission = 0;
+    const units = new Map<string, string | null>();
 
     // الإنتاج: طلبيات الفترة (غير الملغاة) بسعر المنيو
     const orders = (args.gymId
@@ -1473,7 +1483,7 @@ export const outletStatement = query({
       const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
       const gross = lines.reduce((s, l: any) => s + Number(l.qty || 0) * Number(l.listPrice || 0), 0);
       const x = row(o.date);
-      x.prodQty += lines.reduce((s, l: any) => s + linePieces(l), 0);
+      for (const l of lines as any[]) x.prodQty += linePieces(l, await mealUnitOf(ctx, units, l.mealId));
       x.prodAmount += gross;
       commission += gross * (await pctOf(o.gymId)) / 100;
     }
