@@ -701,8 +701,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     if (period === "custom") return { from: customFrom, to: customTo };
     if (period === "day") return { from: anchorDate, to: anchorDate };
     const date = new Date(`${anchorDate}T12:00:00`);
-    const day = date.getDay();
-    date.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+    // أسبوع المنافذ: السبت → الجمعة، كما في كشف المنفذ (12/9 سبت … 17/9).
+    date.setDate(date.getDate() - ((date.getDay() + 1) % 7));
     const from = date.toISOString().slice(0, 10);
     date.setDate(date.getDate() + 6);
     return { from, to: date.toISOString().slice(0, 10) };
@@ -715,6 +715,15 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     (api.gymSales as any).returnsReport,
     { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken }
   ) as any;
+  // كشف حساب المنفذ بصيغة شيت المنفذ: المرتجع بيوم الاستلام، بسعر المنيو، والعمولة مرة واحدة
+  const stmt = useQuery(
+    (api.gymSales as any).outletStatement,
+    scope === "statement" ? { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken } : "skip"
+  ) as any;
+  const stmtNotes = (st: any): string[] => [
+      ...(st?.notes?.priorProduction || []).map((n: any) => t(`يشمل مرتجع ${n.qty} (${n.amount.toFixed(2)}) من إنتاج ${n.orderDate} — استُلم ${n.returnDate}`, `Includes ${n.qty} returned (${n.amount.toFixed(2)}) from ${n.orderDate} production — received ${n.returnDate}`)),
+      ...(st?.notes?.laterReturns || []).map((n: any) => t(`مرتجع ${n.qty} من إنتاج ${n.orderDate} استُلم ${n.returnDate} — يظهر في الكشف التالي`, `${n.qty} returned from ${n.orderDate} production received ${n.returnDate} — appears in the next statement`)),
+  ];
   // تقرير القرار: الأفضل مبيعاً + الأصناف اللي بتسبب هدر + الربح (لو التكلفة معبّاة)
   const decision = useQuery(
     (api.gymSales as any).decisionReport,
@@ -827,29 +836,23 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
     const salesAmt = netRevenue; // = إجمالي الفواتير − قيمة المرتجع (بأسعار ما بعد الخصم)
     const grantedDiscount = Number(report?.totalDiscount || 0);
     const receivable = salesAmt;
-    const statementHtml = !showStatement ? "" : `
+    const statementHtml = !showStatement || !stmt ? "" : `
       <p class="stmt-intro">${t(`الأصناف الغذائية المورّدة خلال (${rangeLabel}):`, `Food items supplied during (${rangeLabel}):`)}</p>
       <table><thead>
-        <tr>
-          <th>${t("التاريخ", "Date")}</th>
-          <th>${t("كمية الإنتاج", "Production Qty")}</th>
-          <th>${t("قيمة الإنتاج", "Production Amount")}</th>
-          <th>${t("كمية المرتجع", "Return Qty")}</th>
-          <th>${t("قيمة المرتجع", "Return Amount")}</th>
-        </tr></thead>
+        <tr><th>${t("التاريخ", "Date")}</th><th>${t("كمية الإنتاج", "Production Qty")}</th><th>${t("قيمة الإنتاج", "Production Amount")}</th><th>${t("كمية المرتجع", "Return Qty")}</th><th>${t("قيمة المرتجع", "Return Amount")}</th></tr></thead>
         <tbody>
-          ${report.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.meals}</td><td class="n">${d.total.toFixed(2)}</td><td class="n">${d.returned || 0}</td><td class="n" style="color:${Number(d.waste) > 0 ? "#b91c1c" : "#94a3b8"}">${Number(d.waste || 0).toFixed(2)}</td></tr>`).join("")}
-          <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${report.totalMeals}</td><td class="n">${report.totalRevenue.toFixed(2)}</td><td class="n">${returnedQty}</td><td class="n">${wasteValue.toFixed(2)}</td></tr>
+          ${stmt.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.prodQty}</td><td class="n">${d.prodAmount.toFixed(2)}</td><td class="n">${d.retQty}</td><td class="n" style="color:${d.retAmount > 0 ? "#b91c1c" : "#94a3b8"}">${d.retAmount.toFixed(2)}</td></tr>`).join("")}
+          <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${stmt.totals.prodQty}</td><td class="n">${stmt.totals.prodAmount.toFixed(2)}</td><td class="n">${stmt.totals.retQty}</td><td class="n">${stmt.totals.retAmount.toFixed(2)}</td></tr>
         </tbody>
       </table>
       <div class="fin">
-        <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
         <table>
-          <tr><td class="lbl">${t("المبيعات (الإنتاج − المرتجع) — بأسعار ما بعد خصم المنفذ", "Sales (production − returns) — at post-discount prices")}</td><td class="val">${salesAmt.toFixed(2)}</td></tr>
-          <tr><td class="lbl">${t(`خصم المنفذ (${commissionRate}%) — مطبَّق في أسعار الفواتير`, `Outlet discount (${commissionRate}%) — already applied in invoice prices`)}</td><td class="val">${grantedDiscount ? grantedDiscount.toFixed(2) : "—"}</td></tr>
-          <tr class="net"><td class="lbl">${t("المستحق (Receivable)", "Receivable")}</td><td class="val">${receivable.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
+          <tr><td class="lbl">${t("المبيعات (Sales)", "Sales")}</td><td class="val">${stmt.sales.toFixed(2)}</td></tr>
+          <tr><td class="lbl">${t("العمولة (Commission)", "Commission")} ${stmt.commissionPct != null ? stmt.commissionPct + "%" : ""}</td><td class="val">${stmt.commission.toFixed(2)}</td></tr>
+          <tr class="net"><td class="lbl">${t("المستحق (Receivable)", "Receivable")}</td><td class="val">${stmt.receivable.toFixed(2)} ${t("ر.ق", "QAR")}</td></tr>
         </table>
       </div>
+      <p class="stmt-intro" style="font-size:11px;color:#64748b">${t("المرتجع محسوب بتاريخ استلامه.", "Returns are dated by the day they were received.")}${stmtNotes(stmt).map((x) => "<br>• " + x).join("")}</p>
 `;
 
     const finHtml = !showFin ? "" : `
@@ -1153,13 +1156,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       </div>
 
       {/* 💵 كشف الحساب على الشاشة — نفس جدول الطباعة (كان يظهر في الـPDF فقط) */}
-      {scope === "statement" && report && (() => {
-        const commissionRate = Number((gyms.find((g: any) => g.id === gymId) as any)?.discountPct ?? 20);
-        const sales = Number(report.netRevenue ?? report.totalRevenue);
-        // الخصم داخل أسعار الفواتير أصلاً — لا يُطرح ثانيةً (كان يُخصم مرتين)
-        const granted = Number(report.totalDiscount || 0);
-        const receivable = sales;
-        return (
+      {scope === "statement" && stmt && (
           <div className="space-y-3">
             <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
               <table className="w-full min-w-[640px] text-sm">
@@ -1173,36 +1170,40 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {(report.days || []).map((d: any) => (
+                  {stmt.days.map((d: any) => (
                     <tr key={d.date}>
                       <td className="px-3 py-2.5 font-bold tabular-nums text-slate-700" dir="ltr">{d.date}</td>
-                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.meals}</td>
-                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.total.toFixed(2)}</td>
-                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.returned || 0}</td>
-                      <td className={cn("px-3 py-2.5 text-end font-black tabular-nums", Number(d.waste) > 0 ? "text-red-600" : "text-slate-400")}>{Number(d.waste || 0).toFixed(2)}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.prodQty}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.prodAmount.toFixed(2)}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.retQty}</td>
+                      <td className={cn("px-3 py-2.5 text-end font-black tabular-nums", d.retAmount > 0 ? "text-red-600" : "text-slate-400")}>{d.retAmount.toFixed(2)}</td>
                     </tr>
                   ))}
                   <tr className="bg-cyan-50 text-[#0E76AC]">
                     <td className="px-3 py-2.5 font-black">{t("الإجمالي", "Total")}</td>
-                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalMeals}</td>
-                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalRevenue.toFixed(2)}</td>
-                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{report.totalReturned}</td>
-                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{Number(report.totalWasteValue || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{stmt.totals.prodQty}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{stmt.totals.prodAmount.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{stmt.totals.retQty}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{stmt.totals.retAmount.toFixed(2)}</td>
                   </tr>
                 </tbody>
               </table>
             </section>
             <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-              <div className="bg-[#0E2A4A] px-4 py-2.5 text-sm font-black text-white">{t("الخلاصة المالية", "Financial summary")}</div>
               <div className="divide-y divide-slate-100 text-sm">
-                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("المبيعات (الإنتاج − المرتجع) — بأسعار ما بعد خصم المنفذ", "Sales (production − returns) — at post-discount prices")}</span><span className="font-black tabular-nums">{sales.toFixed(2)}</span></div>
-                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t(`خصم المنفذ (${commissionRate}%) — مطبَّق في أسعار الفواتير`, `Outlet discount (${commissionRate}%) — already in invoice prices`)}</span><span className="font-black tabular-nums text-slate-400">{granted ? granted.toFixed(2) : "—"}</span></div>
-                <div className="flex items-center justify-between bg-[#0E76AC] px-4 py-3 text-white"><span className="font-black">{t("المستحق (Receivable)", "Receivable")}</span><span className="font-black tabular-nums">{receivable.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("المبيعات (Sales)", "Sales")}</span><span className="font-black tabular-nums">{stmt.sales.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between px-4 py-3"><span className="font-bold text-slate-500">{t("العمولة (Commission)", "Commission")} {stmt.commissionPct != null ? `${stmt.commissionPct}%` : ""}</span><span className="font-black tabular-nums">{stmt.commission.toFixed(2)}</span></div>
+                <div className="flex items-center justify-between bg-[#0E76AC] px-4 py-3 text-white"><span className="font-black">{t("المستحق (Receivable)", "Receivable")}</span><span className="font-black tabular-nums">{stmt.receivable.toFixed(2)} {t("ر.ق", "QAR")}</span></div>
               </div>
             </section>
+            {stmtNotes(stmt).length > 0 && (
+              <section className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold leading-6 text-amber-900">
+                <div>{t("المرتجع محسوب بتاريخ استلامه، لذلك:", "Returns are dated by the day they were received, so:")}</div>
+                {stmtNotes(stmt).map((x, i) => <div key={i}>• {x}</div>)}
+              </section>
+            )}
           </div>
-        );
-      })()}
+      )}
 
       {showDailyChart && (
       <section className="gym-report-panel overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">

@@ -1402,6 +1402,102 @@ export const listOrdersForReturns = query({
 
 /* ═══════════════════════════════ التقارير ═══════════════════════════════ */
 
+/**
+ * كشف حساب المنفذ بصيغة الشيت المعتمد لدى المنفذ:
+ *   التاريخ · كمية الإنتاج · قيمة الإنتاج · كمية المرتجع · قيمة المرتجع
+ *   ثم المبيعات = الإنتاج − المرتجع، العمولة %، المستحق.
+ * القيم بسعر المنيو قبل الخصم (listPrice) والعمولة تُطرح مرة واحدة في الأسفل.
+ * المرتجع يُنسب ليوم **الاستلام** (gymReturnBatches.returnDate) لا ليوم الإنتاج:
+ * الأكل يرجع بعد يوم أو يومين، فبنسبته لتاريخ الإنتاج كان الكشف الأسبوعي
+ * لا يطابق شيت المنفذ عند حدود الأسبوع (الشهري يتطابق تقريباً).
+ * notes: مرتجع مستلم في الفترة من إنتاج قبلها، وإنتاج في الفترة استُلم مرتجعه بعدها.
+ */
+export const outletStatement = query({
+  args: {
+    from: v.string(),
+    to: v.string(),
+    gymId: v.optional(v.id("gymAccounts")),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const { from, to } = args;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      throw new ConvexError("نطاق التاريخ غير صالح");
+    }
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const gyms = new Map<string, any>();
+    const pctOf = async (gymId: any) => {
+      const k = String(gymId);
+      if (!gyms.has(k)) gyms.set(k, await ctx.db.get(gymId));
+      return Number(gyms.get(k)?.discountPct ?? 20);
+    };
+    const rows = new Map<string, { date: string; prodQty: number; prodAmount: number; retQty: number; retAmount: number }>();
+    const row = (d: string) => {
+      let x = rows.get(d);
+      if (!x) { x = { date: d, prodQty: 0, prodAmount: 0, retQty: 0, retAmount: 0 }; rows.set(d, x); }
+      return x;
+    };
+    let commission = 0;
+
+    // الإنتاج: طلبيات الفترة (غير الملغاة) بسعر المنيو
+    const orders = (args.gymId
+      ? await ctx.db.query("gymOrders").withIndex("by_gym_date", (q) => q.eq("gymId", args.gymId!).gte("date", from).lte("date", to)).collect()
+      : await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect()
+    ).filter((o: any) => !o.isVoid);
+    for (const o of orders as any[]) {
+      const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      const gross = lines.reduce((s, l: any) => s + Number(l.qty || 0) * Number(l.listPrice || 0), 0);
+      const x = row(o.date);
+      x.prodQty += lines.reduce((s, l: any) => s + Number(l.qty || 0), 0);
+      x.prodAmount += gross;
+      commission += gross * (await pctOf(o.gymId)) / 100;
+    }
+
+    // المرتجع: دفعات مستلمة في الفترة، بسعر المنيو لسطرها الأصلي
+    const batches = (args.gymId
+      ? await ctx.db.query("gymReturnBatches").withIndex("by_gym_return_date", (q) => q.eq("gymId", args.gymId!).gte("returnDate", from).lte("returnDate", to)).collect()
+      : await ctx.db.query("gymReturnBatches").withIndex("by_return_date", (q) => q.gte("returnDate", from).lte("returnDate", to)).collect());
+    const priorProduction: { orderDate: string; returnDate: string; qty: number; amount: number }[] = [];
+    for (const b of batches as any[]) {
+      const order: any = await ctx.db.get(b.orderId);
+      if (!order || order.isVoid) continue;
+      const bl = await ctx.db.query("gymReturnBatchLines").withIndex("by_return", (q) => q.eq("returnId", b._id)).collect();
+      let qty = 0, gross = 0;
+      for (const l of bl as any[]) {
+        const ol: any = await ctx.db.get(l.orderLineId);
+        qty += Number(l.qty || 0);
+        gross += Number(l.qty || 0) * Number(ol?.listPrice ?? l.unitPrice ?? 0);
+      }
+      const x = row(b.returnDate);
+      x.retQty += qty;
+      x.retAmount += gross;
+      commission -= gross * (await pctOf(b.gymId)) / 100;
+      if (b.orderDate < from) priorProduction.push({ orderDate: b.orderDate, returnDate: b.returnDate, qty, amount: r2(gross) });
+    }
+
+    // إنتاج الفترة الذي استُلم مرتجعه بعد نهايتها (يظهر في كشف الفترة التالية)
+    const laterReturns: { orderDate: string; returnDate: string; qty: number }[] = [];
+    for (const o of orders as any[]) {
+      const bs = await ctx.db.query("gymReturnBatches").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      for (const b of bs as any[]) if (b.returnDate > to) laterReturns.push({ orderDate: o.date, returnDate: b.returnDate, qty: Number(b.totalQty || 0) });
+    }
+
+    const days = [...rows.values()].sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => ({ ...d, prodAmount: r2(d.prodAmount), retAmount: r2(d.retAmount) }));
+    const totals = days.reduce((t, d) => ({ prodQty: t.prodQty + d.prodQty, prodAmount: r2(t.prodAmount + d.prodAmount), retQty: t.retQty + d.retQty, retAmount: r2(t.retAmount + d.retAmount) }), { prodQty: 0, prodAmount: 0, retQty: 0, retAmount: 0 });
+    const sales = r2(totals.prodAmount - totals.retAmount);
+    const pcts = [...new Set([...gyms.values()].map((g: any) => Number(g?.discountPct ?? 20)))];
+    return {
+      from, to, days, totals, sales,
+      commissionPct: pcts.length === 1 ? pcts[0] : null, // null = منافذ بنسب مختلفة
+      commission: r2(commission),
+      receivable: r2(sales - commission),
+      notes: { priorProduction, laterReturns },
+    };
+  },
+});
+
 export const monthlyReport = query({
   args: {
     month: v.optional(v.string()),
