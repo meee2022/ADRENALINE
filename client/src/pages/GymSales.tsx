@@ -695,7 +695,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   /** محتوى المستند. الفترة والمنفذ فلاتر مستقلة — أي مزيج شغّال
    *  (مثلاً: مرتجعات أسبوعية لمنفذ واحد، أو أعلى مبيعاً شهري لكل المنافذ). */
-  const [scope, setScope] = useState<"full" | "returns" | "top" | "statement">("full");
+  const [scope, setScope] = useState<"full" | "returns" | "top" | "statement" | "weights">("full");
   const selectedRange = useMemo(() => {
     if (period === "month") return { from: `${month}-01`, to: `${month}-31` };
     if (period === "custom") return { from: customFrom, to: customTo };
@@ -719,6 +719,11 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   const stmt = useQuery(
     (api.gymSales as any).outletStatement,
     scope === "statement" ? { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken } : "skip"
+  ) as any;
+  // تقرير الأوزان: الأصناف الموزونة بالكيلو (الكافيه يستلم خامات بالجرام)
+  const wts = useQuery(
+    (api.gymSales as any).outletWeights,
+    scope === "weights" ? { from: selectedRange.from, to: selectedRange.to, gymId: (gymId || undefined) as any, sessionToken } : "skip"
   ) as any;
   const stmtNotes = (st: any): string[] => [
       ...(st?.notes?.priorProduction || []).map((n: any) => t(`يشمل مرتجع ${n.qty} (${n.amount.toFixed(2)}) من إنتاج ${n.orderDate} — استُلم ${n.returnDate}`, `Includes ${n.qty} returned (${n.amount.toFixed(2)}) from ${n.orderDate} production — received ${n.returnDate}`)),
@@ -820,7 +825,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           المرتجعات : الهدر فقط + التوصيات + الخلاصة المالية (المستحق بعد الخصم)
           أعلى مبيعاً: الأصناف المُباعة فقط — بلا جداول هدر ولا توصيات إيقاف */
     const showStatement = scope === "statement"; // كشف حساب المنفذ — مستقل، لا يخلط بباقي الأقسام
-    const showFin = !showStatement && scope !== "top";
+    const showWeights = scope === "weights";
+    const showFin = !showStatement && !showWeights && scope !== "top";
     const showDaily = scope === "full";
     const showLedger = scope === "full";
     const showReturns = scope === "full" || scope === "returns";
@@ -855,6 +861,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       <p class="stmt-intro" style="font-size:11px;color:#64748b">${t("المرتجع محسوب بتاريخ استلامه.", "Returns are dated by the day they were received.")}${stmtNotes(stmt).map((x) => "<br>• " + x).join("")}</p>
 `;
 
+    const weightsHtml = !showWeights || !wts ? "" : `
+      <p class="stmt-intro">${t(`الأصناف الموزونة المورّدة خلال (${rangeLabel}) — بالكيلو:`, `Weighed items supplied during (${rangeLabel}) — in kg:`)}</p>
+      <table><thead><tr><th>${t("الصنف", "Item")}</th><th>${t("الوزن (كجم)", "Weight (kg)")}</th><th>${t("مرات التوريد", "Deliveries")}</th><th>${t("القيمة (ر.ق)", "Value (QAR)")}</th></tr></thead>
+        <tbody>${wts.items.map((i: any) => `<tr><td>${isRtl ? (i.nameAr || i.nameEn) : (i.nameEn || i.nameAr)}</td><td class="n">${i.kg.toFixed(2)}</td><td class="n">${i.deliveries}</td><td class="n">${i.amount.toFixed(2)}</td></tr>`).join("") || `<tr><td colspan="4">${t("لا توجد أصناف موزونة في هذه الفترة.", "No weighed items in this period.")}</td></tr>`}
+        <tr class="tot"><td>${t("الإجمالي", "Total")}</td><td class="n">${wts.totalKg.toFixed(2)}</td><td></td><td class="n">${wts.totalAmount.toFixed(2)}</td></tr></tbody></table>
+      <table style="margin-top:16px"><thead><tr class="cap"><td colspan="3">${t("الوزن اليومي", "Daily weight")}</td></tr><tr><th>${t("التاريخ", "Date")}</th><th>${t("الوزن (كجم)", "Weight (kg)")}</th><th>${t("القيمة (ر.ق)", "Value (QAR)")}</th></tr></thead>
+        <tbody>${wts.days.map((d: any) => `<tr><td>${d.date}</td><td class="n">${d.kg.toFixed(2)}</td><td class="n">${d.amount.toFixed(2)}</td></tr>`).join("")}</tbody></table>
+`;
     const finHtml = !showFin ? "" : `
       <div class="fin">
         <div class="fin-h">${t("الخلاصة المالية", "Financial summary")}</div>
@@ -1027,8 +1041,9 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
         <span class="rng">${rangeLabel}</span>
       </div>
       <div class="wrap">
-      ${showStatement ? "" : kpiHtml}
+      ${showStatement || showWeights ? "" : kpiHtml}
       ${statementHtml}
+      ${weightsHtml}
       ${finHtml}
 
       ${dailyHtml}
@@ -1059,6 +1074,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
   /** عنوان المستند حسب محتواه — يظهر في شريط العنوان وفي اسم ملف الـPDF. */
   const scopeTitle = () =>
     scope === "statement" ? t("كشف حساب المنفذ", "Outlet statement")
+      : scope === "weights" ? t("تقرير الأوزان", "Weights report")
       : scope === "returns" ? t("تقرير المرتجعات والهالك", "Returns and waste report")
         : scope === "top" ? t("تقرير الأصناف الأعلى مبيعاً", "Top selling items report")
           : t("تقرير مبيعات المنافذ", "Outlet sales report");
@@ -1085,6 +1101,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
               <option value="full">{t("تقرير كامل", "Full report")}</option>
               <option value="returns">{t("المرتجعات والهالك فقط", "Returns and waste only")}</option>
               <option value="top">{t("الأصناف الأعلى مبيعاً فقط", "Top selling items only")}</option>
+              <option value="weights">{t("تقرير الأوزان (الأصناف بالجرام)", "Weights report (items by gram)")}</option>
             </select>
           </div>
           <div>
@@ -1136,6 +1153,13 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
             <Stat label={t("نسبة الارتجاع", "Return rate")} value={decision?.totals?.wastePct != null ? `${decision.totals.wastePct}%` : "—"} color="#dc2626" />
             <Stat label={t("قيمة الهالك (ر.ق)", "Waste value (QAR)")} value={report?.totalWasteValue?.toFixed(2) ?? "—"} color="#dc2626" />
           </>
+        ) : scope === "weights" ? (
+          <>
+            <Stat label={t("إجمالي الوزن (كجم)", "Total weight (kg)")} value={wts?.totalKg?.toFixed(2) ?? "—"} color="#0E76AC" />
+            <Stat label={t("عدد الأصناف الموزونة", "Weighed items")} value={wts?.items?.length ?? "—"} color="#47759c" />
+            <Stat label={t("أيام التوريد", "Supply days")} value={wts?.days?.length ?? "—"} color="#f59e0b" />
+            <Stat label={t("القيمة (ر.ق)", "Value (QAR)")} value={wts?.totalAmount?.toFixed(2) ?? "—"} color="#16a34a" />
+          </>
         ) : scope === "statement" ? (
           <>
             {/* نفس أساس الكشف تحتها (سعر المنيو، المرتجع بيوم الاستلام) — كانت بطاقات الأساس القديم تعطي مستحقاً مختلفاً */}
@@ -1164,6 +1188,54 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       </div>
 
       {/* 💵 كشف الحساب على الشاشة — نفس جدول الطباعة (كان يظهر في الـPDF فقط) */}
+      {scope === "weights" && wts && (
+        <div className="space-y-3">
+          <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+            <table className="w-full min-w-[560px] text-sm">
+              <thead className="bg-[#0E76AC] text-white text-[12px]"><tr>
+                <th className="px-3 py-2.5 text-start">{t("الصنف", "Item")}</th>
+                <th className="px-3 py-2.5 text-end">{t("الوزن (كجم)", "Weight (kg)")}</th>
+                <th className="px-3 py-2.5 text-end">{t("مرات التوريد", "Deliveries")}</th>
+                <th className="px-3 py-2.5 text-end">{t("القيمة (ر.ق)", "Value (QAR)")}</th>
+              </tr></thead>
+              <tbody className="divide-y divide-slate-100">
+                {wts.items.length === 0 && <tr><td colSpan={4} className="px-3 py-6 text-center text-slate-400">{t("لا توجد أصناف موزونة في هذه الفترة.", "No weighed items in this period.")}</td></tr>}
+                {wts.items.map((i: any) => (
+                  <tr key={i.key}>
+                    <td className="px-3 py-2.5 font-bold text-slate-700">{isRtl ? (i.nameAr || i.nameEn) : (i.nameEn || i.nameAr)}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{i.kg.toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-end tabular-nums text-slate-500">{i.deliveries}</td>
+                    <td className="px-3 py-2.5 text-end font-black tabular-nums">{i.amount.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-cyan-50 text-[#0E76AC]">
+                  <td className="px-3 py-2.5 font-black">{t("الإجمالي", "Total")}</td>
+                  <td className="px-3 py-2.5 text-end font-black tabular-nums">{wts.totalKg.toFixed(2)}</td>
+                  <td />
+                  <td className="px-3 py-2.5 text-end font-black tabular-nums">{wts.totalAmount.toFixed(2)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          {wts.days.length > 0 && (
+            <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+              <div className="bg-[#0E2A4A] px-4 py-2.5 text-sm font-black text-white">{t("الوزن اليومي", "Daily weight")}</div>
+              <table className="w-full min-w-[420px] text-sm">
+                <tbody className="divide-y divide-slate-100">
+                  {wts.days.map((d: any) => (
+                    <tr key={d.date}>
+                      <td className="px-3 py-2.5 font-bold tabular-nums text-slate-700" dir="ltr">{d.date}</td>
+                      <td className="px-3 py-2.5 text-end font-black tabular-nums">{d.kg.toFixed(2)} {t("كجم", "kg")}</td>
+                      <td className="px-3 py-2.5 text-end tabular-nums text-slate-500">{d.amount.toFixed(2)} {t("ر.ق", "QAR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+        </div>
+      )}
+
       {scope === "statement" && stmt && (
           <div className="space-y-3">
             <section className="gym-report-panel overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">

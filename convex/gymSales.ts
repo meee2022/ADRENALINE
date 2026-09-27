@@ -920,9 +920,8 @@ export const listOrders = query({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    let rows: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
-    if (args.from) rows = rows.filter((r) => r.date >= args.from!);
-    if (args.to) rows = rows.filter((r) => r.date <= args.to!);
+    // نطاق الفهرس بدل قراءة كل الطلبيات (نفس النتيجة).
+    let rows: any[] = await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", args.from || "0000-00-00").lte("date", args.to || "9999-99-99")).collect();
     if (args.gymId) rows = rows.filter((r) => String(r.gymId) === String(args.gymId));
     if (!args.includeVoided) rows = rows.filter((r) => !r.isVoid);
     rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.createdAt - a.createdAt));
@@ -1283,9 +1282,7 @@ export const returnsReport = query({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
-    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date").collect();
-    if (args.from) lines = lines.filter((l) => l.date >= args.from!);
-    if (args.to) lines = lines.filter((l) => l.date <= args.to!);
+    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date", (q) => q.gte("date", args.from || "0000-00-00").lte("date", args.to || "9999-99-99")).collect();
     if (args.gymId) lines = lines.filter((l) => String(l.gymId) === String(args.gymId));
 
     // نستبعد أسطر الطلبيات الملغاة
@@ -1356,8 +1353,10 @@ export const listOrdersForReturns = query({
     const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - days);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
 
-    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
-    orders = orders.filter((o) => !o.isVoid && (args.date ? o.date === args.date : o.date >= cutoffStr));
+    let orders: any[] = args.date
+      ? await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.eq("date", args.date!)).collect()
+      : await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", cutoffStr)).collect();
+    orders = orders.filter((o) => !o.isVoid);
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
     orders.sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -1414,6 +1413,51 @@ async function mealUnitOf(ctx: any, cache: Map<string, string | null>, mealId: a
   if (!cache.has(k)) cache.set(k, ((await ctx.db.get(mealId)) as any)?.priceUnit ?? null);
   return cache.get(k) ?? null;
 }
+
+/**
+ * تقرير الأوزان — للأصناف الموزونة فقط (الكافيه يستلم خامات بالجرام ويحضّر بنفسه).
+ * لكل صنف: الوزن المورّد (كجم) والقيمة، ولكل يوم: الوزن والقيمة. بلا تحويل لوجبات.
+ */
+export const outletWeights = query({
+  args: { from: v.string(), to: v.string(), gymId: v.optional(v.id("gymAccounts")), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireRoleOrPermission(ctx, args.sessionToken, { roles: GYM_FINANCE_ROLES, permissions: GYM_FINANCE_PAGES });
+    const { from, to } = args;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) throw new ConvexError("نطاق التاريخ غير صالح");
+    const orders = (args.gymId
+      ? await ctx.db.query("gymOrders").withIndex("by_gym_date", (q) => q.eq("gymId", args.gymId!).gte("date", from).lte("date", to)).collect()
+      : await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect()
+    ).filter((o: any) => !o.isVoid);
+    const units = new Map<string, string | null>();
+    const items = new Map<string, { key: string; nameAr: string; nameEn: string; grams: number; amount: number; days: number }>();
+    const days = new Map<string, { date: string; grams: number; amount: number }>();
+    for (const o of orders as any[]) {
+      const lines = await ctx.db.query("gymOrderLines").withIndex("by_order", (q) => q.eq("orderId", o._id)).collect();
+      for (const l of lines as any[]) {
+        const unit = String(l.priceUnit || (await mealUnitOf(ctx, units, l.mealId)) || "").toLowerCase();
+        if (unit !== "gram") continue;
+        const g = Number(l.qty || 0), amt = Number(l.lineTotal || 0);
+        const key = l.mealId ? String(l.mealId) : `text:${l.mealNameEn || l.mealNameAr}`;
+        const it = items.get(key) || { key, nameAr: l.mealNameAr || "", nameEn: l.mealNameEn || "", grams: 0, amount: 0, days: 0 };
+        it.grams += g; it.amount += amt; it.days += 1;
+        items.set(key, it);
+        const d = days.get(o.date) || { date: o.date, grams: 0, amount: 0 };
+        d.grams += g; d.amount += amt;
+        days.set(o.date, d);
+      }
+    }
+    const kg = (g: number) => Math.round(g / 10) / 100;
+    const r2 = (n: number) => Math.round(n * 100) / 100;
+    const itemRows = [...items.values()].sort((a, b) => b.grams - a.grams)
+      .map((i) => ({ key: i.key, nameAr: i.nameAr, nameEn: i.nameEn, kg: kg(i.grams), amount: r2(i.amount), deliveries: i.days }));
+    const dayRows = [...days.values()].sort((a, b) => a.date.localeCompare(b.date)).map((d) => ({ date: d.date, kg: kg(d.grams), amount: r2(d.amount) }));
+    return {
+      from, to, items: itemRows, days: dayRows,
+      totalKg: kg(itemRows.reduce((s, i) => s + i.kg * 1000, 0)),
+      totalAmount: r2(itemRows.reduce((s, i) => s + i.amount, 0)),
+    };
+  },
+});
 
 /** تصحيح mealsCount للطلبيات القديمة (كانت تعدّ الجرامات وجبات). dryRun يعرض الفرق فقط. */
 export const recomputeMealsCount = internalMutation({
@@ -1547,8 +1591,9 @@ export const monthlyReport = query({
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
       throw new ConvexError("نطاق التاريخ غير صالح");
     }
-    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
-    orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
+    // نطاق الفهرس بدل قراءة كل الطلبيات ثم الفلترة (نفس النتيجة).
+    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect();
+    orders = orders.filter((o) => !o.isVoid);
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
 
     // 💰 المرتجع تالف ولا يُحاسَب عليه المنفذ، فالمستحق الفعلي = الإجمالي − قيمة الهالك.
@@ -1569,8 +1614,20 @@ export const monthlyReport = query({
     const days = Array.from(byDay.values()).sort((a, b) => (a.date < b.date ? -1 : 1));
 
     const orderIds = new Set(orders.map((o) => String(o._id)));
-    let allLines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date").collect();
-    allLines = allLines.filter((l) => l.date >= from && l.date <= to && orderIds.has(String(l.orderId)));
+    let allLines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect();
+    allLines = allLines.filter((l) => orderIds.has(String(l.orderId)));
+    // الوزن المورّد للأصناف الموزونة (الكافيه يستلم خامات بالجرام — لا «وجبات»).
+    const units = new Map<string, string | null>();
+    const gramsByDay = new Map<string, number>();
+    let totalGrams = 0;
+    for (const l of allLines) {
+      const unit = String(l.priceUnit || (await mealUnitOf(ctx, units, l.mealId)) || "").toLowerCase();
+      if (unit !== "gram") continue;
+      const g = Number(l.qty || 0);
+      totalGrams += g;
+      gramsByDay.set(l.date, (gramsByDay.get(l.date) || 0) + g);
+    }
+    for (const d of days) (d as any).weightKg = Math.round((gramsByDay.get(d.date) || 0) / 10) / 100;
     const byMeal = new Map<string, { key: string; nameEn: string; nameAr: string; qty: number; revenue: number }>();
     for (const l of allLines) {
       const key = l.mealId ? String(l.mealId) : `text:${l.mealNameEn || l.mealNameAr}`;
@@ -1592,6 +1649,7 @@ export const monthlyReport = query({
     const deliveredMeals = totalMeals - totalReturned;
 
     return {
+      totalWeightKg: Math.round(totalGrams / 10) / 100,
       month: args.month, from, to, totalMeals, totalRevenue, totalSubtotal, totalDiscount,
       totalWasteValue, totalReturned, netRevenue, deliveredMeals,
       daysCount: days.length,
@@ -1645,13 +1703,14 @@ export const decisionReport = query({
       throw new ConvexError("نطاق التاريخ غير صالح");
     }
 
-    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date").collect();
-    orders = orders.filter((o) => o.date >= from && o.date <= to && !o.isVoid);
+    // نطاق الفهرس بدل قراءة كل الطلبيات ثم الفلترة (نفس النتيجة).
+    let orders: any[] = await ctx.db.query("gymOrders").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect();
+    orders = orders.filter((o) => !o.isVoid);
     if (args.gymId) orders = orders.filter((o) => String(o.gymId) === String(args.gymId));
     const orderIds = new Set(orders.map((o) => String(o._id)));
 
-    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date").collect();
-    lines = lines.filter((l) => l.date >= from && l.date <= to && orderIds.has(String(l.orderId)));
+    let lines: any[] = await ctx.db.query("gymOrderLines").withIndex("by_date", (q) => q.gte("date", from).lte("date", to)).collect();
+    lines = lines.filter((l) => orderIds.has(String(l.orderId)));
 
     // تكلفة الوجبة (لو معبّاة) — نقرأها مرة واحدة لكل mealId
     const costById = new Map<string, number>();
