@@ -910,7 +910,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
           <table>
             <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("التوفير المتوقع", "Expected saving")}</th><th>${t("التوصية", "Recommendation")}</th></tr></thead>
             <tbody>${actions.map((a: any) => `<tr>
-              <td><b>${nameOf(a)}</b><div class="why">${esc(a.reason)}</div></td>
+              <td><b>${nameOf(a)}</b><div class="why">${esc(isRtl ? a.reason : (a.reasonEn || a.reason))}</div></td>
               <td class="n">${a.sent}</td><td class="n">${a.returned}</td>
               <td class="n" style="color:#b91c1c;font-weight:900">${a.returnRate}%</td>
               <td class="n" style="color:#b91c1c">${Number(a.wasteValue).toFixed(2)}</td>
@@ -1428,7 +1428,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                     <tr key={m.key} className="border-t border-slate-100">
                       <td className="p-2 font-bold">
                         {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
-                        {m.reason && <div className="mt-1 max-w-md text-[11px] font-medium leading-5 text-slate-500">{m.reason}</div>}
+                        {(isRtl ? m.reason : (m.reasonEn || m.reason)) && <div className="mt-1 max-w-md text-[11px] font-medium leading-5 text-slate-500">{isRtl ? m.reason : (m.reasonEn || m.reason)}</div>}
                       </td>
                       <td className="p-2 text-center font-black">{m.sent}</td>
                       <td className="p-2 text-center font-black" style={{ color: "#dc2626" }}>{m.returned}</td>
@@ -1444,7 +1444,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                       </td>
                       <td className="p-2 text-end font-black" style={{ color: "#dc2626" }}>{m.wasteValue.toFixed(2)}</td>
                       <td className="p-2 text-center font-black tabular-nums">
-                        {!m.plan ? "—" : bad ? t("إيقاف", "Stop") : skip ? (m.plan.skipDays as string[]).map((d) => t(`بلا ${d}`, `skip ${d}`)).join("، ")
+                        {!m.plan ? "—" : bad ? t("إيقاف", "Stop") : skip ? (isRtl ? (m.plan.skipDays as string[]).map((d) => `بلا ${d}`).join("، ") : ((m.plan.skipDaysEn || m.plan.skipDays) as string[]).map((d) => `skip ${d}`).join(", "))
                           : m.plan.reduceBy > 0 && meh ? <span>{m.plan.recommended}{unit} <span className="text-slate-400 line-through">{m.plan.avgSent}</span></span> : `${m.plan.avgSent}${unit}`}
                       </td>
                       <td className="p-2 text-end font-black tabular-nums text-emerald-700">{m.plan && (bad || meh) ? m.plan.saving.toFixed(2) : "—"}</td>
@@ -1472,7 +1472,7 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   {decision.opportunities.map((m: any) => (
                     <div key={m.key} className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs">
                       <div className="font-black text-emerald-900">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</div>
-                      <div className="mt-0.5 leading-5 text-emerald-800">{m.reason}</div>
+                      <div className="mt-0.5 leading-5 text-emerald-800">{isRtl ? m.reason : (m.reasonEn || m.reason)}</div>
                     </div>
                   ))}
                 </div>
