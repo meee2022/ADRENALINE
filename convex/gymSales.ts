@@ -1686,6 +1686,87 @@ export const monthlyReport = query({
  *   ═══════════════════════════════════════════════════════════════════════════ */
 
 const STOP_RATE = 40;
+const WEEKDAYS_AR = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+/**
+ * خطة توريد لصنف من سجل توريداته في الفترة.
+ *  الكمية المقترحة = ما يغطي المبيع في 3 من كل 4 توريدات (المئين 75 للمُباع لكل توريد).
+ *  التوفير = الهالك الذي كان سيُتجنَّب لو ورّدنا المقترح في كل توريد.
+ *  المخاطرة = مبيع كان سيفوت في الأيام التي تجاوز فيها الطلب المقترح.
+ *  الموزون (جرام) يُقرَّب لأقرب 100 جم.
+ */
+function supplyPlan(r: any) {
+  const gram = String(r.unit || "").toLowerCase() === "gram";
+  const u = gram ? " جم" : "";
+  const fmt = (n: number) => gram ? String(Math.round(n / 100) * 100) : (Math.round(n * 10) / 10).toString();
+  const list = [...((r.deliveries as Map<string, { sent: number; returned: number }>) || new Map()).entries()]
+    .map(([date, d]) => ({ date, sent: d.sent, returned: d.returned, sold: Math.max(0, d.sent - d.returned) }));
+  const n = list.length;
+  const price = Number(r.unitPrice || 0);
+  const empty = { verdict: "OK" as const, reason: "", numbers: null as any };
+  if (n < 3 || r.sent < MIN_SAMPLE) return { ...empty, reason: n ? `بيانات غير كافية للحكم (${n} توريد)` : "" };
+
+  const sold = list.map((d) => d.sold).sort((a, b) => a - b);
+  const p75 = sold[Math.min(n - 1, Math.ceil(n * 0.75) - 1)];
+  const step = gram ? 100 : 1;
+  const recommended = Math.max(step, Math.ceil(p75 / step) * step);
+  const avgSent = r.sent / n, avgSold = sold.reduce((s, x) => s + x, 0) / n;
+  const covered = list.filter((d) => d.sold <= recommended).length;
+  const saving = Math.round(list.reduce((s, d) => s + Math.max(0, Math.min(d.returned, d.sent - recommended)), 0) * price * 100) / 100;
+  const risk = Math.round(list.reduce((s, d) => s + Math.max(0, d.sold - recommended), 0) * price * 100) / 100;
+  const reduceBy = avgSent - recommended;
+  const returnRate = r.sent ? (r.returned / r.sent) * 100 : 0;
+
+  // أين يتركّز الارتجاع أسبوعياً
+  const byDay = new Map<number, { sent: number; returned: number; n: number }>();
+  for (const d of list) {
+    const w = new Date(`${d.date}T12:00:00Z`).getUTCDay();
+    const x = byDay.get(w) || { sent: 0, returned: 0, n: 0 };
+    x.sent += d.sent; x.returned += d.returned; x.n += 1; byDay.set(w, x);
+  }
+  const dayRates = [...byDay.entries()].filter(([, x]) => x.n >= 2 && x.sent > 0)
+    .map(([w, x]) => ({ w, day: WEEKDAYS_AR[w], rate: Math.round((x.returned / x.sent) * 100), returned: x.returned }));
+  const worst = dayRates.filter((x) => x.rate >= 50 && x.rate >= returnRate + 15).sort((a, b) => b.rate - a.rate)[0];
+  // أيام يُرتجع فيها نصف المورّد فأكثر — حذفها من جدول التوريد لصنف لا يُخفَّض كمّاً (قطعة واحدة).
+  const badDays = dayRates.filter((x) => x.rate >= 50).sort((a, b) => b.rate - a.rate);
+
+  const numbers = {
+    deliveries: n, avgSent: Math.round(avgSent * 10) / 10, avgSold: Math.round(avgSold * 10) / 10,
+    recommended, reduceBy: Math.max(0, Math.round(reduceBy * 10) / 10), saving, risk, covered, unit: gram ? "gram" : "piece",
+    worstDay: worst || null,
+  };
+  const dayNote = worst ? ` الارتجاع يتركّز يوم ${worst.day} (${worst.rate}%) — يُخفَّض ذلك اليوم أولاً.` : "";
+
+  // لا يكاد يُباع: هالك مرتفع جداً — إيقاف، مع تجربة أصغر كمية ممكنة قبل القرار النهائي
+  if (returnRate >= 75 || (returnRate >= 60 && avgSold < step)) {
+    const trial = Math.max(step, Math.floor(avgSold / step) * step);
+    const trialSaving = Math.round(list.reduce((s, d) => s + Math.max(0, Math.min(d.returned, d.sent - trial)), 0) * price * 100) / 100;
+    return { verdict: "STOP" as const, numbers: { ...numbers, recommended: 0, saving: Math.round(r.returned * price * 100) / 100 },
+      reason: `يُورَّد ${fmt(avgSent)}${u} ويُباع ${fmt(avgSold)}${u} في المتوسط لكل توريد (${Math.round(returnRate)}% هالك، ${(r.returned * price).toFixed(2)} ر.ق خلال الفترة). ` +
+        `يُوصى بإيقافه` + (trial < avgSent ? `، أو تجربة ${fmt(trial)}${u} لكل توريد لأسبوعين (يوفّر ${trialSaving.toFixed(2)} ر.ق) قبل القرار النهائي.` : ".") + dayNote };
+  }
+  // قطعة واحدة لكل توريد لا تُخفَّض كمّاً: التوفير بحذف أيام الارتجاع من جدول التوريد
+  if (returnRate >= REDUCE_RATE && reduceBy < step && badDays.length) {
+    const daysSaving = Math.round(badDays.reduce((s, x) => s + x.returned, 0) * price * 100) / 100;
+    return { verdict: "REDUCE" as const, numbers: { ...numbers, saving: daysSaving, skipDays: badDays.map((x) => x.day) },
+      reason: `يُورَّد ${fmt(avgSent)}${u} ويُباع ${fmt(avgSold)}${u} في المتوسط — ` +
+        (avgSent < step * 2 ? "لا يمكن تخفيض الكمية أكثر. " : "الكمية تناسب أغلب الأيام، والهالك يتركّز في أيام بعينها. ") +
+        `يُقترح إيقاف توريده ${badDays.map((x) => `يوم ${x.day} (${x.rate}% مرتجع)`).join(" و")}: يوفّر نحو ${daysSaving.toFixed(2)} ر.ق خلال الفترة.` };
+  }
+  if (returnRate >= REDUCE_RATE && reduceBy >= step) {
+    return { verdict: "REDUCE" as const, numbers,
+      reason: `يُورَّد ${fmt(avgSent)}${u} ويُباع ${fmt(avgSold)}${u} في المتوسط. المقترح ${fmt(recommended)}${u} بدل ${fmt(avgSent)}${u} ` +
+        `(−${fmt(reduceBy)}${u} لكل توريد): يوفّر نحو ${saving.toFixed(2)} ر.ق هالكاً خلال الفترة، ويغطي الطلب في ${covered} من ${n} توريدات` +
+        (risk > 0 ? ` (مبيع محتمل يفوت ${risk.toFixed(2)} ر.ق).` : ".") + dayNote };
+  }
+  // ينفد تقريباً كل مرة: فرصة زيادة تجريبية
+  const soldOut = list.filter((d) => d.returned === 0).length;
+  if (returnRate < 3 && soldOut >= Math.ceil(n * 0.8)) {
+    return { verdict: "INCREASE" as const, numbers,
+      reason: `نفد في ${soldOut} من ${n} توريدات تقريباً دون مرتجع — تُقترح زيادة تجريبية ${gram ? "200 جم" : "1–2"} لكل توريد لمدة أسبوع ومتابعة المرتجع.` };
+  }
+  return { ...empty, numbers };
+}
 const REDUCE_RATE = 15;
 const MIN_SAMPLE = 5;
 
@@ -1734,6 +1815,12 @@ export const decisionReport = query({
       row.returned += ret;
       row.revenue = Math.round((row.revenue + Number(l.lineTotal || 0)) * 100) / 100;
       row.wasteValue = Math.round((row.wasteValue + ret * Number(l.unitPrice || 0)) * 100) / 100;
+      // سجل كل توريد (تاريخ/مورّد/مرتجع) — التوصية تُبنى على ما بيع فعلاً يوماً بيوم لا على النسبة وحدها.
+      (row.deliveries ||= new Map<string, { sent: number; returned: number }>());
+      const dd = row.deliveries.get(l.date) || { sent: 0, returned: 0 };
+      dd.sent += Number(l.qty || 0); dd.returned += ret;
+      row.deliveries.set(l.date, dd);
+      if (!row.unit) row.unit = l.priceUnit || null;
       byMeal.set(key, row);
     }
 
@@ -1749,22 +1836,17 @@ export const decisionReport = query({
       const profit = hasCost ? Math.round((netRevenue - (totalCost as number)) * 100) / 100 : null;
       const margin = hasCost && netRevenue > 0 ? Math.round(((profit as number) / netRevenue) * 1000) / 10 : null;
 
-      // الصياغة تظهر في مستند رسمي يُسلَّم للإدارة — عربية فصحى، بصيغة الخبر
-      // لا الأمر، وبلا عاميّة.
-      let verdict: "STOP" | "REDUCE" | "OK" = "OK";
-      let reason = "";
-      if (r.sent >= MIN_SAMPLE && returnRate >= STOP_RATE) {
+      // الصياغة تظهر في مستند رسمي يُسلَّم للإدارة — عربية فصحى، بصيغة الخبر لا الأمر.
+      // التوصية بالأرقام: من المُباع فعلاً في كل توريد، لا من نسبة الارتجاع وحدها.
+      const plan = supplyPlan(r);
+      let verdict: "STOP" | "REDUCE" | "INCREASE" | "OK" = plan.verdict;
+      let reason = plan.reason;
+      if (verdict === "OK" && hasCost && (profit as number) < 0) {
         verdict = "STOP";
-        reason = `تُرتجع ${returnRate}% من الكمية المورّدة هالكةً — بقيمة ${r.wasteValue.toFixed(2)} ر.ق`;
-      } else if (r.sent >= MIN_SAMPLE && returnRate >= REDUCE_RATE) {
-        verdict = "REDUCE";
-        reason = `نسبة ارتجاع ${returnRate}% — يُوصى بتخفيض الكمية المورّدة`;
-      } else if (hasCost && (profit as number) < 0) {
-        verdict = "STOP";
-        reason = `سعر البيع أقل من التكلفة — خسارة ${Math.abs(profit as number).toFixed(2)} ر.ق`;
+        reason = `سعر البيع أقل من التكلفة — خسارة ${Math.abs(profit as number).toFixed(2)} ر.ق خلال الفترة`;
       }
-
-      return { ...r, soldQty, netRevenue, returnRate, totalCost, profit, margin, verdict, reason };
+      const { deliveries: _d, ...rest } = r;
+      return { ...rest, soldQty, netRevenue, returnRate, totalCost, profit, margin, verdict, reason, plan: plan.numbers };
     });
 
     meals.sort((a, b) => b.soldQty - a.soldQty);
@@ -1798,8 +1880,15 @@ export const decisionReport = query({
       },
       costCoverage,
       topSellers: [...meals].filter((m) => m.soldQty > 0).slice(0, 10),
-      actions: meals.filter((m) => m.verdict !== "OK")
-        .sort((a, b) => b.wasteValue - a.wasteValue),
+      actions: meals.filter((m) => m.verdict === "STOP" || m.verdict === "REDUCE")
+        .sort((a, b) => (b.plan?.saving ?? b.wasteValue) - (a.plan?.saving ?? a.wasteValue)),
+      // فرص: أصناف تنفد تقريباً كل توريد — زيادة تجريبية قد ترفع المبيع.
+      opportunities: meals.filter((m) => m.verdict === "INCREASE").sort((a, b) => b.soldQty - a.soldQty).slice(0, 8),
+      // بدائل مقترحة للأصناف الموصى بإيقافها: الأعلى مبيعاً بأقل ارتجاع.
+      replacements: meals.filter((m) => m.verdict === "OK" || m.verdict === "INCREASE")
+        .filter((m) => m.soldQty > 0 && m.returnRate < REDUCE_RATE)
+        .sort((a, b) => b.soldQty - a.soldQty).slice(0, 5)
+        .map((m) => ({ key: m.key, nameAr: m.nameAr, nameEn: m.nameEn, soldQty: m.soldQty, returnRate: m.returnRate })),
       meals,
       thresholds: { STOP_RATE, REDUCE_RATE, MIN_SAMPLE },
     };

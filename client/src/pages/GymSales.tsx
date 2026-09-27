@@ -908,13 +908,14 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
       ? `<div class="act">
           <div class="act-h">${t("التوصيات — الأصناف المسبّبة للهدر", "Recommendations — items causing waste")}</div>
           <table>
-            <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("التوصية", "Recommendation")}</th></tr></thead>
+            <thead><tr><th>${t("الصنف", "Item")}</th><th>${t("المورّد", "Supplied")}</th><th>${t("المرتجع", "Returned")}</th><th>${t("نسبة الارتجاع", "Return rate")}</th><th>${t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th><th>${t("التوفير المتوقع", "Expected saving")}</th><th>${t("التوصية", "Recommendation")}</th></tr></thead>
             <tbody>${actions.map((a: any) => `<tr>
               <td><b>${nameOf(a)}</b><div class="why">${esc(a.reason)}</div></td>
               <td class="n">${a.sent}</td><td class="n">${a.returned}</td>
               <td class="n" style="color:#b91c1c;font-weight:900">${a.returnRate}%</td>
               <td class="n" style="color:#b91c1c">${Number(a.wasteValue).toFixed(2)}</td>
-              <td class="c"><span class="tag ${a.verdict === "STOP" ? "stop" : "red"}">${a.verdict === "STOP" ? t("إيقاف التوريد", "Discontinue") : t("تخفيض الكمية", "Reduce quantity")}</span></td>
+              <td class="n" style="color:#15803d;font-weight:900">${a.plan ? Number(a.plan.saving).toFixed(2) : "—"}</td>
+              <td class="c"><span class="tag ${a.verdict === "STOP" ? "stop" : "red"}">${a.verdict === "STOP" ? t("إيقاف التوريد", "Discontinue") : a.plan?.skipDays?.length ? t("حذف أيام من التوريد", "Skip delivery days") : t("تخفيض الكمية", "Reduce quantity")}</span></td>
             </tr>`).join("")}</tbody>
           </table>
         </div>`
@@ -1400,6 +1401,8 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   <th className="text-center p-2">{t("المستهلك", "Consumed")}</th>
                   <th className="text-center p-2">{t("نسبة الارتجاع", "Return rate")}</th>
                   <th className="text-end p-2">{t("قيمة الهالك (ر.ق)", "Waste value (QAR)")}</th>
+                  <th className="text-center p-2">{t("المقترح لكل توريد", "Suggested per delivery")}</th>
+                  <th className="text-end p-2">{t("التوفير المتوقع", "Expected saving")}</th>
                   <th className="text-center p-2">{t("التوصية", "Recommendation")}</th>
                 </tr>
               </thead>
@@ -1412,14 +1415,21 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                   .sort((a: any, b: any) => b.returnRate - a.returnRate).map((m: any) => {
                   const bad = m.verdict === "STOP";
                   const meh = m.verdict === "REDUCE";
+                  const skip = meh && m.plan?.skipDays?.length;
                   const recommendation = bad
                     ? t("إيقاف التوريد", "Discontinue")
-                    : meh
-                      ? t("تخفيض الكمية", "Reduce quantity")
-                      : t("استمرار ومتابعة", "Continue and monitor");
+                    : skip
+                      ? t("حذف أيام من التوريد", "Skip delivery days")
+                      : meh
+                        ? t("تخفيض الكمية", "Reduce quantity")
+                        : t("استمرار ومتابعة", "Continue and monitor");
+                  const unit = m.plan?.unit === "gram" ? t(" جم", " g") : "";
                   return (
                     <tr key={m.key} className="border-t border-slate-100">
-                      <td className="p-2 font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</td>
+                      <td className="p-2 font-bold">
+                        {isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}
+                        {m.reason && <div className="mt-1 max-w-md text-[11px] font-medium leading-5 text-slate-500">{m.reason}</div>}
+                      </td>
                       <td className="p-2 text-center font-black">{m.sent}</td>
                       <td className="p-2 text-center font-black" style={{ color: "#dc2626" }}>{m.returned}</td>
                       <td className="p-2 text-center font-black text-slate-700">{m.soldQty}</td>
@@ -1433,18 +1443,56 @@ function ReportsTab({ isRtl, t, sessionToken, gyms }: any) {
                         </span>
                       </td>
                       <td className="p-2 text-end font-black" style={{ color: "#dc2626" }}>{m.wasteValue.toFixed(2)}</td>
+                      <td className="p-2 text-center font-black tabular-nums">
+                        {!m.plan ? "—" : bad ? t("إيقاف", "Stop") : skip ? (m.plan.skipDays as string[]).map((d) => t(`بلا ${d}`, `skip ${d}`)).join("، ")
+                          : m.plan.reduceBy > 0 && meh ? <span>{m.plan.recommended}{unit} <span className="text-slate-400 line-through">{m.plan.avgSent}</span></span> : `${m.plan.avgSent}${unit}`}
+                      </td>
+                      <td className="p-2 text-end font-black tabular-nums text-emerald-700">{m.plan && (bad || meh) ? m.plan.saving.toFixed(2) : "—"}</td>
                       <td className="p-2 text-center"><span className={cn("inline-flex rounded-full px-2.5 py-1 text-[10px] font-black", bad ? "bg-red-100 text-red-800" : meh ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800")}>{recommendation}</span></td>
                     </tr>
                   );
                 })}
                 {(!decision || decision.meals.filter((m: any) => m.returned > 0).length === 0) && (
-                  <tr><td colSpan={7} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذه الفترة", "No returns recorded in this period")}</td></tr>
+                  <tr><td colSpan={9} className="text-center text-slate-400 py-6">{t("لا توجد مرتجعات مسجلة في هذه الفترة", "No returns recorded in this period")}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+      )}
+
+      {showReturnsBlocks && ((decision?.opportunities?.length || 0) > 0 || ((decision?.actions || []).some((a: any) => a.verdict === "STOP") && (decision?.replacements?.length || 0) > 0)) && (
+        <Card className="rounded-2xl border-slate-200">
+          <CardContent className="grid gap-4 p-4 md:grid-cols-2">
+            {(decision?.opportunities?.length || 0) > 0 && (
+              <div>
+                <h3 className="mb-2 font-black text-emerald-800">{t("فرص زيادة — أصناف تنفد", "Increase opportunities — items selling out")}</h3>
+                <div className="space-y-2">
+                  {decision.opportunities.map((m: any) => (
+                    <div key={m.key} className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs">
+                      <div className="font-black text-emerald-900">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</div>
+                      <div className="mt-0.5 leading-5 text-emerald-800">{m.reason}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(decision?.actions || []).some((a: any) => a.verdict === "STOP") && (decision?.replacements?.length || 0) > 0 && (
+              <div>
+                <h3 className="mb-2 font-black text-slate-800">{t("بدائل مقترحة مكان الأصناف الموقوفة", "Suggested replacements for stopped items")}</h3>
+                <div className="space-y-2">
+                  {decision.replacements.map((m: any) => (
+                    <div key={m.key} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs">
+                      <span className="font-black">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</span>
+                      <span className="text-slate-500">{t(`بيع ${m.soldQty} · ارتجاع ${m.returnRate}%`, `sold ${m.soldQty} · ${m.returnRate}% returned`)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* 📊 أعلى الأصناف خسارة — قراءة بصرية سريعة: طول الشريط = قيمة الهالك.
