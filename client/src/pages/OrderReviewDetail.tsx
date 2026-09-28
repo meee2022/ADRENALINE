@@ -606,7 +606,8 @@ ${r.skipped.join(", ")}` : ""),
               .map((x) => String(x || "").trim()).filter(Boolean).join(" • "),
             calories: it.calories ?? "",
             protein: it.protein ?? "",
-            imageUrl: it.imageUrl || undefined,
+            // الصورة الحيّة من المنيو كما في الشاشة — لقطة الطلب القديمة فارغة غالباً أو لصورة محذوفة (❓ في الـPDF).
+            imageUrl: mealImage(it) || undefined,
           })),
         })),
       };

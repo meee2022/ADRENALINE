@@ -92,8 +92,9 @@ export function CustomerMealPlanDialog({
               : (isRtl ? (canonical?.nameAr || menu?.name || it.mealNameAr) : (canonical?.nameEn || menu?.name || it.mealNameEn)))
               || (isRtl ? "غير محدد" : "Unspecified"),
             notes: [...mods, it.avoid, it.preferences, it.portions].filter(Boolean).join(" • "),
-            imageUrl: mealArtworkUrl(canonical) || mealArtworkUrl(menu) || mealArtworkUrl(it)
-              || it.imageUrl || canonical?.imageUrl || menu?.imageUrl || undefined,
+            // الصورة الحيّة من المنيو (Convex) أولاً — نفس ما يراه الطاقم والعميل؛ الملفات المدموجة قديمة.
+            imageUrl: canonical?.imageUrl || menu?.imageUrl || mealArtworkUrl(canonical) || mealArtworkUrl(menu)
+              || mealArtworkUrl(it) || it.imageUrl || undefined,
             calories: it.calories ?? canonical?.calories ?? menu?.calories ?? "",
             protein: it.protein ?? canonical?.protein ?? menu?.protein ?? "",
           };
