@@ -16,18 +16,13 @@ type Ctx = any;
 
 // تجميع أرصدة الحسابات من الأسطر المُرحَّلة ضمن نطاق تاريخ.
 async function accountBalances(ctx: Ctx, fromDate?: string, toDate?: string) {
-  const entries = await ctx.db.query("finJournalEntries").collect();
-  const posted = new Map<string, any>();
-  for (const e of entries) {
-    if (e.postingStatus !== "posted") continue;
-    if (fromDate && e.entryDate < fromDate) continue;
-    if (toDate && e.entryDate > toDate) continue;
-    posted.set(String(e._id), e);
-  }
-  const lines = await ctx.db.query("finJournalLines").collect();
+  // من المجاميع اليومية المرحَّلة (finAccountDaily) — كانت تقرأ كل القيود والأسطر فتتجاوز حدود Convex.
+  const rows = await ctx.db.query("finAccountDaily").withIndex("by_date", (q: any) => {
+    const r = q.gte("date", fromDate || "0000-00-00");
+    return toDate ? r.lte("date", toDate) : r;
+  }).collect();
   const bal = new Map<string, { debit: number; credit: number }>();
-  for (const l of lines) {
-    if (!posted.has(String(l.entryId))) continue;
+  for (const l of rows) {
     const k = String(l.accountId);
     const cur = bal.get(k) || { debit: 0, credit: 0 };
     cur.debit += l.debit || 0;
@@ -190,8 +185,10 @@ export const financeDashboard = query({
   args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireFinance(ctx, args.sessionToken);
-    const { period: bal, lifetime: balAll } = await dashboardBalances(ctx, args.fromDate, args.toDate);
     const accounts = await ctx.db.query("finAccounts").collect();
+    // التراكمي مطلوب لحسابات النقدية/البنك/الذمم فقط — لا نقرأ دفتر الأستاذ كله.
+    const lifetimeIds = (accounts as any[]).filter((a) => a.isPostable && ["cash", "bank", "trade_receivable", "trade_payable"].includes(a.operationalType)).map((a) => a._id);
+    const { period: bal, lifetime: balAll } = await dashboardBalances(ctx, args.fromDate, args.toDate, lifetimeIds);
     let revenue = 0, expense = 0, cogs = 0, cash = 0, receivable = 0, payable = 0;
     // النقدية/الذمم تُحسب من كل التاريخ حتى toDate (رصيد لحظي)
     for (const a of accounts as any[]) {

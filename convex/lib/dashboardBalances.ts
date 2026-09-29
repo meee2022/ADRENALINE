@@ -1,26 +1,32 @@
-/** Read each ledger table once; derive period and lifetime balances together. */
-export async function dashboardBalances(ctx: any, fromDate?: string, toDate?: string) {
-  const entries = await ctx.db.query("finJournalEntries")
-    .withIndex("by_status", (q: any) => q.eq("postingStatus", "posted")).collect();
-  const dates = new Map<string, string>();
-  for (const entry of entries) {
-    if (!toDate || entry.entryDate <= toDate) dates.set(String(entry._id), entry.entryDate);
-  }
-  const lines = await ctx.db.query("finJournalLines").collect();
+/**
+ * أرصدة لوحة المالية من المجاميع اليومية (finAccountDaily) — لا من أسطر القيود.
+ *
+ * كانت تقرأ كل finJournalLines منذ البداية، فتجاوزت حدود Convex وأسقطت لوحة التحكم
+ * على كل الأجهزة (29-9). المجاميع اليومية تُحدَّث عند الترحيل وتُطرح عند العكس
+ * (convex/financePost.ts → applyAccountDaily)، فحجم القراءة = أيام × حسابات، ثابت تقريباً.
+ * التعريف كما كان: قيود «مرحَّلة» وتاريخها ≤ toDate؛ الفترة من fromDate.
+ */
+export async function dashboardBalances(ctx: any, fromDate?: string, toDate?: string, lifetimeAccountIds: string[] = []) {
   const period = new Map<string, { debit: number; credit: number }>();
   const lifetime = new Map<string, { debit: number; credit: number }>();
-  const add = (map: typeof period, line: any) => {
-    const key = String(line.accountId);
+  const add = (map: typeof period, row: any) => {
+    const key = String(row.accountId);
     const value = map.get(key) || { debit: 0, credit: 0 };
-    value.debit += line.debit || 0;
-    value.credit += line.credit || 0;
+    value.debit += row.debit || 0;
+    value.credit += row.credit || 0;
     map.set(key, value);
   };
-  for (const line of lines) {
-    const date = dates.get(String(line.entryId));
-    if (date === undefined) continue;
-    add(lifetime, line);
-    if (!fromDate || date >= fromDate) add(period, line);
+  const periodRows = await ctx.db.query("finAccountDaily").withIndex("by_date", (q: any) => {
+    const r = q.gte("date", fromDate || "0000-00-00");
+    return toDate ? r.lte("date", toDate) : r;
+  }).collect();
+  for (const row of periodRows) add(period, row);
+  for (const accountId of lifetimeAccountIds) {
+    const rows = await ctx.db.query("finAccountDaily").withIndex("by_account_date", (q: any) => {
+      const r = q.eq("accountId", accountId);
+      return toDate ? r.lte("date", toDate) : r;
+    }).collect();
+    for (const row of rows) add(lifetime, row);
   }
   return { period, lifetime };
 }

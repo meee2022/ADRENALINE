@@ -1662,6 +1662,18 @@ export default defineSchema({
     .index("by_source", ["sourceType", "sourceId"]),
 
   // أسطر القيد — كل سطر مدين أو دائن على حساب.
+  /* مجاميع يومية مرحَّلة لكل حساب — تُحدَّث عند الترحيل وتُطرح عند العكس.
+     تقارير الأرصدة تقرأ «يوم × حساب» بدل كل الأسطر منذ البداية: حجمها ينمو بالأيام
+     لا بالقيود، فلا تسقط لوحة المالية مع نمو الدفتر (سقطت 29-9 بحدّ 32 ألف مستند). */
+  finAccountDaily: defineTable({
+    accountId: v.id("finAccounts"),
+    date: v.string(),                          // yyyy-MM-dd = تاريخ القيد
+    debit: v.number(),
+    credit: v.number(),
+  })
+    .index("by_account_date", ["accountId", "date"])
+    .index("by_date", ["date"]),
+
   finJournalLines: defineTable({
     entryId: v.id("finJournalEntries"),
     lineNumber: v.number(),
@@ -1674,9 +1686,13 @@ export default defineSchema({
     partyType: v.optional(v.string()),         // "supplier" | "customer" | "company"
     partyId: v.optional(v.string()),
     documentRef: v.optional(v.string()),
+    // تاريخ القيد منسوخاً على السطر: تقارير الفترة تقرأ الأسطر بنطاق تاريخ بدل المرور على كل قيد
+    // (لوحة المالية سقطت بحدّي 32 ألف مستند و4096 قراءة، 29-9).
+    entryDate: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_entry", ["entryId"])
+    .index("by_entry_date", ["entryDate"])
     .index("by_account", ["accountId"])
     .index("by_party", ["partyType", "partyId"]),
 
