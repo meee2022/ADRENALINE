@@ -1668,11 +1668,21 @@ export default defineSchema({
   finAccountDaily: defineTable({
     accountId: v.id("finAccounts"),
     date: v.string(),                          // yyyy-MM-dd = تاريخ القيد
+    // قناة القيد (pos/outlets/purchases/other) — لتقرير ربحية القنوات؛ باقي التقارير تجمع كل القنوات.
+    channel: v.optional(v.string()),
     debit: v.number(),
     credit: v.number(),
   })
     .index("by_account_date", ["accountId", "date"])
+    .index("by_account_date_channel", ["accountId", "date", "channel"])
     .index("by_date", ["date"]),
+
+  /* عدد القيود المرحَّلة لكل قناة ويوم (عمود «العمليات» في ربحية القنوات). */
+  finChannelDaily: defineTable({
+    date: v.string(),
+    channel: v.string(),
+    entries: v.number(),
+  }).index("by_date_channel", ["date", "channel"]),
 
   finJournalLines: defineTable({
     entryId: v.id("finJournalEntries"),
@@ -1694,6 +1704,7 @@ export default defineSchema({
     .index("by_entry", ["entryId"])
     .index("by_entry_date", ["entryDate"])
     .index("by_account", ["accountId"])
+    .index("by_account_date", ["accountId", "entryDate"])
     .index("by_party", ["partyType", "partyId"]),
 
   // قواعد الترحيل التلقائي — تربط نوع الحدث بالحسابات (يعدّلها المحاسب دون كود).

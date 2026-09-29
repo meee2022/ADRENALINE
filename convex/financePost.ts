@@ -96,8 +96,16 @@ type LineIn = {
 
 // إنشاء قيد كامل (رأس + أسطر) بعد التحقق من التوازن. الدالة الأساسية لكل ترحيل.
 
-/** يضيف (sign=1) أو يطرح (sign=-1) أسطر قيد مرحَّل من المجاميع اليومية لكل حساب. */
-export async function applyAccountDaily(ctx: any, date: string, lines: { accountId: any; debit?: number; credit?: number }[], sign: 1 | -1) {
+/** قناة القيد من مصدره — نفس تصنيف تقرير ربحية القنوات. */
+export function entryChannel(sourceType?: string | null) {
+  return sourceType === "posTicket" ? "pos"
+    : sourceType === "gymOrder" || sourceType === "gymReturn" ? "outlets"
+    : sourceType === "inventoryReceipt" ? "purchases" : "other";
+}
+
+/** يضيف (sign=1) أو يطرح (sign=-1) أسطر قيد مرحَّل من المجاميع اليومية لكل حساب وقناة، ويعدّ القيد في قناته. */
+export async function applyAccountDaily(ctx: any, date: string, lines: { accountId: any; debit?: number; credit?: number }[], sign: 1 | -1, sourceType?: string | null) {
+  const channel = entryChannel(sourceType);
   const sums = new Map<string, { accountId: any; debit: number; credit: number }>();
   for (const l of lines) {
     const k = String(l.accountId);
@@ -107,12 +115,15 @@ export async function applyAccountDaily(ctx: any, date: string, lines: { account
   }
   for (const x of sums.values()) {
     const row: any = await ctx.db.query("finAccountDaily")
-      .withIndex("by_account_date", (q: any) => q.eq("accountId", x.accountId).eq("date", date)).first();
+      .withIndex("by_account_date_channel", (q: any) => q.eq("accountId", x.accountId).eq("date", date).eq("channel", channel)).first();
     const debit = Math.round(((row?.debit || 0) + sign * x.debit) * 100) / 100;
     const credit = Math.round(((row?.credit || 0) + sign * x.credit) * 100) / 100;
     if (row) await ctx.db.patch(row._id, { debit, credit });
-    else await ctx.db.insert("finAccountDaily", { accountId: x.accountId, date, debit, credit });
+    else await ctx.db.insert("finAccountDaily", { accountId: x.accountId, date, channel, debit, credit });
   }
+  const c: any = await ctx.db.query("finChannelDaily").withIndex("by_date_channel", (q: any) => q.eq("date", date).eq("channel", channel)).first();
+  if (c) await ctx.db.patch(c._id, { entries: c.entries + sign });
+  else await ctx.db.insert("finChannelDaily", { date, channel, entries: Math.max(0, sign) });
 }
 
 export async function postEntry(
@@ -187,7 +198,7 @@ export async function postEntry(
     });
   }
   if (status === "posted") {
-    await applyAccountDaily(ctx, opts.entryDate, lines.map((l: any) => ({ accountId: l.accountId, debit: round(l.debit || 0), credit: round(l.credit || 0) })), 1);
+    await applyAccountDaily(ctx, opts.entryDate, lines.map((l: any) => ({ accountId: l.accountId, debit: round(l.debit || 0), credit: round(l.credit || 0) })), 1, opts.sourceType);
   }
   return { entryId, entryNumber };
 }
@@ -306,7 +317,7 @@ export async function autoReversePosTicket(
         documentRef: l.documentRef,
       })),
     });
-    await applyAccountDaily(ctx, original.entryDate, lines as any, -1);
+    await applyAccountDaily(ctx, original.entryDate, lines as any, -1, original.sourceType);
     await ctx.db.patch(original._id, { postingStatus: "reversed", reversalEntryId: rev.entryId });
     await ctx.db.patch(rev.entryId, { reversedEntryId: original._id });
     return true;
@@ -330,7 +341,7 @@ async function reversePostedSource(ctx: Ctx, sourceType: string, sourceId: strin
     createdBy,
     lines: lines.map((l: any) => ({ accountId: l.accountId, debit: l.credit, credit: l.debit, description: `عكس ${l.description || ""}`, partyType: l.partyType, partyId: l.partyId, documentRef: l.documentRef })),
   });
-  await applyAccountDaily(ctx, entry.entryDate, lines as any, -1);
+  await applyAccountDaily(ctx, entry.entryDate, lines as any, -1, entry.sourceType);
   await ctx.db.patch(entry._id, { postingStatus: "reversed", reversalEntryId: rev.entryId });
   await ctx.db.patch(rev.entryId, { reversedEntryId: entry._id });
   return true;
@@ -659,7 +670,7 @@ export const reverseEntry = mutation({
         partyId: l.partyId,
       })),
     });
-    await applyAccountDaily(ctx, entry.entryDate, lines as any, -1);
+    await applyAccountDaily(ctx, entry.entryDate, lines as any, -1, entry.sourceType);
     await ctx.db.patch(entry._id, { postingStatus: "reversed", reversalEntryId: rev.entryId });
     await ctx.db.patch(rev.entryId, { reversedEntryId: entry._id });
     await auditFinance(ctx, actor, "FINANCE_ENTRY_REVERSED", String(entry._id), { reversalEntryId: String(rev.entryId), reason: args.reason });

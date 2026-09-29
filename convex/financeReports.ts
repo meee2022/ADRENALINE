@@ -32,6 +32,16 @@ async function accountBalances(ctx: Ctx, fromDate?: string, toDate?: string) {
   return bal;
 }
 
+
+/** القيود المرحَّلة في نطاق تاريخ — استعلام فهرس واحد بدل جلب القيد لكل سطر. */
+async function postedEntriesInRange(ctx: Ctx, fromDate?: string, toDate?: string) {
+  const entries = await ctx.db.query("finJournalEntries").withIndex("by_date", (q: any) => {
+    const r = q.gte("entryDate", fromDate || "0000-00-00");
+    return toDate ? r.lte("entryDate", toDate) : r;
+  }).collect();
+  return new Map<string, any>(entries.filter((e: any) => e.postingStatus === "posted").map((e: any) => [String(e._id), e]));
+}
+
 // ميزان المراجعة — كل حساب بمدينه ودائنه ورصيده الصافي.
 export const trialBalance = query({
   args: { fromDate: v.optional(v.string()), toDate: v.optional(v.string()), sessionToken: v.optional(v.string()) },
@@ -140,13 +150,17 @@ export const generalLedger = query({
     await requireFinance(ctx, args.sessionToken);
     const acc: any = await ctx.db.get(args.accountId);
     if (!acc) return null;
-    const allLines = await ctx.db.query("finJournalLines").withIndex("by_account", (q) => q.eq("accountId", args.accountId)).collect();
+    // أسطر الحساب في النطاق فقط (by_account_date) + القيود المرحَّلة في النطاق بفهرس واحد —
+    // كان يقرأ كل أسطر الحساب منذ البداية ويجلب قيد كل سطر (درج الكاشير آلاف الأسطر).
+    const allLines = await ctx.db.query("finJournalLines").withIndex("by_account_date", (q: any) => {
+      const r = q.eq("accountId", args.accountId).gte("entryDate", args.fromDate || "0000-00-00");
+      return args.toDate ? r.lte("entryDate", args.toDate) : r;
+    }).collect();
+    const posted = await postedEntriesInRange(ctx, args.fromDate, args.toDate);
     const rows: any[] = [];
     for (const l of allLines) {
-      const e: any = await ctx.db.get(l.entryId);
-      if (!e || e.postingStatus !== "posted") continue;
-      if (args.fromDate && e.entryDate < args.fromDate) continue;
-      if (args.toDate && e.entryDate > args.toDate) continue;
+      const e: any = posted.get(String(l.entryId));
+      if (!e) continue;
       rows.push({ date: e.entryDate, entryNumber: e.entryNumber, description: l.description || e.description, debit: l.debit || 0, credit: l.credit || 0 });
     }
     rows.sort((a, b) => a.date.localeCompare(b.date) || a.entryNumber.localeCompare(b.entryNumber));
@@ -164,12 +178,15 @@ export const agedParties = query({
   args: { partyType: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireFinance(ctx, args.sessionToken);
-    const lines = await ctx.db.query("finJournalLines").collect();
+    // أسطر هذا النوع من الأطراف فقط (by_party) — كان يقرأ كل الأسطر.
+    const lines = await ctx.db.query("finJournalLines").withIndex("by_party", (q: any) => q.eq("partyType", args.partyType)).collect();
+    const status = new Map<string, string | null>();
     const map = new Map<string, { debit: number; credit: number }>();
     for (const l of lines) {
-      if (l.partyType !== args.partyType || !l.partyId) continue;
-      const e: any = await ctx.db.get(l.entryId);
-      if (!e || e.postingStatus !== "posted") continue;
+      if (!l.partyId) continue;
+      const k = String(l.entryId);
+      if (!status.has(k)) status.set(k, ((await ctx.db.get(l.entryId)) as any)?.postingStatus ?? null);
+      if (status.get(k) !== "posted") continue;
       const cur = map.get(l.partyId) || { debit: 0, credit: 0 };
       cur.debit += l.debit || 0; cur.credit += l.credit || 0;
       map.set(l.partyId, cur);
@@ -216,18 +233,23 @@ export const cashFlow = query({
   handler: async (ctx, args) => {
     await requireFinance(ctx, args.sessionToken);
     const accounts = (await ctx.db.query("finAccounts").collect()).filter((a: any) => a.isPostable && ["cash", "bank"].includes(a.operationalType));
-    const ids = new Set(accounts.map((a: any) => String(a._id)));
-    const entries = await ctx.db.query("finJournalEntries").collect();
-    const entryMap = new Map(entries.map((e: any) => [String(e._id), e]));
-    const lines = await ctx.db.query("finJournalLines").collect();
+    // الافتتاحي من المجاميع اليومية قبل fromDate، والحركة من أسطر حسابات النقدية في النطاق فقط.
+    // كان يقرأ كل القيود وكل الأسطر فتجاوز حدّ Convex (29-9). النتيجة مطابقة.
     let opening = 0, inflows = 0, outflows = 0;
+    for (const a of accounts as any[]) {
+      const prior = await ctx.db.query("finAccountDaily").withIndex("by_account_date", (q: any) => q.eq("accountId", a._id).lt("date", args.fromDate)).collect();
+      for (const d of prior as any[]) opening += Number(d.debit || 0) - Number(d.credit || 0);
+    }
+    const entryMap = await postedEntriesInRange(ctx, args.fromDate, args.toDate);
+    const lines: any[] = [];
+    for (const a of accounts as any[]) {
+      lines.push(...await ctx.db.query("finJournalLines").withIndex("by_account_date", (q: any) => q.eq("accountId", a._id).gte("entryDate", args.fromDate).lte("entryDate", args.toDate)).collect());
+    }
     const bySource = new Map<string, { inflow: number; outflow: number }>();
     for (const line of lines as any[]) {
-      if (!ids.has(String(line.accountId))) continue;
       const entry: any = entryMap.get(String(line.entryId));
-      if (!entry || entry.postingStatus !== "posted" || entry.entryDate > args.toDate) continue;
+      if (!entry) continue;
       const net = Number(line.debit || 0) - Number(line.credit || 0);
-      if (entry.entryDate < args.fromDate) { opening += net; continue; }
       if (net >= 0) inflows += net; else outflows += -net;
       const key = String(entry.sourceType || entry.journalType || "manual");
       const row = bySource.get(key) || { inflow: 0, outflow: 0 };
@@ -248,25 +270,24 @@ export const channelProfitability = query({
   args: { fromDate: v.string(), toDate: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireFinance(ctx, args.sessionToken);
-    const entries = (await ctx.db.query("finJournalEntries").collect()).filter((e: any) => e.postingStatus === "posted" && e.entryDate >= args.fromDate && e.entryDate <= args.toDate);
-    const rows = new Map<string, { channel: string; revenue: number; returns: number; expenses: number; transactions: number }>();
+    // من المجاميع اليومية لكل حساب وقناة (finAccountDaily) وعدد القيود (finChannelDaily) — شهر واحد
+    // كان يقرأ ~28 ألف مستند (29-9) ويقترب من حدّ Convex. نفس التصنيف ونفس الحساب.
     const accounts = await ctx.db.query("finAccounts").collect();
     const accountMap = new Map(accounts.map((a: any) => [String(a._id), a]));
-    for (const entry of entries as any[]) {
-      const channel = entry.sourceType === "posTicket" ? "pos" : entry.sourceType === "gymOrder" || entry.sourceType === "gymReturn" ? "outlets" : entry.sourceType === "inventoryReceipt" ? "purchases" : "other";
-      const row = rows.get(channel) || { channel, revenue: 0, returns: 0, expenses: 0, transactions: 0 };
-      const lines = await ctx.db.query("finJournalLines").withIndex("by_entry", (q: any) => q.eq("entryId", entry._id)).collect();
-      for (const line of lines as any[]) {
-        const account: any = accountMap.get(String(line.accountId));
-        if (!account) continue;
-        const amount = Number(line.credit || 0) - Number(line.debit || 0);
-        if (account.accountSubType === "contra_revenue") row.returns += -amount;
-        else if (account.accountType === "revenue") row.revenue += amount;
-        else if (account.accountType === "expense") row.expenses += -amount;
-      }
-      row.transactions += 1;
-      rows.set(channel, row);
+    const rows = new Map<string, { channel: string; revenue: number; returns: number; expenses: number; transactions: number }>();
+    const rowOf = (channel: string) => rows.get(channel) || rows.set(channel, { channel, revenue: 0, returns: 0, expenses: 0, transactions: 0 }).get(channel)!;
+    const daily = await ctx.db.query("finAccountDaily").withIndex("by_date", (q: any) => q.gte("date", args.fromDate).lte("date", args.toDate)).collect();
+    for (const d of daily as any[]) {
+      const account: any = accountMap.get(String(d.accountId));
+      if (!account) continue;
+      const row = rowOf(d.channel || "other");
+      const amount = Number(d.credit || 0) - Number(d.debit || 0);
+      if (account.accountSubType === "contra_revenue") row.returns += -amount;
+      else if (account.accountType === "revenue") row.revenue += amount;
+      else if (account.accountType === "expense") row.expenses += -amount;
     }
+    const counts = await ctx.db.query("finChannelDaily").withIndex("by_date_channel", (q: any) => q.gte("date", args.fromDate).lte("date", args.toDate)).collect();
+    for (const c of counts as any[]) rowOf(c.channel).transactions += c.entries;
     return [...rows.values()].map((r) => ({ ...r, net: r.revenue - r.returns - r.expenses })).sort((a, b) => b.net - a.net);
   },
 });
