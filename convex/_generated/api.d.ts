@@ -116,6 +116,7 @@ import type * as stickers from "../stickers.js";
 import type * as storageCleanup from "../storageCleanup.js";
 import type * as subNameUnify from "../subNameUnify.js";
 import type * as subscriberCleanup from "../subscriberCleanup.js";
+import type * as subscriberOrders from "../subscriberOrders.js";
 import type * as subscriptionPause from "../subscriptionPause.js";
 import type * as units from "../units.js";
 import type * as updateBanners from "../updateBanners.js";
@@ -236,6 +237,7 @@ declare const fullApi: ApiFromModules<{
   storageCleanup: typeof storageCleanup;
   subNameUnify: typeof subNameUnify;
   subscriberCleanup: typeof subscriberCleanup;
+  subscriberOrders: typeof subscriberOrders;
   subscriptionPause: typeof subscriptionPause;
   units: typeof units;
   updateBanners: typeof updateBanners;

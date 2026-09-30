@@ -208,6 +208,7 @@ export default function Account() {
       <Btn label="منيو المطعم" variant="outline" onPress={()=>router.push('/restaurant-menu')}/>
       {session && <Btn label="اختيار وجبات اشتراكي" onPress={()=>router.push('/menu')}/>}
       <SmartPlanEntry/>
+      <Btn label="طلباتي وخطتي المعتمدة" onPress={()=>router.push('/my-orders')}/>
       <Btn label="تتبّع طلبك" variant="outline" onPress={()=>router.push('/order-tracking')}/>
       <Btn label="حاسبة السعرات والماكروز" variant="outline" onPress={()=>router.push('/calorie-calculator')}/>
       {session ? <Btn label="إدارة اشتراكي على الموقع الرسمي" variant="outline" onPress={()=>void openSite('/customer/profile')}/> : null}
