@@ -15,7 +15,6 @@ import { useCustomerSession } from '@/customerSession';
 import { colors, fonts } from '@/theme';
 import { Btn, T } from '@/components/ui';
 import { SubscriberDay } from '@/components/SubscriberDay';
-import { SmartPlanEntry } from '@/components/SmartPlanEntry';
 import { LinkNotifications } from '@/components/LinkNotifications';
 import { pushEnabled } from '@/pushEnabled';
 
@@ -146,10 +145,12 @@ export default function Account() {
     <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[s.page,{paddingTop:insets.top+20,paddingBottom:insets.bottom+32}]}>
       {/* مدخل الطاقم مخفي عن العملاء (ومراجع Apple): ضغطة مطوّلة ثانيتين على الشعار تُظهره. */}
       <Pressable onLongPress={()=>setStaffOpen(true)} delayLongPress={2000} accessible={false}><Image source={require('../../assets/brand-wordmark-original.png')} contentFit="contain" style={s.logo} accessibilityLabel={localize(String("أدرينالين للوجبات الصحية"))}/></Pressable>
-      <T w="black" accessibilityRole="header" style={s.title}>{session?'حساب المشترك':registering?'إنشاء حساب جديد':'أهلًا بعودتك'}</T>
-      <T style={s.intro}>{session?'تفاصيل حسابك واشتراكك، في مكان واحد.':'ادخل بحسابك الحالي لمتابعة تفاصيل اشتراكك.'}</T>
+      <T w="black" accessibilityRole="header" style={s.title}>{registering&&!session?'إنشاء حساب جديد':'حسابي'}</T>
+      <T style={s.intro}>{session?'تفاصيل حسابك واشتراكك، في مكان واحد.':'طلباتك وخطتك المعتمدة تظهر هنا. سجّل الدخول لرؤية تفاصيل اشتراكك.'}</T>
       {!!error&&<View accessibilityRole="alert" style={s.notice}><Ionicons name="alert-circle-outline" size={22} color={colors.navy2}/><T style={{flex:1,color:colors.navy2}}>{error}</T></View>}
+      {!session && <OrdersCard onPress={()=>router.push('/my-orders')}/>}
       {!session ? <View style={s.panel}>
+        <T w="black" style={s.section}>{registering?'إنشاء حساب':'تسجيل الدخول بحسابك'}</T>
         {registering && <>
           <T w="bold" style={s.label}>الاسم الكامل</T>
           <TextInput accessibilityLabel={localize(String("الاسم الكامل"))} value={fullName} onChangeText={setFullName} editable={!busy} autoComplete="name" style={[s.input,{textAlign:'auto',writingDirection:'auto'}]} placeholderTextColor={colors.muted2}/>
@@ -189,6 +190,7 @@ export default function Account() {
               <Detail label="الحساسية المسجلة" value={listOf(profile.subscription.allergies).map(localize).join(uiLanguage()==='ar'?'، ':', ')}/>
             </> : <T style={s.intro}>لا يوجد اشتراك مرتبط بهذا الحساب. تواصل مع الأخصائية لربطه.</T>}
           </View>
+          <OrdersCard onPress={()=>router.push('/my-orders')}/>
           {profile.subscription && <>
             <SubscriberDay key={session.accountId} customerId={profile.subscription.id} token={session.token} skippedDates={profile.subscription.skippedDates}/>
             <View style={s.panel}>
@@ -201,34 +203,27 @@ export default function Account() {
           </>}
         </> : null}
         <Btn label="تحديث بيانات الاشتراك" variant="outline" disabled={loading||busy} onPress={()=>void load()}/>
+        <Pressable accessibilityRole="link" onPress={()=>void openSite('/customer/profile')} style={s.link}><T w="bold" style={s.linkText}>إدارة اشتراكي على الموقع الرسمي</T><Ionicons name="open-outline" size={16} color={colors.cyanDark}/></Pressable>
         <Btn label={busy?'جارٍ تسجيل الخروج…':'تسجيل الخروج'} variant="outline" disabled={busy} onPress={()=>void logout()}/>
         <Pressable accessibilityRole="button" accessibilityLabel={localize(String("حذف حسابي"))} disabled={busy} onPress={()=>void deleteAccount()} style={s.link}><Ionicons name="trash-outline" size={18} color="#B42318"/><T w="bold" style={[s.linkText,{color:'#B42318'}]}>حذف حسابي</T></Pressable>
       </>}
       <LinkNotifications/>
-      <Btn label="منيو المطعم" variant="outline" onPress={()=>router.push('/restaurant-menu')}/>
-      {session && <Btn label="اختيار وجبات اشتراكي" onPress={()=>router.push('/menu')}/>}
-      <SmartPlanEntry/>
-      <Btn label="طلباتي وخطتي المعتمدة" onPress={()=>router.push('/my-orders')}/>
-      <Btn label="تتبّع طلبك" variant="outline" onPress={()=>router.push('/order-tracking')}/>
-      <Btn label="حاسبة السعرات والماكروز" variant="outline" onPress={()=>router.push('/calorie-calculator')}/>
-      {session ? <Btn label="إدارة اشتراكي على الموقع الرسمي" variant="outline" onPress={()=>void openSite('/customer/profile')}/> : null}
-      <Pressable accessibilityRole="link" style={s.link} onPress={()=>void Linking.openURL(`https://wa.me/${phone}`).catch(()=>fail('تعذّر فتح واتساب.'))}><Ionicons name="logo-whatsapp" size={21} color={colors.muted2}/><T w="bold" style={s.linkText}>تواصل مع الأخصائية</T></Pressable>
-      <View style={s.panel}>
-        <T w="black" style={s.section}>المساعدة والمعلومات</T>
-        {[
-          ['how-to-subscribe', 'طريقة الاشتراك'],
-          ['about', 'عن أدرينالين'],
-          ['contact', 'تواصل معنا'],
-        ].map(([page,label])=><Pressable key={page} accessibilityRole="button" onPress={()=>router.push(`/information/${page}`)} style={s.link}><T style={s.linkText}>{label}</T><Ionicons name={uiLanguage()==='ar'?'chevron-back':'chevron-forward'} size={16} color={colors.cyanDark}/></Pressable>)}
-        <T style={s.small}>السياسات التالية تُفتح على الموقع الرسمي.</T>
-        {[
-          ['/privacy', 'سياسة الخصوصية'],
-          ['/terms', 'الشروط والأحكام'],
-        ].map(([path,label])=><Pressable key={path} accessibilityRole="link" onPress={()=>void openSite(path)} style={s.link}><T style={s.linkText}>{label}</T><Ionicons name="open-outline" size={16} color={colors.cyanDark}/></Pressable>)}
-      </View>
       {staffOpen && <Pressable accessibilityRole="button" style={s.link} onPress={()=>router.push('/admin')}><Ionicons name="settings-outline" size={20} color={colors.muted2}/><T style={s.linkText}>مدخل الطاقم فقط (ليس للمشتركين) — لوحة التحكم</T></Pressable>}
     </ScrollView>
   </KeyboardAvoidingView>;
+}
+/** البطاقة الأبرز في «حسابي»: الطلبات والخطة المعتمدة — لا تحتاج تسجيل دخول (تُعرف من الجهاز). */
+function OrdersCard({onPress}:{onPress:()=>void}) {
+  useUILanguage();
+  const ar=uiLanguage()==='ar';
+  return <Pressable accessibilityRole="button" onPress={onPress} style={({pressed})=>[s.orders,{flexDirection:ar?'row-reverse':'row'},pressed&&{opacity:.9}]}>
+    <View style={s.ordersIcon}><Ionicons name="calendar-clear-outline" size={24} color={colors.navy2}/></View>
+    <View style={{flex:1,gap:3}}>
+      <T w="black" style={{fontSize:17,color:'#fff'}}>طلباتي وخطتي المعتمدة</T>
+      <T style={{fontSize:13,color:'#CFE6F4'}}>حالة طلبك، ووجباتك يوماً بيوم بعد اعتماد الأخصائية</T>
+    </View>
+    <Ionicons name={ar?'chevron-back':'chevron-forward'} size={20} color="#fff"/>
+  </Pressable>;
 }
 function Detail({label,value}:{label:string;value:unknown}) {
   useUILanguage();
@@ -244,5 +239,7 @@ const s=StyleSheet.create({
   linkText:{color:colors.cyanDark,fontSize:14},small:{fontSize:12,lineHeight:21,color:colors.muted2},
   section:{fontSize:19,color:colors.navy2,marginBottom:8},name:{fontSize:22,color:colors.navy2},package:{fontSize:16,color:colors.cyanDark,marginBottom:12},
   detail:{flexDirection:'row',gap:16,paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.line},
+  orders:{alignItems:'center',gap:14,padding:18,borderRadius:18,backgroundColor:colors.navy2},
+  ordersIcon:{width:46,height:46,borderRadius:14,backgroundColor:colors.cyan,alignItems:'center',justifyContent:'center'},
   notice:{flexDirection:'row',gap:10,padding:16,backgroundColor:colors.cyanSoft,borderRadius:12},
 });

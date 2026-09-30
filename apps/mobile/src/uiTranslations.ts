@@ -2,6 +2,11 @@
 import { foodEnglish } from './foodTranslations';
 export const uiEnglish: Record<string, string> = {
   ...foodEnglish,
+  'المزيد': 'More', 'اطلب واكتشف': 'Order & explore', 'تواصل': 'Contact', 'كل وجبات المطعم خارج الاشتراك': 'All restaurant dishes, outside subscriptions',
+  'حالة الطلب ورابط تتبّع التوصيل': 'Order status and delivery tracking link', 'طلباتي وخطتي المعتمدة': 'My orders & approved plan',
+  'حالة طلبك، ووجباتك يوماً بيوم بعد اعتماد الأخصائية': 'Your order status, and your meals day by day once approved',
+  'تسجيل الدخول بحسابك': 'Sign in to your account', 'إنشاء حساب': 'Create account',
+  'طلباتك وخطتك المعتمدة تظهر هنا. سجّل الدخول لرؤية تفاصيل اشتراكك.': 'Your orders and approved plan appear here. Sign in to see your subscription details.',
   'منيو المطعم': 'Restaurant menu', 'اختيار وجبات اشتراكي': 'Choose my subscription meals',
   'الرئيسية': 'Home', 'القائمة': 'Menu', 'الخطط': 'Plans', 'حسابي': 'Account',
   'الكل': 'All', 'الإفطار': 'Breakfast', 'الغداء': 'Lunch', 'العشاء': 'Dinner', 'سناكس': 'Snacks', 'سناك': 'Snack',
