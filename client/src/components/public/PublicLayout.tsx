@@ -106,18 +106,18 @@ export function PublicLayout({ children }: PublicLayoutProps) {
       {/* Header/Navbar */}
       <header className="sticky top-0 z-50 border-b border-[#3CC4F0]/35 bg-white/95 shadow-[0_8px_28px_rgba(15,39,56,0.08)] backdrop-blur-xl">
         <div className="mx-auto max-w-[1720px] px-4 sm:px-6 xl:px-8">
-          <div className="flex min-h-[72px] items-center justify-between gap-5">
+          <div className="grid min-h-[72px] grid-cols-[auto_minmax(0,1fr)] items-center gap-x-5 xl:gap-y-2 xl:py-3">
             {/* Logo */}
             <a href="/" className="flex shrink-0 items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[#3CC4F0]">
               <img
                 src="/adrenaline-logo.png"
                 alt="Adrenaline"
-                className="h-8 w-auto xl:h-9"
+                className="h-8 w-auto max-w-[200px] object-contain xl:h-9"
               />
             </a>
 
             {/* Desktop Navigation */}
-            <nav className="hidden min-w-0 flex-1 items-center justify-center gap-0.5 xl:flex">
+            <nav aria-label={isRtl ? "أقسام الموقع" : "Website sections"} className="hidden min-w-0 flex-wrap items-center justify-center gap-1 border-t border-slate-100 pt-2 xl:col-span-2 xl:row-start-2 xl:flex">
               <a href="/" className="whitespace-nowrap rounded-lg px-2.5 py-2 text-[14px] font-semibold text-[#20384A] transition-colors hover:bg-[#EAF8FD] hover:text-[#0E76AC]">
                 {isRtl ? "الرئيسية" : "Home"}
               </a>
@@ -148,7 +148,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
             </nav>
 
             {/* Actions */}
-            <div className="flex shrink-0 items-center gap-1.5 xl:border-s xl:border-slate-200 xl:ps-4">
+            <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5 xl:col-start-2 xl:row-start-1">
               {/* Dashboard Button - Show only for logged in admin users */}
               {currentUser && (
                 <>
@@ -205,7 +205,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
               {currentCustomer && (
                 <>
                   {/* Customer Name */}
-                  <span className="hidden text-sm font-medium text-[#0F1516] xl:block">
+                  <span className="hidden max-w-40 truncate text-sm font-medium text-[#0F1516] xl:block">
                     {isRtl ? "مرحباً، " : "Hi, "}
                     {currentCustomer.fullName.split(" ")[0]}
                   </span>
