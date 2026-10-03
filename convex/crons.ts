@@ -31,4 +31,15 @@ crons.hourly(
   internal.posReports.runDailyReportCron,
 );
 
+/**
+ * رسائل واتساب التلقائية (تجديد الاشتراك، فشل التوصيل). نبضة كل ساعة؛ التجديدات
+ * تُرسل مرة يومياً عند ساعة الإرسال المضبوطة، ولا شيء يُرسل إن كانت الأتمتة
+ * معطّلة أو بلا توكن. كل رسالة محمية ضد التكرار (dedupeKey).
+ */
+crons.hourly(
+  "whatsapp automation",
+  { minuteUTC: 10 },
+  internal.whatsapp.tick,
+);
+
 export default crons;

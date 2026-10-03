@@ -558,6 +558,10 @@ export default defineSchema({
     templateRenewalEn: v.string(),
     templateDeliveryAr: v.string(),
     templateDeliveryEn: v.string(),
+    // رقم التجربة: في الوضع التجريبي كل الرسائل تذهب إليه لا للعملاء.
+    testPhone: v.optional(v.string()),
+    // آخر يوم (قطر) شُغّلت فيه تذكيرات التجديد — تمنع تكرارها في نفس اليوم.
+    lastRenewalRunDate: v.optional(v.string()),
     updatedBy: v.optional(v.id("users")),
     updatedAt: v.number(),
   }).index("by_channel", ["channel"]),
@@ -578,11 +582,22 @@ export default defineSchema({
     providerMessageId: v.optional(v.string()),
     error: v.optional(v.string()),
     sentAt: v.optional(v.number()),
+    // مفتاح منع التكرار: (حدث + عميل + تاريخ/خطة) — رسالة واحدة لكل مناسبة.
+    dedupeKey: v.optional(v.string()),
+    // ما أُرسل فعلاً: القالب ومتغيّراته والرقم المستلم (رقم التجربة في الوضع التجريبي).
+    templateName: v.optional(v.string()),
+    templateParams: v.optional(v.array(v.string())),
+    freeText: v.optional(v.string()),
+    sentTo: v.optional(v.string()),
+    // حالة التسليم من Webhook: sent / delivered / read / failed.
+    deliveryStatus: v.optional(v.string()),
     createdAt: v.number(),
   })
     .index("by_createdAt", ["createdAt"])
     .index("by_customer", ["customerId", "createdAt"])
-    .index("by_event", ["eventKey", "createdAt"]),
+    .index("by_event", ["eventKey", "createdAt"])
+    .index("by_dedupe", ["dedupeKey"])
+    .index("by_provider", ["providerMessageId"]),
 
   mealCategories: defineTable({
     name: v.string(),

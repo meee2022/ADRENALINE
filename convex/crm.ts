@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { requireAdmin, requireStaff } from "./sessions";
+import { TEMPLATES, isConnected } from "./whatsapp";
 
 const DEFAULT_AUTOMATION = {
   channel: "WHATSAPP" as const,
@@ -90,8 +91,10 @@ export const automationSettings = query({
       .withIndex("by_channel", (q) => q.eq("channel", "WHATSAPP")).first();
     return {
       ...(saved || DEFAULT_AUTOMATION),
-      connected: Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
-      hasWebhookSecret: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN),
+      connected: isConnected(),
+      hasWebhookSecret: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET),
+      // أسماء القوالب المعتمدة في WhatsApp Manager — ما يُرسَل فعلاً.
+      templateNames: { renewal: TEMPLATES.renewal(), expired: TEMPLATES.expired(), delivery: TEMPLATES.delivery() },
     };
   },
 });
@@ -103,6 +106,7 @@ export const saveAutomationSettings = mutation({
     expired2Enabled: v.boolean(), deliveryFailureEnabled: v.boolean(),
     templateRenewalAr: v.string(), templateRenewalEn: v.string(),
     templateDeliveryAr: v.string(), templateDeliveryEn: v.string(),
+    testPhone: v.optional(v.string()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
