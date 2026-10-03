@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { useStore } from "@/lib/store";
 import { useLanguage } from "@/lib/i18n";
@@ -29,6 +29,9 @@ function CustomerRow({c,text,wa,t,extra}:any){if(!c)return null;return <div clas
 function AutomationPanel({settings,logs,sessionToken,t,ar}:any){
  const save=useMutation(api.crm.saveAutomationSettings); const simulate=useMutation(api.crm.simulateAutomation); const sendTest=useMutation(api.whatsapp.sendTest);
  const [testMsg,setTestMsg]=useState("");
+ const numberStatus=useAction(api.whatsapp.numberStatus); const registerNumber=useAction(api.whatsapp.registerNumber);
+ const [pin,setPin]=useState(""); const [diag,setDiag]=useState<any>(null);
+ const run=async(fn:()=>Promise<any>)=>{setBusy(true);setDiag(null);try{setDiag(await fn())}catch(e:any){setDiag({ok:false,error:{code:0,message:String(e?.data||e?.message||e)}})}finally{setBusy(false)}};
  const test=async(kind:"hello_world"|"renewal"|"delivery")=>{setBusy(true);setTestMsg("");try{await sendTest({kind,sessionToken:sessionToken||undefined});setTestMsg(t("أُرسلت — تابع النتيجة في «آخر العمليات»","Sent — check the result under Recent activity"))}catch(e:any){setTestMsg(String(e?.data||e?.message||e))}finally{setBusy(false)}};
  const [draft,setDraft]=useState<any>(null); const [busy,setBusy]=useState(false); const [saved,setSaved]=useState(false);
  const form=draft||settings;
@@ -65,6 +68,13 @@ function AutomationPanel({settings,logs,sessionToken,t,ar}:any){
      </div>
      {!form.connected&&<p className="mt-2 text-[11px] font-bold text-amber-700">{t("أزرار التجربة تعمل بعد ربط واتساب (التوكن ورقم الخط في إعدادات Convex).","Test buttons work once WhatsApp is connected (token and phone number ID in Convex settings).")}</p>}
      {!!testMsg&&<p className="mt-2 text-[11px] font-bold text-slate-700">{testMsg}</p>}
+    </div>
+    <div className="rounded-xl border bg-white p-4">
+     <b className="text-sm">{t("حالة رقم الإرسال","Sender number status")}</b>
+     <p className="mt-1 text-[11px] leading-5 text-slate-500">{t("يقرأ حالة الرقم من Meta مباشرة. التسجيل يحتاج الرقم السرّي (PIN) الذي اخترته للخط — لا يُحفظ.","Reads the number status straight from Meta. Registration needs the PIN you chose for the line — it is not stored.")}</p>
+     <button type="button" disabled={busy||!form.connected} onClick={()=>run(()=>numberStatus({sessionToken:sessionToken||undefined}))} className="mt-2 w-full rounded-lg border bg-slate-50 px-2 py-2 text-xs font-black text-slate-700 disabled:opacity-40">{t("فحص حالة الرقم","Check number status")}</button>
+     <div className="mt-2 flex gap-2"><input dir="ltr" type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="PIN" className="h-10 min-w-0 flex-1 rounded-lg border px-3 text-sm"/><button type="button" disabled={busy||!form.connected||pin.length!==6} onClick={()=>run(async()=>{const r=await registerNumber({pin,sessionToken:sessionToken||undefined});setPin("");return r})} className="rounded-lg bg-[#075e54] px-3 text-xs font-black text-white disabled:opacity-40">{t("تسجيل الرقم","Register number")}</button></div>
+     {diag&&<div dir="ltr" className={`mt-2 rounded-lg p-2 text-[11px] leading-5 ${diag.ok?"bg-emerald-50 text-emerald-900":"bg-red-50 text-red-800"}`}>{diag.ok?(diag.info?Object.entries(diag.info).filter(([k])=>k!=="id").map(([k,v])=><div key={k}><b>{k}:</b> {String(v)}</div>):"Registered ✓"):<><b>{diag.error?.code}{diag.error?.subcode?` / ${diag.error.subcode}`:""}</b> — {diag.error?.message}{diag.error?.trace&&<div className="text-[10px] opacity-70">fbtrace_id: {diag.error.trace}</div>}</>}</div>}
     </div>
    </div>
    <div className="space-y-4">

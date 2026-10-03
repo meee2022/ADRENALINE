@@ -12,7 +12,7 @@
  * الأمان: التوكن في متغيرات بيئة Convex فقط (WHATSAPP_ACCESS_TOKEN,
  * WHATSAPP_PHONE_NUMBER_ID) — لا يُخزَّن في القاعدة ولا يصل للواجهة.
  */
-import { internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
+import { action, internalAction, internalMutation, internalQuery, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v, ConvexError } from "convex/values";
 import { requireAdmin } from "./sessions";
@@ -313,5 +313,59 @@ export const recordInbound = internalMutation({
       createdAt: Date.now(),
     });
     if (isConnected()) await ctx.scheduler.runAfter(0, internal.whatsapp.sendOne, { logId });
+  },
+});
+
+/** فحص صلاحية المدير من داخل action (الـaction لا يقرأ القاعدة مباشرة). */
+export const assertAdmin = internalQuery({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => { await requireAdmin(ctx, args.sessionToken); return true; },
+});
+
+const graphError = (data: any, status: number) => {
+  const e = data?.error;
+  return e
+    ? { code: e.code ?? status, subcode: e.error_subcode, message: String(e.error_data?.details || e.error_user_msg || e.message || ""), trace: e.fbtrace_id }
+    : { code: status, message: `HTTP ${status}` };
+};
+
+/**
+ * حالة رقم الإرسال عند Meta كما هي (اسم العرض، التحقق، التسجيل، الجودة) —
+ * لتشخيص «لماذا لا يُرسِل» من الصفحة بدل التخمين.
+ */
+export const numberStatus = action({
+  args: { sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<any> => {
+    await ctx.runQuery(internal.whatsapp.assertAdmin, { sessionToken: args.sessionToken });
+    const token = process.env.WHATSAPP_ACCESS_TOKEN, numberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (!token || !numberId) return { ok: false, error: { code: 0, message: "واتساب غير متصل — أضف التوكن ورقم الخط في إعدادات Convex" } };
+    const version = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+    const fields = "display_phone_number,verified_name,name_status,code_verification_status,status,quality_rating,platform_type,account_mode";
+    const res = await fetch(`https://graph.facebook.com/${version}/${numberId}?fields=${fields}`, { headers: { Authorization: `Bearer ${token}` } });
+    const data: any = await res.json().catch(() => ({}));
+    return res.ok ? { ok: true, info: data } : { ok: false, error: graphError(data, res.status) };
+  },
+});
+
+/**
+ * تسجيل الرقم على Cloud API برقم سرّي (PIN) يكتبه المدير في الصفحة. لوحة Meta
+ * تُظهر «Registration failed» بلا سبب؛ هذا الطلب المباشر يعيد كود الخطأ الحقيقي.
+ * الـPIN لا يُخزَّن ولا يُسجَّل.
+ */
+export const registerNumber = action({
+  args: { pin: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<any> => {
+    await ctx.runQuery(internal.whatsapp.assertAdmin, { sessionToken: args.sessionToken });
+    if (!/^\d{6}$/.test(args.pin)) return { ok: false, error: { code: 0, message: "الرقم السرّي ستة أرقام إنجليزية" } };
+    const token = process.env.WHATSAPP_ACCESS_TOKEN, numberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    if (!token || !numberId) return { ok: false, error: { code: 0, message: "واتساب غير متصل — أضف التوكن ورقم الخط في إعدادات Convex" } };
+    const version = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+    const res = await fetch(`https://graph.facebook.com/${version}/${numberId}/register`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", pin: args.pin }),
+    });
+    const data: any = await res.json().catch(() => ({}));
+    return res.ok && data?.success ? { ok: true } : { ok: false, error: graphError(data, res.status) };
   },
 });
