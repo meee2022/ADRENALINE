@@ -343,7 +343,19 @@ export const numberStatus = action({
     const fields = "display_phone_number,verified_name,name_status,code_verification_status,status,quality_rating,platform_type,account_mode";
     const res = await fetch(`https://graph.facebook.com/${version}/${numberId}?fields=${fields}`, { headers: { Authorization: `Bearer ${token}` } });
     const data: any = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true, info: data } : { ok: false, error: graphError(data, res.status) };
+    if (!res.ok) return { ok: false, error: graphError(data, res.status) };
+    // «صحة المراسلة»: Meta تذكر هنا السبب الفعلي لأي منع (دفع، توثيق، حساب…) لكل كيان.
+    const h = await fetch(`https://graph.facebook.com/${version}/${numberId}?fields=health_status`, { headers: { Authorization: `Bearer ${token}` } });
+    const hd: any = await h.json().catch(() => ({}));
+    const info: Record<string, string> = { ...data };
+    if (hd?.health_status) {
+      info.can_send_message = String(hd.health_status.can_send_message);
+      for (const e of hd.health_status.entities || []) {
+        const errs = (e.errors || []).map((x: any) => `${x.error_code}: ${x.error_description}${x.possible_solution ? ` → ${x.possible_solution}` : ""}`).join(" | ");
+        info[`health_${e.entity_type}`] = `${e.can_send_message}${errs ? ` — ${errs}` : ""}`;
+      }
+    }
+    return { ok: true, info };
   },
 });
 
