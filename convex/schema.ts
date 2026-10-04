@@ -566,6 +566,35 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_channel", ["channel"]),
 
+  /* عدّاد تنزيلات التطبيق: جهاز = صف بمعرّف عشوائي يولّده التطبيق (لا بيانات شخصية). */
+  appInstalls: defineTable({
+    installId: v.string(),
+    platform: v.union(v.literal("ios"), v.literal("android")),
+    appVersion: v.string(),
+    firstSeenDay: v.string(),
+    lastSeenDay: v.string(),
+    firstSeenAt: v.number(),
+    lastSeenAt: v.number(),
+    signedIn: v.boolean(),
+  })
+    .index("by_install", ["installId"])
+    .index("by_lastSeenDay", ["lastSeenDay"])
+    .index("by_firstSeenAt", ["firstSeenAt"]),
+
+  /* مجاميع العدّاد تُحدَّث عند الكتابة — القراءة لا تمسح appInstalls. */
+  appInstallDaily: defineTable({
+    date: v.string(),
+    platform: v.union(v.literal("ios"), v.literal("android")),
+    newInstalls: v.number(),
+    activeDevices: v.number(),
+  }).index("by_date_platform", ["date", "platform"]),
+
+  appInstallTotals: defineTable({
+    platform: v.union(v.literal("ios"), v.literal("android")),
+    installs: v.number(),
+    signedIn: v.number(),
+  }).index("by_platform", ["platform"]),
+
   messageAutomationLogs: defineTable({
     customerId: v.optional(v.id("customers")),
     customerName: v.string(),

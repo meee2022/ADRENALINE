@@ -11,6 +11,7 @@ import { colors } from "@/theme";
 import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { CustomerSessionProvider } from '@/customerSession';
 import { NotificationRouter } from '@/components/NotificationRouter';
+import { InstallPing } from '@/components/InstallPing';
 import { useContentLanguage } from '@/useContentLanguage';
 
 // Direction is presentation state, not a forced device setting requiring a restart.
@@ -56,6 +57,7 @@ export default function RootLayout() {
           </Stack>
         ) : null}
         {appReady&&<NotificationRouter/>}
+        <InstallPing/>
         {!splashDone && <AnimatedSplash ready={appReady} onDone={() => setSplashDone(true)} />}
       </View>
       </CustomerSessionProvider>

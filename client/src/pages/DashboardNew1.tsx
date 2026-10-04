@@ -78,6 +78,7 @@ export default function DashboardNew() {
   const invoices = useQuery(api.purchaseInvoices.listInvoices, { limit: 100, sessionToken }) as any[] | undefined;
   const suppliers = useQuery(api.inventory.getSuppliers, { sessionToken }) as any[] | undefined;
   const clientErrors = useQuery(api.clientErrors.recent, { limit: 50, sessionToken }) as any[] | undefined;
+  const appStats = useQuery(api.appInstalls.stats, { sessionToken }) as any;
   const gymList = useQuery(api.gymSales.listOrders, { from: dateKey, to: dateKey, sessionToken }) as any;
   const loading = customersLoading || plansLoading;
 
@@ -447,6 +448,48 @@ export default function DashboardNew() {
           </div>
         </div>
       </section>
+
+      {/* ═══════ 3-ج. تنزيلات التطبيق — عدّاد من فتحات التطبيق نفسه (لا من تقارير المتجر) ═══════ */}
+      {appStats && (
+        <section className="rounded-2xl border-2 border-[#0E2A4A]/10 bg-white p-4 shadow-[0_10px_28px_-22px_rgba(14,42,74,.55)]">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="h-5 w-1.5 rounded-full bg-[#0E76AC]" />
+            <h2 className="text-base font-black text-[#0E2A4A]">{tr("تنزيلات التطبيق", "App installs")}</h2>
+            <span className="text-[11px] font-bold text-slate-400">
+              {appStats.countingSince
+                ? tr(`أجهزة فتحت التطبيق منذ ${appStats.countingSince}`, `Devices that opened the app since ${appStats.countingSince}`)
+                : tr("لم يصل أي جهاز بعد — العدّاد يبدأ مع تحديث التطبيق", "No devices yet — counting starts with the app update")}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { label: tr("إجمالي الأجهزة", "Total devices"), value: appStats.total, tone: "border-[#0E2A4A]/15 bg-[#0E2A4A]/5 text-[#0E2A4A]" },
+              { label: tr("جديد اليوم", "New today"), value: appStats.today?.newInstalls ?? 0, tone: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+              { label: tr("نشط اليوم", "Active today"), value: appStats.today?.activeDevices ?? 0, tone: "border-sky-200 bg-sky-50 text-sky-800" },
+              { label: tr("نشط آخر 7 أيام", "Active 7 days"), value: appStats.active7, tone: "border-sky-200 bg-sky-50 text-sky-800" },
+              { label: tr("سجّلوا دخولاً", "Signed in"), value: appStats.signedIn, tone: "border-amber-200 bg-amber-50 text-amber-800" },
+              { label: "iPhone / Android", value: `${appStats.ios} / ${appStats.android}`, tone: "border-slate-200 bg-slate-50 text-slate-700" },
+            ].map((k) => (
+              <div key={k.label} className={`rounded-xl border p-2.5 ${k.tone}`}>
+                <p className="text-[10px] font-black">{k.label}</p>
+                <p className="mt-0.5 text-lg font-black tabular-nums">{typeof k.value === "number" ? k.value.toLocaleString() : k.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex h-16 items-end gap-1" dir="ltr">
+            {appStats.days.map((d: any) => {
+              const max = Math.max(1, ...appStats.days.map((x: any) => x.newInstalls));
+              return (
+                <div key={d.date} className="flex flex-1 flex-col items-center gap-1" title={`${d.date} · ${d.newInstalls}`}>
+                  <div className="w-full rounded-t bg-gradient-to-t from-[#0E76AC] to-[#38C6F4]" style={{ height: `${Math.max(2, (d.newInstalls / max) * 48)}px`, opacity: d.newInstalls ? 1 : 0.25 }} />
+                  <span className="text-[9px] font-bold tabular-nums text-slate-400">{d.date.slice(8)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-1 text-[10px] font-bold text-slate-400">{tr("أجهزة جديدة يومياً — آخر 14 يوماً", "New devices per day — last 14 days")}</p>
+        </section>
+      )}
 
       {/* ═══════ 4. Today ops flow + Needs attention ═══════ */}
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(330px,.75fr)]">

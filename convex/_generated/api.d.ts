@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as appInstalls from "../appInstalls.js";
 import type * as accountLookup from "../accountLookup.js";
 import type * as adminCenter from "../adminCenter.js";
 import type * as ai from "../ai.js";
@@ -243,6 +244,7 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;
+  appInstalls: typeof appInstalls;
   whatsapp: typeof whatsapp;
 }>;
 
