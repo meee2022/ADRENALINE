@@ -381,3 +381,30 @@ export const registerNumber = action({
     return res.ok && data?.success ? { ok: true } : { ok: false, error: graphError(data, res.status) };
   },
 });
+
+/**
+ * اشتراك حساب واتساب (WABA) في Webhook التطبيق. ضبط الـCallback في لوحة Meta لا يكفي:
+ * بلا هذا الاشتراك لا تصل حالات التسليم ولا ردود العملاء. `subscribe: true` يشترك،
+ * وبدونه يقرأ الحالة فقط.
+ */
+export const webhookSubscription = action({
+  args: { subscribe: v.optional(v.boolean()), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<any> => {
+    await ctx.runQuery(internal.whatsapp.assertAdmin, { sessionToken: args.sessionToken });
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    if (!token) return { ok: false, error: { code: 0, message: "واتساب غير متصل" } };
+    const version = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+    const waba = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "1072439665635913";
+    const url = `https://graph.facebook.com/${version}/${waba}/subscribed_apps`;
+    const headers = { Authorization: `Bearer ${token}` };
+    if (args.subscribe) {
+      const res = await fetch(url, { method: "POST", headers });
+      const data: any = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: graphError(data, res.status) };
+    }
+    const res = await fetch(url, { headers });
+    const data: any = await res.json().catch(() => ({}));
+    if (!res.ok) return { ok: false, error: graphError(data, res.status) };
+    return { ok: true, apps: (data?.data || []).map((a: any) => a?.whatsapp_business_api_data?.name || a?.name || a?.id) };
+  },
+});
