@@ -472,7 +472,7 @@ export default function DashboardNew() {
             ].map((k) => (
               <div key={k.label} className={`rounded-xl border p-2.5 ${k.tone}`}>
                 <p className="text-[10px] font-black">{k.label}</p>
-                <p className="mt-0.5 text-lg font-black tabular-nums">{typeof k.value === "number" ? k.value.toLocaleString() : k.value}</p>
+                <p dir="ltr" className="mt-0.5 text-start text-lg font-black tabular-nums">{typeof k.value === "number" ? k.value.toLocaleString() : k.value}</p>
               </div>
             ))}
           </div>
