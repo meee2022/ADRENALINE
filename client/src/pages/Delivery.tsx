@@ -33,7 +33,8 @@ export default function Delivery() {
 
   const formattedDate = format(date, "yyyy-MM-dd");
 
-  const { data: dailyPlans = [] } = useDailyPlans();
+  // Only the viewed day is ever used below; the default 35-day window was pure read cost.
+  const { data: dailyPlans = [] } = useDailyPlans(undefined, { from: formattedDate, to: formattedDate });
   const { data: customers = [] } = useCustomers();
   const updatePlanMutation = useUpdateDailyPlan();
 

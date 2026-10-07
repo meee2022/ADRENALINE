@@ -2,7 +2,7 @@
  * @file convex/publicMeals.ts
  * @description إدارة الوجبات العامة للموقع
  */
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query, type QueryCtx } from "./_generated/server";
 import { requireAdmin, requireStaff, requireRole, validateSession } from "./sessions";
 import { v, ConvexError } from "convex/values";
 
@@ -415,53 +415,73 @@ export const deleteAll = mutation({
 
 // ===== الأكثر طلبًا (للموقع العام) =====
 // يحسب الأكثر مبيعًا من طلبات العملاء الفعلية، مع صور، وfallback لو لا توجد طلبات.
+const BEST_SELLERS_CACHED = 12;
+
+async function computeBestSellers(ctx: QueryCtx, limit: number) {
+  // كان يقرأ كل أسطر الطلبات منذ البداية فتجاوز حدّ القراءة (Convex) وأسقط الصفحة الرئيسية
+  // (ERR-DFAACF74, 26-9). الأكثر طلباً = آخر 90 يوماً، بسقف ثابت لا يكبر مع الزمن.
+  const since = Date.now() - 90 * 24 * 60 * 60 * 1000;
+  const items = await ctx.db
+    .query("customerOrderItems")
+    .withIndex("by_creation_time", (q) => q.gt("_creationTime", since))
+    .order("desc")
+    .take(6000);
+  const counts = new Map<string, number>();
+  for (const it of items) {
+    const k = String(it.mealId);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  }
+
+  const active = await ctx.db
+    .query("publicMeals")
+    .withIndex("by_active", (q) => q.eq("isActive", true))
+    .collect();
+
+  // رتّب الوجبات النشطة حسب عدد الطلبات (ثم sortOrder كاحتياطي)
+  const ranked = active.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly).sort((a, b) => {
+    const ca = counts.get(String(a._id)) || 0;
+    const cb = counts.get(String(b._id)) || 0;
+    if (cb !== ca) return cb - ca;
+    return (a.sortOrder || 0) - (b.sortOrder || 0);
+  });
+
+  const top = ranked.slice(0, limit);
+  return Promise.all(
+    top.map(async (m) => ({
+      id: m._id,
+      nameAr: m.nameAr,
+      nameEn: m.nameEn || "",
+      slug: m.slug,
+      calories: m.calories,
+      protein: m.protein,
+      carbs: m.carbs,
+      fats: m.fats,
+      priceQAR: m.priceQAR,
+      category: m.category,
+      orders: counts.get(String(m._id)) || 0,
+      imageUrl: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null),
+    }))
+  );
+}
+
+/** Public home page. Served from the hourly snapshot; computes live only until the first snapshot exists. */
 export const bestSellers = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 6 }) => {
-    // كان يقرأ كل أسطر الطلبات منذ البداية فتجاوز حدّ القراءة (Convex) وأسقط الصفحة الرئيسية
-    // (ERR-DFAACF74, 26-9). الأكثر طلباً = آخر 90 يوماً، بسقف ثابت لا يكبر مع الزمن.
-    const since = Date.now() - 90 * 24 * 60 * 60 * 1000;
-    const items = await ctx.db
-      .query("customerOrderItems")
-      .withIndex("by_creation_time", (q) => q.gt("_creationTime", since))
-      .order("desc")
-      .take(6000);
-    const counts = new Map<string, number>();
-    for (const it of items) {
-      const k = String(it.mealId);
-      counts.set(k, (counts.get(k) || 0) + 1);
-    }
+    const cached = await ctx.db.query("bestSellersCache").first();
+    if (cached && limit <= cached.items.length) return cached.items.slice(0, limit);
+    return computeBestSellers(ctx, limit);
+  },
+});
 
-    const active = await ctx.db
-      .query("publicMeals")
-      .withIndex("by_active", (q) => q.eq("isActive", true))
-      .collect();
-
-    // رتّب الوجبات النشطة حسب عدد الطلبات (ثم sortOrder كاحتياطي)
-    const ranked = active.filter((meal: any) => !meal.isGymOnly && !meal.isOnlineOnly).sort((a, b) => {
-      const ca = counts.get(String(a._id)) || 0;
-      const cb = counts.get(String(b._id)) || 0;
-      if (cb !== ca) return cb - ca;
-      return (a.sortOrder || 0) - (b.sortOrder || 0);
-    });
-
-    const top = ranked.slice(0, limit);
-    return Promise.all(
-      top.map(async (m) => ({
-        id: m._id,
-        nameAr: m.nameAr,
-        nameEn: m.nameEn || "",
-        slug: m.slug,
-        calories: m.calories,
-        protein: m.protein,
-        carbs: m.carbs,
-        fats: m.fats,
-        priceQAR: m.priceQAR,
-        category: m.category,
-        orders: counts.get(String(m._id)) || 0,
-        imageUrl: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null),
-      }))
-    );
+export const refreshBestSellers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const items = await computeBestSellers(ctx, BEST_SELLERS_CACHED);
+    const row = await ctx.db.query("bestSellersCache").first();
+    if (row) await ctx.db.patch(row._id, { items, updatedAt: Date.now() });
+    else await ctx.db.insert("bestSellersCache", { items, updatedAt: Date.now() });
+    return items.length;
   },
 });
 

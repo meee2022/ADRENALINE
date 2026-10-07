@@ -42,4 +42,7 @@ crons.hourly(
   internal.whatsapp.tick,
 );
 
+// Public home "best sellers" is served from this snapshot instead of scanning orders per visitor.
+crons.hourly("refresh best sellers", { minuteUTC: 20 }, internal.publicMeals.refreshBestSellers);
+
 export default crons;
