@@ -157,7 +157,8 @@ function countsOnDate(c: any, date: string): boolean {
   return isWithinSubscription(c, d);
 }
 
-async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<string[]> {
+// `pre`: rows the caller already loaded — customizedTemplates is ~2 MB, read it once per call.
+async function computeDayRosterOrderedIds(ctx: any, date: string, pre?: { plansAll: any[]; templates: any[] }): Promise<string[]> {
   const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const dayKey = DOW[new Date(date + "T00:00:00Z").getUTCDay()];
   const settings = await ctx.db.query("restaurantSettings").first();
@@ -177,8 +178,8 @@ async function computeDayRosterOrderedIds(ctx: any, date: string): Promise<strin
     const slots: any[] = Array.isArray(days?.[dayKey]) ? days[dayKey] : Array.isArray(sl) ? sl : [];
     return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
   };
-  const plansAll = await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect();
-  const templates = await ctx.db.query("customizedTemplates").collect();
+  const plansAll = pre?.plansAll ?? await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect();
+  const templates = pre?.templates ?? await ctx.db.query("customizedTemplates").collect();
   const tplIds = new Set(templates.map((t: any) => String(t.customerId)));
   // (أ) العاديون (خطط يومية، غير مخصّصين) و(ب) المخصّصون (قوالب) — منفصلان.
   const regularIds = new Set<string>();
@@ -371,9 +372,8 @@ async function buildStickers(
     // 🔀 المخصّص الذي بُني له قالب: مصدره القالب (الكود بالأسفل)، فنستبعد أي خطة
     //    يومية قديمة له هنا — وإلا فازت الخطة على القالب وطُبع استيكر قديم.
     //    من لا قالب له تبقى خطته تعمل (fallback أثناء الانتقال).
-    const tplCustomerIds = new Set(
-      (await ctx.db.query("customizedTemplates").collect()).map((t: any) => String(t.customerId)),
-    );
+    const allTemplates = await ctx.db.query("customizedTemplates").collect();
+    const tplCustomerIds = new Set(allTemplates.map((t: any) => String(t.customerId)));
     const plans = plansAll.filter(
       (p: any) =>
         (wantAll || String(p.deliveryTime || "") === args.deliveryTime) &&
@@ -424,8 +424,7 @@ async function buildStickers(
       return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
     };
     // روستر اليوم المرتّب (دالة مشتركة) — ترقيم حي احتياطي ثم نُفضّل الأرقام المجمّدة.
-    const allTemplates = await ctx.db.query("customizedTemplates").collect();
-    const orderedIds = await computeDayRosterOrderedIds(ctx, args.date);
+    const orderedIds = await computeDayRosterOrderedIds(ctx, args.date, { plansAll, templates: allTemplates });
     const customerNoById = new Map<string, number>();
     orderedIds.forEach((id, idx) => customerNoById.set(id, idx + 1)); // احتياطي قبل التجميد
     // ✅ لو اليوم مُجمّد (ensureBoxNumbers)، نستخدم الأرقام المخزّنة — تمنع أي تغيير خلال اليوم
