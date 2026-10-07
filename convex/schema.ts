@@ -566,7 +566,7 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_channel", ["channel"]),
 
-  /* Hourly snapshot of publicMeals.bestSellers so the public home page reads one doc. */
+  /* Daily snapshot of publicMeals.bestSellers so the public home page reads one doc. */
   bestSellersCache: defineTable({ items: v.array(v.any()), updatedAt: v.number() }),
 
   /* عدّاد تنزيلات التطبيق: جهاز = صف بمعرّف عشوائي يولّده التطبيق (لا بيانات شخصية). */

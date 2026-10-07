@@ -43,6 +43,6 @@ crons.hourly(
 );
 
 // Public home "best sellers" is served from this snapshot instead of scanning orders per visitor.
-crons.hourly("refresh best sellers", { minuteUTC: 20 }, internal.publicMeals.refreshBestSellers);
+crons.daily("refresh best sellers", { hourUTC: 1, minuteUTC: 20 }, internal.publicMeals.refreshBestSellers); // 04:20 Qatar
 
 export default crons;

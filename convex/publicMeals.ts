@@ -464,7 +464,7 @@ async function computeBestSellers(ctx: QueryCtx, limit: number) {
   );
 }
 
-/** Public home page. Served from the hourly snapshot; computes live only until the first snapshot exists. */
+/** Public home page. Served from the daily snapshot; computes live only until the first snapshot exists. */
 export const bestSellers = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, { limit = 6 }) => {
