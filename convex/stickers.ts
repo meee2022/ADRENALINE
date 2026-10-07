@@ -1,5 +1,5 @@
 // convex/stickers.ts
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { normalizePhone } from "./lib/phone";
 import { estimateCalories, estimateFromParts } from "./lib/calories";
 import { requireStaff } from "./sessions";
@@ -331,6 +331,24 @@ export const get = query({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    return buildStickers(ctx, args);
+  },
+});
+
+/** CLI only (deploy key): same output as `get`, to diff stickers before/after a refactor. */
+export const getInternal = internalQuery({
+  args: {
+    date: v.string(),
+    deliveryTime: v.union(v.literal("MORNING"), v.literal("EVENING"), v.literal("ALL")),
+    lang: v.optional(v.string()),
+  },
+  handler: (ctx, args) => buildStickers(ctx, args),
+});
+
+async function buildStickers(
+  ctx: QueryCtx,
+  args: { date: string; deliveryTime: "MORNING" | "EVENING" | "ALL"; lang?: string },
+) {
     const calorieOverrideRows = await ctx.db
       .query("stickerCalorieOverrides")
       .withIndex("by_date", (q) => q.eq("date", args.date))
@@ -1007,5 +1025,4 @@ export const get = query({
       mealStickers,
       audit: { onlyStickers, onlyKitchen },
     };
-  },
-});
+}
