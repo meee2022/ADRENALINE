@@ -79,6 +79,8 @@ import { confirmDialog, alertDialog } from "@/lib/dialogs";
 import { AppLinkCodeDialog } from "@/components/AppLinkCodeDialog";
 import { getUserError } from "@/lib/userError";
 import { downloadBlob } from "@/lib/native";
+import { subscriptionReportingState } from "@/lib/subscriptionReporting";
+import { useQatarReportingDate } from "@/hooks/useQatarReportingDate";
 
 /* =========================
    Date helpers - DD/MM/YYYY format
@@ -316,6 +318,7 @@ type CustomerFormValues = z.infer<typeof customerSchema>;
 
 export default function Customers() {
   const { data: customers = [] } = useCustomers();
+  const reportingDate = useQatarReportingDate();
   const [pauseTarget, setPauseTarget] = useState<any | null>(null);
   const [pauseSection, setPauseSection] = useState<"pause" | "skip">("pause");
   const [printTarget, setPrintTarget] = useState<any | null>(null);
@@ -342,7 +345,7 @@ export default function Customers() {
       : new URLSearchParams(window.location.search).get("search") || "",
   );
   /** فلتر بطاقات الهيدر: الكل / النشطين / المجمّدين */
-  const [viewFilter, setViewFilter] = useState<"all" | "active" | "paused">("all");
+  const [viewFilter, setViewFilter] = useState<"all" | "active" | "current" | "expired" | "paused">("all");
   const [restaurantFilter, setRestaurantFilter] = useState<"ALL" | "ADRENALINE" | "NUTRI_RESET">("ALL");
   const [newCustomerRestaurant, setNewCustomerRestaurant] = useState<"ADRENALINE" | "NUTRI_RESET">("ADRENALINE");
   const [selectedProgram, setSelectedProgram] = useState<string | null>(null);
@@ -475,6 +478,8 @@ export default function Customers() {
       base = base.filter((c: any) => Boolean(c.pausedFrom));
     } else if (viewFilter === "active") {
       base = base.filter((c: any) => c.isActive);
+    } else if (viewFilter === "current" || viewFilter === "expired") {
+      base = base.filter((c) => subscriptionReportingState(c, reportingDate) === viewFilter);
     }
 
     // فلتر البرنامج
@@ -514,7 +519,7 @@ export default function Customers() {
       const bn = String(b.fullName || "").toLowerCase();
       return an.localeCompare(bn);
     });
-  }, [customers, searchTerm, selectedProgram, viewFilter, restaurantFilter, startFrom, startTo]);
+  }, [customers, searchTerm, selectedProgram, viewFilter, restaurantFilter, startFrom, startTo, reportingDate]);
 
   const selectedPlan = sitePlans.find((p: any) => String(p._id) === planId);
   const planOptions: any[] = selectedPlan?.options ?? [];
@@ -963,10 +968,22 @@ export default function Customers() {
           },
           {
             value: (customers as any[]).filter((c: any) => c.isActive).length,
-            labelAr: "نشط", labelEn: "Active",
+            labelAr: "حسابات مفعّلة", labelEn: "Enabled accounts",
             active: viewFilter === "active",
             // ضغطة ثانية على بطاقة مفعّلة تُرجِع "الكل"
             onClick: () => setViewFilter((v) => (v === "active" ? "all" : "active")),
+          },
+          {
+            value: (customers as any[]).filter((c) => subscriptionReportingState(c, reportingDate) === "current").length,
+            labelAr: "اشتراكات سارية اليوم", labelEn: "Current subscriptions",
+            active: viewFilter === "current",
+            onClick: () => setViewFilter((v) => v === "current" ? "all" : "current"),
+          },
+          {
+            value: (customers as any[]).filter((c) => subscriptionReportingState(c, reportingDate) === "expired").length,
+            labelAr: "اشتراكات منتهية", labelEn: "Expired subscriptions",
+            active: viewFilter === "expired",
+            onClick: () => setViewFilter((v) => v === "expired" ? "all" : "expired"),
           },
           {
             value: pausedCustomers.length,
@@ -986,6 +1003,11 @@ export default function Customers() {
           </Button>
         }
       />
+      <p className="text-sm leading-relaxed text-slate-600">
+        {isRtl
+          ? "الساري اليوم: حساب مفعّل، غير مجمّد، واليوم داخل فترة اشتراكه بتوقيت قطر (يوم الانتهاء محسوب). لا يشمل الاشتراكات التي لم تبدأ أو تواريخها ناقصة. الأرقام لكل المطاعم؛ البطاقات للعرض والفلترة فقط ولا تغيّر الوجبات أو الاشتراكات."
+          : "Current: enabled, not paused, and within a subscription period today in Qatar (end date included). Future starts and missing dates are excluded. Counts cover all restaurants; these filters never change meals or subscriptions."}
+      </p>
 
       {/* Search and Filter Row */}
       <div className="flex flex-col gap-3">
@@ -1078,7 +1100,9 @@ export default function Customers() {
               {viewFilter === "paused" && <PauseCircle className="h-3.5 w-3.5" />}
               {viewFilter === "paused"
                 ? (isRtl ? "المجمّدون فقط" : "Paused only")
-                : (isRtl ? "النشطون فقط" : "Active only")}
+                : viewFilter === "current" ? (isRtl ? "الاشتراكات السارية اليوم فقط" : "Current subscriptions only")
+                : viewFilter === "expired" ? (isRtl ? "الاشتراكات المنتهية فقط" : "Expired subscriptions only")
+                : (isRtl ? "الحسابات المفعّلة فقط" : "Enabled accounts only")}
               <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-white/80">
                 {filteredCustomers.length}
               </span>

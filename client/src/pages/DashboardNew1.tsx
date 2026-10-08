@@ -21,6 +21,8 @@ import { useCustomers, useDailyPlans } from "@/lib/api";
 import { useLanguage } from "@/lib/i18n";
 import { useStore } from "@/lib/store";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { subscriptionReportingState } from "@/lib/subscriptionReporting";
+import { useQatarReportingDate } from "@/hooks/useQatarReportingDate";
 
 type DetailView = "active" | "expiring" | "expired" | "meals" | "inventory" | null;
 
@@ -48,6 +50,7 @@ export default function DashboardNew() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [detailView, setDetailView] = useState<DetailView>(null);
   const dateKey = format(selectedDate, "yyyy-MM-dd");
+  const reportingDate = useQatarReportingDate();
 
   const { data: customers = [], isLoading: customersLoading } = useCustomers();
   const { data: dailyPlans = [], isLoading: plansLoading } = useDailyPlans(dateKey);
@@ -90,7 +93,7 @@ export default function DashboardNew() {
       const d = parseISO(endDate);
       return Number.isNaN(d.getTime()) ? null : differenceInCalendarDays(d, new Date());
     };
-    const active = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d >= 0; });
+    const active = customers.filter((c) => subscriptionReportingState(c, reportingDate) === "current");
     const expiring = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d >= 0 && d <= 3; });
     const expired = customers.filter((c) => { const d = daysRemaining(c.endDate); return d !== null && d < 0; });
     const lowStock = inventoryItems.filter((i: any) => Number(i.currentStock ?? 0) <= Number(i.minStock ?? 0));
@@ -113,7 +116,7 @@ export default function DashboardNew() {
       prepRate: todayPlans.length ? Math.round((prepared / todayPlans.length) * 100) : 0,
       deliveryRate: todayPlans.length ? Math.round((delivered / todayPlans.length) * 100) : 0,
     };
-  }, [customers, dailyPlans, inventoryItems, dateKey, customizedToday]);
+  }, [customers, dailyPlans, inventoryItems, dateKey, customizedToday, reportingDate]);
 
   /** ملخّص المشتريات: فواتير الشهر الجاري وقيمتها — من رؤوس الفواتير المستوردة. */
   const purchases = useMemo(() => {
@@ -280,7 +283,7 @@ export default function DashboardNew() {
           { label: tr("تم التوصيل", "Delivered"), value: `${metrics.deliveryRate}%`,
             note: `${metrics.delivered}/${metrics.todayPlans.length} ${tr("طلب", "orders")}`,
             icon: Route, color: "#47759c", action: () => navigate("/delivery") },
-          { label: tr("مشتركون نشطون", "Active subscribers"), value: metrics.active.length,
+          { label: tr("اشتراكات سارية اليوم", "Current subscriptions"), value: metrics.active.length,
             note: `${metrics.paused} ${tr("مجمّد", "paused")} · ${metrics.expiring.length} ${tr("للتجديد", "renewal")}`,
             icon: Users, color: "#0E2A4A", action: () => setDetailView("active") },
         ].map((item, i) => (
@@ -730,7 +733,7 @@ export default function DashboardNew() {
           </div>
           <div className="space-y-2.5">
             <button onClick={() => setDetailView("active")} className="w-full flex items-center justify-between rounded-xl border border-cyan-200/50 bg-cyan-50/40 p-3 hover:bg-cyan-50">
-              <span className="text-xs font-bold text-cyan-800">{tr("نشطون", "Active")}</span>
+              <span className="text-xs font-bold text-cyan-800">{tr("سارية اليوم", "Current today")}</span>
               <span className="text-xl font-black text-[#0e76ac] tabular-nums">{metrics.active.length}</span>
             </button>
             <button onClick={() => setDetailView("expiring")} className="w-full flex items-center justify-between rounded-xl border border-red-200/50 bg-red-50/40 p-3 hover:bg-red-50">
@@ -829,7 +832,7 @@ export default function DashboardNew() {
             <DialogTitle>
               {detailView === "meals" ? tr("وجبات اليوم", "Today's meals")
                : detailView === "inventory" ? tr("تنبيهات المخزون", "Inventory alerts")
-               : detailView === "active" ? tr("المشتركون النشطون", "Active subscribers")
+               : detailView === "active" ? tr("الاشتراكات السارية اليوم", "Current subscriptions today")
                : detailView === "expiring" ? tr("اشتراكات تنتهي قريباً", "Subscriptions ending soon")
                : tr("اشتراكات منتهية", "Expired subscriptions")}
             </DialogTitle>
