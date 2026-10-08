@@ -607,7 +607,9 @@ export const confirmAllDrafts = mutation({
       .collect();
     let confirmed = 0, skippedEmpty = 0;
     for (const p of plans as any[]) {
-      if (normalizeStatus(p.status) !== "DRAFT") continue;
+      // Raw status on purpose: normalizeStatus() maps anything outside its 5 statuses
+      // (PAUSED, OUT_FOR_DELIVERY, FAILED) to DRAFT, which re-confirmed frozen customers' plans.
+      if (String(p.status || "").trim().toUpperCase() !== "DRAFT") continue;
       const activeItems = (Array.isArray(p.items) ? p.items : []).filter((item: any) => !item?.isOff);
       if (activeItems.length === 0) { skippedEmpty++; continue; }
       await ctx.db.patch(p._id, { status: "CONFIRMED" });
