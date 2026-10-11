@@ -9,13 +9,13 @@ import { ar, enUS } from "date-fns/locale";
 import { useLanguage } from "@/lib/i18n";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Printer, Share2, Store, Sparkles, UtensilsCrossed } from "lucide-react";
+import { CalendarIcon, Printer, Share2, Store, Sparkles, UtensilsCrossed, Repeat } from "lucide-react";
 import { printMealPlanCards } from "@/lib/printMealPlan";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/lib/store";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
 import { slotToDate } from "@/lib/subscription";
-import { localISO } from "@/lib/mealSchedule";
+import { localISO, mealScheduledFor, isMainCategory, isSnackCategory } from "@/lib/mealSchedule";
 import type { Id } from "@/../../convex/_generated/dataModel";
 import { publicOrigin, openExternal } from "@/lib/native";
 
@@ -126,6 +126,50 @@ export default function OrderReviewDetail() {
       void alertDialog({ message: t("تعذّر إنشاء الرابط: ", "Couldn't create link: ") + String(e?.message || e) });
     } finally {
       setSharing(false);
+    }
+  };
+  const repeatOrderMutation = useMutation(api.customerOrders.repeatOrder);
+  const [repeating, setRepeating] = useState(false);
+  /** Preview the differences first; the copy is created only after the nutritionist confirms. */
+  const handleRepeat = async () => {
+    if (!orderId || repeating) return;
+    setRepeating(true);
+    try {
+      const { report: r }: any = await repeatOrderMutation({ orderId: orderId as any, dryRun: true, sessionToken });
+      const slot = (f: any) => `${t("دورة", "cycle")} ${f.week} · ${dayName(f.day)}`;
+      const list = (rows: any[], line: (f: any) => string) =>
+        rows.slice(0, 10).map((f) => `• ${line(f)}`).join("\n") + (rows.length > 10 ? `\n… +${rows.length - 10}` : "");
+      const parts: string[] = [];
+      if (r.countMismatch.length) parts.push(
+        `⚠️ ${t(`عدد الوجبات لا يطابق الباقة (${r.mealsPerDay} وجبة + ${r.snacksPerDay} سناك) في ${r.countMismatch.length} يوم:`,
+          `Meal count differs from the package (${r.mealsPerDay} meals + ${r.snacksPerDay} snacks) on ${r.countMismatch.length} day(s):`)}\n`
+        + list(r.countMismatch, (d) => `${slot(d)} — ${d.mains} ${t("وجبة", "meals")} + ${d.snacks} ${t("سناك", "snacks")}`));
+      if (r.removed.length) parts.push(
+        `⛔ ${t(`${r.removed.length} صنف خرج من المنيو ولن يُنسخ:`, `${r.removed.length} dish(es) left the menu and will not be copied:`)}\n`
+        + list(r.removed, (f) => `${f.name} (${slot(f)})`));
+      if (r.moved.length) parts.push(
+        `⚠️ ${t(`${r.moved.length} صنف غير مجدول في المنيو لهذا اليوم (تحذير فقط):`, `${r.moved.length} dish(es) not scheduled on the menu for that day (warning only):`)}\n`
+        + list(r.moved, (f) => `${f.name} (${slot(f)})`));
+      if (r.restricted.length) parts.push(
+        `⚠️ ${t(`${r.restricted.length} صنف يخالف ممنوعات المشترك:`, `${r.restricted.length} dish(es) conflict with restrictions:`)}\n`
+        + list(r.restricted, (f) => `${f.name} — ${f.word} (${slot(f)})`));
+      if (r.outsidePeriod) parts.push(
+        t(`ℹ️ ${r.outsidePeriod} وجبة أيامها خارج الفترة الجديدة ولن تُنسخ.`, `ℹ️ ${r.outsidePeriod} meal(s) fall outside the new period and will not be copied.`));
+      const ok = await confirmDialog({
+        title: t("تكرار الجدول للفترة الجديدة", "Repeat plan for the new period"),
+        message: `${r.customerName} — ${r.startDate} → ${r.endDate}\n`
+          + t(`سيُنسخ ${r.copied} وجبة على ${r.totalDays} يوم في طلب جديد قيد المراجعة.`, `${r.copied} meal(s) over ${r.totalDays} day(s) will be copied into a new pending order.`)
+          + `\n\n${parts.length ? parts.join("\n\n") : t("✅ الجدول مطابق — لا اختلافات.", "✅ Plan matches — no differences.")}`,
+        confirmText: t("أنشئ الطلب", "Create order"),
+        cancelText: t("إلغاء", "Cancel"),
+      });
+      if (!ok) return;
+      const res: any = await repeatOrderMutation({ orderId: orderId as any, sessionToken });
+      navigate(`/orders/review/${res.orderId}`);
+    } catch (e: any) {
+      void alertDialog({ message: String(e?.data || e?.message || e) });
+    } finally {
+      setRepeating(false);
     }
   };
   const deleteOrderMutation = useMutation(api.customerOrders.deleteOrder);
@@ -417,6 +461,32 @@ ${r.skipped.join(", ")}` : ""),
   const subSnacks = linkedSub?.snacksPerDay ?? null;
   const subPerDay = (subMeals ?? 0) + (subSnacks ?? 0);
 
+  /* Repeated orders only: the copy skipped create()'s guards on purpose, so every day that
+     differs from the package or holds an unscheduled dish is flagged here before approval. */
+  const isRepeatReview = !!(order as any).repeatedFromOrderId && order.status === "pending";
+  const mealById = new Map<string, any>(allMeals.map((m: any) => [String(m._id), m]));
+  const dayIssues: Record<string, string[]> = {};
+  if (isRepeatReview) {
+    const byDay: Record<string, any[]> = {};
+    for (const it of items) (byDay[`${it.week}-${it.day}`] ||= []).push(it);
+    for (const [key, list] of Object.entries(byDay)) {
+      const issues: string[] = [];
+      const mains = list.filter((it) => isMainCategory(it.category)).length;
+      const snacks = list.filter((it) => isSnackCategory(it.category)).length;
+      if (linkedSub && (mains !== (subMeals ?? 0) || snacks !== (subSnacks ?? 0))) {
+        issues.push(t(`${mains} وجبة + ${snacks} سناك — الباقة ${subMeals ?? 0} + ${subSnacks ?? 0}`,
+          `${mains} meals + ${snacks} snacks — package ${subMeals ?? 0} + ${subSnacks ?? 0}`));
+      }
+      for (const it of list) {
+        const meal = mealById.get(String(it.mealId));
+        if (allMeals.length && (!meal || meal.isActive === false)) issues.push(t(`${it.mealNameAr}: خرج من المنيو`, `${it.mealNameEn || it.mealNameAr}: left the menu`));
+        else if (meal && !mealScheduledFor(meal, Number(it.week), String(it.day))) issues.push(t(`${it.mealNameAr}: غير مجدول لهذا اليوم`, `${it.mealNameEn || it.mealNameAr}: not scheduled this day`));
+      }
+      if (issues.length) dayIssues[key] = issues;
+    }
+  }
+  const issueDays = Object.keys(dayIssues).length;
+
   // Group items by week and day
   const groupedByWeek: Record<number, Record<string, typeof items>> = {};
   items.forEach((item) => {
@@ -490,6 +560,14 @@ ${r.skipped.join(", ")}` : ""),
       });
       return;
     }
+
+    if (issueDays > 0 && !(await confirmDialog({
+      title: t("اختلافات في الجدول المكرَّر", "Differences in the repeated plan"),
+      message: t(`يوجد ${issueDays} يوم فيه اختلاف عن الباقة أو المنيو (معلَّمة بالأصفر).\n\nاعتماد الطلب كما هو؟`,
+        `${issueDays} day(s) differ from the package or menu (marked in amber).\n\nApprove as is?`),
+      confirmText: t("نعم، اعتمد كما هو", "Yes, approve as is"),
+      cancelText: t("رجوع للتعديل", "Back to edit"),
+    }))) return;
 
     // ⚠️ تأكيد صريح لو فيه خطط قائمة ستُستبدل (خصوصاً اليدوية من الأخصائية)
     if (conflicts && conflicts.total > 0) {
@@ -646,6 +724,13 @@ ${r.skipped.join(", ")}` : ""),
           {t("← العودة للقائمة","← Back to list")}
         </Button>
         <div className="flex items-center gap-2">
+          {(orderData as any)?.status && !["pending", "cancelled"].includes((orderData as any).status) && (
+            <Button variant="outline" onClick={handleRepeat} disabled={repeating}
+              className="font-bold border-emerald-600 text-emerald-700">
+              <Repeat className="h-4 w-4 ml-2" />
+              {repeating ? t("جارٍ الفحص…", "Checking…") : t("كرّر الجدول للفترة الجديدة", "Repeat for new period")}
+            </Button>
+          )}
           <Button
             onClick={handleShare}
             disabled={sharing}
@@ -773,6 +858,13 @@ ${r.skipped.join(", ")}` : ""),
         )}
       </Card>
 
+      {issueDays > 0 && (
+        <div role="alert" className="rounded-2xl border-2 border-amber-400 bg-amber-50 px-5 py-4 text-amber-900">
+          <p className="font-black">⚠️ {t(`جدول مكرَّر — ${issueDays} يوم يحتاج مراجعة قبل الاعتماد`, `Repeated plan — ${issueDays} day(s) need review before approval`)}</p>
+          <p className="mt-1 text-sm font-bold">{t("الأيام المعلَّمة بالأصفر تختلف عن الباقة الحالية أو عن المنيو. عدّلها ثم اعتمد.", "Days marked in amber differ from the current package or menu. Fix them, then approve.")}</p>
+        </div>
+      )}
+
       {/* Weekly Meals Grid */}
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-gray-900">
@@ -815,6 +907,9 @@ ${r.skipped.join(", ")}` : ""),
                           <h5 className="text-base font-bold">
                             {dayName(day)}
                           </h5>
+                          {dayIssues[overrideKey]?.map((issue) => (
+                            <span key={issue} className="rounded-full bg-amber-300 px-2 py-0.5 text-[11px] font-black text-amber-950">⚠️ {issue}</span>
+                          ))}
                           {effectiveDate && (
                             <span className="text-sm font-semibold opacity-80">
                               · {format(effectiveDate, "d MMM yyyy", { locale })}

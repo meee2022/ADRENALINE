@@ -1149,6 +1149,8 @@ export default defineSchema({
     trackingToken: v.optional(v.string()),
     // 🔒 مفتاح idempotency لمنع تكرار الطلب
     idempotencyKey: v.optional(v.string()),
+    // Set when staff repeated an approved order for a renewed period (see repeatOrder).
+    repeatedFromOrderId: v.optional(v.id("customerOrders")),
   })
     .index("by_status", ["status"])
     .index("by_phone", ["customerPhone"])

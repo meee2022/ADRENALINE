@@ -9,7 +9,11 @@ import { addDeliveryDays, isDeliveryDay, parseDate, fmtDate, addDays, dayNameOf,
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { trail } from "./lib/trail";
 import { loyaltyConfig } from "./loyalty";
-import { qatarTodayISO, validateCustomerOrderSelection } from "./lib/customerOrderRules";
+import {
+  qatarTodayISO, validateCustomerOrderSelection, orderableSubscriptionSlots,
+  mealScheduledFor, isMainCategory, isSnackCategory,
+} from "./lib/customerOrderRules";
+import { restrictionWords, avoidTokens, restrictionHit } from "../shared/rules";
 
 // Helper: Generate unique order number
 function generateOrderNumber(): string {
@@ -267,6 +271,164 @@ export const create = mutation({
       orderNumber,
       trackingToken,
     };
+  },
+});
+
+// ===== REPEAT AN APPROVED ORDER FOR THE RENEWED PERIOD =====
+/**
+ * Copies an approved order's schedule into a NEW pending order for the customer's
+ * current subscription period. It writes no daily plans and touches neither the
+ * source order nor its plans: the copy is approved through approve() like any order,
+ * where each (rotation week + day) slot lands on the matching kitchen-rotation date.
+ * `dryRun` returns only the differences report shown to the nutritionist.
+ */
+export const repeatOrder = mutation({
+  args: {
+    orderId: v.id("customerOrders"),
+    dryRun: v.optional(v.boolean()),
+    sessionToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { orderId, dryRun, sessionToken }) => {
+    await requireRole(ctx, sessionToken, ORDER_REVIEW_ROLES);
+    const source: any = await ctx.db.get(orderId);
+    if (!source) throw new ConvexError("الطلب غير موجود");
+    if (source.status === "pending" || source.status === "cancelled") {
+      throw new ConvexError("يُكرَّر الطلب المعتمد فقط");
+    }
+    const restaurantKey = String(source.restaurantKey || "ADRENALINE");
+    const customer: any = (source.customerId ? await ctx.db.get(source.customerId) : null)
+      ?? await findRestaurantCustomerByPhone(ctx, source.customerPhone, restaurantKey);
+    if (!customer) throw new ConvexError("هذا الطلب غير مربوط بمشترك");
+
+    const now = Date.now();
+    const todayISO = qatarTodayISO(now);
+    if (customer.pausedFrom) throw new ConvexError("اشتراك المشترك مجمّد — لا يمكن تكرار الجدول الآن");
+    const endDate = String(customer.endDate || "");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate) || endDate < todayISO) {
+      throw new ConvexError("اشتراك المشترك منتهٍ — جدّد الاشتراك أولاً ثم كرّر الجدول");
+    }
+
+    // Same slot walk the menu and create() use, so the copy can only hold orderable days.
+    const settings: any = await ctx.db.query("restaurantSettings").first();
+    const advancedOn = String(settings?.cookingWeekAdvancedOn || "");
+    const startRotationWeek = rotationWeekAtDate(
+      Number(settings?.currentCookingWeek) || 1,
+      /^\d{4}-\d{2}-\d{2}$/.test(advancedOn) ? advancedOn : todayISO,
+      String(customer.startDate),
+    );
+    const slotKeys = new Set(
+      orderableSubscriptionSlots(customer, startRotationWeek, todayISO).map((s) => `${s.week}:${s.day}`),
+    );
+    if (slotKeys.size === 0) throw new ConvexError("لا توجد أيام قابلة للطلب في الاشتراك الحالي");
+
+    const items = await ctx.db
+      .query("customerOrderItems")
+      .withIndex("by_orderId", (q) => q.eq("orderId", orderId))
+      .collect();
+    const words = restrictionWords(customer.avoid, customer.allergies);
+    const tokens = avoidTokens(customer.allergies, customer.avoid);
+
+    type Flag = { name: string; week: number; day: string; word?: string };
+    const removed: Flag[] = [], moved: Flag[] = [], restricted: Flag[] = [];
+    let outsidePeriod = 0;
+    const counts = new Map<string, { mains: number; snacks: number }>();
+    const copies: Array<{ item: any; meal: any }> = [];
+    const mealCache = new Map<string, any>();
+    for (const item of items) {
+      const week = Number(item.week);
+      const day = String(item.day).toLowerCase();
+      const key = `${week}:${day}`;
+      if (!slotKeys.has(key)) { outsidePeriod++; continue; }
+      const mealKey = String(item.mealId);
+      if (!mealCache.has(mealKey)) mealCache.set(mealKey, await ctx.db.get(item.mealId));
+      const meal: any = mealCache.get(mealKey);
+      const flag: Flag = { name: String(item.mealNameAr || item.mealNameEn || ""), week, day };
+      // A dish that left the subscribers' menu is never copied: the day shows short instead.
+      if (!meal || !meal.isActive || meal.isGymOnly || meal.isOnlineOnly) { removed.push(flag); continue; }
+      if (!mealScheduledFor(meal, week, day)) moved.push(flag);
+      const word = restrictionHit(meal, words, tokens);
+      if (word) restricted.push({ ...flag, word });
+      const count = counts.get(key) || { mains: 0, snacks: 0 };
+      if (isMainCategory(meal.category)) count.mains++;
+      else if (isSnackCategory(meal.category)) count.snacks++;
+      counts.set(key, count);
+      copies.push({ item, meal });
+    }
+
+    const mealsPerDay = Math.max(0, Math.floor(Number(customer.mealsPerDay) || 0));
+    const snacksPerDay = Math.max(0, Math.floor(Number(customer.snacksPerDay) || 0));
+    const countMismatch = Array.from(slotKeys)
+      .map((key) => {
+        const [week, day] = key.split(":");
+        const count = counts.get(key) || { mains: 0, snacks: 0 };
+        return { week: Number(week), day, mains: count.mains, snacks: count.snacks };
+      })
+      .filter((d) => d.mains !== mealsPerDay || d.snacks !== snacksPerDay);
+
+    const report = {
+      customerName: String(customer.fullName || source.customerName || ""),
+      startDate: String(customer.startDate || ""), endDate,
+      mealsPerDay, snacksPerDay,
+      totalDays: slotKeys.size, copied: copies.length,
+      removed, moved, restricted, countMismatch, outsidePeriod,
+    };
+    if (dryRun) return { report };
+    if (copies.length === 0) throw new ConvexError("لا توجد وجبات صالحة للنسخ إلى الفترة الجديدة");
+
+    // One open copy per source order: a second press reopens it instead of duplicating.
+    const open = (await ctx.db
+      .query("customerOrders")
+      .withIndex("by_phone", (q) => q.eq("customerPhone", source.customerPhone))
+      .collect()).find((o: any) => o.status === "pending" && o.repeatedFromOrderId === orderId);
+    if (open) return { orderId: open._id, orderNumber: open.orderNumber, existing: true, report };
+
+    let totalCalories = 0, totalPrice = 0;
+    for (const { meal } of copies) {
+      totalCalories += Number(meal.calories) || 0;
+      totalPrice += Number(meal.priceQAR) || 0;
+    }
+    const startISO = String(customer.startDate || "");
+    const orderNumber = generateOrderNumber();
+    const removedNote = removed.length
+      ? ` — أصناف لم تُنسخ لأنها خرجت من المنيو: ${removed.map((r) => `${r.name} (دورة ${r.week} · ${r.day})`).join("، ")}`
+      : "";
+    const newOrderId = await ctx.db.insert("customerOrders", {
+      restaurantKey,
+      customerName: source.customerName,
+      customerPhone: source.customerPhone,
+      customerEmail: source.customerEmail,
+      customerId: customer._id,
+      status: "pending",
+      totalMeals: copies.length,
+      totalPrice: Math.round(totalPrice * 100) / 100,
+      totalCalories,
+      orderNumber,
+      trackingToken: newToken(),
+      createdAt: now,
+      notes: `تكرار جدول الطلب ${source.orderNumber}${removedNote}`,
+      preferredStartDate: startISO > todayISO ? startISO : fmtDate(addDays(parseDate(todayISO), 1)),
+      repeatedFromOrderId: orderId,
+    } as any);
+    for (const { item, meal } of copies) {
+      await ctx.db.insert("customerOrderItems", {
+        orderId: newOrderId,
+        mealId: item.mealId,
+        mealNameAr: meal.nameAr,
+        mealNameEn: meal.nameEn,
+        calories: Number(meal.calories) || 0,
+        protein: meal.protein,
+        carbs: meal.carbs,
+        fats: meal.fats,
+        category: meal.category,
+        imageUrl: meal.imageUrl,
+        priceQAR: Number(meal.priceQAR) || 0,
+        week: item.week,
+        day: item.day,
+        specialNotes: item.specialNotes,
+        createdAt: now,
+      });
+    }
+    return { orderId: newOrderId, orderNumber, existing: false, report };
   },
 });
 
