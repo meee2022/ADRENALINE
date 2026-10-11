@@ -35,6 +35,7 @@ export default function OrdersPending() {
   const sessionToken = useStore((s) => s.sessionToken) || undefined;
   const [tab, setTab] = useState<Tab>("pending");
   const [restaurantFilter, setRestaurantFilter] = useState<RestaurantFilter>("ALL");
+  const [search, setSearch] = useState("");
 
   // status: undefined = كل الطلبات؛ وإلا يفلتر على السيرفر
   const orders = useQuery(api.customerOrders.list, {
@@ -62,6 +63,13 @@ export default function OrdersPending() {
     );
   }
 
+  // Search by customer name or phone (digits only, so spaces/+974 don't matter)
+  const q = search.trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const shown = !q ? orders : orders.filter((o) =>
+    String(o.customerName || "").toLowerCase().includes(q) ||
+    (!!qDigits && String(o.customerPhone || "").replace(/\D/g, "").includes(qDigits)));
+
   const TABS: { key: Tab; label: string }[] = [
     { key: "pending", label: t("قيد المراجعة", "Pending") },
     { key: "confirmed", label: t("المعتمدة", "Approved") },
@@ -77,7 +85,7 @@ export default function OrdersPending() {
         subtitleEn="Review pending orders and revisit approved ones anytime"
         kpis={[
           { value: pendingCount ?? 0, labelAr: "قيد المراجعة", labelEn: "Pending" },
-          { value: orders.length, labelAr: "معروض", labelEn: "Showing" },
+          { value: shown.length, labelAr: "معروض", labelEn: "Showing" },
         ]}
       />
 
@@ -117,6 +125,13 @@ export default function OrdersPending() {
           >{label}</button>
         ))}
       </div>
+
+      <input
+        type="search" value={search} onChange={(e) => setSearch(e.target.value)}
+        placeholder={t("ابحث بالاسم أو رقم الجوال", "Search by name or phone")}
+        aria-label={t("بحث في الطلبات", "Search orders")}
+        className="w-full max-w-md rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-[#0E76AC] focus:ring-2 focus:ring-[#3CC4F0]/30"
+      />
 
       {/* ✅ أسبوع المطبخ الحالي — يوجّه المنيو والخطة الذكية */}
       <Card
@@ -161,7 +176,7 @@ export default function OrdersPending() {
       </Card>
 
       {/* Orders List */}
-      {orders.length === 0 ? (
+      {shown.length === 0 ? (
         <Card
           className="p-12 text-center bg-white rounded-2xl"
           style={{ border: "1px solid #e8eef4", boxShadow: "0 1px 2px rgba(15,21,22,.04), 0 12px 28px -14px rgba(14,42,74,.16)" }}
@@ -170,15 +185,15 @@ export default function OrdersPending() {
             <CheckCircle2 className="h-8 w-8 text-[#3cc4f0]" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">
-            {t("رائع! لا توجد طلبات معلقة", "Great! No pending orders")}
+            {q ? t("لا توجد نتائج للبحث", "No matching orders") : t("رائع! لا توجد طلبات معلقة", "Great! No pending orders")}
           </h3>
           <p className="text-gray-500">
-            {tab === "pending" ? t("تم مراجعة جميع الطلبات", "All orders have been reviewed") : t("لا توجد طلبات في هذا التصنيف", "No orders in this category")}
+            {q ? t("جرّب اسماً أو رقماً آخر", "Try another name or number") : tab === "pending" ? t("تم مراجعة جميع الطلبات", "All orders have been reviewed") : t("لا توجد طلبات في هذا التصنيف", "No orders in this category")}
           </p>
         </Card>
       ) : (
         <div className="grid gap-4">
-          {orders.map((order) => {
+          {shown.map((order) => {
             const isNutriResetOrder = (order as any).restaurantKey === "NUTRI_RESET";
             const isSmartOrder = isSmartPlanOrder(order.notes);
             const createdDate = (() => {
