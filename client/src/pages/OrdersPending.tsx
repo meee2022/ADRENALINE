@@ -11,6 +11,8 @@ import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/lib/i18n";
+import { subscriptionReportingState } from "@/lib/subscriptionReporting";
+import { useQatarReportingDate } from "@/hooks/useQatarReportingDate";
 
 /** التبويبات: قيد المراجعة / المعتمدة / الكل */
 type Tab = "pending" | "confirmed" | "all";
@@ -36,6 +38,8 @@ export default function OrdersPending() {
   const [tab, setTab] = useState<Tab>("pending");
   const [restaurantFilter, setRestaurantFilter] = useState<RestaurantFilter>("ALL");
   const [search, setSearch] = useState("");
+  const [runningOnly, setRunningOnly] = useState(true);
+  const today = useQatarReportingDate();
 
   // status: undefined = كل الطلبات؛ وإلا يفلتر على السيرفر
   const orders = useQuery(api.customerOrders.list, {
@@ -45,6 +49,9 @@ export default function OrdersPending() {
     sessionToken,
   });
   const pendingCount = useQuery(api.customerOrders.countPending);
+  // Display-only filter: customers are loaded just while the "running subscriptions" chip is on.
+  const hideEnded = tab === "confirmed" && runningOnly;
+  const customers = useQuery(api.customers.list, hideEnded ? { sessionToken } : "skip");
 
   // ✅ أسبوع الدورة الذي يطبخه المطبخ حالياً — يوجّه اختيار العميل والخطة الذكية
   const settings = useQuery(api.restaurantSettings.get);
@@ -66,9 +73,20 @@ export default function OrdersPending() {
   // Search by customer name or phone (digits only, so spaces/+974 don't matter)
   const q = search.trim().toLowerCase();
   const qDigits = q.replace(/\D/g, "");
-  const shown = !q ? orders : orders.filter((o) =>
+  const digits = (v: unknown) => String(v || "").replace(/\D/g, "");
+  const byId = new Map<string, any>(), byPhone = new Map<string, any>();
+  for (const c of (customers as any[] | undefined) ?? []) {
+    byId.set(String(c._id), c);
+    if (digits(c.phone)) byPhone.set(digits(c.phone).slice(-8), c); // last 8 = Qatar local number
+  }
+  const isRunning = (o: any) => {
+    const c = byId.get(String(o.customerId)) ?? byPhone.get(digits(o.customerPhone).slice(-8));
+    return !!c && ["current", "paused", "upcoming"].includes(subscriptionReportingState(c, today));
+  };
+  const base = hideEnded && customers ? orders.filter(isRunning) : orders;
+  const shown = !q ? base : base.filter((o) =>
     String(o.customerName || "").toLowerCase().includes(q) ||
-    (!!qDigits && String(o.customerPhone || "").replace(/\D/g, "").includes(qDigits)));
+    (!!qDigits && digits(o.customerPhone).includes(qDigits)));
 
   const TABS: { key: Tab; label: string }[] = [
     { key: "pending", label: t("قيد المراجعة", "Pending") },
@@ -126,6 +144,15 @@ export default function OrdersPending() {
         ))}
       </div>
 
+      {tab === "confirmed" && (
+        <button onClick={() => setRunningOnly((v) => !v)} aria-pressed={runningOnly}
+          className={cn("rounded-xl border px-4 py-2 text-xs font-black transition-colors",
+            runningOnly ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300")}
+        >
+          {t("الاشتراكات السارية فقط", "Running subscriptions only")}
+          {hideEnded && customers ? ` · ${t("مخفي", "hidden")} ${orders.length - base.length}` : ""}
+        </button>
+      )}
       <input
         type="search" value={search} onChange={(e) => setSearch(e.target.value)}
         placeholder={t("ابحث بالاسم أو رقم الجوال", "Search by name or phone")}
