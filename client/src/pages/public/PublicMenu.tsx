@@ -34,7 +34,7 @@ import {
   DELIVERY_DAYS as SHARED_DELIVERY_DAYS, type DeliveryDay, defaultDeliveryDay, nextDeliveryDateISO, mealAvailableOn,
   restrictionWords, avoidTokens as avoidTokensOf, restrictionHit,
   dailyLimits, countPicks, dayComplete, dayProgress as sharedDayProgress, slotFull, addMealVerdict, subscriptionSlotKeys,
-  programCalFactor, customerProgram, scaledNutrition,
+  programMacroFactors, customerProgram, scaledNutrition,
 } from "@shared/rules";
 import { confirmDialog, alertDialog } from "@/lib/dialogs";
 import { SubscriptionExpiredNotice } from "@/components/public/SubscriptionExpiredNotice";
@@ -212,7 +212,7 @@ export default function PublicMenuPage() {
   //    العرض فقط — بيانات الطلب تُحفظ بالسعرات الأساسية.
   // ✅ معامل البرنامج والتغذية الفعلية — من shared/rules/nutrition (نفس ما تطبّقه الاستيكرات)
   const calFactor = useMemo(
-    () => programCalFactor(customerProgram(verifiedCustomer), (settings as any)?.programPortions),
+    () => programMacroFactors(customerProgram(verifiedCustomer), (settings as any)?.programPortions),
     [verifiedCustomer, settings],
   );
   const nutritionFor = (meal: any) => scaledNutrition(meal, calFactor);

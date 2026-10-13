@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api, convex } from '@/api';
 import { colors, fonts } from '@/theme';
-import { customerProgram, isSnackCategory, programCalFactor, scaledNutrition, slotToDate, mealAvailableOn, countPicks } from '@/rules';
+import { customerProgram, isSnackCategory, programMacroFactors, scaledNutrition, slotToDate, mealAvailableOn, countPicks } from '@/rules';
 import { Pick, SelectionMeal, selectionState, selectionReady, pickVerdict, picksAt, replacePick, selectableMeal, dayNavigationAllowed } from '@/subscriberSelection';
 import { Btn, Chip, T } from './ui';
 import { MealCard } from './MealCard';
@@ -102,7 +102,7 @@ export function SubscriberMealPlanner({ subscriberId, phone, onExit, initialMode
   const counts = countPicks(today.map(p => p.meal));
   const ready = !!customer && !!catalog && !!rotation && selectionReady(customer, rotationWeek, freshPicks)
     && freshPicks.every(p => catalog.some(m => m._id === p.meal._id));
-  const factor = programCalFactor(customerProgram(customer), settings?.programPortions);
+  const factor = programMacroFactors(customerProgram(customer), settings?.programPortions);
   const unavailablePicks=freshPicks.filter(p=>!catalog?.some(m=>m._id===p.meal._id&&selectableMeal(m,p.week,p.day)));
   const meals = (catalog || []).filter(m => active && selectableMeal(m, active.week, active.day)
     && (kind === 'snack' ? isSnackCategory(m.category) : !isSnackCategory(m.category))

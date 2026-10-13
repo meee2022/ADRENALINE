@@ -8,6 +8,7 @@ import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { ensureDriverLabelCodes } from "./lib/driverLabelCodes";
 import { resolveStickerDriver } from "../shared/driverLabelCode";
 import { liveCustomizedTemplates } from "./lib/customizedTemplates";
+import { programMacroFactors } from "../shared/rules";
 
 type PlanStatus =
   | "DRAFT"
@@ -529,14 +530,6 @@ async function buildStickers(
       FITNESS: { calFactor: 1.25 },
       BULK: { calFactor: 1.4 },
     };
-    const factorFor = (program: string): number => {
-      if (!pp) return 1;
-      const prog = String(program || "").toUpperCase();
-      if (prog.includes("DIET")) return Number(pp.DIET?.calFactor) || 1;
-      if (prog.includes("FITNESS")) return Number(pp.FITNESS?.calFactor) || 1;
-      if (prog.includes("BULK")) return Number(pp.BULK?.calFactor) || 1;
-      return 1;
-    };
     const isMainCourse = (category: string) => {
       const c = String(category || "").toUpperCase();
       return c.includes("LUNCH") || c.includes("DINNER");
@@ -695,10 +688,13 @@ async function buildStickers(
         //    حسب الهدف). الماكروز تُضرب بنفس النسبة حتى يبقى الاستيكر متسقاً
         //    (السعرات = مجموع الماكروز). باقي التصنيفات حصتها ثابتة.
         // برنامج العميل قد يكون في program أو goalType أو goals (بيانات قديمة)
-        const f = isMainCourse(category) ? factorFor(String(c.program || (c as any).goalType || (c as any).goals || "")) : 1;
-        let protein  = Math.round(baseProtein * f);
-        let carbs    = Math.round(baseCarbs * f);
-        let fats     = Math.round(baseFats * f);
+        // Each macro scales by its own portion ratio (rice vs protein) — same rule as the menu.
+        const mf = isMainCourse(category)
+          ? programMacroFactors(String(c.program || (c as any).goalType || (c as any).goals || ""), pp)
+          : { protein: 1, carbs: 1, fats: 1, cal: 1 };
+        let protein  = Math.round(baseProtein * mf.protein);
+        let carbs    = Math.round(baseCarbs * mf.carbs);
+        let fats     = Math.round(baseFats * mf.fats);
         // ✅ أولوية السعرات على الستيكر:
         //   1) سعرات مخصّصة لهذه الوجبة بالذات لهذا المشترك (mealCalorieOverrides) — أعلى أولوية، تُطبع كما هي.
         //   2) سعرات الوجبة الرئيسية اليدوية (mainMealCalories) — للأطباق الرئيسية فقط.
@@ -731,7 +727,7 @@ async function buildStickers(
             ? { min: 0, max: 310 }
             : { min: 0, max: Number.POSITIVE_INFINITY };
         const macroCalories = protein * 4 + carbs * 4 + fats * 9;
-        const automaticCalories = macroCalories > 0 ? macroCalories : Math.round(baseCalories * f);
+        const automaticCalories = macroCalories > 0 ? macroCalories : Math.round(baseCalories * mf.cal);
         const boundedCalories = Math.max(automaticRange.min, Math.min(automaticCalories, automaticRange.max));
         const targetCalories = explicitCalories > 0 ? explicitCalories : boundedCalories;
 

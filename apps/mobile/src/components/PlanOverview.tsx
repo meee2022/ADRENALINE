@@ -2,7 +2,7 @@ import { localizedField, useContentLanguage as useUILanguage } from '@/useConten
 import React, { useState } from 'react';
 import { Pressable, ScrollView, View, StyleSheet } from 'react-native';
 import { Pick, Subscriber, SelectionMeal, selectionState, swapCandidate, replacePick, dayNavigationAllowed } from '@/subscriberSelection';
-import { slotToDate, scaledNutrition, restrictionHit, restrictionWords, avoidTokens } from '@/rules';
+import { slotToDate, scaledNutrition, restrictionHit, restrictionWords, avoidTokens, type MacroFactors } from '@/rules';
 import { colors } from '@/theme';
 import { Btn, Chip, T } from './ui';
 import { PlanMealCard } from './PlanMealCard';
@@ -10,7 +10,7 @@ import { PlanMealCard } from './PlanMealCard';
 const DAYS:Record<string,string>={saturday:'السبت',sunday:'الأحد',monday:'الإثنين',tuesday:'الثلاثاء',wednesday:'الأربعاء',thursday:'الخميس'};
 /** Shared review: day-scoped cards and atomic swaps, never remove before replacing. */
 export function PlanOverview({customer,rotation,picks,catalog,factor,frozen,onRemove,onEdit,onReplace}: {
-  customer:Subscriber;rotation:number;picks:Pick[];catalog:SelectionMeal[];factor:number;frozen:boolean;
+  customer:Subscriber;rotation:number;picks:Pick[];catalog:SelectionMeal[];factor:number|MacroFactors;frozen:boolean;
   onRemove:(index:number)=>void;onEdit:(index:number)=>void;
   onReplace:(index:number,expected:Pick,meal:SelectionMeal,approved:boolean)=>void;
 }) {

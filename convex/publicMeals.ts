@@ -535,3 +535,15 @@ export const imagesByIds = query({
     return out;
   },
 });
+
+/** CLI-only: bulk-set dish macros. Calories are derived (P*4 + C*4 + F*9) so the sticker,
+ *  which prints from macros, can never disagree with the stored number. */
+export const setMacrosInternal = internalMutation({
+  args: { rows: v.array(v.object({ id: v.id("publicMeals"), protein: v.number(), carbs: v.number(), fats: v.number() })) },
+  handler: async (ctx, { rows }) => {
+    for (const r of rows) {
+      await ctx.db.patch(r.id, { protein: r.protein, carbs: r.carbs, fats: r.fats, calories: r.protein * 4 + r.carbs * 4 + r.fats * 9 });
+    }
+    return rows.length;
+  },
+});

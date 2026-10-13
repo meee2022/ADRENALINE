@@ -4,14 +4,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { SelectionMeal } from '@/subscriberSelection';
-import { scaledNutrition, customerCategoryLabel } from '@/rules';
+import { scaledNutrition, customerCategoryLabel, type MacroFactors } from '@/rules';
 import { mealImageSources } from '@/mealImage';
 import { colors } from '@/theme';
 import { T } from './ui';
 
 /** Compact result card: image, readable name, nutrition and action in one surface. */
 export function PlanMealCard({meal,factor,width,label,disabled,onPress}:{
-  meal:SelectionMeal;factor:number;width:number;label:string;disabled:boolean;onPress:()=>void;
+  meal:SelectionMeal;factor:number|MacroFactors;width:number;label:string;disabled:boolean;onPress:()=>void;
 }){
   useUILanguage();
   const nutrition=scaledNutrition(meal,factor);
