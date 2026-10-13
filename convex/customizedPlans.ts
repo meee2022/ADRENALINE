@@ -9,6 +9,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { liveCustomizedTemplates } from "./lib/customizedTemplates";
 
 /** عملاء البرنامج المخصّص + هل لهم قالب محفوظ. للموظفين. */
 export const listCustomized = query({
@@ -83,7 +84,7 @@ export const forDate = query({
     }
     const rotWeek = ((cur - 1 + fridays) % 4) + 1;
 
-    const templates = await ctx.db.query("customizedTemplates").collect();
+    const templates = await liveCustomizedTemplates(ctx);
     const out: any[] = [];
     for (const tpl of templates) {
       const sl = tpl.slots as any;

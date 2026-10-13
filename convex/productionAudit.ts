@@ -2,6 +2,7 @@ import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
+import { liveCustomizedTemplates } from "./lib/customizedTemplates";
 
 const OPERATIONAL_STATUSES = new Set([
   "CONFIRMED",
@@ -39,7 +40,7 @@ export const forDate = query({
     const date = dateOnly(args.date);
     const [dayPlans, templates, boxNumbers] = await Promise.all([
       ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect(),
-      ctx.db.query("customizedTemplates").collect(),
+      liveCustomizedTemplates(ctx),
       ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q) => q.eq("date", date)).collect(),
     ]);
 

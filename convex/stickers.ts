@@ -7,6 +7,7 @@ import { v, ConvexError } from "convex/values";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
 import { ensureDriverLabelCodes } from "./lib/driverLabelCodes";
 import { resolveStickerDriver } from "../shared/driverLabelCode";
+import { liveCustomizedTemplates } from "./lib/customizedTemplates";
 
 type PlanStatus =
   | "DRAFT"
@@ -179,7 +180,7 @@ async function computeDayRosterOrderedIds(ctx: any, date: string, pre?: { plansA
     return slots.filter((s) => s && s.type !== "OFF" && (s.baseName || s.text || s.proteinG));
   };
   const plansAll = pre?.plansAll ?? await ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect();
-  const templates = pre?.templates ?? await ctx.db.query("customizedTemplates").collect();
+  const templates = pre?.templates ?? await liveCustomizedTemplates(ctx);
   const tplIds = new Set(templates.map((t: any) => String(t.customerId)));
   // (أ) العاديون (خطط يومية، غير مخصّصين) و(ب) المخصّصون (قوالب) — منفصلان.
   const regularIds = new Set<string>();
@@ -372,7 +373,7 @@ async function buildStickers(
     // 🔀 المخصّص الذي بُني له قالب: مصدره القالب (الكود بالأسفل)، فنستبعد أي خطة
     //    يومية قديمة له هنا — وإلا فازت الخطة على القالب وطُبع استيكر قديم.
     //    من لا قالب له تبقى خطته تعمل (fallback أثناء الانتقال).
-    const allTemplates = await ctx.db.query("customizedTemplates").collect();
+    const allTemplates = await liveCustomizedTemplates(ctx);
     const tplCustomerIds = new Set(allTemplates.map((t: any) => String(t.customerId)));
     const plans = plansAll.filter(
       (p: any) =>
