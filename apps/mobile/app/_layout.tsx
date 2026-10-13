@@ -12,6 +12,7 @@ import { AnimatedSplash } from "@/components/AnimatedSplash";
 import { CustomerSessionProvider } from '@/customerSession';
 import { NotificationRouter } from '@/components/NotificationRouter';
 import { InstallPing } from '@/components/InstallPing';
+import { AutoUpdate } from '@/components/AutoUpdate';
 import { useContentLanguage } from '@/useContentLanguage';
 
 // Direction is presentation state, not a forced device setting requiring a restart.
@@ -58,6 +59,7 @@ export default function RootLayout() {
         ) : null}
         {appReady&&<NotificationRouter/>}
         <InstallPing/>
+        {Platform.OS !== 'web' && <AutoUpdate/>}
         {!splashDone && <AnimatedSplash ready={appReady} onDone={() => setSplashDone(true)} />}
       </View>
       </CustomerSessionProvider>
