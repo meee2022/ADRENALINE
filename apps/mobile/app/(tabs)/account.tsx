@@ -79,7 +79,7 @@ export default function Account() {
         fail('تعذّر حفظ الجلسة بأمان. حاول مرة أخرى.');return;
       }
       setPassword('');
-    } catch {fail('تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.');}
+    } catch (e:any) {fail((typeof e?.data==='string'&&e.data.trim())||'تعذّر الدخول. تحقق من الاتصال، وإذا تكررت المحاولات انتظر 15 دقيقة.');}
     finally{lock.current=false;setBusy(false);}
   };
   /* إنشاء الحساب داخل التطبيق — Apple (Guideline 4) ترفض إخراج المستخدم إلى المتصفح للتسجيل. */

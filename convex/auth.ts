@@ -12,7 +12,6 @@ import { findStaffByEmail, findCustomerByEmail } from "./accountLookup";
 
 const ATTEMPT_WINDOW_MS = 15 * 60 * 1000; // نافذة 15 دقيقة
 const MAX_ATTEMPTS = 5;
-const THROTTLED = "محاولات كثيرة — حاول مرة أخرى بعد 15 دقيقة";
 
 const attemptKey = (email: string) => String(email || "").trim().toLowerCase();
 
@@ -38,10 +37,13 @@ async function assertNotThrottled(ctx: any, email: string) {
     await ctx.db.delete(row._id);
     return;
   }
-  if (row.count >= MAX_ATTEMPTS) throw new ConvexError(THROTTLED);
+  if (row.count >= MAX_ATTEMPTS) {
+    const minutes = Math.max(1, Math.ceil((row.firstAt + ATTEMPT_WINDOW_MS - Date.now()) / 60000));
+    throw new ConvexError(`🔒 تم قفل الحساب مؤقتاً بسبب ${MAX_ATTEMPTS} محاولات دخول خاطئة — حاول مرة أخرى بعد ${minutes} دقيقة`);
+  }
 }
 
-/** يسجّل محاولة فاشلة. */
+/** يسجّل محاولة فاشلة ويرجّع رسالة الرفض مع عدد المحاولات المتبقية قبل القفل. */
 async function recordFailure(ctx: any, email: string) {
   const key = attemptKey(email);
   const now = Date.now();
@@ -49,15 +51,21 @@ async function recordFailure(ctx: any, email: string) {
     .query("loginAttempts")
     .withIndex("by_key", (q: any) => q.eq("key", key))
     .first();
+  let count = 1;
   if (!row) {
     await ctx.db.insert("loginAttempts", { key, count: 1, firstAt: now, lastAt: now });
-    return;
-  }
-  if (now - row.firstAt > ATTEMPT_WINDOW_MS) {
+  } else if (now - row.firstAt > ATTEMPT_WINDOW_MS) {
     await ctx.db.patch(row._id, { count: 1, firstAt: now, lastAt: now });
   } else {
-    await ctx.db.patch(row._id, { count: row.count + 1, lastAt: now });
+    count = row.count + 1;
+    await ctx.db.patch(row._id, { count, lastAt: now });
   }
+  // Same wording whether or not the email exists, so it reveals nothing about accounts.
+  const left = MAX_ATTEMPTS - count;
+  const error = left > 0
+    ? `بيانات الدخول غير صحيحة — متبقٍ ${left} ${left === 1 ? "محاولة" : "محاولات"} قبل قفل الحساب مؤقتاً`
+    : `بيانات الدخول غير صحيحة — تم قفل الحساب مؤقتاً لمدة 15 دقيقة`;
+  return { success: false as const, error };
 }
 
 /** ينظّف العدّاد بعد نجاح الدخول. */
@@ -82,8 +90,6 @@ export const authenticateUnified = mutation({
     // 🔒 قبل أي مقارنة لكلمة المرور
     await assertNotThrottled(ctx, args.email);
 
-    // رسالة موحّدة لمنع كشف وجود البريد (user enumeration)
-    const INVALID = { success: false as const, error: "بيانات الدخول غير صحيحة" };
 
     // First, try to find in users table (Admin, Staff)
     const user = await findStaffByEmail(ctx, args.email);
@@ -98,8 +104,7 @@ export const authenticateUnified = mutation({
         await ctx.db.patch(user._id, { passwordHash: newHash });
       });
       if (!ok) {
-        await recordFailure(ctx, args.email);
-        return INVALID;
+        return await recordFailure(ctx, args.email);
       }
 
       await clearFailures(ctx, args.email);
@@ -136,8 +141,7 @@ export const authenticateUnified = mutation({
         await ctx.db.patch(customer._id, { passwordHash: newHash });
       });
       if (!okCust) {
-        await recordFailure(ctx, args.email);
-        return INVALID;
+        return await recordFailure(ctx, args.email);
       }
 
       await clearFailures(ctx, args.email);
@@ -161,8 +165,7 @@ export const authenticateUnified = mutation({
     }
 
     // Not found in either table — رسالة موحّدة (ونحتسبها محاولة فاشلة أيضاً)
-    await recordFailure(ctx, args.email);
-    return INVALID;
+    return await recordFailure(ctx, args.email);
   },
 });
 
