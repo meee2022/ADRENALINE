@@ -74,8 +74,10 @@ export default function Login() {
       } else {
         setError(result.error || (isRtl ? "فشل تسجيل الدخول" : "Login failed"));
       }
-    } catch {
-      setError(isRtl ? "حدث خطأ أثناء تسجيل الدخول" : "An error occurred during login");
+    } catch (e: any) {
+      // Business errors (e.g. the 15-minute lockout) arrive as ConvexError data; show them as is.
+      const data = typeof e?.data === "string" ? e.data.trim() : "";
+      setError(data || (isRtl ? "حدث خطأ أثناء تسجيل الدخول" : "An error occurred during login"));
     } finally {
       setIsLoading(false);
     }
