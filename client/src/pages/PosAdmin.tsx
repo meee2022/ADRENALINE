@@ -148,7 +148,6 @@ function BranchesTab({ t, sessionToken, toast }: any) {
 
 function BranchRow({ b, t, update, sessionToken, toast }: any) {
   const [edit, setEdit] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [f, setF] = useState({ name: b.name, code: b.code || "", phone: b.phone || "", address: b.address || "" });
   const save = async () => {
     try { await update({ id: b.id as any, name: f.name, code: f.code, phone: f.phone, address: f.address, sessionToken }); setEdit(false); toast({ title: t("تم الحفظ", "Saved") }); }
@@ -178,88 +177,11 @@ function BranchRow({ b, t, update, sessionToken, toast }: any) {
         className={cn("text-[10px] font-bold px-2 py-1 rounded-full", b.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
         {b.isActive ? t("نشط", "Active") : t("موقوف", "Off")}
       </button>
-      <Button variant="outline" size="sm" onClick={() => setMenuOpen(true)} className="h-8">
-        {t("أصناف الفرع", "Branch menu")} ({b.menuMealIds?.length || t("الكل", "all")})
-      </Button>
+      <span className="text-[11px] font-bold text-slate-500">
+        {b.menuMealIds?.length ? t(`${b.menuMealIds.length} صنفاً`, `${b.menuMealIds.length} items`) : t("كل الأصناف", "full menu")}
+        <span className="text-slate-400"> · {t("تُعدَّل من تبويب الأصناف", "edit in Items tab")}</span>
+      </span>
       <Button variant="outline" size="sm" onClick={() => setEdit(true)} className="h-8">{t("تعديل", "Edit")}</Button>
-      {menuOpen && <BranchMenuDialog b={b} t={t} update={update} sessionToken={sessionToken} toast={toast} onClose={() => setMenuOpen(false)} />}
-    </div>
-  );
-}
-
-/** Pick which POS items this branch sells. Nothing ticked = the full POS menu. */
-function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
-  const items = useQuery(api.posAdmin.listItemsForAdmin, { sessionToken }) as any[] | undefined;
-  const [picked, setPicked] = useState<Set<string>>(() => new Set(b.menuMealIds || []));
-  // Branch-only price per item; empty = the shared POS price.
-  const [prices, setPrices] = useState<Record<string, string>>(
-    () => Object.fromEntries((b.menuPrices || []).map((p: any) => [p.mealId, String(p.price)])));
-  const [q, setQ] = useState("");
-  const [onlyPicked, setOnlyPicked] = useState(false);
-  const sellable = (items || []).filter((m: any) => m.posPrice != null && !m.isHidden);
-  const shown = sellable.filter((m: any) =>
-    (!onlyPicked || picked.has(m.id)) &&
-    `${m.displayName || ""} ${m.nameEn} ${m.nameAr}`.toLowerCase().includes(q.trim().toLowerCase()));
-  const toggle = (id: string) => setPicked((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  const save = async () => {
-    try {
-      const menuPrices = Object.entries(prices)
-        .filter(([, v]) => v.trim() !== "")
-        .map(([mealId, v]) => ({ mealId, price: Number(v) }));
-      if (menuPrices.some((p) => !Number.isFinite(p.price) || p.price < 0)) {
-        void alertDialog({ message: t("سعر الفرع غير صالح", "Invalid branch price") });
-        return;
-      }
-      await update({ id: b.id as any, menuMealIds: Array.from(picked) as any, menuPrices: menuPrices as any, sessionToken });
-      toast({ title: t("تم حفظ أصناف الفرع", "Branch menu saved") });
-      onClose();
-    } catch (e: any) { void alertDialog({ message: (typeof e?.data === "string" && e.data) || e?.message || "خطأ" }); }
-  };
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
-      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="border-b p-4">
-          <div className="font-black text-slate-900">{t("أصناف فرع", "Menu of")} {b.name}</div>
-          <div className="mt-1 text-xs text-slate-500">
-            {t("الكاشير في هذا الفرع يرى الأصناف المعلَّمة فقط. بدون أي علامة = كل أصناف الـ POS.",
-              "Cashiers of this branch only see ticked items. Nothing ticked = the full POS menu.")}
-            {" "}
-            {t("خانة «سعر الفرع» اختيارية: لو كتبت سعراً يُباع به الصنف في هذا الفرع فقط، ولو تركتها فارغة يُباع بالسعر العام.",
-              "Branch price is optional: a number here applies to this branch only; empty = the shared POS price.")}
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("بحث", "Search")} className="h-9 max-w-xs" />
-            <label className="flex items-center gap-1 text-xs font-bold text-slate-600">
-              <input type="checkbox" checked={onlyPicked} onChange={(e) => setOnlyPicked(e.target.checked)} /> {t("المعلَّم فقط", "Ticked only")}
-            </label>
-            <span className="ms-auto text-xs font-black text-[#0E76AC]">{picked.size} {t("صنف", "items")}</span>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2">
-          {!items && <div className="p-6 text-center text-slate-400">…</div>}
-          {shown.map((m: any) => (
-            <label key={m.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50">
-              <input type="checkbox" checked={picked.has(m.id)} onChange={() => toggle(m.id)} />
-              <span className="flex-1 text-sm font-bold text-slate-800">{m.displayName || m.nameEn || m.nameAr}
-                <span className="ms-2 text-xs font-normal text-slate-400">{m.nameAr}</span></span>
-              <span className={cn("text-xs font-black", prices[m.id]?.trim() ? "text-slate-300 line-through" : "text-slate-500")}>
-                {Number(m.posPrice).toFixed(2)}
-              </span>
-              <Input value={prices[m.id] ?? ""} inputMode="decimal" dir="ltr"
-                onClick={(e) => e.preventDefault()}
-                onChange={(e) => setPrices((p) => ({ ...p, [m.id]: e.target.value }))}
-                placeholder={t("سعر الفرع", "Branch price")} className="h-8 w-28 text-xs" />
-            </label>
-          ))}
-        </div>
-        <div className="flex justify-between gap-2 border-t p-3">
-          <Button variant="outline" onClick={() => setPicked(new Set())} className="h-9">{t("كل الأصناف", "Full menu")}</Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="h-9">{t("إلغاء", "Cancel")}</Button>
-            <Button onClick={save} className="h-9 text-white" style={{ background: "#0E76AC" }}>{t("حفظ", "Save")}</Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -704,47 +626,146 @@ function CategoriesTab({ t, sessionToken, toast }: any) {
 
 /* ═══════════════════════════════ POS Items ═══════════════════════════════ */
 
+/**
+ * One screen for "what does the POS sell, where, and for how much".
+ *   - All branches: the shared POS price per item, plus which branches sell it.
+ *   - One branch: only that branch's items, each with an optional branch price.
+ * Nothing here touches the public menu, subscriber plans or outlet prices.
+ */
 function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
   const items = useQuery(api.posAdmin.listItemsForAdmin, { sessionToken }) as any[] | undefined;
   const cats = useQuery(api.posAdmin.listCategories, { sessionToken }) as any[] | undefined;
+  const branches = useQuery(api.posBranches.list, { sessionToken, includeInactive: true }) as any[] | undefined;
   const upsert = useMutation(api.posAdmin.upsertItemMeta);
+  const updateBranch = useMutation(api.posBranches.update);
   const [q, setQ] = useState("");
+  const [branchId, setBranchId] = useState("");
+  const [showUnlisted, setShowUnlisted] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, any>>({});
   const colors = ["#dc2626","#ea580c","#f59e0b","#16a34a","#0891b2","#0E76AC","#7c3aed","#db2777","#475569"];
 
-  const filtered = useMemo(() => (items || []).filter((m: any) => {
-    if (!q.trim()) return true;
-    const qq = q.toLowerCase();
-    return String(m.nameEn).toLowerCase().includes(qq) || String(m.nameAr).toLowerCase().includes(qq);
-  }), [items, q]);
+  const branch = (branches || []).find((b: any) => b.id === branchId) || null;
+  const branchSet: Set<string> | null = branch?.menuMealIds?.length ? new Set<string>(branch.menuMealIds) : null;
+  const branchPrice = new Map<string, number>((branch?.menuPrices || []).map((p: any) => [p.mealId, p.price]));
+  const name = (m: any) => (isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr));
+  const onPos = (m: any) => m.posPrice != null && !m.isHidden;
+  const matches = (m: any) => !q.trim() || `${m.nameEn} ${m.nameAr}`.toLowerCase().includes(q.trim().toLowerCase());
+
+  /** Branches that sell this item: those with no list (full menu) + those listing it. */
+  const soldAt = (id: string) => (branches || []).filter((b: any) => b.isActive && (!b.menuMealIds?.length || b.menuMealIds.includes(id)));
+
+  const rows = useMemo(() => (items || []).filter((m: any) => {
+    if (!matches(m)) return false;
+    if (branch) return branchSet ? branchSet.has(m.id) : onPos(m);
+    return showUnlisted ? !onPos(m) : onPos(m);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [items, q, branchId, branches, showUnlisted]);
+  const unlistedCount = (items || []).filter((m: any) => !onPos(m)).length;
 
   const set = (id: string, patch: any) => setDrafts((d) => ({ ...d, [id]: { ...d[id], ...patch } }));
   const save = async (m: any) => {
     const d = drafts[m.id] || {};
     try {
-      await upsert({
-        mealId: m.id as any,
-        displayName: d.displayName,
-        color: d.color,
-        posCategoryId: d.posCategoryId as any,
-        isHidden: d.isHidden,
-        posPrice: d.posPrice != null && d.posPrice !== "" ? Number(d.posPrice) : undefined,
-        sessionToken,
-      });
-      toast({ title: t("تم ✓", "Saved ✓") });
+      if (d.posPrice !== undefined || d.displayName !== undefined || d.color !== undefined || d.posCategoryId !== undefined || d.isHidden !== undefined) {
+        await upsert({
+          mealId: m.id as any, displayName: d.displayName, color: d.color, posCategoryId: d.posCategoryId as any, isHidden: d.isHidden,
+          posPrice: d.posPrice != null && d.posPrice !== "" ? Number(d.posPrice) : undefined, sessionToken,
+        });
+      }
+      if (branch && d.branchPrice !== undefined) {
+        const v = String(d.branchPrice).trim();
+        if (v !== "" && (!Number.isFinite(Number(v)) || Number(v) < 0)) throw new Error(t("سعر الفرع غير صالح", "Invalid branch price"));
+        const others = (branch.menuPrices || []).filter((p: any) => p.mealId !== m.id);
+        await updateBranch({ id: branch.id as any, menuPrices: (v === "" ? others : [...others, { mealId: m.id, price: Number(v) }]) as any, sessionToken });
+      }
+      toast({ title: t("تم الحفظ ✓", "Saved ✓") });
       setDrafts((cp) => { const n = { ...cp }; delete n[m.id]; return n; });
-    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: e?.message }); }
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: (typeof e?.data === "string" && e.data) || e?.message }); }
   };
+  /** Add/remove an item from the selected branch. A branch with no list sells everything, so the
+   *  first removal materialises the list from the full POS menu minus this item. */
+  const setInBranch = async (m: any, inBranch: boolean) => {
+    if (!branch) return;
+    const current: string[] = branchSet ? Array.from(branchSet) : (items || []).filter(onPos).map((x: any) => x.id);
+    const next = inBranch ? Array.from(new Set([...current, m.id])) : current.filter((id) => id !== m.id);
+    try {
+      await updateBranch({ id: branch.id as any, menuMealIds: next as any, sessionToken });
+      toast({ title: inBranch ? t(`أُضيف ${name(m)} إلى ${branch.name}`, `${name(m)} added to ${branch.name}`) : t(`أُزيل ${name(m)} من ${branch.name}`, `${name(m)} removed from ${branch.name}`) });
+    } catch (e: any) { toast({ title: t("فشل", "Failed"), description: (typeof e?.data === "string" && e.data) || e?.message }); }
+  };
+
+  const addable = (items || []).filter((m: any) => onPos(m) && (!branchSet || !branchSet.has(m.id)));
 
   return (
     <div className="space-y-3">
+      {/* Scope bar */}
       <Card className="rounded-2xl">
         <CardContent className="p-3 space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث…", "Search…")} className="h-10 min-w-0 flex-1" />
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-black text-slate-500">{t("عرض أصناف", "Showing items of")}</span>
+            <button onClick={() => { setBranchId(""); setShowUnlisted(false); }}
+              className={cn("rounded-full border px-4 py-1.5 text-sm font-black", !branch ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-700")}>
+              {t("كل الفروع", "All branches")}
+            </button>
+            {(branches || []).filter((b: any) => b.isActive).map((b: any) => (
+              <button key={b.id} onClick={() => { setBranchId(b.id); setShowUnlisted(false); }}
+                className={cn("rounded-full border px-4 py-1.5 text-sm font-black", branchId === b.id ? "border-[#0E76AC] bg-[#0E76AC] text-white" : "border-slate-200 bg-white text-slate-700")}>
+                {b.name}
+                <span className={cn("ms-1 text-[10px] font-bold", branchId === b.id ? "text-white/80" : "text-slate-400")}>
+                  ({b.menuMealIds?.length || t("الكل", "all")})
+                </span>
+              </button>
+            ))}
           </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ابحث باسم الصنف…", "Search items…")} className="h-10 min-w-0 flex-1" />
+            {!branch && (
+              <button onClick={() => setShowUnlisted((v) => !v)}
+                className={cn("h-10 rounded-xl border px-3 text-xs font-bold", showUnlisted ? "border-amber-400 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600")}>
+                {showUnlisted ? t("↩ رجوع لأصناف الـ POS", "↩ Back to POS items") : t(`أصناف غير مضافة للـ POS (${unlistedCount})`, `Not on the POS (${unlistedCount})`)}
+              </button>
+            )}
+            {branch && (
+              <Button onClick={() => setAddOpen(true)} className="h-10 text-white font-bold" style={{ background: "#0E76AC" }}>
+                <Plus className="h-4 w-4 me-1" /> {t("إضافة صنف للفرع", "Add item to branch")}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-slate-500">
+            {branch
+              ? (branchSet
+                  ? t(`${branch.name} يبيع ${branchSet.size} صنفاً فقط. «سعر الفرع» يغلب على سعر الـ POS في هذا الفرع وحده؛ فارغاً = سعر الـ POS.`,
+                      `${branch.name} sells only these ${branchSet.size} items. "Branch price" overrides the POS price in this branch only; empty = POS price.`)
+                  : t(`${branch.name} يبيع كل أصناف الـ POS. أزل صنفاً أو اكتب له سعر فرع ليصبح لهذا الفرع قائمة خاصة.`,
+                      `${branch.name} sells the full POS menu. Remove an item or set a branch price to give it its own list.`))
+              : showUnlisted
+                ? t("أصناف موجودة في النظام بلا سعر POS — لا يراها الكاشير في أي فرع. اكتب سعراً واحفظ لإضافتها.",
+                    "Items with no POS price — no cashier sees them. Enter a price and save to add one.")
+                : t("سعر الـ POS هنا هو السعر في كل الفروع. عمود «يُباع في» يبيّن أي فرع يبيع الصنف؛ اختر فرعاً لتعديل قائمته وأسعاره.",
+                    "The POS price applies to every branch. \"Sold at\" shows which branches sell the item; pick a branch to edit its list and prices.")}
+          </p>
         </CardContent>
       </Card>
+
+      {addOpen && branch && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={() => setAddOpen(false)}>
+          <div className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b p-4 font-black text-slate-900">{t("إضافة صنف إلى", "Add an item to")} {branch.name}</div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {addable.length === 0 && <div className="p-6 text-center text-sm text-slate-400">{t("كل أصناف الـ POS موجودة في هذا الفرع", "Every POS item is already in this branch")}</div>}
+              {addable.map((m: any) => (
+                <button key={m.id} onClick={() => { void setInBranch(m, true); setAddOpen(false); }}
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-start hover:bg-slate-50">
+                  <span className="flex-1 text-sm font-bold text-slate-800">{name(m)}</span>
+                  <span className="text-xs font-black text-slate-500">{Number(m.posPrice).toFixed(2)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="border-t p-3 text-end"><Button variant="outline" onClick={() => setAddOpen(false)} className="h-9">{t("إغلاق", "Close")}</Button></div>
+          </div>
+        </div>
+      )}
 
       <Card className="rounded-2xl">
         <CardContent className="p-0">
@@ -752,34 +773,56 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
             <table className="min-w-[900px] w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-600 sticky top-0">
                 <tr>
-                  <th className="text-start p-2">{t("الوجبة", "Meal")}</th>
-                  <th className="text-start p-2">{t("السعر العادي", "Regular price")}</th>
-                  <th className="text-start p-2">{t("سعر المنفذ", "Outlet price")}</th>
-                  <th className="text-start p-2">{t("سعر الأونلاين", "Online price")}</th>
+                  <th className="text-start p-2">{t("الصنف", "Item")}</th>
+                  <th className="text-start p-2">{t("سعر الـ POS", "POS price")}<div className="text-[10px] font-normal text-slate-400">{t("كل الفروع", "all branches")}</div></th>
+                  {branch
+                    ? <th className="text-start p-2">{t("سعر الفرع", "Branch price")}<div className="text-[10px] font-normal text-slate-400">{t("هذا الفرع فقط", "this branch only")}</div></th>
+                    : <th className="text-start p-2">{t("يُباع في", "Sold at")}</th>}
+                  <th className="text-start p-2">{t("فئة الشاشة", "Screen tab")}</th>
                   <th className="text-start p-2">{t("لون الزر", "Button color")}</th>
-                  <th className="text-start p-2">{t("فئة POS", "POS Category")}</th>
                   <th className="text-center p-2">{t("مخفي", "Hidden")}</th>
                   <th className="p-2" />
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((m: any) => {
+                {rows.map((m: any) => {
                   const d = drafts[m.id] || {};
                   const dirty = Object.keys(d).length > 0;
                   const currColor = d.color !== undefined ? d.color : m.color;
+                  const at = soldAt(m.id);
+                  const allActive = (branches || []).filter((b: any) => b.isActive).length;
                   return (
                     <tr key={m.id} className="border-t border-slate-100 hover:bg-slate-50">
                       <td className="p-2">
-                        <div className="font-bold">{isRtl ? (m.nameAr || m.nameEn) : (m.nameEn || m.nameAr)}</div>
+                        <div className="font-bold">{name(m)}</div>
+                        <div className="text-[11px] text-slate-400">{isRtl ? m.nameEn : m.nameAr}</div>
                       </td>
-                      <td className="p-2 font-bold text-slate-700">{Number(m.menuPrice).toFixed(2)}</td>
-                      <td className="p-2 font-bold text-emerald-700">{m.gymPrice == null ? "—" : Number(m.gymPrice).toFixed(2)}</td>
                       <td className="p-2">
-                        <input type="number" step="0.01"
-                          defaultValue={m.posPrice ?? ""}
-                          placeholder={t("مطلوب", "Required")}
+                        <input type="number" step="0.01" defaultValue={m.posPrice ?? ""} placeholder={t("بدون سعر", "no price")}
                           onChange={(e) => set(m.id, { posPrice: e.target.value })}
-                          className="w-20 h-8 text-center border border-slate-200 rounded font-bold" />
+                          className="w-24 h-9 text-center border border-slate-200 rounded-lg font-bold" dir="ltr" />
+                      </td>
+                      {branch ? (
+                        <td className="p-2">
+                          <input type="number" step="0.01" defaultValue={branchPrice.get(m.id) ?? ""} placeholder={t("= سعر الـ POS", "= POS price")}
+                            onChange={(e) => set(m.id, { branchPrice: e.target.value })}
+                            className={cn("w-28 h-9 text-center border rounded-lg font-bold", branchPrice.has(m.id) ? "border-[#0E76AC] text-[#0E76AC]" : "border-slate-200")} dir="ltr" />
+                        </td>
+                      ) : (
+                        <td className="p-2 text-xs">
+                          {at.length === allActive
+                            ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">{t("كل الفروع", "All branches")}</span>
+                            : at.length === 0
+                              ? <span className="rounded-full bg-slate-100 px-2 py-0.5 font-bold text-slate-500">{t("لا فرع", "No branch")}</span>
+                              : at.map((b: any) => <span key={b.id} className="me-1 rounded-full bg-[#eef7fb] px-2 py-0.5 font-bold text-[#0E76AC]">{b.name.replace(/^ADRENALINE\s+/i, "")}</span>)}
+                        </td>
+                      )}
+                      <td className="p-2">
+                        <select defaultValue={m.posCategoryId || ""} onChange={(e) => set(m.id, { posCategoryId: e.target.value || undefined })}
+                          className="h-9 rounded-lg border border-slate-200 bg-white text-xs px-2">
+                          <option value="">— {t("افتراضي", "default")} —</option>
+                          {(cats || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
                       </td>
                       <td className="p-2">
                         <div className="flex gap-1 flex-wrap">
@@ -787,22 +830,20 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
                             className={cn("w-6 h-6 rounded-full border border-slate-300 bg-white text-xs", !currColor && "ring-2 ring-slate-900")}>×</button>
                           {colors.map((c) => (
                             <button key={c} onClick={() => set(m.id, { color: c })}
-                              className={cn("w-6 h-6 rounded-full", currColor === c && "ring-2 ring-offset-1 ring-slate-900")}
-                              style={{ background: c }} />
+                              className={cn("w-6 h-6 rounded-full", currColor === c && "ring-2 ring-offset-1 ring-slate-900")} style={{ background: c }} />
                           ))}
                         </div>
-                      </td>
-                      <td className="p-2">
-                        <select defaultValue={m.posCategoryId || ""} onChange={(e) => set(m.id, { posCategoryId: e.target.value || undefined })}
-                          className="h-8 rounded border border-slate-200 bg-white text-xs px-2">
-                          <option value="">— {t("افتراضي", "default")} —</option>
-                          {(cats || []).map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </select>
                       </td>
                       <td className="p-2 text-center">
                         <input type="checkbox" defaultChecked={m.isHidden} onChange={(e) => set(m.id, { isHidden: e.target.checked })} className="w-4 h-4" />
                       </td>
-                      <td className="p-2 text-end">
+                      <td className="p-2 text-end whitespace-nowrap">
+                        {branch && (
+                          <button onClick={() => void setInBranch(m, false)}
+                            className="me-1 h-8 rounded-lg border border-red-200 bg-red-50 px-2 text-xs font-bold text-red-700 hover:bg-red-100">
+                            {t("إزالة من الفرع", "Remove")}
+                          </button>
+                        )}
                         <button onClick={() => save(m)} disabled={!dirty}
                           className={cn("text-xs font-bold px-3 h-8 rounded-lg", dirty ? "bg-[#0E76AC] text-white" : "bg-slate-100 text-slate-400 cursor-not-allowed")}>
                           {t("حفظ", "Save")}
@@ -811,6 +852,9 @@ function ItemsTab({ t, sessionToken, toast, isRtl }: any) {
                     </tr>
                   );
                 })}
+                {items && rows.length === 0 && (
+                  <tr><td colSpan={7} className="py-10 text-center text-sm text-slate-400">{t("لا أصناف", "No items")}</td></tr>
+                )}
               </tbody>
             </table>
           </div>

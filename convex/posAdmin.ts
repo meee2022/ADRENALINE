@@ -4,7 +4,7 @@
  * @frontend client/src/pages/PosAdmin.tsx
  */
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff } from "./sessions";
 import { hashPassword, verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
@@ -825,5 +825,16 @@ export const listShifts = query({
         totalSales: s.totalSales,
         ticketsCount: s.ticketsCount,
       }));
+  },
+});
+
+/** CLI-only: set one item's shared POS price. */
+export const setPosPriceInternal = internalMutation({
+  args: { mealId: v.id("publicMeals"), posPrice: v.number() },
+  handler: async (ctx, { mealId, posPrice }) => {
+    const meta = await ctx.db.query("posItems").withIndex("by_meal", (q) => q.eq("mealId", mealId)).first();
+    if (meta) await ctx.db.patch(meta._id, { posPrice, updatedAt: Date.now() });
+    else await ctx.db.insert("posItems", { mealId, posPrice, updatedAt: Date.now() } as any);
+    return { mealId, posPrice };
   },
 });
