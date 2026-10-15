@@ -50,6 +50,8 @@ export default defineSchema({
     address: v.optional(v.string()),
     isActive: v.boolean(),
     sortOrder: v.optional(v.number()),
+    // Items this branch sells on the POS. Empty/unset = the full POS menu (existing branches).
+    menuMealIds: v.optional(v.array(v.id("publicMeals"))),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   }).index("by_active", ["isActive"]),

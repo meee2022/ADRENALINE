@@ -175,8 +175,15 @@ export const listCategories = query({
 export const listItems = query({
   args: { token: v.optional(v.string()) },
   handler: async (ctx, { token }) => {
-    if (token) await requireCashier(ctx, token);
-    const meals = await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
+    // A branch with its own menu (e.g. West Bay) only sees those items; others see everything.
+    let branchMenu: Set<string> | null = null;
+    if (token) {
+      const { user } = await requireCashier(ctx, token);
+      const branch: any = user.posBranchId ? await ctx.db.get(user.posBranchId) : null;
+      if (branch?.menuMealIds?.length) branchMenu = new Set(branch.menuMealIds.map(String));
+    }
+    const meals = (await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect())
+      .filter((m: any) => !branchMenu || branchMenu.has(String(m._id)));
     const metas = await ctx.db.query("posItems").collect();
     const metaByMeal = new Map(metas.map((m: any) => [String(m.mealId), m]));
     const out = await Promise.all(meals.map(async (m: any) => {

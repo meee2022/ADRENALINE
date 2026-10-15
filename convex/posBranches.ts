@@ -3,7 +3,7 @@
  * @description إدارة فروع نقطة البيع (POS متعدّد الفروع). CRUD للأدمن + قائمة عامة.
  */
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireStaff, requireAdmin } from "./sessions";
 
 /** قائمة الفروع النشطة (للأدمن ولوجهة اختيار الفرع). */
@@ -18,6 +18,7 @@ export const list = query({
       .map((b) => ({
         id: String(b._id), name: b.name, code: b.code || null,
         phone: b.phone || null, address: b.address || null, isActive: b.isActive,
+        menuMealIds: (b.menuMealIds || []).map(String),
       }));
   },
 });
@@ -57,6 +58,8 @@ export const update = mutation({
     phone: v.optional(v.string()),
     address: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
+    // [] = sell the full POS menu
+    menuMealIds: v.optional(v.array(v.id("publicMeals"))),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
@@ -66,7 +69,17 @@ export const update = mutation({
     if (args.phone !== undefined) patch.phone = args.phone.trim() || undefined;
     if (args.address !== undefined) patch.address = args.address.trim() || undefined;
     if (args.isActive !== undefined) patch.isActive = args.isActive;
+    if (args.menuMealIds !== undefined) patch.menuMealIds = args.menuMealIds.length ? args.menuMealIds : undefined;
     await ctx.db.patch(args.id, patch);
     return { ok: true };
+  },
+});
+
+/** CLI-only: set a branch's POS menu by meal ids (used to load the West Bay sheet). */
+export const setMenuInternal = internalMutation({
+  args: { branchId: v.id("posBranches"), mealIds: v.array(v.id("publicMeals")) },
+  handler: async (ctx, { branchId, mealIds }) => {
+    await ctx.db.patch(branchId, { menuMealIds: mealIds.length ? mealIds : undefined, updatedAt: Date.now() });
+    return mealIds.length;
   },
 });

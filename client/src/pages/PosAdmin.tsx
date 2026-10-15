@@ -148,6 +148,7 @@ function BranchesTab({ t, sessionToken, toast }: any) {
 
 function BranchRow({ b, t, update, sessionToken, toast }: any) {
   const [edit, setEdit] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [f, setF] = useState({ name: b.name, code: b.code || "", phone: b.phone || "", address: b.address || "" });
   const save = async () => {
     try { await update({ id: b.id as any, name: f.name, code: f.code, phone: f.phone, address: f.address, sessionToken }); setEdit(false); toast({ title: t("تم الحفظ", "Saved") }); }
@@ -177,7 +178,69 @@ function BranchRow({ b, t, update, sessionToken, toast }: any) {
         className={cn("text-[10px] font-bold px-2 py-1 rounded-full", b.isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500")}>
         {b.isActive ? t("نشط", "Active") : t("موقوف", "Off")}
       </button>
+      <Button variant="outline" size="sm" onClick={() => setMenuOpen(true)} className="h-8">
+        {t("أصناف الفرع", "Branch menu")} ({b.menuMealIds?.length || t("الكل", "all")})
+      </Button>
       <Button variant="outline" size="sm" onClick={() => setEdit(true)} className="h-8">{t("تعديل", "Edit")}</Button>
+      {menuOpen && <BranchMenuDialog b={b} t={t} update={update} sessionToken={sessionToken} toast={toast} onClose={() => setMenuOpen(false)} />}
+    </div>
+  );
+}
+
+/** Pick which POS items this branch sells. Nothing ticked = the full POS menu. */
+function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
+  const items = useQuery(api.posAdmin.listItemsForAdmin, { sessionToken }) as any[] | undefined;
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(b.menuMealIds || []));
+  const [q, setQ] = useState("");
+  const [onlyPicked, setOnlyPicked] = useState(false);
+  const sellable = (items || []).filter((m: any) => m.posPrice != null && !m.isHidden);
+  const shown = sellable.filter((m: any) =>
+    (!onlyPicked || picked.has(m.id)) &&
+    `${m.displayName || ""} ${m.nameEn} ${m.nameAr}`.toLowerCase().includes(q.trim().toLowerCase()));
+  const toggle = (id: string) => setPicked((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const save = async () => {
+    try {
+      await update({ id: b.id as any, menuMealIds: Array.from(picked) as any, sessionToken });
+      toast({ title: t("تم حفظ أصناف الفرع", "Branch menu saved") });
+      onClose();
+    } catch (e: any) { void alertDialog({ message: (typeof e?.data === "string" && e.data) || e?.message || "خطأ" }); }
+  };
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4" onClick={onClose}>
+      <div className="flex max-h-[85vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="border-b p-4">
+          <div className="font-black text-slate-900">{t("أصناف فرع", "Menu of")} {b.name}</div>
+          <div className="mt-1 text-xs text-slate-500">
+            {t("الكاشير في هذا الفرع يرى الأصناف المعلَّمة فقط. بدون أي علامة = كل أصناف الـ POS.",
+              "Cashiers of this branch only see ticked items. Nothing ticked = the full POS menu.")}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("بحث", "Search")} className="h-9 max-w-xs" />
+            <label className="flex items-center gap-1 text-xs font-bold text-slate-600">
+              <input type="checkbox" checked={onlyPicked} onChange={(e) => setOnlyPicked(e.target.checked)} /> {t("المعلَّم فقط", "Ticked only")}
+            </label>
+            <span className="ms-auto text-xs font-black text-[#0E76AC]">{picked.size} {t("صنف", "items")}</span>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-2">
+          {!items && <div className="p-6 text-center text-slate-400">…</div>}
+          {shown.map((m: any) => (
+            <label key={m.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-slate-50">
+              <input type="checkbox" checked={picked.has(m.id)} onChange={() => toggle(m.id)} />
+              <span className="flex-1 text-sm font-bold text-slate-800">{m.displayName || m.nameEn || m.nameAr}
+                <span className="ms-2 text-xs font-normal text-slate-400">{m.nameAr}</span></span>
+              <span className="text-xs font-black text-slate-500">{Number(m.posPrice).toFixed(2)}</span>
+            </label>
+          ))}
+        </div>
+        <div className="flex justify-between gap-2 border-t p-3">
+          <Button variant="outline" onClick={() => setPicked(new Set())} className="h-9">{t("كل الأصناف", "Full menu")}</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} className="h-9">{t("إلغاء", "Cancel")}</Button>
+            <Button onClick={save} className="h-9 text-white" style={{ background: "#0E76AC" }}>{t("حفظ", "Save")}</Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
