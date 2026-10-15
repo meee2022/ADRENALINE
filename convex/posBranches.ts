@@ -19,6 +19,7 @@ export const list = query({
         id: String(b._id), name: b.name, code: b.code || null,
         phone: b.phone || null, address: b.address || null, isActive: b.isActive,
         menuMealIds: (b.menuMealIds || []).map(String),
+        menuPrices: (b.menuPrices || []).map((p: any) => ({ mealId: String(p.mealId), price: p.price })),
       }));
   },
 });
@@ -60,6 +61,8 @@ export const update = mutation({
     isActive: v.optional(v.boolean()),
     // [] = sell the full POS menu
     menuMealIds: v.optional(v.array(v.id("publicMeals"))),
+    // [] = no branch prices (everything at the shared POS price)
+    menuPrices: v.optional(v.array(v.object({ mealId: v.id("publicMeals"), price: v.number() }))),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx, args.sessionToken);
@@ -70,6 +73,12 @@ export const update = mutation({
     if (args.address !== undefined) patch.address = args.address.trim() || undefined;
     if (args.isActive !== undefined) patch.isActive = args.isActive;
     if (args.menuMealIds !== undefined) patch.menuMealIds = args.menuMealIds.length ? args.menuMealIds : undefined;
+    if (args.menuPrices !== undefined) {
+      for (const p of args.menuPrices) {
+        if (!Number.isFinite(p.price) || p.price < 0) throw new ConvexError("سعر الفرع غير صالح");
+      }
+      patch.menuPrices = args.menuPrices.length ? args.menuPrices : undefined;
+    }
     await ctx.db.patch(args.id, patch);
     return { ok: true };
   },

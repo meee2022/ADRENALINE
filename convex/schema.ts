@@ -52,6 +52,8 @@ export default defineSchema({
     sortOrder: v.optional(v.number()),
     // Items this branch sells on the POS. Empty/unset = the full POS menu (existing branches).
     menuMealIds: v.optional(v.array(v.id("publicMeals"))),
+    // Branch-only POS prices; an item without an entry sells at the shared POS price.
+    menuPrices: v.optional(v.array(v.object({ mealId: v.id("publicMeals"), price: v.number() }))),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
   }).index("by_active", ["isActive"]),

@@ -54,6 +54,16 @@ async function resolveBranchId(ctx: QueryCtx | MutationCtx, user: any): Promise<
   return undefined;
 }
 
+/** The cashier's branch menu and branch-only prices (both optional). */
+async function branchCatalog(ctx: QueryCtx | MutationCtx, user: any) {
+  const branchId = await resolveBranchId(ctx, user);
+  const b: any = branchId ? await ctx.db.get(branchId) : null;
+  return {
+    menu: b?.menuMealIds?.length ? new Set<string>(b.menuMealIds.map(String)) : null,
+    prices: new Map<string, number>((b?.menuPrices || []).map((p: any) => [String(p.mealId), Number(p.price)])),
+  };
+}
+
 /** معلومات الفرع للعرض (الفاتورة/الوردية). */
 async function branchInfo(ctx: QueryCtx | MutationCtx, branchId: any) {
   if (!branchId) return null;
@@ -177,10 +187,12 @@ export const listItems = query({
   handler: async (ctx, { token }) => {
     // A branch with its own menu (e.g. West Bay) only sees those items; others see everything.
     let branchMenu: Set<string> | null = null;
+    let branchPrices = new Map<string, number>();
     if (token) {
       const { user } = await requireCashier(ctx, token);
-      const branch: any = user.posBranchId ? await ctx.db.get(user.posBranchId) : null;
-      if (branch?.menuMealIds?.length) branchMenu = new Set(branch.menuMealIds.map(String));
+      const bc = await branchCatalog(ctx, user);
+      branchMenu = bc.menu;
+      branchPrices = bc.prices;
     }
     const meals = (await ctx.db.query("publicMeals").withIndex("by_active", (q) => q.eq("isActive", true)).collect())
       .filter((m: any) => !branchMenu || branchMenu.has(String(m._id)));
@@ -188,7 +200,8 @@ export const listItems = query({
     const metaByMeal = new Map(metas.map((m: any) => [String(m.mealId), m]));
     const out = await Promise.all(meals.map(async (m: any) => {
       const meta = metaByMeal.get(String(m._id));
-      const price = meta?.posPrice != null ? Number(meta.posPrice) : null;
+      const branchPrice = branchPrices.get(String(m._id));
+      const price = branchPrice != null ? branchPrice : meta?.posPrice != null ? Number(meta.posPrice) : null;
       const imageUrl = m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null);
       return {
         id: String(m._id),
@@ -329,8 +342,10 @@ type ServerLine = {
 async function buildServerLines(
   ctx: MutationCtx,
   clientLines: ClientLineInput[],
-  actorIsAdmin: boolean,
+  user: any,
 ): Promise<ServerLine[]> {
+  const actorIsAdmin = isAdmin(user);
+  const { prices: branchPrices } = await branchCatalog(ctx, user);
   // رسوم التوصيل الثابتة من الإعدادات (يسعّرها الخادم — الكاشير مش بيحدد المبلغ)
   const settingsForFee: any = await ctx.db.query("restaurantSettings").first();
   const deliveryFee = Number(settingsForFee?.posDeliveryFee ?? 10);
@@ -349,8 +364,9 @@ async function buildServerLines(
         .query("posItems")
         .withIndex("by_meal", (q) => q.eq("mealId", meal._id))
         .first();
-      if (meta?.posPrice == null) throw new ConvexError("هذا الصنف غير مفعّل للبيع أونلاين: حدّد سعر الأونلاين أولاً");
-      const price = Number(meta.posPrice);
+      const branchPrice = branchPrices.get(String(meal._id));
+      if (branchPrice == null && meta?.posPrice == null) throw new ConvexError("هذا الصنف غير مفعّل للبيع أونلاين: حدّد سعر الأونلاين أولاً");
+      const price = branchPrice != null ? branchPrice : Number(meta!.posPrice);
       if (!Number.isFinite(price) || price < 0) throw new ConvexError("سعر الأونلاين للصنف غير صالح");
       const name = meta?.displayName || meal.nameEn || meal.nameAr || "—";
       out.push({
@@ -605,7 +621,7 @@ export const createTicket = mutation({
       .first();
     if (!shift) throw new ConvexError("يجب فتح وردية أولًا");
 
-    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
+    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], user);
     const totals = await computeTotals(ctx, serverLines, 0);
     const num = await nextTicketNumber(ctx);
     const id = await ctx.db.insert("posTickets", {
@@ -653,7 +669,7 @@ export const parkTicket = mutation({
     const { user } = await requireCashier(ctx, args.token);
     const shift = await ctx.db.query("posShifts").withIndex("by_cashier", q => q.eq("cashierId", user._id)).filter(q => q.eq(q.field("status"), "OPEN")).first();
     if (!shift) throw new ConvexError("يجب فتح وردية أولاً");
-    const lines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
+    const lines = await buildServerLines(ctx, args.lines as ClientLineInput[], user);
     const rawDiscount = Number(args.discount || 0);
     const preview = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     assertDiscountAllowed(preview, rawDiscount, isAdmin(user));
@@ -730,7 +746,7 @@ export const updateTicketLines = mutation({
     if (String(t.cashierId) !== String(user._id) && !isAdmin(user)) {
       throw new ConvexError("لا يُسمح بتعديل فاتورة موظف صندوق آخر");
     }
-    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
+    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], user);
     const rawDiscount = Number(args.discount || 0);
     const subtotalPreview = serverLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     assertDiscountAllowed(subtotalPreview, rawDiscount, isAdmin(user));
@@ -860,7 +876,7 @@ export const quickSale = mutation({
       .first();
     if (!shift) throw new ConvexError("يجب فتح وردية أولًا");
 
-    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], isAdmin(user));
+    const serverLines = await buildServerLines(ctx, args.lines as ClientLineInput[], user);
     const rawDiscount = Number(args.discount || 0);
     const subtotalPreview = serverLines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     assertDiscountAllowed(subtotalPreview, rawDiscount, isAdmin(user));

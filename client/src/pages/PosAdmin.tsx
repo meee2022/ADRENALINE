@@ -191,6 +191,9 @@ function BranchRow({ b, t, update, sessionToken, toast }: any) {
 function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
   const items = useQuery(api.posAdmin.listItemsForAdmin, { sessionToken }) as any[] | undefined;
   const [picked, setPicked] = useState<Set<string>>(() => new Set(b.menuMealIds || []));
+  // Branch-only price per item; empty = the shared POS price.
+  const [prices, setPrices] = useState<Record<string, string>>(
+    () => Object.fromEntries((b.menuPrices || []).map((p: any) => [p.mealId, String(p.price)])));
   const [q, setQ] = useState("");
   const [onlyPicked, setOnlyPicked] = useState(false);
   const sellable = (items || []).filter((m: any) => m.posPrice != null && !m.isHidden);
@@ -200,7 +203,14 @@ function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
   const toggle = (id: string) => setPicked((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const save = async () => {
     try {
-      await update({ id: b.id as any, menuMealIds: Array.from(picked) as any, sessionToken });
+      const menuPrices = Object.entries(prices)
+        .filter(([, v]) => v.trim() !== "")
+        .map(([mealId, v]) => ({ mealId, price: Number(v) }));
+      if (menuPrices.some((p) => !Number.isFinite(p.price) || p.price < 0)) {
+        void alertDialog({ message: t("سعر الفرع غير صالح", "Invalid branch price") });
+        return;
+      }
+      await update({ id: b.id as any, menuMealIds: Array.from(picked) as any, menuPrices: menuPrices as any, sessionToken });
       toast({ title: t("تم حفظ أصناف الفرع", "Branch menu saved") });
       onClose();
     } catch (e: any) { void alertDialog({ message: (typeof e?.data === "string" && e.data) || e?.message || "خطأ" }); }
@@ -213,6 +223,9 @@ function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
           <div className="mt-1 text-xs text-slate-500">
             {t("الكاشير في هذا الفرع يرى الأصناف المعلَّمة فقط. بدون أي علامة = كل أصناف الـ POS.",
               "Cashiers of this branch only see ticked items. Nothing ticked = the full POS menu.")}
+            {" "}
+            {t("خانة «سعر الفرع» اختيارية: لو كتبت سعراً يُباع به الصنف في هذا الفرع فقط، ولو تركتها فارغة يُباع بالسعر العام.",
+              "Branch price is optional: a number here applies to this branch only; empty = the shared POS price.")}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("بحث", "Search")} className="h-9 max-w-xs" />
@@ -229,7 +242,13 @@ function BranchMenuDialog({ b, t, update, sessionToken, toast, onClose }: any) {
               <input type="checkbox" checked={picked.has(m.id)} onChange={() => toggle(m.id)} />
               <span className="flex-1 text-sm font-bold text-slate-800">{m.displayName || m.nameEn || m.nameAr}
                 <span className="ms-2 text-xs font-normal text-slate-400">{m.nameAr}</span></span>
-              <span className="text-xs font-black text-slate-500">{Number(m.posPrice).toFixed(2)}</span>
+              <span className={cn("text-xs font-black", prices[m.id]?.trim() ? "text-slate-300 line-through" : "text-slate-500")}>
+                {Number(m.posPrice).toFixed(2)}
+              </span>
+              <Input value={prices[m.id] ?? ""} inputMode="decimal" dir="ltr"
+                onClick={(e) => e.preventDefault()}
+                onChange={(e) => setPrices((p) => ({ ...p, [m.id]: e.target.value }))}
+                placeholder={t("سعر الفرع", "Branch price")} className="h-8 w-28 text-xs" />
             </label>
           ))}
         </div>
