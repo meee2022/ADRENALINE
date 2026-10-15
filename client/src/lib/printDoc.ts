@@ -104,8 +104,9 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
 
   /* Android Chrome ignores print() called on the new tab from this page, so the receipt
      only showed on screen (Honor Pad, 2026-10-15). There the document prints itself once
-     loaded, plus a Print button for a manual retry (hidden on paper), and the tab closes
-     itself after printing so receipts don't pile up as tabs.
+     loaded, plus a Print button for a manual retry (hidden on paper).
+     ⛔ No auto-close on afterprint: on Android print() returns at once, so closing the tab
+     killed the preview mid-render and the job never reached the printer (2026-10-15).
      ⛔ Not a hidden iframe: Chrome on Android previews the iframe but prints the whole
      POS page — tried and reverted the same day. */
   if (autoPrint && /Android/i.test(navigator.userAgent)) {
@@ -113,7 +114,7 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
       `<button class="pd-print" onclick="print()" style="position:fixed;top:12px;inset-inline-end:12px;z-index:9;` +
       `padding:12px 20px;border:0;border-radius:12px;background:#0E76AC;color:#fff;font:700 16px sans-serif">` +
       `${isRtl ? "طباعة" : "Print"}</button>` +
-      `<script>addEventListener("load",function(){setTimeout(function(){print()},300)});addEventListener("afterprint",function(){setTimeout(function(){close()},500)})<\/script>`;
+      `<script>addEventListener("load",function(){setTimeout(function(){print()},300)})<\/script>`;
     doc = /<\/body>/i.test(doc) ? doc.replace(/<\/body>/i, `${self}</body>`) : doc + self;
     w.document.write(doc);
     w.document.close();
