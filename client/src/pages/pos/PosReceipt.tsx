@@ -49,6 +49,7 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
       isRtl: false,
       width: 400,
       height: 700,
+      pageNumbers: false, // a "Page 1" footer on a roll stops the printer trimming blank paper
     });
   };
 
@@ -60,6 +61,7 @@ export default function ReceiptModal({ ticketId, onClose }: Props) {
       isRtl: false,
       width: 400,
       height: 700,
+      pageNumbers: false, // a "Page 1" footer on a roll stops the printer trimming blank paper
     });
   };
   const labelCount = t ? t.lines.reduce((s: number, l: any) => s + Math.max(1, Math.round(l.qty)), 0) : 0;
