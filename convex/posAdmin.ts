@@ -11,6 +11,7 @@ import { writeAudit } from "./lib/audit";
 import { ONLINE_PRICE_LIST } from "./onlinePriceList";
 import { reverseInventoryForTicket } from "./pos";
 import { reversePointsForPosTicket } from "./loyalty";
+import { autoReversePosTicket } from "./financePost";
 
 function isPosUser(user: any): boolean {
   if (user?.posEnabled === false) return false;
@@ -809,34 +810,76 @@ export const auditTrail = query({
   },
 });
 
-/** إلغاء فاتورة مدفوعة (Refund) — مع تسجيل في auditLog. */
+/**
+ * Undo everything a paid ticket did: the open shift's totals, stock, the finance entry and
+ * loyalty points. Shared by refund (the ticket stays, marked REFUNDED) and delete.
+ */
+async function reversePaidTicket(ctx: any, t: any, ticketId: any, reason: string, userId: any) {
+  if (t.status !== "PAID") return;
+  if (t.shiftId && !t.isNonRevenue) {
+    const shift: any = await ctx.db.get(t.shiftId);
+    if (shift && shift.status === "OPEN") {
+      await ctx.db.patch(t.shiftId, {
+        totalSales: Math.round((shift.totalSales - t.total) * 100) / 100,
+        ticketsCount: Math.max(0, shift.ticketsCount - 1),
+      });
+    }
+  }
+  try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund", t.createdAt); } catch { /* لا نوقف */ }
+  try { await autoReversePosTicket(ctx, ticketId, reason, userId); } catch { /* لا نوقف */ }
+  if (t.customerId) {
+    try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
+  }
+}
+
+function requireReason(reason: unknown): string {
+  const r = String(reason || "").trim();
+  if (r.length < 3) throw new ConvexError("السبب مطلوب (3 أحرف أو أكثر)");
+  return r;
+}
+
+/** 🔒 استرجاع فاتورة مدفوعة من لوحة الإدارة — ADMIN فقط + سبب. الفاتورة تبقى بحالة REFUNDED. */
 export const refundTicket = mutation({
   args: { ticketId: v.id("posTickets"), reason: v.optional(v.string()), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const id = await requireStaff(ctx, args.sessionToken);
+    const id = await requireAdmin(ctx, args.sessionToken);
+    const reason = requireReason(args.reason);
     const t: any = await ctx.db.get(args.ticketId);
     if (!t) throw new ConvexError("الفاتورة غير موجودة");
     if (t.status === "REFUNDED" || t.status === "VOID") return { ok: true };
+    await reversePaidTicket(ctx, t, args.ticketId, reason, id.userId);
     await ctx.db.patch(args.ticketId, { status: "REFUNDED", updatedAt: Date.now() });
-    if (t.shiftId && !t.isNonRevenue) {
-      const shift: any = await ctx.db.get(t.shiftId);
-      if (shift && shift.status === "OPEN") {
-        await ctx.db.patch(t.shiftId, {
-          totalSales: Math.round((shift.totalSales - t.total) * 100) / 100,
-          ticketsCount: Math.max(0, shift.ticketsCount - 1),
-        });
-      }
-    }
-    // 🔒 إرجاع المخزون + عكس نقاط الولاء (كان ناقص — الاسترجاع كان بيغيّر الحالة فقط)
-    try { await reverseInventoryForTicket(ctx, t.ticketNumber, "refund", t.createdAt); } catch { /* لا نوقف */ }
-    if (t.customerId) {
-      try { await reversePointsForPosTicket(ctx, String(t.customerId), t.ticketNumber); } catch { /* fail-safe */ }
-    }
     const actor: any = id.userId ? await ctx.db.get(id.userId as any) : null;
     await writeAudit(ctx,
       { userId: id.userId ? String(id.userId) : undefined, name: actor?.name, role: id.role },
       "REFUND_TICKET", "posTicket", String(args.ticketId),
-      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, paymentMethod: t.paymentMethod, reason: args.reason || null });
+      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, paymentMethod: t.paymentMethod, reason });
+    return { ok: true };
+  },
+});
+
+/**
+ * 🔒 حذف فاتورة نهائياً (تجربة أو مسجّلة بالغلط) — ADMIN فقط + سبب.
+ * لو كانت مدفوعة تُعكس آثارها أولاً (وردية/مخزون/قيد/نقاط) ثم تُحذف هي وسطورها.
+ * يبقى سطر في سجل التدقيق بالرقم والمبلغ والسبب، فلا تختفي بلا أثر.
+ */
+export const deleteTicket = mutation({
+  args: { ticketId: v.id("posTickets"), reason: v.string(), sessionToken: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const id = await requireAdmin(ctx, args.sessionToken);
+    const reason = requireReason(args.reason);
+    const t: any = await ctx.db.get(args.ticketId);
+    if (!t) return { ok: true };
+    await reversePaidTicket(ctx, t, args.ticketId, reason, id.userId);
+    const lines = await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", args.ticketId)).collect();
+    for (const l of lines) await ctx.db.delete(l._id);
+    await ctx.db.delete(args.ticketId);
+    const actor: any = id.userId ? await ctx.db.get(id.userId as any) : null;
+    await writeAudit(ctx,
+      { userId: id.userId ? String(id.userId) : undefined, name: actor?.name, role: id.role },
+      "DELETE_TICKET", "posTicket", String(args.ticketId),
+      { ticketNumber: t.ticketNumber, prevStatus: t.status, total: t.total, paymentMethod: t.paymentMethod,
+        cashierName: t.cashierName, lines: lines.length, reason });
     return { ok: true };
   },
 });

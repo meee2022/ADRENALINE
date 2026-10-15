@@ -869,6 +869,24 @@ function ReportsTab({ t, sessionToken }: any) {
   const bArg = branchId ? { branchId: branchId as any } : {};
   const top = useQuery(api.posAdmin.topItems, { from, to, ...bArg, sessionToken }) as any[] | undefined;
   const receipts = useQuery(api.posAdmin.listReceipts, { from, to, ...bArg, sessionToken }) as any[] | undefined;
+  const refundMut = useMutation(api.posAdmin.refundTicket);
+  const deleteMut = useMutation(api.posAdmin.deleteTicket);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  /** Refund keeps the ticket (marked REFUNDED); delete removes it. Both reverse stock,
+   *  shift totals and the finance entry, need a reason, and are logged in the audit tab. */
+  const ticketAction = async (r: any, kind: "refund" | "delete") => {
+    const reason = window.prompt(kind === "delete"
+      ? t(`حذف الفاتورة #${r.ticketNumber} (${r.total.toFixed(2)}) نهائياً؟ اكتب السبب:`, `Delete receipt #${r.ticketNumber} permanently? Reason:`)
+      : t(`استرجاع الفاتورة #${r.ticketNumber} (${r.total.toFixed(2)})؟ اكتب السبب:`, `Refund receipt #${r.ticketNumber}? Reason:`));
+    if (reason == null) return;
+    setBusyId(r.id);
+    try {
+      if (kind === "delete") await deleteMut({ ticketId: r.id, reason, sessionToken });
+      else await refundMut({ ticketId: r.id, reason, sessionToken });
+    } catch (e: any) {
+      window.alert((typeof e?.data === "string" && e.data) || e?.message || String(e));
+    } finally { setBusyId(null); }
+  };
   const summary = useQuery(api.posAdmin.rangeSalesSummary, { from, to, ...bArg, sessionToken }) as any;
   const hasBranches = (branches?.length || 0) > 0;
   const applyPreset = (days: number) => {
@@ -1019,6 +1037,7 @@ function ReportsTab({ t, sessionToken }: any) {
                 <th className="text-start p-2">{t("الكاشير", "Cashier")}</th>
                 <th className="text-start p-2">{t("طريقة الدفع", "Method")}</th>
                 <th className="text-end p-2">{t("الإجمالي", "Total")}</th>
+                <th className="p-2" />
               </tr></thead>
               <tbody>
                 {(receipts || []).map((r: any) => (
@@ -1028,9 +1047,21 @@ function ReportsTab({ t, sessionToken }: any) {
                     <td className="p-2">{r.cashierName}</td>
                     <td className="p-2 text-xs">{r.paymentMethod || "—"}</td>
                     <td className={cn("p-2 text-end font-black", r.status === "REFUNDED" ? "text-red-500 line-through" : "text-[#0E76AC]")}>{r.total.toFixed(2)}</td>
+                    <td className="p-2 text-end whitespace-nowrap">
+                      {r.status === "PAID" && (
+                        <button disabled={busyId === r.id} onClick={() => ticketAction(r, "refund")}
+                          className="me-1 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700 hover:bg-amber-100 disabled:opacity-50">
+                          {t("استرجاع", "Refund")}
+                        </button>
+                      )}
+                      <button disabled={busyId === r.id} onClick={() => ticketAction(r, "delete")}
+                        className="rounded-lg border border-red-300 bg-red-50 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-100 disabled:opacity-50">
+                        {t("حذف", "Delete")}
+                      </button>
+                    </td>
                   </tr>
                 ))}
-                {receipts && receipts.length === 0 && <tr><td colSpan={5} className="text-center text-slate-400 py-6">{t("لا توجد فواتير", "No receipts")}</td></tr>}
+                {receipts && receipts.length === 0 && <tr><td colSpan={6} className="text-center text-slate-400 py-6">{t("لا توجد فواتير", "No receipts")}</td></tr>}
               </tbody>
             </table>
           </div>
