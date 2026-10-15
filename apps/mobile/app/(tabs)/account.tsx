@@ -16,6 +16,7 @@ import { colors, fonts } from '@/theme';
 import { Btn, T } from '@/components/ui';
 import { SubscriberDay } from '@/components/SubscriberDay';
 import { LinkNotifications } from '@/components/LinkNotifications';
+import { PhoneCodeGate } from '@/components/PhoneCodeGate';
 import { pushEnabled } from '@/pushEnabled';
 
 type Profile = {account:{fullName:string;email:string;phone:string};subscription:null|{
@@ -29,8 +30,10 @@ const listOf=(v:unknown):string[]=>Array.isArray(v)?v.filter(x=>typeof x==='stri
 export default function Account() {
   useUILanguage();
   const router=useRouter(), insets=useSafeAreaInsets();
-  const {session,setSession,ready}=useCustomerSession();
+  const {session,setSession,ready,linked,setLinked}=useCustomerSession();
   const settings = useQuery(api.restaurantSettings.get, {});
+  const otp = useQuery(api.phoneOtp.status, {}) as { enabled: boolean } | undefined;
+  const [byPhone,setByPhone]=useState(false);
   const phone = restaurantPhone(settings);
   const [email,setEmail]=useState(''), [password,setPassword]=useState('');
   const [show,setShow]=useState(false), [busy,setBusy]=useState(false), [loading,setLoading]=useState(false);
@@ -149,7 +152,16 @@ export default function Account() {
       <T style={s.intro}>{session?'تفاصيل حسابك واشتراكك، في مكان واحد.':'طلباتك وخطتك المعتمدة تظهر هنا. سجّل الدخول لرؤية تفاصيل اشتراكك.'}</T>
       {!!error&&<View accessibilityRole="alert" style={s.notice}><Ionicons name="alert-circle-outline" size={22} color={colors.navy2}/><T style={{flex:1,color:colors.navy2}}>{error}</T></View>}
       {!session && <OrdersCard onPress={()=>router.push('/my-orders')}/>}
-      {!session ? <View style={s.panel}>
+      {!session && otp?.enabled && !registering && <View style={s.row}>
+        <Btn label="الدخول برقم الجوال" variant={byPhone?'primary':'outline'} onPress={()=>setByPhone(true)} style={{flex:1}}/>
+        <Btn label="الدخول بالبريد" variant={byPhone?'outline':'primary'} onPress={()=>setByPhone(false)} style={{flex:1}}/>
+      </View>}
+      {!session && otp?.enabled && byPhone && !registering ? <>
+        {linked
+          ? <View style={s.panel}><T w="black" style={s.section}>مرحباً {linked.name||''}</T><T style={s.intro}>رقمك متحقَّق على هذا الجهاز. طلباتك وخطتك تظهر من بطاقة «طلباتي» أعلاه، واختيار الوجبات من تبويب «الوجبات».</T>
+              <Btn label="الخروج من هذا الرقم" variant="outline" onPress={()=>void setLinked(null)} style={{marginTop:12}}/></View>
+          : <PhoneCodeGate title="الدخول برقم الجوال" copy="اكتب رقم جوالك المسجّل في اشتراكك وسيصلك كود للتحقق." onVerified={(v)=>void setLinked({customerId:v.customerId,token:v.token,name:v.name,phone:v.phone})}/>}
+      </> : !session ? <View style={s.panel}>
         <T w="black" style={s.section}>{registering?'إنشاء حساب':'تسجيل الدخول بحسابك'}</T>
         {registering && <>
           <T w="bold" style={s.label}>الاسم الكامل</T>
@@ -242,4 +254,5 @@ const s=StyleSheet.create({
   orders:{alignItems:'center',gap:14,padding:18,borderRadius:18,backgroundColor:colors.navy2},
   ordersIcon:{width:46,height:46,borderRadius:14,backgroundColor:colors.cyan,alignItems:'center',justifyContent:'center'},
   notice:{flexDirection:'row',gap:10,padding:16,backgroundColor:colors.cyanSoft,borderRadius:12},
+  row:{flexDirection:'row',gap:10},
 });

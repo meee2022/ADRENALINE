@@ -8,11 +8,11 @@
  * @module
  */
 
-import type * as appInstalls from "../appInstalls.js";
 import type * as accountLookup from "../accountLookup.js";
 import type * as adminCenter from "../adminCenter.js";
 import type * as ai from "../ai.js";
 import type * as analytics from "../analytics.js";
+import type * as appInstalls from "../appInstalls.js";
 import type * as applySchedulePairs from "../applySchedulePairs.js";
 import type * as attendance from "../attendance.js";
 import type * as auditLog from "../auditLog.js";
@@ -49,6 +49,7 @@ import type * as leaves from "../leaves.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_calories from "../lib/calories.js";
 import type * as lib_customerOrderRules from "../lib/customerOrderRules.js";
+import type * as lib_customizedTemplates from "../lib/customizedTemplates.js";
 import type * as lib_dashboardBalances from "../lib/dashboardBalances.js";
 import type * as lib_dates from "../lib/dates.js";
 import type * as lib_driverLabelCodes from "../lib/driverLabelCodes.js";
@@ -80,10 +81,10 @@ import type * as nameStyle from "../nameStyle.js";
 import type * as notifications from "../notifications.js";
 import type * as officialRosterMigration from "../officialRosterMigration.js";
 import type * as onlineOrders from "../onlineOrders.js";
-import type * as onlinePriceList from "../onlinePriceList.js";
 import type * as outletLabels from "../outletLabels.js";
 import type * as outletScan from "../outletScan.js";
 import type * as passwordReset from "../passwordReset.js";
+import type * as phoneOtp from "../phoneOtp.js";
 import type * as passwords from "../passwords.js";
 import type * as payLater from "../payLater.js";
 import type * as payLaterNode from "../payLaterNode.js";
@@ -135,6 +136,7 @@ declare const fullApi: ApiFromModules<{
   adminCenter: typeof adminCenter;
   ai: typeof ai;
   analytics: typeof analytics;
+  appInstalls: typeof appInstalls;
   applySchedulePairs: typeof applySchedulePairs;
   attendance: typeof attendance;
   auditLog: typeof auditLog;
@@ -171,6 +173,7 @@ declare const fullApi: ApiFromModules<{
   "lib/audit": typeof lib_audit;
   "lib/calories": typeof lib_calories;
   "lib/customerOrderRules": typeof lib_customerOrderRules;
+  "lib/customizedTemplates": typeof lib_customizedTemplates;
   "lib/dashboardBalances": typeof lib_dashboardBalances;
   "lib/dates": typeof lib_dates;
   "lib/driverLabelCodes": typeof lib_driverLabelCodes;
@@ -202,10 +205,10 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   officialRosterMigration: typeof officialRosterMigration;
   onlineOrders: typeof onlineOrders;
-  onlinePriceList: typeof onlinePriceList;
   outletLabels: typeof outletLabels;
   outletScan: typeof outletScan;
   passwordReset: typeof passwordReset;
+  phoneOtp: typeof phoneOtp;
   passwords: typeof passwords;
   payLater: typeof payLater;
   payLaterNode: typeof payLaterNode;
@@ -244,7 +247,6 @@ declare const fullApi: ApiFromModules<{
   units: typeof units;
   updateBanners: typeof updateBanners;
   users: typeof users;
-  appInstalls: typeof appInstalls;
   whatsapp: typeof whatsapp;
 }>;
 

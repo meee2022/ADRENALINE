@@ -24,7 +24,7 @@ import {
 import { useCartStore } from "@/lib/cartStore";
 import { tagLabel } from "@/lib/tagLabels";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { getSessionToken } from "@/lib/store";
 import { api } from "@/../../convex/_generated/api";
 /* ✅ القواعد كلها من المصدر الوحيد shared/rules — لا قاعدة تُكتب في هذه الشاشة. */
@@ -46,8 +46,7 @@ import {
   saveVerifiedPhone,
   saveVerifiedCustomerId,
   setBrowseOnly,
-  clearIdentity,
-} from "@/lib/customerIdentity";
+  clearIdentity, getSubscriberToken, saveSubscriberToken } from "@/lib/customerIdentity";
 import { openExternal } from "@/lib/native";
 import { MenuSubscriberEntry } from '@/components/public/MenuSubscriberEntry';
 import './menu-catalog.css';
@@ -101,6 +100,44 @@ export default function PublicMenuPage() {
   });
   const [browseMode, setBrowseMode] = useState<boolean>(() => isBrowseOnly());
   const [phoneError, setPhoneError] = useState("");
+  /* Code step (only when the restaurant turned the check on): phone → code → subscriber token.
+     Until the code is right, `verifiedPhone` stays empty so nothing about the number is shown. */
+  const otpStatus = useQuery(api.phoneOtp.status, {}) as { enabled: boolean } | undefined;
+  const otpRequest = useMutation(api.phoneOtp.request);
+  const otpVerify = useMutation(api.phoneOtp.verify);
+  const [otpPhone, setOtpPhone] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpMsg, setOtpMsg] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpChoices, setOtpChoices] = useState<any[] | null>(null);
+  const [subscriberToken, setSubscriberToken] = useState<string>(() => getSubscriberToken());
+  const otpErr = (e: any, fb: string) => (typeof e?.data === "string" && e.data.trim()) || fb;
+  const handleRequestCode = async () => {
+    setPhoneError("");
+    const normalized = phoneInput.replace(/\D/g, "");
+    if (normalized.length < 8) { setPhoneError(isRtl ? "رقم غير صحيح" : "Invalid phone number"); return; }
+    setOtpBusy(true);
+    try {
+      const r: any = await otpRequest({ phone: normalized });
+      setOtpPhone(normalized); setOtpCode(""); setOtpChoices(null); setOtpMsg(r?.message || "");
+    } catch (e: any) { setPhoneError(otpErr(e, isRtl ? "تعذّر إرسال الكود" : "Couldn't send the code")); }
+    finally { setOtpBusy(false); }
+  };
+  const handleVerifyCode = async (customerId?: string) => {
+    setPhoneError("");
+    const code = otpCode.replace(/\D/g, "");
+    if (code.length !== 6) { setPhoneError(isRtl ? "اكتب الكود المكوّن من 6 أرقام" : "Enter the 6-digit code"); return; }
+    setOtpBusy(true);
+    try {
+      const r: any = await otpVerify({ phone: otpPhone, code, customerId: customerId as any });
+      if (r?.needsChoice) { setOtpChoices(r.subscribers || []); return; }
+      saveSubscriberToken(r.token); setSubscriberToken(r.token);
+      setVerifiedPhone(otpPhone); saveVerifiedPhone(otpPhone);
+      setVerifiedCustomerId(String(r.customerId)); saveVerifiedCustomerId(String(r.customerId));
+      setOtpPhone(""); setOtpChoices(null);
+    } catch (e: any) { setPhoneError(otpErr(e, isRtl ? "الكود غير صحيح" : "Wrong code")); }
+    finally { setOtpBusy(false); }
+  };
 
   /**
    * ⚡ وصف الوجبة (aboutAr/aboutEn) لا يُرسل ضمن القائمة — 28KB عبر 192 وجبة —
@@ -124,7 +161,7 @@ export default function PublicMenuPage() {
   //    أي زائر يقرأ كل الأسماء والهواتف والعناوين والأسعار من DevTools.
   const matchingCustomers = useQuery(
     api.customers.findPublicByPhone,
-    verifiedPhone ? { phone: verifiedPhone, restaurantKey: restaurant.key } : "skip"
+    verifiedPhone ? { phone: verifiedPhone, restaurantKey: restaurant.key, subscriberToken: subscriberToken || undefined } : "skip"
   );
 
   const verifiedCustomer = useMemo(() => {
@@ -913,7 +950,8 @@ Is that what you want?`,
 
   // ─── Phone gate state determination ─── (isPhoneVerified مُعرّف أعلاه — يحتاجه فلتر الزائر)
   const canViewMenu = isPhoneVerified || isVisitor;
-  const showPhonePrompt = !verifiedPhone;
+  const showCodePrompt = !verifiedPhone && !!otpPhone;
+  const showPhonePrompt = !verifiedPhone && !otpPhone;
   const showCustomerPicker = verifiedPhone && matchingCustomers && matchingCustomers.length > 1 && !verifiedCustomerId;
   const showNotRegistered = verifiedPhone && matchingCustomers !== undefined && matchingCustomers.length === 0;
   const showAutoSelect = verifiedPhone && matchingCustomers && matchingCustomers.length === 1 && !verifiedCustomerId;
@@ -974,11 +1012,15 @@ Is that what you want?`,
 
                 <h2 className="text-2xl font-black text-[#0F1516] text-center mb-2 tracking-tight">
                   {showPhonePrompt && (isRtl ? `أهلاً بك في ${customerBrandName}` : `Welcome to ${customerBrandName}`)}
+                  {showCodePrompt && (isRtl ? "اكتب كود التحقق" : "Enter the code")}
                   {showNotRegistered && (isRtl ? "رقمك غير مسجل" : "Phone Not Registered")}
                   {showCustomerPicker && (isRtl ? "من المستلم؟" : "Who's the recipient?")}
                 </h2>
                 <p className="text-sm text-center mb-6 leading-relaxed" style={{ color: customerAccentDark }}>
-                  {showPhonePrompt && (isRtl ? "أدخل رقم هاتفك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals")}
+                  {showPhonePrompt && (otpStatus?.enabled
+                    ? (isRtl ? "أدخل رقم هاتفك وسيصلك كود للتحقق قبل عرض خطتك" : "Enter your phone; we'll send a code before showing your plan")
+                    : (isRtl ? "أدخل رقم هاتفك للوصول لخطتك واختيار وجباتك" : "Enter your phone to access your plan and pick meals"))}
+                  {showCodePrompt && (otpMsg || (isRtl ? "أرسلنا كوداً من 6 أرقام إلى رقمك" : "We sent a 6-digit code to your phone"))}
                   {showNotRegistered && (isRtl ? "هذا الرقم غير مسجل لدينا. تواصل عبر واتساب للاشتراك" : "This number isn't registered. Contact us via WhatsApp to subscribe")}
                   {showCustomerPicker && (isRtl ? "هذا الرقم مسجل لأكثر من مشترك. اختر اسمك للمتابعة" : "This number has multiple subscribers. Pick your name to continue")}
                 </p>
@@ -1008,7 +1050,7 @@ Is that what you want?`,
                           autoFocus
                           value={phoneInput}
                           onChange={(e) => setPhoneInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleVerifyPhone()}
+                          onKeyDown={(e) => e.key === "Enter" && (otpStatus?.enabled ? void handleRequestCode() : handleVerifyPhone())}
                           placeholder="74XXXXXX"
                           className="flex-1 h-12 px-4 text-center text-base font-bold tabular-nums tracking-widest bg-transparent outline-none"
                         />
@@ -1020,8 +1062,9 @@ Is that what you want?`,
                         </p>
                       )}
                       <button
-                        onClick={handleVerifyPhone}
-                        className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                        onClick={() => (otpStatus?.enabled ? void handleRequestCode() : handleVerifyPhone())}
+                        disabled={otpBusy}
+                        className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
                         style={{
                           background: `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`,
                           boxShadow: "0 6px 20px rgba(60,196,240,0.4)",
@@ -1054,6 +1097,45 @@ Is that what you want?`,
                       </button>
                     </div>
                   </>
+                )}
+
+                {showCodePrompt && (
+                  <div className="space-y-3">
+                    {!otpChoices ? (
+                      <>
+                        <input type="text" inputMode="numeric" dir="ltr" autoFocus maxLength={6} autoComplete="one-time-code"
+                          value={otpCode} onChange={(e) => setOtpCode(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && void handleVerifyCode()}
+                          placeholder="123456"
+                          className="w-full h-14 rounded-xl text-center text-2xl font-black tracking-[0.5em] tabular-nums outline-none"
+                          style={{ background: "#f8fafc", border: `1.5px solid ${phoneError ? "#fca5a5" : "#e2e8f0"}` }} />
+                        <button onClick={() => void handleVerifyCode()} disabled={otpBusy}
+                          className="w-full h-12 rounded-xl font-bold text-white flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60"
+                          style={{ background: `linear-gradient(135deg, ${customerAccent}, ${customerAccentDark})`, boxShadow: "0 6px 20px rgba(60,196,240,0.4)" }}>
+                          {otpBusy ? (isRtl ? "جارٍ التحقق…" : "Checking…") : (isRtl ? "تأكيد" : "Confirm")}
+                        </button>
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-sm font-bold text-center">{isRtl ? "اختر صاحب الاشتراك" : "Pick the subscriber"}</p>
+                        {otpChoices.map((c: any) => (
+                          <button key={c._id} onClick={() => void handleVerifyCode(c._id)} disabled={otpBusy}
+                            className="w-full h-11 rounded-xl text-sm font-bold border border-gray-200 hover:bg-gray-50">
+                            {c.fullName || (isRtl ? "مشترك" : "Subscriber")} — {c.program || ""}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {phoneError && (
+                      <p className="text-xs font-semibold text-red-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{phoneError}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => { setOtpPhone(""); setOtpChoices(null); setPhoneError(""); }} disabled={otpBusy}
+                        className="flex-1 h-10 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50">{isRtl ? "تغيير الرقم" : "Change number"}</button>
+                      <button onClick={() => { setPhoneInput(otpPhone); void handleRequestCode(); }} disabled={otpBusy}
+                        className="flex-1 h-10 rounded-xl text-xs font-bold border border-gray-200 hover:bg-gray-50">{isRtl ? "إعادة الإرسال" : "Resend"}</button>
+                    </div>
+                  </div>
                 )}
 
                 {/* Loading */}

@@ -4,7 +4,7 @@ import { ChevronRight, Package } from "lucide-react";
 import { useCartStore } from "@/lib/cartStore";
 import { useLanguage } from "@/lib/i18n";
 import { alertDialog, confirmDialog } from "@/lib/dialogs";
-import { getVerifiedCustomerId, getVerifiedPhone } from "@/lib/customerIdentity";
+import { getVerifiedCustomerId, getVerifiedPhone, getSubscriberToken } from "@/lib/customerIdentity";
 import { subscriptionShortfall, orderedSubscriptionSlots, slotToDate } from "@/lib/subscription";
 import { mealScheduledFor } from "@/lib/mealSchedule";
 import { restrictionWords, mealIsRestricted, matchedRestriction } from "@/lib/mealRestrictions";
@@ -85,7 +85,7 @@ export default function OrderReview() {
   //    العائلات قد تتشارك رقماً واحداً، فنأخذ أول مطابق كما كان السلوك سابقاً.
   const matchesByPhone = useQuery(
     api.customers.findPublicByPhone,
-    customerPhone ? { phone: customerPhone, restaurantKey: restaurant.key } : "skip"
+    customerPhone ? { phone: customerPhone, restaurantKey: restaurant.key, subscriberToken: getSubscriberToken() || undefined } : "skip"
   );
   const verifiedCustomerId = getVerifiedCustomerId();
   // الرقم قد يخص أكثر من مشترك في العائلة؛ نحترم الحساب الذي اختاره العميل

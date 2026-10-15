@@ -37,7 +37,7 @@ function AutomationPanel({settings,logs,sessionToken,t,ar}:any){
  const form=draft||settings;
  if(!form)return <div className="h-32 animate-pulse rounded-2xl bg-slate-100"/>;
  const set=(key:string,value:any)=>{setDraft({...form,[key]:value});setSaved(false)};
- const persist=async()=>{setBusy(true);try{const {connected,hasWebhookSecret,templateNames,lastRenewalRunDate,_id,_creationTime,channel,updatedBy,updatedAt,...payload}=form;void connected;void hasWebhookSecret;void templateNames;void lastRenewalRunDate;void _id;void _creationTime;void channel;void updatedBy;void updatedAt;await save({...payload,sessionToken:sessionToken||undefined});setSaved(true);setDraft(null)}finally{setBusy(false)}};
+ const persist=async()=>{setBusy(true);try{const {connected,hasWebhookSecret,templateNames,smsConfigured,lastRenewalRunDate,_id,_creationTime,channel,updatedBy,updatedAt,...payload}=form;void connected;void hasWebhookSecret;void templateNames;void smsConfigured;void lastRenewalRunDate;void _id;void _creationTime;void channel;void updatedBy;void updatedAt;await save({...payload,sessionToken:sessionToken||undefined});setSaved(true);setDraft(null)}finally{setBusy(false)}};
  const events=[
   ["renewal7Enabled",t("قبل الانتهاء بـ7 أيام","7 days before expiry")],
   ["renewal3Enabled",t("قبل الانتهاء بـ3 أيام","3 days before expiry")],
@@ -56,6 +56,16 @@ function AutomationPanel({settings,logs,sessionToken,t,ar}:any){
     <div className="grid grid-cols-2 gap-3"><Toggle label={t("تشغيل الأتمتة","Automation enabled")} value={form.enabled} onChange={(v:boolean)=>set("enabled",v)}/><Toggle label={t("الوضع التجريبي","Test mode")} value={form.testMode} onChange={(v:boolean)=>set("testMode",v)}/></div>
     <div className="rounded-xl border bg-slate-50 p-4"><div className="mb-3 flex items-center gap-2"><Clock3 className="h-4 w-4 text-cyan-700"/><b className="text-sm">{t("جدول الإرسال","Sending schedule")}</b></div><div className="grid grid-cols-2 gap-3"><label className="text-xs font-bold text-slate-600">{t("الساعة","Hour")}<input type="number" min="0" max="23" value={form.sendHour} onChange={e=>set("sendHour",Number(e.target.value))} className="mt-1 h-10 w-full rounded-lg border bg-white px-3"/></label><label className="text-xs font-bold text-slate-600">{t("المنطقة الزمنية","Timezone")}<input value={form.timezone} onChange={e=>set("timezone",e.target.value)} className="mt-1 h-10 w-full rounded-lg border bg-white px-3" dir="ltr"/></label></div></div>
     <div className="space-y-2">{events.map(([key,label])=><Toggle key={key} label={label} value={form[key]} onChange={(v:boolean)=>set(key,v)}/>)}</div>
+    {/* Phone + code sign-in for subscribers. Off = the subscriber types a phone and sees the plan, as before. */}
+    <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-4 space-y-3">
+     <div className="flex items-center gap-2"><b className="text-sm text-violet-900">{t("التحقق بكود عند الدخول بالجوال","Phone sign-in with a code")}</b></div>
+     <Toggle label={t("طلب كود من المشترك (التطبيق والمنيو)","Ask subscribers for a code (app & menu)")} value={!!form.phoneOtpEnabled} onChange={(v:boolean)=>set("phoneOtpEnabled",v)}/>
+     <div className="grid grid-cols-2 gap-2">
+      {([["WHATSAPP",t("واتساب","WhatsApp")],["SMS",t("رسالة SMS","SMS")]] as const).map(([k,label])=>
+       <button key={k} type="button" onClick={()=>set("phoneOtpChannel",k)} className={`min-h-10 rounded-xl border px-3 text-xs font-black ${(form.phoneOtpChannel||"WHATSAPP")===k?"border-violet-400 bg-violet-100 text-violet-900":"border-slate-200 bg-white text-slate-500"}`}>{label}{k==="SMS"&&!form.smsConfigured&&<span className="ms-1 text-[10px] font-bold text-amber-700">({t("غير مضبوط","not set up")})</span>}</button>)}
+     </div>
+     <p className="text-[11px] leading-5 text-violet-900/80">{t("مقفول: المشترك يكتب رقمه ويشوف خطته مباشرة. مفتوح: يوصله كود 6 أرقام ولا يرى شيئاً قبل كتابته. واتساب يستخدم القالب المعتمد","Off: a phone alone opens the plan. On: a 6-digit code is required first. WhatsApp uses the approved template")} <code dir="ltr">{form.templateNames?.otp}</code>. {t("SMS يحتاج مزوّداً (SMS_API_URL / SMS_API_KEY / SMS_SENDER في Convex).","SMS needs a provider (SMS_API_URL / SMS_API_KEY / SMS_SENDER in Convex).")}</p>
+    </div>
     <button onClick={async()=>{setBusy(true);try{await simulate({sessionToken:sessionToken||undefined})}finally{setBusy(false)}}} disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 py-2.5 text-sm font-black text-emerald-800"><TestTube2 className="h-4 w-4"/>{t("تشغيل تجربة بدون إرسال","Run simulation without sending")}</button>
     <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
      <b className="text-sm">{t("رقم التجربة","Test number")}</b>

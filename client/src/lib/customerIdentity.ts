@@ -23,6 +23,8 @@
 const KEY_PHONE = "menu_phone";
 const KEY_CUSTOMER_ID = "menu_customer_id";
 const KEY_BROWSE = "menu_browse";
+// Subscriber session issued after a WhatsApp/SMS code (only when the restaurant requires one).
+const KEY_TOKEN = "menu_subscriber_token";
 
 const hasWindow = () => typeof window !== "undefined";
 
@@ -51,6 +53,13 @@ export function saveVerifiedCustomerId(customerId: string): void {
   store()?.setItem(KEY_CUSTOMER_ID, String(customerId));
 }
 
+export function getSubscriberToken(): string {
+  return store()?.getItem(KEY_TOKEN) || "";
+}
+export function saveSubscriberToken(token: string): void {
+  store()?.setItem(KEY_TOKEN, token);
+}
+
 export function setBrowseOnly(): void {
   store()?.setItem(KEY_BROWSE, "1");
 }
@@ -62,6 +71,7 @@ export function clearIdentity(): void {
   s.removeItem(KEY_PHONE);
   s.removeItem(KEY_CUSTOMER_ID);
   s.removeItem(KEY_BROWSE);
+  s.removeItem(KEY_TOKEN);
   // 🧹 تنظيف مخلّفات النسخة القديمة (localStorage) — بدونه يفضل الرقم
   //    القديم محفوظاً على أجهزة العملاء الحاليين إلى الأبد.
   try {

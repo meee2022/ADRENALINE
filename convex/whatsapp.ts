@@ -22,6 +22,8 @@ export const TEMPLATES = {
   renewal: () => process.env.WHATSAPP_TEMPLATE_RENEWAL || "subscription_renewal_reminder",
   expired: () => process.env.WHATSAPP_TEMPLATE_EXPIRED || "subscription_expired_notice",
   delivery: () => process.env.WHATSAPP_TEMPLATE_DELIVERY || "delivery_failed_notice",
+  // Meta "Authentication" category template: fixed wording + a copy-code button.
+  otp: () => process.env.WHATSAPP_TEMPLATE_OTP || "subscriber_login_code",
 };
 
 /** الحساب غير الموثَّق عند Meta محدود بـ250 مستلماً مختلفاً كل 24 ساعة. */
@@ -233,6 +235,70 @@ export const sendOne = internalAction({
     } catch (err: any) {
       await ctx.runMutation(internal.whatsapp.markResult, { logId, ok: false, error: `تعذّر الاتصال: ${String(err?.message || err)}` });
     }
+  },
+});
+
+/**
+ * Sends a sign-in code. The code is passed in, never read from the log, so it is not
+ * stored anywhere in clear text. SMS goes through a generic HTTP provider when configured.
+ */
+export const sendOtp = internalAction({
+  args: { logId: v.id("messageAutomationLogs"), code: v.string() },
+  handler: async (ctx, { logId, code }): Promise<void> => {
+    const job: { to: string; template: string } | null = await ctx.runQuery(internal.phoneOtp.logFor, { logId });
+    if (!job) return;
+    const s: any = await ctx.runQuery(internal.whatsapp.settingsForOtp, {});
+    const fail = (error: string) => ctx.runMutation(internal.whatsapp.markResult, { logId, ok: false, error });
+    try {
+      if (s?.phoneOtpChannel === "SMS") {
+        const key = process.env.SMS_API_KEY, sender = process.env.SMS_SENDER, url = process.env.SMS_API_URL;
+        if (!key || !sender || !url) { await fail("مزوّد SMS غير مضبوط"); return; }
+        // Generic JSON provider: POST {to, from, text} with a bearer key. Adjust SMS_API_URL to the vendor.
+        const res = await fetch(url, {
+          method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ to: `+${job.to}`, from: sender, text: `${code} هو رمز الدخول الخاص بك في Adrenaline. صالح 5 دقائق.` }),
+        });
+        const data: any = await res.json().catch(() => ({}));
+        if (res.ok) await ctx.runMutation(internal.whatsapp.markResult, { logId, ok: true, providerMessageId: String(data?.id || data?.sid || data?.messageId || "sms") });
+        else await fail(`SMS HTTP ${res.status}: ${String(data?.message || data?.error || "").slice(0, 200)}`);
+        return;
+      }
+      const token = process.env.WHATSAPP_ACCESS_TOKEN, numberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+      if (!token || !numberId) { await fail("واتساب غير متصل (لا يوجد توكن)"); return; }
+      const version = process.env.WHATSAPP_GRAPH_VERSION || "v23.0";
+      const res = await fetch(`https://graph.facebook.com/${version}/${numberId}/messages`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messaging_product: "whatsapp", to: job.to, type: "template",
+          template: {
+            name: job.template, language: { code: "ar" },
+            components: [
+              { type: "body", parameters: [{ type: "text", text: code }] },
+              // Authentication templates carry a "copy code" button whose payload is the code.
+              { type: "button", sub_type: "url", index: "0", parameters: [{ type: "text", text: code }] },
+            ],
+          },
+        }),
+      });
+      const data: any = await res.json().catch(() => ({}));
+      const id = data?.messages?.[0]?.id;
+      if (res.ok && id) await ctx.runMutation(internal.whatsapp.markResult, { logId, ok: true, providerMessageId: String(id) });
+      else {
+        const e = data?.error;
+        await fail(e ? `${e.code ?? res.status}: ${e.error_data?.details || e.message || "خطأ من Meta"}` : `HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      await fail(`تعذّر الاتصال: ${String(err?.message || err)}`);
+    }
+  },
+});
+
+export const settingsForOtp = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const s: any = await settingsOf(ctx);
+    return s ? { phoneOtpChannel: s.phoneOtpChannel || "WHATSAPP" } : null;
   },
 });
 

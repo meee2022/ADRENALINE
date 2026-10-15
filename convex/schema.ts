@@ -564,6 +564,10 @@ export default defineSchema({
     templateDeliveryEn: v.string(),
     // رقم التجربة: في الوضع التجريبي كل الرسائل تذهب إليه لا للعملاء.
     testPhone: v.optional(v.string()),
+    // Phone + code sign-in for subscribers (app and public menu). Off = phone alone, as before.
+    phoneOtpEnabled: v.optional(v.boolean()),
+    // How the code is delivered: WhatsApp template, or SMS through a provider (needs SMS_* env vars).
+    phoneOtpChannel: v.optional(v.union(v.literal("WHATSAPP"), v.literal("SMS"))),
     // آخر يوم (قطر) شُغّلت فيه تذكيرات التجديد — تمنع تكرارها في نفس اليوم.
     lastRenewalRunDate: v.optional(v.string()),
     updatedBy: v.optional(v.id("users")),
@@ -601,6 +605,15 @@ export default defineSchema({
     installs: v.number(),
     signedIn: v.number(),
   }).index("by_platform", ["platform"]),
+
+  // One-time codes for phone sign-in; only the hash is stored.
+  phoneOtpCodes: defineTable({
+    phone: v.string(),
+    codeHash: v.string(),
+    expiresAt: v.number(),
+    attempts: v.number(),
+    createdAt: v.number(),
+  }).index("by_phone", ["phone"]),
 
   messageAutomationLogs: defineTable({
     customerId: v.optional(v.id("customers")),

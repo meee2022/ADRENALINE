@@ -18,6 +18,8 @@ const DEFAULT_AUTOMATION = {
   templateRenewalEn: "Hi {{name}}, your Adrenaline subscription ends on {{endDate}}. We would be happy to help you renew.",
   templateDeliveryAr: "مرحباً {{name}}، نعتذر عن تعذر توصيل طلبك اليوم. سيتواصل معك فريقنا لترتيب وقت بديل.",
   templateDeliveryEn: "Hi {{name}}, we could not complete today's delivery. Our team will contact you to arrange another time.",
+  phoneOtpEnabled: false,
+  phoneOtpChannel: "WHATSAPP" as const,
 };
 
 /** عدد الأيام الماضية التي نبحث فيها عن حالات فشل التوصيل. */
@@ -94,7 +96,8 @@ export const automationSettings = query({
       connected: isConnected(),
       hasWebhookSecret: Boolean(process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN && process.env.WHATSAPP_APP_SECRET),
       // أسماء القوالب المعتمدة في WhatsApp Manager — ما يُرسَل فعلاً.
-      templateNames: { renewal: TEMPLATES.renewal(), expired: TEMPLATES.expired(), delivery: TEMPLATES.delivery() },
+      templateNames: { renewal: TEMPLATES.renewal(), expired: TEMPLATES.expired(), delivery: TEMPLATES.delivery(), otp: TEMPLATES.otp() },
+      smsConfigured: Boolean(process.env.SMS_API_KEY && process.env.SMS_SENDER),
     };
   },
 });
@@ -107,10 +110,15 @@ export const saveAutomationSettings = mutation({
     templateRenewalAr: v.string(), templateRenewalEn: v.string(),
     templateDeliveryAr: v.string(), templateDeliveryEn: v.string(),
     testPhone: v.optional(v.string()),
+    phoneOtpEnabled: v.optional(v.boolean()),
+    phoneOtpChannel: v.optional(v.union(v.literal("WHATSAPP"), v.literal("SMS"))),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const identity = await requireAdmin(ctx, args.sessionToken);
+    if (args.phoneOtpEnabled && args.phoneOtpChannel === "SMS" && !(process.env.SMS_API_KEY && process.env.SMS_SENDER)) {
+      throw new ConvexError("مزوّد SMS غير مضبوط بعد (SMS_API_KEY وSMS_SENDER في إعدادات Convex)");
+    }
     if (args.sendHour < 0 || args.sendHour > 23) throw new ConvexError("ساعة الإرسال يجب أن تكون بين 0 و23");
     const { sessionToken: _sessionToken, ...values } = args;
     void _sessionToken;

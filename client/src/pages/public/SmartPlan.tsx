@@ -13,7 +13,7 @@ import { PublicLayout } from "@/components/public/PublicLayout";
 import { PageHeader } from "@/components/public/PageHeader";
 import { useLocation } from "wouter";
 import { Sparkles, AlertTriangle } from "lucide-react";
-import { getVerifiedPhone, saveVerifiedPhone } from "@/lib/customerIdentity";
+import { getVerifiedPhone, saveVerifiedPhone, getSubscriberToken } from "@/lib/customerIdentity";
 import { confirmDialog } from "@/lib/dialogs";
 import { useToast } from "@/hooks/use-toast";
 import { subscriptionState, orderedSubscriptionSlots, subscriptionShortfall } from "@/lib/subscription";
@@ -96,7 +96,7 @@ export default function SmartPlan() {
    */
   const matchesByPhone = useQuery(
     api.customers.findPublicByPhone,
-    !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim(), restaurantKey: restaurant.key } : "skip",
+    !currentCustomer && phone.trim().length >= 6 ? { phone: phone.trim(), restaurantKey: restaurant.key, subscriberToken: getSubscriberToken() || undefined } : "skip",
   ) as any[] | undefined;
   const matchedCustomer = matchesByPhone?.[0] ?? null;
 

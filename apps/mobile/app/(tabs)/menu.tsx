@@ -13,6 +13,7 @@ import { Btn, Chip, T } from "@/components/ui";
 import { MealCard } from "@/components/MealCard";
 import { SubscriberPhoneGate } from '@/components/SubscriberPhoneGate';
 import { SubscriberMealPlanner } from '@/components/SubscriberMealPlanner';
+import { PhoneCodeGate } from '@/components/PhoneCodeGate';
 import { isSnackCategory } from "@/rules";
 import { useCustomerSession } from '@/customerSession';
 
@@ -24,12 +25,19 @@ const CATS = [
 export default function Menu() {
   useUILanguage();
   const router = useRouter();
-  const {session}=useCustomerSession();
+  const {session,linked,setLinked}=useCustomerSession();
   const [profile,setProfile]=useState<any>(null);
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [cat, setCat] = useState("all");
   const [subscriber, setSubscriber] = useState<{ id: string; phone: string; name?: string } | null>(null);
+  // When the restaurant requires a code, a verified subscriber (from "my account") skips the gate.
+  const otp = useQuery(api.phoneOtp.status, {}) as { enabled: boolean } | undefined;
+  const linkedOk = useQuery(api.phoneOtp.check, linked ? { token: linked.token, customerId: linked.customerId as any } : 'skip') as boolean | undefined;
+  useEffect(() => {
+    if (linked && linkedOk === false) void setLinked(null);
+    if (otp?.enabled && linked && linkedOk && !subscriber) setSubscriber({ id: linked.customerId, phone: linked.phone || '', name: linked.name });
+  }, [otp?.enabled, linked?.customerId, linkedOk]);
   const [method, setMethod] = useState<'manual' | 'smart' | null>(null);
   useEffect(()=>{
     let alive=true;setProfile(null);setSubscriber(null);setMethod(null);
@@ -92,7 +100,10 @@ export default function Menu() {
               <T w="black" style={styles.title}>اختيار وجبات اشتراكي</T>
               <T w="bold" style={styles.count}>{loading ? 'نجهّز لك القائمة…' : `${meals.length} وجبة${q.trim() ? ' تطابق بحثك' : ' متاحة للتصفح'}`}</T>
               <T style={styles.sub}>محسوبة السعرات بإشراف أخصائيي تغذية، وتُطبخ صباح كل يوم.</T>
-              <SubscriberPhoneGate onSelect={(customer, phone) => {setMethod(null);setSubscriber({ id: customer._id, phone, name:customer.fullName });}}/>
+              {otp?.enabled
+                ? <PhoneCodeGate title="وجبات اشتراكك" copy="اكتب رقم هاتفك المسجّل وسيصلك كود للتحقق، ثم اختر وجباتك."
+                    onVerified={(v) => { void setLinked({ customerId: v.customerId, token: v.token, name: v.name, phone: v.phone }); setMethod(null); setSubscriber({ id: v.customerId, phone: v.phone, name: v.name }); }}/>
+                : <SubscriberPhoneGate onSelect={(customer, phone) => {setMethod(null);setSubscriber({ id: customer._id, phone, name:customer.fullName });}}/>}
             </View>
             <View style={styles.tools}>
               <View style={styles.search}>

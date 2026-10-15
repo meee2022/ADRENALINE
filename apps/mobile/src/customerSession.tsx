@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 export type CustomerSession = { accountId: string; token: string };
 /** هاتف مربوط باشتراك بكود الأخصائية (بلا حساب بريد) — لإشعارات الطلبات فقط. */
-export type LinkedSubscriber = { customerId: string; token: string; name: string };
+export type LinkedSubscriber = { customerId: string; token: string; name: string; phone?: string };
 const KEY='adrenaline.customer-session.v1';
 const LINK_KEY='adrenaline.linked-subscriber.v1';
 const Context = createContext<{session:CustomerSession|null;ready:boolean;setSession:(s:CustomerSession|null)=>Promise<void>;linked:LinkedSubscriber|null;setLinked:(v:LinkedSubscriber|null)=>Promise<void>}>({session:null,ready:false,setSession:async()=>{},linked:null,setLinked:async()=>{}});

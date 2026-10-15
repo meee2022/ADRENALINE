@@ -4,7 +4,7 @@
  */
 import { mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
-import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin } from "./sessions";
+import { requireStaff, requireStaffOrSubscriptionOwner, requireAdmin, validateSession } from "./sessions";
 import { normalizePhone } from "./lib/phone";
 import { qatarTodayISO } from "./lib/customerOrderRules";
 import { trail } from "./lib/trail";
@@ -88,10 +88,25 @@ function publicCustomerView(c: any) {
  *    كاملة (أسماء/عناوين/أسعار/حساسية) لأي زائر يفتح DevTools.
  */
 export const findPublicByPhone = query({
-  args: { phone: v.string(), restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))) },
-  handler: async (ctx, { phone, restaurantKey }) => {
+  args: {
+    phone: v.string(),
+    restaurantKey: v.optional(v.union(v.literal("ADRENALINE"), v.literal("NUTRI_RESET"))),
+    // Subscriber session from phoneOtp.verify. Required only while the code check is on.
+    subscriberToken: v.optional(v.string()),
+  },
+  handler: async (ctx, { phone, restaurantKey, subscriberToken }) => {
     const normalizedPhone = normalizePhone(phone);
     if (!normalizedPhone) return [];
+    /* With the code check on, a phone alone must reveal nothing: only a session issued
+       after a correct code may read the subscribers on that phone. Off = as before. */
+    const otp: any = await ctx.db.query("messageAutomationSettings")
+      .withIndex("by_channel", (q) => q.eq("channel", "WHATSAPP")).first();
+    if (otp?.phoneOtpEnabled) {
+      const id = await validateSession(ctx, subscriberToken);
+      if (!id || id.accountType !== "subscriber" || !id.customerId) return [];
+      const owner: any = await ctx.db.get(id.customerId as any);
+      if (!owner || normalizePhone(owner.phone) !== normalizedPhone) return [];
+    }
 
     const customers = await ctx.db
       .query("customers")
