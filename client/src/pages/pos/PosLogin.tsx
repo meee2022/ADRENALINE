@@ -2,7 +2,7 @@
  * @file client/src/pages/pos/PosLogin.tsx
  * @description PIN login للكاشير — لوحة أرقام كبيرة تعمل باللمس.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { usePosStore } from "@/lib/posStore";
@@ -37,21 +37,36 @@ export default function PosLogin() {
       setSession(r.token, r.cashier);
       setLocation("/pos");
     } catch (e: any) {
-      setErr(e?.message?.replace("[CONVEX M(pos:loginWithPin)] ", "") || t("حدث خطأ", "Something went wrong"));
+      setErr((typeof e?.data === "string" && e.data) || e?.message?.replace("[CONVEX M(pos:loginWithPin)] ", "") || t("حدث خطأ", "Something went wrong"));
       setPin("");
     } finally { setBusy(false); }
   };
 
+  // Tablets with a keyboard case (e.g. Honor Pad) type the PIN and press Enter instead of tapping.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (/^[0-9]$/.test(e.key)) add(e.key);
+      else if (e.key === "Backspace") del();
+      else if (e.key === "Enter") void submit();
+      else if (e.key === "Escape") clear();
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const digits = ["1","2","3","4","5","6","7","8","9"];
 
   return (
-    <div dir={dir} className="fixed inset-0 grid place-items-center bg-[linear-gradient(145deg,#edf7fa,#dff3f8_52%,#edf3f6)] p-4">
+    <div dir={dir} className="fixed inset-0 overflow-y-auto bg-[linear-gradient(145deg,#edf7fa,#dff3f8_52%,#edf3f6)]">
+     <div className="grid min-h-full place-items-center p-4">
       <button onClick={() => setLanguage(isAr ? "en" : "ar")} className="absolute top-4 end-4 h-10 rounded-xl border border-[#bcdce7] bg-white px-3 text-xs font-black text-[#315d76] shadow-sm hover:bg-[#eaf8fc]">
         <Languages className="me-2 inline h-4 w-4" />{isAr ? "English" : "العربية"}
       </button>
       <div className="w-full max-w-md">
         {/* Brand */}
-        <div className="text-center mb-6 select-none">
+        <div className="text-center mb-6 [@media(max-height:820px)]:mb-3 select-none">
           <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-[linear-gradient(135deg,#3CC4F0,#47759C)] text-2xl font-black text-white shadow-[0_12px_30px_rgba(60,196,240,0.28)]">A</div>
           <div className="inline-flex items-center gap-2 text-[#173b55] font-black text-3xl">
             ADRENALINE
@@ -83,7 +98,7 @@ export default function PosLogin() {
                 key={d}
                 onClick={() => add(d)}
                 disabled={busy}
-                className="h-16 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:border-[#9ddcf0] hover:bg-[#eaf8fc] active:bg-[#3CC4F0] active:text-white text-[#17324d] text-3xl font-black transition-all shadow-sm active:scale-95"
+                className="h-16 [@media(max-height:820px)]:h-12 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:border-[#9ddcf0] hover:bg-[#eaf8fc] active:bg-[#3CC4F0] active:text-white text-[#17324d] text-3xl font-black transition-all shadow-sm active:scale-95"
               >
                 {d}
               </button>
@@ -91,21 +106,21 @@ export default function PosLogin() {
             <button
               onClick={clear}
               disabled={busy}
-              className="h-16 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-red-50 text-[#698392] text-xs font-black uppercase transition-all"
+              className="h-16 [@media(max-height:820px)]:h-12 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-red-50 text-[#698392] text-xs font-black uppercase transition-all"
             >
               {t("مسح", "Clear")}
             </button>
             <button
               onClick={() => add("0")}
               disabled={busy}
-              className="h-16 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-[#eaf8fc] active:bg-[#3CC4F0] active:text-white text-[#17324d] text-3xl font-black transition-all"
+              className="h-16 [@media(max-height:820px)]:h-12 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-[#eaf8fc] active:bg-[#3CC4F0] active:text-white text-[#17324d] text-3xl font-black transition-all"
             >
               0
             </button>
             <button
               onClick={del}
               disabled={busy}
-              className="h-16 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-red-50 text-[#607987] grid place-items-center transition-all"
+              className="h-16 [@media(max-height:820px)]:h-12 rounded-2xl border border-[#d8e6ec] bg-[#f7fafb] hover:bg-red-50 text-[#607987] grid place-items-center transition-all"
             >
               <Delete className="h-6 w-6" />
             </button>
@@ -124,6 +139,7 @@ export default function PosLogin() {
           Adrenaline Healthy Food · POS Terminal
         </p>
       </div>
+     </div>
     </div>
   );
 }
