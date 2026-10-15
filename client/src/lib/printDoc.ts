@@ -106,11 +106,17 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
      only showed on screen (Honor Pad, 2026-10-15). There the document prints itself once
      loaded, plus a Print button for a manual retry; it is hidden on the paper. */
   if (autoPrint && /Android/i.test(navigator.userAgent)) {
+    // Android uses the printer's fixed roll length, so a short receipt fed half a metre of
+    // paper. For 80mm receipts, size the page to the content just before printing.
+    const fitRoll = /size:\s*80mm/i.test(doc)
+      ? `var h=Math.ceil(document.documentElement.scrollHeight*25.4/96)+4,st=document.createElement("style");` +
+        `st.textContent="@page{size:80mm "+h+"mm;margin:0}";document.head.appendChild(st);`
+      : "";
     const self = `<style>@media print{.pd-print{display:none!important}}</style>` +
       `<button class="pd-print" onclick="print()" style="position:fixed;top:12px;inset-inline-end:12px;z-index:9;` +
       `padding:12px 20px;border:0;border-radius:12px;background:#0E76AC;color:#fff;font:700 16px sans-serif">` +
       `${isRtl ? "طباعة" : "Print"}</button>` +
-      `<script>addEventListener("load",function(){setTimeout(function(){print()},300)})<\/script>`;
+      `<script>addEventListener("load",function(){setTimeout(function(){${fitRoll}print()},300)})<\/script>`;
     doc = /<\/body>/i.test(doc) ? doc.replace(/<\/body>/i, `${self}</body>`) : doc + self;
     w.document.write(doc);
     w.document.close();
