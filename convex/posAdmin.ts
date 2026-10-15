@@ -8,7 +8,6 @@ import { mutation, query } from "./_generated/server";
 import { requireAdmin, requireStaff } from "./sessions";
 import { hashPassword, verifyPassword } from "./passwords";
 import { writeAudit } from "./lib/audit";
-import { ONLINE_PRICE_LIST } from "./onlinePriceList";
 import { reverseInventoryForTicket } from "./pos";
 import { reversePointsForPosTicket } from "./loyalty";
 import { autoReversePosTicket } from "./financePost";
@@ -319,92 +318,6 @@ export const upsertItemMeta = mutation({
     }
     const id = await ctx.db.insert("posItems", { mealId: args.mealId, ...patch } as any);
     return { id: String(id) };
-  },
-});
-
-/** Apply the approved online price list to existing POS items without touching public menu prices. */
-export const applyOnlinePriceList = mutation({
-  args: { sessionToken: v.optional(v.string()) },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx, args.sessionToken);
-    const meals: any[] = await ctx.db.query("publicMeals").collect();
-    const metas: any[] = await ctx.db.query("posItems").collect();
-    const metaByMeal = new Map(metas.map((meta) => [String(meta.mealId), meta]));
-    const normalize = (value: string) => value.toLowerCase()
-      .replace(/&/g, " and ")
-      .replace(/\bwith\b|\bw\b/g, " ")
-      .replace(/[^a-z0-9]+/g, " ")
-      .replace(/\b(chilli|chili)\b/g, "chili")
-      .replace(/\b(shishtawook|shish tawook)\b/g, "shish tawook")
-      .replace(/\b(falafil|falafel)\b/g, "falafel")
-      .replace(/\b(omlette|omelette)\b/g, "omelette")
-      .replace(/\b(zuchini|zucchini)\b/g, "zucchini")
-      .replace(/\b(mediterraneen|mediterranean)\b/g, "mediterranean")
-      .replace(/\s+/g, " ").trim();
-    const mealByName = new Map<string, any>();
-    for (const meal of meals) {
-      for (const raw of [meal.nameEn, meal.nameAr]) {
-        const key = normalize(String(raw || ""));
-        if (key && !mealByName.has(key)) mealByName.set(key, meal);
-      }
-    }
-    const matched: Array<{ input: string; meal: string; price: number }> = [];
-    const created: Array<{ input: string; price: number }> = [];
-    const includedMealIds = new Set<string>();
-    const slugify = (value: string) => normalize(value).replace(/\s+/g, "-");
-    const inferCategory = (name: string): "breakfast" | "lunch" | "dinner" | "salad" | "snack" => {
-      const key = normalize(name);
-      if (/salad|fattoush/.test(key)) return "salad";
-      if (/breakfast|egg|omelette|toast|muffin|shakshouka/.test(key)) return "breakfast";
-      if (/cake|ball|brownie|cookie|pudding|tiramisu|basbousa|kunafa|tarte|snickers|ummali|juice|shot|water|chips|fruit|pineapple|pomegranate|mandarin|strawberry|blueberry|drink/.test(key)) return "snack";
-      return "lunch";
-    };
-    for (let index = 0; index < ONLINE_PRICE_LIST.length; index++) {
-      const row = ONLINE_PRICE_LIST[index];
-      let meal = mealByName.get(normalize(row.name));
-      if (!meal) {
-        let slug = `online-${slugify(row.name)}`;
-        let suffix = 2;
-        while (await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", slug)).first()) {
-          slug = `online-${slugify(row.name)}-${suffix++}`;
-        }
-        const mealId = await ctx.db.insert("publicMeals", {
-          nameAr: row.name,
-          nameEn: row.name,
-          slug,
-          calories: 0,
-          protein: 0,
-          carbs: 0,
-          fats: 0,
-          category: inferCategory(row.name),
-          tags: [],
-          ingredients: [],
-          priceQAR: row.price,
-          isGymItem: false,
-          isGymOnly: false,
-          isOnlineOnly: true,
-          isActive: true,
-          sortOrder: index + 1,
-          createdAt: Date.now(),
-        });
-        meal = await ctx.db.get(mealId);
-        created.push({ input: row.name, price: row.price });
-      }
-      if (!meal) continue;
-      includedMealIds.add(String(meal._id));
-      const existing = metaByMeal.get(String(meal._id));
-      if (existing) await ctx.db.patch(existing._id, { posPrice: row.price, isHidden: false, sortOrder: index + 1, updatedAt: Date.now() });
-      else await ctx.db.insert("posItems", { mealId: meal._id, posPrice: row.price, isHidden: false, sortOrder: index + 1, updatedAt: Date.now() } as any);
-      matched.push({ input: row.name, meal: meal.nameEn || meal.nameAr, price: row.price });
-    }
-    let disabled = 0;
-    for (const meta of metas) {
-      if (meta.posPrice != null && !includedMealIds.has(String(meta.mealId))) {
-        await ctx.db.patch(meta._id, { posPrice: undefined, updatedAt: Date.now() });
-        disabled++;
-      }
-    }
-    return { total: ONLINE_PRICE_LIST.length, matched, created, unmatched: [], disabled };
   },
 });
 
