@@ -838,3 +838,29 @@ export const setPosPriceInternal = internalMutation({
     return { mealId, posPrice };
   },
 });
+
+/** CLI-only: create a POS-only (online channel) product, e.g. a plain Beef Burger. */
+export const createPosProductInternal = internalMutation({
+  args: { nameAr: v.string(), nameEn: v.string(), slug: v.string(), category: v.string(), price: v.number() },
+  handler: async (ctx, a) => {
+    if (await ctx.db.query("publicMeals").withIndex("by_slug", (q) => q.eq("slug", a.slug)).first()) throw new ConvexError("slug exists");
+    const mealId = await ctx.db.insert("publicMeals", {
+      nameAr: a.nameAr, nameEn: a.nameEn, slug: a.slug, category: a.category as any,
+      calories: 0, protein: 0, carbs: 0, fats: 0, tags: [], ingredients: [],
+      priceQAR: a.price, isGymItem: false, isGymOnly: false, isOnlineOnly: true, isActive: true,
+      sortOrder: 999, createdAt: Date.now(),
+    } as any);
+    await ctx.db.insert("posItems", { mealId, posPrice: a.price, updatedAt: Date.now() } as any);
+    return String(mealId);
+  },
+});
+
+/** CLI-only: take an item off the POS (keeps it in its own channel). */
+export const clearPosPriceInternal = internalMutation({
+  args: { mealId: v.id("publicMeals") },
+  handler: async (ctx, { mealId }) => {
+    const meta = await ctx.db.query("posItems").withIndex("by_meal", (q) => q.eq("mealId", mealId)).first();
+    if (meta) await ctx.db.patch(meta._id, { posPrice: undefined, updatedAt: Date.now() });
+    return !!meta;
+  },
+});
