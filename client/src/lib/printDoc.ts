@@ -102,6 +102,21 @@ export function openPrintDoc(html: string, opts: PrintDocOptions = {}): boolean 
     return false;
   }
 
+  /* Android Chrome ignores print() called on the new tab from this page, so the receipt
+     only showed on screen (Honor Pad, 2026-10-15). There the document prints itself once
+     loaded, plus a Print button for a manual retry; it is hidden on the paper. */
+  if (autoPrint && /Android/i.test(navigator.userAgent)) {
+    const self = `<style>@media print{.pd-print{display:none!important}}</style>` +
+      `<button class="pd-print" onclick="print()" style="position:fixed;top:12px;inset-inline-end:12px;z-index:9;` +
+      `padding:12px 20px;border:0;border-radius:12px;background:#0E76AC;color:#fff;font:700 16px sans-serif">` +
+      `${isRtl ? "طباعة" : "Print"}</button>` +
+      `<script>addEventListener("load",function(){setTimeout(function(){print()},300)})<\/script>`;
+    doc = /<\/body>/i.test(doc) ? doc.replace(/<\/body>/i, `${self}</body>`) : doc + self;
+    w.document.write(doc);
+    w.document.close();
+    return true;
+  }
+
   w.document.write(doc);
   w.document.close();
   w.focus();
