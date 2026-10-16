@@ -90,3 +90,18 @@ export async function rebuildTemplateDays(ctx: any, template: any): Promise<numb
   }
   return n;
 }
+
+/**
+ * Just {_id, customerId, updatedAt} for every live template, from the marker rows
+ * (one ~100-byte row per template). For readers that need "who has a template" but no slots.
+ * Falls back to the full table while the summary is unbuilt.
+ */
+export async function liveTemplateIndex(ctx: any): Promise<any[]> {
+  const markers = await ctx.db.query("customizedTemplateDays")
+    .withIndex("by_week_day", (q: any) => q.eq("week", 0).eq("day", "*")).collect();
+  const base = markers.length
+    ? (markers as any[]).map((m) => ({ _id: m.templateId, customerId: m.customerId, updatedAt: m.updatedAt }))
+    : (await ctx.db.query("customizedTemplates").collect()).map((t: any) => ({ _id: t._id, customerId: t.customerId, updatedAt: t.updatedAt }));
+  const owners = await Promise.all(base.map((t: any) => ctx.db.get(t.customerId)));
+  return base.filter((_: any, i: number) => !owners[i] || isCustomProgram(owners[i]));
+}

@@ -97,7 +97,7 @@ async function customizedForDate(ctx: any, dateArg: string) {
     }
     const rotWeek = ((cur - 1 + fridays) % 4) + 1;
 
-    const templates = await liveCustomizedTemplates(ctx);
+    const templates = await liveTemplatesForDay(ctx, rotWeek, dayKey);
     const out: any[] = [];
     for (const tpl of templates) {
       const sl = tpl.slots as any;

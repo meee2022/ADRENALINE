@@ -9,7 +9,7 @@ import { convertUnit } from "./units";
 import { requireStaff, requireAdmin, requireRole } from "./sessions";
 import { dayNameOf, rotationWeekAtDate } from "./lib/dates";
 import { autoPostInventoryMovement, autoPostInventoryReceipt } from "./financePost";
-import { liveCustomizedTemplates } from "./lib/customizedTemplates";
+import { liveTemplatesForDay } from "./lib/customizedTemplates";
 
 async function fifoValue(ctx: any, itemId: Id<"inventoryItems">, quantity: number) {
   const batches = await ctx.db.query("inventoryBatches")
@@ -1119,12 +1119,12 @@ export const prepareAndConsumeAllForDate = mutation({
        يقرآن القالب نفسه ويستبعدان صفوف أصحاب القوالب، فلا ازدواج.
        ولا خصم مخزون هنا: وجبات القوالب نصوص وصفات بلا رسيبيات مربوطة. */
     const withPlan = new Set((plans as any[]).map((p) => String(p.customerId || "")));
-    const templates = await liveCustomizedTemplates(ctx);
     const settings: any = await ctx.db.query("restaurantSettings").first();
     const curWk = Number(settings?.currentCookingWeek) || 1;
     const anchor = String(settings?.cookingWeekAdvancedOn || "");
     const rot = /^\d{4}-\d{2}-\d{2}$/.test(anchor) ? rotationWeekAtDate(curWk, anchor, date) : curWk;
     const dayKey = dayNameOf(date);
+    const templates = await liveTemplatesForDay(ctx, rot, dayKey);
     let preparedCustomized = 0;
     for (const t of templates as any[]) {
       if (withPlan.has(String(t.customerId))) continue; // له صفّ فعلاً — لا تكرار

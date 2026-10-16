@@ -2,7 +2,7 @@ import { internalQuery, mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
-import { liveCustomizedTemplates } from "./lib/customizedTemplates";
+import { liveTemplateIndex } from "./lib/customizedTemplates";
 
 const OPERATIONAL_STATUSES = new Set([
   "CONFIRMED",
@@ -53,7 +53,7 @@ async function auditForDate(ctx: any, dateArg: string) {
     const date = dateOnly(args.date);
     const [dayPlans, templates, boxNumbers] = await Promise.all([
       ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect(),
-      liveCustomizedTemplates(ctx),
+      liveTemplateIndex(ctx),
       ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q: any) => q.eq("date", date)).collect(),
     ]);
 
