@@ -1,4 +1,4 @@
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
@@ -37,11 +37,24 @@ export const forDate = query({
   },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    return await auditForDate(ctx, args.date);
+  },
+});
+
+/** CLI-only twin of forDate (deploy-key access) — used to diff output before/after read changes. */
+export const forDateInternal = internalQuery({
+  args: { date: v.string() },
+  handler: async (ctx, args) => await auditForDate(ctx, args.date),
+});
+
+async function auditForDate(ctx: any, dateArg: string) {
+  {
+    const args = { date: dateArg };
     const date = dateOnly(args.date);
     const [dayPlans, templates, boxNumbers] = await Promise.all([
-      ctx.db.query("dailyPlans").withIndex("by_date", (q) => q.eq("date", date)).collect(),
+      ctx.db.query("dailyPlans").withIndex("by_date", (q: any) => q.eq("date", date)).collect(),
       liveCustomizedTemplates(ctx),
-      ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q) => q.eq("date", date)).collect(),
+      ctx.db.query("stickerBoxNumbers").withIndex("by_date", (q: any) => q.eq("date", date)).collect(),
     ]);
 
     const operational = dayPlans.filter(
@@ -431,8 +444,8 @@ export const forDate = query({
       byCode,
       issues,
     };
-  },
-});
+  }
+}
 
 /**
  * إصلاحات آمنة وقابلة للمراجعة:

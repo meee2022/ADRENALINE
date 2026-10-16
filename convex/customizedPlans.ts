@@ -6,10 +6,10 @@
  * @frontend client/src/pages/Customized.tsx
  */
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { requireStaff } from "./sessions";
 import { isWithinSubscription } from "./lib/subscriptionPeriods";
-import { liveCustomizedTemplates } from "./lib/customizedTemplates";
+import { liveCustomizedTemplates, liveTemplatesForDay, rebuildTemplateDays } from "./lib/customizedTemplates";
 
 /** عملاء البرنامج المخصّص + هل لهم قالب محفوظ. للموظفين. */
 export const listCustomized = query({
@@ -66,6 +66,19 @@ export const forDate = query({
   args: { date: v.string(), sessionToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
     await requireStaff(ctx, args.sessionToken);
+    return await customizedForDate(ctx, args.date);
+  },
+});
+
+/** CLI-only twin of forDate — used to diff output before/after read changes. */
+export const forDateInternal = internalQuery({
+  args: { date: v.string() },
+  handler: async (ctx, args) => await customizedForDate(ctx, args.date),
+});
+
+async function customizedForDate(ctx: any, dateArg: string) {
+  {
+    const args = { date: dateArg };
     const DOW = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
     const dayKey = DOW[new Date(args.date + "T00:00:00Z").getUTCDay()];
 
@@ -143,8 +156,8 @@ export const forDate = query({
       });
     }
     return out.sort((a, b) => String(a.customerName).localeCompare(String(b.customerName), "ar"));
-  },
-});
+  }
+}
 
 /**
  * ✅ مكتبة إعادة الاستخدام — كل الأطباق/التركيبات المميّزة المستخدمة سابقاً في أي
@@ -266,6 +279,7 @@ export const saveTemplate = mutation({
       .first();
     if (existing) {
       await ctx.db.patch(existing._id, { slots: args.slots, updatedAt: Date.now(), updatedBy: who });
+      await rebuildTemplateDays(ctx, await ctx.db.get(existing._id));
       return { id: existing._id, updated: true };
     }
     const newId = await ctx.db.insert("customizedTemplates", {
@@ -274,6 +288,7 @@ export const saveTemplate = mutation({
       updatedAt: Date.now(),
       updatedBy: who,
     });
+    await rebuildTemplateDays(ctx, await ctx.db.get(newId));
     return { id: newId, updated: false };
   },
 });
@@ -307,6 +322,7 @@ export const saveTemplateDay = mutation({
       if (!sl.weeks[key].days) sl.weeks[key].days = {};
       sl.weeks[key].days[args.day] = args.slots;
       await ctx.db.patch(existing._id, { slots: sl, updatedAt: Date.now(), updatedBy: who });
+      await rebuildTemplateDays(ctx, await ctx.db.get(existing._id));
       return { id: existing._id, updated: true, day: args.day, week: args.week };
     }
     // قالب جديد: ننشئه بهذا اليوم فقط
@@ -314,6 +330,42 @@ export const saveTemplateDay = mutation({
     const newId = await ctx.db.insert("customizedTemplates", {
       customerId: args.customerId, slots, updatedAt: Date.now(), updatedBy: who,
     });
+    await rebuildTemplateDays(ctx, await ctx.db.get(newId));
     return { id: newId, updated: false, day: args.day, week: args.week };
+  },
+});
+
+/** CLI-only: build the day summary for every template (one-time backfill, idempotent). */
+export const rebuildAllTemplateDays = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("customizedTemplates").collect();
+    let rows = 0;
+    for (const t of all) rows += await rebuildTemplateDays(ctx, t);
+    return { templates: all.length, rows };
+  },
+});
+
+/**
+ * CLI-only: prove the summary matches the templates for every (week, day) — compares the
+ * exact slot arrays the readers would see. Returns the mismatches (expected: none).
+ */
+export const verifyTemplateDays = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const DAYS = ["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
+    const full = await liveCustomizedTemplates(ctx);
+    const mismatches: string[] = [];
+    let checked = 0;
+    for (let week = 1; week <= 4; week++) for (const day of DAYS) {
+      const viaDay = await liveTemplatesForDay(ctx, week, day);
+      const a = new Map(full.map((t: any) => [String(t._id), JSON.stringify(
+        (() => { const sl = t.slots; const wd = sl?.weeks ? (sl.weeks[week] || sl.weeks[String(week)])?.days : null; const d = wd || sl?.days; return Array.isArray(d?.[day]) ? d[day] : Array.isArray(sl) ? sl : []; })(),
+      )]));
+      const b = new Map(viaDay.map((t: any) => [String(t._id), JSON.stringify(t.slots.weeks[week].days[day])]));
+      if (a.size !== b.size) mismatches.push(`${week}/${day}: count ${a.size} vs ${b.size}`);
+      for (const [id, s] of a) { checked++; if (b.get(id) !== s) mismatches.push(`${week}/${day}: ${id}`); }
+    }
+    return { checked, mismatches };
   },
 });

@@ -1331,6 +1331,20 @@ export default defineSchema({
     updatedBy: v.optional(v.string()),
   }).index("by_customer", ["customerId"]),
 
+  // Derived from customizedTemplates: one row per (template, rotation week, weekday) with that
+  // day's slots only. Day-based readers (kitchen, stickers, audit, delivery) read a day here
+  // (~120 KB) instead of the whole template table (~2 MB). Rebuilt on every template write.
+  customizedTemplateDays: defineTable({
+    templateId: v.id("customizedTemplates"),
+    customerId: v.id("customers"),
+    week: v.number(),
+    day: v.string(),
+    slots: v.any(),
+    updatedAt: v.number(),
+  })
+    .index("by_week_day", ["week", "day"])
+    .index("by_template", ["templateId"]),
+
   // ✅ مكتبة الأطباق المخصّصة الجاهزة (مبذورة من كشوف المطبخ) — تظهر كتركيبات
   //    قابلة للنقر في منتقي الوجبات المخصّصة، بالإنجليزي للمطبخ.
   customizedDishLibrary: defineTable({
