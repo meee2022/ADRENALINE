@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /customer/profile
 Disallow: /login
+Disallow: /westbay
 
 Sitemap: https://adrenalinehealthy.com/sitemap.xml

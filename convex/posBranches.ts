@@ -92,3 +92,29 @@ export const setMenuInternal = internalMutation({
     return mealIds.length;
   },
 });
+
+/**
+ * Public, read-only menu of one branch (the QR page /westbay). Only display fields: names,
+ * the price the cashier charges (branch price, else the shared POS price) and the photo.
+ */
+export const publicMenu = query({
+  args: { code: v.string() },
+  handler: async (ctx, { code }) => {
+    const branch: any = (await ctx.db.query("posBranches").collect()).find((b: any) => b.code === code && b.isActive);
+    if (!branch) return null;
+    const branchPrice = new Map<string, number>((branch.menuPrices || []).map((p: any) => [String(p.mealId), Number(p.price)]));
+    const items = [];
+    for (const id of branch.menuMealIds || []) {
+      const m: any = await ctx.db.get(id);
+      if (!m) continue;
+      const pos: any = await ctx.db.query("posItems").withIndex("by_meal", (q) => q.eq("mealId", id)).first();
+      const price = branchPrice.get(String(id)) ?? pos?.posPrice;
+      if (price == null || pos?.isHidden || m.isActive === false) continue; // not sellable here
+      items.push({
+        id: String(id), nameEn: m.nameEn || m.name || "", nameAr: m.nameAr || "", category: m.category || "",
+        price, imageUrl: m.storageId ? await ctx.storage.getUrl(m.storageId) : (m.imageUrl || null),
+      });
+    }
+    return { name: branch.name, items };
+  },
+});
