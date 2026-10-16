@@ -13,6 +13,7 @@ import { getPosMealImage, getPosMealImageById } from "@/lib/posMealImages";
 import { Search, X, Minus, Plus, Truck, Package, UtensilsCrossed, Trash2, MessageSquare, Percent, User2, ChefHat, Coffee, Utensils, Salad, Cookie, Grid3x3, ShoppingCart, ChevronDown, Bookmark } from "lucide-react";
 import ChargeModal from "./PosCharge";
 import ReceiptModal from "./PosReceipt";
+import { addToOutbox, removeFromOutbox } from "@/lib/posOutbox";
 
 type CartLine = { mealId: string | null; name: string; qty: number; unitPrice: number; note?: string };
 type OrderType = "dine_in" | "pickup" | "delivery";
@@ -61,6 +62,7 @@ export default function PosSales() {
   const items = useQuery(api.pos.listItems, { token: token || undefined }) as any[] | undefined;
   const posCats = useQuery(api.pos.listCategories, { token: token || undefined }) as any[] | undefined;
   const shift = useQuery(api.pos.currentShift, token ? { token } : "skip") as any;
+  const me = useQuery(api.pos.me, token ? { token } : "skip") as any;
   const posCfg = useQuery(api.pos.posSettings, { token: token || undefined }) as any;
   const deliveryFee = Number(posCfg?.deliveryFee ?? 10);
   const quickSale = useMutation(api.pos.quickSale);
@@ -191,6 +193,28 @@ export default function PosSales() {
         ...(l.kind ? { kind: l.kind } : {}),
         name: l.name, qty: l.qty, unitPrice: l.unitPrice, notes: l.note,
       }));
+      // Waiter on the beach: the sale is saved on the device first, so a dropped signal
+      // never loses it. Same idempotency key → the server records it once.
+      if (me?.waiter && !activeTicketId) {
+        const args = {
+          token, lines: lineArgs, paymentMethod, cashReceived,
+          ...(payments && payments.length ? { payments } : {}),
+          orderType,
+          customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined,
+          customerId: linkedCustomer?.id as any,
+          discount: totals.discount || undefined,
+          idempotencyKey: idem,
+        };
+        addToOutbox({ idem, args, at: Date.now() });
+        const sent = quickSale(args).then((r) => { removeFromOutbox(idem); return r; },
+          (e) => { removeFromOutbox(idem); throw e; });
+        const r: any = await Promise.race([sent, new Promise((ok) => setTimeout(() => ok(null), 8000))]);
+        clearCart(); setShowCharge(false); setCustomerName(""); setLinkedCustomer(null); setDiscountPct(0);
+        void alertDialog({ message: r
+          ? tt(`تم البيع #${r.ticketNumber} ووصل للكاونتر ✓`, `Sale #${r.ticketNumber} sent to the counter ✓`)
+          : tt("لا يوجد نت الآن. البيع محفوظ على الجهاز وسيُرسل تلقائياً — بلّغ الكاونتر بنفسك.", "No signal. The sale is saved on this device and will send automatically — tell the counter yourself.") });
+        return;
+      }
       const r: any = activeTicketId ? await (async () => {
         await updateTicketLines({ token, ticketId: activeTicketId as any, lines: lineArgs, orderType, customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined, discount: totals.discount || undefined });
         const paid:any = await chargeTicket({ token, ticketId: activeTicketId as any, paymentMethod, cashReceived, ...(payments && payments.length ? { payments } : {}), orderType, customerName: (linkedCustomer?.fullName || customerName.trim()) || undefined, discount: totals.discount || undefined });

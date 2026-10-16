@@ -511,6 +511,11 @@ function CashiersTab({ t, sessionToken, toast, isRtl }: any) {
                   <td className="p-3">
                     <p className="font-bold">{c.name}</p>
                     <span className="inline-flex mt-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{c.role}</span>
+                    <button type="button" onClick={() => update({ id: c.id as any, posWaiter: !c.posWaiter, sessionToken })}
+                      title={t("ويتر متنقل: يبيع ويحصّل في ورديته، وطلباته تظهر على الكاونتر للتجهيز", "Roaming waiter: sells on his own shift; his orders show on the counter")}
+                      className={cn("ms-1 inline-flex mt-1 rounded-full px-2 py-0.5 text-[9px] font-black", c.posWaiter ? "bg-amber-100 text-amber-800" : "bg-slate-50 text-slate-400 border border-dashed border-slate-300")}>
+                      {c.posWaiter ? t("ويتر ✓", "Waiter ✓") : t("+ ويتر", "+ Waiter")}
+                    </button>
                   </td>
                   <td className="p-3 text-slate-600 text-xs">{c.email}</td>
                   {hasBranches && (

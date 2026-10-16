@@ -35,6 +35,8 @@ export default defineSchema({
     posEnabled: v.optional(v.boolean()),
     // ✅ فرع الكاشير المُعيَّن عليه (POS متعدّد الفروع). الأدمن يقدر يغيّره لتغطية فرع آخر.
     posBranchId: v.optional(v.id("posBranches")),
+    // Roaming waiter (beach): sells and collects on his own shift; his sales show on the counter to hand over.
+    posWaiter: v.optional(v.boolean()),
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
@@ -166,6 +168,8 @@ export default defineSchema({
     isNonRevenue: v.optional(v.boolean()),
     // ✅ مفتاح Idempotency لمنع تكرار الدفع (double-click / retry / انقطاع الشبكة)
     idempotencyKey: v.optional(v.string()),
+    // Waiter sales only: NEW (counter must prepare) → READY (waiter picks up) → DONE.
+    pickupStatus: v.optional(v.union(v.literal("NEW"), v.literal("READY"), v.literal("DONE"))),
     paidAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
@@ -175,7 +179,8 @@ export default defineSchema({
     .index("by_paidAt", ["paidAt"])
     .index("by_cashier", ["cashierId"])
     .index("by_branch", ["branchId"])
-    .index("by_idem", ["idempotencyKey"]),
+    .index("by_idem", ["idempotencyKey"])
+    .index("by_pickup", ["pickupStatus"]),
 
   // ===== POS: أسطر الفواتير =====
   posTicketLines: defineTable({

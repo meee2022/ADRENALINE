@@ -41,6 +41,7 @@ export const listCashiers = query({
         hasPin: !!u.pinHash,
         branchId: u.posBranchId ? String(u.posBranchId) : null,
         branchName: u.posBranchId ? (branchName.get(String(u.posBranchId)) || null) : null,
+        posWaiter: !!u.posWaiter,
       }));
   },
 });
@@ -140,6 +141,7 @@ export const updateCashier = mutation({
     posEnabled: v.optional(v.boolean()),
     pin: v.optional(v.string()),
     posBranchId: v.optional(v.id("posBranches")),
+    posWaiter: v.optional(v.boolean()),
     sessionToken: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -152,6 +154,7 @@ export const updateCashier = mutation({
     if (args.isActive !== undefined) patch.isActive = args.isActive;
     if (args.posEnabled !== undefined) patch.posEnabled = args.posEnabled;
     if (args.posBranchId !== undefined) patch.posBranchId = args.posBranchId;
+    if (args.posWaiter !== undefined) patch.posWaiter = args.posWaiter;
     if (args.pin !== undefined) {
       const clean = args.pin.trim();
       if (!/^\d{4,6}$/.test(clean)) throw new ConvexError("يجب أن يتكوّن رمز PIN من 4 إلى 6 أرقام");

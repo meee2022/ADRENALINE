@@ -15,6 +15,7 @@ import PosOpenTickets from "./PosOpenTickets";
 import { Home, Receipt, ClipboardList, Clock, LogOut, Loader2, Languages, Menu, X } from "lucide-react";
 import { PosManifest, InstallButton } from "@/components/pos/PwaInstall";
 import { useLanguage } from "@/lib/i18n";
+import PosPickupBar from "@/components/pos/PosPickupBar";
 
 export default function PosShell() {
   const { token, cashier, clearSession } = usePosStore();
@@ -98,7 +99,7 @@ export default function PosShell() {
           </button>
           <div className={`${isAr ? "text-left" : "text-right"} hidden sm:block leading-tight`}>
             <div className="text-[10px] text-white/60 font-bold">
-              {t("الكاشير", "CASHIER")}{(me as any)?.branchName ? ` · ${(me as any).branchName}` : ""}
+              {(me as any)?.waiter ? t("ويتر", "WAITER") : t("الكاشير", "CASHIER")}{(me as any)?.branchName ? ` · ${(me as any).branchName}` : ""}
             </div>
             <div className="text-sm font-black">{cashier?.name || "—"}</div>
           </div>
@@ -113,6 +114,7 @@ export default function PosShell() {
         </div>
       </header>
 
+      {token && <PosPickupBar token={token} waiter={!!(me as any)?.waiter} t={t} />}
       {/* Main content */}
       <main className="flex-1 overflow-hidden">
         <Suspense fallback={<PosLoading />}>

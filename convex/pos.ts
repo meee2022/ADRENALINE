@@ -133,7 +133,7 @@ export const loginWithPin = mutation({
     const branch = await branchInfo(ctx, match.posBranchId);
     return {
       token,
-      cashier: { id: String(match._id), name: match.name, role: match.role, branchId: branch?.id || null, branchName: branch?.name || null },
+      cashier: { id: String(match._id), name: match.name, role: match.role, branchId: branch?.id || null, branchName: branch?.name || null, waiter: !!match.posWaiter },
     };
   },
 });
@@ -145,7 +145,7 @@ export const me = query({
     try {
       const { user } = await requireCashier(ctx, token);
       const branch = await branchInfo(ctx, user.posBranchId);
-      return { id: String(user._id), name: user.name, role: user.role, branchId: branch?.id || null, branchName: branch?.name || null };
+      return { id: String(user._id), name: user.name, role: user.role, branchId: branch?.id || null, branchName: branch?.name || null, waiter: !!user.posWaiter };
     } catch { return null; }
   },
 });
@@ -812,6 +812,7 @@ export const chargeTicket = mutation({
     const isStaff = pay.isStaff;
     await ctx.db.patch(args.ticketId, {
       status: "PAID", paymentMethod: method, payments: pay.payments,
+      ...(user.posWaiter ? { pickupStatus: "NEW" as const } : {}),
       cashReceived: pay.cashReceived, changeAmount: change,
       discount: totals.discount, subtotal: totals.subtotal, total: totals.total,
       orderType: args.orderType || t.orderType,
@@ -898,6 +899,7 @@ export const quickSale = mutation({
       customerId: args.customerId,
       notes: args.notes?.trim() || undefined,
       isNonRevenue: isStaff, idempotencyKey: args.idempotencyKey,
+      ...(user.posWaiter ? { pickupStatus: "NEW" as const } : {}),
       paidAt: Date.now(), createdAt: Date.now(),
     });
     for (const l of serverLines) {
@@ -1036,5 +1038,49 @@ export const myTodayReceipts = query({
       customerName: t.customerName || null,
       paidAt: t.paidAt || null, createdAt: t.createdAt,
     }));
+  },
+});
+
+/* ═══════════════════════ Waiter → counter hand-over ═══════════════════════ */
+
+/**
+ * Waiter sales still to hand over. The counter sees every one in its branch; a waiter sees
+ * only his own (to know when it's ready). Reads only NEW/READY rows, so branches without a
+ * waiter cost nothing.
+ */
+export const pickupOrders = query({
+  args: { token: v.string() },
+  handler: async (ctx, { token }) => {
+    const { user } = await requireCashier(ctx, token);
+    const branchId = await resolveBranchId(ctx, user);
+    const rows: any[] = [];
+    for (const st of ["NEW", "READY"] as const) {
+      rows.push(...await ctx.db.query("posTickets").withIndex("by_pickup", (q) => q.eq("pickupStatus", st)).collect());
+    }
+    const mine = rows.filter((t) => user.posWaiter
+      ? String(t.cashierId) === String(user._id)
+      : String(t.branchId || "") === String(branchId || "") && t.status === "PAID");
+    mine.sort((a, b) => a.createdAt - b.createdAt);
+    return await Promise.all(mine.map(async (t) => ({
+      id: String(t._id), ticketNumber: t.ticketNumber, status: t.pickupStatus, waiter: t.cashierName || "",
+      customerName: t.customerName || "", notes: t.notes || "", total: t.total, paidAt: t.paidAt || t.createdAt,
+      lines: (await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", t._id)).collect())
+        .map((l: any) => ({ name: l.name, qty: l.qty, note: l.notes || "" })),
+    })));
+  },
+});
+
+/** Counter marks READY; the waiter marks DONE once handed to the customer. Same branch only. */
+export const setPickupStatus = mutation({
+  args: { token: v.string(), ticketId: v.id("posTickets"), status: v.union(v.literal("READY"), v.literal("DONE")) },
+  handler: async (ctx, { token, ticketId, status }) => {
+    const { user } = await requireCashier(ctx, token);
+    const t: any = await ctx.db.get(ticketId);
+    if (!t || !t.pickupStatus) throw new ConvexError("الطلب غير موجود");
+    const own = String(t.cashierId) === String(user._id);
+    const sameBranch = String(t.branchId || "") === String((await resolveBranchId(ctx, user)) || "");
+    if (!own && !sameBranch && !isAdmin(user)) throw new ConvexError("الطلب من فرع آخر");
+    await ctx.db.patch(ticketId, { pickupStatus: status, updatedAt: Date.now() });
+    return { ok: true };
   },
 });
