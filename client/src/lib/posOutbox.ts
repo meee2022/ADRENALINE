@@ -3,7 +3,8 @@
  * Each entry keeps its idempotencyKey, so re-sending can never create a second ticket.
  */
 const KEY = "pos_outbox_v1";
-export type OutboxEntry = { idem: string; args: any; at: number };
+/** sale = paid on the spot; park = sent to the counter, paid on delivery. */
+export type OutboxEntry = { idem: string; kind?: "sale" | "park"; args: any; at: number };
 
 export function readOutbox(): OutboxEntry[] {
   try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; }

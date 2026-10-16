@@ -205,7 +205,7 @@ export default function PosSales() {
           discount: totals.discount || undefined,
           idempotencyKey: idem,
         };
-        addToOutbox({ idem, args, at: Date.now() });
+        addToOutbox({ idem, kind: "sale", args, at: Date.now() });
         const sent = quickSale(args).then((r) => { removeFromOutbox(idem); return r; },
           (e) => { removeFromOutbox(idem); throw e; });
         const r: any = await Promise.race([sent, new Promise((ok) => setTimeout(() => ok(null), 8000))]);
@@ -260,6 +260,18 @@ export default function PosSales() {
       //    الأصلية مفتوحة فتظهر الفاتورة مرّتين في «الفواتير المفتوحة».
       if (activeTicketId) {
         await updateTicketLines({ token, ticketId: activeTicketId as any, lines: lineArgs, ...meta });
+      } else if (me?.waiter) {
+        // Waiter: send to the counter now, collect on delivery. Saved on the device first.
+        const idem = `p_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const args = { token, lines: lineArgs, ...meta, idempotencyKey: idem };
+        addToOutbox({ idem, kind: "park", args, at: Date.now() });
+        const sent = parkTicket(args).then((r) => { removeFromOutbox(idem); return r; }, (e) => { removeFromOutbox(idem); throw e; });
+        const r: any = await Promise.race([sent, new Promise((ok) => setTimeout(() => ok(null), 8000))]);
+        clearCart(); setActiveTicketId(null); setCustomerName(""); setLinkedCustomer(null); setDiscountPct(0);
+        void alertDialog({ message: r
+          ? tt(`أُرسل الطلب #${r.ticketNumber} للكاونتر ✓ — حصّل عند التسليم`, `Order #${r.ticketNumber} sent to the counter ✓ — collect on delivery`)
+          : tt("لا يوجد نت الآن. الطلب محفوظ وسيُرسل تلقائياً — بلّغ الكاونتر بنفسك.", "No signal. The order is saved and will send automatically — tell the counter yourself.") });
+        return;
       } else {
         await parkTicket({ token, lines: lineArgs, ...meta });
       }
@@ -495,6 +507,15 @@ export default function PosSales() {
             </div>
           </div>
 
+          {me?.waiter && !activeTicketId && (
+            <button
+              onClick={parkCurrentTicket}
+              disabled={cart.length === 0 || !shift || busy}
+              className="mb-2 w-full h-14 rounded-xl bg-amber-500 text-white font-black text-lg transition-all disabled:opacity-30 active:scale-95 shadow-xl"
+            >
+              {tt("إرسال للكاونتر — الدفع عند التسليم", "Send to counter — pay on delivery")}
+            </button>
+          )}
           {/* Big Charge button (red like the reference) */}
           <button
             onClick={() => setShowCharge(true)}

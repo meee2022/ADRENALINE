@@ -664,9 +664,14 @@ export const parkTicket = mutation({
   args: {
     token: v.string(), lines: v.array(ticketLineArg), discount: v.optional(v.number()),
     orderType: v.optional(v.string()), customerName: v.optional(v.string()), notes: v.optional(v.string()),
+    idempotencyKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { user } = await requireCashier(ctx, args.token);
+    if (args.idempotencyKey) {
+      const dup = await ctx.db.query("posTickets").withIndex("by_idem", (q) => q.eq("idempotencyKey", args.idempotencyKey)).first();
+      if (dup) return { id: String(dup._id), ticketNumber: dup.ticketNumber, duplicate: true };
+    }
     const shift = await ctx.db.query("posShifts").withIndex("by_cashier", q => q.eq("cashierId", user._id)).filter(q => q.eq(q.field("status"), "OPEN")).first();
     if (!shift) throw new ConvexError("يجب فتح وردية أولاً");
     const lines = await buildServerLines(ctx, args.lines as ClientLineInput[], user);
@@ -674,9 +679,10 @@ export const parkTicket = mutation({
     const preview = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0);
     assertDiscountAllowed(preview, rawDiscount, isAdmin(user));
     const totals = await computeTotals(ctx, lines, rawDiscount);
-    const id = await ctx.db.insert("posTickets", { ticketNumber: await nextTicketNumber(ctx), cashierId: user._id, cashierName: user.name, branchId: (shift as any).branchId, shiftId: shift._id, status: "OPEN", orderType: args.orderType, subtotal: totals.subtotal, discount: totals.discount, tax: 0, total: totals.total, customerName: args.customerName?.trim() || undefined, notes: args.notes?.trim() || undefined, createdAt: Date.now(), updatedAt: Date.now() });
+    const ticketNumber = await nextTicketNumber(ctx);
+    const id = await ctx.db.insert("posTickets", { ticketNumber, cashierId: user._id, cashierName: user.name, branchId: (shift as any).branchId, shiftId: shift._id, status: "OPEN", orderType: args.orderType, subtotal: totals.subtotal, discount: totals.discount, tax: 0, total: totals.total, customerName: args.customerName?.trim() || undefined, notes: args.notes?.trim() || undefined, idempotencyKey: args.idempotencyKey, ...(user.posWaiter ? { pickupStatus: "NEW" as const } : {}), createdAt: Date.now(), updatedAt: Date.now() });
     for (const line of lines) await ctx.db.insert("posTicketLines", { ticketId: id, mealId: line.mealId, name: line.name, qty: line.qty, unitPrice: line.unitPrice, lineTotal: Math.round(line.qty * line.unitPrice * 100) / 100, notes: line.notes });
-    return { id: String(id) };
+    return { id: String(id), ticketNumber };
   },
 });
 
@@ -812,7 +818,6 @@ export const chargeTicket = mutation({
     const isStaff = pay.isStaff;
     await ctx.db.patch(args.ticketId, {
       status: "PAID", paymentMethod: method, payments: pay.payments,
-      ...(user.posWaiter ? { pickupStatus: "NEW" as const } : {}),
       cashReceived: pay.cashReceived, changeAmount: change,
       discount: totals.discount, subtotal: totals.subtotal, total: totals.total,
       orderType: args.orderType || t.orderType,
@@ -1059,11 +1064,11 @@ export const pickupOrders = query({
     }
     const mine = rows.filter((t) => user.posWaiter
       ? String(t.cashierId) === String(user._id)
-      : String(t.branchId || "") === String(branchId || "") && t.status === "PAID");
+      : String(t.branchId || "") === String(branchId || "")).filter((t) => t.status === "OPEN" || t.status === "PAID");
     mine.sort((a, b) => a.createdAt - b.createdAt);
     return await Promise.all(mine.map(async (t) => ({
-      id: String(t._id), ticketNumber: t.ticketNumber, status: t.pickupStatus, waiter: t.cashierName || "",
-      customerName: t.customerName || "", notes: t.notes || "", total: t.total, paidAt: t.paidAt || t.createdAt,
+      id: String(t._id), ticketNumber: t.ticketNumber, status: t.pickupStatus, paid: t.status === "PAID", waiter: t.cashierName || "",
+      customerName: t.customerName || "", notes: t.notes || "", total: t.total, paidAt: t.createdAt,
       lines: (await ctx.db.query("posTicketLines").withIndex("by_ticket", (q) => q.eq("ticketId", t._id)).collect())
         .map((l: any) => ({ name: l.name, qty: l.qty, note: l.notes || "" })),
     })));

@@ -7,6 +7,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/../../convex/_generated/api";
 import { readOutbox, removeFromOutbox } from "@/lib/posOutbox";
 import { alertDialog } from "@/lib/dialogs";
+import { usePosStore } from "@/lib/posStore";
+import { useLocation } from "wouter";
 
 function beep() {
   try {
@@ -24,6 +26,10 @@ export default function PosPickupBar({ token, waiter, t }: { token: string; wait
   const orders = useQuery(api.pos.pickupOrders, { token }) as any[] | undefined;
   const setStatus = useMutation(api.pos.setPickupStatus);
   const quickSale = useMutation(api.pos.quickSale);
+  const parkTicket = useMutation(api.pos.parkTicket);
+  const resume = useMutation(api.pos.resumeOpenTicket);
+  const { setCart, setActiveTicketId, setResumedMeta } = usePosStore();
+  const [, go] = useLocation();
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(readOutbox().length);
   const inFlight = useRef(new Set<string>());
@@ -45,7 +51,7 @@ export default function PosPickupBar({ token, waiter, t }: { token: string; wait
       for (const e of readOutbox()) {
         if (inFlight.current.has(e.idem)) continue;
         inFlight.current.add(e.idem);
-        quickSale(e.args).then(() => removeFromOutbox(e.idem), (err: any) => {
+        (e.kind === "park" ? parkTicket(e.args) : quickSale(e.args)).then(() => removeFromOutbox(e.idem), (err: any) => {
           // The server refused it (e.g. shift closed): drop it and tell the waiter.
           removeFromOutbox(e.idem);
           void alertDialog({ message: `${t("طلب لم يُسجَّل", "A sale was not recorded")}: ${err?.data || err?.message || ""}` });
@@ -64,6 +70,19 @@ export default function PosPickupBar({ token, waiter, t }: { token: string; wait
   if (!list.length && !pending) return null;
   const mark = (id: string, status: "READY" | "DONE") =>
     setStatus({ token, ticketId: id as any, status }).catch((e: any) => alertDialog({ message: e?.data || e?.message || "" }));
+  // Waiter handed it over: close it here, and if not paid yet open it for payment.
+  const delivered = async (o: any) => {
+    await mark(o.id, "DONE");
+    if (o.paid) return;
+    try {
+      const tk: any = await resume({ token, ticketId: o.id as any });
+      setCart(tk.lines);
+      setResumedMeta({ orderType: tk.orderType, customerName: tk.customerName, discount: tk.discount });
+      setActiveTicketId(tk.id);
+      setOpen(false);
+      go("/pos");
+    } catch (e: any) { void alertDialog({ message: e?.data || e?.message || "" }); }
+  };
 
   return (
     <div className="shrink-0 border-b border-amber-200 bg-amber-50 px-3 py-2 text-sm" dir="rtl">
@@ -88,6 +107,7 @@ export default function PosPickupBar({ token, waiter, t }: { token: string; wait
               <div className="flex items-center gap-2 font-black">
                 <span>#{o.ticketNumber}</span>
                 {!waiter && <span className="text-xs text-slate-500">{o.waiter}</span>}
+                <span className={`rounded-full px-2 py-0.5 text-[10px] ${o.paid ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{o.paid ? t("مدفوع", "Paid") : t("غير مدفوع", "Unpaid")}</span>
                 <span className="ms-auto text-xs text-slate-500">{new Date(o.paidAt).toLocaleTimeString("ar-QA", { hour: "2-digit", minute: "2-digit" })}</span>
               </div>
               {(o.customerName || o.notes) && <p className="text-xs font-bold text-slate-600">{[o.customerName, o.notes].filter(Boolean).join(" · ")}</p>}
@@ -98,9 +118,13 @@ export default function PosPickupBar({ token, waiter, t }: { token: string; wait
                 ? (waiter
                     ? <p className="text-xs font-black text-amber-700">{t("قيد التجهيز…", "Being prepared…")}</p>
                     : <button type="button" onClick={() => mark(o.id, "READY")} className="h-10 w-full rounded-lg bg-emerald-600 font-black text-white">{t("جاهز ✓", "Ready ✓")}</button>)
-                : <button type="button" onClick={() => mark(o.id, "DONE")} className="h-10 w-full rounded-lg border border-emerald-500 font-black text-emerald-700">
-                    {waiter ? t("جاهز — استلمته وسلّمته", "Ready — picked up & delivered") : t("بانتظار الويتر · تم التسليم", "Waiting for waiter · handed over")}
-                  </button>}
+                : waiter
+                  ? <button type="button" onClick={() => void delivered(o)} className="h-10 w-full rounded-lg bg-emerald-600 font-black text-white">
+                      {o.paid ? t("جاهز — سلّمته ✓", "Ready — delivered ✓") : t(`جاهز — سلّمته وحصّل ${o.total.toFixed(2)}`, `Ready — delivered, collect ${o.total.toFixed(2)}`)}
+                    </button>
+                  : <button type="button" onClick={() => mark(o.id, "DONE")} className="h-10 w-full rounded-lg border border-emerald-500 font-black text-emerald-700">
+                      {t("بانتظار الويتر · اضغط لو استلمه", "Waiting for waiter · tap when collected")}
+                    </button>}
             </div>
           ))}
         </div>
